@@ -1,4 +1,5 @@
 import type { ChromeClient } from '../types.js';
+import { beginBrowserMutation, type BrowserMutationAuditSink } from './mutationDispatcher.js';
 
 export const DEFAULT_DIALOG_SELECTORS = ['[role="dialog"]', 'dialog', '[aria-modal="true"]'] as const;
 const DEFAULT_VISIBLE_MENU_SELECTORS = [
@@ -537,6 +538,8 @@ export type NavigateAndSettleOptions = WaitForPredicateOptions & {
   requireVisibleDocument?: boolean;
   fallbackToLocationAssign?: boolean;
   fallbackTimeoutMs?: number;
+  mutationAudit?: BrowserMutationAuditSink;
+  mutationSource?: string;
 };
 
 export type NavigateAndSettleResult = {
@@ -1025,6 +1028,15 @@ export async function navigateAndSettle(
   client: Pick<ChromeClient, 'Page' | 'Runtime'>,
   options: NavigateAndSettleOptions,
 ): Promise<NavigateAndSettleResult> {
+  const mutationSource = options.mutationSource ?? 'browser-service:navigateAndSettle';
+  const mutationAudit = options.mutationAudit;
+  const fromUrl = mutationAudit ? await readLocationHrefForAudit(client.Runtime) : null;
+  const audit = beginBrowserMutation(mutationAudit, {
+    kind: 'navigate',
+    source: mutationSource,
+    requestedUrl: options.url,
+    fromUrl,
+  });
   const evaluateState = async (
     timeoutMs: number | undefined,
     fallbackUsed: boolean,
@@ -1102,25 +1114,62 @@ export async function navigateAndSettle(
     };
   };
 
-  await client.Page.navigate({ url: options.url });
-  const primary = await evaluateState(options.timeoutMs, false);
-  if (primary.ok || !options.fallbackToLocationAssign) {
-    return primary;
+  try {
+    await client.Page.navigate({ url: options.url });
+    const primary = await evaluateState(options.timeoutMs, false);
+    if (primary.ok || !options.fallbackToLocationAssign) {
+      await audit.complete({
+        outcome: primary.ok ? 'succeeded' : 'failed',
+        toUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : options.url,
+        fallbackUsed: primary.fallbackUsed,
+        error: primary.ok ? null : primary.reason ?? null,
+      });
+      return primary;
+    }
+
+    await client.Runtime.evaluate({
+      expression: `(() => {
+        const target = ${JSON.stringify(options.url)};
+        if (location.href !== target) {
+          location.assign(target);
+          return 'assigned';
+        }
+        return 'already-there';
+      })()`,
+      awaitPromise: false,
+    }).catch(() => undefined);
+
+    const fallback = await evaluateState(options.fallbackTimeoutMs ?? options.timeoutMs, true);
+    await audit.complete({
+      outcome: fallback.ok ? 'succeeded' : 'failed',
+      toUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : options.url,
+      fallbackUsed: true,
+      reason: 'location-assign-fallback',
+      error: fallback.ok ? null : fallback.reason ?? null,
+    });
+    return fallback;
+  } catch (error) {
+    await audit.complete({
+      outcome: 'failed',
+      toUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : options.url,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
   }
+}
 
-  await client.Runtime.evaluate({
-    expression: `(() => {
-      const target = ${JSON.stringify(options.url)};
-      if (location.href !== target) {
-        location.assign(target);
-        return 'assigned';
-      }
-      return 'already-there';
-    })()`,
-    awaitPromise: false,
-  }).catch(() => undefined);
-
-  return evaluateState(options.fallbackTimeoutMs ?? options.timeoutMs, true);
+async function readLocationHrefForAudit(Runtime: Pick<ChromeClient['Runtime'], 'evaluate'>): Promise<string | null> {
+  try {
+    const result = await Runtime.evaluate({
+      expression: 'location.href',
+      returnByValue: true,
+    });
+    return typeof result.result?.value === 'string' && result.result.value.trim().length > 0
+      ? result.result.value
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function collectUiDiagnostics(

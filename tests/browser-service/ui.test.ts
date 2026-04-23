@@ -38,6 +38,7 @@ import {
   withAnchoredActionDiagnostics,
   withUiDiagnostics,
 } from '../../packages/browser-service/src/service/ui.js';
+import { createInMemoryBrowserMutationLog } from '../../packages/browser-service/src/service/mutationDispatcher.js';
 
 function createRuntime(values: unknown[]) {
   let callIndex = 0;
@@ -1134,6 +1135,60 @@ describe('browser-service ui wait helpers', () => {
         (call) => typeof call?.[0]?.expression === 'string' && call[0].expression.includes('location.assign'),
       ),
     ).toBe(true);
+  });
+
+  test('navigateAndSettle records bounded mutation audit events', async () => {
+    const mutationLog = createInMemoryBrowserMutationLog();
+    const runtime = {
+      evaluate: vi.fn(async (options: { expression: string }) => {
+        if (options.expression === 'location.href') {
+          return { result: { value: 'https://grok.com/files' } };
+        }
+        if (options.expression.includes('location.pathname === "/files"')) {
+          return { result: { value: { path: '/files' } } };
+        }
+        if (options.expression.includes('document.readyState')) {
+          return { result: { value: { readyState: 'interactive', visibilityState: 'visible' } } };
+        }
+        if (options.expression.includes('window.__filesReady')) {
+          return { result: { value: { loaded: true } } };
+        }
+        return { result: { value: null } };
+      }),
+    };
+    const Page = {
+      navigate: vi.fn(async () => undefined),
+    };
+
+    const result = await navigateAndSettle({ Page: Page as never, Runtime: runtime as never }, {
+      url: 'https://grok.com/files',
+      routeExpression: 'location.pathname === "/files"',
+      readyExpression: 'window.__filesReady',
+      timeoutMs: 50,
+      pollMs: 1,
+      mutationAudit: mutationLog.record,
+      mutationSource: 'test:navigate',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(mutationLog.list()).toEqual([
+      expect.objectContaining({
+        phase: 'start',
+        kind: 'navigate',
+        source: 'test:navigate',
+        requestedUrl: 'https://grok.com/files',
+        fromUrl: 'https://grok.com/files',
+      }),
+      expect.objectContaining({
+        phase: 'complete',
+        kind: 'navigate',
+        source: 'test:navigate',
+        requestedUrl: 'https://grok.com/files',
+        toUrl: 'https://grok.com/files',
+        outcome: 'succeeded',
+        fallbackUsed: false,
+      }),
+    ]);
   });
 
   test('pressButton waits for a visible selector before clicking', async () => {

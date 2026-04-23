@@ -13969,3 +13969,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   Finishing the control plane requires routing navigation, reload, target
   reuse/open navigation, and in-page location mutation through one
   browser-service-owned mutation API with audit records.
+- 2026-04-23: Start browser control-plane completion at the substrate
+  primitives, not at provider adapters. In this repo, `navigateAndSettle(...)`
+  and `openOrReuseChromeTarget(...)` sit underneath many provider and legacy
+  browser flows. Adding package-owned mutation audit records there produces
+  immediate attribution across existing callers and reduces the migration to a
+  bounded follow-on instead of another repo-wide blind audit.

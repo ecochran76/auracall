@@ -21,6 +21,14 @@ What already exists:
 
 - profile-scoped browser operation acquisition in
   `packages/browser-service/src/service/operationDispatcher.ts`
+- first mutation-audit substrate now exists in
+  `packages/browser-service/src/service/mutationDispatcher.ts`
+  - `beginBrowserMutation(...)`
+  - `createInMemoryBrowserMutationLog(...)`
+  - current Slice 1 adoption:
+    - `navigateAndSettle(...)`
+    - `openOrReuseChromeTarget(...)`
+    - `connectToRemoteChrome(...)` pass-through support
 - managed-profile locking for login, setup, doctor, features, browser
   execution, and AuraCall-managed `browser-tools` flows
 - browser-service target resolution helpers:
@@ -33,8 +41,9 @@ What already exists:
 What remains unresolved:
 
 - browser mutation authority is still split across several layers
-- navigation and reload actions are not yet forced through one dispatcher-owned
-  path
+- navigation audit now exists for two core substrate primitives, but mutation
+  authority is not yet forced through one dispatcher-owned path
+- reload actions are not yet forced through one dispatcher-owned path
 - target reuse/open can still navigate reused tabs below the provider layer
 - provider and legacy flows can still issue direct CDP page mutations without a
   central audit trail
@@ -173,6 +182,19 @@ Allowed direct access should be limited to:
 - instrument mutation events before and after execution
 - preserve current behavior; this slice is primarily authority and evidence
 
+Status:
+
+- partial implementation landed on 2026-04-23
+- current scope completed:
+  - package-owned mutation audit primitive
+  - audit records for `navigateAndSettle(...)`
+  - audit records for `openOrReuseChromeTarget(...)`
+  - pass-through audit support from `connectToRemoteChrome(...)`
+- still remaining in Slice 1:
+  - central reload wrapper
+  - browser-service-owned accessor for recent mutation history
+  - first runtime/browser-service consumer of those mutation records
+
 ### Slice 2 | Provider adoption
 
 - route Gemini/ChatGPT/Grok provider navigation/reload/open-reuse flows through
@@ -214,7 +236,7 @@ Allowed direct access should be limited to:
 - targeted provider tests for Gemini/ChatGPT/Grok adoption
 - targeted live/browser dogfood only after the first two slices land
 - planning/doc validation:
-  - `pnpm run plans:audit -- --keep 52`
+  - `pnpm run plans:audit -- --keep 53`
   - `git diff --check`
 
 ## Definition Of Done

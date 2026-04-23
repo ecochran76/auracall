@@ -22,8 +22,14 @@
   - `openOrReuseChromeTarget(...)`: 9
   - `navigateAndSettle(...)`: 13
 - Next checkpoint:
-  - implement the first browser-service mutation-dispatcher slice and start
-    migrating provider/legacy mutation paths to that control plane
+  - first browser-service mutation-dispatcher slice is now in code:
+    - package-owned mutation audit primitive
+    - `navigateAndSettle(...)` mutation records
+    - `openOrReuseChromeTarget(...)` mutation records
+    - `connectToRemoteChrome(...)` audit pass-through
+  - next code checkpoint:
+    - add the central reload wrapper and first consumer/readback surface for
+      recent mutation records
 
 ## 2026-04-23 - Gemini generated-image download materialization
 

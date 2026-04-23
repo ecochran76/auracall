@@ -94,8 +94,21 @@ Current active extraction plan:
   - Returns structured phase data (`route`, `document-ready`, `ready`) so
     callers can throw provider-specific errors without reimplementing the
     settling loop.
+  - The current control-plane slice also lets callers attach `mutationAudit`
+    and `mutationSource` so browser-service can emit bounded mutation records
+    around the navigation attempt and any `location.assign(...)` fallback.
   - Prefer this over ad hoc `Page.navigate(...)` + `waitForDocumentReady(...)`
     + retry logic when the page can route asynchronously.
+
+- `service/mutationDispatcher.ts`
+  - Package-owned mutation audit substrate for the browser control-plane lane.
+  - `beginBrowserMutation(...)` emits bounded `start` / `complete` records for
+    navigation, reload, location-assign, and target-open-or-reuse actions.
+  - `createInMemoryBrowserMutationLog(...)` gives tests or future runtime
+    diagnostics a bounded in-memory history surface.
+  - This is distinct from `operationDispatcher`: `operationDispatcher`
+    serializes ownership, while `mutationDispatcher` records which browser
+    mutation AuraCall attempted under that ownership.
 
 - `waitForSelector(Runtime, selector, timeoutMs)`
   - Polls for a selector to appear; prefer this over ad-hoc sleep loops.

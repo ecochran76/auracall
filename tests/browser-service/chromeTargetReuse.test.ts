@@ -57,6 +57,7 @@ import {
   connectToRemoteChrome,
   openOrReuseChromeTarget,
 } from '../../packages/browser-service/src/chromeLifecycle.js';
+import { createInMemoryBrowserMutationLog } from '../../packages/browser-service/src/service/mutationDispatcher.js';
 
 describe('chrome target reuse policy', () => {
   afterEach(() => {
@@ -102,10 +103,13 @@ describe('chrome target reuse policy', () => {
     cdpMock.List.mockResolvedValue([
       { id: 'existing-project', type: 'page', url: 'https://grok.com/project/abc123' },
     ]);
+    const mutationLog = createInMemoryBrowserMutationLog();
 
     const result = await openOrReuseChromeTarget(45920, 'https://grok.com/project/def456', {
       host: '127.0.0.1',
       reusePolicy: 'same-origin',
+      mutationAudit: mutationLog.record,
+      mutationSource: 'test:target-reuse',
     });
 
     expect(result).toMatchObject({
@@ -115,6 +119,28 @@ describe('chrome target reuse policy', () => {
     });
     expect(client.Page.navigate).toHaveBeenCalledWith({ url: 'https://grok.com/project/def456' });
     expect(cdpMock.New).not.toHaveBeenCalled();
+    expect(mutationLog.list()).toEqual([
+      expect.objectContaining({
+        phase: 'start',
+        kind: 'target-open-or-reuse',
+        source: 'test:target-reuse',
+        requestedUrl: 'https://grok.com/project/def456',
+        fromUrl: 'https://grok.com/project/abc123',
+        reused: true,
+        reason: 'same-origin',
+        targetId: 'existing-project',
+      }),
+      expect.objectContaining({
+        phase: 'complete',
+        kind: 'target-open-or-reuse',
+        source: 'test:target-reuse',
+        toUrl: 'https://grok.com/project/def456',
+        outcome: 'succeeded',
+        reused: true,
+        reason: 'same-origin',
+        targetId: 'existing-project',
+      }),
+    ]);
   });
 
   it('reuses a compatible host family page when the service moved hosts', async () => {
@@ -142,10 +168,13 @@ describe('chrome target reuse policy', () => {
       { id: 'existing-project', type: 'page', url: 'https://grok.com/project/abc123' },
     ]);
     cdpMock.New.mockResolvedValue({ id: 'fresh-tab', type: 'page', url: 'https://grok.com/project/def456' });
+    const mutationLog = createInMemoryBrowserMutationLog();
 
     const result = await openOrReuseChromeTarget(45920, 'https://grok.com/project/def456', {
       host: '127.0.0.1',
       reusePolicy: 'new',
+      mutationAudit: mutationLog.record,
+      mutationSource: 'test:target-new',
     });
 
     expect(result).toMatchObject({
@@ -158,6 +187,27 @@ describe('chrome target reuse policy', () => {
       port: 45920,
       url: 'https://grok.com/project/def456',
     });
+    expect(mutationLog.list()).toEqual([
+      expect.objectContaining({
+        phase: 'start',
+        kind: 'target-open-or-reuse',
+        source: 'test:target-new',
+        requestedUrl: 'https://grok.com/project/def456',
+        reused: false,
+        reason: 'new',
+      }),
+      expect.objectContaining({
+        phase: 'complete',
+        kind: 'target-open-or-reuse',
+        source: 'test:target-new',
+        requestedUrl: 'https://grok.com/project/def456',
+        toUrl: 'https://grok.com/project/def456',
+        reused: false,
+        reason: 'new',
+        outcome: 'succeeded',
+        targetId: 'fresh-tab',
+      }),
+    ]);
   });
 
   it('connectToRemoteChrome reuses same-origin tabs instead of creating duplicates', async () => {
