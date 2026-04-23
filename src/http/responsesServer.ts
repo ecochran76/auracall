@@ -75,6 +75,7 @@ import {
 } from '../workbench/service.js';
 import { WorkbenchCapabilityReportRequestSchema } from '../workbench/schema.js';
 import { createBrowserWorkbenchCapabilityDiscovery } from '../workbench/geminiDiscovery.js';
+import { readAuraCallRunStatus } from '../runStatus.js';
 
 export interface ResponsesHttpServerOptions {
   host?: string;
@@ -188,6 +189,7 @@ interface HttpStatusResponse {
     mediaGenerationsCreate: string;
     mediaGenerationsGetTemplate: string;
     mediaGenerationsStatusTemplate: string;
+    runStatusTemplate: string;
     workbenchCapabilitiesList: string;
   };
   compatibility: {
@@ -639,6 +641,25 @@ export async function createResponsesHttpServer(
           source: parsedBody.source ?? 'api',
         });
         sendJson(res, response.status === 'failed' ? 502 : 200, response);
+        return;
+      }
+
+      const runStatusId = matchRunStatusRoute(url.pathname);
+      if (req.method === 'GET' && runStatusId) {
+        const response = await readAuraCallRunStatus(runStatusId, {
+          responsesService,
+          mediaGenerationService,
+        });
+        if (!response) {
+          sendJson(res, 404, {
+            error: {
+              message: `Run ${runStatusId} was not found`,
+              type: 'not_found_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        sendJson(res, 200, response);
         return;
       }
 
@@ -1101,6 +1122,7 @@ function createHttpStatusResponse(input: {
       mediaGenerationsCreate: '/v1/media-generations',
       mediaGenerationsGetTemplate: '/v1/media-generations/{media_generation_id}',
       mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status',
+      runStatusTemplate: '/v1/runs/{run_id}/status',
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}',
     },
@@ -1570,6 +1592,11 @@ function matchMediaGenerationRoute(pathname: string): string | null {
 
 function matchMediaGenerationStatusRoute(pathname: string): string | null {
   const match = /^\/v1\/media-generations\/([^/]+)\/status$/.exec(pathname);
+  return match?.[1] ?? null;
+}
+
+function matchRunStatusRoute(pathname: string): string | null {
+  const match = /^\/v1\/runs\/([^/]+)\/status$/.exec(pathname);
   return match?.[1] ?? null;
 }
 

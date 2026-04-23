@@ -18,6 +18,15 @@
 - Behavior: creates and executes one bounded team run through the existing `TaskRunSpec -> TeamRun -> runtimeRun` path. The structured result is `object = "team_run"` with `taskRunSpec` and deterministic execution ids/status.
 - Provenance: compact MCP-created runs are stamped with `trigger = "mcp"` and `requestedBy.kind = "mcp"`; prebuilt `taskRunSpec` inputs preserve their validated provenance.
 
+### `run_status`
+- Inputs: `id` for a response/runtime run or media generation.
+- Behavior: returns `object = "auracall_run_status"` with a compact status
+  envelope across normal response chats, team-runtime chats, and media
+  generations. It includes current status, latest event, step summaries when
+  available, artifact count, artifact cache path/URI, materialization method,
+  provider/runtime metadata, and failure details.
+- Use this as the default operator polling tool when the run type may vary.
+
 ### `media_generation`
 - Inputs: `provider: "gemini" | "grok"`, `mediaType: "image" | "music" | "video"`, `prompt`, and optional `model`, `transport`, `count`, `size`, `aspectRatio`, `outputDir`, and metadata.
 - Behavior: creates one request through Aura-Call's shared media-generation contract and returns `object = "media_generation"` with durable artifact metadata. The tool surface is live now; provider-backed Gemini/Grok execution remains gated until the media adapters are wired.

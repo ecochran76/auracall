@@ -13840,3 +13840,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   media-generation record through API or MCP and receive a compact status
   summary with latest timeline event, artifact cache path, and materialization
   method instead of scraping raw JSON or re-opening the browser.
+- 2026-04-23: Run status should be generic across chats and media, not scoped to
+  one provider feature. In this repo, operators need one API/MCP polling surface
+  for response chats, team-runtime chats, and media jobs. Keep media-specific
+  readback as a helper, but make `GET /v1/runs/{run_id}/status` and MCP
+  `run_status` the route-neutral status contract.

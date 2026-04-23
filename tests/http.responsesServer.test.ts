@@ -483,6 +483,34 @@ describe('http responses adapter', () => {
         status: 'completed',
         model: 'gemini-3-pro',
       });
+
+      const runStatusResponse = await fetch(`http://127.0.0.1:${server.port}/v1/runs/resp_create_1/status`);
+      expect(runStatusResponse.status).toBe(200);
+      await expect(runStatusResponse.json()).resolves.toMatchObject({
+        id: 'resp_create_1',
+        object: 'auracall_run_status',
+        kind: 'response',
+        status: 'completed',
+        completedAt: '2026-04-08T12:00:00.000Z',
+        stepCount: 1,
+        steps: [
+          {
+            stepId: 'resp_create_1:step:1',
+            status: 'succeeded',
+            service: 'gemini',
+          },
+        ],
+        artifactCount: 0,
+        metadata: {
+          runId: 'resp_create_1',
+          runtimeProfile: 'default',
+          service: 'gemini',
+          model: 'gemini-3-pro',
+        },
+        lastEvent: {
+          type: 'step-succeeded',
+        },
+      });
     } finally {
       await server.close();
     }

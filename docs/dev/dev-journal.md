@@ -19980,3 +19980,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   without re-invoking Gemini/Grok or inspecting raw record JSON.
 - Validation:
   - `pnpm vitest run tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mediaGeneration.test.ts`
+
+## 2026-04-23 - Generic run-status readback
+
+- Promoted status readback from media-specific to run-scoped:
+  - API: `GET /v1/runs/{run_id}/status`
+  - MCP: `run_status`
+- The generic status reader first checks response/team-runtime readback and then
+  media-generation records, returning one compact `auracall_run_status`
+  envelope with status, latest event, step summaries when available, artifact
+  count, artifact cache details, runtime/provider metadata, and failure
+  details.
+- This keeps `media_generation_status` available for media-specific callers,
+  but gives operators one default polling surface for normal chats, team chats,
+  and media jobs.
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "creates and retrieves persisted bounded responses" tests/http.mediaGeneration.test.ts tests/mcp.runStatus.test.ts`
+  - `pnpm vitest run tests/http.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/mcp.mediaGeneration.test.ts`
+  - `pnpm run check`

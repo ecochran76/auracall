@@ -115,6 +115,28 @@ describe('http media generation adapter', () => {
           source: 'api',
         },
       });
+
+      const runStatusResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/runs/${created.id}/status`,
+      );
+      expect(runStatusResponse.status).toBe(200);
+      await expect(runStatusResponse.json()).resolves.toMatchObject({
+        id: created.id,
+        object: 'auracall_run_status',
+        kind: 'media_generation',
+        status: 'succeeded',
+        artifactCount: 1,
+        artifacts: [
+          {
+            id: 'artifact_http_1',
+            fileName: 'asphalt-agent.png',
+            path: expect.stringContaining('asphalt-agent.png'),
+          },
+        ],
+        lastEvent: {
+          event: 'completed',
+        },
+      });
     } finally {
       await server.close();
     }
@@ -130,12 +152,17 @@ describe('http media generation adapter', () => {
       const response = await fetch(`http://127.0.0.1:${server.port}/status`);
       const status = (await response.json()) as Record<
         string,
-        { mediaGenerationsCreate?: string; mediaGenerationsStatusTemplate?: string }
+        {
+          mediaGenerationsCreate?: string;
+          mediaGenerationsStatusTemplate?: string;
+          runStatusTemplate?: string;
+        }
       >;
       expect(status.routes.mediaGenerationsCreate).toBe('/v1/media-generations');
       expect(status.routes.mediaGenerationsStatusTemplate).toBe(
         '/v1/media-generations/{media_generation_id}/status',
       );
+      expect(status.routes.runStatusTemplate).toBe('/v1/runs/{run_id}/status');
     } finally {
       await server.close();
     }

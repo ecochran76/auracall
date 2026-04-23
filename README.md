@@ -139,6 +139,7 @@ Terminology note:
   - `POST /v1/media-generations`
   - `GET /v1/media-generations/{media_generation_id}`
   - `GET /v1/media-generations/{media_generation_id}/status`
+  - `GET /v1/runs/{run_id}/status`
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs
@@ -153,7 +154,9 @@ Terminology note:
     metadata. The route persists request/readback records with a `timeline[]`
     showing processing milestones such as capability discovery, prompt
     submission, artifact polling, materialization, and terminal completion.
-    Operators can poll
+    Operators can poll the generic
+    `GET /v1/runs/{run_id}/status` surface for response/team chats and media
+    jobs. Media jobs also retain the narrower
     `GET /v1/media-generations/{media_generation_id}/status` for a compact
     status summary with the latest timeline event, artifact cache path, and
     materialization method.
@@ -670,8 +673,9 @@ Terminology note:
 - Run the stdio server via `auracall-mcp`.
 - Configure clients via [steipete/mcporter](https://github.com/steipete/mcporter) or `.mcp.json`; see [docs/mcp.md](docs/mcp.md) for connection examples.
 - MCP tools include `consult`, `sessions`, bounded team execution through
-  `team_run`, the shared media contract through `media_generation`, media run
-  status readback through `media_generation_status`, and
+  `team_run`, generic run status through `run_status`, the shared media
+  contract through `media_generation`, media run status readback through
+  `media_generation_status`, and
   routine provider workbench discovery through `workbench_capabilities`.
 ```bash
 npx -y auracall auracall-mcp

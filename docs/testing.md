@@ -195,6 +195,8 @@
     - `curl -s http://127.0.0.1:8080/v1/responses -H 'Content-Type: application/json' -d '{"model":"gpt-5.2","input":"Reply exactly with: local api smoke"}'`
   - read it back:
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/responses/<response_id>`
+    - for compact operator status, run
+      `curl http://127.0.0.1:8080/v1/runs/<response_id>/status`
   - create a browser-transport Gemini image request only after capability
     discovery reports `gemini.media.create_image` as `available`; the local API
     then selects `Create image`, records media-generation `timeline[]`
@@ -221,6 +223,8 @@
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/media-generations/<media_generation_id>`
     - for compact operator status, run
       `curl http://127.0.0.1:8080/v1/media-generations/<media_generation_id>/status`
+    - for the generic run-status surface, run
+      `curl http://127.0.0.1:8080/v1/runs/<media_generation_id>/status`
     - inspect `timeline[]` for `running_persisted`, `executor_started`,
       provider-specific progress, and terminal `completed|failed` evidence
   - create bounded team run:
