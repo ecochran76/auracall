@@ -15,11 +15,13 @@ import {
 } from './geminiEvidence.js';
 import type { BrowserToolsUiListResult } from '../../../packages/browser-service/src/browserTools.js';
 import {
+  armDownloadCapture,
   navigateAndSettle,
   pressButton,
   setInputValue,
   submitInlineRename,
   waitForPredicate,
+  waitForDownloadCapture,
 } from '../service/ui.js';
 import type { ChromeClient } from '../types.js';
 import { providerNavigationAllowed } from './navigationPolicy.js';
@@ -2615,6 +2617,162 @@ function inferGeminiArtifactMimeType(name: string | null | undefined): string | 
   return undefined;
 }
 
+async function configureGeminiDownloadBehaviorWithClient(
+  client: ChromeClient,
+  downloadPath: string,
+): Promise<void> {
+  const cdpClient = client as unknown as {
+    send?: (method: string, params?: Record<string, unknown>) => Promise<unknown>;
+  };
+  if (typeof cdpClient.send !== 'function') {
+    return;
+  }
+  try {
+    await cdpClient.send('Browser.setDownloadBehavior', {
+      behavior: 'allow',
+      downloadPath,
+      eventsEnabled: true,
+    });
+    return;
+  } catch {
+    // Fall back to the older Page domain when Browser.setDownloadBehavior is unavailable.
+  }
+  try {
+    await cdpClient.send('Page.setDownloadBehavior', {
+      behavior: 'allow',
+      downloadPath,
+    });
+  } catch {
+    // Leave downloads unconfigured if the target does not support either method.
+  }
+}
+
+async function waitForGeminiDownloadedFile(
+  destDir: string,
+  timeoutMs = 20_000,
+): Promise<string | null> {
+  const deadline = Date.now() + timeoutMs;
+  let lastPath: string | null = null;
+  let lastSize = -1;
+  let stableCount = 0;
+  while (Date.now() < deadline) {
+    const entries = await fs.readdir(destDir, { withFileTypes: true }).catch(() => []);
+    const fileNames = entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
+    const completed = fileNames.filter((name) => !name.endsWith('.crdownload') && !name.endsWith('.tmp'));
+    if (completed.length > 0) {
+      const candidatePath = path.join(destDir, completed.sort()[0]!);
+      const stat = await fs.stat(candidatePath).catch(() => null);
+      if (stat) {
+        if (candidatePath === lastPath && stat.size === lastSize) {
+          stableCount += 1;
+        } else {
+          lastPath = candidatePath;
+          lastSize = stat.size;
+          stableCount = 0;
+        }
+        if (stableCount >= 1) {
+          return candidatePath;
+        }
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return null;
+}
+
+const GEMINI_GENERATED_IMAGE_DOWNLOAD_BUTTON_ATTR = 'data-auracall-gemini-generated-image-download';
+const GEMINI_GENERATED_IMAGE_DOWNLOAD_CAPTURE_STATE_KEY = '__auracallGeminiGeneratedImageDownloadCapture';
+
+export function geminiGeneratedImageDownloadButtonTagExpression(
+  artifact: Pick<ConversationArtifact, 'id' | 'uri' | 'messageIndex'>,
+): string {
+  return `(() => {
+    const attr = ${JSON.stringify(GEMINI_GENERATED_IMAGE_DOWNLOAD_BUTTON_ATTR)};
+    const normalize = (value) => String(value || '').trim();
+    const visible = (node) => {
+      if (!(node instanceof Element)) return false;
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+    document.querySelectorAll('button[' + attr + '="true"]').forEach((node) => node.removeAttribute(attr));
+    const expectedUri = normalize(${JSON.stringify(typeof artifact.uri === 'string' ? artifact.uri : '')});
+    const expectedMessageIndex = ${JSON.stringify(
+      typeof artifact.messageIndex === 'number' ? artifact.messageIndex : null,
+    )};
+    const parseArtifactOrdinal = (value) => {
+      const match = String(value || '').match(/^(?:gemini-artifact:[^:]+:(?:fallback:)?\\d+:(\\d+))$/);
+      if (!match) return null;
+      const parsed = Number.parseInt(match[1] || '', 10);
+      return Number.isFinite(parsed) ? parsed : null;
+    };
+    const expectedArtifactOrdinal = parseArtifactOrdinal(${JSON.stringify(artifact.id)});
+    const turns = Array.from(document.querySelectorAll('user-query, model-response'))
+      .filter((node) => node instanceof HTMLElement && visible(node));
+    turns.sort((left, right) => {
+      const position = left.compareDocumentPosition(right);
+      if (position & Node.DOCUMENT_POSITION_PRECEDING) return 1;
+      if (position & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
+      return 0;
+    });
+    const assistantTurns = [];
+    let logicalMessageIndex = 0;
+    for (const node of turns) {
+      if (!(node instanceof HTMLElement)) continue;
+      if (node.matches('user-query')) {
+        logicalMessageIndex += 1;
+        continue;
+      }
+      assistantTurns.push({ node, logicalMessageIndex });
+      logicalMessageIndex += 1;
+    }
+    const taggedButton = (button) => {
+      if (!(button instanceof HTMLElement) || !visible(button)) return false;
+      button.setAttribute(attr, 'true');
+      return true;
+    };
+    if (expectedUri) {
+      for (const entry of assistantTurns) {
+        const matchingImage = Array.from(entry.node.querySelectorAll('img[src]'))
+          .find((candidate) =>
+            candidate instanceof HTMLImageElement &&
+            visible(candidate) &&
+            normalize(candidate.currentSrc || candidate.src || candidate.getAttribute('src') || '') === expectedUri
+          );
+        if (!(matchingImage instanceof HTMLImageElement)) continue;
+        const container =
+          matchingImage.closest('image-renderer, image-response, .image-container, .image-button') ||
+          matchingImage.parentElement ||
+          entry.node;
+        const directButton = container instanceof Element
+          ? container.querySelector('button[data-test-id="download-generated-image-button"]')
+          : null;
+        if (taggedButton(directButton)) {
+          return { ok: true, strategy: 'uri-match' };
+        }
+      }
+    }
+    const ordinalCandidates = assistantTurns.filter((entry) =>
+      expectedMessageIndex === null || entry.logicalMessageIndex === expectedMessageIndex
+    );
+    for (const entry of ordinalCandidates) {
+      const buttons = Array.from(entry.node.querySelectorAll('button[data-test-id="download-generated-image-button"]'))
+        .filter((button) => button instanceof HTMLElement && visible(button));
+      if (buttons.length === 0) continue;
+      const targetIndex = expectedArtifactOrdinal !== null && expectedArtifactOrdinal < buttons.length ? expectedArtifactOrdinal : 0;
+      const target = buttons[targetIndex];
+      if (taggedButton(target)) {
+        return { ok: true, strategy: 'ordinal-fallback', buttonCount: buttons.length, targetIndex };
+      }
+    }
+    const fallback = Array.from(document.querySelectorAll('button[data-test-id="download-generated-image-button"]'))
+      .find((button) => button instanceof HTMLElement && visible(button));
+    if (taggedButton(fallback)) {
+      return { ok: true, strategy: 'global-fallback' };
+    }
+    return { ok: false };
+  })()`;
+}
+
 async function fetchGeminiBinaryWithClient(
   client: ChromeClient,
   url: string,
@@ -3360,6 +3518,96 @@ async function materializeGeminiConversationArtifactWithClient(
   if (resolvedArtifact.kind === 'generated' || resolvedArtifact.kind === 'image') {
     const remoteUrl = typeof resolvedArtifact.uri === 'string' ? resolvedArtifact.uri.trim() : '';
     if (!remoteUrl) return null;
+    if (resolvedArtifact.kind === 'image' && resolvedArtifact.metadata && resolvedArtifact.metadata.hasDownloadButton) {
+      await fs.mkdir(destDir, { recursive: true });
+      await configureGeminiDownloadBehaviorWithClient(client, destDir);
+      const tagged = await client.Runtime.evaluate({
+        expression: geminiGeneratedImageDownloadButtonTagExpression(resolvedArtifact),
+        returnByValue: true,
+      });
+      const taggedValue = isRecord(tagged.result?.value) ? tagged.result.value : null;
+      if (taggedValue?.ok === true) {
+        await armDownloadCapture(client.Runtime, { stateKey: GEMINI_GENERATED_IMAGE_DOWNLOAD_CAPTURE_STATE_KEY });
+        const clickResult = await client.Runtime.evaluate({
+          expression: `(() => {
+            const button = document.querySelector(${JSON.stringify(
+              `button[${GEMINI_GENERATED_IMAGE_DOWNLOAD_BUTTON_ATTR}="true"]`,
+            )});
+            if (!(button instanceof HTMLElement)) {
+              return { ok: false, reason: 'Gemini generated image download button missing before click' };
+            }
+            button.click();
+            return { ok: true };
+          })()`,
+          returnByValue: true,
+        });
+        const clicked = isRecord(clickResult.result?.value) ? clickResult.result.value : null;
+        if (clicked?.ok === true) {
+          const capture = await waitForDownloadCapture(client.Runtime, {
+            stateKey: GEMINI_GENERATED_IMAGE_DOWNLOAD_CAPTURE_STATE_KEY,
+            timeoutMs: 1_500,
+            pollMs: 100,
+          });
+          const capturedHref = normalizeWhitespace(capture.href ?? '');
+          const capturedName = normalizeWhitespace(capture.downloadName ?? '');
+          if (capturedHref) {
+            try {
+              const { buffer, contentType, contentDisposition } = await fetchGeminiBinaryWithClient(client, capturedHref);
+              const fallbackBaseName =
+                extractFilenameFromContentDisposition(contentDisposition) ||
+                extractGeminiArtifactFileName(capturedHref) ||
+                capturedName ||
+                resolvedArtifact.title;
+              const fileName = ensureGeminiArtifactExtension(
+                fallbackBaseName,
+                geminiContentTypeToExtension(contentType) || '.png',
+              );
+              const destPath = path.join(destDir, fileName);
+              await fs.writeFile(destPath, buffer);
+              return {
+                id: resolvedArtifact.id,
+                name: fileName,
+                provider: 'gemini',
+                source: 'conversation',
+                size: buffer.byteLength,
+                mimeType: contentType ?? inferGeminiArtifactMimeType(fileName),
+                remoteUrl: capturedHref,
+                localPath: destPath,
+                metadata: {
+                  artifactKind: resolvedArtifact.kind,
+                  artifactTitle: resolvedArtifact.title,
+                  materialization: 'download-button-anchor-fetch',
+                  ...(resolvedArtifact.metadata ?? {}),
+                },
+              };
+            } catch {
+              // Fall through to filesystem download polling and existing fetch/screenshot fallbacks.
+            }
+          }
+          const downloadedPath = await waitForGeminiDownloadedFile(destDir, 10_000);
+          if (downloadedPath) {
+            const stat = await fs.stat(downloadedPath);
+            const fileName = path.basename(downloadedPath);
+            return {
+              id: resolvedArtifact.id,
+              name: fileName,
+              provider: 'gemini',
+              source: 'conversation',
+              size: stat.size,
+              mimeType: inferGeminiArtifactMimeType(fileName),
+              remoteUrl,
+              localPath: downloadedPath,
+              metadata: {
+                artifactKind: resolvedArtifact.kind,
+                artifactTitle: resolvedArtifact.title,
+                materialization: 'download-button',
+                ...(resolvedArtifact.metadata ?? {}),
+              },
+            };
+          }
+        }
+      }
+    }
     let fetched: Awaited<ReturnType<typeof fetchGeminiBinaryWithClient>> | null = null;
     try {
       fetched = await fetchGeminiBinaryWithClient(client, remoteUrl);

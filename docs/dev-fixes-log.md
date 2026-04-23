@@ -13955,3 +13955,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   poll can attach to the Gemini home page before the media executor has a
   submitted `tabTargetId`; that proves browser reachability, not active media
   state. Return `unavailable` until the media run records the submitted target.
+- 2026-04-23: Treat Gemini's generated-image download button as a real
+  materialization surface, not passive evidence only. In this repo,
+  `button[data-test-id="download-generated-image-button"]` may be the only
+  stable path to the full-size image even after visible-image detection
+  succeeds. Generated-image materialization should click that provider-owned
+  control on the active submitted tab, prefer captured href or download harvest,
+  and keep `img.src` fetch plus screenshot capture as bounded fallbacks.

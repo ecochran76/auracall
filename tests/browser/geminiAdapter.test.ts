@@ -4,6 +4,7 @@ import {
   canReuseGeminiResolvedTabTarget,
   createGeminiAdapter,
   deriveGeminiFeatureProbeFromUiList,
+  geminiGeneratedImageDownloadButtonTagExpression,
   inferGeminiGeneratedArtifactMediaType,
   geminiConversationSurfaceReadyExpression,
   extractGeminiProjectIdFromUrl,
@@ -300,6 +301,18 @@ describe('geminiAdapter id helpers', () => {
     expect(expression).toContain('button[aria-label="Main menu"]');
     expect(expression).toContain('conversation with gemini');
     expect(expression).toContain('what can we get done');
+  });
+
+  test('tags Gemini generated-image download buttons by artifact uri before ordinal fallback', () => {
+    const expression = geminiGeneratedImageDownloadButtonTagExpression({
+      id: 'gemini-artifact:514daf6556ba1dd5:1:0',
+      uri: 'https://lh3.googleusercontent.com/generated-image',
+      messageIndex: 1,
+    });
+    expect(expression).toContain('button[data-test-id="download-generated-image-button"]');
+    expect(expression).toContain('https://lh3.googleusercontent.com/generated-image');
+    expect(expression).toContain("strategy: 'uri-match'");
+    expect(expression).toContain("strategy: 'ordinal-fallback'");
   });
 
   test('exposes direct conversation rename support on the Gemini provider surface', () => {

@@ -1,3 +1,21 @@
+## 2026-04-23 - Gemini generated-image download materialization
+
+- Current focus:
+  - use Gemini's generated-image download button during artifact
+    materialization instead of treating it as passive metadata only
+- Progress:
+  - added a Gemini provider-owned download-button path for generated images
+  - materialization now tags `button[data-test-id="download-generated-image-button"]`
+    on the active submitted tab, arms download capture, clicks the button, then
+    prefers captured download href or filesystem download harvest before
+    falling back to existing `img.src` fetch and visible-image screenshot
+    capture
+  - added narrow unit coverage for the button-tagging expression
+- Remaining validation:
+  - run targeted Gemini adapter tests and typecheck
+  - dogfood one bounded Gemini async image run to confirm the cache now
+    receives the downloaded full-size image
+
 ## 2026-04-21 - Scheduler mutation design checkpoint
 
 - Opened and closed
