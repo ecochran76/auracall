@@ -99,3 +99,9 @@ records `tabTargetId`, so status diagnostics need to work there too.
   JSON `"wait": false`, and MCP `media_generation` `wait: false` now return a
   running media generation id immediately while the existing shared executor
   path continues in the background.
+- Async dogfood run `medgen_00965e4e5ee24e9abaace5bb1ecdc989` proved status
+  polling can observe the running media id and return honest pre-submission
+  unavailable diagnostics, but the Gemini executor stalled after
+  `executor_started` and before `prompt_submitted`. Add a pre-submission stall
+  guard before expecting active `browser-state` diagnostics to be captured
+  reliably during every Gemini media run.

@@ -20202,3 +20202,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.schema.test.ts`
   - `pnpm run check`
+
+## 2026-04-23 - Async Gemini media status dogfood
+
+- Ran one guarded async Gemini image request through
+  `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api serve --port 8105 --no-recover-runs-on-start`.
+- `POST /v1/media-generations?wait=false` returned `202` with running id
+  `medgen_00965e4e5ee24e9abaace5bb1ecdc989`; metadata correctly persisted
+  `runtimeProfile: "auracall-gemini-pro"`.
+- Repeated `GET /v1/runs/medgen_00965e4e5ee24e9abaace5bb1ecdc989/status?diagnostics=browser-state`
+  polls worked while the job was running and returned honest unavailable
+  diagnostics before prompt submission:
+  `media generation medgen_00965e4e5ee24e9abaace5bb1ecdc989 has no submitted browser tab target yet`.
+- The job advanced through `capability_discovered` and `executor_started`, but
+  did not record `prompt_submitted` during the bounded polling window. The
+  local server was stopped rather than adding browser churn.
+- Finding: async polling is now functional end to end, but the Gemini browser
+  media executor still needs a pre-submission stall guard or diagnostic event
+  for cases where it gets stuck after `executor_started` and before
+  `prompt_submitted`.

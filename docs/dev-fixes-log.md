@@ -17,6 +17,13 @@
   the id; capability discovery, prompt submission, artifact polling, timeline
   persistence, failure handling, and cache materialization must stay shared.
 
+- 2026-04-23: Add a pre-submission stall guard for Gemini browser media
+  execution. Async dogfood proved callers can poll a running media id, but a
+  live run stalled after `executor_started` and before `prompt_submitted`,
+  leaving no submitted `tabTargetId` for browser diagnostics. The executor
+  should persist a bounded diagnostic/failure event when prompt submission does
+  not complete within the expected window.
+
 - 2026-04-21: Public prebuilt `taskRunSpec` input should mean the live
   flattened schema only. In this repo, HTTP `POST /v1/team-runs` and MCP
   `team_run` may now accept `{ taskRunSpec }`, but must validate with
