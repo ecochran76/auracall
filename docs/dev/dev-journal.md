@@ -19665,3 +19665,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation target:
   - `pnpm run plans:audit -- --keep 50`
   - `git diff --check`
+
+## 2026-04-23 - Workbench capability discovery/reporting
+
+- Added shared workbench capability schema, static catalog, and report service.
+- Added local API route:
+  - `GET /v1/workbench-capabilities`
+- Added MCP tool:
+  - `workbench_capabilities`
+- Static catalog entries intentionally report conservative availability:
+  - `unknown` for observed capabilities that need account/runtime confirmation
+  - `account_gated` for apps/connectors and skills that may require plan or
+    user consent
+- Validation target:
+  - `pnpm vitest run tests/workbenchCapabilities.test.ts tests/http.workbenchCapabilities.test.ts tests/mcp.workbenchCapabilities.test.ts tests/mcp.schema.test.ts`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 50`
+  - `git diff --check`

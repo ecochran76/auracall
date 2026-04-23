@@ -13758,3 +13758,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   provider-neutral workbench capability discovery/availability model first,
   then layer invocation on top only after readback and gating semantics are
   explicit.
+- 2026-04-23: Make workbench capability reporting cheap and routine. In this
+  repo, callers should be able to ask the local API or MCP server what ChatGPT,
+  Gemini, or Grok capabilities are known or discovered for the selected
+  provider/runtime profile before deciding what to invoke. The first report
+  surface should be read-only and conservative: static catalog entries use
+  `unknown` or `account_gated` availability until live discovery proves the
+  current account state.

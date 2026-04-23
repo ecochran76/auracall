@@ -33,10 +33,14 @@ a stable first-class adapter.
   - which capabilities require extra provider state, credentials, or
     human-mediated setup
   - whether a capability is stable, experimental, gated, or currently blocked
+- First implementation slice now provides a static/fake-discovery report path:
+  - local API: `GET /v1/workbench-capabilities`
+  - MCP tool: `workbench_capabilities`
+  - shared schema/service/catalog with conservative availability projection
 
 ## Target Contract
 
-- Add one provider-neutral `workbench capability` model with:
+- [x] Add one provider-neutral `workbench capability` model with:
   - stable Aura-Call capability id
   - provider id and observed provider label(s)
   - category: `research`, `media`, `canvas`, `connector`, `skill`, `app`,
@@ -49,8 +53,8 @@ a stable first-class adapter.
   - stability: `stable`, `experimental`, `observed`, or `deprecated`
   - required inputs, output artifact expectations, and safety constraints
 - Add a capability-discovery path before broad invocation:
-  - local API read/list surface
-  - MCP read/list tool or resource
+  - [x] local API read/list surface
+  - [x] MCP read/list tool or resource
   - CLI inspection command
   - browser-service discovery adapter for provider-visible tools
 - Add a capability-invocation path only after discovery/readback is stable:
@@ -78,9 +82,9 @@ a stable first-class adapter.
 
 ## Acceptance Criteria
 
-- Local API can list observed/configured workbench capabilities for at least
+- [x] Local API can list observed/configured workbench capabilities for at least
   ChatGPT and Gemini with explicit availability/status fields.
-- MCP exposes the same capability list in a bounded schema.
+- [x] MCP exposes the same capability list in a bounded schema.
 - CLI can inspect one provider/runtime profile and report visible workbench
   capabilities without invoking them.
 - Gemini media generation can map `image|music|video` requests to discovered
@@ -91,13 +95,13 @@ a stable first-class adapter.
   completion, and artifact/readback behavior.
 - ChatGPT apps/connectors and business-plan skills are represented as
   account-gated capabilities when visible, not hard-coded universal tools.
-- Tests cover schema normalization, provider-label aliasing, availability
+- [x] Tests cover schema normalization, provider-label aliasing, availability
   states, and one fake-provider API/MCP list path.
 
 ## Validation Plan
 
-- Unit tests for capability schema, normalization, and availability projection.
-- Fake-provider API/MCP tests for capability listing.
+- [x] Unit tests for capability schema, normalization, and availability projection.
+- [x] Fake-provider API/MCP tests for capability listing.
 - Browser-provider tests for Gemini tool drawer labels and ChatGPT composer
   add-on/app/skill labels using captured DOM fixtures or bounded selectors.
 - Live discovery smoke only on signed-in managed browser profiles and never

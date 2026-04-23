@@ -1441,3 +1441,23 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification target:
   - `pnpm run plans:audit -- --keep 50`
   - `git diff --check`
+
+## Turn 58 | 2026-04-23
+
+- Continued implementation plan:
+  `docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md`
+- Goal: make service discovery/reporting a regular API/MCP workflow for
+  volatile provider workbench tools.
+- Change:
+  - added shared workbench capability types/schema/catalog/service
+  - added local API route `GET /v1/workbench-capabilities`
+  - added MCP tool `workbench_capabilities`
+  - static catalog includes Gemini media/research and ChatGPT search/canvas,
+    Deep Research, apps, and skills with conservative availability
+  - live browser/provider discovery remains a later slice
+- Verification target:
+  - `pnpm vitest run tests/workbenchCapabilities.test.ts tests/http.workbenchCapabilities.test.ts tests/mcp.workbenchCapabilities.test.ts tests/mcp.schema.test.ts`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 50`
+  - `git diff --check`

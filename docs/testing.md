@@ -195,6 +195,12 @@
     - `curl -s http://127.0.0.1:8080/v1/responses -H 'Content-Type: application/json' -d '{"model":"gpt-5.2","input":"Reply exactly with: local api smoke"}'`
   - read it back:
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/responses/<response_id>`
+  - list workbench capabilities for service discovery:
+    - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=gemini"`
+    - use `category=research|media|canvas|connector|skill|app|search|file|other`
+      to narrow the report
+    - static entries are intentionally conservative until live browser/provider
+      discovery proves current account availability
   - create/read media-generation contract record:
     - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"gemini","mediaType":"image","prompt":"Generate an image of an asphalt secret agent","aspectRatio":"1:1"}'`
     - the same contract accepts `mediaType = music|video`; Gemini music may

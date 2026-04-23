@@ -129,6 +129,7 @@ Terminology note:
   - `GET /v1/team-runs/inspect`
   - `GET /v1/runtime-runs/inspect`
   - `GET /v1/models`
+  - `GET /v1/workbench-capabilities`
   - `POST /v1/responses`
   - `GET /v1/responses/{response_id}`
   - `POST /v1/media-generations`
@@ -147,6 +148,11 @@ Terminology note:
     metadata. The route persists request/readback records now;
     provider-backed Gemini/Grok media execution is still gated until the
     adapters are wired.
+  - `GET /v1/workbench-capabilities` reports currently known or discovered
+    provider workbench capabilities for regular service discovery. Filter with
+    `provider=chatgpt|gemini|grok`, `category=research|media|canvas|connector|skill|app|search|file|other`,
+    and `runtimeProfile=<name>`. Static entries report conservative
+    `unknown` or `account_gated` availability until live discovery is wired.
   - `POST /v1/team-runs` creates one bounded task-backed team execution:
     - request fields are either:
       - compact fields: `teamId`, `objective`, and optional `title`,
@@ -647,7 +653,8 @@ Terminology note:
 - Run the stdio server via `auracall-mcp`.
 - Configure clients via [steipete/mcporter](https://github.com/steipete/mcporter) or `.mcp.json`; see [docs/mcp.md](docs/mcp.md) for connection examples.
 - MCP tools include `consult`, `sessions`, bounded team execution through
-  `team_run`, and the shared media contract through `media_generation`.
+  `team_run`, the shared media contract through `media_generation`, and
+  routine provider workbench discovery through `workbench_capabilities`.
 ```bash
 npx -y auracall auracall-mcp
 ```
