@@ -13860,3 +13860,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   same answer to "is Gemini generating?" Reuse the same selector expression and
   coercion for lottie/avatar spinner, generated media, stale stop controls, and
   `isGenerating` instead of copying those rules across workflows.
+- 2026-04-23: Keep Grok visible-answer and provider-error evidence in one
+  provider-owned helper. In this repo, response waiting, service-state probing,
+  and future Grok media/Imagine work should share the same rate-limit
+  classification and assistant-visible signal instead of duplicating toast
+  regexes or markdown/text checks.

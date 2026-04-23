@@ -20033,3 +20033,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/browser/liveServiceState.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts`
   - `pnpm run check`
+
+## 2026-04-23 - Grok evidence helper
+
+- Extracted Grok assistant visibility and rate-limit toast classification into
+  a provider-owned helper shared by browser response waiting and live
+  service-state probing.
+- The live probe now maps Grok evidence into the shared LLM service-state
+  envelope instead of owning toast regex and visible-answer checks inline.
+- Validation:
+  - `pnpm vitest run tests/browser/grokEvidence.test.ts tests/browser/liveServiceState.test.ts tests/browser/grokActions.test.ts`
+  - `pnpm run check`

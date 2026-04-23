@@ -185,3 +185,6 @@ Current evidence:
   provider-owned helper shared by service-state probing and media prompt
   readback, so spinner/media/stop-control semantics do not drift between text
   and media workflows.
+- 2026-04-23: Grok assistant/rate-limit evidence now lives in a provider-owned
+  helper shared by response waiting and service-state probing, keeping
+  visible-answer and provider-error semantics ready for future Grok media work.

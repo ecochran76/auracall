@@ -13,6 +13,10 @@ import {
   GROK_MODEL_LABEL_NORMALIZER,
   normalizeGrokModelLabel,
 } from '../providers/grokModelMenu.js';
+import {
+  isGrokRateLimitToastText,
+  type GrokAssistantSnapshot,
+} from '../providers/grokEvidence.js';
 
 const GROK_SELECTORS = GROK_PROVIDER.selectors;
 const GROK_INPUT_SELECTORS = buildSelectorArrayLiteral(GROK_SELECTORS.input);
@@ -553,12 +557,8 @@ export function buildGrokAssistantSnapshotExpressionForTest(): string {
 
 export async function readGrokAssistantSnapshotForRuntime(
   Runtime: ChromeClient['Runtime'],
-): Promise<{ count: number; lastText: string; lastMarkdown: string; lastHtml: string; toastText: string }> {
+): Promise<GrokAssistantSnapshot> {
   return readAssistantSnapshot(Runtime);
-}
-
-function isGrokRateLimitToastText(value: string): boolean {
-  return /query limit|too many requests|rate limit|request limit|try again in\s+\d+/i.test(value);
 }
 
 function buildGrokAssistantSnapshotExpression(): string {

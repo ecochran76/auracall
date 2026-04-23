@@ -15,6 +15,7 @@ import {
   coerceGeminiActivityEvidence,
   type GeminiActivityEvidence,
 } from './providers/geminiEvidence.js';
+import { classifyGrokAssistantSnapshot } from './providers/grokEvidence.js';
 import type { RuntimeRunInspectionServiceStateProbeResult } from '../runtime/inspection.js';
 
 const CHATGPT_HOME_URL = 'https://chatgpt.com/';
@@ -211,25 +212,26 @@ export async function probeGrokBrowserServiceState(
       return hardStop;
     }
     const snapshot = await readGrokAssistantSnapshotForRuntime(Runtime);
-    if (snapshot.toastText && isGrokRateLimitToastText(snapshot.toastText)) {
+    const evidence = classifyGrokAssistantSnapshot(snapshot);
+    if (evidence.kind === 'provider-error') {
       return createLlmServiceStateObservation({
         service: 'grok',
         state: 'provider-error',
-        evidenceRef: 'grok-rate-limit-toast',
-        confidence: 'high',
+        evidenceRef: evidence.evidenceRef,
+        confidence: evidence.confidence,
       });
     }
-    if ((snapshot.lastMarkdown || snapshot.lastText).trim().length > 0) {
+    if (evidence.kind === 'assistant-visible') {
       return createLlmServiceStateObservation({
         service: 'grok',
         state: 'response-incoming',
-        evidenceRef: 'grok-assistant-visible',
-        confidence: 'high',
+        evidenceRef: evidence.evidenceRef,
+        confidence: evidence.confidence,
       });
     }
     return createLlmUnknownObservation({
       service: 'grok',
-      evidenceRef: 'grok-live-probe-no-signal',
+      evidenceRef: evidence.evidenceRef,
     });
   } finally {
     await client.close().catch(() => undefined);
@@ -586,8 +588,4 @@ function isGeminiPromptCommitted(options: { historyText: string; prompt: string 
     return false;
   }
   return historyText.includes(prompt) || historyText.includes(prompt.slice(0, 80));
-}
-
-function isGrokRateLimitToastText(value: string): boolean {
-  return /query limit|too many requests|rate limit|request limit|try again in\s+\d+/i.test(value);
 }
