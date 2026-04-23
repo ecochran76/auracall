@@ -966,6 +966,7 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
       logger,
       reusePolicy: 'new',
       blankTabLimit: 0,
+      mutationSource: 'legacy:gemini-native:connect-tab',
     });
     const targetId = resolveChromeTargetId(opened.target);
     if (!targetId) {

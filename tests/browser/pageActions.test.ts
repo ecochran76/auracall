@@ -69,8 +69,8 @@ describe('navigateToChatGPT', () => {
     const runtime = {
       evaluate: vi
         .fn()
-        .mockResolvedValueOnce({ result: { value: 'loading' } })
-        .mockResolvedValueOnce({ result: { value: 'complete' } }),
+        .mockResolvedValueOnce({ result: { value: false } })
+        .mockResolvedValueOnce({ result: { value: true } }),
     } as unknown as ChromeClient['Runtime'];
     await navigateToChatGPT(
       { navigate } as unknown as ChromeClient['Page'],

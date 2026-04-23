@@ -20385,3 +20385,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run check`
   - `pnpm run plans:audit -- --keep 53`
   - `git diff --check`
+
+## 2026-04-23 - Legacy browser mutation migration
+
+- Migrated legacy ChatGPT/Grok navigation helpers from direct `Page.navigate`
+  calls to browser-service `navigateAndSettle(...)`.
+- Migrated ChatGPT assistant-response retry navigation in `src/browser/index.ts`
+  to `navigateAndSettle(...)`.
+- Changed ChatGPT reattach sidebar fallback handling so the page script returns
+  a fallback conversation URL instead of assigning `location.href`; reattach
+  callers now route that URL through `navigateAndSettle(...)`.
+- Labeled Gemini native browser attachment target opening with
+  `legacy:gemini-native:connect-tab`.
+- Added `tests/browser/browserMutationControlPlane.test.ts` to reject direct
+  legacy `Page.navigate`, `Page.reload`, `location.assign`,
+  `location.replace`, and `location.href = ...` mutations outside
+  browser-service/provider control points.
+- Validation:
+  - `pnpm vitest run tests/browser/pageActions.test.ts tests/browser/reattach.test.ts tests/browser/browserMutationControlPlane.test.ts tests/browser-service/ui.test.ts tests/browser-service/chromeTargetReuse.test.ts tests/gemini-web/executor.test.ts tests/gemini-web/browserNative.test.ts`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 53`
+  - `git diff --check`

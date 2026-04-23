@@ -39,6 +39,8 @@ What already exists:
 - bounded browser diagnostics on runtime/media status surfaces
 - browser-service-owned bounded mutation history for the selected AuraCall
   runtime profile and service, surfaced through opt-in browser diagnostics
+- legacy ChatGPT/Grok navigation helpers and ChatGPT reattach fallback
+  navigation now route through `navigateAndSettle(...)`
 
 What remains unresolved:
 
@@ -49,6 +51,9 @@ What remains unresolved:
 - target reuse/open can still navigate reused tabs below the provider layer
 - provider and legacy flows can still issue direct CDP page mutations without a
   central audit trail
+- direct legacy browser-flow page navigation/reload/location-assignment
+  mutations are now covered by a static regression test, but raw dev/debug
+  scripts remain intentionally fenced outside that check
 - the reproduced Gemini browser-media mismatch shows this clearly:
   - `prompt_submitted` records a concrete conversation route
   - the owned tab later appears back on root `/app`
@@ -235,6 +240,28 @@ Status:
   `src/browser/reattachHelpers.ts`, and `src/gemini-web/browserNative.ts`
   through the same mutation control plane or explicitly fence them as legacy
   escape hatches
+
+Status:
+
+- partial implementation landed on 2026-04-23
+- current scope completed:
+  - ChatGPT legacy `navigateToChatGPT(...)` now uses
+    `navigateAndSettle(...)`
+  - Grok legacy `navigateToGrok(...)` now uses `navigateAndSettle(...)`
+  - ChatGPT assistant-response retry navigation in `src/browser/index.ts`
+    now uses `navigateAndSettle(...)`
+  - reattach sidebar fallback no longer assigns `location.href` inside the
+    page; callers receive the fallback URL and route it through
+    `navigateAndSettle(...)`
+  - Gemini native browser attachment tab open now declares a mutation source
+    when calling `openOrReuseChromeTarget(...)`
+  - static regression coverage rejects direct legacy `Page.navigate(...)`,
+    `Page.reload(...)`, `location.assign(...)`, `location.replace(...)`, and
+    `location.href = ...` mutations outside approved browser-service/provider
+    control points
+- still remaining in Slice 3:
+  - decide whether raw dev/debug scripts should remain separately fenced only
+    or should gain a dedicated explicit escape-hatch audit helper
 
 ### Slice 4 | Enforcement and cleanup
 

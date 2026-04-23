@@ -17,6 +17,7 @@ import {
   isGrokRateLimitToastText,
   type GrokAssistantSnapshot,
 } from '../providers/grokEvidence.js';
+import { navigateAndSettle, type NavigateAndSettleOptions } from '../service/ui.js';
 
 const GROK_SELECTORS = GROK_PROVIDER.selectors;
 const GROK_INPUT_SELECTORS = buildSelectorArrayLiteral(GROK_SELECTORS.input);
@@ -57,10 +58,18 @@ export async function navigateToGrok(
   Runtime: ChromeClient['Runtime'],
   url: string,
   logger: BrowserLogger,
+  options: Pick<NavigateAndSettleOptions, 'mutationAudit' | 'mutationSource'> = {},
 ): Promise<void> {
   logger(`Navigating to ${url}`);
-  await Page.navigate({ url });
-  await waitForDocumentReady(Runtime, 45_000);
+  const settled = await navigateAndSettle({ Page, Runtime }, {
+    url,
+    timeoutMs: 45_000,
+    mutationAudit: options.mutationAudit,
+    mutationSource: options.mutationSource ?? 'legacy:grok:navigate',
+  });
+  if (!settled.ok) {
+    throw new Error(`Grok navigation to ${url} did not settle: ${settled.reason ?? settled.phase}`);
+  }
 }
 
 export async function ensureGrokLoggedIn(

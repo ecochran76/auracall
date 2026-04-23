@@ -7,6 +7,7 @@ import {
 import { delay } from '../utils.js';
 import { logDomFailure } from '../domDebug.js';
 import { BrowserAutomationError } from '../../oracle/errors.js';
+import { navigateAndSettle, type NavigateAndSettleOptions } from '../service/ui.js';
 
 export function installJavaScriptDialogAutoDismissal(
   Page: ChromeClient['Page'],
@@ -55,10 +56,21 @@ export async function navigateToChatGPT(
   Runtime: ChromeClient['Runtime'],
   url: string,
   logger: BrowserLogger,
+  options: Pick<NavigateAndSettleOptions, 'mutationAudit' | 'mutationSource'> = {},
 ) {
   logger(`Navigating to ${url}`);
-  await Page.navigate({ url });
-  await waitForDocumentReady(Runtime, 45_000);
+  const settled = await navigateAndSettle({ Page, Runtime }, {
+    url,
+    timeoutMs: 45_000,
+    mutationAudit: options.mutationAudit,
+    mutationSource: options.mutationSource ?? 'legacy:chatgpt:navigate',
+  });
+  if (!settled.ok) {
+    throw new BrowserAutomationError(`Navigation to ${url} did not settle: ${settled.reason ?? settled.phase}`, {
+      stage: 'chatgpt-navigation',
+      providerState: 'navigation-failed',
+    });
+  }
 }
 
 export interface PromptReadyNavigationOptions {

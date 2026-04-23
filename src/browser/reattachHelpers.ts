@@ -82,7 +82,12 @@ export async function withTimeout<T>(task: Promise<T>, ms: number, label: string
 
 export async function openConversationFromSidebar(
   Runtime: ChromeClient['Runtime'],
-  options: { conversationId?: string | null; preferProjects?: boolean; promptPreview?: string },
+  options: {
+    conversationId?: string | null;
+    preferProjects?: boolean;
+    promptPreview?: string;
+    navigationFallback?: (targetUrl: string) => Promise<void>;
+  },
   attempt = 0,
 ): Promise<boolean> {
   const response = await Runtime.evaluate({
@@ -175,18 +180,22 @@ export async function openConversationFromSidebar(
         target.clickable.dispatchEvent(
           new MouseEvent('click', { bubbles: true, cancelable: true, view: window }),
         );
-        // Fallback: some project-sidebar items don't navigate on click, force the URL.
+        // Fallback URL is returned to the caller so navigation still goes
+        // through the browser-service mutation helper instead of in-page
+        // location assignment.
+        let fallbackUrl = '';
         if (target.href && target.href.includes('/c/')) {
           const targetUrl = target.href.startsWith('http')
             ? target.href
             : new URL(target.href, location.origin).toString();
           if (targetUrl && targetUrl !== location.href) {
-            location.href = targetUrl;
+            fallbackUrl = targetUrl;
           }
         }
         return {
           ok: true,
           href: target.href || '',
+          fallbackUrl,
           count: candidates.length,
           scope: target.inNav ? 'nav' : 'main',
         };
@@ -195,12 +204,21 @@ export async function openConversationFromSidebar(
     })()`,
     returnByValue: true,
   });
-  return Boolean(response.result?.value?.ok);
+  const value = response.result?.value as { ok?: boolean; fallbackUrl?: string } | undefined;
+  if (value?.ok && typeof value.fallbackUrl === 'string' && value.fallbackUrl) {
+    await options.navigationFallback?.(value.fallbackUrl);
+  }
+  return Boolean(value?.ok);
 }
 
 export async function openConversationFromSidebarWithRetry(
   Runtime: ChromeClient['Runtime'],
-  options: { conversationId?: string | null; preferProjects?: boolean; promptPreview?: string },
+  options: {
+    conversationId?: string | null;
+    preferProjects?: boolean;
+    promptPreview?: string;
+    navigationFallback?: (targetUrl: string) => Promise<void>;
+  },
   timeoutMs: number,
 ): Promise<boolean> {
   const start = Date.now();

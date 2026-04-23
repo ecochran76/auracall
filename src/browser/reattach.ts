@@ -127,7 +127,12 @@ export async function resumeBrowserSession(
 export const __test__ = {
   openConversationFromSidebar: (
     Runtime: ChromeClient['Runtime'],
-    options: { conversationId?: string | null; preferProjects?: boolean; promptPreview?: string },
+    options: {
+      conversationId?: string | null;
+      preferProjects?: boolean;
+      promptPreview?: string;
+      navigationFallback?: (targetUrl: string) => Promise<void>;
+    },
   ) => openConversationFromSidebar(Runtime, options),
   pickTarget,
   extractConversationIdFromUrl,

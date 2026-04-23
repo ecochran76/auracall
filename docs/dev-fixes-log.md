@@ -13994,3 +13994,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   selected managed browser profile, even when the caller is only polling API or
   MCP status. Keep a bounded browser-service mutation history per AuraCall
   runtime profile/service and expose it through `diagnostics=browser-state`.
+- 2026-04-23: Remove in-page URL assignment fallbacks from legacy browser
+  flows instead of treating them as harmless recovery. In this repo, a
+  `location.href = ...` fallback can look exactly like the Gemini root-fallback
+  failure class the control plane is trying to explain. Return the intended URL
+  to a caller that can use `navigateAndSettle(...)`, then enforce the rule with
+  a static regression test.

@@ -84,7 +84,7 @@ import {
   DEFAULT_DEBUG_PORT_RANGE,
   pickAvailableDebugPort,
 } from './portSelection.js';
-import { dismissOpenMenus } from './service/ui.js';
+import { dismissOpenMenus, navigateAndSettle } from './service/ui.js';
 import { resolveManagedBrowserLaunchContextFromResolvedConfig } from './service/profileResolution.js';
 import {
   appendChatgptMutationRecord,
@@ -2791,7 +2791,14 @@ async function waitForAssistantResponseWithReload(
       throw error;
     }
     logger('Assistant response stalled; reloading conversation and retrying once');
-    await Page.navigate({ url: conversationUrl });
+    const settled = await navigateAndSettle({ Page, Runtime }, {
+      url: conversationUrl,
+      timeoutMs: 45_000,
+      mutationSource: 'legacy:chatgpt:assistant-response-retry-navigation',
+    });
+    if (!settled.ok) {
+      throw error;
+    }
     await delay(1000);
     return await waitForAssistantResponse(Runtime, timeoutMs, logger, minTurnIndex, options);
   }

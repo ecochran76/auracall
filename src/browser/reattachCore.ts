@@ -3,6 +3,7 @@ import type { BrowserRuntimeMetadata, BrowserSessionConfig, ResolvedBrowserConfi
 import type { BrowserLogger, ChromeClient } from './types.js';
 import { isDevToolsResponsive } from './processCheck.js';
 import { resolveManagedBrowserLaunchContextFromResolvedConfig } from './service/profileResolution.js';
+import { navigateAndSettle } from './service/ui.js';
 import {
   connectToChromeTarget as connectToChromeTargetCore,
   listChromeTargets as listChromeTargetsCore,
@@ -95,11 +96,21 @@ export type ReattachHelperDeps = {
   withTimeout: <T>(promise: Promise<T>, timeoutMs: number, message: string) => Promise<T>;
   openConversationFromSidebar: (
     Runtime: ChromeClient['Runtime'],
-    options: { conversationId?: string | null; preferProjects?: boolean; promptPreview?: string },
+    options: {
+      conversationId?: string | null;
+      preferProjects?: boolean;
+      promptPreview?: string;
+      navigationFallback?: (targetUrl: string) => Promise<void>;
+    },
   ) => Promise<boolean>;
   openConversationFromSidebarWithRetry: (
     Runtime: ChromeClient['Runtime'],
-    options: { conversationId?: string | null; preferProjects?: boolean; promptPreview?: string },
+    options: {
+      conversationId?: string | null;
+      preferProjects?: boolean;
+      promptPreview?: string;
+      navigationFallback?: (targetUrl: string) => Promise<void>;
+    },
     timeoutMs: number,
   ) => Promise<boolean>;
   waitForLocationChange: (Runtime: ChromeClient['Runtime'], timeoutMs: number) => Promise<void>;
@@ -238,7 +249,7 @@ export async function resumeBrowserSessionCore(
       port: runtime.chromePort,
       target: target?.targetId,
     })) as unknown as ChromeClient;
-    const { Runtime, DOM } = client;
+    const { Page, Runtime, DOM } = client;
     if (Runtime?.enable) {
       await Runtime.enable();
     }
@@ -261,6 +272,16 @@ export async function resumeBrowserSessionCore(
           conversationId: runtime.conversationId ?? helpers.extractConversationIdFromUrl(runtime.tabUrl ?? ''),
           preferProjects: true,
           promptPreview: deps.promptPreview,
+          navigationFallback: (targetUrl) =>
+            navigateAndSettle({ Page, Runtime }, {
+              url: targetUrl,
+              timeoutMs: 15_000,
+              mutationSource: 'legacy:chatgpt:reattach-sidebar-fallback',
+            }).then((settled) => {
+              if (!settled.ok) {
+                throw new Error(`Reattach sidebar fallback did not settle: ${settled.reason ?? settled.phase}`);
+              }
+            }),
         },
         15_000,
       );
@@ -395,6 +416,16 @@ async function resumeBrowserSessionViaNewChrome(
           resolved.url !== 'https://chatgpt.com/' ||
           Boolean(runtime.tabUrl && (/\/g\//.test(runtime.tabUrl) || runtime.tabUrl.includes('/project'))),
         promptPreview: deps.promptPreview,
+        navigationFallback: (targetUrl) =>
+          navigateAndSettle({ Page, Runtime }, {
+            url: targetUrl,
+            timeoutMs: 15_000,
+            mutationSource: 'legacy:chatgpt:reattach-sidebar-fallback',
+          }).then((settled) => {
+            if (!settled.ok) {
+              throw new Error(`Reattach sidebar fallback did not settle: ${settled.reason ?? settled.phase}`);
+            }
+          }),
       },
       15_000,
     );
