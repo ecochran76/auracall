@@ -111,3 +111,12 @@ records `tabTargetId`, so status diagnostics need to work there too.
   early attached target before `prompt_submitted`. `prompt_submitted` now means
   Aura-Call observed a submitted Gemini prompt state; generated image waiting is
   owned by the artifact polling phase.
+- Follow-up dogfood run `medgen_5c19098f75734f718c789fdefbe4f5f7` proved the
+  new status diagnostics path works during active execution: operators could
+  inspect the exact Gemini tab before submission and while Gemini briefly showed
+  active spinner/stop-control evidence. The remaining failure is narrower:
+  after `prompt_submitted`, Gemini fell back to the root app surface on the
+  owned tab and artifact polling timed out with
+  `Gemini conversation content not found on the active tab`. The next follow-up
+  is a post-submit route/content stability guard, not another diagnostics
+  surface change.

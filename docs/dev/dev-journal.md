@@ -20239,3 +20239,37 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/mediaBrowserDiagnostics.test.ts`
   - `pnpm vitest run tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/mcp.schema.test.ts`
   - `pnpm run check`
+
+## 2026-04-23 - Async Gemini media dogfood after pre-submission visibility
+
+- Ran one guarded async Gemini image request through
+  `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api serve --port 8106 --no-recover-runs-on-start`.
+- `POST /v1/media-generations?wait=false` returned `202` with running id
+  `medgen_5c19098f75734f718c789fdefbe4f5f7`; metadata correctly persisted
+  `runtimeProfile: "auracall-gemini-pro"`.
+- Status diagnostics now exposed the exact live Gemini tab before submission:
+  - `browser_target_attached` recorded target
+    `DB8964C63D8371F02E22CE2F667B4550`
+  - `GET /v1/runs/medgen_5c19098f75734f718c789fdefbe4f5f7/status?diagnostics=browser-state`
+    returned observed browser evidence on that tab with stored screenshots
+    before and after prompt insertion
+  - after `prompt_inserted`, provider evidence reported
+    `hasActiveAvatarSpinner = true`, `hasStopControl = true`,
+    `isGenerating = true`
+- The run then recorded `prompt_submitted`, but the submitted-state event still
+  had `conversationId = null` and `url = https://gemini.google.com/app` even
+  though later failure details showed conversation id `5a2619c6fa975ef6`.
+- Artifact polling failed for the full timeout window and the saved screenshot
+  showed the healthy Gemini root home surface, not the conversation route:
+  `Hi Eric / What can we get done?` plus the `Create image` chip.
+- Terminal status at `2026-04-23T16:08:04.183Z`:
+  - `status = failed`
+  - `failure.code = media_generation_provider_timeout`
+  - `failure.details.conversationId = 5a2619c6fa975ef6`
+  - `failure.details.pollCount = 20`
+  - `failure.details.lastReadbackError = "Gemini conversation content not found on the active tab for 5a2619c6fa975ef6."`
+- Finding: pre-submission visibility is fixed, but Gemini media still needs a
+  post-submit route-stability guard. AuraCall can observe submitted-state
+  evidence and derive a conversation id later while the active tab falls back to
+  the root Gemini app, causing artifact polling against the submitted tab to
+  miss the conversation content for the full timeout window.

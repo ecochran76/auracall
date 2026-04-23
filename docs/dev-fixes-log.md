@@ -32,6 +32,14 @@
   image visibility to artifact polling so status diagnostics can inspect the
   exact browser tab during stalled provider interactions.
 
+- 2026-04-23: Gemini browser media needs a post-submit route-stability guard,
+  not only pre-submit visibility. In this repo, a live run can show valid
+  send/generating evidence, then mark `prompt_submitted`, derive a conversation
+  id later, and still end up back on the healthy Gemini root app surface with
+  no conversation content on the submitted tab. After submitted-state
+  observation, keep ownership on the same browser tab and verify the
+  conversation route/content stabilizes before long artifact polling.
+
 - 2026-04-21: Public prebuilt `taskRunSpec` input should mean the live
   flattened schema only. In this repo, HTTP `POST /v1/team-runs` and MCP
   `team_run` may now accept `{ taskRunSpec }`, but must validate with
