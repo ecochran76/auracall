@@ -8,6 +8,27 @@ export type MediaGenerationSource = 'cli' | 'api' | 'mcp';
 
 export type MediaGenerationStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 
+export type MediaGenerationTimelineEventName =
+  | 'running_persisted'
+  | 'capability_discovered'
+  | 'executor_started'
+  | 'prompt_submitted'
+  | 'artifact_poll'
+  | 'image_visible'
+  | 'artifact_materialized'
+  | 'completed'
+  | 'failed';
+
+export interface MediaGenerationTimelineEvent {
+  event: MediaGenerationTimelineEventName;
+  at: string;
+  details?: Record<string, unknown> | null;
+}
+
+export type MediaGenerationTimelineEmitter = (
+  event: Omit<MediaGenerationTimelineEvent, 'at'> & { at?: string },
+) => Promise<void> | void;
+
 export interface MediaGenerationRequest {
   provider: MediaGenerationProvider;
   mediaType: MediaGenerationType;
@@ -53,6 +74,7 @@ export interface MediaGenerationResponse {
   updatedAt: string;
   completedAt?: string | null;
   artifacts: MediaGenerationArtifact[];
+  timeline?: MediaGenerationTimelineEvent[];
   metadata?: Record<string, unknown> | null;
   failure?: MediaGenerationFailure | null;
 }
@@ -69,6 +91,7 @@ export interface MediaGenerationExecutorInput {
   id: string;
   createdAt: string;
   artifactDir: string;
+  emitTimeline?: MediaGenerationTimelineEmitter;
 }
 
 export interface MediaGenerationExecutorResult {

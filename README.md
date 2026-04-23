@@ -149,12 +149,13 @@ Terminology note:
   - `POST /v1/media-generations` accepts the shared media-generation contract
     for `provider = gemini|grok`, `mediaType = image|music|video`, prompt,
     optional `model`, `transport`, `count`, `size`, `aspectRatio`, and
-    metadata. The route persists request/readback records now;
-    provider-backed Gemini/Grok media execution is still gated until the
-    adapters are wired. Gemini image requests with `transport = browser` now
-    check the matching workbench capability, select `Create image`, and
-    materialize generated image artifacts through the managed browser path.
-    Gemini music/video and Grok Imagine remain explicitly gated.
+    metadata. The route persists request/readback records with a `timeline[]`
+    showing processing milestones such as capability discovery, prompt
+    submission, artifact polling, materialization, and terminal completion.
+    Gemini image requests with `transport = browser` now check the matching
+    workbench capability, select `Create image`, and materialize generated image
+    artifacts through the managed browser path. Gemini music/video and Grok
+    Imagine remain explicitly gated.
   - `GET /v1/workbench-capabilities` reports currently known or discovered
     provider workbench capabilities for regular service discovery. Filter with
     `provider=chatgpt|gemini|grok`, `category=research|media|canvas|connector|skill|app|search|file|other`,

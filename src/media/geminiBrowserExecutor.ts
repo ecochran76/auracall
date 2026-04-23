@@ -6,6 +6,7 @@ import type {
   MediaGenerationArtifact,
   MediaGenerationExecutor,
   MediaGenerationExecutorInput,
+  MediaGenerationTimelineEmitter,
   MediaGenerationType,
 } from './types.js';
 import { MediaGenerationExecutionError } from './service.js';
@@ -55,6 +56,15 @@ async function executeGeminiBrowserMediaGeneration(
   });
   const conversationId = normalizeNonEmpty(promptResult.conversationId) ?? extractGeminiConversationId(promptResult.url);
   const tabTargetId = normalizeNonEmpty(promptResult.tabTargetId);
+  await input.emitTimeline?.({
+    event: 'prompt_submitted',
+    details: {
+      capabilityId: GEMINI_IMAGE_CAPABILITY_ID,
+      conversationId: conversationId ?? null,
+      tabTargetId: tabTargetId ?? null,
+      url: promptResult.url ?? null,
+    },
+  });
   if (!conversationId) {
     throw new MediaGenerationExecutionError(
       'media_generation_readback_failed',
@@ -82,6 +92,7 @@ async function executeGeminiBrowserMediaGeneration(
     promptResult.url ?? resolveGeminiConversationUrl(conversationId),
     request.metadata,
     timeoutMs,
+    input.emitTimeline,
   );
   if (imageArtifacts.length === 0) {
     throw new MediaGenerationExecutionError(
@@ -108,6 +119,16 @@ async function executeGeminiBrowserMediaGeneration(
       },
     });
     if (!file) continue;
+    await input.emitTimeline?.({
+      event: 'artifact_materialized',
+      details: {
+        providerArtifactId: artifact.id,
+        fileName: file.name || null,
+        path: file.localPath ?? null,
+        mimeType: file.mimeType ?? null,
+        materialization: file.metadata?.materialization ?? null,
+      },
+    });
     materialized.push(mapGeminiFileToMediaArtifact(file, artifact, request.mediaType, materialized.length + 1));
   }
   if (materialized.length === 0) {
@@ -143,6 +164,7 @@ async function waitForGeminiImageArtifacts(
   tabUrl: string,
   metadata: Record<string, unknown> | null | undefined,
   timeoutMs: number,
+  emitTimeline: MediaGenerationTimelineEmitter | undefined,
 ): Promise<{ imageArtifacts: ConversationArtifact[]; pollCount: number; lastReadbackError?: string | null }> {
   const pollIntervalMs = resolveArtifactPollIntervalMs(metadata);
   const deadline = Date.now() + timeoutMs;
@@ -160,11 +182,37 @@ async function waitForGeminiImageArtifacts(
       });
       lastReadbackError = null;
       const imageArtifacts = lastArtifacts.filter(isImageArtifact);
+      await emitTimeline?.({
+        event: 'artifact_poll',
+        details: {
+          pollCount,
+          artifactCount: lastArtifacts.length,
+          imageArtifactCount: imageArtifacts.length,
+          lastReadbackError: null,
+        },
+      });
       if (imageArtifacts.length > 0) {
+        await emitTimeline?.({
+          event: 'image_visible',
+          details: {
+            pollCount,
+            generatedArtifactCount: imageArtifacts.length,
+            artifactIds: imageArtifacts.map((artifact) => artifact.id),
+          },
+        });
         return { imageArtifacts, pollCount, lastReadbackError };
       }
     } catch (error) {
       lastReadbackError = error instanceof Error ? error.message : String(error);
+      await emitTimeline?.({
+        event: 'artifact_poll',
+        details: {
+          pollCount,
+          artifactCount: lastArtifacts.length,
+          imageArtifactCount: lastArtifacts.filter(isImageArtifact).length,
+          lastReadbackError,
+        },
+      });
     }
     const remainingMs = deadline - Date.now();
     if (remainingMs <= 0) {

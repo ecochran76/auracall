@@ -197,7 +197,8 @@
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/responses/<response_id>`
   - create a browser-transport Gemini image request only after capability
     discovery reports `gemini.media.create_image` as `available`; the local API
-    then selects `Create image` and materializes generated image artifacts:
+    then selects `Create image`, records media-generation `timeline[]`
+    milestones, and materializes generated image artifacts:
     - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"gemini","mediaType":"image","transport":"browser","prompt":"Generate an image of an asphalt secret agent"}'`
   - list workbench capabilities for service discovery:
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=gemini"`
@@ -218,6 +219,8 @@
     - until provider adapters are wired, default execution returns a persisted
       `failed` response with `failure.code = media_provider_not_implemented`
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/media-generations/<media_generation_id>`
+    - inspect `timeline[]` for `running_persisted`, `executor_started`,
+      provider-specific progress, and terminal `completed|failed` evidence
   - create bounded team run:
     - `curl -s http://127.0.0.1:8080/v1/team-runs -H 'Content-Type: application/json' -d '{"teamId":"ops","objective":"Reply with one bounded team result.","responseFormat":"markdown","maxTurns":2}'`
     - with background drain enabled, creation returns after persistence and

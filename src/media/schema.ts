@@ -5,6 +5,7 @@ import type {
   MediaGenerationRequest,
   MediaGenerationResponse,
   MediaGenerationStoredRecord,
+  MediaGenerationTimelineEvent,
 } from './types.js';
 
 export const MediaGenerationProviderSchema = z.enum(['gemini', 'grok']);
@@ -50,6 +51,22 @@ export const MediaGenerationFailureSchema: z.ZodType<MediaGenerationFailure> = z
   details: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
+export const MediaGenerationTimelineEventSchema: z.ZodType<MediaGenerationTimelineEvent> = z.object({
+  event: z.enum([
+    'running_persisted',
+    'capability_discovered',
+    'executor_started',
+    'prompt_submitted',
+    'artifact_poll',
+    'image_visible',
+    'artifact_materialized',
+    'completed',
+    'failed',
+  ]),
+  at: z.string(),
+  details: z.record(z.string(), z.unknown()).nullable().optional(),
+});
+
 export const MediaGenerationResponseSchema: z.ZodType<MediaGenerationResponse> = z.object({
   id: z.string().min(1),
   object: z.literal('media_generation'),
@@ -62,6 +79,7 @@ export const MediaGenerationResponseSchema: z.ZodType<MediaGenerationResponse> =
   updatedAt: z.string(),
   completedAt: z.string().nullable().optional(),
   artifacts: z.array(MediaGenerationArtifactSchema),
+  timeline: z.array(MediaGenerationTimelineEventSchema).optional(),
   metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   failure: MediaGenerationFailureSchema.nullable().optional(),
 });

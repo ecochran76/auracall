@@ -19929,3 +19929,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   path can select the workbench image capability, wait on the submitted tab,
   detect the rendered image, and persist a local artifact without failing
   binary fetch.
+
+## 2026-04-23 - Media-generation timeline readback
+
+- Added durable `timeline[]` events to media-generation records so local API and
+  MCP callers can distinguish persisted `running` state from provider progress
+  and terminal completion.
+- Service-level events now include `running_persisted`,
+  `capability_discovered`, `executor_started`, `completed`, and `failed`.
+  Gemini browser image execution emits `prompt_submitted`, `artifact_poll`,
+  `image_visible`, and `artifact_materialized`.
+- This records exactly when Aura-Call considered a media request submitted,
+  visible, materialized, and finished. Artifact metadata still reports the
+  actual materialization method, so screenshot fallback is not mislabeled as a
+  fetched provider blob.
+- Validation:
+  - `pnpm vitest run tests/mediaGeneration.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts`

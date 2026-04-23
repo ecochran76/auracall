@@ -22,13 +22,46 @@ describe('media generation service', () => {
     const nowValues = [
       '2026-04-22T12:00:00.000Z',
       '2026-04-22T12:00:01.000Z',
+      '2026-04-22T12:00:02.000Z',
+      '2026-04-22T12:00:03.000Z',
+      '2026-04-22T12:00:04.000Z',
+      '2026-04-22T12:00:05.000Z',
+      '2026-04-22T12:00:06.000Z',
     ];
     const service = createMediaGenerationService({
       now: () => new Date(nowValues[Math.min(nowIndex++, nowValues.length - 1)]),
       generateId: () => 'medgen_test_1',
-      executor: async ({ artifactDir }) => {
+      executor: async ({ artifactDir, emitTimeline }) => {
+        await emitTimeline?.({
+          event: 'prompt_submitted',
+          details: {
+            conversationId: 'conversation_1',
+          },
+        });
+        await emitTimeline?.({
+          event: 'artifact_poll',
+          details: {
+            pollCount: 1,
+            imageArtifactCount: 1,
+          },
+        });
         const filePath = path.join(artifactDir, 'fake.png');
         await fs.writeFile(filePath, Buffer.from('fake image bytes'));
+        await emitTimeline?.({
+          event: 'image_visible',
+          details: {
+            pollCount: 1,
+            generatedArtifactCount: 1,
+          },
+        });
+        await emitTimeline?.({
+          event: 'artifact_materialized',
+          details: {
+            providerArtifactId: 'artifact_1',
+            path: filePath,
+            materialization: 'test-fixture',
+          },
+        });
         return {
           model: 'fake-image-model',
           artifacts: [
@@ -82,7 +115,53 @@ describe('media generation service', () => {
         aspectRatio: '1:1',
         executor: 'fake',
       },
+      timeline: [
+        {
+          event: 'running_persisted',
+          at: '2026-04-22T12:00:00.000Z',
+          details: {
+            status: 'running',
+          },
+        },
+        {
+          event: 'executor_started',
+          at: '2026-04-22T12:00:01.000Z',
+        },
+        {
+          event: 'prompt_submitted',
+          at: '2026-04-22T12:00:02.000Z',
+        },
+        {
+          event: 'artifact_poll',
+          at: '2026-04-22T12:00:03.000Z',
+        },
+        {
+          event: 'image_visible',
+          at: '2026-04-22T12:00:04.000Z',
+        },
+        {
+          event: 'artifact_materialized',
+          at: '2026-04-22T12:00:05.000Z',
+        },
+        {
+          event: 'completed',
+          at: '2026-04-22T12:00:06.000Z',
+          details: {
+            status: 'succeeded',
+            artifactCount: 1,
+          },
+        },
+      ],
     });
+    expect(created.timeline?.map((entry) => entry.event)).toEqual([
+      'running_persisted',
+      'executor_started',
+      'prompt_submitted',
+      'artifact_poll',
+      'image_visible',
+      'artifact_materialized',
+      'completed',
+    ]);
     await expect(fs.access(created.artifacts[0]?.path ?? '')).resolves.toBeUndefined();
 
     const readBack = await service.readGeneration('medgen_test_1');
@@ -114,6 +193,11 @@ describe('media generation service', () => {
         code: 'media_provider_not_implemented',
       },
     });
+    expect(created.timeline?.map((entry) => entry.event)).toEqual([
+      'running_persisted',
+      'executor_started',
+      'failed',
+    ]);
     await expect(service.readGeneration('medgen_failure_1')).resolves.toEqual(created);
   });
 
@@ -217,6 +301,12 @@ describe('media generation service', () => {
         },
       },
     });
+    expect(created.timeline?.map((entry) => entry.event)).toEqual([
+      'running_persisted',
+      'capability_discovered',
+      'executor_started',
+      'completed',
+    ]);
   });
 
   it('fails Gemini browser media generation when the matching capability is not available', async () => {
@@ -259,6 +349,10 @@ describe('media generation service', () => {
         },
       },
     });
+    expect(created.timeline?.map((entry) => entry.event)).toEqual([
+      'running_persisted',
+      'failed',
+    ]);
     await expect(service.readGeneration('medgen_capability_miss_1')).resolves.toEqual(created);
   });
 });

@@ -59,10 +59,14 @@ describe('Gemini browser media generation executor', () => {
     });
 
     const executor = createGeminiBrowserMediaGenerationExecutor({} as never);
+    const timelineEvents: string[] = [];
     const result = await executor({
       id: 'medgen_test',
       createdAt: '2026-04-23T12:00:00.000Z',
       artifactDir,
+      emitTimeline: (event) => {
+        timelineEvents.push(event.event);
+      },
       request: {
         provider: 'gemini',
         mediaType: 'image',
@@ -131,6 +135,12 @@ describe('Gemini browser media generation executor', () => {
         artifactPollCount: 1,
       },
     });
+    expect(timelineEvents).toEqual([
+      'prompt_submitted',
+      'artifact_poll',
+      'image_visible',
+      'artifact_materialized',
+    ]);
   });
 
   it('polls conversation artifacts after prompt submission before materializing', async () => {
@@ -165,10 +175,14 @@ describe('Gemini browser media generation executor', () => {
     });
 
     const executor = createGeminiBrowserMediaGenerationExecutor({} as never);
+    const timelineEvents: string[] = [];
     const resultPromise = executor({
       id: 'medgen_test',
       createdAt: '2026-04-23T12:00:00.000Z',
       artifactDir,
+      emitTimeline: (event) => {
+        timelineEvents.push(event.event);
+      },
       request: {
         provider: 'gemini',
         mediaType: 'image',
@@ -187,6 +201,13 @@ describe('Gemini browser media generation executor', () => {
         artifactPollCount: 2,
       },
     });
+    expect(timelineEvents).toEqual([
+      'prompt_submitted',
+      'artifact_poll',
+      'artifact_poll',
+      'image_visible',
+      'artifact_materialized',
+    ]);
     expect(browserClient.getConversationContext).not.toHaveBeenCalled();
     expect(browserClient.readActiveConversationArtifacts).toHaveBeenNthCalledWith(
       1,

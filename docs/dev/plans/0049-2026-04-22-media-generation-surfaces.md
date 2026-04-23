@@ -70,6 +70,11 @@ helpers.
   `medgen_422d7585aa8544ba86c8c8bcf17c03cc` persisted
   `Generated image 1.png` via `visible-image-screenshot` from conversation
   `10b7e2a15e2dd77c` after two artifact polls.
+- Media-generation records now include a durable `timeline[]` that is persisted
+  while the request is running and retained on terminal readback. The timeline
+  records service-level milestones plus provider progress such as Gemini prompt
+  submission, artifact polls, visible image detection, materialization, and
+  terminal completion/failure.
 
 ## Target Contract
 
@@ -87,6 +92,10 @@ helpers.
 - Extend MCP with the same bounded media request/readback surface.
 - Persist media artifacts and metadata under the existing runtime/session
   ownership model so readback is possible after the generating process exits.
+- Persist a route-neutral `timeline[]` on media-generation records so API and
+  MCP callers can see whether Aura-Call is running, waiting on provider
+  artifacts, materializing, completed, or failed without inspecting browser
+  state directly.
 - Use
   [0050 Workbench Capability Surfaces](0050-2026-04-23-workbench-capability-surfaces.md)
   as the discovery/availability layer for provider workbench tools; keep this
@@ -133,6 +142,9 @@ helpers.
   submission while the generated image is visible on the active tab.
 - [x] Gemini browser image artifact polling is pinned to the submitted tab
   target id and does not use general conversation-context refresh.
+- [x] Media-generation readback includes a persisted processing timeline with
+  prompt submission, artifact polling, materialization, and terminal state
+  evidence.
 - Gemini music/video generation selects the explicit tool path when those
   browser adapter paths are implemented.
 - [x] Gemini browser media requests are gated by the matching workbench
@@ -149,6 +161,8 @@ helpers.
   request mapping.
 - [x] Local API smoke for create/readback on a fake provider.
 - [x] MCP smoke for the same fake provider path.
+- [x] Unit coverage for media-generation timeline persistence and Gemini
+  browser executor progress events.
 - Live Gemini image smoke only after managed-profile state is clear of
   `google.com/sorry` or captcha pages. Avoid repeated back-to-back Gemini image
   smokes on the same managed browser profile; the next acceptance smoke should

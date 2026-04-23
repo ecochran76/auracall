@@ -33,6 +33,22 @@ const mediaGenerationArtifactShape = z.object({
   metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
+const mediaGenerationTimelineEventShape = z.object({
+  event: z.enum([
+    'running_persisted',
+    'capability_discovered',
+    'executor_started',
+    'prompt_submitted',
+    'artifact_poll',
+    'image_visible',
+    'artifact_materialized',
+    'completed',
+    'failed',
+  ]),
+  at: z.string(),
+  details: z.record(z.string(), z.unknown()).nullable().optional(),
+});
+
 const mediaGenerationOutputShape = {
   id: z.string(),
   object: z.literal('media_generation'),
@@ -45,6 +61,7 @@ const mediaGenerationOutputShape = {
   updatedAt: z.string(),
   completedAt: z.string().nullable().optional(),
   artifacts: z.array(mediaGenerationArtifactShape),
+  timeline: z.array(mediaGenerationTimelineEventShape).optional(),
   metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   failure: z
     .object({

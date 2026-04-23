@@ -13828,3 +13828,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   submitted `tabTargetId`, require it for artifact polling, read artifacts from
   that exact tab only, and fail rather than falling back to URL-based
   readback.
+- 2026-04-23: Media-generation callers need a durable processing timeline, not
+  only initial and terminal records. In this repo, a successful Gemini browser
+  image run can materialize through a visible-image screenshot fallback instead
+  of a provider blob fetch, and operators need to know when Aura-Call submitted
+  the prompt, observed artifact polls, saw the image, materialized the file, and
+  completed. Store these milestones in `media_generation.timeline[]` and keep
+  the artifact metadata as the source of truth for the materialization method.
