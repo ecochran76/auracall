@@ -53,6 +53,21 @@ existing Aura-Call media-generation contract.
     one visible `/imagine` control, and a stored PNG screenshot path
   - both image and video capabilities reported `account_gated`
   - no generation prompt was submitted
+- Grok Imagine read-only provider evidence now includes run-state/readback
+  signals when visible on `/imagine`:
+  - `run_state = account_gated|blocked|pending|terminal_video|terminal_image|idle|not_visible`
+  - pending indicators from visible busy/progress/generation text evidence
+  - terminal image/video DOM media evidence and media URLs
+  - visible materialization controls such as download/save/open/share/copy
+  - capability metadata carries the same evidence for API/MCP/CLI consumers
+  - no prompt submission or generation-control click is performed
+- Live dogfood on 2026-04-24 confirmed the current `/imagine` page reports:
+  - `run_state = account_gated`
+  - `pending = false`
+  - `terminal_image = false`
+  - `terminal_video = false`
+  - public gallery media URLs remain visible as page evidence, but are not
+    promoted to terminal generated output while the account is gated
 
 ## Research Findings
 
@@ -179,6 +194,9 @@ Add a browser-first Grok Imagine discovery/audit slice:
   discovery without raw CDP access or prompt submission.
 - [x] Operators can explicitly inspect Grok `/imagine` read-only through the
   workbench capability surface before invocation exists.
+- [x] Grok `/imagine` diagnostics can classify account gating, blocked,
+  pending, terminal image/video, and visible materialization evidence without
+  submitting a prompt.
 
 ## Validation Plan
 
@@ -191,13 +209,20 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - `pnpm tsx bin/auracall.ts capabilities --target grok --diagnostics browser-state --json`
 - [x] Bounded live read-only managed-browser Grok Imagine entrypoint inspection:
   - `pnpm tsx bin/auracall.ts capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json`
+- [x] Unit tests for Grok Imagine read-only run-state/materialization evidence:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/workbenchCapabilities.test.ts --maxWorkers 1`
+- [x] Bounded live read-only run-state dogfood:
+  - `pnpm tsx bin/auracall.ts capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json`
+  - observed `run_state = account_gated`, no pending generation, and no
+    terminal generated media promotion from the public gallery
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
 
 ## Next Slice
 
-Keep Grok Imagine invocation gated. The next browser slice should add a
-provider-owned run-state/readback detector for `/imagine` that can classify
-account gating, pending generation, terminal image/video, and materialization
-controls without submitting a prompt by default.
+Keep Grok Imagine invocation gated. The next browser slice should dogfood the
+new read-only run-state detector on the live `/imagine` page, record the exact
+current account posture, and only then add a guarded browser invocation path
+that submits one prompt, pins the submitted tab, waits on provider-owned
+run-state transitions, and materializes artifacts through the detected controls.

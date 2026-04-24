@@ -71,9 +71,29 @@ describe('normalizeGrokFeatureSignature', () => {
         visible: true,
         account_gated: false,
         blocked: false,
+        run_state: 'terminal_image',
+        terminal_image: true,
         modes: ['Image', 'image-to-video', 'Image'],
         labels: [' Imagine ', 'Create with Imagine', 'Imagine'],
         routes: ['https://grok.com/imagine', 'https://grok.com/imagine'],
+        materialization_controls: [
+          {
+            tag: 'button',
+            ariaLabel: 'Download',
+            visible: true,
+          },
+        ],
+        media: {
+          images: [
+            {
+              kind: 'image',
+              src: 'blob:https://grok.com/image-1',
+              width: 512,
+              height: 512,
+            },
+          ],
+          urls: ['blob:https://grok.com/image-1', 'blob:https://grok.com/image-1'],
+        },
         href: 'https://grok.com/imagine',
         title: 'Grok',
       },
@@ -85,11 +105,36 @@ describe('normalizeGrokFeatureSignature', () => {
         visible: true,
         account_gated: false,
         blocked: false,
+        moderation_blocked: false,
+        rate_limited: false,
+        run_state: 'terminal_image',
+        pending: false,
+        terminal_image: true,
+        terminal_video: false,
         modes: ['image', 'image-to-video'],
         labels: ['Create with Imagine', 'Imagine'],
         routes: ['https://grok.com/imagine'],
         href: 'https://grok.com/imagine',
         title: 'Grok',
+        materialization_controls: [
+          {
+            tag: 'button',
+            ariaLabel: 'Download',
+            visible: true,
+          },
+        ],
+        media: {
+          images: [
+            {
+              kind: 'image',
+              src: 'blob:https://grok.com/image-1',
+              width: 512,
+              height: 512,
+            },
+          ],
+          videos: [],
+          urls: ['blob:https://grok.com/image-1'],
+        },
       },
     });
   });

@@ -283,6 +283,108 @@ describe('workbench capability service', () => {
     });
   });
 
+  it('does not promote account-gated gallery media to terminal Grok Imagine output', () => {
+    const capabilities = deriveGrokWorkbenchCapabilitiesFromFeatureSignature(
+      JSON.stringify({
+        detector: 'grok-feature-probe-v1',
+        imagine: {
+          visible: true,
+          account_gated: true,
+          terminal_image: true,
+          terminal_video: true,
+          run_state: 'account_gated',
+          modes: ['image', 'video'],
+          labels: ['Imagine'],
+          routes: ['https://grok.com/imagine'],
+          media: {
+            images: [{ src: 'https://imagine-public.x.ai/example.jpg' }],
+            videos: [{ src: 'https://imagine-public.x.ai/example.mp4' }],
+          },
+        },
+      }),
+      '2026-04-24T12:00:00.000Z',
+    );
+
+    expect(capabilities).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'grok.media.imagine_image',
+        availability: 'account_gated',
+        metadata: expect.objectContaining({
+          runState: 'account_gated',
+          terminalImage: false,
+          terminalVideo: false,
+        }),
+      }),
+      expect.objectContaining({
+        id: 'grok.media.imagine_video',
+        availability: 'account_gated',
+        metadata: expect.objectContaining({
+          terminalImage: false,
+          terminalVideo: false,
+        }),
+      }),
+    ]));
+  });
+
+  it('preserves Grok Imagine run-state and materialization evidence in capability metadata', () => {
+    const capabilities = deriveGrokWorkbenchCapabilitiesFromFeatureSignature(
+      JSON.stringify({
+        detector: 'grok-feature-probe-v1',
+        imagine: {
+          visible: true,
+          run_state: 'terminal_video',
+          terminal_video: true,
+          modes: ['image'],
+          labels: ['Imagine'],
+          routes: ['https://grok.com/imagine'],
+          materialization_controls: [
+            {
+              tag: 'button',
+              ariaLabel: 'Download',
+              visible: true,
+            },
+          ],
+          media: {
+            videos: [
+              {
+                kind: 'video',
+                src: 'blob:https://grok.com/video-1',
+                width: 640,
+                height: 360,
+              },
+            ],
+            urls: ['blob:https://grok.com/video-1'],
+          },
+        },
+      }),
+      '2026-04-24T12:00:00.000Z',
+    );
+
+    expect(capabilities).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'grok.media.imagine_video',
+        metadata: expect.objectContaining({
+          runState: 'terminal_video',
+          terminalVideo: true,
+          materializationControls: [
+            expect.objectContaining({
+              ariaLabel: 'Download',
+              visible: true,
+            }),
+          ],
+          media: expect.objectContaining({
+            videos: [
+              expect.objectContaining({
+                src: 'blob:https://grok.com/video-1',
+              }),
+            ],
+            urls: ['blob:https://grok.com/video-1'],
+          }),
+        }),
+      }),
+    ]));
+  });
+
   it('attaches opt-in browser diagnostics to a workbench capability report', async () => {
     const service = createWorkbenchCapabilityService({
       now: () => new Date('2026-04-24T12:00:00.000Z'),

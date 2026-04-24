@@ -1710,3 +1710,29 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`
+
+## Turn 65 | 2026-04-24
+
+- Continued implementation plan:
+  `docs/dev/plans/0054-2026-04-24-grok-imagine-research-checkpoint.md`
+- Goal: add provider-owned read-only Grok Imagine run-state/readback evidence
+  before any prompt-submission work.
+- Change:
+  - extended the Grok feature probe with conservative `run_state` classification
+  - captured visible pending indicators, terminal image/video DOM media,
+    media URLs, and download/save/open/share/copy controls
+  - preserved normalized evidence in Grok workbench capability metadata for
+    CLI/API/MCP consumers
+  - kept discovery read-only with no prompt submission or generation-control
+    clicks
+- Verification target:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/workbenchCapabilities.test.ts --maxWorkers 1`
+  - live read-only dogfood:
+    - `pnpm tsx bin/auracall.ts capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json`
+    - observed `run_state = account_gated`, `pending = false`,
+      `terminal_image = false`, and `terminal_video = false`; public gallery
+      media stayed page evidence instead of terminal generated output
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`

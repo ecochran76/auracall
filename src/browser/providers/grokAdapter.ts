@@ -140,9 +140,22 @@ export function buildGrokFeatureProbeExpression(): string {
   return `(() => {
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
     const lower = (value) => normalize(value).toLowerCase();
+    const isVisible = (node) => {
+      if (!(node instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(node);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+    const rectSummary = (node) => {
+      if (!(node instanceof HTMLElement)) return null;
+      const rect = node.getBoundingClientRect();
+      return { width: Math.round(rect.width), height: Math.round(rect.height) };
+    };
     const labels = [];
     const routes = [];
     const matchedControls = [];
+    const materializationControls = [];
     const modes = new Set();
     const addLabel = (value) => {
       const normalized = normalize(value);
@@ -164,7 +177,7 @@ export function buildGrokFeatureProbeExpression(): string {
         addLabel(text || aria || title || 'Imagine');
         if (href) addRoute(href);
         if (matchedControls.length < 20) {
-          const rect = node instanceof HTMLElement ? node.getBoundingClientRect() : null;
+          const rect = rectSummary(node);
           matchedControls.push({
             tag: String(node.tagName || '').toLowerCase(),
             text: text || null,
@@ -172,9 +185,23 @@ export function buildGrokFeatureProbeExpression(): string {
             title: title || null,
             href: href || null,
             role: normalize(node.getAttribute?.('role') || '') || null,
-            visible: rect ? rect.width > 0 && rect.height > 0 : null,
+            visible: isVisible(node),
           });
         }
+      }
+      if (/download|save|export|open|share|copy link|copy|post/.test(haystack) && materializationControls.length < 30 && isVisible(node)) {
+        const rect = rectSummary(node);
+        materializationControls.push({
+          tag: String(node.tagName || '').toLowerCase(),
+          text: text || null,
+          ariaLabel: aria || null,
+          title: title || null,
+          href: href || null,
+          role: normalize(node.getAttribute?.('role') || '') || null,
+          visible: isVisible(node),
+          width: rect?.width ?? null,
+          height: rect?.height ?? null,
+        });
       }
       if (haystack.includes('image') || haystack.includes('photo')) modes.add('image');
       if (haystack.includes('video') || haystack.includes('animate')) modes.add('video');
@@ -191,16 +218,91 @@ export function buildGrokFeatureProbeExpression(): string {
     const visible = labels.length > 0 || lower(locationHref).includes('/imagine') || bodyText.includes('imagine');
     const accountGated = /upgrade|premium\\+|supergrok|subscribe|subscription|limit reached|not available|not eligible/.test(bodyText);
     const blocked = /failed to generate|try again later|rate limit|moderated|policy|unavailable/.test(bodyText);
+    const moderationBlocked = /moderated|policy|safety|not allowed|cannot generate/.test(bodyText);
+    const rateLimited = /rate limit|too many requests|try again later|limit reached/.test(bodyText);
+    const pendingText = /generating|creating|processing|queued|please wait|almost done|rendering/.test(bodyText);
+    const pendingControls = Array.from(document.querySelectorAll('[aria-busy="true"], [role="progressbar"], [data-state="loading"], svg[aria-label*="loading" i], svg[aria-label*="generating" i]'))
+      .filter((node) => node instanceof HTMLElement || node instanceof SVGElement)
+      .filter((node) => {
+        if (node instanceof HTMLElement) return isVisible(node);
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      })
+      .slice(0, 20)
+      .map((node) => ({
+        tag: String(node.tagName || '').toLowerCase(),
+        ariaLabel: normalize(node.getAttribute?.('aria-label') || '') || null,
+        role: normalize(node.getAttribute?.('role') || '') || null,
+      }));
+    const readMedia = (selector, kind) => Array.from(document.querySelectorAll(selector))
+      .filter((node) => isVisible(node))
+      .map((node) => {
+        const rect = rectSummary(node);
+        const src = normalize(node.currentSrc || node.src || node.getAttribute?.('src') || '');
+        const poster = normalize(node.getAttribute?.('poster') || '');
+        const href = normalize(node.closest?.('a[href]')?.getAttribute('href') || '');
+        return {
+          kind,
+          tag: String(node.tagName || '').toLowerCase(),
+          src: src || null,
+          poster: poster || null,
+          href: href || null,
+          alt: normalize(node.getAttribute?.('alt') || '') || null,
+          width: rect?.width ?? null,
+          height: rect?.height ?? null,
+        };
+      })
+      .filter((entry) => {
+        const width = Number(entry.width || 0);
+        const height = Number(entry.height || 0);
+        const url = lower([entry.src, entry.poster, entry.href].filter(Boolean).join(' '));
+        if (kind === 'video') return width >= 120 && height >= 80;
+        if (url.includes('avatar') || url.includes('icon') || url.includes('logo')) return false;
+        return width >= 120 && height >= 80;
+      })
+      .slice(0, 20);
+    const images = readMedia('main img, [role="main"] img, img[src*="grok"], img[src*="imagine"], img[src^="blob:"], img[src^="data:"]', 'image');
+    const videos = readMedia('main video, [role="main"] video, video', 'video');
+    const mediaUrls = Array.from(new Set(images.concat(videos).flatMap((entry) => [entry.src, entry.poster, entry.href]).filter(Boolean))).slice(0, 40);
+    const pending = pendingText || pendingControls.length > 0;
+    const terminalImage = !accountGated && !blocked && images.length > 0;
+    const terminalVideo = !accountGated && !blocked && videos.length > 0;
+    const runState = accountGated
+      ? 'account_gated'
+      : blocked
+        ? 'blocked'
+        : pending
+          ? 'pending'
+          : terminalVideo
+            ? 'terminal_video'
+            : terminalImage
+              ? 'terminal_image'
+              : visible
+                ? 'idle'
+                : 'not_visible';
     return {
       detector: 'grok-feature-probe-v1',
       imagine: {
         visible,
         account_gated: accountGated,
         blocked,
+        moderation_blocked: moderationBlocked,
+        rate_limited: rateLimited,
+        run_state: runState,
+        pending,
+        terminal_image: terminalImage,
+        terminal_video: terminalVideo,
         modes: Array.from(modes).sort(),
         labels: Array.from(new Set(labels)).slice(0, 20),
         routes: Array.from(new Set(routes)).slice(0, 20),
         controls: matchedControls,
+        pending_controls: pendingControls,
+        materialization_controls: materializationControls,
+        media: {
+          images,
+          videos,
+          urls: mediaUrls,
+        },
         href: locationHref,
         title: document.title || null,
       },
@@ -218,11 +320,19 @@ export function normalizeGrokFeatureSignature(probe: unknown): string | null {
       visible?: unknown;
       account_gated?: unknown;
       blocked?: unknown;
+      moderation_blocked?: unknown;
+      rate_limited?: unknown;
+      run_state?: unknown;
+      pending?: unknown;
+      terminal_image?: unknown;
+      terminal_video?: unknown;
       modes?: unknown;
       labels?: unknown;
       routes?: unknown;
       href?: unknown;
       title?: unknown;
+      materialization_controls?: unknown;
+      media?: unknown;
     };
   };
   const imagine = value.imagine && typeof value.imagine === 'object' ? value.imagine : null;
@@ -244,21 +354,74 @@ export function normalizeGrokFeatureSignature(probe: unknown): string | null {
       visible: imagine.visible === true,
       account_gated: imagine.account_gated === true,
       blocked: imagine.blocked === true,
+      moderation_blocked: imagine.moderation_blocked === true,
+      rate_limited: imagine.rate_limited === true,
+      run_state: normalizeGrokImagineRunState(imagine.run_state),
+      pending: imagine.pending === true,
+      terminal_image: imagine.terminal_image === true,
+      terminal_video: imagine.terminal_video === true,
       modes,
       labels,
       routes,
       href: typeof imagine.href === 'string' && imagine.href.trim() ? imagine.href.trim() : null,
       title: typeof imagine.title === 'string' && imagine.title.trim() ? imagine.title.trim() : null,
+      materialization_controls: normalizeGrokEvidenceArray(imagine.materialization_controls, 30),
+      media: normalizeGrokImagineMedia(imagine.media),
     },
   };
   const hasSignal =
     normalized.imagine.visible ||
     normalized.imagine.account_gated ||
     normalized.imagine.blocked ||
+    normalized.imagine.pending ||
+    normalized.imagine.terminal_image ||
+    normalized.imagine.terminal_video ||
+    normalized.imagine.run_state !== null ||
     normalized.imagine.modes.length > 0 ||
     normalized.imagine.labels.length > 0 ||
     normalized.imagine.routes.length > 0;
   return hasSignal ? JSON.stringify(normalized) : null;
+}
+
+function normalizeGrokImagineRunState(value: unknown): string | null {
+  const normalized = String(value ?? '').toLowerCase().replace(/[^a-z0-9_-]+/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+  return [
+    'account_gated',
+    'blocked',
+    'pending',
+    'terminal_video',
+    'terminal_image',
+    'idle',
+    'not_visible',
+  ].includes(normalized)
+    ? normalized
+    : null;
+}
+
+function normalizeGrokEvidenceArray(value: unknown, limit: number): Array<Record<string, unknown>> {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry))
+    .slice(0, limit)
+    .map((entry) => ({ ...entry }));
+}
+
+function normalizeGrokImagineMedia(value: unknown): {
+  images: Array<Record<string, unknown>>;
+  videos: Array<Record<string, unknown>>;
+  urls: string[];
+} {
+  const record = value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+  const urls = Array.isArray(record.urls)
+    ? Array.from(new Set(record.urls.map((entry) => String(entry ?? '').trim()).filter(Boolean))).slice(0, 40)
+    : [];
+  return {
+    images: normalizeGrokEvidenceArray(record.images, 20),
+    videos: normalizeGrokEvidenceArray(record.videos, 20),
+    urls,
+  };
 }
 
 async function readGrokFeatureSignature(client: ChromeClient): Promise<string | null> {

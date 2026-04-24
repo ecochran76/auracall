@@ -14046,3 +14046,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   browser workbench route; callers need to opt into opening or reusing it via
   `entrypoint=grok-imagine`, with browser-service mutation attribution, instead
   of making every capability report navigate the provider UI.
+- 2026-04-24: Treat Grok Imagine run-state as provider-owned evidence, not a
+  generic browser status guess. In this repo, `/imagine` can show account
+  gating, pending generation, terminal media, and download/share controls
+  without a normal chat transcript. Keep those selectors in the Grok adapter
+  and surface the normalized evidence through workbench diagnostics before
+  adding any prompt-submission path.

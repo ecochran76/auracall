@@ -20532,3 +20532,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   opened/reused `https://grok.com/imagine`, captured document state and a PNG
   screenshot, detected visible image/video mode evidence, and reported both
   Grok Imagine image/video capabilities as `account_gated`.
+
+## 2026-04-24 - Grok Imagine run-state evidence
+
+- Focus: make the `/imagine` diagnostics useful for invocation readiness
+  without submitting prompts.
+- Progress: Extended the Grok provider feature probe with read-only
+  `run_state` classification, visible pending indicators, terminal image/video
+  media evidence, media URLs, and materialization controls. Workbench
+  capability metadata now carries that evidence through CLI/API/MCP reports.
+- Dogfood: `pnpm tsx bin/auracall.ts capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json`
+  observed `run_state = account_gated`, no pending generation, and no terminal
+  generated image/video promotion from the public gallery media on the gated
+  page.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/workbenchCapabilities.test.ts --maxWorkers 1`
+  - pending broader closeout validation

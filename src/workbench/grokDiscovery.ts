@@ -10,10 +10,20 @@ interface GrokImagineSignals {
   visible: boolean;
   accountGated: boolean;
   blocked: boolean;
+  pending: boolean;
+  terminalImage: boolean;
+  terminalVideo: boolean;
+  runState: string | null;
   image: boolean;
   video: boolean;
   labels: string[];
   routes: string[];
+  materializationControls: Array<Record<string, unknown>>;
+  media: {
+    images: Array<Record<string, unknown>>;
+    videos: Array<Record<string, unknown>>;
+    urls: string[];
+  };
 }
 
 const commonPromptInput = [
@@ -61,11 +71,17 @@ export function deriveGrokWorkbenchCapabilitiesFromFeatureSignature(
       metadata: {
         featureSignatureSignal: 'imagine',
         routes: signals.routes,
+        runState: signals.runState,
+        pending: signals.pending,
+        terminalImage: signals.terminalImage,
+        terminalVideo: signals.terminalVideo,
+        materializationControls: signals.materializationControls,
+        media: signals.media,
       },
     });
   }
 
-  if (signals.video) {
+  if (signals.video || signals.terminalVideo) {
     capabilities.push({
       id: 'grok.media.imagine_video',
       provider: 'grok',
@@ -87,6 +103,12 @@ export function deriveGrokWorkbenchCapabilitiesFromFeatureSignature(
       metadata: {
         featureSignatureSignal: 'imagine_video',
         routes: signals.routes,
+        runState: signals.runState,
+        pending: signals.pending,
+        terminalImage: signals.terminalImage,
+        terminalVideo: signals.terminalVideo,
+        materializationControls: signals.materializationControls,
+        media: signals.media,
       },
     });
   }
@@ -109,10 +131,20 @@ function collectGrokImagineSignals(root: GrokImagineFeatureObject): GrokImagineS
     visible: false,
     accountGated: false,
     blocked: false,
+    pending: false,
+    terminalImage: false,
+    terminalVideo: false,
+    runState: null,
     image: false,
     video: false,
     labels: [],
     routes: [],
+    materializationControls: [],
+    media: {
+      images: [],
+      videos: [],
+      urls: [],
+    },
   };
   collectFromObject(root, signals);
   if (root.configured && typeof root.configured === 'object') {
@@ -120,6 +152,11 @@ function collectGrokImagineSignals(root: GrokImagineFeatureObject): GrokImagineS
   }
   if (root.detected && typeof root.detected === 'object') {
     collectFromObject(root.detected as GrokImagineFeatureObject, signals);
+  }
+  if (signals.accountGated || signals.blocked) {
+    signals.pending = false;
+    signals.terminalImage = false;
+    signals.terminalVideo = false;
   }
   signals.labels = Array.from(new Set(signals.labels)).sort();
   signals.routes = Array.from(new Set(signals.routes)).sort();
@@ -135,13 +172,30 @@ function collectFromObject(source: GrokImagineFeatureObject, signals: GrokImagin
     visible?: unknown;
     account_gated?: unknown;
     blocked?: unknown;
+    pending?: unknown;
+    terminal_image?: unknown;
+    terminal_video?: unknown;
+    run_state?: unknown;
     modes?: unknown;
     labels?: unknown;
     routes?: unknown;
+    materialization_controls?: unknown;
+    media?: unknown;
   };
   if (entry.visible === true) signals.visible = true;
   if (entry.account_gated === true) signals.accountGated = true;
   if (entry.blocked === true) signals.blocked = true;
+  if (entry.pending === true) signals.pending = true;
+  if (entry.terminal_image === true) {
+    signals.terminalImage = true;
+    signals.image = true;
+  }
+  if (entry.terminal_video === true) {
+    signals.terminalVideo = true;
+    signals.video = true;
+  }
+  const runState = typeof entry.run_state === 'string' && entry.run_state.trim() ? entry.run_state.trim() : null;
+  if (runState) signals.runState = runState;
   if (Array.isArray(entry.modes)) {
     for (const mode of entry.modes) {
       const normalized = normalizeToken(mode);
@@ -151,6 +205,8 @@ function collectFromObject(source: GrokImagineFeatureObject, signals: GrokImagin
   }
   collectStringArray(entry.labels, signals.labels);
   collectStringArray(entry.routes, signals.routes);
+  signals.materializationControls.push(...collectRecordArray(entry.materialization_controls, 30));
+  collectMediaEvidence(entry.media, signals.media);
 }
 
 function collectStringArray(value: unknown, sink: string[]): void {
@@ -171,4 +227,27 @@ function normalizeToken(value: unknown): string {
 
 function normalizeLabel(value: unknown): string {
   return String(value ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function collectRecordArray(value: unknown, limit: number): Array<Record<string, unknown>> {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry))
+    .slice(0, limit)
+    .map((entry) => ({ ...entry }));
+}
+
+function collectMediaEvidence(value: unknown, sink: GrokImagineSignals['media']): void {
+  const record = value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+  sink.images.push(...collectRecordArray(record.images, 20));
+  sink.videos.push(...collectRecordArray(record.videos, 20));
+  if (Array.isArray(record.urls)) {
+    for (const entry of record.urls) {
+      const normalized = normalizeLabel(entry);
+      if (normalized) sink.urls.push(normalized);
+    }
+  }
+  sink.urls = Array.from(new Set(sink.urls)).slice(0, 40);
 }

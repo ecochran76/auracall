@@ -215,7 +215,10 @@ Terminology note:
     `diagnostics=browser-state` to include bounded target/document/provider
     evidence and a stored screenshot path for the selected provider. For Grok
     Imagine, add `--entrypoint grok-imagine` or `entrypoint=grok-imagine` to
-    inspect the `/imagine` workbench route without submitting a prompt.
+    inspect the `/imagine` workbench route without submitting a prompt. Grok
+    Imagine provider evidence includes conservative read-only run-state,
+    pending, terminal image/video, media URL, and materialization-control
+    signals when those are visible in the workbench.
   - `POST /v1/team-runs` creates one bounded task-backed team execution:
     - request fields are either:
       - compact fields: `teamId`, `objective`, and optional `title`,

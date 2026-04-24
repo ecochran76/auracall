@@ -229,6 +229,10 @@
     - `entrypoint=grok-imagine` / `--entrypoint grok-imagine` opens or reuses
       the Grok `/imagine` route through browser-service control-plane
       attribution for read-only inspection only
+    - Grok `/imagine` diagnostics include provider-owned read-only
+      `run_state`, pending, terminal image/video, media URL, and
+      materialization-control evidence when visible. They do not submit a
+      prompt or click generation controls.
     - with the configured `api serve` runtime, `provider=gemini`,
       `provider=chatgpt`, and `provider=grok` can merge read-only
       feature-signature evidence from the matching managed browser profile;
