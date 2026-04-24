@@ -84,7 +84,7 @@ import {
   type WorkbenchCapabilityServiceDeps,
 } from '../workbench/service.js';
 import { WorkbenchCapabilityReportRequestSchema } from '../workbench/schema.js';
-import { createBrowserWorkbenchCapabilityDiscovery } from '../workbench/geminiDiscovery.js';
+import { createBrowserWorkbenchCapabilityDiscovery } from '../workbench/browserDiscovery.js';
 import { readAuraCallRunStatus } from '../runStatus.js';
 import type { AuraCallRunStatus } from '../runStatus.js';
 

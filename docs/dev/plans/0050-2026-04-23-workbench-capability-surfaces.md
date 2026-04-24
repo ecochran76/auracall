@@ -49,6 +49,11 @@ a stable first-class adapter.
 - Gemini live discovery now treats current renamed media rows (`Images`,
   `Videos`, `Music`) as aliases for the existing
   `gemini.media.create_image|create_video|create_music` capability ids.
+- ChatGPT browser-backed discovery now maps the existing read-only feature
+  signature into workbench capabilities for Web Search, Deep Research, Company
+  Knowledge, visible apps/connectors, and visible skills. Static ChatGPT apps,
+  Company Knowledge, and skills remain conservative `account_gated` entries
+  until current-account discovery reports an available concrete capability.
 
 ## Target Contract
 
@@ -105,10 +110,10 @@ a stable first-class adapter.
 - [x] Gemini feature-signature discovery maps visible `Create image`/`Images`,
   `Create music`/`Music`, `Create video`/`Videos`, Canvas, and Deep Research modes into available
   workbench capabilities.
-- Deep Research is represented as a capability for ChatGPT and Gemini without
+- [x] Deep Research is represented as a capability for ChatGPT and Gemini without
   claiming full automation until a provider-backed smoke proves request,
   completion, and artifact/readback behavior.
-- ChatGPT apps/connectors and business-plan skills are represented as
+- [x] ChatGPT apps/connectors and business-plan skills are represented as
   account-gated capabilities when visible, not hard-coded universal tools.
 - [x] Tests cover schema normalization, provider-label aliasing, availability
   states, and one fake-provider API/MCP list path.
@@ -120,6 +125,7 @@ a stable first-class adapter.
 - [x] Fake-provider API/MCP tests for capability listing.
 - Browser-provider tests for Gemini tool drawer labels and ChatGPT composer
   add-on/app/skill labels using captured DOM fixtures or bounded selectors.
+- [x] Unit tests for ChatGPT feature-signature to workbench-capability mapping.
 - [x] Unit tests for Gemini feature-signature to workbench-capability mapping.
 - Live discovery smoke only on signed-in managed browser profiles and never
   after a `google.com/sorry`, CAPTCHA, or similar blocking page is detected.

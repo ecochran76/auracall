@@ -1,3 +1,11 @@
+- 2026-04-23: Reuse ChatGPT feature signatures for read-only workbench
+  capability discovery. In this repo, the ChatGPT browser adapter already
+  observes volatile account-specific signals such as Web Search, Deep
+  Research, Company Knowledge, and visible apps. Map those signatures into
+  `workbench_capability_report` entries before adding new DOM scrapers or
+  invocation behavior, and keep static apps/skills/account surfaces
+  conservative until discovery proves current-account visibility.
+
 - 2026-04-23: After closing a maintenance exception, complete the selected
   integration-hygiene pass before reopening service/runner implementation. In
   this repo, Plan 0038 intentionally paused service/runner architecture work

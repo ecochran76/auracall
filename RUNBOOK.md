@@ -1,5 +1,23 @@
 # RUNBOOK
 
+## Turn 55 | 2026-04-23
+
+- Active plan: `docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md`
+- Goal: extend read-only workbench capability discovery to ChatGPT's volatile
+  composer/workbench tool surface.
+- Result:
+  - ChatGPT feature signatures now project available capabilities for Web
+    Search, Deep Research, Company Knowledge, visible apps/connectors, and
+    visible skills
+  - static ChatGPT apps, Company Knowledge, and skills remain conservative
+    `account_gated` entries until discovery proves current-account visibility
+  - API/MCP/CLI capability reports reuse the existing read-only capability
+    contract and do not invoke or enable provider tools
+- Verification:
+  - `pnpm vitest run tests/workbenchCapabilities.test.ts tests/http.workbenchCapabilities.test.ts tests/mcp.workbenchCapabilities.test.ts tests/cli/workbenchCapabilitiesCommand.test.ts --maxWorkers 1`
+  - `pnpm tsx bin/auracall.ts capabilities --target chatgpt --static --json`
+  - `pnpm tsx bin/auracall.ts capabilities --target gemini --static --json`
+
 ## Turn 54 | 2026-04-23
 
 - Active plan: `docs/dev/plans/0038-2026-04-21-service-runner-roadmap-checkpoint.md`

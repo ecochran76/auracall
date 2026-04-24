@@ -143,6 +143,23 @@ export const STATIC_WORKBENCH_CAPABILITY_CATALOG: WorkbenchCapability[] = [
     source: 'static_catalog',
   },
   {
+    id: 'chatgpt.files.company_knowledge',
+    provider: 'chatgpt',
+    providerLabels: ['Company knowledge'],
+    category: 'file',
+    invocationMode: 'composer_attachment',
+    surfaces: ['browser_service', 'local_api', 'mcp'],
+    availability: 'account_gated',
+    stability: 'observed',
+    requiredInputs: commonPromptInput,
+    output: { artifactTypes: ['generated'] },
+    safety: {
+      mayUseExternalAccount: true,
+      notes: ['Company knowledge is workspace/account dependent and should be discovered before invocation.'],
+    },
+    source: 'static_catalog',
+  },
+  {
     id: 'chatgpt.skills',
     provider: 'chatgpt',
     providerLabels: ['Skills'],

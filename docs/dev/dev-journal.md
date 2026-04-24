@@ -1,3 +1,20 @@
+## 2026-04-23 - ChatGPT workbench capability discovery
+
+- Current focus:
+  - continue Plan 0050 by making ChatGPT volatile workbench tools reportable
+    through the existing read-only capability contract
+- Progress:
+  - added a ChatGPT feature-signature mapper for Web Search, Deep Research,
+    Company Knowledge, visible apps/connectors, and visible skills
+  - wired browser-backed capability discovery for `provider=chatgpt` through
+    the same service path as Gemini discovery
+  - kept static ChatGPT apps, Company Knowledge, and skills conservative until
+    current-account discovery reports concrete availability
+- Validation:
+  - `pnpm vitest run tests/workbenchCapabilities.test.ts tests/http.workbenchCapabilities.test.ts tests/mcp.workbenchCapabilities.test.ts tests/cli/workbenchCapabilitiesCommand.test.ts --maxWorkers 1`
+  - `pnpm tsx bin/auracall.ts capabilities --target chatgpt --static --json`
+  - `pnpm tsx bin/auracall.ts capabilities --target gemini --static --json`
+
 ## 2026-04-23 - Service/runner integration hygiene
 
 - Current focus:

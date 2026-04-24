@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createWorkbenchCapabilityService } from '../src/workbench/service.js';
 import { deriveGeminiWorkbenchCapabilitiesFromFeatureSignature } from '../src/workbench/geminiDiscovery.js';
+import { deriveChatgptWorkbenchCapabilitiesFromFeatureSignature } from '../src/workbench/chatgptDiscovery.js';
 
 describe('workbench capability service', () => {
   it('reports static workbench capabilities with bounded availability summary', async () => {
@@ -110,5 +111,97 @@ describe('workbench capability service', () => {
         availability: 'available',
       }),
     ]));
+  });
+
+  it('derives available ChatGPT capabilities from a live feature signature', () => {
+    const capabilities = deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(
+      JSON.stringify({
+        detector: 'chatgpt-feature-probe-v1',
+        web_search: true,
+        deep_research: true,
+        company_knowledge: true,
+        apps: ['github', 'google drive'],
+        skills: ['study and learn'],
+      }),
+      '2026-04-23T12:00:00.000Z',
+    );
+
+    expect(capabilities).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'chatgpt.search.web_search',
+        provider: 'chatgpt',
+        category: 'search',
+        availability: 'available',
+        source: 'browser_discovery',
+      }),
+      expect.objectContaining({
+        id: 'chatgpt.research.deep_research',
+        category: 'research',
+        availability: 'available',
+        safety: expect.objectContaining({ mayTakeMinutes: true }),
+      }),
+      expect.objectContaining({
+        id: 'chatgpt.files.company_knowledge',
+        category: 'file',
+        availability: 'available',
+      }),
+      expect.objectContaining({
+        id: 'chatgpt.apps.github',
+        category: 'app',
+        providerLabels: ['GitHub'],
+        availability: 'available',
+        safety: expect.objectContaining({ requiresUserConsent: true }),
+      }),
+      expect.objectContaining({
+        id: 'chatgpt.apps.google_drive',
+        providerLabels: ['Google Drive'],
+      }),
+      expect.objectContaining({
+        id: 'chatgpt.skills.study_and_learn',
+        category: 'skill',
+        providerLabels: ['Study And Learn'],
+      }),
+    ]));
+  });
+
+  it('merges discovered ChatGPT app visibility without losing account-gated catalog entries', async () => {
+    const service = createWorkbenchCapabilityService({
+      now: () => new Date('2026-04-23T12:00:00.000Z'),
+      discoverCapabilities: async () =>
+        deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(
+          JSON.stringify({
+            detector: 'chatgpt-feature-probe-v1',
+            detected: {
+              deep_research: true,
+              apps: ['github'],
+            },
+          }),
+          '2026-04-23T12:00:00.000Z',
+        ),
+    });
+
+    const report = await service.listCapabilities({ provider: 'chatgpt', category: 'app' });
+
+    expect(report.capabilities.map((capability) => capability.id)).toEqual([
+      'chatgpt.apps',
+      'chatgpt.apps.github',
+    ]);
+    expect(report.capabilities).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'chatgpt.apps',
+        availability: 'account_gated',
+        source: 'static_catalog',
+      }),
+      expect.objectContaining({
+        id: 'chatgpt.apps.github',
+        availability: 'available',
+        source: 'browser_discovery',
+      }),
+    ]));
+    expect(report.summary).toMatchObject({
+      total: 2,
+      available: 1,
+      accountGated: 1,
+    });
   });
 });

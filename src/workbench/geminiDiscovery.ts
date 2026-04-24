@@ -1,9 +1,4 @@
-import { BrowserAutomationClient } from '../browser/client.js';
-import type { ResolvedUserConfig } from '../config.js';
-import type {
-  WorkbenchCapability,
-  WorkbenchCapabilityReportRequest,
-} from './types.js';
+import type { WorkbenchCapability } from './types.js';
 
 interface GeminiFeatureObject {
   modes?: unknown;
@@ -69,19 +64,6 @@ const GEMINI_MODE_TO_CAPABILITY: Record<string, Pick<WorkbenchCapability, 'id' |
     safety: { mayTakeMinutes: true },
   },
 };
-
-export function createBrowserWorkbenchCapabilityDiscovery(
-  userConfig: ResolvedUserConfig,
-): (request: WorkbenchCapabilityReportRequest) => Promise<WorkbenchCapability[]> {
-  return async (request) => {
-    if (request.provider !== 'gemini') {
-      return [];
-    }
-    const client = await BrowserAutomationClient.fromConfig(userConfig, { target: 'gemini' });
-    const signature = await client.getFeatureSignature();
-    return deriveGeminiWorkbenchCapabilitiesFromFeatureSignature(signature, new Date().toISOString());
-  };
-}
 
 export function deriveGeminiWorkbenchCapabilitiesFromFeatureSignature(
   featureSignature: string | null | undefined,

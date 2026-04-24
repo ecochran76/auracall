@@ -103,7 +103,7 @@ import {
   normalizeWorkbenchCapabilityProvider,
 } from '../src/cli/workbenchCapabilitiesCommand.js';
 import { createWorkbenchCapabilityService } from '../src/workbench/service.js';
-import { createBrowserWorkbenchCapabilityDiscovery } from '../src/workbench/geminiDiscovery.js';
+import { createBrowserWorkbenchCapabilityDiscovery } from '../src/workbench/browserDiscovery.js';
 import { performSessionRun } from '../src/cli/sessionRunner.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
 import { isMediaFile } from '../src/browser/prompt.js';
@@ -3697,7 +3697,8 @@ program
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const selectedProvider = normalizeWorkbenchCapabilityProvider(commandOptions.provider ?? commandOptions.target);
-    const shouldUseBrowserDiscovery = !commandOptions.static && selectedProvider === 'gemini';
+    const shouldUseBrowserDiscovery =
+      !commandOptions.static && (selectedProvider === 'gemini' || selectedProvider === 'chatgpt');
     let reporter = createWorkbenchCapabilityService();
 
     if (shouldUseBrowserDiscovery) {
@@ -3705,11 +3706,12 @@ program
         inspectBrowserDoctorState,
         withBrowserProbeOperation,
       } = await import('../src/browser/profileDoctor.js');
-      const localReport = await inspectBrowserDoctorState(userConfig, { target: 'gemini' });
+      const browserTarget = selectedProvider === 'chatgpt' ? 'chatgpt' : 'gemini';
+      const localReport = await inspectBrowserDoctorState(userConfig, { target: browserTarget });
       reporter = createWorkbenchCapabilityService({
         discoverCapabilities: async (request) => {
           let capabilities: Awaited<ReturnType<ReturnType<typeof createBrowserWorkbenchCapabilityDiscovery>>> = [];
-          await withBrowserProbeOperation('gemini', localReport, 'features', async () => {
+          await withBrowserProbeOperation(browserTarget, localReport, 'features', async () => {
             capabilities = await createBrowserWorkbenchCapabilityDiscovery(userConfig)(request);
           });
           return capabilities;

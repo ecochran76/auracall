@@ -43,6 +43,9 @@ Current State:
     owns the more general discovery/invocation model for rapidly changing
     chat-workbench capabilities such as Deep Research, ChatGPT apps,
     ChatGPT business-plan skills, Gemini media tools, and provider add-ons
+    - read-only ChatGPT feature-signature discovery now projects visible Web
+      Search, Deep Research, Company Knowledge, apps/connectors, and skills
+      into the same capability report without invoking or enabling tools
 - runtime browser diagnostics are closed in
   [docs/dev/plans/0051-2026-04-23-runtime-browser-diagnostics.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0051-2026-04-23-runtime-browser-diagnostics.md)
   - `GET /v1/runtime-runs/inspect?...&diagnostics=browser-state`, CLI
