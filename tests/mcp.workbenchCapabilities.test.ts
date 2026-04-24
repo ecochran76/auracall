@@ -10,6 +10,29 @@ describe('mcp workbench_capabilities tool', () => {
         provider: request?.provider ?? null,
         category: request?.category ?? null,
         runtimeProfile: request?.runtimeProfile ?? null,
+        browserDiagnostics: request?.diagnostics === 'browser-state'
+          ? {
+              probeStatus: 'observed',
+              service: request.provider ?? null,
+              ownerStepId: 'workbench-capabilities-grok',
+              observedAt: '2026-04-24T12:00:00.000Z',
+              source: 'browser-service',
+              reason: null,
+              target: {
+                host: '127.0.0.1',
+                port: 45000,
+                targetId: 'target-1',
+                url: 'https://grok.com/imagine',
+                title: 'Grok',
+              },
+              document: null,
+              visibleCounts: null,
+              providerEvidence: {
+                detector: 'grok-feature-probe-v1',
+              },
+              screenshot: null,
+            }
+          : null,
         capabilities: [
           {
             id: 'chatgpt.research.deep_research',
@@ -37,17 +60,25 @@ describe('mcp workbench_capabilities tool', () => {
     });
 
     const result = await handler({
-      provider: 'chatgpt',
+      provider: 'grok',
       category: 'research',
       runtimeProfile: 'default',
+      diagnostics: 'browser-state',
     });
 
     expect(result).toMatchObject({
       structuredContent: {
         object: 'workbench_capability_report',
-        provider: 'chatgpt',
+        provider: 'grok',
         category: 'research',
         runtimeProfile: 'default',
+        browserDiagnostics: {
+          probeStatus: 'observed',
+          service: 'grok',
+          providerEvidence: {
+            detector: 'grok-feature-probe-v1',
+          },
+        },
         capabilities: [
           {
             id: 'chatgpt.research.deep_research',

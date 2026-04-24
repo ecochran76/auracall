@@ -85,6 +85,7 @@ import {
 } from '../workbench/service.js';
 import { WorkbenchCapabilityReportRequestSchema } from '../workbench/schema.js';
 import { createBrowserWorkbenchCapabilityDiscovery } from '../workbench/browserDiscovery.js';
+import { createBrowserWorkbenchCapabilityDiagnostics } from '../workbench/browserDiagnostics.js';
 import { readAuraCallRunStatus } from '../runStatus.js';
 import type { AuraCallRunStatus } from '../runStatus.js';
 
@@ -108,6 +109,7 @@ export interface ResponsesHttpServerDeps {
   mediaGenerationExecutor?: MediaGenerationServiceDeps['executor'];
   workbenchCapabilityCatalog?: WorkbenchCapabilityServiceDeps['catalog'];
   discoverWorkbenchCapabilities?: WorkbenchCapabilityServiceDeps['discoverCapabilities'];
+  diagnoseWorkbenchCapabilities?: WorkbenchCapabilityServiceDeps['diagnoseCapabilities'];
   executionHost?: ExecutionServiceHost;
   localActionExecutionPolicy?: ExecutionServiceHostDeps['localActionExecutionPolicy'];
   probeRuntimeRunServiceState?: (
@@ -268,6 +270,7 @@ export async function createResponsesHttpServer(
     now,
     catalog: deps.workbenchCapabilityCatalog,
     discoverCapabilities: deps.discoverWorkbenchCapabilities,
+    diagnoseCapabilities: deps.diagnoseWorkbenchCapabilities,
   });
   const probeMediaGenerationBrowserDiagnosticsImpl =
     deps.probeMediaGenerationBrowserDiagnostics ?? probeMediaGenerationBrowserDiagnostics;
@@ -1004,6 +1007,9 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
       discoverWorkbenchCapabilities: createBrowserWorkbenchCapabilityDiscovery(
         resolvedUserConfig as ResolvedUserConfig,
       ),
+      diagnoseWorkbenchCapabilities: createBrowserWorkbenchCapabilityDiagnostics(
+        resolvedUserConfig as ResolvedUserConfig,
+      ),
     },
   );
   const host = options.host ?? '127.0.0.1';
@@ -1229,7 +1235,7 @@ function createHttpStatusResponse(input: {
       mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
       runStatusTemplate: '/v1/runs/{run_id}/status[?diagnostics=browser-state]',
       workbenchCapabilitiesList:
-        '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}',
+        '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&diagnostics=browser-state]',
     },
     compatibility: {
       openai: true,
@@ -1610,12 +1616,14 @@ function parseWorkbenchCapabilityQuery(searchParams: URLSearchParams) {
       .enum(['0', '1', 'true', 'false'])
       .transform((value) => value === '1' || value.toLowerCase() === 'true')
       .optional(),
+    diagnostics: z.enum(['browser-state']).optional(),
   }).parse(raw);
   return WorkbenchCapabilityReportRequestSchema.parse({
     provider: parsed.provider ?? null,
     category: parsed.category ?? null,
     runtimeProfile: parsed.runtimeProfile ?? null,
     includeUnavailable: parsed.includeUnavailable ?? null,
+    diagnostics: parsed.diagnostics ?? null,
   });
 }
 

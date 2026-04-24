@@ -26,6 +26,7 @@ export interface WorkbenchCapabilitiesCliOptions {
   category?: unknown;
   availableOnly?: unknown;
   runtimeProfile?: unknown;
+  diagnostics?: unknown;
 }
 
 export function normalizeWorkbenchCapabilityProvider(value: unknown): WorkbenchCapabilityProvider | null {
@@ -48,6 +49,14 @@ export function normalizeWorkbenchCapabilityCategory(value: unknown): WorkbenchC
   throw new Error(`Invalid category "${value}". Use one of: ${WORKBENCH_CAPABILITY_CATEGORIES.join(', ')}.`);
 }
 
+export function normalizeWorkbenchCapabilityDiagnostics(value: unknown): 'browser-state' | null {
+  if (value == null) return null;
+  const normalized = String(value).trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized === 'browser-state') return normalized;
+  throw new Error(`Invalid diagnostics "${value}". Use "browser-state".`);
+}
+
 export async function buildWorkbenchCapabilityReportForCli(
   reporter: WorkbenchCapabilityReporter,
   options: WorkbenchCapabilitiesCliOptions = {},
@@ -63,6 +72,7 @@ export async function buildWorkbenchCapabilityReportForCli(
     category,
     runtimeProfile,
     includeUnavailable: !options.availableOnly,
+    diagnostics: normalizeWorkbenchCapabilityDiagnostics(options.diagnostics),
   };
   return reporter.listCapabilities(request);
 }
@@ -81,22 +91,47 @@ export function formatWorkbenchCapabilityReport(report: WorkbenchCapabilityRepor
 
   if (report.capabilities.length === 0) {
     lines.push('No capabilities matched the requested filters.');
-    return lines.join('\n');
   }
 
-  for (const capability of report.capabilities) {
-    const labels = capability.providerLabels.length > 0 ? `: ${capability.providerLabels.join(', ')}` : '';
-    lines.push(
-      `- ${capability.id} [${capability.category}] ${capability.availability} via ${capability.invocationMode} (${capability.source})${labels}`,
-    );
-    const outputs = capability.output.artifactTypes?.length ? capability.output.artifactTypes.join(', ') : 'generated';
-    lines.push(`  output: ${outputs}; surfaces: ${capability.surfaces.join(', ')}`);
-    const safety = formatSafetyNotes(capability.safety);
-    if (safety) {
-      lines.push(`  safety: ${safety}`);
+  if (report.browserDiagnostics) {
+    lines.push(formatBrowserDiagnostics(report.browserDiagnostics));
+  }
+
+  if (report.capabilities.length > 0) {
+    for (const capability of report.capabilities) {
+      const labels = capability.providerLabels.length > 0 ? `: ${capability.providerLabels.join(', ')}` : '';
+      lines.push(
+        `- ${capability.id} [${capability.category}] ${capability.availability} via ${capability.invocationMode} (${capability.source})${labels}`,
+      );
+      const outputs = capability.output.artifactTypes?.length ? capability.output.artifactTypes.join(', ') : 'generated';
+      lines.push(`  output: ${outputs}; surfaces: ${capability.surfaces.join(', ')}`);
+      const safety = formatSafetyNotes(capability.safety);
+      if (safety) {
+        lines.push(`  safety: ${safety}`);
+      }
     }
   }
 
+  return lines.join('\n');
+}
+
+function formatBrowserDiagnostics(
+  diagnostics: NonNullable<WorkbenchCapabilityReport['browserDiagnostics']>,
+): string {
+  if (diagnostics.probeStatus !== 'observed') {
+    return `Browser diagnostics: unavailable (${diagnostics.reason ?? 'no reason reported'})`;
+  }
+  const lines = [
+    `Browser diagnostics: observed ${diagnostics.service ?? '(unknown service)'}`,
+    `  target: ${diagnostics.target?.url ?? '(none)'}`,
+    `  document: ${diagnostics.document?.title ?? '(untitled)'}; ready=${diagnostics.document?.readyState ?? '(unknown)'}`,
+  ];
+  if (diagnostics.screenshot) {
+    lines.push(`  screenshot: ${diagnostics.screenshot.path} (${diagnostics.screenshot.bytes} bytes)`);
+  }
+  if (diagnostics.providerEvidence) {
+    lines.push(`  provider evidence: ${JSON.stringify(diagnostics.providerEvidence)}`);
+  }
   return lines.join('\n');
 }
 

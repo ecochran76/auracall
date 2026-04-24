@@ -14035,3 +14035,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   from read-only inspection helpers. Keep those mutating raw scripts listed in
   `RAW_DEVTOOLS_MUTATING_SCRIPT_ALLOWLIST` and fail tests when a new one
   appears without explicit acknowledgement.
+- 2026-04-24: Capability discovery needs browser diagnostics before invocation.
+  In this repo, volatile workbench surfaces such as Grok Imagine can be
+  account-gated, renamed, or partially visible. Let operators request
+  `diagnostics=browser-state` on workbench capability reports so they can see
+  bounded target/document/provider evidence plus a stored screenshot without
+  opening raw CDP or submitting a prompt.

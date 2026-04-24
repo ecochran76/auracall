@@ -96,6 +96,7 @@ export const WorkbenchCapabilityReportRequestSchema: z.ZodType<WorkbenchCapabili
   category: WorkbenchCapabilityCategorySchema.nullable().optional(),
   runtimeProfile: z.string().trim().min(1).nullable().optional(),
   includeUnavailable: z.boolean().nullable().optional(),
+  diagnostics: z.enum(['browser-state']).nullable().optional(),
 });
 
 export const WorkbenchCapabilityReportSchema: z.ZodType<WorkbenchCapabilityReport> = z.object({
@@ -104,6 +105,7 @@ export const WorkbenchCapabilityReportSchema: z.ZodType<WorkbenchCapabilityRepor
   provider: WorkbenchCapabilityProviderSchema.nullable().optional(),
   category: WorkbenchCapabilityCategorySchema.nullable().optional(),
   runtimeProfile: z.string().nullable().optional(),
+  browserDiagnostics: z.any().nullable().optional(),
   capabilities: z.array(WorkbenchCapabilitySchema),
   summary: z.object({
     total: z.number().int().nonnegative(),

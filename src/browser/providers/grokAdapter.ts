@@ -136,12 +136,13 @@ function isClientFocusSuppressed(client: ChromeClient): boolean {
   return Boolean((client as ChromeClientWithFocusPolicy).__auracallSuppressFocus);
 }
 
-function buildGrokFeatureProbeExpression(): string {
+export function buildGrokFeatureProbeExpression(): string {
   return `(() => {
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
     const lower = (value) => normalize(value).toLowerCase();
     const labels = [];
     const routes = [];
+    const controls = [];
     const modes = new Set();
     const addLabel = (value) => {
       const normalized = normalize(value);
@@ -162,6 +163,18 @@ function buildGrokFeatureProbeExpression(): string {
       if (haystack.includes('imagine') || haystack.includes('/imagine')) {
         addLabel(text || aria || title || 'Imagine');
         if (href) addRoute(href);
+        if (controls.length < 20) {
+          const rect = node instanceof HTMLElement ? node.getBoundingClientRect() : null;
+          controls.push({
+            tag: String(node.tagName || '').toLowerCase(),
+            text: text || null,
+            ariaLabel: aria || null,
+            title: title || null,
+            href: href || null,
+            role: normalize(node.getAttribute?.('role') || '') || null,
+            visible: rect ? rect.width > 0 && rect.height > 0 : null,
+          });
+        }
       }
       if (haystack.includes('image') || haystack.includes('photo')) modes.add('image');
       if (haystack.includes('video') || haystack.includes('animate')) modes.add('video');
@@ -187,6 +200,7 @@ function buildGrokFeatureProbeExpression(): string {
         modes: Array.from(modes).sort(),
         labels: Array.from(new Set(labels)).slice(0, 20),
         routes: Array.from(new Set(routes)).slice(0, 20),
+        controls,
         href: locationHref,
         title: document.title || null,
       },

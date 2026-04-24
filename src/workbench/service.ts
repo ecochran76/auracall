@@ -10,11 +10,13 @@ import type {
   WorkbenchCapabilityReportRequest,
   WorkbenchCapabilityReporter,
 } from './types.js';
+import type { RuntimeRunInspectionBrowserDiagnosticsSummary } from '../runtime/inspection.js';
 
 export interface WorkbenchCapabilityServiceDeps {
   now?: () => Date;
   catalog?: WorkbenchCapability[];
   discoverCapabilities?: (request: WorkbenchCapabilityReportRequest) => Promise<WorkbenchCapability[]>;
+  diagnoseCapabilities?: (request: WorkbenchCapabilityReportRequest) => Promise<RuntimeRunInspectionBrowserDiagnosticsSummary | null>;
 }
 
 export function createWorkbenchCapabilityService(
@@ -36,6 +38,9 @@ export function createWorkbenchCapabilityService(
         })
         .sort(compareCapabilities)
         .map((capability) => WorkbenchCapabilitySchema.parse(capability));
+      const browserDiagnostics = request.diagnostics === 'browser-state' && deps.diagnoseCapabilities
+        ? await deps.diagnoseCapabilities(request)
+        : null;
 
       const report: WorkbenchCapabilityReport = {
         object: 'workbench_capability_report',
@@ -43,6 +48,7 @@ export function createWorkbenchCapabilityService(
         provider: request.provider ?? null,
         category: request.category ?? null,
         runtimeProfile: request.runtimeProfile ?? null,
+        browserDiagnostics,
         capabilities,
         summary: {
           total: capabilities.length,

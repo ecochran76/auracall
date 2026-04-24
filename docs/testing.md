@@ -211,15 +211,19 @@
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=gemini"`
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=chatgpt"`
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=grok"`
+    - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=grok&diagnostics=browser-state"`
     - `auracall capabilities --target gemini --json`
     - `auracall capabilities --target chatgpt --json`
     - `auracall capabilities --target grok --json`
+    - `auracall capabilities --target grok --diagnostics browser-state --json`
     - `auracall capabilities --target gemini --static --json` for a no-browser
       catalog check
     - use `category=research|media|canvas|connector|skill|app|search|file|other`
       to narrow the report
     - static entries are intentionally conservative until live browser/provider
       discovery proves current account availability
+    - `diagnostics=browser-state` / `--diagnostics browser-state` adds bounded
+      target/document/provider evidence and a stored PNG screenshot path
     - with the configured `api serve` runtime, `provider=gemini`,
       `provider=chatgpt`, and `provider=grok` can merge read-only
       feature-signature evidence from the matching managed browser profile;
@@ -305,6 +309,9 @@
           `GET /v1/media-generations/<id>/status?diagnostics=browser-state`
           expose the same bounded browser snapshot for active browser-backed
           media jobs, using the media run's recorded `tabTargetId` when present
+        - `GET /v1/workbench-capabilities?provider=<provider>&diagnostics=browser-state`
+          exposes the same bounded browser snapshot for current workbench
+          capability discovery, including Grok Imagine gating evidence
       - optional `schedulerAuthority` when explicitly requested with
         `authority=scheduler`
         - read-only authority evidence only

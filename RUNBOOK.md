@@ -1657,3 +1657,29 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run check`
   - `pnpm run plans:audit -- --keep 53`
   - `git diff --check`
+
+## Turn 63 | 2026-04-24
+
+- Continued implementation plan:
+  `docs/dev/plans/0054-2026-04-24-grok-imagine-research-checkpoint.md`
+- Goal: give operators direct browser evidence for Grok Imagine gating during
+  workbench capability discovery, without raw CDP access or prompt submission.
+- Change:
+  - added `diagnostics=browser-state` / `--diagnostics browser-state` to
+    workbench capability reports
+  - wired the diagnostics option through CLI, local API, MCP, and the shared
+    workbench capability service
+  - reused browser-service diagnostics storage and screenshot capture
+  - added Grok Imagine provider evidence to browser diagnostics using the
+    read-only Grok feature probe
+- Verification target:
+  - `pnpm vitest run tests/workbenchCapabilities.test.ts tests/http.workbenchCapabilities.test.ts tests/mcp.workbenchCapabilities.test.ts tests/cli/workbenchCapabilitiesCommand.test.ts tests/browser/grokAdapter.test.ts`
+  - live read-only dogfood:
+    - `pnpm tsx bin/auracall.ts capabilities --target grok --diagnostics browser-state --json`
+    - selected the current managed Grok project-chat tab, captured target
+      URL/title plus a stored PNG screenshot, and kept Imagine capabilities
+      conservative `unknown`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`

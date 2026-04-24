@@ -20501,3 +20501,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run check`
   - `pnpm run plans:audit -- --keep 53`
   - `git diff --check`
+
+## 2026-04-24 - Workbench capability browser diagnostics
+
+- Focus: expose bounded browser evidence for Grok Imagine account-gating during
+  workbench capability discovery.
+- Progress: Added `diagnostics=browser-state` to workbench capability reports
+  across CLI/API/MCP/service. The diagnostics path uses browser-service-owned
+  target resolution and screenshot storage, then adds Grok Imagine provider
+  evidence from the read-only feature probe. No prompt submission or raw CDP
+  surface was added.
+- Dogfood: `pnpm tsx bin/auracall.ts capabilities --target grok --diagnostics browser-state --json`
+  selected the current managed Grok project-chat tab, captured target URL/title
+  and a stored PNG screenshot path, and kept Imagine image/video capabilities
+  conservative `unknown` because the selected tab was not `/imagine`.
+- Validation:
+  - `pnpm vitest run tests/workbenchCapabilities.test.ts tests/http.workbenchCapabilities.test.ts tests/mcp.workbenchCapabilities.test.ts tests/cli/workbenchCapabilitiesCommand.test.ts tests/browser/grokAdapter.test.ts`
+  - pending broader closeout validation

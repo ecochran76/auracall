@@ -12,6 +12,7 @@ import {
   buildGeminiActivityEvidenceExpression,
   coerceGeminiActivityEvidence,
 } from './providers/geminiEvidence.js';
+import { buildGrokFeatureProbeExpression } from './providers/grokAdapter.js';
 
 const SERVICE_HOME_URLS: Record<Extract<ExecutionRunnerServiceId, 'chatgpt' | 'gemini' | 'grok'>, string> = {
   chatgpt: 'https://chatgpt.com/',
@@ -60,6 +61,11 @@ export async function probeBrowserRunDiagnostics(
     await Runtime.enable();
     await Page.enable().catch(() => undefined);
     const pageState = await readPageDiagnostics(Runtime, input.service);
+    const document = {
+      ...pageState.document,
+      url: pageState.document.url ?? target.tab?.url ?? null,
+      title: pageState.document.title ?? target.tab?.title ?? null,
+    };
     const screenshot = await captureDiagnosticsScreenshot(client, input);
     const browserMutations = summarizeBrowserMutations(browserService.listRecentBrowserMutations?.(20) ?? []);
     return {
@@ -71,10 +77,10 @@ export async function probeBrowserRunDiagnostics(
         host,
         port,
         targetId,
-        url: target.tab?.url ?? pageState.document.url,
-        title: target.tab?.title ?? pageState.document.title,
+        url: target.tab?.url ?? document.url,
+        title: target.tab?.title ?? document.title,
       },
-      document: pageState.document,
+      document,
       visibleCounts: pageState.visibleCounts,
       providerEvidence: pageState.providerEvidence,
       browserMutations,
@@ -116,7 +122,11 @@ async function readPageDiagnostics(
 }
 
 function buildPageDiagnosticsExpression(service: BrowserDiagnosticsService): string {
-  const providerExpression = service === 'gemini' ? buildGeminiActivityEvidenceExpression() : 'null';
+  const providerExpression = service === 'gemini'
+    ? buildGeminiActivityEvidenceExpression()
+    : service === 'grok'
+      ? buildGrokFeatureProbeExpression()
+      : 'null';
   return `(() => {
     const visible = (node) => {
       if (!(node instanceof HTMLElement)) return false;
@@ -126,7 +136,15 @@ function buildPageDiagnosticsExpression(service: BrowserDiagnosticsService): str
       return rect.width > 0 && rect.height > 0;
     };
     const countVisible = (selector) => Array.from(document.querySelectorAll(selector)).filter((node) => visible(node)).length;
-    const providerEvidence = ${providerExpression};
+    let providerEvidence = null;
+    try {
+      providerEvidence = ${providerExpression};
+    } catch (error) {
+      providerEvidence = {
+        detector: '${service}-provider-evidence',
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
     return {
       document: {
         url: location.href,

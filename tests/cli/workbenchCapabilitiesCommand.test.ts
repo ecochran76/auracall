@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildWorkbenchCapabilityReportForCli,
   formatWorkbenchCapabilityReport,
+  normalizeWorkbenchCapabilityDiagnostics,
   normalizeWorkbenchCapabilityCategory,
   normalizeWorkbenchCapabilityProvider,
 } from '../../src/cli/workbenchCapabilitiesCommand.js';
@@ -13,6 +14,10 @@ describe('workbench capabilities CLI helpers', () => {
     expect(normalizeWorkbenchCapabilityCategory('Media')).toBe('media');
     expect(() => normalizeWorkbenchCapabilityProvider('claude')).toThrow(
       'Invalid provider "claude". Use "chatgpt", "gemini", or "grok".',
+    );
+    expect(normalizeWorkbenchCapabilityDiagnostics('browser-state')).toBe('browser-state');
+    expect(() => normalizeWorkbenchCapabilityDiagnostics('raw-cdp')).toThrow(
+      'Invalid diagnostics "raw-cdp". Use "browser-state".',
     );
   });
 
@@ -38,6 +43,7 @@ describe('workbench capabilities CLI helpers', () => {
         provider: 'gemini',
         category: 'media',
         runtimeProfile: 'default',
+        diagnostics: null,
         includeUnavailable: false,
       },
     ]);
@@ -54,6 +60,62 @@ describe('workbench capabilities CLI helpers', () => {
     expect(formatWorkbenchCapabilityReport(sampleReport)).toContain(
       'output: image; surfaces: browser_service, cli, local_api, mcp',
     );
+  });
+
+  it('formats opt-in browser diagnostics in capability reports', () => {
+    const report: WorkbenchCapabilityReport = {
+      ...sampleReport,
+      browserDiagnostics: {
+        probeStatus: 'observed',
+        service: 'grok',
+        ownerStepId: 'workbench-capabilities-grok',
+        observedAt: '2026-04-24T12:00:00.000Z',
+        source: 'browser-service',
+        reason: null,
+        target: {
+          host: '127.0.0.1',
+          port: 45000,
+          targetId: 'target-1',
+          url: 'https://grok.com/imagine',
+          title: 'Grok',
+        },
+        document: {
+          url: 'https://grok.com/imagine',
+          title: 'Grok',
+          readyState: 'complete',
+          visibilityState: 'visible',
+          focused: true,
+          bodyTextLength: 1200,
+        },
+        visibleCounts: {
+          buttons: 4,
+          links: 2,
+          inputs: 0,
+          textareas: 1,
+          contenteditables: 0,
+          modelResponses: 0,
+        },
+        providerEvidence: {
+          detector: 'grok-feature-probe-v1',
+          imagine: {
+            visible: true,
+            account_gated: true,
+          },
+        },
+        screenshot: {
+          path: '/tmp/auracall-diagnostics/grok.png',
+          mimeType: 'image/png',
+          bytes: 1234,
+        },
+      },
+    };
+
+    const formatted = formatWorkbenchCapabilityReport(report);
+
+    expect(formatted).toContain('Browser diagnostics: observed grok');
+    expect(formatted).toContain('target: https://grok.com/imagine');
+    expect(formatted).toContain('screenshot: /tmp/auracall-diagnostics/grok.png (1234 bytes)');
+    expect(formatted).toContain('"detector":"grok-feature-probe-v1"');
   });
 });
 

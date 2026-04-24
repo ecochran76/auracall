@@ -23,6 +23,7 @@ const workbenchCapabilitiesInputShape = {
   category: z.enum(capabilityCategoryValues).nullable().optional(),
   runtimeProfile: z.string().min(1).nullable().optional(),
   includeUnavailable: z.boolean().nullable().optional(),
+  diagnostics: z.enum(['browser-state']).nullable().optional(),
 } satisfies z.ZodRawShape;
 
 const workbenchCapabilityShape = z.object({
@@ -75,6 +76,7 @@ const workbenchCapabilitiesOutputShape = {
   provider: z.enum(['chatgpt', 'gemini', 'grok']).nullable().optional(),
   category: z.enum(capabilityCategoryValues).nullable().optional(),
   runtimeProfile: z.string().nullable().optional(),
+  browserDiagnostics: z.unknown().nullable().optional(),
   capabilities: z.array(workbenchCapabilityShape),
   summary: z.object({
     total: z.number(),

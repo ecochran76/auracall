@@ -104,6 +104,7 @@ import {
 } from '../src/cli/workbenchCapabilitiesCommand.js';
 import { createWorkbenchCapabilityService } from '../src/workbench/service.js';
 import { createBrowserWorkbenchCapabilityDiscovery } from '../src/workbench/browserDiscovery.js';
+import { createBrowserWorkbenchCapabilityDiagnostics } from '../src/workbench/browserDiagnostics.js';
 import { performSessionRun } from '../src/cli/sessionRunner.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
 import { isMediaFile } from '../src/browser/prompt.js';
@@ -3688,6 +3689,7 @@ program
   )
   .option('--available-only', 'Hide blocked and not-visible capabilities.', false)
   .option('--static', 'Use the static catalog only; do not attach to a managed browser.', false)
+  .option('--diagnostics <browser-state>', 'Include bounded browser-state diagnostics for the selected provider.')
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async function (this: Command) {
     const commandOptions = {
@@ -3717,6 +3719,7 @@ program
           });
           return capabilities;
         },
+        diagnoseCapabilities: createBrowserWorkbenchCapabilityDiagnostics(userConfig),
       });
     }
 
@@ -3725,6 +3728,7 @@ program
       category: commandOptions.category,
       availableOnly: commandOptions.availableOnly,
       runtimeProfile: userConfig.auracallProfile ?? 'default',
+      diagnostics: commandOptions.diagnostics,
     });
 
     if (commandOptions.json) {

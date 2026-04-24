@@ -58,6 +58,11 @@ a stable first-class adapter.
   into `grok.media.imagine_image` and `grok.media.imagine_video` capability
   reports. Static Grok Imagine entries remain conservative until the managed
   Grok browser profile proves current-account visibility.
+- Workbench capability reports now accept opt-in `diagnostics=browser-state`
+  through CLI/API/MCP for a selected provider. The diagnostics payload is
+  bounded browser-service evidence: selected target/document state, visible
+  control counts, provider evidence such as Grok Imagine gating signals, recent
+  browser mutation records, and a stored PNG screenshot path.
 
 ## Target Contract
 
@@ -108,6 +113,8 @@ a stable first-class adapter.
 - [x] MCP exposes the same capability list in a bounded schema.
 - [x] CLI can inspect one provider/runtime profile and report visible workbench
   capabilities without invoking them.
+- [x] CLI/API/MCP can include bounded browser-state diagnostics for a selected
+  provider without exposing raw CDP access.
 - [x] Gemini media generation can map `image|music|video` requests to discovered
   `Create image|Create music|Create video` capabilities where the browser path
   is used.
@@ -132,6 +139,8 @@ a stable first-class adapter.
 - [x] Unit tests for ChatGPT feature-signature to workbench-capability mapping.
 - [x] Unit tests for Gemini feature-signature to workbench-capability mapping.
 - [x] Unit tests for Grok Imagine feature-signature to workbench-capability mapping.
+- [x] Unit tests for workbench `diagnostics=browser-state` propagation and
+  CLI/API/MCP report shape.
 - Live discovery smoke only on signed-in managed browser profiles and never
   after a `google.com/sorry`, CAPTCHA, or similar blocking page is detected.
 - Provider-backed invocation smokes stay opt-in per capability because Deep

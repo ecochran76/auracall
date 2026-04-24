@@ -60,6 +60,7 @@ auracall capabilities --target gemini --json
 auracall capabilities --target gemini --static --json
 auracall capabilities --target chatgpt --json
 auracall capabilities --target grok --static --json
+auracall capabilities --target grok --diagnostics browser-state --json
 
 # Save and diff live feature snapshots
 auracall features snapshot --target gemini --json
@@ -209,7 +210,9 @@ Terminology note:
     `auracall capabilities --target gemini --json`,
     `auracall capabilities --target chatgpt --json`, or
     `auracall capabilities --target grok --json`; add `--static` to skip
-    browser attachment during debugging.
+    browser attachment during debugging. Add `--diagnostics browser-state` or
+    `diagnostics=browser-state` to include bounded target/document/provider
+    evidence and a stored screenshot path for the selected provider.
   - `POST /v1/team-runs` creates one bounded task-backed team execution:
     - request fields are either:
       - compact fields: `teamId`, `objective`, and optional `title`,
@@ -318,6 +321,9 @@ Terminology note:
           a PNG screenshot path under AuraCall diagnostics storage
         - generic run/media status also supports this switch for active
           browser-backed media jobs and prefers the provider `tabTargetId`
+        - workbench capability reports support the same switch for selected
+          providers, so Grok Imagine account-gating evidence can be inspected
+          without submitting a prompt
           recorded at prompt submission
       - optional `schedulerAuthority` when explicitly requested with
         `authority=scheduler`

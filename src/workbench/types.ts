@@ -1,3 +1,5 @@
+import type { RuntimeRunInspectionBrowserDiagnosticsSummary } from '../runtime/inspection.js';
+
 export type WorkbenchCapabilityProvider = 'chatgpt' | 'gemini' | 'grok';
 
 export type WorkbenchCapabilityCategory =
@@ -81,6 +83,7 @@ export interface WorkbenchCapabilityReportRequest {
   category?: WorkbenchCapabilityCategory | null;
   runtimeProfile?: string | null;
   includeUnavailable?: boolean | null;
+  diagnostics?: 'browser-state' | null;
 }
 
 export interface WorkbenchCapabilityReport {
@@ -89,6 +92,7 @@ export interface WorkbenchCapabilityReport {
   provider?: WorkbenchCapabilityProvider | null;
   category?: WorkbenchCapabilityCategory | null;
   runtimeProfile?: string | null;
+  browserDiagnostics?: RuntimeRunInspectionBrowserDiagnosticsSummary | null;
   capabilities: WorkbenchCapability[];
   summary: {
     total: number;

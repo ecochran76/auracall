@@ -282,4 +282,74 @@ describe('workbench capability service', () => {
       unknown: 1,
     });
   });
+
+  it('attaches opt-in browser diagnostics to a workbench capability report', async () => {
+    const service = createWorkbenchCapabilityService({
+      now: () => new Date('2026-04-24T12:00:00.000Z'),
+      diagnoseCapabilities: async (request) => ({
+        probeStatus: 'observed',
+        service: request.provider ?? null,
+        ownerStepId: 'workbench-capabilities-grok',
+        observedAt: '2026-04-24T12:00:00.000Z',
+        source: 'browser-service',
+        reason: null,
+        target: {
+          host: '127.0.0.1',
+          port: 45000,
+          targetId: 'target-1',
+          url: 'https://grok.com/imagine',
+          title: 'Grok',
+        },
+        document: {
+          url: 'https://grok.com/imagine',
+          title: 'Grok',
+          readyState: 'complete',
+          visibilityState: 'visible',
+          focused: true,
+          bodyTextLength: 1200,
+        },
+        visibleCounts: {
+          buttons: 4,
+          links: 2,
+          inputs: 0,
+          textareas: 1,
+          contenteditables: 0,
+          modelResponses: 0,
+        },
+        providerEvidence: {
+          detector: 'grok-feature-probe-v1',
+          imagine: {
+            visible: true,
+            account_gated: true,
+            labels: ['Imagine'],
+          },
+        },
+        screenshot: {
+          path: '/tmp/auracall-diagnostics/grok.png',
+          mimeType: 'image/png',
+          bytes: 1234,
+        },
+      }),
+    });
+
+    const report = await service.listCapabilities({
+      provider: 'grok',
+      category: 'media',
+      diagnostics: 'browser-state',
+    });
+
+    expect(report.browserDiagnostics).toMatchObject({
+      probeStatus: 'observed',
+      service: 'grok',
+      target: {
+        url: 'https://grok.com/imagine',
+      },
+      providerEvidence: {
+        detector: 'grok-feature-probe-v1',
+      },
+      screenshot: {
+        path: '/tmp/auracall-diagnostics/grok.png',
+      },
+    });
+  });
 });

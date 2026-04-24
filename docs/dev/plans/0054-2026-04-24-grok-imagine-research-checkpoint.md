@@ -31,6 +31,18 @@ existing Aura-Call media-generation contract.
   - reported `grok.media.imagine_image` as `account_gated`
   - kept `grok.media.imagine_video` at static `unknown`
   - did not submit a generation request
+- Workbench capability reports now support opt-in bounded browser diagnostics:
+  - CLI: `auracall capabilities --target grok --diagnostics browser-state --json`
+  - API: `GET /v1/workbench-capabilities?provider=grok&diagnostics=browser-state`
+  - MCP: `workbench_capabilities` with `diagnostics = "browser-state"`
+  - diagnostics include selected target/document state, Grok Imagine provider
+    evidence, recent browser mutation records, and a stored PNG screenshot path
+- First diagnostics dogfood on 2026-04-24 succeeded:
+  - `pnpm tsx bin/auracall.ts capabilities --target grok --diagnostics browser-state --json`
+  - selected the current managed Grok project-chat tab, not `/imagine`
+  - captured target URL/title and a stored PNG screenshot path
+  - kept Grok Imagine image/video capabilities conservative `unknown`
+  - did not submit a generation request or navigate to a conversation id
 
 ## Research Findings
 
@@ -153,6 +165,8 @@ Add a browser-first Grok Imagine discovery/audit slice:
   account gating, moderation walls, or human-verification pages.
 - [x] One bounded live read-only Grok browser capability probe records the
   current account posture without invoking Imagine.
+- [x] Operators can request bounded browser diagnostics for Grok capability
+  discovery without raw CDP access or prompt submission.
 
 ## Validation Plan
 
@@ -160,12 +174,15 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - Targeted browser-service/provider tests for dispatcher-owned discovery paths.
 - [x] Bounded live read-only managed-browser discovery:
   - `pnpm tsx bin/auracall.ts capabilities --target grok --json`
+- Targeted tests for workbench browser diagnostics across CLI/API/MCP/service.
+- [x] Bounded live read-only managed-browser diagnostics:
+  - `pnpm tsx bin/auracall.ts capabilities --target grok --diagnostics browser-state --json`
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
 
 ## Next Slice
 
-Implement Grok browser Imagine discovery first. The first code slice should
-report whether the managed Grok account exposes Imagine and which image/video
-controls are visible, without submitting a generation request.
+Dogfood `auracall capabilities --target grok --diagnostics browser-state --json`
+on the managed Grok profile, then use the captured evidence to decide whether
+the next browser slice can safely enter Imagine or must remain account-gated.
