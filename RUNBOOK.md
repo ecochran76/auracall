@@ -1,5 +1,20 @@
 # RUNBOOK
 
+## Turn 54 | 2026-04-23
+
+- Active plan: `docs/dev/plans/0038-2026-04-21-service-runner-roadmap-checkpoint.md`
+- Goal: complete the service/runner integration-hygiene action that Plan 0038
+  selected before any new implementation lane.
+- Result:
+  - worktree was clean before the pass
+  - broad HTTP/MCP/runtime/CLI runner-control validation passed
+  - no fresh service/runner ownership or readback mismatch was reproduced
+  - service/runner architecture expansion remains paused until a concrete
+    product requirement or reproduced mismatch justifies a new bounded plan
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts tests/runtime.configuredExecutor.test.ts tests/runtime.schedulerAuthority.test.ts tests/runtime.runnersControl.test.ts tests/runtime.dispatcher.test.ts tests/runtime.control.test.ts tests/runtime.inspection.test.ts tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/mcp.runStatus.test.ts tests/mcp.runtimeInspect.test.ts tests/mcp/teamRun.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/cli.runStatusCommand.test.ts tests/cli/runtimeInspectionCommand.test.ts tests/cli/teamRunCommand.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mcp/teamRun.test.ts tests/teams.runtimeBridge.test.ts tests/runtime.runner.test.ts tests/runtime.lease.test.ts tests/runtime.store.test.ts tests/runtime.runnersStore.test.ts tests/teams.service.test.ts tests/teams.store.test.ts tests/teams.schema.test.ts --maxWorkers 1`
+
 ## Turn 53 | 2026-04-23
 
 - Active browser reliability exception:

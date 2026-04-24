@@ -1,3 +1,10 @@
+- 2026-04-23: After closing a maintenance exception, complete the selected
+  integration-hygiene pass before reopening service/runner implementation. In
+  this repo, Plan 0038 intentionally paused service/runner architecture work
+  until broad HTTP/MCP/runtime/CLI runner-control validation and worktree
+  review were done. Passing that hygiene step is a reason to keep the lane
+  paused, not a reason to continue extraction by inertia.
+
 - 2026-04-23: `api serve` must resolve the selected AuraCall runtime profile
   before constructing HTTP, workbench, runtime, or media services. Loading raw
   config inside the server bypasses global CLI flags such as `--profile` and

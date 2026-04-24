@@ -53,6 +53,16 @@ validation set, keep the plan audit green, inspect the accumulated dirty
 worktree, and prepare the current batch for review/commit before selecting a
 new primary implementation lane.
 
+## Integration Hygiene Result
+
+Completed on 2026-04-23 after the browser control-plane exception closed.
+
+- The worktree was clean before the pass.
+- Broad HTTP/MCP/runtime/CLI runner-control validation passed.
+- No new service/runner ownership or readback mismatch was reproduced.
+- Keep service/runner architecture expansion paused until a concrete product
+  requirement or reproduced mismatch justifies another bounded plan.
+
 ## Non-Goals
 
 - no fleet scheduler
@@ -80,9 +90,5 @@ new primary implementation lane.
 
 ## Next Slice
 
-Run an integration-hygiene pass over the accumulated worktree:
-
-- validate the broad affected test surface
-- inspect unstaged/untracked files by lane
-- decide the review/commit boundary
-- only then choose the next implementation lane
+Select the next bounded implementation lane from current product need rather
+than continuing service/runner extraction by inertia.

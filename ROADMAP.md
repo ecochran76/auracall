@@ -160,8 +160,12 @@ Current State:
     `ExecutionServiceHost`
   - pause service/runner architecture expansion until a concrete mismatch is
     reproduced
-  - next action is integration hygiene: broaden validation, inspect the
-    accumulated dirty worktree by lane, and prepare a review/commit boundary
+  - integration hygiene passed on 2026-04-23 after the browser control-plane
+    exception closed:
+    - broad HTTP/MCP/runtime/CLI runner-control validation passed
+    - the worktree was clean before the hygiene pass
+  - keep service/runner implementation paused until a concrete product
+    requirement or ownership/readback mismatch justifies the next bounded plan
 - raw DevTools dispatcher fencing is closed in
   [docs/dev/plans/0039-2026-04-21-raw-devtools-dispatcher-fencing.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0039-2026-04-21-raw-devtools-dispatcher-fencing.md)
   - `browser-tools --port <port>` now acquires a port-scoped dispatcher lock

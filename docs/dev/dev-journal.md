@@ -1,3 +1,21 @@
+## 2026-04-23 - Service/runner integration hygiene
+
+- Current focus:
+  - complete the integration-hygiene action selected by Plan 0038 after the
+    browser control-plane exception closed
+- Progress:
+  - confirmed the worktree was clean before the pass
+  - validated the broad HTTP/MCP/runtime/CLI runner-control surface
+  - updated `ROADMAP.md`, `RUNBOOK.md`, Plan 0001, and Plan 0038 to record the
+    result
+- Decision:
+  - keep service/runner architecture expansion paused until a concrete product
+    requirement or reproduced ownership/readback mismatch justifies a new
+    bounded implementation plan
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts tests/runtime.configuredExecutor.test.ts tests/runtime.schedulerAuthority.test.ts tests/runtime.runnersControl.test.ts tests/runtime.dispatcher.test.ts tests/runtime.control.test.ts tests/runtime.inspection.test.ts tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/mcp.runStatus.test.ts tests/mcp.runtimeInspect.test.ts tests/mcp/teamRun.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/cli.runStatusCommand.test.ts tests/cli/runtimeInspectionCommand.test.ts tests/cli/teamRunCommand.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mcp/teamRun.test.ts tests/teams.runtimeBridge.test.ts tests/runtime.runner.test.ts tests/runtime.lease.test.ts tests/runtime.store.test.ts tests/runtime.runnersStore.test.ts tests/teams.service.test.ts tests/teams.store.test.ts tests/teams.schema.test.ts --maxWorkers 1`
+
 ## 2026-04-23 - Browser control-plane completion audit
 
 - Current focus:
