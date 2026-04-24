@@ -15,7 +15,7 @@ export interface SelectorCheckResult {
 }
 
 export interface DiagnosisSurface {
-  kind: 'conversation' | 'non-conversation';
+  kind: 'conversation' | 'non-conversation' | 'workbench';
   reason: string;
   requiredChecks: string[];
   deferredChecks: string[];
@@ -33,6 +33,7 @@ export interface DiagnosisReport {
 
 const CONVERSATION_OUTPUT_CHECKS = new Set(['assistantBubble', 'assistantRole', 'copyButton']);
 const PROMPT_DEPENDENT_CHECKS = new Set(['sendButton']);
+const WORKBENCH_DEFERRED_CHECKS = new Set(['modelButton']);
 
 function classifyDiagnosisSurface(url: string, providerId: BrowserProviderConfig['id']): DiagnosisSurface {
   let parsed: URL | null = null;
@@ -48,6 +49,15 @@ function classifyDiagnosisSurface(url: string, providerId: BrowserProviderConfig
   }
 
   const path = parsed.pathname;
+  if (providerId === 'grok' && path === '/imagine') {
+    return {
+      kind: 'workbench',
+      reason: 'grok-imagine-route',
+      requiredChecks: [],
+      deferredChecks: [],
+    };
+  }
+
   const isConversation =
     path.includes('/c/') ||
     (providerId === 'grok' && Boolean(parsed.searchParams.get('chat'))) ||
@@ -78,6 +88,12 @@ function classifySelectorRequirement(
     return {
       requirement: 'deferred',
       deferredReason: 'prompt-dependent-control-not-expected-before-input',
+    };
+  }
+  if (surface.kind === 'workbench' && WORKBENCH_DEFERRED_CHECKS.has(checkName)) {
+    return {
+      requirement: 'deferred',
+      deferredReason: 'generic-chat-control-not-expected-on-workbench-surface',
     };
   }
   return { requirement: 'required' };

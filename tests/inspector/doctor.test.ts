@@ -81,6 +81,32 @@ describe('diagnoseProvider', () => {
     });
   });
 
+  test('treats Grok Imagine as a workbench surface without requiring the chat model selector', async () => {
+    const counts = {
+      ...countsFor(GROK_PROVIDER.selectors.input.slice(0, 1)),
+      ...countsFor(GROK_PROVIDER.selectors.sendButton.slice(0, 1)),
+      ...countsFor(GROK_PROVIDER.selectors.menuItem.slice(0, 1)),
+      ...countsFor(GROK_PROVIDER.selectors.composerRoot.slice(0, 1)),
+      ...countsFor(GROK_PROVIDER.selectors.fileInput.slice(0, 1)),
+      ...countsFor(GROK_PROVIDER.selectors.attachmentMenu.slice(0, 1)),
+    };
+
+    const report = await diagnoseProvider(createClient('https://grok.com/imagine', counts), GROK_PROVIDER);
+
+    expect(report.allPassed).toBe(true);
+    expect(report.surface).toMatchObject({
+      kind: 'workbench',
+      reason: 'grok-imagine-route',
+      deferredChecks: ['sendButton', 'modelButton', 'assistantBubble', 'assistantRole', 'copyButton'],
+    });
+    expect(report.failedRequiredChecks).toEqual([]);
+    expect(report.checks.find((check) => check.name === 'modelButton')).toMatchObject({
+      matched: false,
+      requirement: 'deferred',
+      deferredReason: 'generic-chat-control-not-expected-on-workbench-surface',
+    });
+  });
+
   test('keeps assistant selectors required on conversation surfaces', async () => {
     const counts = {
       ...countsFor(CHATGPT_PROVIDER.selectors.input.slice(0, 1)),

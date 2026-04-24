@@ -93,6 +93,8 @@ Status: closed through
   doctor selector diagnosis.
 - Treat healthy Grok and ChatGPT home/new-chat surfaces as valid doctor
   outcomes when no assistant turn is expected.
+- Treat provider workbench routes, such as Grok `/imagine`, as their own
+  selector-diagnosis surface when they do not expose normal chat-only controls.
 - Keep blocking-state detection and conversation-surface checks strict.
 
 ### Phase 9: Mutation control-plane completion

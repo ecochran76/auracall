@@ -14058,3 +14058,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   requests must first re-run `grok.media.imagine_image` discovery on the
   explicit entrypoint and fail before prompt submission unless the capability
   is actually `available`.
+- 2026-04-24: Do not make generic chat controls mandatory on provider
+  workbench routes. In this repo, Grok `/imagine` can be signed in and healthy
+  while omitting the normal chat model selector. Doctor selector diagnosis
+  should classify that route as a workbench surface, keep composer/file/menu
+  checks meaningful, and defer chat-only controls instead of reporting an auth
+  or browser-health failure.

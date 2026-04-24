@@ -20573,3 +20573,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run check`
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 54`
+
+## 2026-04-24 - Grok Imagine doctor selector diagnosis
+
+- Focus: make `auracall doctor --target grok --json` report the live
+  `/imagine` workbench accurately after auth was confirmed.
+- Finding: the managed Grok browser profile was signed in and selected the
+  healthy `https://grok.com/imagine` tab, but selector diagnosis still failed
+  because it required the generic Grok chat model selector on the Imagine
+  workbench route.
+- Progress: classified Grok `/imagine` as a workbench selector-diagnosis
+  surface. Doctor now keeps composer/file/menu checks meaningful there, while
+  deferring normal chat-only controls such as `modelButton`.
+- Validation:
+  - `pnpm vitest run tests/inspector/doctor.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm tsx bin/auracall.ts doctor --target grok --json`
