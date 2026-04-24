@@ -59,6 +59,7 @@ auracall features --target gemini --json
 auracall capabilities --target gemini --json
 auracall capabilities --target gemini --static --json
 auracall capabilities --target chatgpt --json
+auracall capabilities --target grok --static --json
 
 # Save and diff live feature snapshots
 auracall features snapshot --target gemini --json
@@ -198,12 +199,16 @@ Terminology note:
     `provider=chatgpt|gemini|grok`, `category=research|media|canvas|connector|skill|app|search|file|other`,
     and `runtimeProfile=<name>`. Static entries report conservative
     `unknown` or `account_gated` availability. When served with the configured
-    runtime, `provider=gemini` and `provider=chatgpt` can merge live browser
-    feature-signature evidence from the matching managed browser profile.
+    runtime, `provider=gemini`, `provider=chatgpt`, and `provider=grok` can
+    merge live browser feature-signature evidence from the matching managed
+    browser profile.
     ChatGPT discovery reports visible Web Search, Deep Research, Company
     Knowledge, apps/connectors, and skills without invoking or enabling them.
-    The matching CLI surface is `auracall capabilities --target gemini --json`
-    or `auracall capabilities --target chatgpt --json`; add `--static` to skip
+    Grok discovery reports visible Imagine image/video capability evidence
+    without submitting a generation request. The matching CLI surface is
+    `auracall capabilities --target gemini --json`,
+    `auracall capabilities --target chatgpt --json`, or
+    `auracall capabilities --target grok --json`; add `--static` to skip
     browser attachment during debugging.
   - `POST /v1/team-runs` creates one bounded task-backed team execution:
     - request fields are either:

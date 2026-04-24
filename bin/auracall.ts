@@ -3698,7 +3698,8 @@ program
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const selectedProvider = normalizeWorkbenchCapabilityProvider(commandOptions.provider ?? commandOptions.target);
     const shouldUseBrowserDiscovery =
-      !commandOptions.static && (selectedProvider === 'gemini' || selectedProvider === 'chatgpt');
+      !commandOptions.static &&
+      (selectedProvider === 'gemini' || selectedProvider === 'chatgpt' || selectedProvider === 'grok');
     let reporter = createWorkbenchCapabilityService();
 
     if (shouldUseBrowserDiscovery) {
@@ -3706,7 +3707,7 @@ program
         inspectBrowserDoctorState,
         withBrowserProbeOperation,
       } = await import('../src/browser/profileDoctor.js');
-      const browserTarget = selectedProvider === 'chatgpt' ? 'chatgpt' : 'gemini';
+      const browserTarget = selectedProvider === 'chatgpt' ? 'chatgpt' : selectedProvider === 'grok' ? 'grok' : 'gemini';
       const localReport = await inspectBrowserDoctorState(userConfig, { target: browserTarget });
       reporter = createWorkbenchCapabilityService({
         discoverCapabilities: async (request) => {

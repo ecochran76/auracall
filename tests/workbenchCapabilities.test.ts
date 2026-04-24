@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createWorkbenchCapabilityService } from '../src/workbench/service.js';
 import { deriveGeminiWorkbenchCapabilitiesFromFeatureSignature } from '../src/workbench/geminiDiscovery.js';
 import { deriveChatgptWorkbenchCapabilitiesFromFeatureSignature } from '../src/workbench/chatgptDiscovery.js';
+import { deriveGrokWorkbenchCapabilitiesFromFeatureSignature } from '../src/workbench/grokDiscovery.js';
 
 describe('workbench capability service', () => {
   it('reports static workbench capabilities with bounded availability summary', async () => {
@@ -202,6 +203,83 @@ describe('workbench capability service', () => {
       total: 2,
       available: 1,
       accountGated: 1,
+    });
+  });
+
+  it('derives available Grok Imagine capabilities from browser discovery evidence', () => {
+    const capabilities = deriveGrokWorkbenchCapabilitiesFromFeatureSignature(
+      JSON.stringify({
+        detector: 'grok-feature-probe-v1',
+        imagine: {
+          visible: true,
+          modes: ['image', 'image-to-video'],
+          labels: ['Imagine', 'Create with Imagine'],
+          routes: ['https://grok.com/imagine'],
+        },
+      }),
+      '2026-04-24T12:00:00.000Z',
+    );
+
+    expect(capabilities).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'grok.media.imagine_image',
+        provider: 'grok',
+        category: 'media',
+        availability: 'available',
+        source: 'browser_discovery',
+        output: expect.objectContaining({
+          artifactTypes: ['image'],
+        }),
+      }),
+      expect.objectContaining({
+        id: 'grok.media.imagine_video',
+        category: 'media',
+        invocationMode: 'post_prompt_action',
+        availability: 'available',
+        output: expect.objectContaining({
+          artifactTypes: ['video'],
+        }),
+      }),
+    ]));
+  });
+
+  it('reports Grok Imagine account gating without claiming availability', async () => {
+    const service = createWorkbenchCapabilityService({
+      now: () => new Date('2026-04-24T12:00:00.000Z'),
+      discoverCapabilities: async () =>
+        deriveGrokWorkbenchCapabilitiesFromFeatureSignature(
+          JSON.stringify({
+            detector: 'grok-feature-probe-v1',
+            imagine: {
+              visible: true,
+              account_gated: true,
+              labels: ['Imagine'],
+              routes: ['https://grok.com/imagine'],
+            },
+          }),
+          '2026-04-24T12:00:00.000Z',
+        ),
+    });
+
+    const report = await service.listCapabilities({ provider: 'grok', category: 'media' });
+
+    expect(report.capabilities).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'grok.media.imagine_image',
+        availability: 'account_gated',
+        source: 'browser_discovery',
+      }),
+      expect.objectContaining({
+        id: 'grok.media.imagine_video',
+        availability: 'unknown',
+        source: 'static_catalog',
+      }),
+    ]));
+    expect(report.summary).toMatchObject({
+      total: 2,
+      available: 0,
+      accountGated: 1,
+      unknown: 1,
     });
   });
 });

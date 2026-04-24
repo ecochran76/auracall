@@ -1,5 +1,29 @@
 # RUNBOOK
 
+## Turn 57 | 2026-04-24
+
+- Active plan:
+  `docs/dev/plans/0054-2026-04-24-grok-imagine-research-checkpoint.md`
+- Goal: implement the first browser-first Grok Imagine discovery slice without
+  submitting a generation request.
+- Result:
+  - added static Grok Imagine image/video workbench capability entries
+  - added read-only Grok browser feature-signature probing for Imagine
+    visibility, labels, routes, modes, account gating, and blocked/failure
+    evidence
+  - mapped Grok Imagine feature signatures into
+    `grok.media.imagine_image` and `grok.media.imagine_video`
+  - wired CLI/API capability discovery so `provider=grok` can use the same
+    browser-backed discovery path as Gemini and ChatGPT
+  - live read-only managed-browser probe observed `/imagine` and reported
+    `grok.media.imagine_image` as `account_gated`; video remained static
+    `unknown`
+- Verification:
+  - `pnpm vitest run tests/workbenchCapabilities.test.ts tests/http.workbenchCapabilities.test.ts tests/mcp.workbenchCapabilities.test.ts tests/cli/workbenchCapabilitiesCommand.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm tsx bin/auracall.ts capabilities --target grok --static --json`
+  - `pnpm tsx bin/auracall.ts capabilities --target grok --json`
+  - `pnpm run check`
+
 ## Turn 56 | 2026-04-24
 
 - Active plan:

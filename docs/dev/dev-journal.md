@@ -1,3 +1,24 @@
+## 2026-04-24 - Grok Imagine browser discovery
+
+- Current focus:
+  - implement the first browser-first Grok Imagine discovery slice without
+    prompt submission
+- Progress:
+  - added static Grok Imagine image/video workbench capability entries
+  - added Grok browser feature-signature probing for Imagine visibility,
+    labels, routes, modes, account gating, and blocked/failure evidence
+  - mapped Grok feature signatures into `grok.media.imagine_image` and
+    `grok.media.imagine_video`
+  - wired `provider=grok` through browser-backed workbench discovery
+  - live read-only managed-browser probe observed `/imagine` and reported
+    `grok.media.imagine_image` as `account_gated`; no generation request was
+    submitted
+- Validation:
+  - `pnpm vitest run tests/workbenchCapabilities.test.ts tests/http.workbenchCapabilities.test.ts tests/mcp.workbenchCapabilities.test.ts tests/cli/workbenchCapabilitiesCommand.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm tsx bin/auracall.ts capabilities --target grok --static --json`
+  - `pnpm tsx bin/auracall.ts capabilities --target grok --json`
+  - `pnpm run check`
+
 ## 2026-04-24 - Grok Imagine research checkpoint
 
 - Current focus:

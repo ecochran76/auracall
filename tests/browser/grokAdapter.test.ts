@@ -10,6 +10,7 @@ import {
   grokUrlMatchesPreference,
   grokConversationTitleQuality,
   isGrokMainSidebarOpenProbe,
+  normalizeGrokFeatureSignature,
   parseGrokPersonalFilesRowTexts,
   parseGrokWorkspaceCreateError,
   resolveGrokConversationUrl,
@@ -54,6 +55,42 @@ describe('grok route helpers', () => {
   test('builds root and project conversation URLs from manifest-backed templates', () => {
     expect(resolveGrokConversationUrl('conv-1')).toBe('https://grok.com/c/conv-1');
     expect(resolveGrokConversationUrl('conv-1', 'proj-1')).toBe('https://grok.com/project/proj-1?chat=conv-1');
+  });
+});
+
+describe('normalizeGrokFeatureSignature', () => {
+  test('normalizes Imagine browser discovery evidence into a stable signature', () => {
+    const signature = normalizeGrokFeatureSignature({
+      detector: 'ignored',
+      imagine: {
+        visible: true,
+        account_gated: false,
+        blocked: false,
+        modes: ['Image', 'image-to-video', 'Image'],
+        labels: [' Imagine ', 'Create with Imagine', 'Imagine'],
+        routes: ['https://grok.com/imagine', 'https://grok.com/imagine'],
+        href: 'https://grok.com/imagine',
+        title: 'Grok',
+      },
+    });
+
+    expect(JSON.parse(signature ?? 'null')).toEqual({
+      detector: 'grok-feature-probe-v1',
+      imagine: {
+        visible: true,
+        account_gated: false,
+        blocked: false,
+        modes: ['image', 'image-to-video'],
+        labels: ['Create with Imagine', 'Imagine'],
+        routes: ['https://grok.com/imagine'],
+        href: 'https://grok.com/imagine',
+        title: 'Grok',
+      },
+    });
+  });
+
+  test('returns null when no Imagine signal is present', () => {
+    expect(normalizeGrokFeatureSignature({ detector: 'grok-feature-probe-v1', imagine: {} })).toBeNull();
   });
 });
 

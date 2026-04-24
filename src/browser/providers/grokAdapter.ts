@@ -136,6 +136,125 @@ function isClientFocusSuppressed(client: ChromeClient): boolean {
   return Boolean((client as ChromeClientWithFocusPolicy).__auracallSuppressFocus);
 }
 
+function buildGrokFeatureProbeExpression(): string {
+  return `(() => {
+    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+    const lower = (value) => normalize(value).toLowerCase();
+    const labels = [];
+    const routes = [];
+    const modes = new Set();
+    const addLabel = (value) => {
+      const normalized = normalize(value);
+      if (normalized) labels.push(normalized);
+    };
+    const addRoute = (value) => {
+      const normalized = normalize(value);
+      if (normalized) routes.push(normalized);
+    };
+    const controls = Array.from(document.querySelectorAll('a[href], button, [role="button"], [role="tab"], [aria-label], [title]')).slice(0, 800);
+    for (const node of controls) {
+      const text = normalize(node.textContent || '');
+      const aria = normalize(node.getAttribute?.('aria-label') || '');
+      const title = normalize(node.getAttribute?.('title') || '');
+      const href = normalize(node.getAttribute?.('href') || '');
+      const haystack = lower([text, aria, title, href].filter(Boolean).join(' '));
+      if (!haystack) continue;
+      if (haystack.includes('imagine') || haystack.includes('/imagine')) {
+        addLabel(text || aria || title || 'Imagine');
+        if (href) addRoute(href);
+      }
+      if (haystack.includes('image') || haystack.includes('photo')) modes.add('image');
+      if (haystack.includes('video') || haystack.includes('animate')) modes.add('video');
+      if (haystack.includes('text to image') || haystack.includes('text-to-image')) modes.add('text-to-image');
+      if (haystack.includes('image to video') || haystack.includes('image-to-video')) modes.add('image-to-video');
+      if (haystack.includes('text to video') || haystack.includes('text-to-video')) modes.add('text-to-video');
+    }
+    const bodyText = lower((document.body?.innerText || '').slice(0, 30000));
+    const locationHref = String(location.href || '');
+    if (lower(locationHref).includes('/imagine')) {
+      routes.push(locationHref);
+      labels.push('Imagine');
+    }
+    const visible = labels.length > 0 || lower(locationHref).includes('/imagine') || bodyText.includes('imagine');
+    const accountGated = /upgrade|premium\\+|supergrok|subscribe|subscription|limit reached|not available|not eligible/.test(bodyText);
+    const blocked = /failed to generate|try again later|rate limit|moderated|policy|unavailable/.test(bodyText);
+    return {
+      detector: 'grok-feature-probe-v1',
+      imagine: {
+        visible,
+        account_gated: accountGated,
+        blocked,
+        modes: Array.from(modes).sort(),
+        labels: Array.from(new Set(labels)).slice(0, 20),
+        routes: Array.from(new Set(routes)).slice(0, 20),
+        href: locationHref,
+        title: document.title || null,
+      },
+    };
+  })()`;
+}
+
+export function normalizeGrokFeatureSignature(probe: unknown): string | null {
+  if (!probe || typeof probe !== 'object') {
+    return null;
+  }
+  const value = probe as {
+    detector?: unknown;
+    imagine?: {
+      visible?: unknown;
+      account_gated?: unknown;
+      blocked?: unknown;
+      modes?: unknown;
+      labels?: unknown;
+      routes?: unknown;
+      href?: unknown;
+      title?: unknown;
+    };
+  };
+  const imagine = value.imagine && typeof value.imagine === 'object' ? value.imagine : null;
+  if (!imagine) {
+    return null;
+  }
+  const labels = Array.isArray(imagine.labels)
+    ? Array.from(new Set(imagine.labels.map((entry) => String(entry ?? '').replace(/\s+/g, ' ').trim()).filter(Boolean))).sort()
+    : [];
+  const routes = Array.isArray(imagine.routes)
+    ? Array.from(new Set(imagine.routes.map((entry) => String(entry ?? '').trim()).filter(Boolean))).sort()
+    : [];
+  const modes = Array.isArray(imagine.modes)
+    ? Array.from(new Set(imagine.modes.map((entry) => String(entry ?? '').toLowerCase().replace(/\s+/g, ' ').trim()).filter(Boolean))).sort()
+    : [];
+  const normalized = {
+    detector: 'grok-feature-probe-v1',
+    imagine: {
+      visible: imagine.visible === true,
+      account_gated: imagine.account_gated === true,
+      blocked: imagine.blocked === true,
+      modes,
+      labels,
+      routes,
+      href: typeof imagine.href === 'string' && imagine.href.trim() ? imagine.href.trim() : null,
+      title: typeof imagine.title === 'string' && imagine.title.trim() ? imagine.title.trim() : null,
+    },
+  };
+  const hasSignal =
+    normalized.imagine.visible ||
+    normalized.imagine.account_gated ||
+    normalized.imagine.blocked ||
+    normalized.imagine.modes.length > 0 ||
+    normalized.imagine.labels.length > 0 ||
+    normalized.imagine.routes.length > 0;
+  return hasSignal ? JSON.stringify(normalized) : null;
+}
+
+async function readGrokFeatureSignature(client: ChromeClient): Promise<string | null> {
+  const { result } = await client.Runtime.evaluate({
+    expression: buildGrokFeatureProbeExpression(),
+    returnByValue: true,
+  });
+  return normalizeGrokFeatureSignature(result?.value);
+}
+
 export function isGrokMainSidebarOpenProbe(probe: GrokMainSidebarProbe | null | undefined): boolean {
   if (!probe) {
     return false;
@@ -460,6 +579,7 @@ export async function ensureGrokTabVisible(
 export function createGrokAdapter(): Pick<
   BrowserProvider,
   | 'capabilities'
+  | 'getFeatureSignature'
   | 'listProjects'
   | 'listConversations'
   | 'getUserIdentity'
@@ -503,6 +623,17 @@ export function createGrokAdapter(): Pick<
       projects: true,
       conversations: true,
       files: true,
+    },
+    async getFeatureSignature(options?: BrowserProviderListOptions): Promise<string | null> {
+      const { client, targetId, shouldClose, host, port } = await connectToGrokTab(options, GROK_HOME_URL);
+      try {
+        return await readGrokFeatureSignature(client);
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
     },
     async listProjects(options?: BrowserProviderListOptions): Promise<Project[]> {
       const { client, targetId, shouldClose, host, port } = await connectToGrokTab(options, GROK_PROJECTS_INDEX_URL);

@@ -1,3 +1,10 @@
+- 2026-04-24: Treat Grok Imagine browser support as discoverable before it is
+  invokable. In this repo, the first browser-first slice should only expose
+  static and read-only managed-browser evidence for Imagine image/video
+  availability, labels, routes, modes, gating, and blocked/failure signals.
+  Do not submit a generation request until selectors, run-state evidence, and
+  artifact materialization paths are known.
+
 - 2026-04-24: Browser-first Grok Imagine needs discovery before invocation. In
   this repo, xAI API research is useful context, but the target operator path
   is the signed-in Grok browser workbench. Do not implement API media execution

@@ -54,6 +54,10 @@ a stable first-class adapter.
   Knowledge, visible apps/connectors, and visible skills. Static ChatGPT apps,
   Company Knowledge, and skills remain conservative `account_gated` entries
   until current-account discovery reports an available concrete capability.
+- Grok browser-backed discovery now maps read-only Imagine feature evidence
+  into `grok.media.imagine_image` and `grok.media.imagine_video` capability
+  reports. Static Grok Imagine entries remain conservative until the managed
+  Grok browser profile proves current-account visibility.
 
 ## Target Contract
 
@@ -127,6 +131,7 @@ a stable first-class adapter.
   add-on/app/skill labels using captured DOM fixtures or bounded selectors.
 - [x] Unit tests for ChatGPT feature-signature to workbench-capability mapping.
 - [x] Unit tests for Gemini feature-signature to workbench-capability mapping.
+- [x] Unit tests for Grok Imagine feature-signature to workbench-capability mapping.
 - Live discovery smoke only on signed-in managed browser profiles and never
   after a `google.com/sorry`, CAPTCHA, or similar blocking page is detected.
 - Provider-backed invocation smokes stay opt-in per capability because Deep

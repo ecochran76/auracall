@@ -20,6 +20,17 @@ existing Aura-Call media-generation contract.
 - The default media executor still fails Grok requests durably with
   `media_provider_not_implemented`.
 - No browser-service Grok Imagine workflow is implemented.
+- Static/read-only workbench capability reporting now includes conservative
+  Grok Imagine image/video entries.
+- The Grok browser adapter now exposes a read-only feature signature that can
+  detect visible Imagine entrypoints, labels, routes, modes, and gating/failure
+  evidence without submitting a prompt.
+- First live read-only managed-browser probe on 2026-04-24 succeeded:
+  - `auracall capabilities --target grok --json`
+  - observed `/imagine`
+  - reported `grok.media.imagine_image` as `account_gated`
+  - kept `grok.media.imagine_video` at static `unknown`
+  - did not submit a generation request
 
 ## Research Findings
 
@@ -133,18 +144,22 @@ Add a browser-first Grok Imagine discovery/audit slice:
 
 - Plan 0049 and roadmap clearly select browser-first Grok Imagine discovery as
   the next Grok implementation step.
-- Browser discovery remains read-only and dispatcher-owned.
-- Tests cover Grok Imagine capability projection from captured/browser
+- [x] Browser discovery remains read-only and dispatcher-owned.
+- [x] Tests cover Grok Imagine capability projection from captured/browser
   discovery evidence.
 - Docs state that xAI API image/video support is deferred, not the current
   implementation target.
 - Live browser audit uses the managed Grok browser profile and stops on
   account gating, moderation walls, or human-verification pages.
+- [x] One bounded live read-only Grok browser capability probe records the
+  current account posture without invoking Imagine.
 
 ## Validation Plan
 
-- Unit tests for Grok Imagine browser-discovery evidence mapping.
+- [x] Unit tests for Grok Imagine browser-discovery evidence mapping.
 - Targeted browser-service/provider tests for dispatcher-owned discovery paths.
+- [x] Bounded live read-only managed-browser discovery:
+  - `pnpm tsx bin/auracall.ts capabilities --target grok --json`
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`

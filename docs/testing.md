@@ -210,18 +210,20 @@
   - list workbench capabilities for service discovery:
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=gemini"`
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=chatgpt"`
+    - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=grok"`
     - `auracall capabilities --target gemini --json`
     - `auracall capabilities --target chatgpt --json`
+    - `auracall capabilities --target grok --json`
     - `auracall capabilities --target gemini --static --json` for a no-browser
       catalog check
     - use `category=research|media|canvas|connector|skill|app|search|file|other`
       to narrow the report
     - static entries are intentionally conservative until live browser/provider
       discovery proves current account availability
-    - with the configured `api serve` runtime, `provider=gemini` and
-      `provider=chatgpt` can merge read-only feature-signature evidence from
-      the matching managed browser profile; unfiltered reports remain
-      static/cheap
+    - with the configured `api serve` runtime, `provider=gemini`,
+      `provider=chatgpt`, and `provider=grok` can merge read-only
+      feature-signature evidence from the matching managed browser profile;
+      unfiltered reports remain static/cheap
   - create/read media-generation contract record:
     - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"gemini","mediaType":"image","prompt":"Generate an image of an asphalt secret agent","aspectRatio":"1:1"}'`
     - for active polling, request async creation:
