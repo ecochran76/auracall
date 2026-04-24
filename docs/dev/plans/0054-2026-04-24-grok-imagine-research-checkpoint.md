@@ -60,6 +60,9 @@ existing Aura-Call media-generation contract.
   - pending indicators from visible busy/progress/generation text evidence
   - terminal image/video DOM media evidence and media URLs
   - visible materialization controls such as download/save/open/share/copy
+  - bounded visible tile evidence from the masonry wall and filmstrip,
+    including tile URL, selected state, generated/public-gallery
+    classification, and tile surface
   - capability metadata carries the same evidence for API/MCP/CLI consumers
   - no prompt submission or generation-control click is performed
 - Live dogfood on 2026-04-24 confirmed the current `/imagine` page reports:
@@ -175,6 +178,8 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - image/video URLs
   - post URLs
   - cacheable DOM media elements
+- compare visible preview tiles against the provider-owned full-quality
+  download path before deciding which artifact should be canonical
 - expose discovery through the existing workbench capability report before
   adding provider invocation
 - keep API image/video execution as a documented later adapter path
@@ -186,6 +191,8 @@ Add a browser-first Grok Imagine discovery/audit slice:
   capability preflight and use the pinned submitted tab plus run-state evidence.
 - No video generation automation in the first implementation slice.
 - No image editing, video editing, reference-image workflows, or extensions.
+- No automated infinite-scroll harvesting beyond the currently visible,
+  bounded tile set until the preview/full-quality comparison path is proven.
 - No fallback from browser to API when the browser account is missing Imagine.
 - No claim that API support means browser Imagine is available.
 
@@ -214,6 +221,11 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - [x] Account-gated Grok browser image attempts record a pre-submit
   `capability_unavailable` timeline event and preserve the matching
   workbench capability evidence for operator status/readback.
+- [x] Grok `/imagine` diagnostics preserve bounded visible tile evidence for
+  the current masonry/filmstrip surfaces.
+- Grok materialization can download all currently visible generated tiles and
+  compare at least one selected tile against the provider full-quality download
+  before promoting a canonical artifact path.
 
 ## Validation Plan
 

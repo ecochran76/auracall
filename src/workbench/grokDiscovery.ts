@@ -22,6 +22,7 @@ interface GrokImagineSignals {
   media: {
     images: Array<Record<string, unknown>>;
     videos: Array<Record<string, unknown>>;
+    visibleTiles: Array<Record<string, unknown>>;
     urls: string[];
   };
 }
@@ -143,6 +144,7 @@ function collectGrokImagineSignals(root: GrokImagineFeatureObject): GrokImagineS
     media: {
       images: [],
       videos: [],
+      visibleTiles: [],
       urls: [],
     },
   };
@@ -243,6 +245,7 @@ function collectMediaEvidence(value: unknown, sink: GrokImagineSignals['media'])
     : {};
   sink.images.push(...collectRecordArray(record.images, 20));
   sink.videos.push(...collectRecordArray(record.videos, 20));
+  sink.visibleTiles.push(...collectRecordArray(record.visible_tiles, 80));
   if (Array.isArray(record.urls)) {
     for (const entry of record.urls) {
       const normalized = normalizeLabel(entry);

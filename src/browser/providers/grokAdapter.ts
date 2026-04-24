@@ -241,13 +241,18 @@ export function buildGrokFeatureProbeExpression(): string {
         ariaLabel: normalize(node.getAttribute?.('aria-label') || '') || null,
         role: normalize(node.getAttribute?.('role') || '') || null,
       }));
-    const readMedia = (selector, kind) => Array.from(document.querySelectorAll(selector))
+    const readMedia = (selector, kind, limit = 20) => Array.from(document.querySelectorAll(selector))
       .filter((node) => isVisible(node))
       .map((node) => {
         const rect = rectSummary(node);
         const src = normalize(node.currentSrc || node.src || node.getAttribute?.('src') || '');
         const poster = normalize(node.getAttribute?.('poster') || '');
         const href = normalize(node.closest?.('a[href]')?.getAttribute('href') || '');
+        const tileButton = node.closest?.('button[data-filmstrip-item="true"], button');
+        const tileRoot = node.closest?.('[id^="imagine-masonry-section"], [data-filmstrip-scroll="true"]');
+        const className = normalize(node.getAttribute?.('class') || '');
+        const selected = Boolean(tileButton?.matches?.('[tabindex="0"], .ring-white, [aria-selected="true"], [data-selected="true"]'));
+        const url = lower([src, poster, href].filter(Boolean).join(' '));
         return {
           kind,
           tag: String(node.tagName || '').toLowerCase(),
@@ -257,6 +262,11 @@ export function buildGrokFeatureProbeExpression(): string {
           alt: normalize(node.getAttribute?.('alt') || '') || null,
           width: rect?.width ?? null,
           height: rect?.height ?? null,
+          selected,
+          tileSurface: tileRoot?.matches?.('[data-filmstrip-scroll="true"]') ? 'filmstrip' : tileRoot ? 'masonry' : null,
+          generated: url.includes('/generated/') || url.includes('assets.grok.com/users/') || url.includes('blob:') || url.includes('data:image/'),
+          publicGallery: url.includes('imagine-public.x.ai'),
+          className: className || null,
         };
       })
       .filter((entry) => {
@@ -267,10 +277,15 @@ export function buildGrokFeatureProbeExpression(): string {
         if (url.includes('avatar') || url.includes('icon') || url.includes('logo')) return false;
         return width >= 120 && height >= 80;
       })
-      .slice(0, 20);
-    const images = readMedia('main img, [role="main"] img, img[src*="grok"], img[src*="imagine"], img[src^="blob:"], img[src^="data:"]', 'image');
+      .slice(0, limit);
+    const visibleTiles = readMedia(
+      'main img, [role="main"] img, [id^="imagine-masonry-section"] img, [data-filmstrip-scroll="true"] img, img[src*="assets.grok.com/users"], img[src*="imagine-public.x.ai"], img[src*="grok"], img[src*="imagine"], img[src^="blob:"], img[src^="data:"]',
+      'image',
+      80,
+    );
+    const images = visibleTiles.slice(0, 20);
     const videos = readMedia('main video, [role="main"] video, video', 'video');
-    const mediaUrls = Array.from(new Set(images.concat(videos).flatMap((entry) => [entry.src, entry.poster, entry.href]).filter(Boolean))).slice(0, 40);
+    const mediaUrls = Array.from(new Set(visibleTiles.concat(videos).flatMap((entry) => [entry.src, entry.poster, entry.href]).filter(Boolean))).slice(0, 80);
     const pending = pendingText || pendingControls.length > 0;
     const terminalImage = !accountGated && !blocked && images.length > 0;
     const terminalVideo = !accountGated && !blocked && videos.length > 0;
@@ -308,6 +323,7 @@ export function buildGrokFeatureProbeExpression(): string {
         media: {
           images,
           videos,
+          visible_tiles: visibleTiles,
           urls: mediaUrls,
         },
         href: locationHref,
@@ -410,12 +426,32 @@ function normalizeGrokEvidenceArray(value: unknown, limit: number): Array<Record
   return value
     .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry))
     .slice(0, limit)
-    .map((entry) => ({ ...entry }));
+    .map((entry) => normalizeGrokEvidenceRecord(entry));
+}
+
+function normalizeGrokEvidenceRecord(entry: Record<string, unknown>): Record<string, unknown> {
+  const normalized: Record<string, unknown> = { ...entry };
+  for (const key of ['src', 'poster', 'href']) {
+    const value = normalized[key];
+    if (typeof value === 'string' && value.startsWith('data:') && value.length > 160) {
+      const commaIndex = value.indexOf(',');
+      const prefix = commaIndex > 0 ? value.slice(0, commaIndex + 1) : value.slice(0, 80);
+      normalized[key] = `${prefix}<omitted ${value.length} chars>`;
+      normalized[`${key}BytesApprox`] = Math.max(0, Math.floor((value.length - prefix.length) * 0.75));
+      normalized[`${key}Kind`] = 'data-url';
+    } else if (typeof value === 'string' && value.startsWith('blob:')) {
+      normalized[`${key}Kind`] = 'blob-url';
+    } else if (typeof value === 'string' && value.length > 0) {
+      normalized[`${key}Kind`] = 'remote-url';
+    }
+  }
+  return normalized;
 }
 
 function normalizeGrokImagineMedia(value: unknown): {
   images: Array<Record<string, unknown>>;
   videos: Array<Record<string, unknown>>;
+  visible_tiles: Array<Record<string, unknown>>;
   urls: string[];
 } {
   const record = value && typeof value === 'object' && !Array.isArray(value)
@@ -427,6 +463,7 @@ function normalizeGrokImagineMedia(value: unknown): {
   return {
     images: normalizeGrokEvidenceArray(record.images, 20),
     videos: normalizeGrokEvidenceArray(record.videos, 20),
+    visible_tiles: normalizeGrokEvidenceArray(record.visible_tiles, 80),
     urls,
   };
 }

@@ -353,6 +353,14 @@ describe('workbench capability service', () => {
                 height: 360,
               },
             ],
+            visible_tiles: [
+              {
+                kind: 'image',
+                src: 'https://assets.grok.com/users/user/generated/image-1.jpg',
+                selected: true,
+                tileSurface: 'masonry',
+              },
+            ],
             urls: ['blob:https://grok.com/video-1'],
           },
         },
@@ -373,6 +381,13 @@ describe('workbench capability service', () => {
             }),
           ],
           media: expect.objectContaining({
+            visibleTiles: [
+              expect.objectContaining({
+                src: 'https://assets.grok.com/users/user/generated/image-1.jpg',
+                selected: true,
+                tileSurface: 'masonry',
+              }),
+            ],
             videos: [
               expect.objectContaining({
                 src: 'blob:https://grok.com/video-1',

@@ -14069,3 +14069,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   from a provider execution failure: it must stop before prompt submission,
   record `capability_unavailable`, and carry bounded capability evidence plus
   the inspection command in failed readback/status.
+- 2026-04-24: Treat Grok Imagine masonry/filmstrip tiles as first-class
+  readback evidence. In this repo, Grok Imagine can render a wall of visible
+  generated tiles plus a selected tile/full-quality download action. Discovery
+  should preserve bounded visible tile URLs, selected state, generated/public
+  classification, and tile surface before implementing full-quality download
+  comparison or infinite-scroll harvesting.

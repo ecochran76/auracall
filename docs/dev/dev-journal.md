@@ -20547,6 +20547,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   page.
 - Validation:
   - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/workbenchCapabilities.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 54`
+  - live read-only probe:
+    `pnpm tsx bin/auracall.ts capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json`
+    reported 5 visible masonry tiles with bounded `data-url` metadata and
+    `srcBytesApprox`, while capability availability remained `account_gated`
   - pending broader closeout validation
 
 ## 2026-04-24 - Guarded Grok Imagine image invocation
@@ -20612,3 +20618,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `media_capability_unavailable` with timeline
     `running_persisted -> capability_unavailable -> failed`,
     `capabilityAvailability = account_gated`, and `tabTargetId = null`
+
+## 2026-04-24 - Grok Imagine visible tile evidence
+
+- Focus: encode the observed Grok Imagine DOM surfaces for the wall of
+  generated images before adding full-quality download automation.
+- Progress: Added bounded `media.visible_tiles` evidence to the Grok Imagine
+  feature signature. The evidence records visible masonry/filmstrip image URLs,
+  selected state, tile surface, generated/public-gallery classification, and
+  dimensions separately from terminal image/video media.
+- Next materialization target: download all currently visible generated tiles
+  and compare at least one selected preview tile with the provider-owned
+  full-quality `Download` action before deciding the canonical artifact path.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/workbenchCapabilities.test.ts --maxWorkers 1`
