@@ -198,8 +198,9 @@ Terminology note:
     `transport = browser` now check `grok.media.imagine_image` through the
     explicit `/imagine` entrypoint first; account-gated or unavailable accounts
     fail before prompt submission, while available accounts use the pinned
-    `/imagine` tab, provider run-state polling, and remote media
-    materialization. Gemini music/video and Grok video remain explicitly gated.
+    `/imagine` tab, provider run-state polling, visible tile capture, and a
+    provider download-button comparison before falling back to remote media
+    fetch. Gemini music/video and Grok video remain explicitly gated.
   - `GET /v1/workbench-capabilities` reports currently known or discovered
     provider workbench capabilities for regular service discovery. Filter with
     `provider=chatgpt|gemini|grok`, `category=research|media|canvas|connector|skill|app|search|file|other`,
@@ -222,7 +223,8 @@ Terminology note:
     inspect the `/imagine` workbench route without submitting a prompt. Grok
     Imagine provider evidence includes conservative read-only run-state,
     pending, terminal image/video, media URL, and materialization-control
-    signals when those are visible in the workbench.
+    signals when those are visible in the workbench. Bounded visible masonry
+    and filmstrip tiles are preserved separately from terminal media evidence.
   - `POST /v1/team-runs` creates one bounded task-backed team execution:
     - request fields are either:
       - compact fields: `teamId`, `objective`, and optional `title`,

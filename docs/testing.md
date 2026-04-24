@@ -216,6 +216,10 @@
       `failed` in `timeline[]`, with `metadata.capabilityId`,
       `metadata.capabilityAvailability`, and the inspection command in
       `failure.details`
+    - available Grok image runs should materialize bounded visible Imagine
+      tiles through the active browser tab, then compare one preview against
+      the provider download-button result before using remote media fetch as a
+      fallback
   - list workbench capabilities for service discovery:
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=gemini"`
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=chatgpt"`
@@ -240,8 +244,9 @@
       attribution for read-only inspection only
     - Grok `/imagine` diagnostics include provider-owned read-only
       `run_state`, pending, terminal image/video, media URL, and
-      materialization-control evidence when visible. They do not submit a
-      prompt or click generation controls.
+      materialization-control evidence when visible, plus bounded masonry and
+      filmstrip visible-tile evidence. They do not submit a prompt or click
+      generation controls.
     - with the configured `api serve` runtime, `provider=gemini`,
       `provider=chatgpt`, and `provider=grok` can merge read-only
       feature-signature evidence from the matching managed browser profile;

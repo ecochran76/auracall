@@ -20632,3 +20632,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   full-quality `Download` action before deciding the canonical artifact path.
 - Validation:
   - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/workbenchCapabilities.test.ts --maxWorkers 1`
+
+## 2026-04-24 - Grok Imagine visible tile materialization
+
+- Focus: move Grok Imagine image readback from passive URL evidence to
+  browser-service-owned active materialization on the submitted `/imagine` tab.
+- Progress: added a provider active-media materialization hook and wired Grok
+  image runs to capture bounded visible masonry/filmstrip tiles in-page,
+  persist them as media artifacts, then compare the first preview against the
+  provider download-button result when exposed. The executor still falls back
+  to remote terminal media fetch only if active visible-tile capture yields no
+  files.
+- Guardrail: materialization reuses the submitted tab with `preserveActiveTab`;
+  it does not navigate to a conversation id or open a separate raw CDP path.
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - live read-only capability probe still reported `grok.media.imagine_image`
+    as `account_gated` with five visible tiles, so no prompt-submitting
+    materialization dogfood was run on the current account.

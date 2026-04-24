@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { BrowserAutomationClient } from '../browser/client.js';
+import type { FileRef } from '../browser/providers/domain.js';
 import type { BrowserProviderPromptProgressEvent } from '../browser/providers/types.js';
 import type { ResolvedUserConfig } from '../config.js';
 import {
@@ -24,6 +25,7 @@ type GrokImagineEvidence = {
   media: {
     images: Array<Record<string, unknown>>;
     videos: Array<Record<string, unknown>>;
+    visibleTiles: Array<Record<string, unknown>>;
     urls: string[];
   };
 };
@@ -107,10 +109,39 @@ async function executeGrokBrowserMediaGeneration(
     timeoutMs,
     input.emitTimeline,
   );
+  const activeFiles = await client.materializeActiveMediaArtifacts({
+    capabilityId: GROK_IMAGE_CAPABILITY_ID,
+    mediaType: 'image',
+    maxItems: resolveVisibleTileMaterializationLimit(request.metadata),
+    compareFullQuality: true,
+  }, input.artifactDir, {
+    configuredUrl: tabUrl,
+    tabUrl,
+    tabTargetId,
+    preserveActiveTab: true,
+    mutationSourcePrefix: 'media:grok-imagine',
+  }).catch(() => []);
+  const activeArtifacts = activeFiles.map((file, index) => mapGrokFileToMediaArtifact(file, index + 1));
+  const artifacts: MediaGenerationArtifact[] = [];
+  for (const artifact of activeArtifacts) {
+    artifacts.push(artifact);
+    await input.emitTimeline?.({
+      event: 'artifact_materialized',
+      details: {
+        providerArtifactId: artifact.id,
+        path: artifact.path ?? null,
+        uri: artifact.uri ?? null,
+        mimeType: artifact.mimeType ?? null,
+        materialization: artifact.metadata?.materialization ?? null,
+        visibleTile: artifact.metadata?.materialization === 'visible-tile-browser-capture',
+        fullQualityDiffersFromPreview: artifact.metadata?.fullQualityDiffersFromPreview ?? null,
+      },
+    });
+  }
   const imageEntries = evidence.media.images.filter((entry) => normalizeNonEmpty(entry.src) || normalizeNonEmpty(entry.href));
   const requestedCount = Math.max(1, Math.min(request.count ?? 1, imageEntries.length));
-  const artifacts: MediaGenerationArtifact[] = [];
   for (const entry of imageEntries.slice(0, requestedCount)) {
+    if (artifacts.length > 0) break;
     const artifact = await materializeGrokImageEntry(entry, input.artifactDir, artifacts.length + 1);
     if (!artifact) continue;
     artifacts.push(artifact);
@@ -185,6 +216,7 @@ async function waitForGrokImagineTerminalImage(
         accountGated: evidence.accountGated,
         imageCount: evidence.media.images.length,
         videoCount: evidence.media.videos.length,
+        visibleTileCount: evidence.media.visibleTiles.length,
         mediaUrlCount: evidence.media.urls.length,
       },
     });
@@ -206,6 +238,7 @@ async function waitForGrokImagineTerminalImage(
         details: {
           pollCount,
           generatedArtifactCount: evidence.media.images.length,
+          visibleTileCount: evidence.media.visibleTiles.length,
           mediaUrlCount: evidence.media.urls.length,
         },
       });
@@ -282,6 +315,7 @@ function parseGrokImagineEvidence(signature: string | null | undefined): GrokIma
       media: {
         images: collectRecordArray(mediaRecord.images),
         videos: collectRecordArray(mediaRecord.videos),
+        visibleTiles: collectRecordArray(mediaRecord.visible_tiles),
         urls: Array.isArray(mediaRecord.urls)
           ? mediaRecord.urls.map((entry) => String(entry ?? '').trim()).filter(Boolean)
           : [],
@@ -295,7 +329,7 @@ function parseGrokImagineEvidence(signature: string | null | undefined): GrokIma
       terminalVideo: false,
       blocked: false,
       accountGated: false,
-      media: { images: [], videos: [], urls: [] },
+      media: { images: [], videos: [], visibleTiles: [], urls: [] },
     };
   }
 }
@@ -323,6 +357,34 @@ function resolveArtifactPollIntervalMs(metadata: Record<string, unknown> | null 
     return Math.max(250, Math.min(candidate, 30_000));
   }
   return 5_000;
+}
+
+function resolveVisibleTileMaterializationLimit(metadata: Record<string, unknown> | null | undefined): number {
+  const candidate = metadata?.visibleTileMaterializationLimit;
+  if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+    return Math.max(1, Math.min(candidate, 24));
+  }
+  return 12;
+}
+
+function mapGrokFileToMediaArtifact(file: FileRef, ordinal: number): MediaGenerationArtifact {
+  const metadata = file.metadata ?? {};
+  return {
+    id: file.id || `grok_imagine_image_${ordinal}`,
+    type: 'image',
+    mimeType: file.mimeType ?? null,
+    fileName: file.name || `grok-imagine-${ordinal}.jpg`,
+    path: file.localPath ?? null,
+    uri: file.localPath ? `file://${file.localPath}` : file.remoteUrl ?? null,
+    width: numberOrNull(metadata.width),
+    height: numberOrNull(metadata.height),
+    metadata: {
+      ...metadata,
+      providerArtifactId: file.id,
+      remoteUrl: file.remoteUrl ?? null,
+      checksumSha256: file.checksumSha256 ?? null,
+    },
+  };
 }
 
 function collectRecordArray(value: unknown): Array<Record<string, unknown>> {

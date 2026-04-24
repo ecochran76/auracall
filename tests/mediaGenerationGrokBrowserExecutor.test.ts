@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const browserClient = {
   runPrompt: vi.fn(),
   getFeatureSignature: vi.fn(),
+  materializeActiveMediaArtifacts: vi.fn(),
 };
 
 const fromConfig = vi.fn(async () => browserClient);
@@ -18,6 +19,7 @@ describe('Grok browser media generation executor', () => {
   beforeEach(() => {
     vi.useRealTimers();
     vi.clearAllMocks();
+    browserClient.materializeActiveMediaArtifacts.mockResolvedValue([]);
     vi.stubGlobal('fetch', vi.fn(async () => ({
       ok: true,
       headers: {
@@ -112,6 +114,21 @@ describe('Grok browser media generation executor', () => {
       tabTargetId: 'grok-tab-1',
       preserveActiveTab: true,
     });
+    expect(browserClient.materializeActiveMediaArtifacts).toHaveBeenCalledWith(
+      {
+        capabilityId: 'grok.media.imagine_image',
+        mediaType: 'image',
+        maxItems: 12,
+        compareFullQuality: true,
+      },
+      artifactDir,
+      expect.objectContaining({
+        configuredUrl: 'https://grok.com/imagine',
+        tabUrl: 'https://grok.com/imagine',
+        tabTargetId: 'grok-tab-1',
+        preserveActiveTab: true,
+      }),
+    );
     expect(result).toMatchObject({
       artifacts: [
         {
@@ -146,5 +163,116 @@ describe('Grok browser media generation executor', () => {
       'image_visible',
       'artifact_materialized',
     ]);
+  });
+
+  it('prefers browser-service visible tile capture and records full-quality comparison metadata', async () => {
+    const { createGrokBrowserMediaGenerationExecutor } = await import('../src/media/grokBrowserExecutor.js');
+    const artifactDir = '/tmp/auracall-grok-media-artifacts';
+    browserClient.runPrompt.mockResolvedValueOnce({
+      text: '',
+      url: 'https://grok.com/imagine',
+      tabTargetId: 'grok-tab-2',
+    });
+    browserClient.getFeatureSignature.mockResolvedValueOnce(JSON.stringify({
+      detector: 'grok-feature-probe-v1',
+      imagine: {
+        run_state: 'terminal_image',
+        pending: false,
+        terminal_image: true,
+        terminal_video: false,
+        account_gated: false,
+        blocked: false,
+        media: {
+          images: [{ src: 'data:image/jpeg;base64,<omitted 200 chars>', srcKind: 'data-url' }],
+          videos: [],
+          visible_tiles: [{ srcKind: 'data-url', selected: true }],
+          urls: [],
+        },
+      },
+    }));
+    browserClient.materializeActiveMediaArtifacts.mockResolvedValueOnce([
+      {
+        id: 'grok_imagine_visible_1',
+        name: 'grok-imagine-visible-1.jpg',
+        provider: 'grok',
+        source: 'conversation',
+        size: 10,
+        mimeType: 'image/jpeg',
+        localPath: path.join(artifactDir, 'grok-imagine-visible-1.jpg'),
+        checksumSha256: 'preview-sha',
+        metadata: {
+          materialization: 'visible-tile-browser-capture',
+          width: 277,
+          height: 413,
+          srcKind: 'data-url',
+          selected: true,
+        },
+      },
+      {
+        id: 'grok_imagine_full_quality_1',
+        name: 'grok-imagine-full-quality.jpg',
+        provider: 'grok',
+        source: 'conversation',
+        size: 100,
+        mimeType: 'image/jpeg',
+        localPath: path.join(artifactDir, 'grok-imagine-full-quality.jpg'),
+        checksumSha256: 'full-sha',
+        metadata: {
+          materialization: 'download-button',
+          previewArtifactId: 'grok_imagine_visible_1',
+          fullQualityDiffersFromPreview: true,
+        },
+      },
+    ]);
+
+    const executor = createGrokBrowserMediaGenerationExecutor({} as never);
+    const timelineEvents: string[] = [];
+    const result = await executor({
+      id: 'medgen_grok_test',
+      createdAt: '2026-04-24T12:00:00.000Z',
+      artifactDir,
+      emitTimeline: (event) => {
+        timelineEvents.push(event.event);
+      },
+      request: {
+        provider: 'grok',
+        mediaType: 'image',
+        prompt: 'Generate an image of an asphalt secret agent',
+        transport: 'browser',
+        metadata: {
+          visibleTileMaterializationLimit: 5,
+        },
+      },
+    });
+
+    expect(browserClient.materializeActiveMediaArtifacts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        maxItems: 5,
+        compareFullQuality: true,
+      }),
+      artifactDir,
+      expect.objectContaining({
+        preserveActiveTab: true,
+        mutationSourcePrefix: 'media:grok-imagine',
+      }),
+    );
+    expect(result.artifacts).toMatchObject([
+      {
+        id: 'grok_imagine_visible_1',
+        metadata: {
+          materialization: 'visible-tile-browser-capture',
+          checksumSha256: 'preview-sha',
+        },
+      },
+      {
+        id: 'grok_imagine_full_quality_1',
+        metadata: {
+          materialization: 'download-button',
+          fullQualityDiffersFromPreview: true,
+        },
+      },
+    ]);
+    expect(timelineEvents).toContain('artifact_materialized');
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

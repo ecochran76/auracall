@@ -14075,3 +14075,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   should preserve bounded visible tile URLs, selected state, generated/public
   classification, and tile surface before implementing full-quality download
   comparison or infinite-scroll harvesting.
+- 2026-04-24: Materialize Grok Imagine images from the active browser tab
+  before trusting diagnostic URLs. In this repo, Grok visible previews can be
+  `data:` or `blob:` URLs that are intentionally truncated in capability
+  diagnostics. Provider artifact readback should run inside the submitted
+  `/imagine` tab, capture bounded visible tiles to local files, then compare a
+  preview against the provider-owned download button before falling back to a
+  remote media fetch.

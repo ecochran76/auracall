@@ -72,6 +72,13 @@ export interface BrowserProviderPromptResult {
   tabTargetId?: string | null;
 }
 
+export interface BrowserProviderActiveMediaMaterializationInput {
+  capabilityId?: string | null;
+  mediaType?: string | null;
+  maxItems?: number | null;
+  compareFullQuality?: boolean | null;
+}
+
 export type BrowserProviderPromptProgressPhase =
   | 'browser_target_attached'
   | 'gemini_surface_ready'
@@ -205,6 +212,11 @@ export interface BrowserProvider {
     projectId?: string,
     options?: BrowserProviderListOptions,
   ) => Promise<FileRef | null>;
+  materializeActiveMediaArtifacts?: (
+    input: BrowserProviderActiveMediaMaterializationInput,
+    destDir: string,
+    options?: BrowserProviderListOptions,
+  ) => Promise<FileRef[]>;
   renameConversation?: (conversationId: string, newTitle: string, projectId?: string, options?: BrowserProviderListOptions) => Promise<void>;
   deleteConversation?: (conversationId: string, projectId?: string, options?: BrowserProviderListOptions) => Promise<void>;
 }

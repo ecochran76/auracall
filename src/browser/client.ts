@@ -1,6 +1,10 @@
 import type { ResolvedUserConfig } from '../config.js';
 import type { ChromeClient } from './types.js';
-import type { BrowserProvider, BrowserProviderListOptions } from './providers/types.js';
+import type {
+  BrowserProvider,
+  BrowserProviderActiveMediaMaterializationInput,
+  BrowserProviderListOptions,
+} from './providers/types.js';
 import { diagnoseProvider, type DiagnosisReport } from '../inspector/doctor.js';
 import { CRAWLER_SCRIPT } from '../inspector/crawler.js';
 import type { BrowserLoginOptions } from './login.js';
@@ -131,6 +135,14 @@ export class BrowserAutomationClient {
     options?: { projectId?: string; listOptions?: BrowserProviderListOptions },
   ): Promise<FileRef | null> {
     return this.llmService.materializeConversationArtifact(conversationId, artifact, destDir, options);
+  }
+
+  async materializeActiveMediaArtifacts(
+    input: BrowserProviderActiveMediaMaterializationInput,
+    destDir: string,
+    options?: BrowserProviderListOptions,
+  ): Promise<FileRef[]> {
+    return this.llmService.materializeActiveMediaArtifacts(input, destDir, options);
   }
 
   async connectDevTools(): Promise<{ client: ChromeClient; port: number }> {

@@ -223,9 +223,10 @@ Add a browser-first Grok Imagine discovery/audit slice:
   workbench capability evidence for operator status/readback.
 - [x] Grok `/imagine` diagnostics preserve bounded visible tile evidence for
   the current masonry/filmstrip surfaces.
-- Grok materialization can download all currently visible generated tiles and
-  compare at least one selected tile against the provider full-quality download
-  before promoting a canonical artifact path.
+- [x] Grok materialization can download all currently visible generated tiles
+  through the active browser tab and compare one preview against the
+  provider-owned full-quality download-button path before falling back to
+  remote media fetch.
 
 ## Validation Plan
 
@@ -246,6 +247,9 @@ Add a browser-first Grok Imagine discovery/audit slice:
     terminal generated media promotion from the public gallery
 - [x] Unit tests for Grok browser media preflight and guarded executor:
   - `pnpm vitest run tests/mediaGeneration.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts --maxWorkers 1`
+- [x] Unit tests for Grok visible-tile materialization and full-quality
+  comparison routing:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
 - [x] Bounded live gated media request:
   - `POST /v1/media-generations` with `provider = grok`, `mediaType = image`,
     `transport = browser`

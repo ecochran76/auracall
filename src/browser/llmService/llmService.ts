@@ -2,7 +2,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { ResolvedUserConfig } from '../../config.js';
 import { getPreferredRuntimeProfile, getPreferredRuntimeProfileName } from '../../config/model.js';
-import type { BrowserProviderListOptions, ProviderUserIdentity } from '../providers/types.js';
+import type {
+  BrowserProviderActiveMediaMaterializationInput,
+  BrowserProviderListOptions,
+  ProviderUserIdentity,
+} from '../providers/types.js';
 import {
   appendChatgptMutationRecord,
   CHATGPT_MUTATION_BUDGET_AUTO_WAIT_MAX_MS,
@@ -992,6 +996,21 @@ export abstract class LlmService {
           listOptions,
         ) as Promise<FileRef | null>,
       { action: 'materializeConversationArtifact' },
+    );
+  }
+
+  async materializeActiveMediaArtifacts(
+    input: BrowserProviderActiveMediaMaterializationInput,
+    destDir: string,
+    options?: BrowserProviderListOptions,
+  ): Promise<FileRef[]> {
+    if (!this.provider.materializeActiveMediaArtifacts) {
+      throw new Error(`Active media artifact fetch is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options, { ensurePort: true });
+    return this.withRetry(
+      () => this.provider.materializeActiveMediaArtifacts?.(input, destDir, listOptions) as Promise<FileRef[]>,
+      { action: 'materializeActiveMediaArtifacts' },
     );
   }
 

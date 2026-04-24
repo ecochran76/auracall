@@ -1,4 +1,6 @@
+import fs from 'node:fs/promises';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import CDP from 'chrome-remote-interface';
 import type { Project, Conversation, ConversationContext, FileRef } from './domain.js';
 import type {
@@ -50,7 +52,9 @@ import {
   hoverRowAndClickAction,
   hoverAndReveal,
   navigateAndSettle,
+  armDownloadCapture,
   submitInlineRename,
+  waitForDownloadCapture,
   queryRowsByText,
   waitForDialog,
   waitForDocumentReady as waitForDocumentReadyUi,
@@ -637,6 +641,324 @@ async function waitForGrokImagineSubmittedState(
   return last;
 }
 
+type GrokCapturedImageTile = {
+  ordinal: number;
+  src: string | null;
+  srcKind: string | null;
+  width: number | null;
+  height: number | null;
+  naturalWidth: number | null;
+  naturalHeight: number | null;
+  selected: boolean;
+  dataUrl?: string | null;
+  error?: string | null;
+};
+
+async function materializeGrokImagineVisibleImagesWithClient(
+  client: ChromeClient,
+  destDir: string,
+  options: { maxItems?: number | null; compareFullQuality?: boolean },
+): Promise<FileRef[]> {
+  const maxItems = Math.max(1, Math.min(Number(options.maxItems ?? 12) || 12, 24));
+  await fs.mkdir(destDir, { recursive: true });
+  await configureGrokDownloadBehaviorWithClient(client, destDir);
+  const captured = await captureGrokImagineVisibleImageTiles(client.Runtime, maxItems);
+  const files: FileRef[] = [];
+  for (const tile of captured.tiles) {
+    const parsed = parseImageDataUrl(tile.dataUrl ?? '');
+    if (!parsed) continue;
+    const ext = extensionForMimeType(parsed.mimeType);
+    const fileName = `grok-imagine-visible-${tile.ordinal}.${ext}`;
+    const filePath = path.join(destDir, fileName);
+    await fs.writeFile(filePath, parsed.buffer);
+    files.push({
+      id: `grok_imagine_visible_${tile.ordinal}`,
+      name: fileName,
+      provider: 'grok',
+      source: 'conversation',
+      size: parsed.buffer.byteLength,
+      mimeType: parsed.mimeType,
+      remoteUrl: tile.src ?? undefined,
+      localPath: filePath,
+      checksumSha256: sha256Hex(parsed.buffer),
+      metadata: {
+        materialization: 'visible-tile-browser-capture',
+        artifactKind: 'image',
+        width: tile.naturalWidth ?? tile.width ?? null,
+        height: tile.naturalHeight ?? tile.height ?? null,
+        srcKind: tile.srcKind,
+        selected: tile.selected,
+      },
+    });
+  }
+  if (options.compareFullQuality !== false && files.length > 0) {
+    const comparison = await materializeGrokFullQualityDownload(client, destDir, files[0]);
+    if (comparison) {
+      files.push(comparison);
+    }
+  }
+  return files;
+}
+
+async function captureGrokImagineVisibleImageTiles(
+  Runtime: ChromeClient['Runtime'],
+  maxItems: number,
+): Promise<{ tiles: GrokCapturedImageTile[] }> {
+  const { result } = await Runtime.evaluate({
+    expression: `(async () => {
+      const maxItems = ${JSON.stringify(maxItems)};
+      const visible = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const style = getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width >= 40 && rect.height >= 40;
+      };
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const classify = (src) => {
+        if (!src) return null;
+        if (src.startsWith('data:')) return 'data-url';
+        if (src.startsWith('blob:')) return 'blob-url';
+        if (/^https?:/i.test(src)) return 'remote-url';
+        return 'other';
+      };
+      const toDataUrl = async (src) => {
+        if (!src) return { dataUrl: null, error: 'missing-src' };
+        if (src.startsWith('data:image/')) return { dataUrl: src, error: null };
+        try {
+          const response = await fetch(src, { credentials: 'include', cache: 'force-cache' });
+          if (!response.ok) return { dataUrl: null, error: 'fetch-' + response.status };
+          const blob = await response.blob();
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.onerror = () => reject(new Error('file-reader-failed'));
+            reader.readAsDataURL(blob);
+          });
+          return { dataUrl, error: null };
+        } catch (error) {
+          return { dataUrl: null, error: String(error && error.message ? error.message : error) };
+        }
+      };
+      const selectors = [
+        '#imagine-masonry-section-0 img',
+        '[data-filmstrip-scroll="true"] img',
+        'main img[src^="data:image/"]',
+        'main img[src^="blob:"]',
+        'main img[src*="assets.grok.com/users/"]',
+        'main img[src*="/generated/"]',
+      ];
+      const seen = new Set();
+      const images = [];
+      for (const selector of selectors) {
+        for (const img of Array.from(document.querySelectorAll(selector))) {
+          if (!(img instanceof HTMLImageElement) || seen.has(img) || !visible(img)) continue;
+          seen.add(img);
+          const src = img.currentSrc || img.src || '';
+          const generated = src.startsWith('data:image/') || src.startsWith('blob:') || /assets\\.grok\\.com\\/users\\//.test(src) || /\\/generated\\//.test(src);
+          if (!generated) continue;
+          images.push(img);
+          if (images.length >= maxItems) break;
+        }
+        if (images.length >= maxItems) break;
+      }
+      const tiles = [];
+      for (const [index, img] of images.entries()) {
+        const src = img.currentSrc || img.src || '';
+        const captured = await toDataUrl(src);
+        const rect = img.getBoundingClientRect();
+        tiles.push({
+          ordinal: index + 1,
+          src,
+          srcKind: classify(src),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+          naturalWidth: img.naturalWidth || null,
+          naturalHeight: img.naturalHeight || null,
+          selected: Boolean(img.closest('[aria-selected="true"], [data-state="active"], .ring-white')),
+          dataUrl: captured.dataUrl,
+          error: captured.error,
+        });
+        await sleep(25);
+      }
+      return { tiles };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+  const value = result?.value as { tiles?: GrokCapturedImageTile[] } | undefined;
+  return {
+    tiles: Array.isArray(value?.tiles) ? value.tiles : [],
+  };
+}
+
+async function materializeGrokFullQualityDownload(
+  client: ChromeClient,
+  destDir: string,
+  previewFile: FileRef,
+): Promise<FileRef | null> {
+  await armDownloadCapture(client.Runtime, { stateKey: '__auracallGrokImagineDownloadCapture' });
+  const clicked = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const visible = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const style = getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const firstTile = document.querySelector('#imagine-masonry-section-0 img, main img[src^="data:image/"], main img[src^="blob:"], main img[src*="assets.grok.com/users/"], main img[src*="/generated/"]');
+      if (firstTile instanceof HTMLElement && visible(firstTile)) {
+        (firstTile.closest('button,[role="button"],a') || firstTile).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+        (firstTile.closest('button,[role="button"],a') || firstTile).click();
+        await sleep(700);
+      }
+      const buttons = Array.from(document.querySelectorAll('button[aria-label*="Download" i], button[title*="Download" i], [role="button"][aria-label*="Download" i]'))
+        .filter((node) => visible(node) && !node.disabled && node.getAttribute('aria-disabled') !== 'true');
+      const button = buttons[0] || null;
+      if (!(button instanceof HTMLElement)) {
+        return { ok: false, reason: 'download-button-missing' };
+      }
+      button.click();
+      return { ok: true };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+  const clickedValue = clicked.result?.value as { ok?: boolean; reason?: string } | undefined;
+  if (clickedValue?.ok !== true) {
+    return null;
+  }
+  const capture = await waitForDownloadCapture(client.Runtime, {
+    stateKey: '__auracallGrokImagineDownloadCapture',
+    timeoutMs: 1_500,
+    pollMs: 100,
+  });
+  let filePath = await waitForGrokDownloadedFile(destDir, 10_000);
+  let remoteUrl = capture.href || null;
+  if (!filePath && remoteUrl) {
+    const response = await fetch(remoteUrl);
+    if (response.ok) {
+      const mimeType = response.headers.get('content-type')?.split(';')[0]?.trim() || 'image/jpeg';
+      const fileName = ensureExtension(capture.downloadName || 'grok-imagine-full-quality', extensionForMimeType(mimeType));
+      filePath = path.join(destDir, fileName);
+      await fs.writeFile(filePath, Buffer.from(await response.arrayBuffer()));
+    }
+  }
+  if (!filePath) return null;
+  const stat = await fs.stat(filePath);
+  const buffer = await fs.readFile(filePath);
+  const previewSha = previewFile.checksumSha256 ?? null;
+  const fullQualitySha = sha256Hex(buffer);
+  return {
+    id: 'grok_imagine_full_quality_1',
+    name: path.basename(filePath),
+    provider: 'grok',
+    source: 'conversation',
+    size: stat.size,
+    mimeType: inferMimeTypeFromName(filePath),
+    remoteUrl: remoteUrl ?? undefined,
+    localPath: filePath,
+    checksumSha256: fullQualitySha,
+    metadata: {
+      materialization: remoteUrl ? 'download-button-anchor-fetch' : 'download-button',
+      artifactKind: 'image',
+      previewArtifactId: previewFile.id,
+      previewSize: previewFile.size ?? null,
+      previewChecksumSha256: previewSha,
+      fullQualityDiffersFromPreview: previewSha ? previewSha !== fullQualitySha || previewFile.size !== stat.size : null,
+    },
+  };
+}
+
+async function configureGrokDownloadBehaviorWithClient(client: ChromeClient, downloadPath: string): Promise<void> {
+  const cdpClient = client as unknown as { send?: (method: string, params?: Record<string, unknown>) => Promise<unknown> };
+  if (typeof cdpClient.send !== 'function') return;
+  try {
+    await cdpClient.send('Browser.setDownloadBehavior', {
+      behavior: 'allow',
+      downloadPath,
+      eventsEnabled: true,
+    });
+    return;
+  } catch {
+    // Fall back to the older Page domain when Browser.setDownloadBehavior is unavailable.
+  }
+  try {
+    await cdpClient.send('Page.setDownloadBehavior', {
+      behavior: 'allow',
+      downloadPath,
+    });
+  } catch {
+    // Leave downloads unconfigured if this target does not support either API.
+  }
+}
+
+async function waitForGrokDownloadedFile(destDir: string, timeoutMs: number): Promise<string | null> {
+  const deadline = Date.now() + timeoutMs;
+  let lastPath: string | null = null;
+  let lastSize = -1;
+  let stableCount = 0;
+  while (Date.now() < deadline) {
+    const entries = await fs.readdir(destDir, { withFileTypes: true }).catch(() => []);
+    const candidates = entries
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name)
+      .filter((name) => !name.startsWith('grok-imagine-visible-') && !name.endsWith('.crdownload') && !name.endsWith('.tmp'))
+      .sort();
+    if (candidates.length > 0) {
+      const candidatePath = path.join(destDir, candidates[0]!);
+      const stat = await fs.stat(candidatePath).catch(() => null);
+      if (stat) {
+        if (candidatePath === lastPath && stat.size === lastSize) stableCount += 1;
+        else {
+          lastPath = candidatePath;
+          lastSize = stat.size;
+          stableCount = 0;
+        }
+        if (stableCount >= 1) return candidatePath;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return null;
+}
+
+function parseImageDataUrl(value: string): { mimeType: string; buffer: Buffer } | null {
+  const match = value.match(/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i);
+  if (!match?.[1] || !match?.[2]) return null;
+  return {
+    mimeType: match[1].toLowerCase(),
+    buffer: Buffer.from(match[2], 'base64'),
+  };
+}
+
+function extensionForMimeType(mimeType: string): string {
+  const normalized = mimeType.toLowerCase();
+  if (normalized.includes('png')) return 'png';
+  if (normalized.includes('webp')) return 'webp';
+  if (normalized.includes('gif')) return 'gif';
+  return 'jpg';
+}
+
+function inferMimeTypeFromName(filePath: string): string {
+  const lower = filePath.toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  return 'image/jpeg';
+}
+
+function ensureExtension(fileName: string, extension: string): string {
+  const clean = String(fileName || 'grok-imagine-full-quality').replace(/[\/\0]/g, '-').trim() || 'grok-imagine-full-quality';
+  return /\.[a-z0-9]{2,5}$/i.test(clean) ? clean : `${clean}.${extension}`;
+}
+
+function sha256Hex(buffer: Buffer): string {
+  return createHash('sha256').update(buffer).digest('hex');
+}
+
 export function isGrokMainSidebarOpenProbe(probe: GrokMainSidebarProbe | null | undefined): boolean {
   if (!probe) {
     return false;
@@ -963,6 +1285,7 @@ export function createGrokAdapter(): Pick<
   | 'capabilities'
   | 'getFeatureSignature'
   | 'runPrompt'
+  | 'materializeActiveMediaArtifacts'
   | 'listProjects'
   | 'listConversations'
   | 'getUserIdentity'
@@ -1132,6 +1455,43 @@ export function createGrokAdapter(): Pick<
           url: submittedState.href ?? baseline.href ?? targetUrl,
           tabTargetId: targetId ?? null,
         };
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+    async materializeActiveMediaArtifacts(
+      input,
+      destDir,
+      options?: BrowserProviderListOptions,
+    ): Promise<FileRef[]> {
+      if (input.capabilityId !== 'grok.media.imagine_image') {
+        throw new Error(
+          `Grok active media materialization only supports grok.media.imagine_image, got ${input.capabilityId ?? 'none'}.`,
+        );
+      }
+      const targetUrl = options?.configuredUrl ?? options?.tabUrl ?? 'https://grok.com/imagine';
+      const { client, targetId, shouldClose, host, port } = await connectToGrokTab(
+        {
+          ...options,
+          configuredUrl: targetUrl,
+          preserveActiveTab: true,
+          mutationSourcePrefix: options?.mutationSourcePrefix ?? 'media:grok-imagine',
+        },
+        targetUrl,
+      );
+      try {
+        await waitForDocumentReadyUi(client.Runtime, {
+          timeoutMs: 10_000,
+          description: 'Grok Imagine document ready for media materialization',
+        }).catch(() => undefined);
+        await waitForGrokImagineRoute(client.Runtime, targetUrl);
+        return await materializeGrokImagineVisibleImagesWithClient(client, destDir, {
+          maxItems: input.maxItems,
+          compareFullQuality: input.compareFullQuality !== false,
+        });
       } finally {
         await client.close().catch(() => undefined);
         if (shouldClose && targetId) {
