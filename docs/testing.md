@@ -247,6 +247,10 @@
       materialization-control evidence when visible, plus bounded masonry and
       filmstrip visible-tile evidence. They do not submit a prompt or click
       generation controls.
+    - a passive `Upgrade to SuperGrok` upsell alone is not an account gate
+      when usable Image/Video controls or generated media are visible; blocking
+      gate classification requires contextual generation-limit/subscription
+      evidence with no ready composer or media
     - with the configured `api serve` runtime, `provider=gemini`,
       `provider=chatgpt`, and `provider=grok` can merge read-only
       feature-signature evidence from the matching managed browser profile;

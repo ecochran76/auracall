@@ -223,6 +223,9 @@ Add a browser-first Grok Imagine discovery/audit slice:
   workbench capability evidence for operator status/readback.
 - [x] Grok `/imagine` diagnostics preserve bounded visible tile evidence for
   the current masonry/filmstrip surfaces.
+- [x] Grok `/imagine` diagnostics do not treat passive `Upgrade to SuperGrok`
+  upsell text as an account gate when usable controls or generated media are
+  visible.
 - [x] Grok materialization can download all currently visible generated tiles
   through the active browser tab and compare one preview against the
   provider-owned full-quality download-button path before falling back to
@@ -243,8 +246,11 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/workbenchCapabilities.test.ts --maxWorkers 1`
 - [x] Bounded live read-only run-state dogfood:
   - `pnpm tsx bin/auracall.ts capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json`
-  - observed `run_state = account_gated`, no pending generation, and no
-    terminal generated media promotion from the public gallery
+  - first observed the passive-upsell false positive as `run_state =
+    account_gated`
+  - after narrowing gate detection, observed `run_state = terminal_image`,
+    `account_gated = false`, and `grok.media.imagine_image` availability
+    `available`
 - [x] Unit tests for Grok browser media preflight and guarded executor:
   - `pnpm vitest run tests/mediaGeneration.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts --maxWorkers 1`
 - [x] Unit tests for Grok visible-tile materialization and full-quality
@@ -258,6 +264,14 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - returned media id:
     `medgen_8744a7d69a314433bc7d7e67615391e9`
   - timeline contained only `running_persisted` and `failed`
+- [x] Bounded live Grok browser image materialization:
+  - direct Grok browser media executor prompt:
+    `Generate an image of an asphalt secret agent`
+  - observed prompt insertion/submission, changed terminal media fingerprint,
+    eight visible tile JPEG artifacts, and one provider download-button
+    artifact under `/tmp/auracall-grok-live-materialization`
+  - first preview and full-quality artifact matched by SHA-256, so the current
+    web surface appears to expose full-quality bytes in the visible tile
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
@@ -265,7 +279,7 @@ Add a browser-first Grok Imagine discovery/audit slice:
 ## Next Slice
 
 Keep Grok video and edit/reference workflows gated. The next browser slice
-should dogfood the new Grok image preflight through the local API on the current
-account, confirm it stops before prompt submission while account-gated, and
-then harden terminal materialization for available accounts with provider
-download-control support instead of relying only on remote media URLs.
+should route Grok image generation through the durable API/MCP media-generation
+service path, verify persisted run-status/artifact-cache readback, and then
+decide whether visible-tile bytes or the download-button artifact should be the
+canonical returned image.

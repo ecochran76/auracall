@@ -225,6 +225,9 @@ Terminology note:
     pending, terminal image/video, media URL, and materialization-control
     signals when those are visible in the workbench. Bounded visible masonry
     and filmstrip tiles are preserved separately from terminal media evidence.
+    Passive upsell affordances such as `Upgrade to SuperGrok` are not treated
+    as account gates unless the page also lacks ready generation controls or
+    generated media.
   - `POST /v1/team-runs` creates one bounded task-backed team execution:
     - request fields are either:
       - compact fields: `teamId`, `objective`, and optional `title`,

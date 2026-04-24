@@ -64,6 +64,48 @@ describe('normalizeGrokFeatureSignature', () => {
     expect(() => new Function(`return ${buildGrokFeatureProbeExpression()};`)).not.toThrow();
   });
 
+  test('does not classify a passive SuperGrok upsell as an Imagine account gate', () => {
+    const probe = evaluateGrokFeatureProbeWithFakeDom({
+      bodyText: 'Discover kittens Think Harder Image Video Speed Quality 2:3 Upgrade to SuperGrok',
+      controls: [
+        fakeElement('button', { text: 'Image', width: 80, height: 32 }),
+        fakeElement('button', { text: 'Video', width: 80, height: 32 }),
+        fakeElement('button', { ariaLabel: 'Submit', width: 40, height: 40 }),
+        fakeElement('button', { text: 'Upgrade to SuperGrok', width: 160, height: 40 }),
+      ],
+      composerInputs: [
+        fakeElement('div', { text: 'Type to imagine', placeholder: 'Type to imagine', width: 400, height: 48 }),
+      ],
+      images: [
+        fakeImage({
+          src: `data:image/jpeg;base64,${Buffer.from('preview image bytes').toString('base64')}`,
+          alt: 'Generated image',
+          width: 277,
+          height: 413,
+        }),
+      ],
+    });
+
+    expect(probe.imagine.account_gated).toBe(false);
+    expect(probe.imagine.run_state).toBe('terminal_image');
+    expect(probe.imagine.terminal_image).toBe(true);
+  });
+
+  test('keeps contextual Imagine generation gates when no ready composer or media is visible', () => {
+    const probe = evaluateGrokFeatureProbeWithFakeDom({
+      bodyText: 'Image generation limit reached. Upgrade to generate more images.',
+      controls: [
+        fakeElement('button', { text: 'Upgrade to SuperGrok', width: 160, height: 40 }),
+      ],
+      composerInputs: [],
+      images: [],
+    });
+
+    expect(probe.imagine.account_gated).toBe(true);
+    expect(probe.imagine.run_state).toBe('account_gated');
+    expect(probe.imagine.terminal_image).toBe(false);
+  });
+
   test('normalizes Imagine browser discovery evidence into a stable signature', () => {
     const signature = normalizeGrokFeatureSignature({
       detector: 'ignored',
@@ -169,6 +211,121 @@ describe('normalizeGrokFeatureSignature', () => {
     expect(normalizeGrokFeatureSignature({ detector: 'grok-feature-probe-v1', imagine: {} })).toBeNull();
   });
 });
+
+type FakeDomInput = {
+  bodyText: string;
+  controls: FakeElement[];
+  composerInputs: FakeElement[];
+  images: FakeElement[];
+};
+
+class FakeElement {
+  tagName: string;
+  textContent: string;
+  currentSrc: string;
+  src: string;
+  disabled: boolean;
+  private attrs: Map<string, string>;
+  private width: number;
+  private height: number;
+
+  constructor(tagName: string, options: {
+    text?: string;
+    ariaLabel?: string;
+    title?: string;
+    href?: string;
+    placeholder?: string;
+    src?: string;
+    alt?: string;
+    width?: number;
+    height?: number;
+    disabled?: boolean;
+  } = {}) {
+    this.tagName = tagName.toUpperCase();
+    this.textContent = options.text ?? '';
+    this.currentSrc = options.src ?? '';
+    this.src = options.src ?? '';
+    this.disabled = options.disabled ?? false;
+    this.width = options.width ?? 1;
+    this.height = options.height ?? 1;
+    this.attrs = new Map();
+    if (options.ariaLabel) this.attrs.set('aria-label', options.ariaLabel);
+    if (options.title) this.attrs.set('title', options.title);
+    if (options.href) this.attrs.set('href', options.href);
+    if (options.placeholder) this.attrs.set('placeholder', options.placeholder);
+    if (options.alt) this.attrs.set('alt', options.alt);
+  }
+
+  getAttribute(name: string): string | null {
+    return this.attrs.get(name) ?? null;
+  }
+
+  getBoundingClientRect(): { width: number; height: number } {
+    return { width: this.width, height: this.height };
+  }
+
+  closest(): null {
+    return null;
+  }
+
+  matches(): boolean {
+    return false;
+  }
+}
+
+function fakeElement(tagName: string, options?: ConstructorParameters<typeof FakeElement>[1]): FakeElement {
+  return new FakeElement(tagName, options);
+}
+
+function fakeImage(options: ConstructorParameters<typeof FakeElement>[1]): FakeElement {
+  return new FakeElement('img', options);
+}
+
+function evaluateGrokFeatureProbeWithFakeDom(input: FakeDomInput): { imagine: Record<string, unknown> } {
+  const previous = {
+    document: globalThis.document,
+    window: globalThis.window,
+    location: globalThis.location,
+    HTMLElement: globalThis.HTMLElement,
+    SVGElement: globalThis.SVGElement,
+    HTMLImageElement: globalThis.HTMLImageElement,
+  };
+  const querySelectorAll = vi.fn((selector: string) => {
+    if (selector.includes('textarea') || selector.includes('[contenteditable="true"]')) {
+      return input.composerInputs;
+    }
+    if (selector.includes('[aria-busy') || selector.includes('progressbar')) {
+      return [];
+    }
+    if (selector.includes('video')) {
+      return [];
+    }
+    if (selector.includes('img')) {
+      return input.images;
+    }
+    return input.controls;
+  });
+  try {
+    Object.assign(globalThis, {
+      HTMLElement: FakeElement,
+      SVGElement: FakeElement,
+      HTMLImageElement: FakeElement,
+      window: {
+        getComputedStyle: () => ({ display: 'block', visibility: 'visible', opacity: '1' }),
+      },
+      document: {
+        body: { innerText: input.bodyText },
+        querySelectorAll,
+      },
+      location: {
+        href: 'https://grok.com/imagine',
+      },
+    });
+    return new Function(`return ${buildGrokFeatureProbeExpression()};`)() as { imagine: Record<string, unknown> };
+  } finally {
+    Object.assign(globalThis, previous);
+  }
+}
 
 describe('findGrokProjectByName', () => {
   test('finds the created project by normalized exact name', () => {

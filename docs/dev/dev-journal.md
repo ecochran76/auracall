@@ -20651,3 +20651,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - live read-only capability probe still reported `grok.media.imagine_image`
     as `account_gated` with five visible tiles, so no prompt-submitting
     materialization dogfood was run on the current account.
+
+## 2026-04-24 - Grok Imagine upsell gate false positive
+
+- Focus: distinguish a passive `Upgrade to SuperGrok` upsell from a blocking
+  Imagine account gate.
+- Progress: narrowed the Grok Imagine gate detector to contextual generation
+  blockers and ready-composer/media evidence. Passive upsell text no longer
+  prevents `grok.media.imagine_image` from reporting available when the
+  workbench has usable controls or generated media. Prompt submission also
+  waits for pending state, new media count, or changed media fingerprint so old
+  visible tiles do not satisfy a newly submitted run.
+- Live dogfood: `auracall capabilities --target grok --entrypoint
+  grok-imagine --diagnostics browser-state --json` now reports both Grok
+  Imagine capabilities available with `run_state = terminal_image`. A bounded
+  direct Grok browser media executor run submitted `Generate an image of an
+  asphalt secret agent`, observed changed terminal media, captured eight
+  visible JPEG tile artifacts, and materialized one provider download-button
+  artifact under `/tmp/auracall-grok-live-materialization`; the first preview
+  and full-quality artifact had matching SHA-256
+  `14d598e86fd4c02b7bf2d72beefd29bf60b18f2e86a5eaade21fdf87d01f4221`.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/workbenchCapabilities.test.ts --maxWorkers 1`
+  - `pnpm run check`

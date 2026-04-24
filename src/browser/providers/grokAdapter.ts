@@ -227,7 +227,21 @@ export function buildGrokFeatureProbeExpression(): string {
       labels.push('Imagine');
     }
     const visible = labels.length > 0 || lower(locationHref).includes('/imagine') || bodyText.includes('imagine');
-    const accountGated = /upgrade|premium\\+|supergrok|subscribe|subscription|limit reached|not available|not eligible/.test(bodyText);
+    const composerInputs = Array.from(document.querySelectorAll('main textarea, main [contenteditable="true"], textarea, [contenteditable="true"]'))
+      .filter((node) => isVisible(node))
+      .filter((node) => {
+        const label = lower([node.getAttribute?.('aria-label'), node.getAttribute?.('placeholder'), node.textContent].filter(Boolean).join(' '));
+        return /prompt|describe|imagine|create|message|ask|type/.test(label);
+      });
+    const enabledSendControls = Array.from(document.querySelectorAll('main button, main [role="button"], button, [role="button"]'))
+      .filter((node) => isVisible(node))
+      .filter((node) => !node.disabled && node.getAttribute?.('aria-disabled') !== 'true')
+      .filter((node) => {
+        const label = lower([node.textContent, node.getAttribute?.('aria-label'), node.getAttribute?.('title')].filter(Boolean).join(' '));
+        return /generate|create|submit|send|arrow|go/.test(label);
+      });
+    const hasReadyComposer = composerInputs.length > 0 && enabledSendControls.length > 0;
+    const contextualAccountGate = /(?:requires?|need|must|only available|available only).{0,80}(?:supergrok|premium\\+?|subscription|subscribe|upgrade)|(?:upgrade|subscribe).{0,80}(?:generate|create|imagine|image|video)|(?:not eligible|not available).{0,80}(?:generate|create|imagine|image|video)|(?:limit reached|generation limit|daily limit)/.test(bodyText);
     const blocked = /failed to generate|try again later|rate limit|moderated|policy|unavailable/.test(bodyText);
     const moderationBlocked = /moderated|policy|safety|not allowed|cannot generate/.test(bodyText);
     const rateLimited = /rate limit|too many requests|try again later|limit reached/.test(bodyText);
@@ -291,6 +305,7 @@ export function buildGrokFeatureProbeExpression(): string {
     const videos = readMedia('main video, [role="main"] video, video', 'video');
     const mediaUrls = Array.from(new Set(visibleTiles.concat(videos).flatMap((entry) => [entry.src, entry.poster, entry.href]).filter(Boolean))).slice(0, 80);
     const pending = pendingText || pendingControls.length > 0;
+    const accountGated = contextualAccountGate && !hasReadyComposer && images.length === 0 && videos.length === 0;
     const terminalImage = !accountGated && !blocked && images.length > 0;
     const terminalVideo = !accountGated && !blocked && videos.length > 0;
     const runState = accountGated
@@ -490,6 +505,7 @@ type GrokImaginePromptState = {
   terminalImage: boolean;
   terminalVideo: boolean;
   mediaUrlCount: number;
+  mediaFingerprint: string | null;
 };
 
 async function waitForGrokImagineRoute(Runtime: ChromeClient['Runtime'], targetUrl: string): Promise<void> {
@@ -531,6 +547,9 @@ async function readGrokImaginePromptState(Runtime: ChromeClient['Runtime']): Pro
     };
   } | undefined;
   const imagine = probe?.imagine && typeof probe.imagine === 'object' ? probe.imagine : {};
+  const mediaUrls = Array.isArray(imagine.media?.urls)
+    ? imagine.media.urls.map((entry) => String(entry ?? '').trim()).filter(Boolean)
+    : [];
   return {
     href: typeof imagine.href === 'string' && imagine.href.trim() ? imagine.href.trim() : null,
     title: typeof imagine.title === 'string' && imagine.title.trim() ? imagine.title.trim() : null,
@@ -540,7 +559,10 @@ async function readGrokImaginePromptState(Runtime: ChromeClient['Runtime']): Pro
     pending: imagine.pending === true,
     terminalImage: imagine.terminal_image === true,
     terminalVideo: imagine.terminal_video === true,
-    mediaUrlCount: Array.isArray(imagine.media?.urls) ? imagine.media.urls.length : 0,
+    mediaUrlCount: mediaUrls.length,
+    mediaFingerprint: mediaUrls.length > 0
+      ? mediaUrls.map((entry) => `${entry.length}:${entry.slice(0, 48)}:${entry.slice(-24)}`).join('|')
+      : null,
   };
 }
 
@@ -628,11 +650,12 @@ async function waitForGrokImagineSubmittedState(
     last = await readGrokImaginePromptState(Runtime);
     if (
       last.pending ||
-      last.terminalImage ||
-      last.terminalVideo ||
       last.blocked ||
       last.accountGated ||
-      last.mediaUrlCount > baseline.mediaUrlCount
+      (last.terminalImage && !baseline.terminalImage) ||
+      (last.terminalVideo && !baseline.terminalVideo) ||
+      last.mediaUrlCount > baseline.mediaUrlCount ||
+      (last.mediaFingerprint !== null && last.mediaFingerprint !== baseline.mediaFingerprint)
     ) {
       return last;
     }

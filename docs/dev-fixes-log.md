@@ -14082,3 +14082,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `/imagine` tab, capture bounded visible tiles to local files, then compare a
   preview against the provider-owned download button before falling back to a
   remote media fetch.
+- 2026-04-24: Do not classify passive provider upsell text as an account gate.
+  In this repo, Grok `/imagine` can show a normal `Upgrade to SuperGrok`
+  affordance while the signed-in workbench still has usable Image/Video
+  controls and generated media. Account-gate detection should require a
+  contextual blocking generation message or missing ready-composer/media
+  evidence, and submitted media runs should wait for new media evidence rather
+  than accepting stale visible tiles from a prior run.
