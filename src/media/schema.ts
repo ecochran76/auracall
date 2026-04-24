@@ -55,6 +55,7 @@ export const MediaGenerationTimelineEventSchema: z.ZodType<MediaGenerationTimeli
   event: z.enum([
     'running_persisted',
     'capability_discovered',
+    'capability_unavailable',
     'executor_started',
     'browser_target_attached',
     'gemini_surface_ready',

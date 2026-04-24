@@ -132,7 +132,18 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
       persistTimelineEvent,
     } = context;
     try {
-      const capability = await resolveMediaGenerationCapability(request, capabilityReporter, runtimeProfile);
+      let capability: WorkbenchCapability | null = null;
+      try {
+        capability = await resolveMediaGenerationCapability(request, capabilityReporter, runtimeProfile);
+      } catch (error) {
+        if (error instanceof MediaGenerationExecutionError && error.code === 'media_capability_unavailable') {
+          await persistTimelineEvent({
+            event: 'capability_unavailable',
+            details: error.details ?? null,
+          });
+        }
+        throw error;
+      }
       if (capability) {
         await persistTimelineEvent({
           event: 'capability_discovered',
@@ -204,6 +215,10 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
         updatedAt: completedAt,
         completedAt,
         timeline,
+        metadata: {
+          ...(runningResponse.metadata ?? {}),
+          ...formatFailureMetadata(failure),
+        },
         failure,
       } satisfies MediaGenerationResponse);
       await store.writeResponse(response, { persistedAt: completedAt });
@@ -267,6 +282,8 @@ async function resolveMediaGenerationCapability(
       providerLabels: capability?.providerLabels ?? [],
       source: capability?.source ?? null,
       observedAt: capability?.observedAt ?? null,
+      workbenchCapability: capability ? formatCapabilityMetadata(capability) : null,
+      inspectionCommand: `auracall capabilities --target ${request.provider}${request.provider === 'grok' ? ' --entrypoint grok-imagine --diagnostics browser-state' : ''} --json`,
       runtimeProfile,
       transport: request.transport,
     },
@@ -310,6 +327,16 @@ function createMediaGenerationFailure(error: unknown): MediaGenerationFailure {
   return {
     code: 'media_generation_failed',
     message: error instanceof Error ? error.message : String(error),
+  };
+}
+
+function formatFailureMetadata(failure: MediaGenerationFailure): Record<string, unknown> {
+  const details = failure.details ?? {};
+  return {
+    failureCode: failure.code,
+    capabilityId: details.capabilityId ?? null,
+    capabilityAvailability: details.availability ?? null,
+    workbenchCapability: details.workbenchCapability ?? null,
   };
 }
 

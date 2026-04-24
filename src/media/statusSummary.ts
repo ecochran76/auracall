@@ -40,6 +40,8 @@ export interface MediaGenerationStatusSummary {
     conversationId?: unknown;
     tabTargetId?: unknown;
     capabilityId?: unknown;
+    capabilityAvailability?: unknown;
+    failureCode?: unknown;
     artifactPollCount?: unknown;
     generatedArtifactCount?: unknown;
   };
@@ -92,6 +94,8 @@ function summarizeMetadata(metadata: Record<string, unknown> | null): MediaGener
     conversationId: metadata?.conversationId ?? null,
     tabTargetId: metadata?.tabTargetId ?? null,
     capabilityId: metadata?.capabilityId ?? null,
+    capabilityAvailability: metadata?.capabilityAvailability ?? null,
+    failureCode: metadata?.failureCode ?? null,
     artifactPollCount: metadata?.artifactPollCount ?? null,
     generatedArtifactCount: metadata?.generatedArtifactCount ?? null,
   };

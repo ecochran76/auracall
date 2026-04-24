@@ -11,6 +11,7 @@ export type MediaGenerationStatus = 'queued' | 'running' | 'succeeded' | 'failed
 export type MediaGenerationTimelineEventName =
   | 'running_persisted'
   | 'capability_discovered'
+  | 'capability_unavailable'
   | 'executor_started'
   | 'browser_target_attached'
   | 'gemini_surface_ready'

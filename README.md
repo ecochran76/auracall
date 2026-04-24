@@ -172,8 +172,8 @@ Terminology note:
     `?wait=false` or JSON `"wait": false` to return a running media id
     immediately for polling. The route persists request/readback records with a
     `timeline[]` showing processing milestones such as capability discovery,
-    prompt submission, artifact polling, materialization, and terminal
-    completion. Operators can poll the generic
+    capability-gate stops, prompt submission, artifact polling,
+    materialization, and terminal completion. Operators can poll the generic
     `GET /v1/runs/{run_id}/status` surface for response/team chats and media
     jobs. Media jobs also retain the narrower
     `GET /v1/media-generations/{media_generation_id}/status` for a compact

@@ -338,20 +338,32 @@ describe('http media generation adapter', () => {
       });
 
       expect(createResponse.status).toBe(502);
-      await expect(createResponse.json()).resolves.toMatchObject({
+      const body = await createResponse.json();
+      expect(body).toMatchObject({
         object: 'media_generation',
         status: 'failed',
         provider: 'gemini',
         mediaType: 'image',
+        metadata: {
+          capabilityId: 'gemini.media.create_image',
+          capabilityAvailability: 'unknown',
+          failureCode: 'media_capability_unavailable',
+        },
         failure: {
           code: 'media_capability_unavailable',
           details: {
             capabilityId: 'gemini.media.create_image',
             availability: 'unknown',
+            inspectionCommand: 'auracall capabilities --target gemini --json',
             transport: 'browser',
           },
         },
       });
+      expect((body as { timeline?: Array<{ event?: string }> }).timeline?.map((entry) => entry.event)).toEqual([
+        'running_persisted',
+        'capability_unavailable',
+        'failed',
+      ]);
       expect(invoked).toBe(false);
     } finally {
       await server.close();

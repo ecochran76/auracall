@@ -102,6 +102,10 @@ helpers.
   - keep xAI API image/video execution as a later adapter path
   - use API research only as background context for media concepts, not as the
     first implementation target
+- Browser media capability preflight failures now persist an explicit
+  `capability_unavailable` timeline event before terminal `failed` and carry
+  bounded capability metadata into failed readback/status, so operators can
+  prove a gated run stopped before provider prompt submission.
 
 ## Target Contract
 
@@ -188,6 +192,9 @@ helpers.
   browser adapter paths are implemented.
 - [x] Gemini browser media requests are gated by the matching workbench
   capability availability before tool selection/execution.
+- [x] Browser media capability-gate failures expose a pre-submit
+  `capability_unavailable` timeline event and compact capability metadata on
+  failed readback/status.
 - Grok Imagine implementation is either green for image generation or remains
   explicitly gated with a provider/API credential blocker.
 - Docs state which provider/media combinations are implemented, gated, or not

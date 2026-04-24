@@ -20589,3 +20589,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/inspector/doctor.test.ts --maxWorkers 1`
   - `pnpm run check`
   - `pnpm tsx bin/auracall.ts doctor --target grok --json`
+
+## 2026-04-24 - Media capability-gate status evidence
+
+- Focus: harden the pre-submit failure path for browser media tools, especially
+  current Grok Imagine account gating.
+- Progress: media-generation capability preflight failures now emit a persisted
+  `capability_unavailable` timeline event before terminal `failed`. Failed
+  readback/status metadata now carries `capabilityId`,
+  `capabilityAvailability`, `failureCode`, and bounded `workbenchCapability`
+  evidence, while failure details include the exact `auracall capabilities ...`
+  inspection command.
+- Guardrail: this preserves the current no-prompt-submission behavior for
+  Grok Imagine account-gated runs and makes the stop reason pollable through
+  the normal media/run status surfaces.
+- Validation:
+  - `pnpm vitest run tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 54`
+  - local API dogfood Grok browser image request:
+    `medgen_3be9571b5b1f4739a73e45e41f087f49` failed as
+    `media_capability_unavailable` with timeline
+    `running_persisted -> capability_unavailable -> failed`,
+    `capabilityAvailability = account_gated`, and `tabTargetId = null`

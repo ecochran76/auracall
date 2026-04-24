@@ -344,13 +344,28 @@ describe('media generation service', () => {
         details: {
           capabilityId: 'gemini.media.create_image',
           availability: 'unknown',
+          inspectionCommand: 'auracall capabilities --target gemini --json',
           runtimeProfile: 'default',
           transport: 'browser',
+          workbenchCapability: {
+            id: 'gemini.media.create_image',
+            availability: 'unknown',
+          },
+        },
+      },
+      metadata: {
+        capabilityId: 'gemini.media.create_image',
+        capabilityAvailability: 'unknown',
+        failureCode: 'media_capability_unavailable',
+        workbenchCapability: {
+          id: 'gemini.media.create_image',
+          availability: 'unknown',
         },
       },
     });
     expect(created.timeline?.map((entry) => entry.event)).toEqual([
       'running_persisted',
+      'capability_unavailable',
       'failed',
     ]);
     await expect(service.readGeneration('medgen_capability_miss_1')).resolves.toEqual(created);
@@ -391,13 +406,28 @@ describe('media generation service', () => {
         details: {
           capabilityId: 'grok.media.imagine_image',
           availability: 'account_gated',
+          inspectionCommand: 'auracall capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json',
           runtimeProfile: 'default',
           transport: 'browser',
+          workbenchCapability: {
+            id: 'grok.media.imagine_image',
+            availability: 'account_gated',
+          },
+        },
+      },
+      metadata: {
+        capabilityId: 'grok.media.imagine_image',
+        capabilityAvailability: 'account_gated',
+        failureCode: 'media_capability_unavailable',
+        workbenchCapability: {
+          id: 'grok.media.imagine_image',
+          availability: 'account_gated',
         },
       },
     });
     expect(created.timeline?.map((entry) => entry.event)).toEqual([
       'running_persisted',
+      'capability_unavailable',
       'failed',
     ]);
   });

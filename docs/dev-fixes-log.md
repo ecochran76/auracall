@@ -14064,3 +14064,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   should classify that route as a workbench surface, keep composer/file/menu
   checks meaningful, and defer chat-only controls instead of reporting an auth
   or browser-health failure.
+- 2026-04-24: Persist capability-gate stops as their own media timeline event.
+  In this repo, a Grok Imagine account-gated run should be visibly different
+  from a provider execution failure: it must stop before prompt submission,
+  record `capability_unavailable`, and carry bounded capability evidence plus
+  the inspection command in failed readback/status.

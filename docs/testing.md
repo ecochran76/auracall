@@ -212,6 +212,10 @@
     first checks the explicit `/imagine` entrypoint and fails before prompt
     submission when the capability is `account_gated` or otherwise unavailable:
     - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"grok","mediaType":"image","transport":"browser","prompt":"Generate an image of an asphalt secret agent"}'`
+    - gated failures should include `capability_unavailable` before terminal
+      `failed` in `timeline[]`, with `metadata.capabilityId`,
+      `metadata.capabilityAvailability`, and the inspection command in
+      `failure.details`
   - list workbench capabilities for service discovery:
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=gemini"`
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=chatgpt"`

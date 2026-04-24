@@ -74,6 +74,9 @@ existing Aura-Call media-generation contract.
     `entrypoint = grok-imagine` and `diagnostics = browser-state`
   - `account_gated`, `unknown`, `blocked`, or missing capability stops before
     provider prompt submission
+  - gated runs persist `capability_unavailable` before terminal failure and
+    retain the inspection command plus bounded workbench capability metadata in
+    failed readback/status
   - available accounts use a pinned `/imagine` tab, provider run-state polling,
     and remote media materialization from detected terminal image evidence
   - video remains gated as not implemented
@@ -208,6 +211,9 @@ Add a browser-first Grok Imagine discovery/audit slice:
   submitting a prompt.
 - [x] Grok browser image invocation is guarded by capability preflight so
   account-gated accounts fail before prompt submission.
+- [x] Account-gated Grok browser image attempts record a pre-submit
+  `capability_unavailable` timeline event and preserve the matching
+  workbench capability evidence for operator status/readback.
 
 ## Validation Plan
 
