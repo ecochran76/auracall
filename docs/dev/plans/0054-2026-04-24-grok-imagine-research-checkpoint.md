@@ -72,70 +72,85 @@ Findings:
 
 ## Decision
 
-Implement Grok Imagine through the xAI API first, not through browser
-automation.
+Implement browser-side Grok Imagine discovery and proof first. Do not implement
+the xAI API executor yet.
 
 Reasoning:
 
-- The official API is documented and separates image and video mechanics
-  clearly.
-- API image generation maps directly into the existing `media_generation`
-  executor result shape.
-- Browser Grok Imagine is account-tier and UI dependent, and should stay behind
-  discovery/reporting until a live surface is intentionally audited.
-- Video generation requires a deferred polling loop and temporary artifact
-  download semantics, so it should follow the image executor rather than land
-  in the same first code slice.
+- The requested product path is the signed-in Grok workbench, not the separate
+  xAI API account/key surface.
+- Browser Grok Imagine is the complicated and volatile interface that needs
+  Aura-Call hardening:
+  - account-tier gating
+  - web/mobile differences
+  - image/video mode transitions
+  - moderation and rate-limit failures
+  - generated post URLs and history/readback ambiguity
+  - download/materialization surfaces that may differ from chat artifacts
+- The official API remains useful reference material for expected media
+  concepts, but it must not drive the first implementation slice.
+- xAI API image/video support should remain a later adapter path after the
+  browser workbench path has discovery, status sensing, and artifact readback.
 
 ## First Implementation Slice
 
-Add a Grok API image executor:
+Add a browser-first Grok Imagine discovery/audit slice:
 
-- select it only when:
-  - `provider = "grok"`
-  - `mediaType = "image"`
-  - `transport = "api"` or `transport` is omitted/`auto`
-- require `XAI_API_KEY` or an injected test key/dependency
-- call `POST /v1/images/generations` with:
-  - `model = request.model ?? "grok-imagine-image"`
-  - `prompt`
-  - `n = count` when provided
-  - `aspect_ratio = aspectRatio` when provided
-  - `resolution = size` when provided and it is an xAI image resolution
-  - prefer `response_format = "b64_json"` for durable cache materialization
-- persist returned images into the media-generation artifact directory
-- emit timeline events for provider request, response receipt, and artifact
-  materialization
-- preserve moderation/model metadata when returned
+- use the managed Grok browser profile through browser-service-owned
+  dispatcher/control-plane paths only
+- discover whether the signed-in account exposes Imagine on web
+- record the actual entrypoint, labels, routes, and visible controls
+- classify available generation modes:
+  - text-to-image
+  - image-to-video
+  - text-to-video if exposed on web
+  - edit/variation/favorites/history if exposed
+- identify run-state evidence:
+  - generation pending/in-progress
+  - moderation/rate-limit/account-gated failures
+  - terminal image visible
+  - terminal video visible
+- identify artifact materialization paths:
+  - download buttons
+  - image/video URLs
+  - post URLs
+  - cacheable DOM media elements
+- expose discovery through the existing workbench capability report before
+  adding provider invocation
+- keep API image/video execution as a documented later adapter path
 
 ## Non-Goals
 
-- No Grok browser Imagine automation in this slice.
-- No video generation in the first implementation slice.
+- No xAI API implementation in this slice.
+- No blind Grok Imagine prompt submission until discovery selectors and
+  run-state evidence are captured.
+- No video generation automation in the first implementation slice.
 - No image editing, video editing, reference-image workflows, or extensions.
-- No fallback from API to browser when `XAI_API_KEY` is missing.
-- No claim that Grok Imagine browser availability is known from API support.
+- No fallback from browser to API when the browser account is missing Imagine.
+- No claim that API support means browser Imagine is available.
 
 ## Acceptance Criteria
 
-- Plan 0049 and roadmap clearly select API image generation as the next Grok
-  implementation step.
-- Unit tests cover request mapping, missing-key failure, base64 artifact
-  materialization, and URL artifact materialization if supported.
-- HTTP/MCP media-generation tests prove `provider = "grok"` image execution can
-  run through the shared contract with an injected fake transport.
-- Docs state that Grok image/video browser support remains gated.
-- Live smoke remains opt-in behind `AURACALL_LIVE_TEST=1` and `XAI_API_KEY`.
+- Plan 0049 and roadmap clearly select browser-first Grok Imagine discovery as
+  the next Grok implementation step.
+- Browser discovery remains read-only and dispatcher-owned.
+- Tests cover Grok Imagine capability projection from captured/browser
+  discovery evidence.
+- Docs state that xAI API image/video support is deferred, not the current
+  implementation target.
+- Live browser audit uses the managed Grok browser profile and stops on
+  account gating, moderation walls, or human-verification pages.
 
 ## Validation Plan
 
-- `pnpm vitest run tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts`
-- New Grok API media executor unit tests.
+- Unit tests for Grok Imagine browser-discovery evidence mapping.
+- Targeted browser-service/provider tests for dispatcher-owned discovery paths.
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
 
 ## Next Slice
 
-Implement the Grok API image executor only. Defer video until the image path has
-durable artifact materialization and status readback.
+Implement Grok browser Imagine discovery first. The first code slice should
+report whether the managed Grok account exposes Imagine and which image/video
+controls are visible, without submitting a generation request.

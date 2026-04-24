@@ -11,10 +11,11 @@
   - updated Plan 0049 and `ROADMAP.md` to select Grok API image generation as
     the next bounded implementation slice
 - Decision:
-  - implement `grok-imagine-image` API image generation first
-  - defer `grok-imagine-video` because it requires request-id polling and
-    temporary video URL materialization
-  - keep browser Grok Imagine automation out of the first slice
+  - after user correction, implement browser-first Grok Imagine discovery
+    before any API executor or provider invocation
+  - defer xAI API image/video execution
+  - first code slice should report whether the managed Grok browser profile
+    exposes Imagine and what image/video controls are visible
 - Verification target:
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`

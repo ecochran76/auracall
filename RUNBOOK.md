@@ -17,9 +17,10 @@
   - video URLs are temporary and must be downloaded promptly
   - xAI API access is separate from Grok.com/X/mobile subscription state
 - Decision:
-  - implement Grok API image generation first
-  - defer Grok video, image editing, video editing, and browser Imagine
-    automation to later bounded slices
+  - user corrected priority to browser-first Grok Imagine
+  - implement managed-browser Imagine discovery before provider invocation
+  - defer xAI API image/video execution, image editing, video editing, and
+    browser prompt submission to later bounded slices
 - Verification target:
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`
