@@ -1,4 +1,5 @@
 import type { RuntimeRunInspectionBrowserDiagnosticsSummary } from '../runtime/inspection.js';
+import type { WorkbenchCapabilityEntrypoint } from './entrypoints.js';
 
 export type WorkbenchCapabilityProvider = 'chatgpt' | 'gemini' | 'grok';
 
@@ -84,6 +85,7 @@ export interface WorkbenchCapabilityReportRequest {
   runtimeProfile?: string | null;
   includeUnavailable?: boolean | null;
   diagnostics?: 'browser-state' | null;
+  entrypoint?: WorkbenchCapabilityEntrypoint | null;
 }
 
 export interface WorkbenchCapabilityReport {

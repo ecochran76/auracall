@@ -3,6 +3,7 @@ import type { ResolvedUserConfig } from '../config.js';
 import { deriveChatgptWorkbenchCapabilitiesFromFeatureSignature } from './chatgptDiscovery.js';
 import { deriveGeminiWorkbenchCapabilitiesFromFeatureSignature } from './geminiDiscovery.js';
 import { deriveGrokWorkbenchCapabilitiesFromFeatureSignature } from './grokDiscovery.js';
+import { resolveWorkbenchCapabilityEntrypointUrl } from './entrypoints.js';
 import type {
   WorkbenchCapability,
   WorkbenchCapabilityReportRequest,
@@ -16,7 +17,14 @@ export function createBrowserWorkbenchCapabilityDiscovery(
       return [];
     }
     const client = await BrowserAutomationClient.fromConfig(userConfig, { target: request.provider });
-    const signature = await client.getFeatureSignature();
+    const entrypointUrl = resolveWorkbenchCapabilityEntrypointUrl(request);
+    const signature = await client.getFeatureSignature(entrypointUrl
+      ? {
+          configuredUrl: entrypointUrl,
+          preserveActiveTab: true,
+          mutationSourcePrefix: `workbench:${request.entrypoint}`,
+        }
+      : undefined);
     const observedAt = new Date().toISOString();
     if (request.provider === 'chatgpt') {
       return deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(signature, observedAt);

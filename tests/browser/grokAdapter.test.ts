@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 import {
+  buildGrokFeatureProbeExpression,
   choosePreferredGrokConversation,
   ensureGrokTabVisible,
   extractGrokAccountFileIdFromUrl,
@@ -59,6 +60,10 @@ describe('grok route helpers', () => {
 });
 
 describe('normalizeGrokFeatureSignature', () => {
+  test('builds a syntactically valid Imagine feature probe expression', () => {
+    expect(() => new Function(`return ${buildGrokFeatureProbeExpression()};`)).not.toThrow();
+  });
+
   test('normalizes Imagine browser discovery evidence into a stable signature', () => {
     const signature = normalizeGrokFeatureSignature({
       detector: 'ignored',

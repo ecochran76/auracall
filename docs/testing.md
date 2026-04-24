@@ -212,10 +212,12 @@
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=chatgpt"`
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=grok"`
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=grok&diagnostics=browser-state"`
+    - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=grok&entrypoint=grok-imagine&diagnostics=browser-state"`
     - `auracall capabilities --target gemini --json`
     - `auracall capabilities --target chatgpt --json`
     - `auracall capabilities --target grok --json`
     - `auracall capabilities --target grok --diagnostics browser-state --json`
+    - `auracall capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json`
     - `auracall capabilities --target gemini --static --json` for a no-browser
       catalog check
     - use `category=research|media|canvas|connector|skill|app|search|file|other`
@@ -224,6 +226,9 @@
       discovery proves current account availability
     - `diagnostics=browser-state` / `--diagnostics browser-state` adds bounded
       target/document/provider evidence and a stored PNG screenshot path
+    - `entrypoint=grok-imagine` / `--entrypoint grok-imagine` opens or reuses
+      the Grok `/imagine` route through browser-service control-plane
+      attribution for read-only inspection only
     - with the configured `api serve` runtime, `provider=gemini`,
       `provider=chatgpt`, and `provider=grok` can merge read-only
       feature-signature evidence from the matching managed browser profile;

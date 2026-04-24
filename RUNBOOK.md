@@ -1683,3 +1683,30 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`
+
+## Turn 64 | 2026-04-24
+
+- Continued implementation plan:
+  `docs/dev/plans/0054-2026-04-24-grok-imagine-research-checkpoint.md`
+- Goal: add a read-only Grok Imagine entrypoint inspection path before any
+  invocation work.
+- Change:
+  - added `entrypoint=grok-imagine` / `--entrypoint grok-imagine` to workbench
+    capability requests
+  - routed explicit Grok Imagine discovery through `https://grok.com/imagine`
+    using existing browser-service target open/reuse control-plane attribution
+  - preserved the explicit entrypoint tab long enough for browser diagnostics
+  - split generic document diagnostics from provider-specific evidence so a
+    provider probe failure cannot erase target/document state
+  - fixed the Grok feature probe syntax regression and added a parse guard test
+- Verification target:
+  - `pnpm vitest run tests/workbenchCapabilities.test.ts tests/http.workbenchCapabilities.test.ts tests/mcp.workbenchCapabilities.test.ts tests/cli/workbenchCapabilitiesCommand.test.ts tests/browser/grokAdapter.test.ts tests/mcp.schema.test.ts`
+  - live read-only dogfood:
+    - `pnpm tsx bin/auracall.ts capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json`
+    - observed `https://grok.com/imagine`, `Imagine - Grok`, image/video
+      mode evidence, account-gated image/video capability reports, and a
+      stored PNG screenshot
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`

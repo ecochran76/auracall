@@ -6,6 +6,7 @@ import {
   normalizeWorkbenchCapabilityCategory,
   normalizeWorkbenchCapabilityProvider,
 } from '../../src/cli/workbenchCapabilitiesCommand.js';
+import { normalizeWorkbenchCapabilityEntrypoint } from '../../src/workbench/entrypoints.js';
 import type { WorkbenchCapabilityReport } from '../../src/workbench/types.js';
 
 describe('workbench capabilities CLI helpers', () => {
@@ -19,6 +20,8 @@ describe('workbench capabilities CLI helpers', () => {
     expect(() => normalizeWorkbenchCapabilityDiagnostics('raw-cdp')).toThrow(
       'Invalid diagnostics "raw-cdp". Use "browser-state".',
     );
+    expect(normalizeWorkbenchCapabilityEntrypoint('imagine')).toBe('grok-imagine');
+    expect(normalizeWorkbenchCapabilityEntrypoint('grok-imagine')).toBe('grok-imagine');
   });
 
   it('builds a bounded report request for the reporter', async () => {
@@ -44,6 +47,7 @@ describe('workbench capabilities CLI helpers', () => {
         category: 'media',
         runtimeProfile: 'default',
         diagnostics: null,
+        entrypoint: null,
         includeUnavailable: false,
       },
     ]);
@@ -116,6 +120,32 @@ describe('workbench capabilities CLI helpers', () => {
     expect(formatted).toContain('target: https://grok.com/imagine');
     expect(formatted).toContain('screenshot: /tmp/auracall-diagnostics/grok.png (1234 bytes)');
     expect(formatted).toContain('"detector":"grok-feature-probe-v1"');
+  });
+
+  it('passes explicit workbench entrypoint requests to the reporter', async () => {
+    const calls: unknown[] = [];
+    await buildWorkbenchCapabilityReportForCli(
+      {
+        async listCapabilities(request) {
+          calls.push(request);
+          return sampleReport;
+        },
+      },
+      {
+        target: 'grok',
+        diagnostics: 'browser-state',
+        entrypoint: 'imagine',
+        runtimeProfile: 'default',
+      },
+    );
+
+    expect(calls).toEqual([
+      expect.objectContaining({
+        provider: 'grok',
+        diagnostics: 'browser-state',
+        entrypoint: 'grok-imagine',
+      }),
+    ]);
   });
 });
 

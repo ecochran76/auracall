@@ -5,6 +5,7 @@ import type {
   WorkbenchCapabilityReportRequest,
   WorkbenchCapabilityReporter,
 } from '../workbench/types.js';
+import { normalizeWorkbenchCapabilityEntrypoint } from '../workbench/entrypoints.js';
 
 export const WORKBENCH_CAPABILITY_PROVIDERS: WorkbenchCapabilityProvider[] = ['chatgpt', 'gemini', 'grok'];
 
@@ -27,6 +28,7 @@ export interface WorkbenchCapabilitiesCliOptions {
   availableOnly?: unknown;
   runtimeProfile?: unknown;
   diagnostics?: unknown;
+  entrypoint?: unknown;
 }
 
 export function normalizeWorkbenchCapabilityProvider(value: unknown): WorkbenchCapabilityProvider | null {
@@ -73,6 +75,7 @@ export async function buildWorkbenchCapabilityReportForCli(
     runtimeProfile,
     includeUnavailable: !options.availableOnly,
     diagnostics: normalizeWorkbenchCapabilityDiagnostics(options.diagnostics),
+    entrypoint: normalizeWorkbenchCapabilityEntrypoint(options.entrypoint),
   };
   return reporter.listCapabilities(request);
 }

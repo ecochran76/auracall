@@ -142,7 +142,7 @@ export function buildGrokFeatureProbeExpression(): string {
     const lower = (value) => normalize(value).toLowerCase();
     const labels = [];
     const routes = [];
-    const controls = [];
+    const matchedControls = [];
     const modes = new Set();
     const addLabel = (value) => {
       const normalized = normalize(value);
@@ -163,9 +163,9 @@ export function buildGrokFeatureProbeExpression(): string {
       if (haystack.includes('imagine') || haystack.includes('/imagine')) {
         addLabel(text || aria || title || 'Imagine');
         if (href) addRoute(href);
-        if (controls.length < 20) {
+        if (matchedControls.length < 20) {
           const rect = node instanceof HTMLElement ? node.getBoundingClientRect() : null;
-          controls.push({
+          matchedControls.push({
             tag: String(node.tagName || '').toLowerCase(),
             text: text || null,
             ariaLabel: aria || null,
@@ -200,7 +200,7 @@ export function buildGrokFeatureProbeExpression(): string {
         modes: Array.from(modes).sort(),
         labels: Array.from(new Set(labels)).slice(0, 20),
         routes: Array.from(new Set(routes)).slice(0, 20),
-        controls,
+        controls: matchedControls,
         href: locationHref,
         title: document.title || null,
       },
@@ -639,8 +639,38 @@ export function createGrokAdapter(): Pick<
       files: true,
     },
     async getFeatureSignature(options?: BrowserProviderListOptions): Promise<string | null> {
-      const { client, targetId, shouldClose, host, port } = await connectToGrokTab(options, GROK_HOME_URL);
+      const { client, targetId, shouldClose, host, port } = await connectToGrokTab(
+        options,
+        options?.configuredUrl ?? GROK_HOME_URL,
+      );
       try {
+        await waitForDocumentReadyUi(client.Runtime, {
+          timeoutMs: 8000,
+          description: 'Grok feature signature document ready',
+        }).catch(() => undefined);
+        if (options?.configuredUrl) {
+          await waitForPredicate(
+            client.Runtime,
+            `(() => {
+              const expected = ${JSON.stringify(options.configuredUrl)};
+              try {
+                const current = new URL(location.href);
+                const target = new URL(expected);
+                if (current.host !== target.host || current.pathname !== target.pathname) return null;
+              } catch {
+                if (!String(location.href || '').includes(expected)) return null;
+              }
+              return {
+                href: location.href,
+                bodyTextLength: document.body?.innerText?.length ?? 0,
+              };
+            })()`,
+            {
+              timeoutMs: 8000,
+              description: 'Grok feature signature entrypoint route',
+            },
+          ).catch(() => undefined);
+        }
         return await readGrokFeatureSignature(client);
       } finally {
         await client.close().catch(() => undefined);
@@ -2830,7 +2860,7 @@ async function connectToGrokTab(
       mutationSource: resolveMutationSource(options, 'provider:grok', 'connect-tab'),
     });
     targetInfo = opened.target ?? undefined;
-    shouldClose = !opened.reused;
+    shouldClose = !opened.reused && options?.preserveActiveTab !== true;
     usedExisting = opened.reused;
   } else if (!targetInfo) {
     targetInfo = candidates[0];
@@ -2849,7 +2879,7 @@ async function connectToGrokTab(
       mutationSource: resolveMutationSource(options, 'provider:grok', 'connect-tab-fallback'),
     });
     targetInfo = opened.target ?? undefined;
-    shouldClose = !opened.reused;
+    shouldClose = !opened.reused && options?.preserveActiveTab !== true;
     usedExisting = opened.reused;
   }
   const targetId = resolveGrokTargetId(targetInfo);

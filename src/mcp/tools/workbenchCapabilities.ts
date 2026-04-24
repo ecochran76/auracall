@@ -24,6 +24,7 @@ const workbenchCapabilitiesInputShape = {
   runtimeProfile: z.string().min(1).nullable().optional(),
   includeUnavailable: z.boolean().nullable().optional(),
   diagnostics: z.enum(['browser-state']).nullable().optional(),
+  entrypoint: z.enum(['grok-imagine']).nullable().optional(),
 } satisfies z.ZodRawShape;
 
 const workbenchCapabilityShape = z.object({

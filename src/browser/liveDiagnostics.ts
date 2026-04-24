@@ -13,6 +13,7 @@ import {
   coerceGeminiActivityEvidence,
 } from './providers/geminiEvidence.js';
 import { buildGrokFeatureProbeExpression } from './providers/grokAdapter.js';
+import { waitForDocumentReady } from './service/ui.js';
 
 const SERVICE_HOME_URLS: Record<Extract<ExecutionRunnerServiceId, 'chatgpt' | 'gemini' | 'grok'>, string> = {
   chatgpt: 'https://chatgpt.com/',
@@ -34,6 +35,7 @@ export async function probeBrowserRunDiagnostics(
     runId: string;
     stepId: string;
     preferredTargetId?: string | null;
+    configuredUrl?: string | null;
   },
   deps: BrowserRunDiagnosticsDeps = {},
 ): Promise<RuntimeRunInspectionBrowserDiagnosticsProbeResult | null> {
@@ -41,7 +43,7 @@ export async function probeBrowserRunDiagnostics(
     deps.createBrowserService?.(userConfig, input.service) ?? BrowserService.fromConfig(userConfig, input.service);
   const target = await browserService.resolveServiceTarget({
     serviceId: input.service,
-    configuredUrl: userConfig.services?.[input.service]?.url ?? SERVICE_HOME_URLS[input.service],
+    configuredUrl: input.configuredUrl ?? userConfig.services?.[input.service]?.url ?? SERVICE_HOME_URLS[input.service],
     ensurePort: true,
   });
   const port = target.port;
@@ -60,6 +62,10 @@ export async function probeBrowserRunDiagnostics(
     const { Runtime, Page } = client;
     await Runtime.enable();
     await Page.enable().catch(() => undefined);
+    await waitForDocumentReady(Runtime, {
+      timeoutMs: 8000,
+      description: `${input.service} browser diagnostics document ready`,
+    }).catch(() => undefined);
     const pageState = await readPageDiagnostics(Runtime, input.service);
     const document = {
       ...pageState.document,
@@ -114,19 +120,15 @@ async function readPageDiagnostics(
   const value = result?.value && typeof result.value === 'object'
     ? (result.value as Record<string, unknown>)
     : {};
+  const providerEvidence = await readProviderEvidence(Runtime, service);
   return {
     document: coerceDocumentDiagnostics(value.document),
     visibleCounts: coerceVisibleCounts(value.visibleCounts),
-    providerEvidence: coerceProviderEvidence(value.providerEvidence),
+    providerEvidence,
   };
 }
 
 function buildPageDiagnosticsExpression(service: BrowserDiagnosticsService): string {
-  const providerExpression = service === 'gemini'
-    ? buildGeminiActivityEvidenceExpression()
-    : service === 'grok'
-      ? buildGrokFeatureProbeExpression()
-      : 'null';
   return `(() => {
     const visible = (node) => {
       if (!(node instanceof HTMLElement)) return false;
@@ -136,15 +138,6 @@ function buildPageDiagnosticsExpression(service: BrowserDiagnosticsService): str
       return rect.width > 0 && rect.height > 0;
     };
     const countVisible = (selector) => Array.from(document.querySelectorAll(selector)).filter((node) => visible(node)).length;
-    let providerEvidence = null;
-    try {
-      providerEvidence = ${providerExpression};
-    } catch (error) {
-      providerEvidence = {
-        detector: '${service}-provider-evidence',
-        error: error instanceof Error ? error.message : String(error),
-      };
-    }
     return {
       document: {
         url: location.href,
@@ -162,9 +155,39 @@ function buildPageDiagnosticsExpression(service: BrowserDiagnosticsService): str
         contenteditables: countVisible('[contenteditable="true"]'),
         modelResponses: countVisible('model-response'),
       },
-      providerEvidence,
     };
   })()`;
+}
+
+async function readProviderEvidence(
+  Runtime: ChromeClient['Runtime'],
+  service: BrowserDiagnosticsService,
+): Promise<Record<string, unknown> | null> {
+  const expression = service === 'gemini'
+    ? buildGeminiActivityEvidenceExpression()
+    : service === 'grok'
+      ? buildGrokFeatureProbeExpression()
+      : null;
+  if (!expression) {
+    return null;
+  }
+  const { result, exceptionDetails } = await Runtime.evaluate({ expression, returnByValue: true }).catch((error) => ({
+    result: null,
+    exceptionDetails: {
+      text: error instanceof Error ? error.message : String(error),
+    },
+  }));
+  if (exceptionDetails) {
+    const exceptionRecord = exceptionDetails as { text?: unknown; exception?: { description?: unknown } };
+    return {
+      detector: `${service}-provider-evidence`,
+      error: [
+        typeof exceptionRecord.text === 'string' ? exceptionRecord.text : null,
+        typeof exceptionRecord.exception?.description === 'string' ? exceptionRecord.exception.description : null,
+      ].filter(Boolean).join(': ') || 'provider evidence evaluation failed',
+    };
+  }
+  return coerceProviderEvidence(result?.value);
 }
 
 async function captureDiagnosticsScreenshot(

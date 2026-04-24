@@ -67,8 +67,8 @@
   provider or inspecting raw JSON.
 
 ### `workbench_capabilities`
-- Inputs: optional `provider: "chatgpt" | "gemini" | "grok"`, optional `category: "research" | "media" | "canvas" | "connector" | "skill" | "app" | "search" | "file" | "other"`, optional `runtimeProfile`, optional `includeUnavailable`, and optional `diagnostics: "browser-state"`.
-- Behavior: returns `object = "workbench_capability_report"` with known or discovered provider workbench capabilities, provider labels, invocation modes, surfaces, availability, stability, required inputs, output expectations, and safety flags. This is read-only discovery and does not click provider tools. `diagnostics = "browser-state"` adds bounded target/document/provider evidence and a stored PNG screenshot path for the selected provider.
+- Inputs: optional `provider: "chatgpt" | "gemini" | "grok"`, optional `category: "research" | "media" | "canvas" | "connector" | "skill" | "app" | "search" | "file" | "other"`, optional `runtimeProfile`, optional `includeUnavailable`, optional `diagnostics: "browser-state"`, and optional `entrypoint: "grok-imagine"`.
+- Behavior: returns `object = "workbench_capability_report"` with known or discovered provider workbench capabilities, provider labels, invocation modes, surfaces, availability, stability, required inputs, output expectations, and safety flags. This is read-only discovery and does not click provider tools. `diagnostics = "browser-state"` adds bounded target/document/provider evidence and a stored PNG screenshot path for the selected provider. `entrypoint = "grok-imagine"` opens or reuses Grok `/imagine` through browser-service control-plane attribution before read-only inspection.
 - Volatility: static catalog entries use conservative `unknown` or `account_gated` availability until browser/provider discovery confirms the current account state. ChatGPT feature-signature discovery can report visible Web Search, Deep Research, Company Knowledge, apps/connectors, and skills without invoking or enabling them. Grok discovery can report visible Imagine image/video evidence without submitting a generation request.
 
 ## Resources

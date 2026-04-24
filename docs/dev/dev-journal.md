@@ -20518,3 +20518,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/workbenchCapabilities.test.ts tests/http.workbenchCapabilities.test.ts tests/mcp.workbenchCapabilities.test.ts tests/cli/workbenchCapabilitiesCommand.test.ts tests/browser/grokAdapter.test.ts`
   - pending broader closeout validation
+
+## 2026-04-24 - Grok Imagine entrypoint inspection
+
+- Focus: inspect Grok `/imagine` read-only before adding any generation
+  invocation.
+- Progress: Added `entrypoint=grok-imagine` to the workbench capability request
+  path across CLI/API/MCP. The browser discovery path now passes
+  `https://grok.com/imagine` into the Grok adapter and keeps the explicit
+  entrypoint tab available for diagnostics. Generic browser diagnostics now
+  survive provider-specific evidence failures.
+- Dogfood: `pnpm tsx bin/auracall.ts capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json`
+  opened/reused `https://grok.com/imagine`, captured document state and a PNG
+  screenshot, detected visible image/video mode evidence, and reported both
+  Grok Imagine image/video capabilities as `account_gated`.

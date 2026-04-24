@@ -2,6 +2,7 @@ import type { ResolvedUserConfig } from '../config.js';
 import { probeBrowserRunDiagnostics } from '../browser/liveDiagnostics.js';
 import type { RuntimeRunInspectionBrowserDiagnosticsSummary } from '../runtime/inspection.js';
 import type { WorkbenchCapabilityReportRequest } from './types.js';
+import { resolveWorkbenchCapabilityEntrypointUrl } from './entrypoints.js';
 
 export function createBrowserWorkbenchCapabilityDiagnostics(
   userConfig: ResolvedUserConfig,
@@ -20,6 +21,7 @@ export function createBrowserWorkbenchCapabilityDiagnostics(
       service: request.provider,
       runId: 'workbench-capabilities',
       stepId: `workbench-capabilities-${request.provider}`,
+      configuredUrl: resolveWorkbenchCapabilityEntrypointUrl(request),
     });
 
     if (!observed) {

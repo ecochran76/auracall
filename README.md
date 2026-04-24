@@ -61,6 +61,7 @@ auracall capabilities --target gemini --static --json
 auracall capabilities --target chatgpt --json
 auracall capabilities --target grok --static --json
 auracall capabilities --target grok --diagnostics browser-state --json
+auracall capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json
 
 # Save and diff live feature snapshots
 auracall features snapshot --target gemini --json
@@ -212,7 +213,9 @@ Terminology note:
     `auracall capabilities --target grok --json`; add `--static` to skip
     browser attachment during debugging. Add `--diagnostics browser-state` or
     `diagnostics=browser-state` to include bounded target/document/provider
-    evidence and a stored screenshot path for the selected provider.
+    evidence and a stored screenshot path for the selected provider. For Grok
+    Imagine, add `--entrypoint grok-imagine` or `entrypoint=grok-imagine` to
+    inspect the `/imagine` workbench route without submitting a prompt.
   - `POST /v1/team-runs` creates one bounded task-backed team execution:
     - request fields are either:
       - compact fields: `teamId`, `objective`, and optional `title`,

@@ -43,6 +43,16 @@ existing Aura-Call media-generation contract.
   - captured target URL/title and a stored PNG screenshot path
   - kept Grok Imagine image/video capabilities conservative `unknown`
   - did not submit a generation request or navigate to a conversation id
+- Grok Imagine entrypoint inspection now exists:
+  - CLI: `auracall capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json`
+  - API: `GET /v1/workbench-capabilities?provider=grok&entrypoint=grok-imagine&diagnostics=browser-state`
+  - MCP: `workbench_capabilities` with `entrypoint = "grok-imagine"`
+  - live dogfood on 2026-04-24 opened/reused `https://grok.com/imagine`
+    through browser-service `target-open-or-reuse` control-plane attribution
+  - diagnostics captured `Imagine - Grok`, visible image/video mode evidence,
+    one visible `/imagine` control, and a stored PNG screenshot path
+  - both image and video capabilities reported `account_gated`
+  - no generation prompt was submitted
 
 ## Research Findings
 
@@ -167,6 +177,8 @@ Add a browser-first Grok Imagine discovery/audit slice:
   current account posture without invoking Imagine.
 - [x] Operators can request bounded browser diagnostics for Grok capability
   discovery without raw CDP access or prompt submission.
+- [x] Operators can explicitly inspect Grok `/imagine` read-only through the
+  workbench capability surface before invocation exists.
 
 ## Validation Plan
 
@@ -177,12 +189,15 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - Targeted tests for workbench browser diagnostics across CLI/API/MCP/service.
 - [x] Bounded live read-only managed-browser diagnostics:
   - `pnpm tsx bin/auracall.ts capabilities --target grok --diagnostics browser-state --json`
+- [x] Bounded live read-only managed-browser Grok Imagine entrypoint inspection:
+  - `pnpm tsx bin/auracall.ts capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json`
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
 
 ## Next Slice
 
-Dogfood `auracall capabilities --target grok --diagnostics browser-state --json`
-on the managed Grok profile, then use the captured evidence to decide whether
-the next browser slice can safely enter Imagine or must remain account-gated.
+Keep Grok Imagine invocation gated. The next browser slice should add a
+provider-owned run-state/readback detector for `/imagine` that can classify
+account gating, pending generation, terminal image/video, and materialization
+controls without submitting a prompt by default.

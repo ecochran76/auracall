@@ -14041,3 +14041,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `diagnostics=browser-state` on workbench capability reports so they can see
   bounded target/document/provider evidence plus a stored screenshot without
   opening raw CDP or submitting a prompt.
+- 2026-04-24: Keep explicit workbench entrypoint inspection separate from
+  normal capability discovery. In this repo, Grok `/imagine` is a volatile
+  browser workbench route; callers need to opt into opening or reusing it via
+  `entrypoint=grok-imagine`, with browser-service mutation attribution, instead
+  of making every capability report navigate the provider UI.

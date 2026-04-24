@@ -3,15 +3,18 @@ import { createWorkbenchCapabilitiesToolHandler } from '../src/mcp/tools/workben
 
 describe('mcp workbench_capabilities tool', () => {
   it('returns structured workbench capability reports', async () => {
+    const calls: unknown[] = [];
     const handler = createWorkbenchCapabilitiesToolHandler({
-      listCapabilities: async (request) => ({
-        object: 'workbench_capability_report',
-        generatedAt: '2026-04-23T12:00:00.000Z',
-        provider: request?.provider ?? null,
-        category: request?.category ?? null,
-        runtimeProfile: request?.runtimeProfile ?? null,
-        browserDiagnostics: request?.diagnostics === 'browser-state'
-          ? {
+      listCapabilities: async (request) => {
+        calls.push(request);
+        return {
+          object: 'workbench_capability_report',
+          generatedAt: '2026-04-23T12:00:00.000Z',
+          provider: request?.provider ?? null,
+          category: request?.category ?? null,
+          runtimeProfile: request?.runtimeProfile ?? null,
+          browserDiagnostics: request?.diagnostics === 'browser-state'
+            ? {
               probeStatus: 'observed',
               service: request.provider ?? null,
               ownerStepId: 'workbench-capabilities-grok',
@@ -32,31 +35,32 @@ describe('mcp workbench_capabilities tool', () => {
               },
               screenshot: null,
             }
-          : null,
-        capabilities: [
-          {
-            id: 'chatgpt.research.deep_research',
-            provider: 'chatgpt',
-            providerLabels: ['Deep research'],
-            category: 'research',
-            invocationMode: 'tool_drawer_selection',
-            surfaces: ['browser_service', 'local_api', 'mcp'],
-            availability: 'unknown',
-            stability: 'observed',
-            requiredInputs: [{ name: 'prompt', required: true }],
-            output: { artifactTypes: ['document'] },
-            safety: { mayTakeMinutes: true },
-            source: 'test_fixture',
+            : null,
+          capabilities: [
+            {
+              id: 'chatgpt.research.deep_research',
+              provider: 'chatgpt',
+              providerLabels: ['Deep research'],
+              category: 'research',
+              invocationMode: 'tool_drawer_selection',
+              surfaces: ['browser_service', 'local_api', 'mcp'],
+              availability: 'unknown',
+              stability: 'observed',
+              requiredInputs: [{ name: 'prompt', required: true }],
+              output: { artifactTypes: ['document'] },
+              safety: { mayTakeMinutes: true },
+              source: 'test_fixture',
+            },
+          ],
+          summary: {
+            total: 1,
+            available: 0,
+            accountGated: 0,
+            unknown: 1,
+            blocked: 0,
           },
-        ],
-        summary: {
-          total: 1,
-          available: 0,
-          accountGated: 0,
-          unknown: 1,
-          blocked: 0,
-        },
-      }),
+        };
+      },
     });
 
     const result = await handler({
@@ -64,6 +68,7 @@ describe('mcp workbench_capabilities tool', () => {
       category: 'research',
       runtimeProfile: 'default',
       diagnostics: 'browser-state',
+      entrypoint: 'grok-imagine',
     });
 
     expect(result).toMatchObject({
@@ -87,5 +92,12 @@ describe('mcp workbench_capabilities tool', () => {
         ],
       },
     });
+    expect(calls).toEqual([
+      expect.objectContaining({
+        provider: 'grok',
+        diagnostics: 'browser-state',
+        entrypoint: 'grok-imagine',
+      }),
+    ]);
   });
 });
