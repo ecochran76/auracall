@@ -75,7 +75,7 @@ import {
   createMediaGenerationService,
   type MediaGenerationServiceDeps,
 } from '../media/service.js';
-import { createGeminiBrowserMediaGenerationExecutor } from '../media/geminiBrowserExecutor.js';
+import { createBrowserMediaGenerationExecutor } from '../media/browserExecutor.js';
 import { probeMediaGenerationBrowserDiagnostics } from '../media/browserDiagnostics.js';
 import type { MediaGenerationRequest } from '../media/types.js';
 import { summarizeMediaGenerationStatus } from '../media/statusSummary.js';
@@ -278,7 +278,7 @@ export async function createResponsesHttpServer(
     now,
     executor:
       deps.mediaGenerationExecutor ??
-      (resolvedUserConfig ? createGeminiBrowserMediaGenerationExecutor(resolvedUserConfig) : undefined),
+      (resolvedUserConfig ? createBrowserMediaGenerationExecutor(resolvedUserConfig) : undefined),
     capabilityReporter: workbenchCapabilityService,
     runtimeProfile:
       typeof resolvedUserConfig?.auracallProfile === 'string'

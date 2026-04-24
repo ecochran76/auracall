@@ -225,20 +225,34 @@ const GEMINI_MEDIA_CAPABILITY_IDS: Record<MediaGenerationType, string> = {
   video: 'gemini.media.create_video',
 };
 
+const GROK_MEDIA_CAPABILITY_IDS: Partial<Record<MediaGenerationType, string>> = {
+  image: 'grok.media.imagine_image',
+  video: 'grok.media.imagine_video',
+};
+
 async function resolveMediaGenerationCapability(
   request: MediaGenerationRequest,
   reporter: WorkbenchCapabilityReporter | null,
   runtimeProfile: string | null,
 ): Promise<WorkbenchCapability | null> {
-  if (!reporter || request.provider !== 'gemini' || request.transport !== 'browser') {
+  if (!reporter || request.transport !== 'browser') {
     return null;
   }
-  const capabilityId = GEMINI_MEDIA_CAPABILITY_IDS[request.mediaType];
+  const capabilityId = request.provider === 'gemini'
+    ? GEMINI_MEDIA_CAPABILITY_IDS[request.mediaType]
+    : request.provider === 'grok'
+      ? GROK_MEDIA_CAPABILITY_IDS[request.mediaType]
+      : null;
+  if (!capabilityId) {
+    return null;
+  }
   const report = await reporter.listCapabilities({
-    provider: 'gemini',
+    provider: request.provider,
     category: 'media',
     runtimeProfile,
     includeUnavailable: true,
+    entrypoint: request.provider === 'grok' ? 'grok-imagine' : null,
+    diagnostics: request.provider === 'grok' ? 'browser-state' : null,
   });
   const capability = report.capabilities.find((entry) => entry.id === capabilityId) ?? null;
   if (capability?.availability === 'available') {
@@ -246,7 +260,7 @@ async function resolveMediaGenerationCapability(
   }
   throw new MediaGenerationExecutionError(
     'media_capability_unavailable',
-    `Gemini browser ${request.mediaType} generation requires ${capabilityId}, but the capability is ${capability?.availability ?? 'not_visible'}. Run auracall capabilities --target gemini --json to inspect the current workbench state.`,
+    `${formatProviderLabel(request.provider)} browser ${request.mediaType} generation requires ${capabilityId}, but the capability is ${capability?.availability ?? 'not_visible'}. Run auracall capabilities --target ${request.provider}${request.provider === 'grok' ? ' --entrypoint grok-imagine --diagnostics browser-state' : ''} --json to inspect the current workbench state.`,
     {
       capabilityId,
       availability: capability?.availability ?? 'not_visible',
@@ -259,6 +273,10 @@ async function resolveMediaGenerationCapability(
   );
 }
 
+function formatProviderLabel(provider: string): string {
+  return provider === 'grok' ? 'Grok' : provider === 'gemini' ? 'Gemini' : provider;
+}
+
 function formatCapabilityMetadata(capability: WorkbenchCapability): Record<string, unknown> {
   return {
     id: capability.id,
@@ -266,6 +284,7 @@ function formatCapabilityMetadata(capability: WorkbenchCapability): Record<strin
     providerLabels: capability.providerLabels,
     source: capability.source,
     observedAt: capability.observedAt ?? null,
+    metadata: capability.metadata ?? null,
   };
 }
 

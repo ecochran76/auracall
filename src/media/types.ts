@@ -20,6 +20,7 @@ export type MediaGenerationTimelineEventName =
   | 'send_attempted'
   | 'submitted_state_observed'
   | 'prompt_submitted'
+  | 'run_state_observed'
   | 'artifact_poll'
   | 'image_visible'
   | 'artifact_materialized'

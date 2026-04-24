@@ -1,7 +1,14 @@
 import path from 'node:path';
 import CDP from 'chrome-remote-interface';
 import type { Project, Conversation, ConversationContext, FileRef } from './domain.js';
-import type { BrowserProvider, BrowserProviderListOptions, ProviderUserIdentity } from './types.js';
+import type {
+  BrowserProvider,
+  BrowserProviderListOptions,
+  BrowserProviderPromptInput,
+  BrowserProviderPromptProgressEvent,
+  BrowserProviderPromptResult,
+  ProviderUserIdentity,
+} from './types.js';
 import type { ChromeClient } from '../types.js';
 import { providerNavigationAllowed } from './navigationPolicy.js';
 import { annotateClientMutationContext, resolveMutationAudit, resolveMutationSource } from './mutationAudit.js';
@@ -432,6 +439,167 @@ async function readGrokFeatureSignature(client: ChromeClient): Promise<string | 
   return normalizeGrokFeatureSignature(result?.value);
 }
 
+type GrokImaginePromptState = {
+  href: string | null;
+  title: string | null;
+  runState: string | null;
+  accountGated: boolean;
+  blocked: boolean;
+  pending: boolean;
+  terminalImage: boolean;
+  terminalVideo: boolean;
+  mediaUrlCount: number;
+};
+
+async function waitForGrokImagineRoute(Runtime: ChromeClient['Runtime'], targetUrl: string): Promise<void> {
+  await waitForPredicate(
+    Runtime,
+    `(() => {
+      try {
+        const current = new URL(location.href);
+        const target = new URL(${JSON.stringify(targetUrl)});
+        if (current.host !== target.host || current.pathname !== target.pathname) return null;
+      } catch {
+        if (!String(location.href || '').includes(${JSON.stringify(targetUrl)})) return null;
+      }
+      return { href: location.href, title: document.title || null };
+    })()`,
+    {
+      timeoutMs: 10_000,
+      description: 'Grok Imagine route',
+    },
+  ).catch(() => undefined);
+}
+
+async function readGrokImaginePromptState(Runtime: ChromeClient['Runtime']): Promise<GrokImaginePromptState> {
+  const { result } = await Runtime.evaluate({
+    expression: buildGrokFeatureProbeExpression(),
+    returnByValue: true,
+  });
+  const probe = result?.value as {
+    imagine?: {
+      href?: unknown;
+      title?: unknown;
+      run_state?: unknown;
+      account_gated?: unknown;
+      blocked?: unknown;
+      pending?: unknown;
+      terminal_image?: unknown;
+      terminal_video?: unknown;
+      media?: { urls?: unknown };
+    };
+  } | undefined;
+  const imagine = probe?.imagine && typeof probe.imagine === 'object' ? probe.imagine : {};
+  return {
+    href: typeof imagine.href === 'string' && imagine.href.trim() ? imagine.href.trim() : null,
+    title: typeof imagine.title === 'string' && imagine.title.trim() ? imagine.title.trim() : null,
+    runState: typeof imagine.run_state === 'string' && imagine.run_state.trim() ? imagine.run_state.trim() : null,
+    accountGated: imagine.account_gated === true,
+    blocked: imagine.blocked === true,
+    pending: imagine.pending === true,
+    terminalImage: imagine.terminal_image === true,
+    terminalVideo: imagine.terminal_video === true,
+    mediaUrlCount: Array.isArray(imagine.media?.urls) ? imagine.media.urls.length : 0,
+  };
+}
+
+async function setGrokImaginePrompt(
+  Runtime: ChromeClient['Runtime'],
+  prompt: string,
+): Promise<{ ok: boolean; reason?: string }> {
+  const { result } = await Runtime.evaluate({
+    expression: `(() => {
+      const prompt = ${JSON.stringify(prompt)};
+      const visible = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const style = window.getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 20 && rect.height > 12;
+      };
+      const candidates = Array.from(document.querySelectorAll('main textarea, main [contenteditable="true"], textarea, [contenteditable="true"]'))
+        .filter(visible);
+      const input = candidates.find((node) => {
+        const label = String(node.getAttribute('aria-label') || node.getAttribute('placeholder') || node.textContent || '').toLowerCase();
+        return /prompt|describe|imagine|create|message|ask|type/.test(label);
+      }) || candidates[0] || null;
+      if (!input) return { ok: false, reason: 'composer input not found' };
+      input.focus();
+      if (input instanceof HTMLTextAreaElement || input instanceof HTMLInputElement) {
+        const setter = Object.getOwnPropertyDescriptor(input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, 'value')?.set;
+        if (setter) setter.call(input, prompt);
+        else input.value = prompt;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      } else {
+        input.textContent = prompt;
+        input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: prompt }));
+      }
+      return { ok: true };
+    })()`,
+    returnByValue: true,
+  });
+  const value = result?.value as { ok?: boolean; reason?: string } | undefined;
+  return value?.ok ? { ok: true } : { ok: false, reason: value?.reason ?? 'prompt insertion failed' };
+}
+
+async function submitGrokImaginePrompt(Runtime: ChromeClient['Runtime']): Promise<{ ok: boolean; reason?: string }> {
+  const { result } = await Runtime.evaluate({
+    expression: `(() => {
+      const visible = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const style = window.getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      const controls = Array.from(document.querySelectorAll('main button, main [role="button"], button, [role="button"]'))
+        .filter((node) => visible(node) && !node.disabled && node.getAttribute('aria-disabled') !== 'true');
+      const preferred = controls.find((node) => {
+        const label = normalize([node.textContent, node.getAttribute('aria-label'), node.getAttribute('title')].filter(Boolean).join(' '));
+        return /generate|create|submit|send|arrow|go/.test(label);
+      }) || controls.at(-1) || null;
+      if (!preferred) return { ok: false, reason: 'send control not found' };
+      preferred.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+      preferred.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      preferred.click();
+      preferred.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+      return {
+        ok: true,
+        label: normalize([preferred.textContent, preferred.getAttribute('aria-label'), preferred.getAttribute('title')].filter(Boolean).join(' ')) || null,
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const value = result?.value as { ok?: boolean; reason?: string } | undefined;
+  return value?.ok ? { ok: true } : { ok: false, reason: value?.reason ?? 'send click failed' };
+}
+
+async function waitForGrokImagineSubmittedState(
+  Runtime: ChromeClient['Runtime'],
+  baseline: GrokImaginePromptState,
+  timeoutMs: number,
+): Promise<GrokImaginePromptState> {
+  const deadline = Date.now() + Math.max(10_000, Math.min(timeoutMs, 600_000));
+  let last = baseline;
+  while (Date.now() <= deadline) {
+    last = await readGrokImaginePromptState(Runtime);
+    if (
+      last.pending ||
+      last.terminalImage ||
+      last.terminalVideo ||
+      last.blocked ||
+      last.accountGated ||
+      last.mediaUrlCount > baseline.mediaUrlCount
+    ) {
+      return last;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  return last;
+}
+
 export function isGrokMainSidebarOpenProbe(probe: GrokMainSidebarProbe | null | undefined): boolean {
   if (!probe) {
     return false;
@@ -757,6 +925,7 @@ export function createGrokAdapter(): Pick<
   BrowserProvider,
   | 'capabilities'
   | 'getFeatureSignature'
+  | 'runPrompt'
   | 'listProjects'
   | 'listConversations'
   | 'getUserIdentity'
@@ -835,6 +1004,97 @@ export function createGrokAdapter(): Pick<
           ).catch(() => undefined);
         }
         return await readGrokFeatureSignature(client);
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+    async runPrompt(
+      input: BrowserProviderPromptInput,
+      options?: BrowserProviderListOptions,
+    ): Promise<BrowserProviderPromptResult> {
+      if (input.capabilityId !== 'grok.media.imagine_image') {
+        throw new Error(`Grok browser prompt execution only supports grok.media.imagine_image, got ${input.capabilityId ?? 'none'}.`);
+      }
+      const targetUrl = input.targetUrl ?? options?.configuredUrl ?? 'https://grok.com/imagine';
+      const { client, targetId, shouldClose, host, port } = await connectToGrokTab(
+        {
+          ...options,
+          configuredUrl: targetUrl,
+          preserveActiveTab: true,
+          mutationSourcePrefix: options?.mutationSourcePrefix ?? 'media:grok-imagine',
+        },
+        targetUrl,
+      );
+      const emitProgress = async (event: BrowserProviderPromptProgressEvent) => {
+        await input.onProgress?.(event);
+      };
+      try {
+        await emitProgress({
+          phase: 'browser_target_attached',
+          details: {
+            targetId: targetId ?? null,
+            host,
+            port,
+            targetUrl,
+          },
+        });
+        await waitForDocumentReadyUi(client.Runtime, {
+          timeoutMs: 10_000,
+          description: 'Grok Imagine document ready',
+        }).catch(() => undefined);
+        await waitForGrokImagineRoute(client.Runtime, targetUrl);
+        const baseline = await readGrokImaginePromptState(client.Runtime);
+        await emitProgress({
+          phase: 'composer_ready',
+          details: {
+            ...baseline,
+            targetId: targetId ?? null,
+          },
+        });
+        if (baseline.accountGated || baseline.blocked) {
+          throw new Error(
+            `Grok Imagine is ${baseline.runState ?? (baseline.accountGated ? 'account_gated' : 'blocked')}; refusing prompt submission.`,
+          );
+        }
+        const inserted = await setGrokImaginePrompt(client.Runtime, input.prompt);
+        if (!inserted.ok) {
+          throw new Error(inserted.reason ?? 'Grok Imagine prompt input was not found.');
+        }
+        await emitProgress({
+          phase: 'prompt_inserted',
+          details: {
+            targetId: targetId ?? null,
+            promptLength: input.prompt.length,
+          },
+        });
+        const submitted = await submitGrokImaginePrompt(client.Runtime);
+        await emitProgress({
+          phase: 'send_attempted',
+          details: {
+            targetId: targetId ?? null,
+            ok: submitted.ok,
+            reason: submitted.reason ?? null,
+          },
+        });
+        if (!submitted.ok) {
+          throw new Error(submitted.reason ?? 'Grok Imagine send control was not found.');
+        }
+        const submittedState = await waitForGrokImagineSubmittedState(client.Runtime, baseline, input.timeoutMs ?? 300_000);
+        await emitProgress({
+          phase: 'submitted_state_observed',
+          details: {
+            ...submittedState,
+            targetId: targetId ?? null,
+          },
+        });
+        return {
+          text: '',
+          url: submittedState.href ?? baseline.href ?? targetUrl,
+          tabTargetId: targetId ?? null,
+        };
       } finally {
         await client.close().catch(() => undefined);
         if (shouldClose && targetId) {

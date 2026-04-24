@@ -14052,3 +14052,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   without a normal chat transcript. Keep those selectors in the Grok adapter
   and surface the normalized evidence through workbench diagnostics before
   adding any prompt-submission path.
+- 2026-04-24: Capability-gate Grok Imagine invocation before touching the
+  composer. In this repo, the current Grok account can expose public `/imagine`
+  gallery media while the generation account is still gated. Browser media
+  requests must first re-run `grok.media.imagine_image` discovery on the
+  explicit entrypoint and fail before prompt submission unless the capability
+  is actually `available`.

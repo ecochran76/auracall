@@ -17,9 +17,10 @@ existing Aura-Call media-generation contract.
   - live smoke requires `XAI_API_KEY` or a validated browser account path
 - Aura-Call already has a route-neutral `media_generation` resource for
   `provider = "grok"` and `mediaType = image|music|video`.
-- The default media executor still fails Grok requests durably with
-  `media_provider_not_implemented`.
-- No browser-service Grok Imagine workflow is implemented.
+- The default local API media executor now has a guarded Grok browser image
+  path for `provider = grok`, `mediaType = image`, `transport = browser`.
+- Grok video, API execution, and edit/reference workflows still fail durably as
+  not implemented.
 - Static/read-only workbench capability reporting now includes conservative
   Grok Imagine image/video entries.
 - The Grok browser adapter now exposes a read-only feature signature that can
@@ -68,6 +69,14 @@ existing Aura-Call media-generation contract.
   - `terminal_video = false`
   - public gallery media URLs remain visible as page evidence, but are not
     promoted to terminal generated output while the account is gated
+- Grok browser image invocation is now wired behind capability preflight:
+  - media service checks `grok.media.imagine_image` with
+    `entrypoint = grok-imagine` and `diagnostics = browser-state`
+  - `account_gated`, `unknown`, `blocked`, or missing capability stops before
+    provider prompt submission
+  - available accounts use a pinned `/imagine` tab, provider run-state polling,
+    and remote media materialization from detected terminal image evidence
+  - video remains gated as not implemented
 
 ## Research Findings
 
@@ -170,8 +179,8 @@ Add a browser-first Grok Imagine discovery/audit slice:
 ## Non-Goals
 
 - No xAI API implementation in this slice.
-- No blind Grok Imagine prompt submission until discovery selectors and
-  run-state evidence are captured.
+- No blind Grok Imagine prompt submission. Browser image invocation must pass
+  capability preflight and use the pinned submitted tab plus run-state evidence.
 - No video generation automation in the first implementation slice.
 - No image editing, video editing, reference-image workflows, or extensions.
 - No fallback from browser to API when the browser account is missing Imagine.
@@ -197,6 +206,8 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - [x] Grok `/imagine` diagnostics can classify account gating, blocked,
   pending, terminal image/video, and visible materialization evidence without
   submitting a prompt.
+- [x] Grok browser image invocation is guarded by capability preflight so
+  account-gated accounts fail before prompt submission.
 
 ## Validation Plan
 
@@ -215,14 +226,24 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - `pnpm tsx bin/auracall.ts capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json`
   - observed `run_state = account_gated`, no pending generation, and no
     terminal generated media promotion from the public gallery
+- [x] Unit tests for Grok browser media preflight and guarded executor:
+  - `pnpm vitest run tests/mediaGeneration.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts --maxWorkers 1`
+- [x] Bounded live gated media request:
+  - `POST /v1/media-generations` with `provider = grok`, `mediaType = image`,
+    `transport = browser`
+  - observed on current account: `media_capability_unavailable` before
+    `prompt_submitted`
+  - returned media id:
+    `medgen_8744a7d69a314433bc7d7e67615391e9`
+  - timeline contained only `running_persisted` and `failed`
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
 
 ## Next Slice
 
-Keep Grok Imagine invocation gated. The next browser slice should dogfood the
-new read-only run-state detector on the live `/imagine` page, record the exact
-current account posture, and only then add a guarded browser invocation path
-that submits one prompt, pins the submitted tab, waits on provider-owned
-run-state transitions, and materializes artifacts through the detected controls.
+Keep Grok video and edit/reference workflows gated. The next browser slice
+should dogfood the new Grok image preflight through the local API on the current
+account, confirm it stops before prompt submission while account-gated, and
+then harden terminal materialization for available accounts with provider
+download-control support instead of relying only on remote media URLs.

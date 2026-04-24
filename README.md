@@ -194,8 +194,12 @@ Terminology note:
     distinguish a healthy managed browser from a stuck provider interaction.
     Gemini image requests with `transport = browser` now check the matching
     workbench capability, select `Create image`, and materialize generated image
-    artifacts through the managed browser path. Gemini music/video and Grok
-    Imagine remain explicitly gated.
+    artifacts through the managed browser path. Grok image requests with
+    `transport = browser` now check `grok.media.imagine_image` through the
+    explicit `/imagine` entrypoint first; account-gated or unavailable accounts
+    fail before prompt submission, while available accounts use the pinned
+    `/imagine` tab, provider run-state polling, and remote media
+    materialization. Gemini music/video and Grok video remain explicitly gated.
   - `GET /v1/workbench-capabilities` reports currently known or discovered
     provider workbench capabilities for regular service discovery. Filter with
     `provider=chatgpt|gemini|grok`, `category=research|media|canvas|connector|skill|app|search|file|other`,

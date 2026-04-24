@@ -51,8 +51,11 @@ export class GrokService extends LlmService {
     return this.overlayConversationListFromCache(items, listOptions, projectId);
   }
 
-  async runPrompt(_input: PromptInput, _options?: BrowserProviderListOptions): Promise<PromptResult> {
-    throw new Error('Prompt execution is not supported for grok in llmService yet.');
+  async runPrompt(input: PromptInput, options?: BrowserProviderListOptions): Promise<PromptResult> {
+    return this.runPlannedPrompt({
+      ...input,
+      listOptions: options ?? input.listOptions,
+    });
   }
 
   async renameConversation(

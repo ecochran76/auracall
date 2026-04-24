@@ -355,22 +355,72 @@ describe('media generation service', () => {
     ]);
     await expect(service.readGeneration('medgen_capability_miss_1')).resolves.toEqual(created);
   });
+
+  it('fails Grok browser media generation before prompt submission when Imagine is account-gated', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-media-generation-grok-gated-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    let invoked = false;
+    const service = createMediaGenerationService({
+      now: () => new Date('2026-04-24T12:00:00.000Z'),
+      generateId: () => 'medgen_grok_gated_1',
+      capabilityReporter: createCapabilityReporter('account_gated', 'grok'),
+      runtimeProfile: 'default',
+      executor: async () => {
+        invoked = true;
+        return { artifacts: [] };
+      },
+    });
+
+    const created = await service.createGeneration({
+      provider: 'grok',
+      mediaType: 'image',
+      prompt: 'Generate an image of an asphalt secret agent',
+      source: 'api',
+      transport: 'browser',
+    });
+
+    expect(invoked).toBe(false);
+    expect(created).toMatchObject({
+      id: 'medgen_grok_gated_1',
+      status: 'failed',
+      provider: 'grok',
+      mediaType: 'image',
+      failure: {
+        code: 'media_capability_unavailable',
+        details: {
+          capabilityId: 'grok.media.imagine_image',
+          availability: 'account_gated',
+          runtimeProfile: 'default',
+          transport: 'browser',
+        },
+      },
+    });
+    expect(created.timeline?.map((entry) => entry.event)).toEqual([
+      'running_persisted',
+      'failed',
+    ]);
+  });
 });
 
-function createCapabilityReporter(availability: 'available' | 'unknown'): WorkbenchCapabilityReporter {
+function createCapabilityReporter(
+  availability: 'available' | 'unknown' | 'account_gated',
+  provider: 'gemini' | 'grok' = 'gemini',
+): WorkbenchCapabilityReporter {
   return {
     async listCapabilities(request) {
+      const capabilityId = provider === 'grok' ? 'grok.media.imagine_image' : 'gemini.media.create_image';
       return {
         object: 'workbench_capability_report',
         generatedAt: '2026-04-22T12:00:00.000Z',
-        provider: request?.provider ?? 'gemini',
+        provider: request?.provider ?? provider,
         category: request?.category ?? 'media',
         runtimeProfile: request?.runtimeProfile ?? null,
         capabilities: [
           {
-            id: 'gemini.media.create_image',
-            provider: 'gemini',
-            providerLabels: ['Create image'],
+            id: capabilityId,
+            provider,
+            providerLabels: provider === 'grok' ? ['Imagine'] : ['Create image'],
             category: 'media',
             invocationMode: 'tool_drawer_selection',
             surfaces: ['browser_service', 'cli', 'local_api', 'mcp'],
@@ -386,7 +436,7 @@ function createCapabilityReporter(availability: 'available' | 'unknown'): Workbe
         summary: {
           total: 1,
           available: availability === 'available' ? 1 : 0,
-          accountGated: 0,
+          accountGated: availability === 'account_gated' ? 1 : 0,
           unknown: availability === 'unknown' ? 1 : 0,
           blocked: 0,
         },

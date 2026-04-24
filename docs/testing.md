@@ -207,6 +207,11 @@
     then selects `Create image`, records media-generation `timeline[]`
     milestones, and materializes generated image artifacts:
     - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"gemini","mediaType":"image","transport":"browser","prompt":"Generate an image of an asphalt secret agent"}'`
+  - create a browser-transport Grok image request only after capability
+    discovery reports `grok.media.imagine_image` as `available`; the local API
+    first checks the explicit `/imagine` entrypoint and fails before prompt
+    submission when the capability is `account_gated` or otherwise unavailable:
+    - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"grok","mediaType":"image","transport":"browser","prompt":"Generate an image of an asphalt secret agent"}'`
   - list workbench capabilities for service discovery:
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=gemini"`
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=chatgpt"`

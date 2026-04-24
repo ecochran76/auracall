@@ -1736,3 +1736,35 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`
+
+## Turn 66 | 2026-04-24
+
+- Continued implementation plan:
+  `docs/dev/plans/0054-2026-04-24-grok-imagine-research-checkpoint.md`
+- Goal: wire the first guarded Grok browser image invocation path without
+  allowing account-gated prompt submission.
+- Change:
+  - added Grok browser media executor support for image generation behind
+    `grok.media.imagine_image`
+  - media service now preflights Grok browser image requests through the
+    explicit `/imagine` entrypoint with browser-state diagnostics
+  - account-gated/unavailable Grok Imagine stops with
+    `media_capability_unavailable` before the executor is invoked
+  - available-account path pins the `/imagine` tab, emits prompt/run-state
+    timeline events, polls provider run state, and materializes terminal remote
+    image media
+  - Grok video remains gated as not implemented
+- Verification target:
+  - `pnpm vitest run tests/mediaGeneration.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mediaGeneration.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.schema.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/browserMutationControlPlane.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - local API gated live request:
+    - `pnpm tsx bin/auracall.ts api serve --port 18081`
+    - `curl -s http://127.0.0.1:18081/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"grok","mediaType":"image","transport":"browser","prompt":"Generate an image of an asphalt secret agent"}'`
+    - returned `medgen_8744a7d69a314433bc7d7e67615391e9` with
+      `media_capability_unavailable`, `availability = account_gated`, and no
+      `prompt_submitted` timeline event
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`

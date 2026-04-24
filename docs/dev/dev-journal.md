@@ -20548,3 +20548,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/workbenchCapabilities.test.ts --maxWorkers 1`
   - pending broader closeout validation
+
+## 2026-04-24 - Guarded Grok Imagine image invocation
+
+- Focus: add the first Grok browser image execution path while preserving the
+  account-gated preflight stop.
+- Progress: Added a combined browser media executor and a Grok browser image
+  executor behind `grok.media.imagine_image`. The media service now checks the
+  explicit `/imagine` capability with browser-state diagnostics before invoking
+  the executor. On available accounts, the executor pins the `/imagine` tab,
+  submits one prompt, polls provider-owned run-state evidence, and materializes
+  terminal remote image media.
+- Guardrail: current account-gated posture should return
+  `media_capability_unavailable` before `prompt_submitted`; Grok video remains
+  not implemented.
+- Dogfood: local API `POST /v1/media-generations` for Grok browser image
+  returned `medgen_8744a7d69a314433bc7d7e67615391e9` with
+  `media_capability_unavailable`, capability availability `account_gated`, and
+  no `prompt_submitted` event in the timeline.
+- Validation:
+  - `pnpm vitest run tests/mediaGeneration.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mediaGeneration.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.schema.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/browserMutationControlPlane.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
