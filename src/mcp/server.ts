@@ -12,8 +12,29 @@ import { registerMediaGenerationTool } from './tools/mediaGeneration.js';
 import { registerWorkbenchCapabilitiesTool } from './tools/workbenchCapabilities.js';
 import { registerRunStatusTool } from './tools/runStatus.js';
 import { registerRuntimeInspectTool } from './tools/runtimeInspect.js';
+import { resolveConfig } from '../schema/resolver.js';
+import type { ResolvedUserConfig } from '../config.js';
+import { createMediaGenerationService } from '../media/service.js';
+import { createBrowserMediaGenerationExecutor } from '../media/browserExecutor.js';
+import { createWorkbenchCapabilityService } from '../workbench/service.js';
+import { createBrowserWorkbenchCapabilityDiscovery } from '../workbench/browserDiscovery.js';
+import { createBrowserWorkbenchCapabilityDiagnostics } from '../workbench/browserDiagnostics.js';
+
+export interface McpServiceBundle {
+  mediaGenerationService: ReturnType<typeof createMediaGenerationService>;
+  workbenchCapabilityReporter: ReturnType<typeof createWorkbenchCapabilityService>;
+}
+
+export interface CreateMcpServicesDeps {
+  createMediaGenerationService?: typeof createMediaGenerationService;
+  createBrowserMediaGenerationExecutor?: typeof createBrowserMediaGenerationExecutor;
+  createWorkbenchCapabilityService?: typeof createWorkbenchCapabilityService;
+  createBrowserWorkbenchCapabilityDiscovery?: typeof createBrowserWorkbenchCapabilityDiscovery;
+  createBrowserWorkbenchCapabilityDiagnostics?: typeof createBrowserWorkbenchCapabilityDiagnostics;
+}
 
 export async function startMcpServer(): Promise<void> {
+  const services = await createDefaultMcpServices();
   const server = new McpServer(
     {
       name: 'auracall-mcp',
@@ -28,10 +49,16 @@ export async function startMcpServer(): Promise<void> {
 
   registerConsultTool(server);
   registerTeamRunTool(server);
-  registerRunStatusTool(server);
+  registerRunStatusTool(server, {
+    mediaGenerationService: services.mediaGenerationService,
+  });
   registerRuntimeInspectTool(server);
-  registerMediaGenerationTool(server);
-  registerWorkbenchCapabilitiesTool(server);
+  registerMediaGenerationTool(server, {
+    service: services.mediaGenerationService,
+  });
+  registerWorkbenchCapabilitiesTool(server, {
+    reporter: services.workbenchCapabilityReporter,
+  });
   registerSessionsTool(server);
   registerSessionResources(server);
 
@@ -48,6 +75,43 @@ export async function startMcpServer(): Promise<void> {
   // Keep the process alive until the client closes the transport.
   await server.connect(transport);
   await closed;
+}
+
+export async function createDefaultMcpServices(): Promise<McpServiceBundle> {
+  const resolvedUserConfig = await resolveConfig({}, process.cwd(), process.env);
+  return createMcpServicesFromConfig(resolvedUserConfig as ResolvedUserConfig);
+}
+
+export function createMcpServicesFromConfig(
+  resolvedUserConfig: ResolvedUserConfig,
+  deps: CreateMcpServicesDeps = {},
+): McpServiceBundle {
+  const createWorkbenchService =
+    deps.createWorkbenchCapabilityService ?? createWorkbenchCapabilityService;
+  const createDiscovery =
+    deps.createBrowserWorkbenchCapabilityDiscovery ?? createBrowserWorkbenchCapabilityDiscovery;
+  const createDiagnostics =
+    deps.createBrowserWorkbenchCapabilityDiagnostics ?? createBrowserWorkbenchCapabilityDiagnostics;
+  const createMediaService = deps.createMediaGenerationService ?? createMediaGenerationService;
+  const createMediaExecutor =
+    deps.createBrowserMediaGenerationExecutor ?? createBrowserMediaGenerationExecutor;
+
+  const workbenchCapabilityReporter = createWorkbenchService({
+    discoverCapabilities: createDiscovery(resolvedUserConfig),
+    diagnoseCapabilities: createDiagnostics(resolvedUserConfig),
+  });
+  const mediaGenerationService = createMediaService({
+    executor: createMediaExecutor(resolvedUserConfig),
+    capabilityReporter: workbenchCapabilityReporter,
+    runtimeProfile:
+      typeof resolvedUserConfig.auracallProfile === 'string'
+        ? resolvedUserConfig.auracallProfile
+        : null,
+  });
+  return {
+    mediaGenerationService,
+    workbenchCapabilityReporter,
+  };
 }
 
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('auracall-mcp')) {

@@ -745,8 +745,10 @@ Terminology note:
 - MCP tools include `consult`, `sessions`, bounded team execution through
   `team_run`, generic run status through `run_status`, the shared media
   contract through `media_generation`, media run status readback through
-  `media_generation_status`, and
-  routine provider workbench discovery through `workbench_capabilities`.
+  `media_generation_status`, and routine provider workbench discovery through
+  `workbench_capabilities`. When launched from a resolved AuraCall runtime
+  profile, the MCP media and workbench tools use the same configured
+  browser-backed service bundle as the local API server.
 ```bash
 npx -y auracall auracall-mcp
 ```

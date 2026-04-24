@@ -40,6 +40,7 @@ const mediaGenerationTimelineEventShape = z.object({
   event: z.enum([
     'running_persisted',
     'capability_discovered',
+    'capability_unavailable',
     'executor_started',
     'browser_target_attached',
     'gemini_surface_ready',

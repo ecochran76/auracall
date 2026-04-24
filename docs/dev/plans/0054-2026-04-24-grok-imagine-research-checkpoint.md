@@ -19,6 +19,9 @@ existing Aura-Call media-generation contract.
   `provider = "grok"` and `mediaType = image|music|video`.
 - The default local API media executor now has a guarded Grok browser image
   path for `provider = grok`, `mediaType = image`, `transport = browser`.
+- The MCP server now builds the same configured browser-backed media/workbench
+  service bundle as the local API path for media generation, media status,
+  generic run status, and workbench capability tools.
 - Grok video, API execution, and edit/reference workflows still fail durably as
   not implemented.
 - Static/read-only workbench capability reporting now includes conservative
@@ -83,6 +86,20 @@ existing Aura-Call media-generation contract.
   - available accounts use a pinned `/imagine` tab, provider run-state polling,
     and remote media materialization from detected terminal image evidence
   - video remains gated as not implemented
+- Durable local API dogfood on 2026-04-24 confirmed browser-backed Grok image
+  runs persist processing state and artifacts:
+  - request id: `medgen_bb41e86d6d6d4bcea5499bc2c090772c`
+  - `POST /v1/media-generations?wait=false` returned `running`
+  - status polling observed `image_visible` while the run was still `running`
+    and then terminal `completed`
+  - `GET /v1/media-generations/{id}/status` and
+    `GET /v1/runs/{id}/status` agreed on `status = succeeded`,
+    `artifactCount = 1`, and the cached artifact path under
+    `~/.auracall/runtime/media-generations/.../artifacts`
+  - remaining materialization gap: the durable path landed on a
+    `/imagine/templates/...` route and cached a remote media fetch, while the
+    earlier direct executor path proved visible-tile/download-button capture
+    can produce local browser-derived artifacts
 
 ## Research Findings
 
@@ -230,6 +247,11 @@ Add a browser-first Grok Imagine discovery/audit slice:
   through the active browser tab and compare one preview against the
   provider-owned full-quality download-button path before falling back to
   remote media fetch.
+- [x] Grok browser image generation can run through the durable local API
+  media-generation service path and be read back through both media-generation
+  status and generic run status.
+- [x] MCP media/workbench tools use the configured browser-backed service
+  bundle rather than default no-executor services.
 
 ## Validation Plan
 
@@ -272,6 +294,15 @@ Add a browser-first Grok Imagine discovery/audit slice:
     artifact under `/tmp/auracall-grok-live-materialization`
   - first preview and full-quality artifact matched by SHA-256, so the current
     web surface appears to expose full-quality bytes in the visible tile
+- [x] Unit tests for configured MCP media/workbench service wiring:
+  - `pnpm vitest run tests/mcp.server.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/mcp.workbenchCapabilities.test.ts --maxWorkers 1`
+- [x] Bounded durable local API Grok browser image request:
+  - `POST /v1/media-generations?wait=false` with `provider = grok`,
+    `mediaType = image`, `transport = browser`
+  - returned id: `medgen_bb41e86d6d6d4bcea5499bc2c090772c`
+  - status polling observed `image_visible` before `completed`
+  - media-generation status and generic run status both reported the cached
+    artifact
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
@@ -279,7 +310,6 @@ Add a browser-first Grok Imagine discovery/audit slice:
 ## Next Slice
 
 Keep Grok video and edit/reference workflows gated. The next browser slice
-should route Grok image generation through the durable API/MCP media-generation
-service path, verify persisted run-status/artifact-cache readback, and then
-decide whether visible-tile bytes or the download-button artifact should be the
-canonical returned image.
+should make durable API/MCP Grok image runs prefer active visible-tile and
+download-button materialization on `/imagine/templates/...` routes before
+falling back to remote public-gallery media URLs.

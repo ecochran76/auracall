@@ -60,7 +60,10 @@ export async function writeMediaGenerationResponse(
   const parsedRecord = MediaGenerationStoredRecordSchema.parse(record);
   const generationDir = getMediaGenerationDir(response.id);
   await fs.mkdir(generationDir, { recursive: true });
-  await fs.writeFile(getMediaGenerationRecordPath(response.id), `${JSON.stringify(parsedRecord, null, 2)}\n`, 'utf8');
+  const recordPath = getMediaGenerationRecordPath(response.id);
+  const tempPath = `${recordPath}.${process.pid}.${Date.now()}.tmp`;
+  await fs.writeFile(tempPath, `${JSON.stringify(parsedRecord, null, 2)}\n`, 'utf8');
+  await fs.rename(tempPath, recordPath);
   return parsedRecord;
 }
 

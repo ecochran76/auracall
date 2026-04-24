@@ -220,6 +220,10 @@
       tiles through the active browser tab, then compare one preview against
       the provider download-button result before using remote media fetch as a
       fallback
+    - read back the same id through both
+      `/v1/media-generations/<id>/status` and `/v1/runs/<id>/status`; both
+      should agree on terminal state, last event, artifact count, and cached
+      artifact paths
   - list workbench capabilities for service discovery:
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=gemini"`
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=chatgpt"`
@@ -1941,6 +1945,11 @@
   - Post-MVP polish history is archived in [0021-2026-04-08-chatgpt-polish-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0021-2026-04-08-chatgpt-polish-plan.md).
   - Broader hostile-state hardening history is archived in [0020-2026-04-08-chatgpt-hardening-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0020-2026-04-08-chatgpt-hardening-plan.md).
 - MCP focused: `pnpm test:mcp` (builds then stdio smoke via mcporter).
+- MCP media/workbench service wiring:
+  - `pnpm vitest run tests/mcp.server.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/mcp.workbenchCapabilities.test.ts --maxWorkers 1`
+  - proves MCP media generation, media status, generic run status, and
+    workbench capability tools share the configured browser-backed service
+    bundle instead of default no-executor services
 - MCP team-run parity:
   - `pnpm vitest run tests/mcp/teamRun.test.ts tests/mcp.schema.test.ts --maxWorkers 1`
   - proves the `team_run` tool registration, bounded input/output schemas, and

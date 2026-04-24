@@ -1,3 +1,35 @@
+## 2026-04-24 - Grok Imagine durable API/MCP status path
+
+- Current focus:
+  - route browser-backed Grok image generation through the durable API/MCP
+    service surfaces and verify run-status/artifact readback
+- Progress:
+  - wired `auracall-mcp` media generation, media status, generic run status,
+    and workbench capability tools to the configured browser-backed services
+    instead of default static/no-executor services
+  - aligned the MCP media timeline schema with the core
+    `capability_unavailable` event
+  - added a Grok Imagine composer-ready wait before prompt insertion to avoid
+    the observed early `composer input not found` failure on a freshly settled
+    `/imagine` route
+  - made media-generation `record.json` writes atomic so async API/MCP status
+    polling cannot observe a partial JSON write while timeline events are being
+    persisted
+  - durable local API dogfood created
+    `medgen_bb41e86d6d6d4bcea5499bc2c090772c`, observed `image_visible` while
+    running, completed successfully, and read back the same cached artifact
+    through both media-generation status and generic run status
+- Follow-up:
+  - improve Grok `/imagine/templates/...` materialization so durable API/MCP
+    runs prefer active visible-tile/download-button capture before remote
+    gallery fetch
+- Validation:
+  - `pnpm vitest run tests/mcp.server.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/mcp.workbenchCapabilities.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mcp.server.test.ts tests/mcp.mediaGeneration.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.mediaGeneration.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - bounded live local API Grok browser media request with `wait=false`
+
 ## 2026-04-24 - Grok Imagine browser discovery
 
 - Current focus:

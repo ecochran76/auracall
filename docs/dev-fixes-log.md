@@ -14089,3 +14089,19 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   contextual blocking generation message or missing ready-composer/media
   evidence, and submitted media runs should wait for new media evidence rather
   than accepting stale visible tiles from a prior run.
+- 2026-04-24: MCP tools must share the configured runtime services, not default
+  no-executor fallbacks. In this repo, HTTP already created media/workbench
+  services from the resolved AuraCall runtime profile, while MCP was still
+  registering default media and capability services. Keep MCP media generation,
+  media status, generic run status, and workbench capability tools on the same
+  configured service bundle so browser-backed API/MCP behavior stays aligned.
+- 2026-04-24: Treat provider route readiness and composer readiness as separate
+  gates on volatile workbench pages. In this repo, Grok `/imagine` can report
+  document and route readiness before the ProseMirror composer is hydrated.
+  Wait for a visible composer before prompt insertion instead of treating
+  `composer input not found` as a terminal provider failure.
+- 2026-04-24: Write media-generation status records atomically. In this repo,
+  async API/MCP status polling can read `record.json` while a media executor is
+  appending timeline events. Use temp-file plus rename writes so readers see a
+  complete previous record or a complete next record, never an empty/truncated
+  JSON payload.

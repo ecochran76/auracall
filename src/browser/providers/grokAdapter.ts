@@ -528,6 +528,33 @@ async function waitForGrokImagineRoute(Runtime: ChromeClient['Runtime'], targetU
   ).catch(() => undefined);
 }
 
+async function waitForGrokImagineComposer(Runtime: ChromeClient['Runtime']): Promise<void> {
+  await waitForPredicate(
+    Runtime,
+    `(() => {
+      const visible = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const style = window.getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 20 && rect.height > 12;
+      };
+      const input = Array.from(document.querySelectorAll('main textarea, main [contenteditable="true"], textarea, [contenteditable="true"]'))
+        .find(visible);
+      if (!input) return null;
+      return {
+        tag: input.tagName,
+        text: input.textContent || null,
+        placeholder: input.getAttribute('placeholder') || input.querySelector('[data-placeholder]')?.getAttribute('data-placeholder') || null,
+      };
+    })()`,
+    {
+      timeoutMs: 15_000,
+      description: 'Grok Imagine composer',
+    },
+  );
+}
+
 async function readGrokImaginePromptState(Runtime: ChromeClient['Runtime']): Promise<GrokImaginePromptState> {
   const { result } = await Runtime.evaluate({
     expression: buildGrokFeatureProbeExpression(),
@@ -1429,6 +1456,7 @@ export function createGrokAdapter(): Pick<
           description: 'Grok Imagine document ready',
         }).catch(() => undefined);
         await waitForGrokImagineRoute(client.Runtime, targetUrl);
+        await waitForGrokImagineComposer(client.Runtime);
         const baseline = await readGrokImaginePromptState(client.Runtime);
         await emitProgress({
           phase: 'composer_ready',
