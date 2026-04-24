@@ -426,6 +426,10 @@ Current active extraction plan:
     `AURACALL_ALLOW_RAW_CDP=1`.
   - The guard consumes `--allow-raw-cdp` before the script parses positional
     arguments.
+  - Raw scripts that directly mutate browser state must also be listed in
+    `RAW_DEVTOOLS_MUTATING_SCRIPT_ALLOWLIST`; the control-plane regression test
+    fails if a new raw mutating script appears without that explicit entry and
+    guard.
 
 - `pnpm tsx scripts/browser-tools.ts probe --port <port> [--url-contains <text>] [--selector <css>] [--script-any <token>] [--script-all <token>] [--json]`
   - Collects structured generic probes from the selected page.

@@ -1551,3 +1551,27 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
       requires a recorded `tabTargetId` before reporting observed media
       browser diagnostics
   - `git diff --check`
+
+## Turn 62 | 2026-04-23
+
+- Closed implementation plan:
+  `docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md`
+- Goal: finish the browser mutation control-plane boundary after Gemini media
+  dogfood showed root-route fallback needed attribution.
+- Change:
+  - browser-service mutation helpers now provide the product-code control
+    points for navigation, reload, target open/reuse, and location fallback
+  - provider and legacy product paths route through those helpers or carry
+    mutation audit context
+  - browser diagnostics can report recent mutation history
+  - static enforcement rejects direct product browser mutations outside
+    approved browser-service control points
+  - raw mutating CDP scripts remain available only through the explicit
+    `--allow-raw-cdp` / `AURACALL_ALLOW_RAW_CDP=1` guard and
+    `RAW_DEVTOOLS_MUTATING_SCRIPT_ALLOWLIST`
+- Verification target:
+  - `pnpm vitest run tests/browser/browserMutationControlPlane.test.ts tests/scripts/rawDevtoolsGuard.test.ts tests/scripts/browserServiceWrappers.test.ts`
+  - broader targeted browser-control tests
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 53`
+  - `git diff --check`

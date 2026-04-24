@@ -3,6 +3,7 @@ import {
   consumeRawDevToolsEscapeHatch,
   RAW_DEVTOOLS_ALLOW_ENV,
   RAW_DEVTOOLS_ALLOW_FLAG,
+  RAW_DEVTOOLS_MUTATING_SCRIPT_ALLOWLIST,
   requireRawDevToolsEscapeHatch,
 } from '../../scripts/raw-devtools-guard.js';
 
@@ -28,5 +29,13 @@ describe('raw DevTools script guard', () => {
         env: {},
       }),
     ).toThrow(/browser-tools\.ts --port <port>/);
+  });
+
+  test('keeps the mutating raw script allowlist explicit', () => {
+    expect([...RAW_DEVTOOLS_MUTATING_SCRIPT_ALLOWLIST].sort()).toEqual([
+      'scripts/test-remote-chrome.ts',
+      'scripts/verify-grok-project-remove-steps.ts',
+      'scripts/verify-grok-project-sources-steps.ts',
+    ]);
   });
 });

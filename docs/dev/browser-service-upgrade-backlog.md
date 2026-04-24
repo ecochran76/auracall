@@ -164,14 +164,16 @@ Current active plan:
   authority primitive only if another real workflow needs the same “reuse the
   tab or fail” contract.
 - 2026-04-23 control-plane follow-up:
-  - that “another real workflow” now exists and is active:
+  - that “another real workflow” is closed in:
     `docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md`
-  - reproduced Gemini browser-media runs show the current dispatcher work is
-    still incomplete because target reuse/open, navigation, reload, and some
-    legacy location mutation remain split across browser-service helpers,
-    provider adapters, and legacy browser flows
-  - treat the control-plane completion plan as the current owner for finishing
-    browser mutation authority, not this backlog note
+  - product browser mutations now route through browser-service-owned control
+    points or provider helpers that carry mutation audit context
+  - static enforcement rejects new direct product `Page.navigate`,
+    `Page.reload`, `location.assign`, `location.replace`, and
+    `location.href = ...` mutations outside approved browser-service control
+    points
+  - raw mutating CDP scripts remain explicit guarded escape hatches listed in
+    `RAW_DEVTOOLS_MUTATING_SCRIPT_ALLOWLIST`
 
 ## New reusable learnings from the ChatGPT composer/add-on work (2026-03-28)
 

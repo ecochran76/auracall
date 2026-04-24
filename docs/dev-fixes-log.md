@@ -14000,3 +14000,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   failure class the control plane is trying to explain. Return the intended URL
   to a caller that can use `navigateAndSettle(...)`, then enforce the rule with
   a static regression test.
+- 2026-04-23: Raw CDP escape hatches need their own mutation allowlist. In this
+  repo, guarded raw scripts are useful for development, but scripts that
+  directly navigate/reload/retarget a browser are still materially different
+  from read-only inspection helpers. Keep those mutating raw scripts listed in
+  `RAW_DEVTOOLS_MUTATING_SCRIPT_ALLOWLIST` and fail tests when a new one
+  appears without explicit acknowledgement.

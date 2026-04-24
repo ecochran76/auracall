@@ -19,16 +19,16 @@ Current State:
     local-runner bridge
 - supporting maintenance work is allowed only when it directly protects that
   lane or fixes a newly reproduced mismatch
-- current browser reliability exception:
+- closed browser reliability exception:
   - the earlier profile-scoped dispatcher ownership proof is still closed in
     [docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md)
-  - a new concrete mismatch has reopened the browser reliability lane in
+  - the concrete mismatch reopened and then closed the browser reliability lane
+    in
     [docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md)
-    because managed-profile mutation authority is still split across
-    browser-service helpers, provider adapters, and legacy browser flows
-  - the active goal is to finish the browser-service control plane so
-    navigation/reload/target-reuse mutations are attributable to one
-    dispatcher-owned path per managed browser profile/service
+  - browser-service mutation audit now covers navigation/reload/target-reuse
+    control points, providers and legacy product flows route through those
+    helpers, diagnostics can report recent mutation history, and raw mutating
+    CDP scripts are explicitly allowlisted/guarded escape hatches
 - parked lanes should not resume from inertia:
   - response-shape normalization is parked unless a new public routing or
     readback mismatch is reproduced
@@ -59,14 +59,12 @@ Current State:
     bounded browser snapshot for active browser-backed media jobs
   - media diagnostics prefer the Gemini prompt-submission `tabTargetId` when
     present and return honest `unavailable` posture for terminal jobs
-- browser control-plane completion is open in
+- browser control-plane completion is closed in
   [docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md)
-  - codebase audit found remaining direct `Page.navigate`, `Page.reload`,
-    `location.assign`/`location.href`, `openOrReuseChromeTarget`, and
-    `navigateAndSettle` mutation paths still split across browser-service,
-    providers, and legacy browser flows
-  - the lane exists to finish one browser-service-owned mutation authority and
-    audit trail, not to widen provider behavior opportunistically
+  - product-code browser mutations are now limited by static regression tests
+    to approved browser-service control points
+  - raw mutating CDP scripts stay available only as explicit guarded
+    development escape hatches
 - the bounded `0004` operator-facing claimant/readback hardening sub-lane is
   now maintenance-only unless a new concrete mismatch is demonstrated
 - the narrower `api serve` server-local-runner ownership/readback checkpoint is

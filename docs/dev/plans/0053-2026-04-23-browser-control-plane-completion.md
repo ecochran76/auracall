@@ -1,6 +1,6 @@
 # Plan 0053 | Browser Control Plane Completion
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Purpose
@@ -41,28 +41,24 @@ What already exists:
   runtime profile and service, surfaced through opt-in browser diagnostics
 - legacy ChatGPT/Grok navigation helpers and ChatGPT reattach fallback
   navigation now route through `navigateAndSettle(...)`
+- direct product-code browser mutations are statically limited to the approved
+  browser-service control points
+- raw mutating CDP scripts are explicitly listed in
+  `RAW_DEVTOOLS_MUTATING_SCRIPT_ALLOWLIST` and must call the raw DevTools guard
 
 What remains unresolved:
 
-- browser mutation authority is still split across legacy browser flows
-- navigation/reload/open-reuse audit now exists for core substrate/provider
-  primitives, but mutation authority is not yet forced through one
-  dispatcher-owned path everywhere
-- target reuse/open can still navigate reused tabs below the provider layer
-- provider and legacy flows can still issue direct CDP page mutations without a
-  central audit trail
-- direct legacy browser-flow page navigation/reload/location-assignment
-  mutations are now covered by a static regression test, but raw dev/debug
-  scripts remain intentionally fenced outside that check
-- the reproduced Gemini browser-media mismatch shows this clearly:
-  - `prompt_submitted` records a concrete conversation route
-  - the owned tab later appears back on root `/app`
-  - current instrumentation can prove the bad state, but not yet attribute the
-    exact AuraCall mutation path that caused it
+- this plan's product-code control-plane scope is complete
+- raw dev/debug scripts remain intentional escape hatches, not product
+  automation paths
+- if Gemini still falls back to root `/app`, diagnostics can now distinguish an
+  AuraCall-issued mutation from provider/browser state by inspecting the
+  recorded mutation history
 
 ## Audit Inventory
 
-Codebase audit on 2026-04-23 found these remaining refactor points:
+Codebase audit on 2026-04-23 originally found these refactor points. Their
+current status is recorded below.
 
 ### 1. Browser-service mutation primitives still mutate directly
 
@@ -91,16 +87,20 @@ Codebase audit on 2026-04-23 found these remaining refactor points:
 ### 3. Legacy browser flows still mutate outside the dispatcher boundary
 
 - `src/browser/index.ts`
-  - direct `connectToRemoteChrome(...)`
-  - direct `Page.navigate(...)` assistant-response reload path
+  - direct `connectToRemoteChrome(...)` uses the browser-service
+    open/reuse helper; remote-Chrome usage is outside managed-profile
+    product mutation ownership
+  - direct `Page.navigate(...)` assistant-response reload path migrated to
+    `navigateAndSettle(...)`
 - `src/browser/actions/navigation.ts`
-  - direct `Page.navigate(...)`
+  - direct `Page.navigate(...)` migrated to `navigateAndSettle(...)`
 - `src/browser/actions/grok.ts`
-  - direct `Page.navigate(...)`
+  - direct `Page.navigate(...)` migrated to `navigateAndSettle(...)`
 - `src/browser/reattachHelpers.ts`
-  - direct `location.href = targetUrl` fallback
+  - direct `location.href = targetUrl` fallback removed; caller receives the
+    target URL and routes through `navigateAndSettle(...)`
 - `src/gemini-web/browserNative.ts`
-  - direct `openOrReuseChromeTarget(...)`
+  - direct `openOrReuseChromeTarget(...)` call now carries a mutation source
 
 ### 4. Mutation surface size at audit time
 
@@ -269,6 +269,22 @@ Status:
   are introduced outside approved browser-service control points
 - update docs and operator guidance to describe the control-plane boundary
 
+Status:
+
+- completed on 2026-04-23
+- current scope completed:
+  - `tests/browser/browserMutationControlPlane.test.ts` rejects direct product
+    `Page.navigate(...)`, `Page.reload(...)`, `location.assign(...)`,
+    `location.replace(...)`, and `location.href = ...` mutations outside:
+    - `packages/browser-service/src/service/ui.ts`
+    - `packages/browser-service/src/chromeLifecycle.ts`
+  - raw mutating CDP scripts are scanned separately and must match
+    `RAW_DEVTOOLS_MUTATING_SCRIPT_ALLOWLIST`
+  - allowlisted raw mutating scripts must import/call
+    `enforceRawDevToolsEscapeHatchForCli`
+  - docs now describe raw scripts as explicit escape hatches, not product
+    browser-service pathways
+
 ## Acceptance Criteria
 
 - managed-profile browser mutations are attributable to one browser-service
@@ -294,11 +310,9 @@ Status:
 
 ## Definition Of Done
 
-- one browser-service mutation API owns managed-profile navigation/reload/tab
-  retargeting semantics
-- the audit inventory in this plan is either migrated or explicitly fenced as a
-  legacy/raw path
-- roadmap and browser-service roadmap both show this lane as the active browser
-  reliability exception
-- journal/fixes log record the control-plane lesson and remaining follow-on
-  posture
+- completed: one browser-service mutation API owns product-code
+  managed-profile navigation/reload/tab retargeting semantics
+- completed: the audit inventory in this plan is either migrated or explicitly
+  fenced as a raw path
+- completed: roadmap and browser-service docs record the lane closeout
+- completed: journal/fixes log record the control-plane lesson

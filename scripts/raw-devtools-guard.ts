@@ -1,5 +1,10 @@
 export const RAW_DEVTOOLS_ALLOW_FLAG = '--allow-raw-cdp';
 export const RAW_DEVTOOLS_ALLOW_ENV = 'AURACALL_ALLOW_RAW_CDP';
+export const RAW_DEVTOOLS_MUTATING_SCRIPT_ALLOWLIST = [
+  'scripts/test-remote-chrome.ts',
+  'scripts/verify-grok-project-remove-steps.ts',
+  'scripts/verify-grok-project-sources-steps.ts',
+] as const;
 
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'y', 'on']);
 

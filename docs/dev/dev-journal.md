@@ -20406,3 +20406,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run check`
   - `pnpm run plans:audit -- --keep 53`
   - `git diff --check`
+
+## 2026-04-23 - Browser control-plane enforcement closeout
+
+- Added `RAW_DEVTOOLS_MUTATING_SCRIPT_ALLOWLIST` to make raw scripts that
+  directly mutate browser state an explicit, reviewed escape hatch.
+- Broadened `tests/browser/browserMutationControlPlane.test.ts` so product code
+  allows direct navigation/reload/location mutation only in browser-service
+  control points, while raw mutating scripts must match the allowlist and call
+  `enforceRawDevToolsEscapeHatchForCli`.
+- Closed Plan 0053 and updated the roadmap/browser-service backlog to reflect
+  the completed control-plane boundary.
+- Validation:
+  - `pnpm vitest run tests/browser/browserMutationControlPlane.test.ts tests/scripts/rawDevtoolsGuard.test.ts tests/scripts/browserServiceWrappers.test.ts`
+  - `pnpm vitest run tests/browser/browserMutationControlPlane.test.ts tests/scripts/rawDevtoolsGuard.test.ts tests/scripts/browserServiceWrappers.test.ts tests/browser/pageActions.test.ts tests/browser/reattach.test.ts tests/browser/browserService.test.ts tests/browser/mutationAudit.test.ts tests/browser-service/ui.test.ts tests/browser-service/chromeTargetReuse.test.ts tests/gemini-web/executor.test.ts tests/gemini-web/browserNative.test.ts`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 53`
+  - `git diff --check`
