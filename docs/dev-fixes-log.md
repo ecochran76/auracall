@@ -1,3 +1,11 @@
+- 2026-04-24: Research Grok Imagine API before implementing browser or media
+  automation. In this repo, xAI image generation and video generation have
+  different execution shapes: `grok-imagine-image` can fit the current
+  media-generation executor as a synchronous image request, while
+  `grok-imagine-video` returns a request id that must be polled and then
+  downloaded from a temporary URL. Implement API image generation first and
+  defer browser Imagine and video polling to separate bounded slices.
+
 - 2026-04-23: Reuse ChatGPT feature signatures for read-only workbench
   capability discovery. In this repo, the ChatGPT browser adapter already
   observes volatile account-specific signals such as Web Search, Deep

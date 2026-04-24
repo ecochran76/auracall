@@ -39,6 +39,10 @@ Current State:
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     owns the first-class media-generation resource for image/music/video
+    - Grok Imagine research is now captured in
+      [docs/dev/plans/0054-2026-04-24-grok-imagine-research-checkpoint.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0054-2026-04-24-grok-imagine-research-checkpoint.md)
+    - next bounded Grok slice should implement API image generation through
+      `grok-imagine-image`; Grok video remains a later deferred-polling slice
   - [docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md)
     owns the more general discovery/invocation model for rapidly changing
     chat-workbench capabilities such as Deep Research, ChatGPT apps,

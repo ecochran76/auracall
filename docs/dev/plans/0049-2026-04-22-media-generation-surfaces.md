@@ -95,6 +95,12 @@ helpers.
   status remains a narrow helper, not the primary cross-run polling surface.
 - CLI now has matching generic readback through `auracall run status <id>` and
   `--json`, backed by the same durable run-status reader as API/MCP.
+- Grok Imagine research is captured in
+  [0054 Grok Imagine Research Checkpoint](0054-2026-04-24-grok-imagine-research-checkpoint.md):
+  - implement xAI API image generation first with `grok-imagine-image`
+  - prefer API execution over browser automation for the first Grok slice
+  - defer Grok video because it is a separate deferred polling flow with
+    temporary video URLs
 
 ## Target Contract
 
@@ -185,6 +191,8 @@ helpers.
   explicitly gated with a provider/API credential blocker.
 - Docs state which provider/media combinations are implemented, gated, or not
   yet available.
+- [x] Grok Imagine research identifies the first implementation target and the
+  video/deferred-polling follow-up boundary.
 
 ## Validation Plan
 
@@ -209,3 +217,5 @@ helpers.
   readback through terminal completion.
 - Live Grok Imagine smoke only with a configured `XAI_API_KEY` or validated
   browser account path that exposes Imagine.
+- First Grok implementation validation should use injected/fake HTTP transport
+  before any live `XAI_API_KEY` smoke.

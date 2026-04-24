@@ -1,5 +1,29 @@
 # RUNBOOK
 
+## Turn 56 | 2026-04-24
+
+- Active plan:
+  `docs/dev/plans/0054-2026-04-24-grok-imagine-research-checkpoint.md`
+- Goal: research Grok Imagine before implementation because the interface is
+  provider-specific and has separate image/video execution shapes.
+- Result:
+  - xAI API image generation uses `grok-imagine-image` through
+    `/v1/images/generations`
+  - image generation can return URL or base64 data and supports `n`,
+    `aspect_ratio`, and `resolution`
+  - xAI API video generation uses `grok-imagine-video` through
+    `/v1/videos/generations`, returns a `request_id`, and requires polling
+    `/v1/videos/{request_id}`
+  - video URLs are temporary and must be downloaded promptly
+  - xAI API access is separate from Grok.com/X/mobile subscription state
+- Decision:
+  - implement Grok API image generation first
+  - defer Grok video, image editing, video editing, and browser Imagine
+    automation to later bounded slices
+- Verification target:
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`
+
 ## Turn 55 | 2026-04-23
 
 - Active plan: `docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md`

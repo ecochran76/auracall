@@ -1,3 +1,24 @@
+## 2026-04-24 - Grok Imagine research checkpoint
+
+- Current focus:
+  - research Grok Imagine before implementation so Aura-Call models the real
+    xAI API/browser split instead of assuming the browser workbench shape
+- Progress:
+  - reviewed xAI image generation docs, video generation docs, Imagine API
+    landing page, API introduction, and Grok Imagine API announcement
+  - opened
+    `docs/dev/plans/0054-2026-04-24-grok-imagine-research-checkpoint.md`
+  - updated Plan 0049 and `ROADMAP.md` to select Grok API image generation as
+    the next bounded implementation slice
+- Decision:
+  - implement `grok-imagine-image` API image generation first
+  - defer `grok-imagine-video` because it requires request-id polling and
+    temporary video URL materialization
+  - keep browser Grok Imagine automation out of the first slice
+- Verification target:
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`
+
 ## 2026-04-23 - ChatGPT workbench capability discovery
 
 - Current focus:
