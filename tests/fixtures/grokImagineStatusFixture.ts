@@ -58,6 +58,30 @@ export function createGrokImagineVideoResponse(
         },
       },
       {
+        event: 'capability_selected',
+        at: '2026-04-25T17:20:02.100Z',
+        details: {
+          capabilityId: 'grok.media.imagine_video',
+          mode: 'Video',
+          selected: true,
+          clicked: true,
+          modeControls: [
+            {
+              text: 'Image',
+              role: 'radio',
+              checked: 'false',
+              disabled: false,
+            },
+            {
+              text: 'Video',
+              role: 'radio',
+              checked: 'true',
+              disabled: false,
+            },
+          ],
+        },
+      },
+      {
         event: 'prompt_submitted',
         at: '2026-04-25T17:20:05.000Z',
         details: {

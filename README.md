@@ -197,9 +197,10 @@ Terminology note:
     outputs such as Gemini music MP4-with-art versus MP3 without fetching the
     full generation record. Media status also includes a derived
     `diagnostics` block from persisted timeline evidence so operators can see
-    capability preflight, submitted tab, provider route progression, artifact
-    polling/progress counts, terminal run-state counts, and materialization
-    source without a separate browser probe. Grok browser image jobs require
+    capability preflight, selected workbench mode/tool state, submitted tab,
+    provider route progression, artifact polling/progress counts, terminal
+    run-state counts, and materialization source without a separate browser
+    probe. Grok browser image jobs require
     generated account media for terminal success; public gallery/template
     media remains diagnostic evidence and is not cached as generated output.
     Repeated stable

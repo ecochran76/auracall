@@ -229,6 +229,12 @@ existing Aura-Call media-generation contract.
     checked and Video unchecked
   - submitted tab stayed on `https://grok.com/imagine`, reached
     `image_visible` on poll 1, and cached one visible tile artifact
+- Compact status now carries the latest capability-selection evidence:
+  - `diagnostics.capabilitySelection` is derived from the persisted
+    `capability_selected` event
+  - generic run status and MCP `run_status` inherit the same diagnostics block
+  - operators can confirm Grok Image/Video mode selection without fetching the
+    full media record
 - Bounded read-only video discovery has started:
   - the live `/imagine` page exposes `Image` and `Video` as visible
     `role = radio` controls, with `Image` checked and `Video` unchecked
@@ -610,6 +616,8 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - timeline contained `capability_selected` with `mode = Image` before
     `prompt_inserted`
   - cached one `visible-tile-browser-capture` JPEG artifact
+- [x] Compact status exposes capability-selection evidence:
+  - `pnpm vitest run tests/mediaStatusSummary.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
 - [x] Bounded live gated media request:
   - `POST /v1/media-generations` with `provider = grok`, `mediaType = image`,
     `transport = browser`

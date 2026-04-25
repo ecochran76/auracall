@@ -266,6 +266,22 @@ describe('mcp run_status tool', () => {
               id: 'grok.media.imagine_video',
               discoveryAction: 'grok-imagine-video-mode',
             },
+            capabilitySelection: {
+              capabilityId: 'grok.media.imagine_video',
+              mode: 'Video',
+              selected: true,
+              clicked: true,
+              modeControls: [
+                {
+                  text: 'Image',
+                  checked: 'false',
+                },
+                {
+                  text: 'Video',
+                  checked: 'true',
+                },
+              ],
+            },
             runState: {
               runState: 'terminal_video',
               terminalVideo: true,

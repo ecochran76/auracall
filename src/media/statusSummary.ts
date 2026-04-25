@@ -60,6 +60,13 @@ export interface MediaGenerationStatusDiagnostics {
     source: string | null;
     discoveryAction: string | null;
   };
+  capabilitySelection: {
+    capabilityId: string | null;
+    mode: string | null;
+    selected: boolean | null;
+    clicked: boolean | null;
+    modeControls: Array<Record<string, unknown>> | null;
+  };
   submittedTab: {
     targetId: string | null;
     initialUrl: string | null;
@@ -156,6 +163,7 @@ function summarizeDiagnostics(response: MediaGenerationResponse): MediaGeneratio
   const timeline = response.timeline ?? [];
   const capabilityEvent = findLastEvent(timeline, 'capability_discovered') ??
     findLastEvent(timeline, 'capability_unavailable');
+  const capabilitySelectedEvent = findLastEvent(timeline, 'capability_selected');
   const attachedEvent = findLastEvent(timeline, 'browser_target_attached');
   const promptSubmittedEvent = findLastEvent(timeline, 'prompt_submitted');
   const runStateEvent = findLastEvent(timeline, 'run_state_observed') ??
@@ -195,6 +203,7 @@ function summarizeDiagnostics(response: MediaGenerationResponse): MediaGeneratio
     ? metadataRecord.discoveryAction
     : null;
   const runStateDetails = runStateEvent?.details ?? {};
+  const capabilitySelectionDetails = capabilitySelectedEvent?.details ?? {};
   const materializedDetails = materializedEvent?.details ?? {};
   const runStateEventName = runStateEvent?.event ?? null;
 
@@ -204,6 +213,13 @@ function summarizeDiagnostics(response: MediaGenerationResponse): MediaGeneratio
       availability: stringOrNull(capabilityDetails.availability),
       source: stringOrNull(capabilityDetails.source),
       discoveryAction: stringOrNull(discoveryAction?.action),
+    },
+    capabilitySelection: {
+      capabilityId: stringOrNull(capabilitySelectionDetails.capabilityId),
+      mode: stringOrNull(capabilitySelectionDetails.mode),
+      selected: booleanOrNull(capabilitySelectionDetails.selected),
+      clicked: booleanOrNull(capabilitySelectionDetails.clicked),
+      modeControls: recordArrayOrNull(capabilitySelectionDetails.modeControls),
     },
     submittedTab: {
       targetId: stringOrNull(promptSubmittedEvent?.details?.tabTargetId) ??
@@ -300,5 +316,11 @@ function stringOrNull(value: unknown): string | null {
 function stringArrayOrNull(value: unknown): string[] | null {
   if (!Array.isArray(value)) return null;
   const entries = uniqueStrings(value.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0));
+  return entries.length > 0 ? entries : null;
+}
+
+function recordArrayOrNull(value: unknown): Array<Record<string, unknown>> | null {
+  if (!Array.isArray(value)) return null;
+  const entries = value.filter(isRecord);
   return entries.length > 0 ? entries : null;
 }

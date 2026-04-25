@@ -118,6 +118,26 @@ describe('media generation status summary', () => {
           source: 'browser_discovery',
           discoveryAction: 'grok-imagine-video-mode',
         },
+        capabilitySelection: {
+          capabilityId: 'grok.media.imagine_video',
+          mode: 'Video',
+          selected: true,
+          clicked: true,
+          modeControls: [
+            {
+              text: 'Image',
+              role: 'radio',
+              checked: 'false',
+              disabled: false,
+            },
+            {
+              text: 'Video',
+              role: 'radio',
+              checked: 'true',
+              disabled: false,
+            },
+          ],
+        },
         submittedTab: {
           targetId: 'grok-video-tab-1',
           initialUrl: 'https://grok.com/imagine',
@@ -352,6 +372,13 @@ describe('media generation status summary', () => {
         availability: 'available',
         source: 'browser_discovery',
         discoveryAction: 'grok-imagine-video-mode',
+      },
+      capabilitySelection: {
+        capabilityId: null,
+        mode: null,
+        selected: null,
+        clicked: null,
+        modeControls: null,
       },
       submittedTab: {
         targetId: 'grok-tab-1',

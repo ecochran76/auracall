@@ -14369,3 +14369,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   path without touching the browser. Use the local API server, configured
   server service, or an explicitly wired service for operator-equivalent
   browser dogfood.
+- 2026-04-25: Compact media status should expose the latest
+  `capability_selected` evidence, not just the full persisted media record.
+  Browser providers can be sticky or modeful, so operators need generic
+  `run_status`, media status, and MCP status to show which workbench mode/tool
+  was selected before submission.

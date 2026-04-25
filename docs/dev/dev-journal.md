@@ -21561,3 +21561,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `curl -s 'http://127.0.0.1:18080/v1/media-generations/medgen_504d9872bdcc43f1a4327ea2782a1e3a/status'`
   - `curl -s 'http://127.0.0.1:18080/v1/runs/medgen_504d9872bdcc43f1a4327ea2782a1e3a/status'`
   - `pnpm tsx bin/auracall.ts run status medgen_504d9872bdcc43f1a4327ea2782a1e3a --json`
+
+## 2026-04-25 - Compact status capability selection evidence
+
+- Focus: make status readback prove which provider workbench mode/tool Aura-Call
+  selected without requiring the full media record.
+- Progress: media status diagnostics now include the latest
+  `capability_selected` event as `diagnostics.capabilitySelection`, including
+  `capabilityId`, mode, selected/clicked flags, and compact mode-control
+  evidence when providers emit it. Generic `run status`, MCP `run_status`, and
+  media status inherit the same diagnostics block.
+- Validation:
+  - `pnpm vitest run tests/mediaStatusSummary.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mediaStatusSummary.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mediaStatusSummary.test.ts tests/mcp.runStatus.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/cli.runStatusCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`
