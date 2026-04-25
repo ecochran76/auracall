@@ -14237,3 +14237,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   mode signal. Treat a successful Video-mode discovery action or video-mode
   audit as `grok.media.imagine_video` evidence before allowing or denying
   execution.
+- 2026-04-24: Mode-specific workbench discovery must wait for the mode controls
+  it intends to inspect. In this repo, a Grok video media request can reuse the
+  `/imagine` tab immediately after a post route and match the route before the
+  Image/Video controls hydrate, producing a static `unknown` preflight result
+  even though the later explicit capability endpoint reports Video available.
+  Wait for visible Image and enabled Video controls before running the
+  `grok-imagine-video-mode` discovery action.

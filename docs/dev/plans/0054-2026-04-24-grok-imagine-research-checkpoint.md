@@ -676,6 +676,22 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - `stat` confirmed a `2,253,656` byte artifact
   - post-run `browser-tools inspect` confirmed the Grok tab stayed on the
     submitted `/imagine/post/...` URL
+- [x] Follow-up normal Grok browser video dogfood with browser kept open:
+  - initial rerun id `medgen_9fb698483a9840c88fdb5ead8fd8fcd9`
+    exposed a route-ready/hydration race where media preflight saw the static
+    `unknown` video capability while an immediate explicit Video-mode
+    capability probe reported `available`
+  - Grok feature-signature discovery now waits for visible Image and enabled
+    Video controls before running `grok-imagine-video-mode`
+  - fixed rerun id `medgen_11c3fe4fcafe4eb9b55ca49abcff8f35` submitted to
+    `https://grok.com/imagine/post/25687eca-0bab-464b-8381-cf6e12296405`
+  - status polling observed `pending`, terminal `video_visible` at poll `3`,
+    `generatedVideoCount = 1`, and `materialization = download-button`
+  - media-generation status and generic run status agreed on terminal success
+    with one cached `video/mp4` artifact
+  - `stat` confirmed a `3,248,027` byte artifact
+  - post-run `browser-tools inspect` confirmed the Grok tab stayed on the
+    submitted `/imagine/post/...` URL
 - [x] API/MCP/status media regression tests:
   - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
 - [x] `pnpm run check`
@@ -685,7 +701,6 @@ Add a browser-first Grok Imagine discovery/audit slice:
 
 ## Next Slice
 
-Keep Grok edit/reference workflows gated. The next browser slice should
-dogfood the normal Grok video path once more with no extra navigation churn,
-then harden operator status diagnostics and move the same browser-first
-pattern to the next media parity gap.
+Keep Grok edit/reference workflows gated. The next browser slice should harden
+operator status diagnostics for Grok media runs and then move the same
+browser-first pattern to the next media parity gap.

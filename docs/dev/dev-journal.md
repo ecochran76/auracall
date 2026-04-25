@@ -21098,3 +21098,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`
+
+## 2026-04-24 - Grok video preflight hydration dogfood
+
+- Focus: rerun the normal Grok browser video dogfood with the browser kept
+  open and inspect for navigation churn.
+- Finding: request `medgen_9fb698483a9840c88fdb5ead8fd8fcd9` failed before
+  prompt submission as `media_capability_unavailable` with
+  `grok.media.imagine_video = unknown`, but an immediate explicit
+  `/v1/workbench-capabilities?provider=grok&entrypoint=grok-imagine&discoveryAction=grok-imagine-video-mode`
+  call reported `grok.media.imagine_video = available`.
+- Fix: Grok feature-signature discovery now waits for visible Image and
+  enabled Video mode controls before running the `grok-imagine-video-mode`
+  discovery action. This keeps the fix provider-local and avoids treating a
+  route-ready but not-yet-hydrated Imagine page as static unknown capability.
+- Live validation: fixed rerun `medgen_11c3fe4fcafe4eb9b55ca49abcff8f35`
+  submitted to
+  `https://grok.com/imagine/post/25687eca-0bab-464b-8381-cf6e12296405`,
+  observed pending and then `video_visible` at poll 3, cached one
+  `grok-imagine-video-1.mp4` artifact with `materialization =
+  download-button`, and generic run status agreed on `succeeded`; file size is
+  `3,248,027` bytes and post-run browser inspection kept the Grok tab on the
+  submitted post URL.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/workbenchCapabilities.test.ts tests/mediaGeneration.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`

@@ -709,6 +709,37 @@ function buildGrokImagineVideoModeAuditUpdateExpression(): string {
   })()`;
 }
 
+async function waitForGrokImagineModeControls(Runtime: ChromeClient['Runtime']): Promise<void> {
+  await waitForPredicate(
+    Runtime,
+    `(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const isVisible = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const style = window.getComputedStyle(node);
+        const rect = node.getBoundingClientRect();
+        return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
+      };
+      const controls = Array.from(document.querySelectorAll('[role="radio"], button'))
+        .filter((node) => node instanceof HTMLElement)
+        .filter(isVisible)
+        .map((node) => ({
+          text: normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('title') || ''),
+          checked: normalize(node.getAttribute('aria-checked') || '') || null,
+          disabled: Boolean(node.disabled) || normalize(node.getAttribute('aria-disabled') || '') === 'true',
+        }))
+        .filter((entry) => entry.text === 'Image' || entry.text === 'Video');
+      const hasImage = controls.some((entry) => entry.text === 'Image');
+      const hasVideo = controls.some((entry) => entry.text === 'Video' && !entry.disabled);
+      return hasImage && hasVideo ? { controls } : null;
+    })()`,
+    {
+      timeoutMs: 8000,
+      description: 'Grok Imagine mode controls ready',
+    },
+  ).catch(() => undefined);
+}
+
 async function performGrokImagineDiscoveryAction(
   Runtime: ChromeClient['Runtime'],
   action: BrowserProviderListOptions['discoveryAction'],
@@ -2147,6 +2178,9 @@ export function createGrokAdapter(): Pick<
               description: 'Grok feature signature entrypoint route',
             },
           ).catch(() => undefined);
+        }
+        if (options?.discoveryAction === 'grok-imagine-video-mode') {
+          await waitForGrokImagineModeControls(client.Runtime);
         }
         const discoveryAction = await performGrokImagineDiscoveryAction(
           client.Runtime,
