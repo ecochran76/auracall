@@ -20766,3 +20766,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`
+
+## 2026-04-24 - Grok Imagine submit-path live dogfood
+
+- Focus: validate the new submit-path timeline against the live signed-in Grok
+  browser profile with one bounded API request.
+- Result: async local API run `medgen_33cc6d83194a4beba1f91e21566472a1`
+  returned `failed` with `media_generation_no_generated_output`.
+  `submit_path_observed` reported `outcome = public_template_no_generated`,
+  `routeKind = imagine_template`, provider href
+  `https://grok.com/imagine/templates/b1d6b6a6-f21f-4a87-80cf-3e75765b5b96`,
+  `generatedImageCount = 0`, `publicGalleryImageCount = 20`, and
+  `publicGalleryVisibleTileCount = 25`.
+- Finding: the browser can be on a healthy Grok template route after the send
+  click, but the current selected surface is still public/template media rather
+  than newly generated account media. The next fix should inspect send-control
+  selection and composer acceptance before changing artifact polling.
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`

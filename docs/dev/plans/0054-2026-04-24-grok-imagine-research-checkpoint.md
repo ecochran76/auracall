@@ -126,6 +126,18 @@ existing Aura-Call media-generation contract.
   - repeated `public_template_no_generated` evidence returns prompt submission
     control to the media executor early so status can fail as
     `media_generation_no_generated_output`
+- Live submit-path dogfood on 2026-04-24 confirmed the new status path:
+  - request id: `medgen_33cc6d83194a4beba1f91e21566472a1`
+  - `submit_path_observed` reported `outcome =
+    public_template_no_generated`, `routeKind = imagine_template`, and
+    `generatedImageCount = 0`
+  - provider href was
+    `https://grok.com/imagine/templates/b1d6b6a6-f21f-4a87-80cf-3e75765b5b96`
+  - status reached terminal `failed` with
+    `media_generation_no_generated_output`
+  - first dogfood attempts exposed missing Zod schema entries for the new
+    timeline events; `src/media/schema.ts` now includes both
+    `submit_path_observed` and `no_generated_media`
 
 ## Research Findings
 
@@ -285,6 +297,8 @@ Add a browser-first Grok Imagine discovery/audit slice:
   of a generic timeout.
 - [x] Grok prompt submission emits submit-path diagnostics so operators can
   distinguish pending/generated/template/blocked post-send states.
+- [x] Live Grok submit-path dogfood records `submit_path_observed` and terminal
+  no-generated-output status through the local API status path.
 
 ## Validation Plan
 
@@ -352,6 +366,10 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - [x] Submit-path timeline coverage:
   - `tests/mediaGenerationGrokBrowserExecutor.test.ts`
   - verifies `submit_path_observed` flows through media timelines
+- [x] Bounded live Grok submit-path dogfood:
+  - returned id: `medgen_33cc6d83194a4beba1f91e21566472a1`
+  - observed `public_template_no_generated`
+  - failed durably as `media_generation_no_generated_output`
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
@@ -359,6 +377,6 @@ Add a browser-first Grok Imagine discovery/audit slice:
 ## Next Slice
 
 Keep Grok video and edit/reference workflows gated. The next browser slice
-should run one bounded live Grok dogfood with the new submit-path timeline and
-use the observed outcome to decide whether the next fix belongs in composer
-send selection, route handling, or provider capability/gating classification.
+should inspect Grok Imagine composer/send selection on the live route and
+verify whether Aura-Call is clicking the intended submit control or a template
+reuse/generation-mode control before changing artifact polling.

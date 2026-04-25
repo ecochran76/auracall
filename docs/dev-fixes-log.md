@@ -1,3 +1,10 @@
+- 2026-04-24: Keep timeline event type unions and Zod schemas in lockstep.
+  Adding `submit_path_observed` and `no_generated_media` only to TypeScript
+  types let unit executors pass but crashed `api serve` when it persisted live
+  media timelines. Any new timeline event must update `src/media/types.ts`,
+  `src/media/schema.ts`, and at least one service-level persistence test or
+  live dogfood before handoff.
+
 - 2026-04-24: Grok Imagine prompt submission needs a separate submit-path
   milestone before artifact polling. `send_attempted` only proves Aura-Call
   clicked a candidate control; it does not prove the workbench accepted a new
