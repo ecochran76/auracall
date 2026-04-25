@@ -128,7 +128,7 @@ async function executeGrokBrowserMediaGeneration(
     );
   }
   if (request.mediaType === 'video') {
-    return executeGrokBrowserVideoSkeleton(input);
+    return executeGrokBrowserVideoSkeleton(input, userConfig);
   }
   if (request.mediaType !== 'image') {
     throw new MediaGenerationExecutionError(
@@ -265,7 +265,8 @@ async function executeGrokBrowserMediaGeneration(
 
 async function executeGrokBrowserVideoSkeleton(
   input: MediaGenerationExecutorInput,
-): Promise<never> {
+  userConfig: ResolvedUserConfig,
+): Promise<{ artifacts: MediaGenerationArtifact[]; model?: string | null; metadata?: Record<string, unknown> | null }> {
   const audit = extractGrokVideoModeAudit(input.workbenchCapability?.metadata);
   await input.emitTimeline?.({
     event: 'capability_selected',
@@ -302,6 +303,9 @@ async function executeGrokBrowserVideoSkeleton(
       selectedGeneratedMediaCount: numberOrZero(audit?.selectedGeneratedMediaCount),
     },
   });
+  if (isGrokVideoReadbackProbeEnabled(input.request.metadata)) {
+    return executeGrokBrowserVideoReadbackProbe(input, userConfig);
+  }
   throw new MediaGenerationExecutionError(
     'media_provider_not_implemented',
     'Grok browser video generation has a pre-submit executor skeleton, but post-submit run-state and artifact materialization acceptance criteria are not implemented yet.',
@@ -315,6 +319,89 @@ async function executeGrokBrowserVideoSkeleton(
       videoModeAudit: audit,
     },
   );
+}
+
+async function executeGrokBrowserVideoReadbackProbe(
+  input: MediaGenerationExecutorInput,
+  userConfig: ResolvedUserConfig,
+): Promise<{ artifacts: MediaGenerationArtifact[]; model?: string | null; metadata?: Record<string, unknown> | null }> {
+  const tabTargetId = normalizeNonEmpty(input.request.metadata?.grokVideoReadbackTabTargetId);
+  const tabUrl = normalizeNonEmpty(input.request.metadata?.grokVideoReadbackTabUrl) ?? GROK_IMAGINE_URL;
+  if (!tabTargetId) {
+    throw new MediaGenerationExecutionError(
+      'media_generation_readback_failed',
+      'Grok browser video readback probe requires metadata.grokVideoReadbackTabTargetId for an existing submitted tab.',
+      {
+        provider: 'grok',
+        transport: input.request.transport ?? null,
+        mediaType: 'video',
+        capabilityId: GROK_VIDEO_CAPABILITY_ID,
+        readbackProbe: true,
+      },
+    );
+  }
+  const timeoutMs = resolveMediaTimeoutMs(input.request.metadata);
+  const client = await BrowserAutomationClient.fromConfig(userConfig, { target: 'grok' });
+  const readback = await waitForGrokImagineTerminalVideoReadback(
+    client,
+    tabTargetId,
+    tabUrl,
+    input.request.metadata,
+    timeoutMs,
+    input.emitTimeline,
+  );
+  if (!readback.materializationCandidate) {
+    throw new MediaGenerationExecutionError(
+      'media_generation_artifact_materialization_failed',
+      'Grok browser video readback reached ready state without a materialization candidate.',
+      {
+        tabUrl,
+        tabTargetId,
+        capabilityId: GROK_VIDEO_CAPABILITY_ID,
+        readbackProbe: true,
+      },
+    );
+  }
+  const artifact = await materializeGrokVideoCandidate(readback.materializationCandidate, input.artifactDir, 1);
+  if (!artifact) {
+    throw new MediaGenerationExecutionError(
+      'media_generation_artifact_materialization_failed',
+      'Grok browser video readback found a generated video candidate, but it could not be materialized.',
+      {
+        tabUrl,
+        tabTargetId,
+        capabilityId: GROK_VIDEO_CAPABILITY_ID,
+        readbackProbe: true,
+        materializationCandidate: readback.materializationCandidate,
+      },
+    );
+  }
+  await input.emitTimeline?.({
+    event: 'artifact_materialized',
+    details: {
+      providerArtifactId: artifact.id,
+      path: artifact.path ?? null,
+      uri: artifact.uri ?? null,
+      mimeType: artifact.mimeType ?? null,
+      materialization: artifact.metadata?.materialization ?? null,
+      materializationSource: artifact.metadata?.materializationSource ?? null,
+    },
+  });
+  return {
+    artifacts: [artifact],
+    model: input.request.model ?? null,
+    metadata: {
+      executor: 'grok-browser',
+      capabilityId: GROK_VIDEO_CAPABILITY_ID,
+      tabUrl,
+      tabTargetId,
+      readbackProbe: true,
+      runState: readback.runState,
+      artifactPollCount: readback.pollCount,
+      generatedArtifactCount: 1,
+      materializationCandidateSource: readback.materializationCandidate.source,
+    },
+  };
 }
 
 async function waitForGrokImagineTerminalImage(
@@ -935,6 +1022,10 @@ function resolveVisibleTileMaterializationLimit(metadata: Record<string, unknown
     return Math.max(1, Math.min(candidate, 24));
   }
   return 12;
+}
+
+function isGrokVideoReadbackProbeEnabled(metadata: Record<string, unknown> | null | undefined): boolean {
+  return metadata?.grokVideoReadbackProbe === true;
 }
 
 function mapGrokFileToMediaArtifact(file: FileRef, ordinal: number): MediaGenerationArtifact {

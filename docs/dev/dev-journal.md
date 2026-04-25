@@ -1,3 +1,20 @@
+## 2026-04-24 - Grok video disabled readback probe
+
+- Current focus:
+  - wire Grok video readback primitives into an explicitly disabled executor
+    branch without enabling live video Submit
+- Progress:
+  - Grok browser video still emits pre-submit context and stops for normal
+    callers before prompt insertion or Submit
+  - added `metadata.grokVideoReadbackProbe = true` plus
+    `metadata.grokVideoReadbackTabTargetId` as a diagnostic-only path that
+    polls an existing tab target, emits `run_state_observed`/`video_visible`,
+    and materializes a generated video candidate
+  - the probe branch never calls `runPrompt` and does not navigate or reload
+    the provider page
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+
 ## 2026-04-24 - Grok video wait-loop skeleton
 
 - Current focus:

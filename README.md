@@ -179,7 +179,10 @@ Terminology note:
     request Grok browser video, but it currently stops before prompt insertion
     after recording Video-mode pre-submit evidence; video Submit remains gated
     until post-submit terminal-video and materialization criteria are wired to
-    the executor. Operators can poll the generic
+    the executor. A diagnostic-only Grok video readback probe exists for
+    already-submitted tabs when metadata explicitly provides
+    `grokVideoReadbackProbe = true` and `grokVideoReadbackTabTargetId`; it
+    does not submit, navigate, or reload. Operators can poll the generic
     `GET /v1/runs/{run_id}/status` surface for response/team chats and media
     jobs. Media jobs also retain the narrower
     `GET /v1/media-generations/{media_generation_id}/status` for a compact

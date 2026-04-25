@@ -238,6 +238,14 @@ existing Aura-Call media-generation contract.
     materialization source metadata
   - the executor remains pre-submit gated until these primitives are wired to
     a real post-submit path
+- Grok video readback primitives are now wired to a disabled executor branch:
+  - normal callers still stop before prompt insertion or Submit
+  - the diagnostic branch requires `metadata.grokVideoReadbackProbe = true`
+    and an existing `metadata.grokVideoReadbackTabTargetId`
+  - the branch polls that existing tab, emits the normal media timeline, and
+    can materialize a generated video artifact
+  - the branch never calls `runPrompt`, navigates, reloads, or opens a new
+    Grok route
 
 ## Research Findings
 
@@ -412,6 +420,9 @@ Add a browser-first Grok Imagine discovery/audit slice:
   Submit.
 - [x] Grok video wait-loop and remote materialization primitives are covered
   by fixture tests and do not invoke prompt submission or route navigation.
+- [x] Grok video readback primitives are wired to a diagnostic-only executor
+  branch behind explicit metadata, while normal callers remain pre-submit
+  gated.
 
 ## Validation Plan
 
@@ -523,6 +534,10 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - validates existing-tab polling through `getFeatureSignature`,
     no-`runPrompt` behavior, `video_visible`, remote `video/mp4`
     materialization, and terminal missing-candidate failure
+- [x] Unit test for the disabled Grok video executor readback probe:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - validates explicit metadata opt-in, existing-tab polling, no `runPrompt`,
+    timeline/status shape, `video_visible`, and artifact materialization
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
@@ -530,6 +545,6 @@ Add a browser-first Grok Imagine discovery/audit slice:
 ## Next Slice
 
 Keep Grok video and edit/reference workflows gated. The next browser slice
-should wire these primitives to a disabled executor branch behind an explicit
-metadata flag, then validate the timeline/status shape without allowing normal
-callers to click live Grok video Submit.
+should add a read-only live probe runbook for inspecting an already-submitted
+manual Grok video tab, then use one bounded human-started run to validate
+status/readback without letting Aura-Call click video Submit.

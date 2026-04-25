@@ -1,3 +1,9 @@
+- 2026-04-24: Diagnostic video readback must require an explicit existing-tab
+  contract. For Grok Imagine video, any executor branch that exercises
+  post-submit polling before live Submit is enabled must require metadata such
+  as `grokVideoReadbackProbe = true` and `grokVideoReadbackTabTargetId`, and
+  it must not call `runPrompt`, navigate, or reload.
+
 - 2026-04-24: Keep volatile video polling tab-scoped and no-navigation.
   Grok Imagine video readback should poll the already submitted tab target via
   `getFeatureSignature`, emit timeline events from normalized readback
