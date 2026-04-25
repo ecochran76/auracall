@@ -1,3 +1,22 @@
+## 2026-04-24 - Grok video wait-loop skeleton
+
+- Current focus:
+  - add fixture-backed Grok video polling and materialization primitives
+    without enabling live Grok video Submit
+- Progress:
+  - added a no-navigation terminal-video wait loop that polls an existing
+    tab target through `getFeatureSignature`, emits `run_state_observed`, and
+    emits `video_visible` only when generated video evidence is ready
+  - added remote video candidate materialization to the media artifact cache
+    with `type = video`, `video/mp4` defaults, source metadata, and selected
+    state
+  - fixture tests cover pending-to-ready polling, no `runPrompt` submission,
+    terminal materialization, and terminal generated video without a
+    materialization candidate
+  - Grok browser video remains gated before prompt insertion or Submit
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+
 ## 2026-04-24 - Grok video readback skeleton
 
 - Current focus:

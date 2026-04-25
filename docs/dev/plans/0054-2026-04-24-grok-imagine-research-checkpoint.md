@@ -228,6 +228,16 @@ existing Aura-Call media-generation contract.
     entries, selected generated video tiles, or visible download/open controls
   - the helper is not yet called after a live Submit; the executor remains
     pre-submit gated
+- Grok video polling and remote materialization now have fixture-backed
+  primitives:
+  - the wait loop polls only an existing tab target through
+    `getFeatureSignature` and does not navigate, reload, or submit
+  - pending evidence continues polling, ready evidence emits `video_visible`,
+    and failed evidence maps to media-generation failure codes
+  - generated video candidates can be cached as `type = video` artifacts with
+    materialization source metadata
+  - the executor remains pre-submit gated until these primitives are wired to
+    a real post-submit path
 
 ## Research Findings
 
@@ -400,6 +410,8 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - [x] Grok video readback decisions produce reusable timeline payloads and
   materialization candidate selection from fixture evidence without enabling
   Submit.
+- [x] Grok video wait-loop and remote materialization primitives are covered
+  by fixture tests and do not invoke prompt submission or route navigation.
 
 ## Validation Plan
 
@@ -506,6 +518,11 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - validates pending/progress, terminal ready, public-template failure,
     missing-materialization failure, selected-tile candidate selection, and
     future `video_visible` timeline payloads
+- [x] Unit test for Grok video polling/materialization primitives:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - validates existing-tab polling through `getFeatureSignature`,
+    no-`runPrompt` behavior, `video_visible`, remote `video/mp4`
+    materialization, and terminal missing-candidate failure
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
@@ -513,6 +530,6 @@ Add a browser-first Grok Imagine discovery/audit slice:
 ## Next Slice
 
 Keep Grok video and edit/reference workflows gated. The next browser slice
-should add the private wait-loop/materialization function that consumes the
-readback helper, still fixture-tested first, before any live video Submit click
-is enabled.
+should wire these primitives to a disabled executor branch behind an explicit
+metadata flag, then validate the timeline/status shape without allowing normal
+callers to click live Grok video Submit.

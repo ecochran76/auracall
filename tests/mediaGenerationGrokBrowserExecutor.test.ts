@@ -287,6 +287,142 @@ describe('Grok browser media generation executor', () => {
     });
   });
 
+  it('polls fixture-backed Grok video readback and materializes a terminal candidate without submitting', async () => {
+    const {
+      materializeGrokVideoCandidate,
+      waitForGrokImagineTerminalVideoReadback,
+    } = await import('../src/media/grokBrowserExecutor.js');
+    const artifactDir = '/tmp/auracall-grok-video-media-artifacts';
+    browserClient.getFeatureSignature
+      .mockResolvedValueOnce(JSON.stringify({
+        imagine: {
+          href: 'https://grok.com/imagine',
+          run_state: 'progress',
+          pending: false,
+          terminal_video: false,
+          media: { videos: [], visible_tiles: [], urls: [] },
+        },
+      }))
+      .mockResolvedValueOnce(JSON.stringify({
+        imagine: {
+          href: 'https://grok.com/imagine',
+          run_state: 'terminal_video',
+          pending: false,
+          terminal_video: true,
+          media: {
+            videos: [{
+              kind: 'video',
+              src: 'https://assets.grok.com/users/test/generated/video-2.mp4',
+              generated: true,
+              selected: true,
+            }],
+            visible_tiles: [],
+            urls: ['https://assets.grok.com/users/test/generated/video-2.mp4'],
+          },
+        },
+      }));
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      headers: {
+        get: (name: string) => name.toLowerCase() === 'content-type' ? 'video/mp4' : null,
+      },
+      arrayBuffer: async () => Buffer.from('fake grok video bytes').buffer,
+    })));
+
+    const timelineEvents: string[] = [];
+    const readback = await waitForGrokImagineTerminalVideoReadback(
+      browserClient,
+      'grok-video-tab-1',
+      'https://grok.com/imagine',
+      { artifactPollIntervalMs: 1 },
+      30000,
+      (event) => {
+        timelineEvents.push(event.event);
+      },
+    );
+    const artifact = await materializeGrokVideoCandidate(readback.materializationCandidate!, artifactDir, 1);
+
+    expect(browserClient.runPrompt).not.toHaveBeenCalled();
+    expect(browserClient.getFeatureSignature).toHaveBeenCalledWith({
+      configuredUrl: 'https://grok.com/imagine',
+      tabUrl: 'https://grok.com/imagine',
+      tabTargetId: 'grok-video-tab-1',
+      preserveActiveTab: true,
+    });
+    expect(browserClient.getFeatureSignature).toHaveBeenCalledTimes(2);
+    expect(timelineEvents).toEqual([
+      'run_state_observed',
+      'run_state_observed',
+      'video_visible',
+    ]);
+    expect(readback).toMatchObject({
+      decision: 'ready',
+      pollCount: 2,
+      materializationCandidate: {
+        source: 'generated-video',
+        remoteUrl: 'https://assets.grok.com/users/test/generated/video-2.mp4',
+      },
+    });
+    expect(artifact).toMatchObject({
+      id: 'grok_imagine_video_1',
+      type: 'video',
+      mimeType: 'video/mp4',
+      fileName: 'grok-imagine-video-1.mp4',
+      path: path.join(artifactDir, 'grok-imagine-video-1.mp4'),
+      metadata: {
+        remoteUrl: 'https://assets.grok.com/users/test/generated/video-2.mp4',
+        materialization: 'remote-media-fetch',
+        materializationSource: 'generated-video',
+        selected: true,
+      },
+    });
+  });
+
+  it('fails fixture-backed Grok video readback when terminal video has no materialization candidate', async () => {
+    const { waitForGrokImagineTerminalVideoReadback } = await import('../src/media/grokBrowserExecutor.js');
+    browserClient.getFeatureSignature.mockResolvedValueOnce(JSON.stringify({
+      imagine: {
+        href: 'https://grok.com/imagine',
+        run_state: 'terminal_video',
+        pending: false,
+        terminal_video: true,
+        media: {
+          videos: [{
+            kind: 'video',
+            src: '',
+            generated: true,
+            selected: true,
+          }],
+          visible_tiles: [],
+          urls: [],
+        },
+      },
+    }));
+
+    const timelineEvents: string[] = [];
+    await expect(waitForGrokImagineTerminalVideoReadback(
+      browserClient,
+      'grok-video-tab-2',
+      'https://grok.com/imagine',
+      { artifactPollIntervalMs: 1 },
+      30000,
+      (event) => {
+        timelineEvents.push(event.event);
+      },
+    )).rejects.toMatchObject({
+      code: 'media_generation_artifact_materialization_failed',
+      details: {
+        decision: 'failed',
+        failureReason: 'terminal_video_without_materialization_candidate',
+        terminalVideo: true,
+        materializationCandidateCount: 0,
+      },
+    });
+
+    expect(browserClient.runPrompt).not.toHaveBeenCalled();
+    expect(timelineEvents).toEqual(['run_state_observed']);
+  });
+
   it('submits through the guarded Imagine path and materializes terminal image evidence', async () => {
     const { createGrokBrowserMediaGenerationExecutor } = await import('../src/media/grokBrowserExecutor.js');
     const artifactDir = '/tmp/auracall-grok-media-artifacts';

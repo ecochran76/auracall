@@ -1,3 +1,9 @@
+- 2026-04-24: Keep volatile video polling tab-scoped and no-navigation.
+  Grok Imagine video readback should poll the already submitted tab target via
+  `getFeatureSignature`, emit timeline events from normalized readback
+  decisions, and materialize only generated-account video candidates. Do not
+  reload or re-open provider routes while a generated media request is active.
+
 - 2026-04-24: Keep video readback decisions reusable before wiring Submit.
   For Grok Imagine video, one provider feature signature should produce the
   same timeline details, terminal `video_visible` payload, failure reason, and

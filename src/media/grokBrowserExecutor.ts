@@ -653,6 +653,98 @@ export function selectGrokImagineVideoMaterializationCandidate(
   return null;
 }
 
+export async function waitForGrokImagineTerminalVideoReadback(
+  client: Pick<BrowserAutomationClient, 'getFeatureSignature'>,
+  tabTargetId: string,
+  tabUrl: string,
+  metadata: Record<string, unknown> | null | undefined,
+  timeoutMs: number,
+  emitTimeline: MediaGenerationExecutorInput['emitTimeline'],
+): Promise<GrokImagineVideoReadbackEvaluation> {
+  const pollIntervalMs = resolveArtifactPollIntervalMs(metadata);
+  const deadline = Date.now() + timeoutMs;
+  let pollCount = 0;
+  let lastEvaluation: GrokImagineVideoReadbackEvaluation | null = null;
+  while (Date.now() <= deadline) {
+    pollCount += 1;
+    const signature = await client.getFeatureSignature({
+      configuredUrl: tabUrl,
+      tabUrl,
+      tabTargetId,
+      preserveActiveTab: true,
+    });
+    const evaluation = evaluateGrokImagineVideoPostSubmitReadback(signature, pollCount);
+    lastEvaluation = evaluation;
+    await emitTimeline?.(evaluation.runStateTimelineEvent);
+    if (evaluation.decision === 'ready') {
+      if (evaluation.terminalTimelineEvent) {
+        await emitTimeline?.(evaluation.terminalTimelineEvent);
+      }
+      return evaluation;
+    }
+    if (evaluation.decision === 'failed') {
+      throw createGrokVideoReadbackFailure(evaluation, tabUrl, timeoutMs);
+    }
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) break;
+    await new Promise((resolve) => setTimeout(resolve, Math.min(pollIntervalMs, remainingMs)));
+  }
+  throw new MediaGenerationExecutionError(
+    'media_generation_provider_timeout',
+    'Grok browser video generation submitted successfully, but no terminal generated video appeared before the timeout.',
+    {
+      timeoutMs,
+      pollCount,
+      tabUrl,
+      lastDecision: lastEvaluation?.decision ?? null,
+      lastRunState: lastEvaluation?.runState ?? null,
+      generatedVideoCount: lastEvaluation?.generatedVideoCount ?? null,
+      selectedGeneratedVideoCount: lastEvaluation?.selectedGeneratedVideoCount ?? null,
+      materializationCandidateCount: lastEvaluation?.materializationCandidateCount ?? null,
+      providerHref: lastEvaluation?.providerHref ?? null,
+    },
+  );
+}
+
+export async function materializeGrokVideoCandidate(
+  candidate: GrokImagineVideoMaterializationCandidate,
+  artifactDir: string,
+  ordinal: number,
+): Promise<MediaGenerationArtifact | null> {
+  const remoteUrl = normalizeNonEmpty(candidate.remoteUrl);
+  if (!remoteUrl || remoteUrl.startsWith('blob:') || remoteUrl.startsWith('data:')) {
+    return null;
+  }
+  const response = await fetch(remoteUrl);
+  if (!response.ok) {
+    return null;
+  }
+  const mimeType = response.headers.get('content-type')?.split(';')[0]?.trim() ||
+    candidate.mimeType ||
+    'video/mp4';
+  const extension = resolveVideoExtension(mimeType, remoteUrl);
+  const fileName = `grok-imagine-video-${ordinal}.${extension}`;
+  const filePath = path.join(artifactDir, fileName);
+  const bytes = Buffer.from(await response.arrayBuffer());
+  await fs.mkdir(artifactDir, { recursive: true });
+  await fs.writeFile(filePath, bytes);
+  return {
+    id: `grok_imagine_video_${ordinal}`,
+    type: 'video',
+    mimeType,
+    fileName,
+    path: filePath,
+    uri: `file://${filePath}`,
+    metadata: {
+      providerArtifactId: `grok_imagine_video_${ordinal}`,
+      remoteUrl,
+      materialization: 'remote-media-fetch',
+      materializationSource: candidate.source,
+      selected: candidate.selected,
+    },
+  };
+}
+
 function parseGrokImagineSignatureObject(signature: string | null | undefined): {
   imagine: Record<string, unknown>;
   media: Record<string, unknown>;
@@ -712,6 +804,52 @@ function mapGrokVideoMaterializationCandidate(
     mimeType: normalizeNonEmpty(entry.mimeType) ?? normalizeNonEmpty(entry.mime_type) ?? 'video/mp4',
     selected: Boolean(entry.selected),
   };
+}
+
+function createGrokVideoReadbackFailure(
+  evaluation: GrokImagineVideoReadbackEvaluation,
+  tabUrl: string,
+  timeoutMs: number,
+): MediaGenerationExecutionError {
+  const details = {
+    ...evaluation.timelineDetails,
+    tabUrl,
+    timeoutMs,
+  };
+  if (evaluation.failureReason === 'account_gated' || evaluation.failureReason === 'blocked') {
+    return new MediaGenerationExecutionError(
+      'media_generation_provider_blocked',
+      `Grok Imagine reported ${evaluation.failureReason} after video prompt submission.`,
+      details,
+    );
+  }
+  if (evaluation.failureReason === 'terminal_public_template_without_generated_video') {
+    return new MediaGenerationExecutionError(
+      'media_generation_no_generated_output',
+      'Grok Imagine reached a public/template video surface after submission, but no generated account video appeared.',
+      details,
+    );
+  }
+  if (evaluation.failureReason === 'terminal_video_without_materialization_candidate') {
+    return new MediaGenerationExecutionError(
+      'media_generation_artifact_materialization_failed',
+      'Grok Imagine reached terminal generated video state, but no video materialization candidate was available.',
+      details,
+    );
+  }
+  return new MediaGenerationExecutionError(
+    'media_generation_provider_failed',
+    'Grok Imagine video readback failed.',
+    details,
+  );
+}
+
+function resolveVideoExtension(mimeType: string, remoteUrl: string): string {
+  const lowerMimeType = mimeType.toLowerCase();
+  const lowerUrl = remoteUrl.toLowerCase();
+  if (lowerMimeType.includes('webm') || lowerUrl.endsWith('.webm')) return 'webm';
+  if (lowerMimeType.includes('quicktime') || lowerUrl.endsWith('.mov')) return 'mov';
+  return 'mp4';
 }
 
 function isPublicGalleryGrokMediaEntry(entry: Record<string, unknown>): boolean {
