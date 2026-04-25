@@ -14244,3 +14244,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   even though the later explicit capability endpoint reports Video available.
   Wait for visible Image and enabled Video controls before running the
   `grok-imagine-video-mode` discovery action.
+- 2026-04-25: Media status should expose the operational path it already
+  persisted. In this repo, Grok media troubleshooting required jumping between
+  timeline events, generic run status, and browser-tools inspection to answer
+  basic questions: which capability passed, which tab was submitted, which
+  provider route became authoritative, what run-state evidence won, and how the
+  artifact was materialized. Derive a compact status `diagnostics` block from
+  persisted timeline events so API/MCP/CLI callers can inspect those answers
+  without re-invoking the provider or taking a live browser snapshot.

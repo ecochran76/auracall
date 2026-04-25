@@ -97,6 +97,7 @@ const mediaGenerationStatusOutputShape = {
   timeline: z.array(mediaGenerationTimelineEventShape),
   artifactCount: z.number().int().nonnegative(),
   artifacts: z.array(mediaGenerationStatusArtifactShape),
+  diagnostics: z.unknown().optional(),
   browserDiagnostics: z.unknown().optional(),
   failure: z
     .object({

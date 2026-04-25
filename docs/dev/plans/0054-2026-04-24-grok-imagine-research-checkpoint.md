@@ -692,6 +692,14 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - `stat` confirmed a `3,248,027` byte artifact
   - post-run `browser-tools inspect` confirmed the Grok tab stayed on the
     submitted `/imagine/post/...` URL
+- [x] Media status now includes persisted-path diagnostics:
+  - `media_generation_status` derives capability preflight, submitted tab,
+    provider route progression, latest run-state counts, and materialization
+    source from stored timeline events
+  - generic `run_status` for media jobs carries the same media diagnostics in
+    metadata, so callers can use one route-neutral status surface
+  - this does not run browser probes, navigate, reload, or reattach to the
+    provider
 - [x] API/MCP/status media regression tests:
   - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
 - [x] `pnpm run check`
@@ -701,6 +709,5 @@ Add a browser-first Grok Imagine discovery/audit slice:
 
 ## Next Slice
 
-Keep Grok edit/reference workflows gated. The next browser slice should harden
-operator status diagnostics for Grok media runs and then move the same
-browser-first pattern to the next media parity gap.
+Keep Grok edit/reference workflows gated. The next browser slice should move
+the same browser-first pattern to the next media parity gap.

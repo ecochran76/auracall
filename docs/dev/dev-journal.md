@@ -21126,3 +21126,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`
+
+## 2026-04-25 - Media status path diagnostics
+
+- Focus: make Grok media status actionable without requiring separate
+  browser-tools inspection for routine questions.
+- Progress: `media_generation_status` now derives a compact `diagnostics`
+  block from persisted timeline events: capability preflight, submitted tab,
+  provider route progression, latest run-state counts, and materialization
+  source. Generic `run_status` for media jobs carries the same data under
+  `metadata.mediaDiagnostics`.
+- Validation:
+  - `pnpm vitest run tests/mediaStatusSummary.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mediaStatusSummary.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/mediaGeneration.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`

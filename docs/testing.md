@@ -241,6 +241,10 @@
       `/v1/media-generations/<id>/status` and `/v1/runs/<id>/status`; both
       should agree on terminal state, last event, artifact count, and cached
       artifact paths
+    - status `diagnostics` should summarize capability preflight, submitted
+      tab id/url, provider route progression, latest run-state counts, and
+      materialization source from the persisted timeline without requiring
+      `diagnostics=browser-state`
   - list workbench capabilities for service discovery:
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=gemini"`
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=chatgpt"`

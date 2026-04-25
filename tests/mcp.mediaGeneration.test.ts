@@ -253,6 +253,15 @@ describe('mcp media_generation tool', () => {
             remoteUrl: 'blob:https://gemini.google.com/status',
           },
         ],
+        diagnostics: {
+          provider: {
+            latestHref: null,
+            routeProgression: [],
+          },
+          materialization: {
+            materialization: null,
+          },
+        },
       },
     });
 

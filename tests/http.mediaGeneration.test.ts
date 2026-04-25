@@ -112,6 +112,14 @@ describe('http media generation adapter', () => {
         lastEvent: {
           event: 'completed',
         },
+        diagnostics: {
+          capability: {
+            id: null,
+          },
+          provider: {
+            routeProgression: [],
+          },
+        },
         metadata: {
           source: 'api',
         },
@@ -149,6 +157,13 @@ describe('http media generation adapter', () => {
         ],
         lastEvent: {
           event: 'completed',
+        },
+        metadata: {
+          mediaDiagnostics: {
+            capability: {
+              id: null,
+            },
+          },
         },
       });
 

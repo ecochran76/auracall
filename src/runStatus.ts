@@ -123,7 +123,10 @@ function summarizeMediaRunStatus(summary: MediaGenerationStatusSummary): AuraCal
       mimeType: artifact.mimeType ?? null,
       materialization: artifact.materialization ?? null,
     })),
-    metadata: summary.metadata,
+    metadata: {
+      ...summary.metadata,
+      mediaDiagnostics: summary.diagnostics,
+    },
     failure: summary.failure ?? null,
   };
 }
