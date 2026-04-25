@@ -1,3 +1,11 @@
+- 2026-04-24: Scope Grok Imagine prompt submission to the composer form and
+  wait for submit enablement after ProseMirror input. Broad control labels such
+  as `go` or `arrow` can match public template cards like `Go Skiing` instead
+  of the workbench submit button, and immediate post-insert clicks can race the
+  disabled-to-enabled transition. The submit path should require the visible
+  composer form and an enabled `type = submit` or explicit
+  submit/send/generate/create aria/title control.
+
 - 2026-04-24: Keep timeline event type unions and Zod schemas in lockstep.
   Adding `submit_path_observed` and `no_generated_media` only to TypeScript
   types let unit executors pass but crashed `api serve` when it persisted live

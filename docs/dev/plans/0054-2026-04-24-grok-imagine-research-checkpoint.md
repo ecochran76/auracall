@@ -138,6 +138,22 @@ existing Aura-Call media-generation contract.
   - first dogfood attempts exposed missing Zod schema entries for the new
     timeline events; `src/media/schema.ts` now includes both
     `submit_path_observed` and `no_generated_media`
+- The composer/send audit confirmed the previous live failure was selector
+  drift, not an account gate:
+  - the live `/imagine/templates/...` DOM included a visible `Go Skiing`
+    template card that matched the old broad `go` send-control heuristic
+  - submit selection is now scoped to the composer form and only accepts an
+    enabled `type = submit` or explicit submit/send/generate/create
+    aria/title/text control
+  - after prompt insertion, the executor waits briefly for Grok to enable the
+    form submit button before clicking
+  - request id `medgen_68d57594cbe94fbc853f8e9ea2a3466c` reproduced the
+    enablement race: prompt inserted, later DOM showed enabled `Submit`, but
+    the earlier click attempt failed with `composer submit control not found`
+  - request id `medgen_60f410b013da4e3480b57f1f3072d93f` then succeeded with
+    `send_attempted.ok = true`, `label = submit`,
+    `submit_path_observed.outcome = generated_media`, and four cached
+    artifacts
 
 ## Research Findings
 
@@ -370,6 +386,12 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - returned id: `medgen_33cc6d83194a4beba1f91e21566472a1`
   - observed `public_template_no_generated`
   - failed durably as `media_generation_no_generated_output`
+- [x] Bounded live Grok composer-submit dogfood:
+  - initial reproduction id:
+    `medgen_68d57594cbe94fbc853f8e9ea2a3466c`
+  - fixed validation id: `medgen_60f410b013da4e3480b57f1f3072d93f`
+  - timeline observed `send_attempted.ok = true`, `label = submit`,
+    `generated_media`, and four artifacts
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
@@ -377,6 +399,7 @@ Add a browser-first Grok Imagine discovery/audit slice:
 ## Next Slice
 
 Keep Grok video and edit/reference workflows gated. The next browser slice
-should inspect Grok Imagine composer/send selection on the live route and
-verify whether Aura-Call is clicking the intended submit control or a template
-reuse/generation-mode control before changing artifact polling.
+should exercise one more durable API/MCP status readback against the now-fixed
+Grok Imagine image path, then move to bounded Grok video discovery without
+submitting video generation until its composer, filmstrip, and download
+semantics are separately mapped.

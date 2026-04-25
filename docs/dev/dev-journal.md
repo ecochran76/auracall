@@ -1,3 +1,31 @@
+## 2026-04-24 - Grok Imagine composer submit control
+
+- Current focus:
+  - verify Grok Imagine browser image runs click the real composer submit
+    control instead of template/gallery controls
+- Progress:
+  - audited the live `/imagine/templates/...` DOM and confirmed the previous
+    broad submit selector could match the visible `Go Skiing` template card
+    because it accepted `go`
+  - scoped Grok Imagine submit-control selection to the composer form, removed
+    broad `go`/`arrow` matching, and excluded upload/saved/sidebar/history
+    controls
+  - added a short submit-ready wait after ProseMirror prompt insertion so the
+    executor does not race Grok's enablement of the form submit button
+  - live local API dogfood first reproduced the race with
+    `medgen_68d57594cbe94fbc853f8e9ea2a3466c`: the prompt was inserted, the
+    page later showed an enabled `Submit` button, but `send_attempted` had
+    already failed with `composer submit control not found`
+  - the follow-up live request
+    `medgen_60f410b013da4e3480b57f1f3072d93f` succeeded with four artifacts;
+    timeline evidence shows `send_attempted.ok = true`, `label = submit`,
+    `submit_path_observed.outcome = generated_media`, and
+    `generatedImageCount = 4`
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - bounded live local API Grok browser image request with `wait=false`
+
 ## 2026-04-24 - Grok Imagine durable API/MCP status path
 
 - Current focus:

@@ -748,13 +748,35 @@ async function submitGrokImaginePrompt(Runtime: ChromeClient['Runtime']): Promis
         return rect.width > 0 && rect.height > 0;
       };
       const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
-      const controls = Array.from(document.querySelectorAll('main button, main [role="button"], button, [role="button"]'))
+      const composerInputs = Array.from(document.querySelectorAll('main textarea, main [contenteditable="true"], textarea, [contenteditable="true"]'))
+        .filter(visible);
+      const composer = composerInputs.find((node) => {
+        const label = normalize([node.getAttribute('aria-label'), node.getAttribute('placeholder'), node.textContent, node.querySelector('[data-placeholder]')?.getAttribute('data-placeholder')].filter(Boolean).join(' '));
+        return /prompt|describe|imagine|create|message|ask|type/.test(label);
+      }) || composerInputs[0] || null;
+      const composerForm = composer?.closest?.('form') || null;
+      const root = composerForm || document.querySelector('main') || document;
+      const controls = Array.from(root.querySelectorAll('button, [role="button"]'))
         .filter((node) => visible(node) && !node.disabled && node.getAttribute('aria-disabled') !== 'true');
       const preferred = controls.find((node) => {
-        const label = normalize([node.textContent, node.getAttribute('aria-label'), node.getAttribute('title')].filter(Boolean).join(' '));
-        return /generate|create|submit|send|arrow|go/.test(label);
-      }) || controls.at(-1) || null;
-      if (!preferred) return { ok: false, reason: 'send control not found' };
+        const aria = normalize([node.getAttribute('aria-label'), node.getAttribute('title')].filter(Boolean).join(' '));
+        const text = normalize(node.textContent);
+        const label = normalize([text, aria].filter(Boolean).join(' '));
+        const type = normalize(node.getAttribute('type'));
+        if (/upload|attach|saved|close|share|history|sidebar|project|search/.test(label)) return false;
+        if (type === 'submit') return true;
+        if (/\\b(submit|send|generate|create)\\b/.test(aria)) return true;
+        return composerForm ? /^(submit|send|generate|create)$/.test(text) : false;
+      }) || null;
+      if (!preferred) {
+        return {
+          ok: false,
+          reason: 'composer submit control not found',
+          composerFound: Boolean(composer),
+          scopedToComposerForm: Boolean(composerForm),
+          enabledControlCount: controls.length,
+        };
+      }
       preferred.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
       preferred.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
       preferred.click();
@@ -770,6 +792,41 @@ async function submitGrokImaginePrompt(Runtime: ChromeClient['Runtime']): Promis
   return value?.ok
     ? { ok: true, label: typeof value.label === 'string' ? value.label : null }
     : { ok: false, reason: value?.reason ?? 'send click failed' };
+}
+
+async function waitForGrokImagineSubmitControl(Runtime: ChromeClient['Runtime'], timeoutMs = 5000): Promise<void> {
+  await waitForPredicate(
+    Runtime,
+    `(() => {
+      const visible = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const style = window.getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      const composer = Array.from(document.querySelectorAll('main textarea, main [contenteditable="true"], textarea, [contenteditable="true"]'))
+        .filter(visible)
+        .find((node) => {
+          const label = normalize([node.getAttribute('aria-label'), node.getAttribute('placeholder'), node.textContent, node.querySelector('[data-placeholder]')?.getAttribute('data-placeholder')].filter(Boolean).join(' '));
+          return /prompt|describe|imagine|create|message|ask|type/.test(label);
+        });
+      const form = composer?.closest?.('form') || null;
+      if (!form) return null;
+      const submit = Array.from(form.querySelectorAll('button, [role="button"]')).find((node) => {
+        if (!visible(node) || node.disabled || node.getAttribute('aria-disabled') === 'true') return false;
+        const aria = normalize([node.getAttribute('aria-label'), node.getAttribute('title')].filter(Boolean).join(' '));
+        const type = normalize(node.getAttribute('type'));
+        return type === 'submit' || /\\b(submit|send|generate|create)\\b/.test(aria);
+      });
+      return submit ? { ok: true } : null;
+    })()`,
+    {
+      timeoutMs,
+      description: 'Grok Imagine submit control ready',
+    },
+  );
 }
 
 async function waitForGrokImagineSubmittedState(
@@ -1662,6 +1719,7 @@ export function createGrokAdapter(): Pick<
             promptLength: input.prompt.length,
           },
         });
+        await waitForGrokImagineSubmitControl(client.Runtime).catch(() => undefined);
         const submitted = await submitGrokImaginePrompt(client.Runtime);
         await emitProgress({
           phase: 'send_attempted',
