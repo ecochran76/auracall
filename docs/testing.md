@@ -234,7 +234,8 @@
       gated behind explicit metadata:
       `grokVideoReadbackProbe = true` plus `grokVideoReadbackTabTargetId`;
       it must poll the existing tab only and must not submit, navigate, or
-      reload
+      reload; use `docs/grok-imagine-video-readback-runbook.md` for the
+      bounded manual live probe
     - read back the same id through both
       `/v1/media-generations/<id>/status` and `/v1/runs/<id>/status`; both
       should agree on terminal state, last event, artifact count, and cached

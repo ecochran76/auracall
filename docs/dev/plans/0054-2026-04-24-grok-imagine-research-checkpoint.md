@@ -246,6 +246,16 @@ existing Aura-Call media-generation contract.
     can materialize a generated video artifact
   - the branch never calls `runPrompt`, navigates, reloads, or opens a new
     Grok route
+- The Grok video readback probe now also bypasses service-level capability
+  preflight so the request cannot trigger `grok-imagine` entrypoint discovery
+  or the Video-mode discovery action before attaching to the existing tab.
+- The manual readback procedure is documented in
+  `docs/grok-imagine-video-readback-runbook.md`:
+  - human starts the Grok video run
+  - Aura-Call attaches to the existing DevTools tab id only
+  - status is read back through both media-generation status and generic run
+    status
+  - no Submit click, navigation, reload, or entrypoint open/reuse is allowed
 
 ## Research Findings
 
@@ -423,6 +433,11 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - [x] Grok video readback primitives are wired to a diagnostic-only executor
   branch behind explicit metadata, while normal callers remain pre-submit
   gated.
+- [x] The diagnostic Grok video readback branch bypasses service-level
+  capability preflight so no entrypoint discovery or Video-mode mode-audit
+  side effects can occur before existing-tab attachment.
+- [x] Operators have a bounded manual runbook for validating status/readback on
+  a human-submitted Grok Imagine video tab without enabling automated Submit.
 
 ## Validation Plan
 
@@ -538,13 +553,22 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
   - validates explicit metadata opt-in, existing-tab polling, no `runPrompt`,
     timeline/status shape, `video_visible`, and artifact materialization
-- `pnpm run check`
-- `pnpm run plans:audit -- --keep 54`
-- `git diff --check`
+- [x] Service-level unit test for the explicit Grok video readback probe:
+  - `pnpm vitest run tests/mediaGeneration.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - validates that `grokVideoReadbackProbe = true` skips capability preflight,
+    leaves `workbenchCapability` unset, and invokes the executor without
+    `capability_discovered`
+- [x] API/MCP/status media regression tests:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+- [x] `pnpm run check`
+- [x] `pnpm run build`
+- [x] `pnpm run plans:audit -- --keep 54`
+- [x] `git diff --check`
 
 ## Next Slice
 
-Keep Grok video and edit/reference workflows gated. The next browser slice
-should add a read-only live probe runbook for inspecting an already-submitted
-manual Grok video tab, then use one bounded human-started run to validate
-status/readback without letting Aura-Call click video Submit.
+Keep Grok video and edit/reference workflows gated. The next browser slice is
+one bounded human-started Grok Imagine video run using
+`docs/grok-imagine-video-readback-runbook.md`, then compare the media status
+and generic run-status readback before deciding whether controlled automated
+Submit can be planned.

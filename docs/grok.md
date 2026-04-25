@@ -10,8 +10,11 @@ Owner: Aura-Call CLI
 - Background runs: **not supported** by the Grok API (requests with `background: true` are rejected). Aura-Call forces foreground streaming even if `--background` is set.
 - Search tools: Grok expects `web_search`; OpenAI’s `web_search_preview` is not accepted.
 - Context: 2M token context for the current Grok 4.20 family.
-- Grok Imagine image/video generation is a separate API surface and is not yet
-  implemented in Aura-Call CLI/API/MCP media generation.
+- Grok Imagine image/video generation is a separate API surface. Aura-Call has
+  browser-backed Grok Imagine image generation and read-only video discovery;
+  automated Grok video Submit remains gated. Use
+  `docs/grok-imagine-video-readback-runbook.md` for the diagnostic
+  existing-tab video readback probe.
 
 ## Browser Automation
 

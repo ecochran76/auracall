@@ -20970,3 +20970,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`
+
+## 2026-04-24 - Grok Imagine video readback runbook guard
+
+- Focus: make the disabled Grok video readback probe safe enough for one
+  human-started live validation without exposing automated Video Submit.
+- Progress: Added a service-level bypass so explicit
+  `grokVideoReadbackProbe = true` requests skip normal Grok video capability
+  preflight. This prevents the readback probe from opening/reusing
+  `grok-imagine` or running the Video-mode discovery action before attaching
+  to the supplied existing tab id.
+- Docs: Added `docs/grok-imagine-video-readback-runbook.md` and linked it from
+  testing/manual/Grok docs plus plan 0054. The runbook keeps the operator
+  contract narrow: human submits the video, Aura-Call polls the existing tab,
+  status is read back through both media and generic run-status surfaces, and
+  bot guards stop automation.
+- Validation:
+  - `pnpm vitest run tests/mediaGeneration.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`

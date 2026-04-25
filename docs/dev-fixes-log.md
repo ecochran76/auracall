@@ -1,3 +1,10 @@
+- 2026-04-24: Existing-tab diagnostic probes must bypass capability preflight
+  when the preflight can touch provider UI. For Grok Imagine video readback,
+  `grokVideoReadbackProbe = true` must skip the normal
+  `grok-imagine`/`grok-imagine-video-mode` capability discovery path so the
+  request attaches to the supplied tab id only and cannot navigate, reload, or
+  change Image/Video mode before polling status.
+
 - 2026-04-24: Diagnostic video readback must require an explicit existing-tab
   contract. For Grok Imagine video, any executor branch that exercises
   post-submit polling before live Submit is enabled must require metadata such

@@ -537,6 +537,91 @@ describe('media generation service', () => {
       'failed',
     ]);
   });
+
+  it('skips Grok video capability preflight for explicit existing-tab readback probes', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-media-generation-grok-video-readback-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const capabilityRequests: unknown[] = [];
+    const service = createMediaGenerationService({
+      now: () => new Date('2026-04-24T12:00:00.000Z'),
+      generateId: () => 'medgen_grok_video_readback_1',
+      runtimeProfile: 'default',
+      capabilityReporter: {
+        async listCapabilities(request) {
+          capabilityRequests.push(request);
+          throw new Error('readback probes must not preflight capabilities');
+        },
+      },
+      executor: async ({ artifactDir, workbenchCapability, emitTimeline }) => {
+        await emitTimeline?.({
+          event: 'run_state_observed',
+          details: {
+            state: 'terminal_video',
+            pending: false,
+            terminalVideo: true,
+            generatedVideoCount: 1,
+          },
+        });
+        const filePath = path.join(artifactDir, 'grok-video.mp4');
+        await fs.writeFile(filePath, Buffer.from('fake grok video bytes'));
+        return {
+          model: 'grok-imagine-video',
+          artifacts: [
+            {
+              id: 'grok_video_readback_1',
+              type: 'video',
+              mimeType: 'video/mp4',
+              fileName: 'grok-video.mp4',
+              path: filePath,
+            },
+          ],
+          metadata: {
+            executorSawCapability: workbenchCapability?.id ?? null,
+          },
+        };
+      },
+    });
+
+    const created = await service.createGeneration({
+      provider: 'grok',
+      mediaType: 'video',
+      prompt: 'Manual readback probe only; do not submit.',
+      source: 'api',
+      transport: 'browser',
+      metadata: {
+        grokVideoReadbackProbe: true,
+        grokVideoReadbackTabTargetId: 'manual-tab-1',
+      },
+    });
+
+    expect(capabilityRequests).toEqual([]);
+    expect(created).toMatchObject({
+      id: 'medgen_grok_video_readback_1',
+      status: 'succeeded',
+      mediaType: 'video',
+      metadata: {
+        grokVideoReadbackProbe: true,
+        grokVideoReadbackTabTargetId: 'manual-tab-1',
+        executorSawCapability: null,
+      },
+      artifacts: [
+        {
+          id: 'grok_video_readback_1',
+          type: 'video',
+          mimeType: 'video/mp4',
+          fileName: 'grok-video.mp4',
+        },
+      ],
+    });
+    expect(created.metadata?.workbenchCapability).toBeUndefined();
+    expect(created.timeline?.map((entry) => entry.event)).toEqual([
+      'running_persisted',
+      'executor_started',
+      'run_state_observed',
+      'completed',
+    ]);
+  });
 });
 
 function createCapabilityReporter(

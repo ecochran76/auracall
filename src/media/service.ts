@@ -251,6 +251,9 @@ async function resolveMediaGenerationCapability(
   reporter: WorkbenchCapabilityReporter | null,
   runtimeProfile: string | null,
 ): Promise<WorkbenchCapability | null> {
+  if (isGrokVideoReadbackProbe(request)) {
+    return null;
+  }
   if (!reporter || request.transport !== 'browser') {
     return null;
   }
@@ -292,6 +295,13 @@ async function resolveMediaGenerationCapability(
       transport: request.transport,
     },
   );
+}
+
+function isGrokVideoReadbackProbe(request: MediaGenerationRequest): boolean {
+  return request.provider === 'grok'
+    && request.mediaType === 'video'
+    && request.transport === 'browser'
+    && request.metadata?.grokVideoReadbackProbe === true;
 }
 
 function formatProviderLabel(provider: string): string {

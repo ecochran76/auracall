@@ -38,6 +38,10 @@ Treat Windows Chrome as supplemental/manual-debug coverage for now. It should no
 
 For the post-acceptance Grok backlog, use `docs/dev/grok-remaining-crud-plan.md`. Conversation-scoped file read/list/cache parity and append-only add are now live for both project and non-project conversations; the current active slice is attachment/asset-manifest breadth beyond the visible file chips.
 
+For Grok Imagine video, do not let Aura-Call click Video Submit yet. Use
+`docs/grok-imagine-video-readback-runbook.md` to validate readback/status on a
+human-submitted existing tab with the diagnostic readback probe.
+
 ### Quick browser port smoke
 
 - `pnpm test:browser` — launches headful Chrome and checks the DevTools endpoint is reachable. Set `AURACALL_BROWSER_PORT` (or `AURACALL_BROWSER_DEBUG_PORT`) to reuse a fixed port when you’ve already opened a firewall rule.
