@@ -14363,3 +14363,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   verify the requested Image/Video radio mode on the current `/imagine` page
   and record that state in the media timeline. Do not rely on prior discovery
   or the last live run's mode.
+- 2026-04-25: Browser media live smokes need the configured service surface.
+  A bare `createMediaGenerationService()` has no workbench capability reporter
+  or browser executor and will fail with the generic provider-not-implemented
+  path without touching the browser. Use the local API server, configured
+  server service, or an explicitly wired service for operator-equivalent
+  browser dogfood.

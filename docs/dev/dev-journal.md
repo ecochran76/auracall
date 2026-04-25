@@ -21535,3 +21535,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`
+
+## 2026-04-25 - Grok Imagine image mode live proof
+
+- Focus: dogfood the pre-submit Image mode guard with one low-churn live Grok
+  image request.
+- Live validation: request `medgen_504d9872bdcc43f1a4327ea2782a1e3a`
+  submitted through local API `POST /v1/media-generations?wait=false` with
+  `provider = grok`, `mediaType = image`, `transport = browser`, and
+  `count = 1`.
+- Result: the run succeeded on tab `6088C5371BC63D7C88C9BB4A6F7DFAD4`,
+  stayed on `https://grok.com/imagine`, emitted `capability_selected` before
+  `prompt_inserted` with `mode = Image`, `selected = true`, `clicked = false`,
+  observed `image_visible` on poll 1, and cached one
+  `visible-tile-browser-capture` artifact.
+- Artifact:
+  `~/.auracall/runtime/media-generations/medgen_504d9872bdcc43f1a4327ea2782a1e3a/artifacts/grok-imagine-visible-1.jpg`
+  is `21,983` bytes.
+- Operator note: a bare `createMediaGenerationService()` smoke is intentionally
+  unconfigured and does not wire the browser capability reporter or browser
+  executor. Use the configured HTTP API path, configured server service, or an
+  explicitly wired service for live browser dogfood.
+- Validation:
+  - `curl -s 'http://127.0.0.1:18080/v1/media-generations?wait=false' ...`
+  - `curl -s 'http://127.0.0.1:18080/v1/media-generations/medgen_504d9872bdcc43f1a4327ea2782a1e3a/status'`
+  - `curl -s 'http://127.0.0.1:18080/v1/runs/medgen_504d9872bdcc43f1a4327ea2782a1e3a/status'`
+  - `pnpm tsx bin/auracall.ts run status medgen_504d9872bdcc43f1a4327ea2782a1e3a --json`

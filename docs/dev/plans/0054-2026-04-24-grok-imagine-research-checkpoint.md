@@ -218,6 +218,17 @@ existing Aura-Call media-generation contract.
   - both paths emit `capability_selected` with the observed mode controls so
     operators can tell whether the adapter clicked the sticky Image/Video
     switch
+- Low-churn live image validation on 2026-04-25 confirmed:
+  - request id `medgen_504d9872bdcc43f1a4327ea2782a1e3a`
+  - `count = 1`, `provider = grok`, `mediaType = image`,
+    `transport = browser`
+  - timeline emitted `capability_selected` at
+    `2026-04-25T18:18:18.094Z` before `prompt_inserted` at
+    `2026-04-25T18:18:18.157Z`
+  - selected mode evidence was `mode = Image`, `selected = true`, with Image
+    checked and Video unchecked
+  - submitted tab stayed on `https://grok.com/imagine`, reached
+    `image_visible` on poll 1, and cached one visible tile artifact
 - Bounded read-only video discovery has started:
   - the live `/imagine` page exposes `Image` and `Video` as visible
     `role = radio` controls, with `Image` checked and `Video` unchecked
@@ -594,6 +605,11 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
   - image and video paths emit `capability_selected` after verifying the
     requested primary mode
+- [x] Bounded live Grok browser image mode-selection proof:
+  - returned id: `medgen_504d9872bdcc43f1a4327ea2782a1e3a`
+  - timeline contained `capability_selected` with `mode = Image` before
+    `prompt_inserted`
+  - cached one `visible-tile-browser-capture` JPEG artifact
 - [x] Bounded live gated media request:
   - `POST /v1/media-generations` with `provider = grok`, `mediaType = image`,
     `transport = browser`
