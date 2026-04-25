@@ -1,3 +1,25 @@
+## 2026-04-25 - Gemini music status surface dogfood
+
+- Focus: confirm the successful Gemini music run is inspectable through public
+  status surfaces without re-opening or probing the browser.
+- Progress: generic CLI `run status`, local API
+  `/v1/runs/medgen_779d86976a8f4e9faa7f7b7e542a97a5/status`, local API
+  `/v1/media-generations/medgen_779d86976a8f4e9faa7f7b7e542a97a5/status`,
+  MCP `run_status`, and MCP `media_generation_status` all read the persisted
+  `succeeded` state with `artifactCount = 2`. Each surface preserved the
+  cached MP4-with-art artifact
+  `Midnight_at_the_Harbor.mp4` with `downloadVariant =
+  video_with_album_art` and the cached MP3 artifact
+  `Midnight_at_the_Harbor.mp3` with `downloadVariant = mp3`, plus
+  `generated-media-download-variant` materialization and browser-route
+  diagnostics from the stored timeline.
+- Validation:
+  - `pnpm tsx bin/auracall.ts run status medgen_779d86976a8f4e9faa7f7b7e542a97a5 --json`
+  - `pnpm tsx bin/auracall.ts api serve --port 18080 --no-recover-runs-on-start`
+  - `curl -s http://127.0.0.1:18080/v1/runs/medgen_779d86976a8f4e9faa7f7b7e542a97a5/status`
+  - `curl -s http://127.0.0.1:18080/v1/media-generations/medgen_779d86976a8f4e9faa7f7b7e542a97a5/status`
+  - direct MCP handler calls for `run_status` and `media_generation_status`
+
 ## 2026-04-25 - Gemini music hidden variant live green
 
 - Focus: finish the Gemini music service path so fresh browser runs cache both
