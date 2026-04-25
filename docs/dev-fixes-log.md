@@ -1,3 +1,8 @@
+- 2026-04-25: Provider API media access should not become the default next
+  lane just because an explicit adapter exists. After adding Gemini
+  `transport = api`, park live API validation unless deliberately selected and
+  keep browser-first media/workbench behavior as the active dogfood priority.
+
 - 2026-04-25: Keep Gemini API image generation explicit and separate from
   browser media generation. In this repo, `transport = api` now uses the
   Google GenAI SDK `models.generateImages` path and caches returned inline

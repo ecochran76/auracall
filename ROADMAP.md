@@ -46,6 +46,9 @@ Current State:
     - legacy Gemini `--generate-image` migration and Gemini API image support
       are closed in
       [docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md)
+      - provider API media access is implemented only as an explicit path and
+        parked for current dogfooding; browser-first media/workbench behavior
+        remains the active priority
     - xAI API image/video execution and Grok edit/reference workflows remain
       deferred until selected by a separate bounded plan
   - [docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md)

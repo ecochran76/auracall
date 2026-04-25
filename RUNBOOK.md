@@ -1,5 +1,20 @@
 # RUNBOOK
 
+## Turn 64 | 2026-04-25
+
+- Active plan:
+  `docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md`
+- Goal: record the operator decision to sideline provider API access for now.
+- Result:
+  - skipped the proposed live Gemini API image smoke
+  - kept explicit Gemini `transport = api` support as implemented, but parked
+    provider API media access for current dogfooding
+  - restored browser-first media/workbench behavior as the active priority in
+    roadmap and operator docs
+- Verification target:
+  - `pnpm run plans:audit -- --keep 55`
+  - `git diff --check`
+
 ## Turn 63 | 2026-04-25
 
 - Active plan:

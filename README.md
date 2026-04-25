@@ -66,7 +66,6 @@ auracall capabilities --target grok --entrypoint grok-imagine --discovery-action
 
 # Shared durable media-generation contract from the CLI
 auracall media generate --provider gemini --type image -p "Generate an image of an asphalt secret agent" --json
-auracall media generate --provider gemini --type image --transport api -p "Generate an image of an asphalt secret agent" --count 1 --json
 auracall media generate --provider grok --type image -p "Generate an image of an asphalt secret agent" --count 1 --no-wait
 auracall run status <media_generation_id> --json
 
@@ -152,8 +151,9 @@ Terminology note:
   immediately, then poll it with `auracall run status <id> --json`.
 - Prefer `auracall media generate` for new image/music/video automation because
   it persists the media-generation id, timeline, status, and artifact cache.
-  Gemini image requests can use `--transport api` with `GEMINI_API_KEY`; that
-  path caches Imagen API image bytes into the same durable artifact directory.
+  Gemini image requests can use explicit `--transport api` with
+  `GEMINI_API_KEY`, but provider API media access is not the current primary
+  dogfood lane; browser media paths remain the normal operator focus.
   The older Gemini-only `--generate-image <file>` flag remains a
   compatibility shortcut for direct one-file browser image saves and does not
   create a durable media-generation record.

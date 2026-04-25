@@ -81,3 +81,5 @@ Plan 0049 closed the shared durable media-generation resource.
 Plan 0055 is closed. The legacy Gemini `--generate-image <file>` flag remains a
 documented compatibility shortcut, and the durable media-generation service now
 supports Gemini API image generation through explicit `transport = api`.
+Provider API access is parked for current dogfooding, so no live Gemini API
+image smoke is required before returning to browser-first work.

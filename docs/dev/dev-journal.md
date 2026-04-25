@@ -1,3 +1,15 @@
+## 2026-04-25 - Provider API access parked
+
+- Focus: respond to the operator decision to sideline provider API access for
+  now instead of running the live Gemini API image smoke.
+- Progress: left explicit Gemini API image execution in place, but updated
+  roadmap/operator docs to treat provider API media as parked for current
+  dogfooding. Browser-first media and workbench behavior remain the active
+  priority.
+- Validation:
+  - `pnpm run plans:audit -- --keep 55`
+  - `git diff --check`
+
 ## 2026-04-25 - Gemini API image execution
 
 - Focus: finish Plan 0055 by comparing the current Google GenAI SDK image

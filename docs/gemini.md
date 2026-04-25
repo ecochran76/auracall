@@ -167,7 +167,8 @@ Notes:
   Add `--transport api` for Gemini API image generation through
   `GEMINI_API_KEY`; the default API image model is Imagen
   `imagen-4.0-generate-001`, with `--model` available for current Google model
-  ids.
+  ids. Provider API media access is parked for current dogfooding; use browser
+  media paths unless intentionally validating the API path.
   `--generate-image <file>` is retained as a Gemini-only compatibility
   shortcut for direct one-file browser image saves.
 - `--browser-model-strategy` only affects ChatGPT automation; Gemini web always uses the explicit Gemini model ID.

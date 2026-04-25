@@ -205,7 +205,8 @@
   - create a shared-contract CLI media request:
     - `pnpm tsx bin/auracall.ts media generate --provider gemini --type image -p "Generate an image of an asphalt secret agent" --json`
     - Gemini API image generation uses the same durable contract when
-      `GEMINI_API_KEY` is set:
+      `GEMINI_API_KEY` is set, but provider API media access is parked for
+      now; run this only when deliberately validating that non-primary path:
       `pnpm tsx bin/auracall.ts media generate --provider gemini --type image --transport api -p "Generate an image of an asphalt secret agent" --count 1 --json`
     - for async browser smokes, add `--no-wait` and poll with
       `pnpm tsx bin/auracall.ts run status <media_generation_id> --json`
