@@ -60,9 +60,9 @@
   latest timeline event, full timeline, artifact count, artifact cache path,
   materialization method, failure details when present, and derived
   `diagnostics` from the persisted timeline. The diagnostics block summarizes
-  capability preflight, submitted tab, provider route progression, latest
-  run-state counts, and materialization source without re-invoking the
-  provider.
+  capability preflight, submitted tab, provider route progression, artifact
+  polling/progress counts, terminal run-state counts, and materialization
+  source without re-invoking the provider.
 - `diagnostics = "browser-state"` adds bounded live browser evidence for a
   running browser-backed media job, using the recorded provider `tabTargetId`
   when present. The same diagnostics payload includes recent browser mutation

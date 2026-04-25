@@ -149,6 +149,7 @@ function summarizeDiagnostics(response: MediaGenerationResponse): MediaGeneratio
   const runStateEvent = findLastEvent(timeline, 'run_state_observed') ??
     findLastEvent(timeline, 'video_visible') ??
     findLastEvent(timeline, 'image_visible') ??
+    findLastEvent(timeline, 'artifact_poll') ??
     findLastEvent(timeline, 'submitted_state_observed') ??
     findLastEvent(timeline, 'submit_path_observed') ??
     findLastEvent(timeline, 'composer_ready');
@@ -182,6 +183,7 @@ function summarizeDiagnostics(response: MediaGenerationResponse): MediaGeneratio
     : null;
   const runStateDetails = runStateEvent?.details ?? {};
   const materializedDetails = materializedEvent?.details ?? {};
+  const runStateEventName = runStateEvent?.event ?? null;
 
   return {
     capability: {
@@ -203,13 +205,16 @@ function summarizeDiagnostics(response: MediaGenerationResponse): MediaGeneratio
     },
     runState: {
       pollCount: numberOrNull(runStateDetails.pollCount),
-      runState: stringOrNull(runStateDetails.runState),
-      pending: booleanOrNull(runStateDetails.pending),
-      terminalImage: booleanOrNull(runStateDetails.terminalImage),
-      terminalVideo: booleanOrNull(runStateDetails.terminalVideo),
-      generatedImageCount: numberOrNull(runStateDetails.generatedImageCount),
-      generatedVideoCount: numberOrNull(runStateDetails.generatedVideoCount),
+      runState: stringOrNull(runStateDetails.runState) ?? inferredRunState(runStateEventName),
+      pending: booleanOrNull(runStateDetails.pending) ?? inferredPending(runStateEventName, runStateDetails),
+      terminalImage: booleanOrNull(runStateDetails.terminalImage) ?? (runStateEventName === 'image_visible' ? true : null),
+      terminalVideo: booleanOrNull(runStateDetails.terminalVideo) ?? (runStateEventName === 'video_visible' ? true : null),
+      generatedImageCount: numberOrNull(runStateDetails.generatedImageCount) ??
+        numberOrNull(runStateDetails.imageArtifactCount),
+      generatedVideoCount: numberOrNull(runStateDetails.generatedVideoCount) ??
+        numberOrNull(runStateDetails.videoArtifactCount),
       generatedArtifactCount: numberOrNull(runStateDetails.generatedArtifactCount) ??
+        numberOrNull(runStateDetails.artifactCount) ??
         numberOrNull(response.metadata?.generatedArtifactCount),
       materializationCandidateSource: stringOrNull(runStateDetails.materializationCandidateSource),
       decision: stringOrNull(runStateDetails.decision),
@@ -222,6 +227,27 @@ function summarizeDiagnostics(response: MediaGenerationResponse): MediaGeneratio
       materializationSource: stringOrNull(materializedDetails.materializationSource),
     },
   };
+}
+
+function inferredRunState(eventName: MediaGenerationTimelineEvent['event'] | null): string | null {
+  if (eventName === 'artifact_poll') return 'artifact_polling';
+  if (eventName === 'image_visible') return 'terminal_image';
+  if (eventName === 'video_visible') return 'terminal_video';
+  if (eventName === 'submitted_state_observed') return 'submitted';
+  return null;
+}
+
+function inferredPending(
+  eventName: MediaGenerationTimelineEvent['event'] | null,
+  details: Record<string, unknown>,
+): boolean | null {
+  if (eventName !== 'artifact_poll') {
+    return null;
+  }
+  const artifactCount = numberOrNull(details.artifactCount) ??
+    numberOrNull(details.imageArtifactCount) ??
+    numberOrNull(details.videoArtifactCount);
+  return artifactCount === null ? true : artifactCount === 0;
 }
 
 function findLastEvent(

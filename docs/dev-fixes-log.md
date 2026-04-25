@@ -14259,3 +14259,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   artifact cache path from stored timeline evidence alone. Use
   `diagnostics=browser-state` for unresolved active-run questions, not as the
   routine first readback.
+- 2026-04-25: Include provider artifact polling in persisted diagnostics. In
+  this repo, Gemini image runs can be healthy and actively polling for
+  generated media after prompt submission, but before `image_visible` or
+  materialization. Treat `artifact_poll` as an actionable `artifact_polling`
+  run state with poll count, pending status, and artifact counts so operators
+  do not need browser diagnostics just to see that the submitted Gemini run is
+  still waiting on media.

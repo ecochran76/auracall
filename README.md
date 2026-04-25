@@ -193,11 +193,12 @@ Terminology note:
     status summary with the latest timeline event, artifact cache path, and
     materialization method. Media status also includes a derived
     `diagnostics` block from persisted timeline evidence so operators can see
-    capability preflight, submitted tab, provider route progression, latest
-    run-state counts, and materialization source without a separate browser
-    probe. Grok browser image jobs require generated account media for
-    terminal success; public gallery/template media remains diagnostic
-    evidence and is not cached as generated output. Repeated stable
+    capability preflight, submitted tab, provider route progression, artifact
+    polling/progress counts, terminal run-state counts, and materialization
+    source without a separate browser probe. Grok browser image jobs require
+    generated account media for terminal success; public gallery/template
+    media remains diagnostic evidence and is not cached as generated output.
+    Repeated stable
     public/template terminal media with no generated account image fails as
     `media_generation_no_generated_output`; inspect `diagnostics` or
     `submit_path_observed` to see whether Grok reported pending generation,

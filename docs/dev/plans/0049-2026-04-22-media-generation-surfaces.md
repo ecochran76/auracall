@@ -106,6 +106,19 @@ helpers.
   `capability_unavailable` timeline event before terminal `failed` and carry
   bounded capability metadata into failed readback/status, so operators can
   prove a gated run stopped before provider prompt submission.
+- Live Gemini capability discovery on 2026-04-25 reported
+  `gemini.media.create_image`, `gemini.media.create_music`, and
+  `gemini.media.create_video` as `available` from browser discovery. The
+  implemented Gemini browser image path then completed request
+  `medgen_0b72e6f23cb04e0293dc4005ceb6521d` with one cached
+  `Generated image 1.png` artifact from conversation `b0450d66b9120b2b`.
+  Music/video are discovered and contract-representable, but still fail in
+  the Gemini browser executor as `media_provider_not_implemented` until the
+  mode-specific submit/readback/materialization paths are implemented.
+- Media status diagnostics now summarize Gemini `artifact_poll` events as
+  `artifact_polling` with pending state, poll count, and artifact counts, so
+  operators can distinguish submitted-but-waiting image runs from unknown
+  provider state without requesting live browser diagnostics.
 
 ## Target Contract
 
@@ -223,6 +236,16 @@ helpers.
 - Latest supervised local API Gemini image smoke passed on 2026-04-23 with a
   persisted image artifact, no media-generation failure, and full timeline
   readback through terminal completion.
+- Latest live local API Gemini image smoke passed on 2026-04-25 with persisted
+  status diagnostics:
+  - request id `medgen_0b72e6f23cb04e0293dc4005ceb6521d`
+  - capability discovery showed Images, Music, and Videos available
+  - media status first reported `prompt_submitted`, then `artifact_poll`, then
+    terminal `completed`
+  - generic run status and CLI run status reported matching
+    `metadata.mediaDiagnostics`
+  - cached artifact:
+    `~/.auracall/runtime/media-generations/medgen_0b72e6f23cb04e0293dc4005ceb6521d/artifacts/Generated image 1.png`
 - Live Grok Imagine smoke only with a configured `XAI_API_KEY` or validated
   browser account path that exposes Imagine.
 - First Grok implementation validation should use read-only managed-browser

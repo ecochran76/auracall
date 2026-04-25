@@ -162,4 +162,91 @@ describe('media generation status summary', () => {
       },
     });
   });
+
+  it('summarizes Gemini artifact polling as an actionable in-progress run state', () => {
+    const response: MediaGenerationResponse = {
+      id: 'medgen_gemini_polling_1',
+      object: 'media_generation',
+      status: 'running',
+      provider: 'gemini',
+      mediaType: 'image',
+      prompt: 'Generate an image of an asphalt secret agent',
+      createdAt: '2026-04-25T14:05:56.715Z',
+      updatedAt: '2026-04-25T14:06:19.890Z',
+      completedAt: null,
+      artifacts: [],
+      timeline: [
+        {
+          event: 'capability_discovered',
+          at: '2026-04-25T14:05:58.995Z',
+          details: {
+            id: 'gemini.media.create_image',
+            availability: 'available',
+            source: 'browser_discovery',
+          },
+        },
+        {
+          event: 'browser_target_attached',
+          at: '2026-04-25T14:05:59.476Z',
+          details: {
+            targetId: 'gemini-tab-1',
+            targetUrl: 'https://gemini.google.com/app',
+          },
+        },
+        {
+          event: 'composer_ready',
+          at: '2026-04-25T14:06:02.757Z',
+          details: {
+            href: 'https://gemini.google.com/app',
+            tabTargetId: 'gemini-tab-1',
+          },
+        },
+        {
+          event: 'prompt_submitted',
+          at: '2026-04-25T14:06:03.940Z',
+          details: {
+            capabilityId: 'gemini.media.create_image',
+            conversationId: 'b0450d66b9120b2b',
+            tabTargetId: 'gemini-tab-1',
+            url: 'https://gemini.google.com/app/b0450d66b9120b2b',
+          },
+        },
+        {
+          event: 'artifact_poll',
+          at: '2026-04-25T14:06:09.685Z',
+          details: {
+            pollCount: 1,
+            artifactCount: 0,
+            imageArtifactCount: 0,
+            lastReadbackError: null,
+          },
+        },
+      ],
+      metadata: {
+        tabTargetId: 'gemini-tab-1',
+      },
+    };
+
+    const summary = summarizeMediaGenerationStatus(response);
+
+    expect(summary.diagnostics.runState).toEqual({
+      pollCount: 1,
+      runState: 'artifact_polling',
+      pending: true,
+      terminalImage: null,
+      terminalVideo: null,
+      generatedImageCount: 0,
+      generatedVideoCount: null,
+      generatedArtifactCount: 0,
+      materializationCandidateSource: null,
+      decision: null,
+    });
+    expect(summary.diagnostics.provider).toEqual({
+      latestHref: 'https://gemini.google.com/app/b0450d66b9120b2b',
+      routeProgression: [
+        'https://gemini.google.com/app',
+        'https://gemini.google.com/app/b0450d66b9120b2b',
+      ],
+    });
+  });
 });

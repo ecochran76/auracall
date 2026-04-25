@@ -1,3 +1,28 @@
+## 2026-04-25 - Gemini media parity dogfood
+
+- Focus: verify Gemini media capability discovery and the shared status
+  diagnostics path before starting music/video executor work.
+- Progress: live Gemini capability discovery reported
+  `gemini.media.create_image`, `gemini.media.create_music`, and
+  `gemini.media.create_video` as `available` from browser discovery. Local API
+  request `medgen_0b72e6f23cb04e0293dc4005ceb6521d` ran the implemented
+  browser image path, observed artifact polling while running, and completed
+  with one cached `Generated image 1.png` artifact from conversation
+  `b0450d66b9120b2b`. Status diagnostics now also summarize Gemini
+  `artifact_poll` events as `artifact_polling` with pending state and artifact
+  counts.
+- Validation:
+  - `pnpm tsx bin/auracall.ts capabilities --target gemini --json`
+  - `curl -s 'http://127.0.0.1:8081/v1/media-generations?wait=false' ...`
+  - `curl -s 'http://127.0.0.1:8081/v1/media-generations/medgen_0b72e6f23cb04e0293dc4005ceb6521d/status'`
+  - `curl -s 'http://127.0.0.1:8081/v1/runs/medgen_0b72e6f23cb04e0293dc4005ceb6521d/status'`
+  - `pnpm tsx bin/auracall.ts run status medgen_0b72e6f23cb04e0293dc4005ceb6521d --json`
+  - `pnpm vitest run tests/mediaStatusSummary.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`
+
 ## 2026-04-25 - Grok media diagnostics dogfood
 
 - Focus: verify the new persisted media status diagnostics on a real
