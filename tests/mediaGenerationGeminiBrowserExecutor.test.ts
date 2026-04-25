@@ -283,6 +283,147 @@ describe('Gemini browser media generation executor', () => {
     ]);
   });
 
+  it('selects Create music and materializes both video-with-artwork and mp3 variants', async () => {
+    const { createGeminiBrowserMediaGenerationExecutor } = await import('../src/media/geminiBrowserExecutor.js');
+    const artifactDir = '/tmp/auracall-media-artifacts';
+    const videoPath = path.join(artifactDir, 'spy-theme-with-artwork.mp4');
+    const mp3Path = path.join(artifactDir, 'spy-theme.mp3');
+    browserClient.runPrompt.mockResolvedValueOnce({
+      text: '',
+      conversationId: 'gemini-music-conversation-1',
+      url: 'https://gemini.google.com/app/gemini-music-conversation-1',
+      tabTargetId: 'gemini-music-tab-1',
+    });
+    browserClient.readActiveConversationArtifacts.mockResolvedValueOnce([
+      {
+        id: 'artifact-music-video-1',
+        title: 'Spy Theme',
+        kind: 'generated',
+        uri: 'https://contribution.usercontent.google.com/download?filename=spy_theme_with_artwork.mp4',
+        metadata: {
+          mediaType: 'music',
+          fileName: 'spy_theme_with_artwork.mp4',
+          downloadLabel: 'Download as video with album art',
+          downloadVariant: 'video_with_album_art',
+        },
+      },
+      {
+        id: 'artifact-music-mp3-1',
+        title: 'Spy Theme',
+        kind: 'generated',
+        uri: 'https://contribution.usercontent.google.com/download?filename=spy_theme.mp3',
+        metadata: {
+          mediaType: 'music',
+          fileName: 'spy_theme.mp3',
+          downloadLabel: 'Download as MP3',
+          downloadVariant: 'mp3',
+        },
+      },
+    ]);
+    browserClient.materializeConversationArtifact
+      .mockResolvedValueOnce({
+        id: 'artifact-music-video-1',
+        name: 'spy-theme-with-artwork.mp4',
+        provider: 'gemini',
+        source: 'conversation',
+        size: 9876,
+        mimeType: 'video/mp4',
+        remoteUrl: 'https://contribution.usercontent.google.com/download?filename=spy_theme_with_artwork.mp4',
+        localPath: videoPath,
+        metadata: {
+          materialization: 'generated-media-fetch',
+          mediaType: 'music',
+          downloadVariant: 'video_with_album_art',
+        },
+      })
+      .mockResolvedValueOnce({
+        id: 'artifact-music-mp3-1',
+        name: 'spy-theme.mp3',
+        provider: 'gemini',
+        source: 'conversation',
+        size: 3456,
+        mimeType: 'audio/mpeg',
+        remoteUrl: 'https://contribution.usercontent.google.com/download?filename=spy_theme.mp3',
+        localPath: mp3Path,
+        metadata: {
+          materialization: 'generated-media-fetch',
+          mediaType: 'music',
+          downloadVariant: 'mp3',
+        },
+      });
+
+    const executor = createGeminiBrowserMediaGenerationExecutor({} as never);
+    const timelineEvents: string[] = [];
+    const result = await executor({
+      id: 'medgen_music_test',
+      createdAt: '2026-04-25T12:00:00.000Z',
+      artifactDir,
+      emitTimeline: (event) => {
+        timelineEvents.push(event.event);
+      },
+      request: {
+        provider: 'gemini',
+        mediaType: 'music',
+        prompt: 'Create a spy theme song',
+        transport: 'browser',
+        count: 1,
+      },
+    });
+
+    expect(browserClient.runPrompt).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: 'Create a spy theme song',
+      capabilityId: 'gemini.media.create_music',
+      completionMode: 'prompt_submitted',
+      noProject: true,
+      timeoutMs: 600000,
+      onProgress: expect.any(Function),
+    }));
+    expect(browserClient.materializeConversationArtifact).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({
+      artifacts: [
+        {
+          id: 'artifact-music-video-1',
+          type: 'music',
+          mimeType: 'video/mp4',
+          fileName: 'spy-theme-with-artwork.mp4',
+          path: videoPath,
+          metadata: {
+            providerArtifactId: 'artifact-music-video-1',
+            mediaType: 'music',
+            downloadVariant: 'video_with_album_art',
+          },
+        },
+        {
+          id: 'artifact-music-mp3-1',
+          type: 'music',
+          mimeType: 'audio/mpeg',
+          fileName: 'spy-theme.mp3',
+          path: mp3Path,
+          metadata: {
+            providerArtifactId: 'artifact-music-mp3-1',
+            mediaType: 'music',
+            downloadVariant: 'mp3',
+          },
+        },
+      ],
+      metadata: {
+        executor: 'gemini-browser',
+        conversationId: 'gemini-music-conversation-1',
+        tabTargetId: 'gemini-music-tab-1',
+        capabilityId: 'gemini.media.create_music',
+        generatedArtifactCount: 2,
+        artifactPollCount: 1,
+      },
+    });
+    expect(timelineEvents).toEqual([
+      'prompt_submitted',
+      'artifact_poll',
+      'music_visible',
+      'artifact_materialized',
+      'artifact_materialized',
+    ]);
+  });
+
   it('polls conversation artifacts after prompt submission before materializing', async () => {
     const { createGeminiBrowserMediaGenerationExecutor } = await import('../src/media/geminiBrowserExecutor.js');
     const artifactDir = '/tmp/auracall-media-artifacts';
@@ -439,24 +580,42 @@ describe('Gemini browser media generation executor', () => {
     expect(browserClient.readActiveConversationArtifacts).not.toHaveBeenCalled();
   });
 
-  it('fails before prompt submission for Gemini browser music media', async () => {
+  it('reports a media-specific timeout when submitted Gemini music artifacts never appear', async () => {
+    vi.useFakeTimers();
     const { createGeminiBrowserMediaGenerationExecutor } = await import('../src/media/geminiBrowserExecutor.js');
+    browserClient.runPrompt.mockResolvedValueOnce({
+      text: '',
+      conversationId: 'gemini-music-timeout',
+      url: 'https://gemini.google.com/app/gemini-music-timeout',
+      tabTargetId: 'gemini-music-timeout-tab',
+    });
+    browserClient.readActiveConversationArtifacts.mockResolvedValue([]);
     const executor = createGeminiBrowserMediaGenerationExecutor({} as never);
 
-    await expect(
-      executor({
-        id: 'medgen_test',
-        createdAt: '2026-04-23T12:00:00.000Z',
-        artifactDir: '/tmp/auracall-media-artifacts',
-        request: {
-          provider: 'gemini',
-          mediaType: 'music',
-          prompt: 'Create spy music',
-          transport: 'browser',
+    const resultPromise = executor({
+      id: 'medgen_test',
+      createdAt: '2026-04-23T12:00:00.000Z',
+      artifactDir: '/tmp/auracall-media-artifacts',
+      request: {
+        provider: 'gemini',
+        mediaType: 'music',
+        prompt: 'Create spy music',
+        transport: 'browser',
+        metadata: {
+          timeoutMs: 30_000,
+          artifactPollIntervalMs: 250,
         },
-      }),
-    ).rejects.toMatchObject({
-      code: 'media_provider_not_implemented',
+      },
     });
+
+    const assertion = expect(resultPromise).rejects.toMatchObject({
+      code: 'media_generation_provider_timeout',
+      details: {
+        conversationId: 'gemini-music-timeout',
+        timeoutMs: 30_000,
+      },
+    });
+    await vi.advanceTimersByTimeAsync(30_001);
+    await assertion;
   });
 });

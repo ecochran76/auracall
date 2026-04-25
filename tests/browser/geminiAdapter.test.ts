@@ -138,6 +138,13 @@ describe('geminiAdapter id helpers', () => {
         downloadLabel: 'Download video',
       },
     })).toBe('video');
+    expect(inferGeminiGeneratedArtifactMediaType({
+      kind: 'generated',
+      uri: 'https://contribution.usercontent.google.com/download?filename=spy_theme.mp3',
+      metadata: {
+        downloadLabel: 'Download as MP3',
+      },
+    })).toBe('music');
   });
 
   test('normalizes Gemini generated media artifacts into stable titles and metadata', () => {

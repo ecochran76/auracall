@@ -1,3 +1,20 @@
+## 2026-04-25 - Gemini music fixture-first executor
+
+- Focus: implement Gemini music without spending live media-generation quota.
+- Progress: Gemini browser media execution now supports `mediaType = music`
+  by selecting `gemini.media.create_music`, using the same prompt-submitted
+  no-renavigation path as image/video, polling the submitted tab for generated
+  music artifacts, emitting `music_visible`, and materializing every music
+  download variant exposed by readback. Fixture coverage models Gemini's known
+  download choices: video with album art and MP3 audio.
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/browser/geminiAdapter.test.ts tests/mediaStatusSummary.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/browser/geminiAdapter.test.ts tests/mediaStatusSummary.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/mediaGeneration.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`
+
 ## 2026-04-25 - Gemini video fixture-first executor
 
 - Focus: implement Gemini video without spending live daily video-generation

@@ -13,8 +13,9 @@ import type {
 } from './types.js';
 import { MediaGenerationExecutionError } from './service.js';
 
-const GEMINI_CAPABILITY_IDS: Record<'image' | 'video', string> = {
+const GEMINI_CAPABILITY_IDS: Record<'image' | 'music' | 'video', string> = {
   image: 'gemini.media.create_image',
+  music: 'gemini.media.create_music',
   video: 'gemini.media.create_video',
 };
 
@@ -35,17 +36,6 @@ async function executeGeminiBrowserMediaGeneration(
       {
         provider: request.provider,
         transport: request.transport ?? null,
-        mediaType: request.mediaType,
-      },
-    );
-  }
-  if (request.mediaType === 'music') {
-    throw new MediaGenerationExecutionError(
-      'media_provider_not_implemented',
-      `Gemini browser ${request.mediaType} generation is not implemented yet.`,
-      {
-        provider: request.provider,
-        transport: request.transport,
         mediaType: request.mediaType,
       },
     );
@@ -122,7 +112,9 @@ async function executeGeminiBrowserMediaGeneration(
     );
   }
 
-  const requestedCount = Math.max(1, Math.min(request.count ?? 1, artifacts.length));
+  const requestedCount = request.mediaType === 'music'
+    ? artifacts.length
+    : Math.max(1, Math.min(request.count ?? 1, artifacts.length));
   const materialized: MediaGenerationArtifact[] = [];
   for (const artifact of artifacts.slice(0, requestedCount)) {
     const file = await client.materializeConversationArtifact(conversationId, artifact, input.artifactDir, {
@@ -200,7 +192,7 @@ async function waitForGeminiMediaArtifacts(
   conversationId: string,
   tabTargetId: string,
   tabUrl: string,
-  mediaType: 'image' | 'video',
+  mediaType: 'image' | 'music' | 'video',
   metadata: Record<string, unknown> | null | undefined,
   timeoutMs: number,
   emitTimeline: MediaGenerationTimelineEmitter | undefined,
@@ -227,19 +219,18 @@ async function waitForGeminiMediaArtifacts(
           pollCount,
           artifactCount: lastArtifacts.length,
           imageArtifactCount: lastArtifacts.filter((artifact) => isMediaArtifact(artifact, 'image')).length,
+          musicArtifactCount: lastArtifacts.filter((artifact) => isMediaArtifact(artifact, 'music')).length,
           videoArtifactCount: lastArtifacts.filter((artifact) => isMediaArtifact(artifact, 'video')).length,
           lastReadbackError: null,
         },
       });
       if (matchingArtifacts.length > 0) {
         await emitTimeline?.({
-          event: mediaType === 'image' ? 'image_visible' : 'video_visible',
+          event: mediaVisibleEvent(mediaType),
           details: {
             pollCount,
             generatedArtifactCount: matchingArtifacts.length,
-            ...(mediaType === 'image'
-              ? { generatedImageCount: matchingArtifacts.length }
-              : { generatedVideoCount: matchingArtifacts.length }),
+            ...generatedCountDetails(mediaType, matchingArtifacts.length),
             artifactIds: matchingArtifacts.map((artifact) => artifact.id),
           },
         });
@@ -253,6 +244,7 @@ async function waitForGeminiMediaArtifacts(
           pollCount,
           artifactCount: lastArtifacts.length,
           imageArtifactCount: lastArtifacts.filter((artifact) => isMediaArtifact(artifact, 'image')).length,
+          musicArtifactCount: lastArtifacts.filter((artifact) => isMediaArtifact(artifact, 'music')).length,
           videoArtifactCount: lastArtifacts.filter((artifact) => isMediaArtifact(artifact, 'video')).length,
           lastReadbackError,
         },
@@ -287,11 +279,45 @@ function resolveArtifactPollIntervalMs(metadata: Record<string, unknown> | null 
   return 5_000;
 }
 
-function isMediaArtifact(artifact: ConversationArtifact, mediaType: 'image' | 'video'): boolean {
+function isMediaArtifact(artifact: ConversationArtifact, mediaType: 'image' | 'music' | 'video'): boolean {
   if (mediaType === 'image') {
     return artifact.kind === 'image';
   }
+  if (mediaType === 'music') {
+    return artifact.kind === 'generated' && isGeminiMusicArtifact(artifact);
+  }
   return artifact.kind === 'generated' && artifact.metadata?.mediaType === 'video';
+}
+
+function isGeminiMusicArtifact(artifact: ConversationArtifact): boolean {
+  const metadata = artifact.metadata ?? {};
+  if (metadata.mediaType === 'music') return true;
+  const fields = [
+    metadata.fileName,
+    metadata.downloadLabel,
+    metadata.shareLabel,
+    metadata.playLabel,
+    metadata.downloadVariant,
+    artifact.title,
+    artifact.uri,
+  ].map((value) => String(value ?? '').toLowerCase());
+  return fields.some((value) =>
+    /\b(mp3|track|music|song|remix|audio)\b/.test(value) ||
+    /\.(mp3|m4a|wav|aac|flac|ogg)(?:$|[?#])/.test(value) ||
+    value.includes('with album art')
+  );
+}
+
+function mediaVisibleEvent(mediaType: 'image' | 'music' | 'video'): 'image_visible' | 'music_visible' | 'video_visible' {
+  if (mediaType === 'image') return 'image_visible';
+  if (mediaType === 'music') return 'music_visible';
+  return 'video_visible';
+}
+
+function generatedCountDetails(mediaType: 'image' | 'music' | 'video', count: number): Record<string, number> {
+  if (mediaType === 'image') return { generatedImageCount: count };
+  if (mediaType === 'music') return { generatedMusicCount: count };
+  return { generatedVideoCount: count };
 }
 
 function mapGeminiFileToMediaArtifact(

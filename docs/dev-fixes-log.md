@@ -14273,3 +14273,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `Create video`, poll generated `video` artifacts, emit `video_visible`, and
   materialize the generated media. Do not make live video generation part of
   routine validation.
+- 2026-04-25: Treat Gemini music downloads as variants of one music output,
+  not as a single video artifact. In this repo, the Gemini music UI exposes
+  both "download as video" with album art and "download as MP3". The browser
+  media executor should preserve both when readback exposes both variants,
+  emit `music_visible`, and keep live validation fixture-first unless an
+  operator intentionally spends provider quota.

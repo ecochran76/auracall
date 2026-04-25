@@ -41,6 +41,14 @@ helpers.
   artifacts, emits `video_visible`, and materializes the generated media file.
   Live video smokes are intentionally not part of routine validation because
   Gemini exposes only a small daily video-generation quota.
+- Gemini browser music execution is fixture-backed and wired through the same
+  browser media executor: it selects `Create music`, submits through the
+  managed Gemini provider adapter, polls the submitted tab for generated music
+  artifacts, emits `music_visible`, and materializes every generated music
+  download variant exposed by readback. The current accepted fixture models
+  Gemini's two provider download choices: video with album art and MP3 audio.
+  Live music smokes should be opt-in/manual for the same quota and
+  provider-churn reasons as video.
 - A first live API image smoke proved capability discovery, tool selection,
   and prompt submission, but Gemini remained in an active `Stop response` state
   until the media-generation timeout, so artifact completion/readback was still
@@ -119,10 +127,9 @@ helpers.
   implemented Gemini browser image path then completed request
   `medgen_0b72e6f23cb04e0293dc4005ceb6521d` with one cached
   `Generated image 1.png` artifact from conversation `b0450d66b9120b2b`.
-  Video is now implemented fixture-first in the Gemini browser executor.
-  Music is discovered and contract-representable, but still fails in the
-  Gemini browser executor as `media_provider_not_implemented` until its
-  transport/artifact semantics are accepted.
+  Video and music are now implemented fixture-first in the Gemini browser
+  executor. Music readback accepts the two known provider download variants:
+  video with album art and MP3 audio.
 - Media status diagnostics now summarize Gemini `artifact_poll` events as
   `artifact_polling` with pending state, poll count, and artifact counts, so
   operators can distinguish submitted-but-waiting image runs from unknown
@@ -212,8 +219,9 @@ helpers.
 - [x] Gemini video generation selects the explicit `Create video` tool path,
   polls the submitted tab for generated video artifacts, and materializes the
   generated media file in fixture coverage.
-- Gemini music generation selects the explicit tool path when that browser
-  adapter path is implemented.
+- [x] Gemini music generation selects the explicit `Create music` tool path,
+  polls the submitted tab for generated music artifacts, and materializes
+  video-with-album-art plus MP3 variants in fixture coverage.
 - [x] Gemini browser media requests are gated by the matching workbench
   capability availability before tool selection/execution.
 - [x] Browser media capability-gate failures expose a pre-submit
@@ -262,6 +270,12 @@ helpers.
   intentional manual/operator run after capability discovery reports
   `gemini.media.create_video` as available and the managed browser profile is
   clear of `google.com/sorry` or CAPTCHA state.
+- Gemini music validation is fixture-first by default for the same
+  quota/churn reasons. Live music smoke should be a single intentional
+  manual/operator run after capability discovery reports
+  `gemini.media.create_music` as available and should verify that both
+  download variants, video with album art and MP3 audio, are cached when the
+  provider exposes both.
 - Live Grok Imagine smoke only with a configured `XAI_API_KEY` or validated
   browser account path that exposes Imagine.
 - First Grok implementation validation should use read-only managed-browser

@@ -69,8 +69,10 @@ export interface MediaGenerationStatusDiagnostics {
     runState: string | null;
     pending: boolean | null;
     terminalImage: boolean | null;
+    terminalMusic: boolean | null;
     terminalVideo: boolean | null;
     generatedImageCount: number | null;
+    generatedMusicCount: number | null;
     generatedVideoCount: number | null;
     generatedArtifactCount: number | null;
     materializationCandidateSource: string | null;
@@ -148,6 +150,7 @@ function summarizeDiagnostics(response: MediaGenerationResponse): MediaGeneratio
   const promptSubmittedEvent = findLastEvent(timeline, 'prompt_submitted');
   const runStateEvent = findLastEvent(timeline, 'run_state_observed') ??
     findLastEvent(timeline, 'video_visible') ??
+    findLastEvent(timeline, 'music_visible') ??
     findLastEvent(timeline, 'image_visible') ??
     findLastEvent(timeline, 'artifact_poll') ??
     findLastEvent(timeline, 'submitted_state_observed') ??
@@ -208,9 +211,12 @@ function summarizeDiagnostics(response: MediaGenerationResponse): MediaGeneratio
       runState: stringOrNull(runStateDetails.runState) ?? inferredRunState(runStateEventName),
       pending: booleanOrNull(runStateDetails.pending) ?? inferredPending(runStateEventName, runStateDetails),
       terminalImage: booleanOrNull(runStateDetails.terminalImage) ?? (runStateEventName === 'image_visible' ? true : null),
+      terminalMusic: booleanOrNull(runStateDetails.terminalMusic) ?? (runStateEventName === 'music_visible' ? true : null),
       terminalVideo: booleanOrNull(runStateDetails.terminalVideo) ?? (runStateEventName === 'video_visible' ? true : null),
       generatedImageCount: numberOrNull(runStateDetails.generatedImageCount) ??
         numberOrNull(runStateDetails.imageArtifactCount),
+      generatedMusicCount: numberOrNull(runStateDetails.generatedMusicCount) ??
+        numberOrNull(runStateDetails.musicArtifactCount),
       generatedVideoCount: numberOrNull(runStateDetails.generatedVideoCount) ??
         numberOrNull(runStateDetails.videoArtifactCount),
       generatedArtifactCount: numberOrNull(runStateDetails.generatedArtifactCount) ??
@@ -232,6 +238,7 @@ function summarizeDiagnostics(response: MediaGenerationResponse): MediaGeneratio
 function inferredRunState(eventName: MediaGenerationTimelineEvent['event'] | null): string | null {
   if (eventName === 'artifact_poll') return 'artifact_polling';
   if (eventName === 'image_visible') return 'terminal_image';
+  if (eventName === 'music_visible') return 'terminal_music';
   if (eventName === 'video_visible') return 'terminal_video';
   if (eventName === 'submitted_state_observed') return 'submitted';
   return null;

@@ -218,6 +218,17 @@
       `artifact_materialized`, and `completed`
     - generated videos should cache as `video/mp4` artifacts with the
       materialization method reported in status diagnostics
+  - create a browser-transport Gemini music request only when intentionally
+    spending Gemini media-generation quota:
+    - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"gemini","mediaType":"music","transport":"browser","prompt":"Create a spy theme song"}'`
+    - routine validation should use fixture tests instead of live music
+      generation
+    - expected successful runs include `capability_discovered`,
+      `executor_started`, `browser_target_attached`, `capability_selected`,
+      `prompt_submitted`, repeated `artifact_poll`, `music_visible`,
+      `artifact_materialized`, and `completed`
+    - generated music should cache every provider download variant exposed by
+      readback, including video with album art and MP3 audio
   - create a browser-transport Grok image request only after capability
     discovery reports `grok.media.imagine_image` as `available`; the local API
     first checks the explicit `/imagine` entrypoint and fails before prompt

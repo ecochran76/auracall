@@ -543,6 +543,7 @@ async function selectGeminiWorkbenchCapability(client: ChromeClient, capabilityI
   }
   const labelsByCapabilityId: Record<string, string[]> = {
     'gemini.media.create_image': ['create image', 'images'],
+    'gemini.media.create_music': ['create music', 'music'],
     'gemini.media.create_video': ['create video', 'videos'],
   };
   const targetLabels = labelsByCapabilityId[normalizedCapabilityId];
@@ -2499,6 +2500,7 @@ export function inferGeminiGeneratedArtifactMediaType(
   if (/\b(video|movie)\b/.test(labelCandidates)) return 'video';
   const fileName = extractGeminiArtifactFileName(artifact.uri);
   if (typeof fileName === 'string' && /\b(track|music|song|remix)\b/i.test(fileName)) return 'music';
+  if (typeof fileName === 'string' && /\.(mp3|m4a|wav|aac|flac|ogg)$/i.test(fileName)) return 'music';
   return null;
 }
 
@@ -6199,7 +6201,11 @@ export function createGeminiAdapter(): Pick<
         });
         if (input.completionMode === 'prompt_submitted') {
           let result: BrowserProviderPromptResult;
-          if (input.capabilityId === 'gemini.media.create_image' || input.capabilityId === 'gemini.media.create_video') {
+          if (
+            input.capabilityId === 'gemini.media.create_image' ||
+            input.capabilityId === 'gemini.media.create_music' ||
+            input.capabilityId === 'gemini.media.create_video'
+          ) {
             result = await waitForGeminiSubmittedMediaPromptResult(
               client.Runtime,
               baseline,

@@ -25,6 +25,7 @@ export type MediaGenerationTimelineEventName =
   | 'run_state_observed'
   | 'artifact_poll'
   | 'image_visible'
+  | 'music_visible'
   | 'video_visible'
   | 'no_generated_media'
   | 'artifact_materialized'

@@ -217,18 +217,19 @@ Terminology note:
     `composer_ready`, `prompt_inserted`, and `send_attempted` before the
     terminal `prompt_submitted`/artifact-polling sequence, so operators can
     distinguish a healthy managed browser from a stuck provider interaction.
-    Gemini image/video requests with `transport = browser` now check the
-    matching workbench capability, select the matching `Images`/`Videos`
+    Gemini image/music/video requests with `transport = browser` now check the
+    matching workbench capability, select the matching `Images`/`Music`/`Videos`
     workbench tool, and materialize generated artifacts through the managed
-    browser path. Gemini video live smokes are quota-sensitive and should stay
-    opt-in/manual; fixture coverage is the routine validation path. Grok image
-    requests with
+    browser path. Gemini music can cache both provider download variants when
+    readback exposes them: video with album art and MP3 audio. Gemini music/video
+    live smokes are quota-sensitive and should stay opt-in/manual; fixture
+    coverage is the routine validation path. Grok image requests with
     `transport = browser` now check `grok.media.imagine_image` through the
     explicit `/imagine` entrypoint first; account-gated or unavailable accounts
     fail before prompt submission, while available accounts use the pinned
     `/imagine` tab, provider run-state polling, visible tile capture, and a
     provider download-button comparison before falling back to remote media
-    fetch. Gemini music and Grok video remain explicitly gated.
+    fetch. Grok video remains explicitly gated.
   - `GET /v1/workbench-capabilities` reports currently known or discovered
     provider workbench capabilities for regular service discovery. Filter with
     `provider=chatgpt|gemini|grok`, `category=research|media|canvas|connector|skill|app|search|file|other`,
