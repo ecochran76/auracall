@@ -13,6 +13,7 @@ import {
 import { MediaGenerationExecutionError } from './service.js';
 
 const GROK_IMAGE_CAPABILITY_ID = 'grok.media.imagine_image';
+const GROK_VIDEO_CAPABILITY_ID = 'grok.media.imagine_video';
 const GROK_IMAGINE_URL = 'https://grok.com/imagine';
 
 type GrokImagineEvidence = {
@@ -67,6 +68,9 @@ async function executeGrokBrowserMediaGeneration(
         mediaType: request.mediaType,
       },
     );
+  }
+  if (request.mediaType === 'video') {
+    return executeGrokBrowserVideoSkeleton(input);
   }
   if (request.mediaType !== 'image') {
     throw new MediaGenerationExecutionError(
@@ -199,6 +203,60 @@ async function executeGrokBrowserMediaGeneration(
       generatedArtifactCount: artifacts.length,
     },
   };
+}
+
+async function executeGrokBrowserVideoSkeleton(
+  input: MediaGenerationExecutorInput,
+): Promise<never> {
+  const audit = extractGrokVideoModeAudit(input.workbenchCapability?.metadata);
+  await input.emitTimeline?.({
+    event: 'capability_selected',
+    details: {
+      capabilityId: GROK_VIDEO_CAPABILITY_ID,
+      mode: 'Video',
+      discoveryAction: 'grok-imagine-video-mode',
+      source: input.workbenchCapability?.source ?? null,
+      observedAt: input.workbenchCapability?.observedAt ?? null,
+    },
+  });
+  await input.emitTimeline?.({
+    event: 'composer_ready',
+    details: {
+      capabilityId: GROK_VIDEO_CAPABILITY_ID,
+      mode: 'Video',
+      composer: audit?.composer ?? [],
+      submitControls: audit?.submitControls ?? [],
+      uploadControls: audit?.uploadControls ?? [],
+      aspectControls: audit?.aspectControls ?? [],
+    },
+  });
+  await input.emitTimeline?.({
+    event: 'submitted_state_observed',
+    details: {
+      capabilityId: GROK_VIDEO_CAPABILITY_ID,
+      mode: 'Video',
+      submitted: false,
+      reason: 'video_executor_skeleton_pre_submit_stop',
+      filmstrip: audit?.filmstrip ?? [],
+      downloadControls: audit?.downloadControls ?? [],
+      visibleMedia: audit?.visibleMedia ?? [],
+      generatedMediaSelectorCount: numberOrZero(audit?.generatedMediaSelectorCount),
+      selectedGeneratedMediaCount: numberOrZero(audit?.selectedGeneratedMediaCount),
+    },
+  });
+  throw new MediaGenerationExecutionError(
+    'media_provider_not_implemented',
+    'Grok browser video generation has a pre-submit executor skeleton, but post-submit run-state and artifact materialization acceptance criteria are not implemented yet.',
+    {
+      provider: 'grok',
+      transport: input.request.transport ?? null,
+      mediaType: 'video',
+      capabilityId: GROK_VIDEO_CAPABILITY_ID,
+      preSubmitStop: true,
+      discoveryAction: 'grok-imagine-video-mode',
+      videoModeAudit: audit,
+    },
+  );
 }
 
 async function waitForGrokImagineTerminalImage(
@@ -499,6 +557,18 @@ function collectRecordArray(value: unknown): Array<Record<string, unknown>> {
     Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry));
 }
 
+function extractGrokVideoModeAudit(metadata: Record<string, unknown> | null | undefined): Record<string, unknown> | null {
+  const discoveryAction = metadata?.discoveryAction;
+  if (!discoveryAction || typeof discoveryAction !== 'object' || Array.isArray(discoveryAction)) {
+    return null;
+  }
+  const audit = (discoveryAction as Record<string, unknown>).videoModeAudit;
+  if (!audit || typeof audit !== 'object' || Array.isArray(audit)) {
+    return null;
+  }
+  return audit as Record<string, unknown>;
+}
+
 function normalizeNonEmpty(value: unknown): string | null {
   const trimmed = typeof value === 'string' ? value.trim() : '';
   return trimmed.length > 0 ? trimmed : null;
@@ -506,4 +576,8 @@ function normalizeNonEmpty(value: unknown): string | null {
 
 function numberOrNull(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function numberOrZero(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }

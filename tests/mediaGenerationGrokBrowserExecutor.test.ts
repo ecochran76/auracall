@@ -177,6 +177,88 @@ describe('Grok browser media generation executor', () => {
     ]);
   });
 
+  it('captures video-mode pre-submit evidence and fails before prompt submission', async () => {
+    const { createGrokBrowserMediaGenerationExecutor } = await import('../src/media/grokBrowserExecutor.js');
+    const executor = createGrokBrowserMediaGenerationExecutor({} as never);
+    const timelineEvents: Array<{ event: string; details?: Record<string, unknown> | null }> = [];
+
+    await expect(executor({
+      id: 'medgen_grok_video_test',
+      createdAt: '2026-04-24T12:00:00.000Z',
+      artifactDir: '/tmp/auracall-grok-video-media-artifacts',
+      workbenchCapability: {
+        id: 'grok.media.imagine_video',
+        provider: 'grok',
+        providerLabels: ['Imagine'],
+        category: 'media',
+        invocationMode: 'post_prompt_action',
+        surfaces: ['browser_service', 'local_api', 'mcp'],
+        availability: 'available',
+        stability: 'observed',
+        requiredInputs: [{ name: 'prompt', required: true }],
+        output: { artifactTypes: ['video'] },
+        safety: {},
+        observedAt: '2026-04-24T12:00:00.000Z',
+        source: 'browser_discovery',
+        metadata: {
+          discoveryAction: {
+            action: 'grok-imagine-video-mode',
+            status: 'observed_video_mode',
+            videoModeAudit: {
+              composer: [{ tag: 'div', placeholder: 'Type to imagine' }],
+              submitControls: [{ tag: 'button', ariaLabel: 'Submit', disabled: true }],
+              uploadControls: [{ tag: 'button', ariaLabel: 'Upload' }],
+              aspectControls: [{ tag: 'button', ariaLabel: 'Aspect Ratio', text: '2:3' }],
+              filmstrip: [],
+              downloadControls: [],
+              visibleMedia: [{ tag: 'img', generated: true, selected: true }],
+              generatedMediaSelectorCount: 2,
+              selectedGeneratedMediaCount: 1,
+            },
+          },
+        },
+      },
+      emitTimeline: (event) => {
+        timelineEvents.push(event);
+      },
+      request: {
+        provider: 'grok',
+        mediaType: 'video',
+        prompt: 'Generate a video of an asphalt secret agent',
+        transport: 'browser',
+      },
+    })).rejects.toMatchObject({
+      code: 'media_provider_not_implemented',
+      details: {
+        capabilityId: 'grok.media.imagine_video',
+        mediaType: 'video',
+        preSubmitStop: true,
+        videoModeAudit: {
+          generatedMediaSelectorCount: 2,
+          selectedGeneratedMediaCount: 1,
+        },
+      },
+    });
+
+    expect(fromConfig).not.toHaveBeenCalled();
+    expect(browserClient.runPrompt).not.toHaveBeenCalled();
+    expect(timelineEvents.map((entry) => entry.event)).toEqual([
+      'capability_selected',
+      'composer_ready',
+      'submitted_state_observed',
+    ]);
+    expect(timelineEvents[1].details).toMatchObject({
+      capabilityId: 'grok.media.imagine_video',
+      composer: [{ tag: 'div', placeholder: 'Type to imagine' }],
+      submitControls: [{ tag: 'button', ariaLabel: 'Submit', disabled: true }],
+    });
+    expect(timelineEvents[2].details).toMatchObject({
+      submitted: false,
+      generatedMediaSelectorCount: 2,
+      selectedGeneratedMediaCount: 1,
+    });
+  });
+
   it('does not treat public template media as completed generated image output', async () => {
     const { createGrokBrowserMediaGenerationExecutor } = await import('../src/media/grokBrowserExecutor.js');
     const artifactDir = '/tmp/auracall-grok-media-artifacts';

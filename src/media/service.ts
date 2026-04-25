@@ -163,6 +163,7 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
         id,
         createdAt,
         artifactDir: store.getArtifactDir(id),
+        workbenchCapability: capability,
         emitTimeline: persistTimelineEvent,
       });
       const completedAt = now().toISOString();
@@ -268,6 +269,9 @@ async function resolveMediaGenerationCapability(
     includeUnavailable: true,
     entrypoint: request.provider === 'grok' ? 'grok-imagine' : null,
     diagnostics: request.provider === 'grok' ? 'browser-state' : null,
+    discoveryAction: request.provider === 'grok' && request.mediaType === 'video'
+      ? 'grok-imagine-video-mode'
+      : null,
   });
   const capability = report.capabilities.find((entry) => entry.id === capabilityId) ?? null;
   if (capability?.availability === 'available') {

@@ -1,3 +1,28 @@
+## 2026-04-24 - Grok video executor skeleton
+
+- Current focus:
+  - add a durable pre-submit Grok browser video executor skeleton without
+    enabling video generation
+- Progress:
+  - media capability preflight now requests
+    `discoveryAction = grok-imagine-video-mode` for Grok browser video
+  - media executors now receive the discovered workbench capability, allowing
+    the Grok video skeleton to reuse the preflight `videoModeAudit` instead of
+    clicking Video a second time
+  - Grok browser video requests emit `capability_selected`, `composer_ready`,
+    and `submitted_state_observed` with `submitted = false`, then fail with
+    `media_provider_not_implemented` before prompt insertion or Submit
+  - live local API dogfood returned
+    `medgen_5db184cae1ea432aae1e6649beb6ed22` with terminal
+    `media_provider_not_implemented`, the expected pre-submit timeline, a
+    contenteditable `Type to imagine` composer, and
+    `generatedMediaSelectorCount = 1`
+  - Grok image execution remains on the existing submitted/poll/materialize
+    path
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts --maxWorkers 1`
+  - bounded live local API Grok browser video request with `wait=false`
+
 ## 2026-04-24 - Grok Imagine video-mode discovery action
 
 - Current focus:
@@ -16,7 +41,7 @@
     generated/selected media counts
   - live dogfood on 2026-04-24 observed a contenteditable `Type to imagine`
     composer, disabled `Submit`, visible `Upload`, `Aspect Ratio = 2:3`, no
-    root-state filmstrip/download controls, `generatedMediaSelectorCount = 2`,
+    root-state filmstrip/download controls, `generatedMediaSelectorCount = 1`,
     and `selectedGeneratedMediaCount = 1`
   - the action does not type into the composer and does not click Submit
 - Validation:

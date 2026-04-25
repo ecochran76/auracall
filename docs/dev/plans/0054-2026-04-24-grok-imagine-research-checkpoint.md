@@ -193,10 +193,22 @@ existing Aura-Call media-generation contract.
   - Video mode kept a contenteditable `Type to imagine` composer and disabled
     `Submit` before prompt text
   - visible controls included `Upload` and `Aspect Ratio = 2:3`
-  - root-state Video mode exposed generated/selected media counts but no
+  - root-state Video mode exposed one generated/selected media selector but no
     visible filmstrip or download controls until generated media is selected or
     produced
   - the probe restored the original Image/Video mode after evidence capture
+- Grok browser video now has a gated executor skeleton:
+  - media capability preflight requests
+    `discoveryAction = grok-imagine-video-mode`
+  - the executor receives the discovered workbench capability evidence and
+    emits `capability_selected`, `composer_ready`, and
+    `submitted_state_observed` with `submitted = false`
+  - the executor fails with `media_provider_not_implemented` before prompt
+    insertion or Submit until video run-state and artifact materialization
+    acceptance criteria are defined
+  - live local API dogfood id
+    `medgen_5db184cae1ea432aae1e6649beb6ed22` confirmed the expected
+    pre-submit timeline and no prompt submission
 
 ## Research Findings
 
@@ -361,6 +373,8 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - [x] Explicit Grok Video-mode discovery records composer/input requirements,
   generated-media selector counts, and materialization-control evidence without
   submitting a prompt.
+- [x] Grok browser video requests have a durable pre-submit executor skeleton
+  that records Video-mode evidence and fails before prompt insertion.
 
 ## Validation Plan
 
@@ -449,8 +463,15 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - [x] Bounded read-only Grok video-mode semantics audit:
   - `pnpm tsx bin/auracall.ts capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --discovery-action grok-imagine-video-mode --json`
   - observed contenteditable composer, disabled Submit, Upload, Aspect Ratio,
-    generated/selected media counts, and no root-state filmstrip/download
+    one generated/selected media selector, and no root-state filmstrip/download
     controls
+- [x] Unit tests for the Grok video executor skeleton:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts --maxWorkers 1`
+- [x] Bounded live Grok video executor skeleton dogfood:
+  - returned id: `medgen_5db184cae1ea432aae1e6649beb6ed22`
+  - terminal failure: `media_provider_not_implemented`
+  - timeline included `capability_selected`, `composer_ready`, and
+    `submitted_state_observed` with `submitted = false`
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
@@ -458,7 +479,5 @@ Add a browser-first Grok Imagine discovery/audit slice:
 ## Next Slice
 
 Keep Grok video and edit/reference workflows gated. The next browser slice
-should add a video-specific executor skeleton that shares only the proven
-composer/mode-selection primitives with image generation, then fails before
-submission until post-submit video run-state and artifact materialization
-acceptance criteria are defined.
+should define post-submit video run-state and artifact materialization
+acceptance criteria before enabling any video Submit click.

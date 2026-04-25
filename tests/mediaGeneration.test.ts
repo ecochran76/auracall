@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
-import { createMediaGenerationService } from '../src/media/service.js';
+import { createMediaGenerationService, MediaGenerationExecutionError } from '../src/media/service.js';
 import type { WorkbenchCapabilityReporter } from '../src/workbench/types.js';
 
 describe('media generation service', () => {
@@ -428,6 +428,112 @@ describe('media generation service', () => {
     expect(created.timeline?.map((entry) => entry.event)).toEqual([
       'running_persisted',
       'capability_unavailable',
+      'failed',
+    ]);
+  });
+
+  it('requests explicit Grok video-mode discovery before invoking browser video execution', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-media-generation-grok-video-preflight-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const capabilityRequests: unknown[] = [];
+    const service = createMediaGenerationService({
+      now: () => new Date('2026-04-24T12:00:00.000Z'),
+      generateId: () => 'medgen_grok_video_preflight_1',
+      runtimeProfile: 'default',
+      capabilityReporter: {
+        async listCapabilities(request) {
+          capabilityRequests.push(request);
+          return {
+            object: 'workbench_capability_report',
+            generatedAt: '2026-04-24T12:00:00.000Z',
+            provider: 'grok',
+            category: 'media',
+            runtimeProfile: 'default',
+            capabilities: [
+              {
+                id: 'grok.media.imagine_video',
+                provider: 'grok',
+                providerLabels: ['Imagine'],
+                category: 'media',
+                invocationMode: 'post_prompt_action',
+                surfaces: ['browser_service', 'local_api', 'mcp'],
+                availability: 'available',
+                stability: 'observed',
+                requiredInputs: [{ name: 'prompt', required: true }],
+                output: { artifactTypes: ['video'] },
+                safety: {},
+                observedAt: '2026-04-24T12:00:00.000Z',
+                source: 'browser_discovery',
+                metadata: {
+                  discoveryAction: {
+                    action: 'grok-imagine-video-mode',
+                    videoModeAudit: {
+                      composer: [{ tag: 'div', placeholder: 'Type to imagine' }],
+                      generatedMediaSelectorCount: 2,
+                    },
+                  },
+                },
+              },
+            ],
+            summary: {
+              total: 1,
+              available: 1,
+              accountGated: 0,
+              unknown: 0,
+              blocked: 0,
+            },
+          };
+        },
+      },
+      executor: async ({ workbenchCapability, emitTimeline }) => {
+        await emitTimeline?.({
+          event: 'submitted_state_observed',
+          details: {
+            submitted: false,
+            capabilityId: workbenchCapability?.id ?? null,
+            videoModeAudit: workbenchCapability?.metadata?.discoveryAction,
+          },
+        });
+        throw new MediaGenerationExecutionError('media_provider_not_implemented', 'video skeleton stop', {
+          capabilityId: workbenchCapability?.id ?? null,
+        });
+      },
+    });
+
+    const created = await service.createGeneration({
+      provider: 'grok',
+      mediaType: 'video',
+      prompt: 'Generate a video of an asphalt secret agent',
+      source: 'api',
+      transport: 'browser',
+    });
+
+    expect(capabilityRequests).toEqual([
+      expect.objectContaining({
+        provider: 'grok',
+        category: 'media',
+        entrypoint: 'grok-imagine',
+        diagnostics: 'browser-state',
+        discoveryAction: 'grok-imagine-video-mode',
+      }),
+    ]);
+    expect(created).toMatchObject({
+      id: 'medgen_grok_video_preflight_1',
+      status: 'failed',
+      mediaType: 'video',
+      failure: {
+        code: 'media_provider_not_implemented',
+        details: {
+          capabilityId: 'grok.media.imagine_video',
+        },
+      },
+    });
+    expect(created.timeline?.map((entry) => entry.event)).toEqual([
+      'running_persisted',
+      'capability_discovered',
+      'executor_started',
+      'submitted_state_observed',
       'failed',
     ]);
   });

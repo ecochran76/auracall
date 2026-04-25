@@ -1,3 +1,10 @@
+- 2026-04-24: A gated executor skeleton should still persist useful
+  pre-submit state. For Grok Imagine video, capability preflight owns the
+  explicit Video-mode discovery action, and the executor receives that
+  workbench capability evidence so it can emit composer/materialization
+  timeline context before failing with `media_provider_not_implemented`
+  without typing or submitting.
+
 - 2026-04-24: Make provider mode audits explicit discovery actions, not
   hidden side effects of generic capability reads. Grok Imagine video-mode
   research may need to click the Video radio to expose provider-specific

@@ -102,6 +102,7 @@ export interface MediaGenerationExecutorInput {
   id: string;
   createdAt: string;
   artifactDir: string;
+  workbenchCapability?: import('../workbench/types.js').WorkbenchCapability | null;
   emitTimeline?: MediaGenerationTimelineEmitter;
 }
 

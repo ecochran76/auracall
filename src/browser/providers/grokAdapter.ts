@@ -655,6 +655,13 @@ function buildGrokImagineVideoModeAuditUpdateExpression(): string {
       const visibleMedia = Array.from(document.querySelectorAll('main img, main video, [data-filmstrip-scroll="true"] img, [data-filmstrip-scroll="true"] video, img[src*="assets.grok.com/users"], video[src*="assets.grok.com/users"]'))
         .filter((node) => node instanceof HTMLElement)
         .filter(isVisible)
+        .filter((node) => {
+          const alt = normalize(node.getAttribute('alt') || '').toLowerCase();
+          const src = normalize(node.currentSrc || node.src || node.getAttribute('src') || '').toLowerCase();
+          const rect = node.getBoundingClientRect();
+          if (alt === 'pfp' || alt.includes('avatar') || src.includes('profile-picture')) return false;
+          return rect.width >= 40 && rect.height >= 40;
+        })
         .slice(0, 40)
         .map((node) => {
           const rect = node.getBoundingClientRect();
@@ -787,6 +794,13 @@ async function performGrokImagineDiscoveryAction(
         const visibleMedia = Array.from(document.querySelectorAll('main img, main video, [data-filmstrip-scroll="true"] img, [data-filmstrip-scroll="true"] video, img[src*="assets.grok.com/users"], video[src*="assets.grok.com/users"]'))
           .filter((node) => node instanceof HTMLElement)
           .filter(isVisible)
+          .filter((node) => {
+            const alt = normalize(node.getAttribute('alt') || '').toLowerCase();
+            const src = normalize(node.currentSrc || node.src || node.getAttribute('src') || '').toLowerCase();
+            const rect = node.getBoundingClientRect();
+            if (alt === 'pfp' || alt.includes('avatar') || src.includes('profile-picture')) return false;
+            return rect.width >= 40 && rect.height >= 40;
+          })
           .slice(0, 40)
           .map((node) => {
             const rect = node.getBoundingClientRect();
