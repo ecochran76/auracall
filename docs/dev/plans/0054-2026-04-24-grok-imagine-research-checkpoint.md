@@ -24,6 +24,15 @@ existing Aura-Call media-generation contract.
   generic run status, and workbench capability tools.
 - Grok video, API execution, and edit/reference workflows still fail durably as
   not implemented.
+- Grok Imagine video-mode auditing now has an explicit workbench capability
+  discovery action:
+  - CLI: `auracall capabilities --target grok --entrypoint grok-imagine --discovery-action grok-imagine-video-mode --json`
+  - API: `GET /v1/workbench-capabilities?provider=grok&entrypoint=grok-imagine&discoveryAction=grok-imagine-video-mode`
+  - MCP: `workbench_capabilities` with
+    `discoveryAction = "grok-imagine-video-mode"`
+  - the action may click the Video radio, records before/after control
+    evidence, restores the original Image/Video mode, and does not type or
+    submit a prompt
 - Static/read-only workbench capability reporting now includes conservative
   Grok Imagine image/video entries.
 - The Grok browser adapter now exposes a read-only feature signature that can

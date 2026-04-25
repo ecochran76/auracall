@@ -69,6 +69,7 @@ describe('mcp workbench_capabilities tool', () => {
       runtimeProfile: 'default',
       diagnostics: 'browser-state',
       entrypoint: 'grok-imagine',
+      discoveryAction: 'grok-imagine-video-mode',
     });
 
     expect(result).toMatchObject({
@@ -97,6 +98,7 @@ describe('mcp workbench_capabilities tool', () => {
         provider: 'grok',
         diagnostics: 'browser-state',
         entrypoint: 'grok-imagine',
+        discoveryAction: 'grok-imagine-video-mode',
       }),
     ]);
   });

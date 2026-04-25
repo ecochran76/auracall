@@ -62,6 +62,7 @@ auracall capabilities --target chatgpt --json
 auracall capabilities --target grok --static --json
 auracall capabilities --target grok --diagnostics browser-state --json
 auracall capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json
+auracall capabilities --target grok --entrypoint grok-imagine --discovery-action grok-imagine-video-mode --json
 
 # Save and diff live feature snapshots
 auracall features snapshot --target gemini --json

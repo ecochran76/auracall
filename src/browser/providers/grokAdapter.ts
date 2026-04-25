@@ -351,6 +351,7 @@ export function buildGrokFeatureProbeExpression(): string {
         labels: Array.from(new Set(labels)).slice(0, 20),
         routes: Array.from(new Set(routes)).slice(0, 20),
         controls: matchedControls,
+        discovery_action: window.__auracallGrokImagineDiscoveryAction || null,
         pending_controls: pendingControls,
         materialization_controls: materializationControls,
         media: {
@@ -387,6 +388,8 @@ export function normalizeGrokFeatureSignature(probe: unknown): string | null {
       routes?: unknown;
       href?: unknown;
       title?: unknown;
+      controls?: unknown;
+      discovery_action?: unknown;
       materialization_controls?: unknown;
       media?: unknown;
     };
@@ -421,6 +424,8 @@ export function normalizeGrokFeatureSignature(probe: unknown): string | null {
       routes,
       href: typeof imagine.href === 'string' && imagine.href.trim() ? imagine.href.trim() : null,
       title: typeof imagine.title === 'string' && imagine.title.trim() ? imagine.title.trim() : null,
+      controls: normalizeGrokEvidenceArray(imagine.controls, 30),
+      discovery_action: normalizeGrokDiscoveryAction(imagine.discovery_action),
       materialization_controls: normalizeGrokEvidenceArray(imagine.materialization_controls, 30),
       media: normalizeGrokImagineMedia(imagine.media),
     },
@@ -435,7 +440,9 @@ export function normalizeGrokFeatureSignature(probe: unknown): string | null {
     normalized.imagine.run_state !== null ||
     normalized.imagine.modes.length > 0 ||
     normalized.imagine.labels.length > 0 ||
-    normalized.imagine.routes.length > 0;
+    normalized.imagine.routes.length > 0 ||
+    normalized.imagine.controls.length > 0 ||
+    normalized.imagine.discovery_action !== null;
   return hasSignal ? JSON.stringify(normalized) : null;
 }
 
@@ -501,12 +508,225 @@ function normalizeGrokImagineMedia(value: unknown): {
   };
 }
 
+function normalizeGrokDiscoveryAction(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  const action = typeof record.action === 'string' && record.action.trim() ? record.action.trim() : null;
+  if (action !== 'grok-imagine-video-mode') {
+    return null;
+  }
+  const normalized: Record<string, unknown> = {
+    action,
+    status: typeof record.status === 'string' && record.status.trim() ? record.status.trim() : 'unknown',
+    clicked: record.clicked === true,
+    beforeMode: typeof record.beforeMode === 'string' && record.beforeMode.trim() ? record.beforeMode.trim() : null,
+    afterMode: typeof record.afterMode === 'string' && record.afterMode.trim() ? record.afterMode.trim() : null,
+    observedAt: typeof record.observedAt === 'string' && record.observedAt.trim() ? record.observedAt.trim() : null,
+    controlsBefore: normalizeGrokEvidenceArray(record.controlsBefore, 20),
+    controlsAfter: normalizeGrokEvidenceArray(record.controlsAfter, 20),
+  };
+  if (typeof record.error === 'string' && record.error.trim()) {
+    normalized.error = record.error.trim().slice(0, 500);
+  }
+  return normalized;
+}
+
+type GrokImagineDiscoveryActionResult = {
+  action: 'grok-imagine-video-mode';
+  status: string;
+  restoreMode: 'Image' | 'Video' | null;
+};
+
 async function readGrokFeatureSignature(client: ChromeClient): Promise<string | null> {
   const { result } = await client.Runtime.evaluate({
     expression: buildGrokFeatureProbeExpression(),
     returnByValue: true,
   });
   return normalizeGrokFeatureSignature(result?.value);
+}
+
+async function performGrokImagineDiscoveryAction(
+  Runtime: ChromeClient['Runtime'],
+  action: BrowserProviderListOptions['discoveryAction'],
+): Promise<GrokImagineDiscoveryActionResult | null> {
+  if (action !== 'grok-imagine-video-mode') {
+    return null;
+  }
+  const { result } = await Runtime.evaluate({
+    expression: `(() => {
+      const action = 'grok-imagine-video-mode';
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const isVisible = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const style = window.getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const readControls = () => Array.from(document.querySelectorAll('[role="radio"], button'))
+        .filter((node) => node instanceof HTMLElement)
+        .filter(isVisible)
+        .map((node) => {
+          const text = normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('title') || '');
+          return {
+            tag: String(node.tagName || '').toLowerCase(),
+            text: text || null,
+            role: normalize(node.getAttribute('role') || '') || null,
+            checked: normalize(node.getAttribute('aria-checked') || '') || null,
+            disabled: Boolean(node.disabled) || normalize(node.getAttribute('aria-disabled') || '') === 'true',
+          };
+        })
+        .filter((entry) => /^(Image|Video|Speed|Quality)$/.test(String(entry.text || '')))
+        .slice(0, 20);
+      const selectedPrimaryMode = (controls) => {
+        const selected = controls.find((entry) => (entry.text === 'Image' || entry.text === 'Video') && entry.checked === 'true');
+        return selected ? selected.text : null;
+      };
+      const findRadio = (label) => Array.from(document.querySelectorAll('[role="radio"], button'))
+        .filter((node) => node instanceof HTMLElement)
+        .filter(isVisible)
+        .find((node) => normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('title') || '') === label) || null;
+      const controlsBefore = readControls();
+      const beforeMode = selectedPrimaryMode(controlsBefore);
+      const video = findRadio('Video');
+      let status = 'not_visible';
+      let clicked = false;
+      let error = null;
+      try {
+        if (video && !(Boolean(video.disabled) || normalize(video.getAttribute('aria-disabled') || '') === 'true')) {
+          if (normalize(video.getAttribute('aria-checked') || '') === 'true') {
+            status = 'already_selected';
+          } else {
+            video.click();
+            clicked = true;
+            status = 'clicked';
+          }
+        } else if (video) {
+          status = 'disabled';
+        }
+      } catch (err) {
+        status = 'error';
+        error = err instanceof Error ? err.message : String(err);
+      }
+      const controlsAfter = readControls();
+      const afterMode = selectedPrimaryMode(controlsAfter);
+      const record = {
+        action,
+        status,
+        clicked,
+        beforeMode,
+        afterMode,
+        controlsBefore,
+        controlsAfter,
+        observedAt: new Date().toISOString(),
+        error,
+      };
+      window.__auracallGrokImagineDiscoveryAction = record;
+      return record;
+    })()`,
+    returnByValue: true,
+  });
+  const record = result?.value as Record<string, unknown> | undefined;
+  if (record?.clicked === true) {
+    await waitForPredicate(
+      Runtime,
+      `(() => {
+        const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+        const video = Array.from(document.querySelectorAll('[role="radio"], button'))
+          .filter((node) => node instanceof HTMLElement)
+          .find((node) => normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('title') || '') === 'Video');
+        return video && normalize(video.getAttribute('aria-checked') || '') === 'true'
+          ? { checked: true, text: normalize(video.textContent || '') }
+          : null;
+      })()`,
+      {
+        timeoutMs: 5000,
+        description: 'Grok Imagine Video mode discovery action',
+      },
+    ).catch(() => undefined);
+    await Runtime.evaluate({
+      expression: `(() => {
+        const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+        const readControls = () => Array.from(document.querySelectorAll('[role="radio"], button'))
+          .filter((node) => node instanceof HTMLElement)
+          .filter((node) => {
+            const style = window.getComputedStyle(node);
+            const rect = node.getBoundingClientRect();
+            return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
+          })
+          .map((node) => ({
+            text: normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('title') || '') || null,
+            role: normalize(node.getAttribute('role') || '') || null,
+            checked: normalize(node.getAttribute('aria-checked') || '') || null,
+            disabled: Boolean(node.disabled) || normalize(node.getAttribute('aria-disabled') || '') === 'true',
+          }))
+          .filter((entry) => /^(Image|Video|Speed|Quality)$/.test(String(entry.text || '')))
+          .slice(0, 20);
+        const record = window.__auracallGrokImagineDiscoveryAction;
+        if (record && typeof record === 'object') {
+          record.controlsAfter = readControls();
+          const selected = record.controlsAfter.find((entry) => (entry.text === 'Image' || entry.text === 'Video') && entry.checked === 'true');
+          record.afterMode = selected ? selected.text : null;
+          record.status = record.afterMode === 'Video' ? 'observed_video_mode' : record.status;
+        }
+        return record || null;
+      })()`,
+      returnByValue: true,
+    }).catch(() => undefined);
+  }
+  const beforeMode = record?.beforeMode === 'Image' || record?.beforeMode === 'Video' ? record.beforeMode : null;
+  return {
+    action,
+    status: typeof record?.status === 'string' ? record.status : 'unknown',
+    restoreMode: beforeMode,
+  };
+}
+
+async function restoreGrokImaginePrimaryMode(
+  Runtime: ChromeClient['Runtime'],
+  mode: GrokImagineDiscoveryActionResult['restoreMode'],
+): Promise<void> {
+  if (mode !== 'Image' && mode !== 'Video') {
+    return;
+  }
+  await Runtime.evaluate({
+    expression: `(() => {
+      const targetMode = ${JSON.stringify(mode)};
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const isVisible = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const style = window.getComputedStyle(node);
+        const rect = node.getBoundingClientRect();
+        return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
+      };
+      const target = Array.from(document.querySelectorAll('[role="radio"], button'))
+        .filter((node) => node instanceof HTMLElement)
+        .filter(isVisible)
+        .find((node) => normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('title') || '') === targetMode);
+      if (!target || normalize(target.getAttribute('aria-checked') || '') === 'true') return null;
+      if (Boolean(target.disabled) || normalize(target.getAttribute('aria-disabled') || '') === 'true') return null;
+      target.click();
+      return { mode: targetMode, clicked: true };
+    })()`,
+    returnByValue: true,
+  }).catch(() => undefined);
+  await waitForPredicate(
+    Runtime,
+    `(() => {
+      const targetMode = ${JSON.stringify(mode)};
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const target = Array.from(document.querySelectorAll('[role="radio"], button'))
+        .filter((node) => node instanceof HTMLElement)
+        .find((node) => normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('title') || '') === targetMode);
+      return target && normalize(target.getAttribute('aria-checked') || '') === 'true' ? { mode: targetMode } : null;
+    })()`,
+    {
+      timeoutMs: 5000,
+      description: `Grok Imagine ${mode} mode restore`,
+    },
+  ).catch(() => undefined);
 }
 
 type GrokImaginePromptState = {
@@ -1665,7 +1885,15 @@ export function createGrokAdapter(): Pick<
             },
           ).catch(() => undefined);
         }
-        return await readGrokFeatureSignature(client);
+        const discoveryAction = await performGrokImagineDiscoveryAction(
+          client.Runtime,
+          options?.discoveryAction ?? null,
+        );
+        try {
+          return await readGrokFeatureSignature(client);
+        } finally {
+          await restoreGrokImaginePrimaryMode(client.Runtime, discoveryAction?.restoreMode ?? null);
+        }
       } finally {
         await client.close().catch(() => undefined);
         if (shouldClose && targetId) {

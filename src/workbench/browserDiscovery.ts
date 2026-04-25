@@ -22,6 +22,7 @@ export function createBrowserWorkbenchCapabilityDiscovery(
       ? {
           configuredUrl: entrypointUrl,
           preserveActiveTab: true,
+          discoveryAction: request.discoveryAction ?? null,
           mutationSourcePrefix: `workbench:${request.entrypoint}`,
         }
       : undefined);

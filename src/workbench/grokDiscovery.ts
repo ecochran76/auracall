@@ -18,6 +18,8 @@ interface GrokImagineSignals {
   video: boolean;
   labels: string[];
   routes: string[];
+  controls: Array<Record<string, unknown>>;
+  discoveryAction: Record<string, unknown> | null;
   materializationControls: Array<Record<string, unknown>>;
   media: {
     images: Array<Record<string, unknown>>;
@@ -76,6 +78,8 @@ export function deriveGrokWorkbenchCapabilitiesFromFeatureSignature(
         pending: signals.pending,
         terminalImage: signals.terminalImage,
         terminalVideo: signals.terminalVideo,
+        controls: signals.controls,
+        discoveryAction: signals.discoveryAction,
         materializationControls: signals.materializationControls,
         media: signals.media,
       },
@@ -108,6 +112,8 @@ export function deriveGrokWorkbenchCapabilitiesFromFeatureSignature(
         pending: signals.pending,
         terminalImage: signals.terminalImage,
         terminalVideo: signals.terminalVideo,
+        controls: signals.controls,
+        discoveryAction: signals.discoveryAction,
         materializationControls: signals.materializationControls,
         media: signals.media,
       },
@@ -140,6 +146,8 @@ function collectGrokImagineSignals(root: GrokImagineFeatureObject): GrokImagineS
     video: false,
     labels: [],
     routes: [],
+    controls: [],
+    discoveryAction: null,
     materializationControls: [],
     media: {
       images: [],
@@ -181,6 +189,8 @@ function collectFromObject(source: GrokImagineFeatureObject, signals: GrokImagin
     modes?: unknown;
     labels?: unknown;
     routes?: unknown;
+    controls?: unknown;
+    discovery_action?: unknown;
     materialization_controls?: unknown;
     media?: unknown;
   };
@@ -207,6 +217,9 @@ function collectFromObject(source: GrokImagineFeatureObject, signals: GrokImagin
   }
   collectStringArray(entry.labels, signals.labels);
   collectStringArray(entry.routes, signals.routes);
+  signals.controls.push(...collectRecordArray(entry.controls, 30));
+  const discoveryAction = collectRecord(entry.discovery_action);
+  if (discoveryAction) signals.discoveryAction = discoveryAction;
   signals.materializationControls.push(...collectRecordArray(entry.materialization_controls, 30));
   collectMediaEvidence(entry.media, signals.media);
 }
@@ -237,6 +250,13 @@ function collectRecordArray(value: unknown, limit: number): Array<Record<string,
     .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry))
     .slice(0, limit)
     .map((entry) => ({ ...entry }));
+}
+
+function collectRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  return { ...(value as Record<string, unknown>) };
 }
 
 function collectMediaEvidence(value: unknown, sink: GrokImagineSignals['media']): void {

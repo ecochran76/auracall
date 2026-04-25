@@ -40,6 +40,7 @@ export interface BrowserProviderListOptions {
   historyLimit?: number;
   historySince?: string;
   preserveActiveTab?: boolean;
+  discoveryAction?: 'grok-imagine-video-mode' | null;
   browserService?: import('../service/types.js').BrowserServiceHandle;
   modelLabel?: string;
   mutationAudit?: BrowserMutationAuditSink;

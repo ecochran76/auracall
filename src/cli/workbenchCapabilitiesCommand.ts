@@ -1,5 +1,6 @@
 import type {
   WorkbenchCapabilityCategory,
+  WorkbenchCapabilityDiscoveryAction,
   WorkbenchCapabilityProvider,
   WorkbenchCapabilityReport,
   WorkbenchCapabilityReportRequest,
@@ -29,6 +30,7 @@ export interface WorkbenchCapabilitiesCliOptions {
   runtimeProfile?: unknown;
   diagnostics?: unknown;
   entrypoint?: unknown;
+  discoveryAction?: unknown;
 }
 
 export function normalizeWorkbenchCapabilityProvider(value: unknown): WorkbenchCapabilityProvider | null {
@@ -59,6 +61,14 @@ export function normalizeWorkbenchCapabilityDiagnostics(value: unknown): 'browse
   throw new Error(`Invalid diagnostics "${value}". Use "browser-state".`);
 }
 
+export function normalizeWorkbenchCapabilityDiscoveryAction(value: unknown): WorkbenchCapabilityDiscoveryAction | null {
+  if (value == null) return null;
+  const normalized = String(value).trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized === 'grok-imagine-video-mode') return 'grok-imagine-video-mode';
+  throw new Error(`Invalid discovery action "${value}". Use "grok-imagine-video-mode".`);
+}
+
 export async function buildWorkbenchCapabilityReportForCli(
   reporter: WorkbenchCapabilityReporter,
   options: WorkbenchCapabilitiesCliOptions = {},
@@ -76,6 +86,7 @@ export async function buildWorkbenchCapabilityReportForCli(
     includeUnavailable: !options.availableOnly,
     diagnostics: normalizeWorkbenchCapabilityDiagnostics(options.diagnostics),
     entrypoint: normalizeWorkbenchCapabilityEntrypoint(options.entrypoint),
+    discoveryAction: normalizeWorkbenchCapabilityDiscoveryAction(options.discoveryAction),
   };
   return reporter.listCapabilities(request);
 }

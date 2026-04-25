@@ -25,6 +25,7 @@ const workbenchCapabilitiesInputShape = {
   includeUnavailable: z.boolean().nullable().optional(),
   diagnostics: z.enum(['browser-state']).nullable().optional(),
   entrypoint: z.enum(['grok-imagine']).nullable().optional(),
+  discoveryAction: z.enum(['grok-imagine-video-mode']).nullable().optional(),
 } satisfies z.ZodRawShape;
 
 const workbenchCapabilityShape = z.object({

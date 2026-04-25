@@ -1,3 +1,10 @@
+- 2026-04-24: Make provider mode audits explicit discovery actions, not
+  hidden side effects of generic capability reads. Grok Imagine video-mode
+  research may need to click the Video radio to expose provider-specific
+  controls, but the request must say so (`discoveryAction =
+  grok-imagine-video-mode`), preserve before/after control evidence, restore
+  the original Image/Video mode, and never type or submit a prompt.
+
 - 2026-04-24: Do not duplicate media timeline event enums in MCP tool output
   schemas. The API/store schema already owns `MediaGenerationTimelineEvent`;
   MCP media status should reuse that canonical schema so events such as

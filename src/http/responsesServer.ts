@@ -1235,7 +1235,7 @@ function createHttpStatusResponse(input: {
       mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
       runStatusTemplate: '/v1/runs/{run_id}/status[?diagnostics=browser-state]',
       workbenchCapabilitiesList:
-        '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state]',
+        '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
     },
     compatibility: {
       openai: true,
@@ -1618,6 +1618,7 @@ function parseWorkbenchCapabilityQuery(searchParams: URLSearchParams) {
       .optional(),
     diagnostics: z.enum(['browser-state']).optional(),
     entrypoint: z.enum(['grok-imagine', 'imagine']).optional(),
+    discoveryAction: z.enum(['grok-imagine-video-mode']).optional(),
   }).parse(raw);
   return WorkbenchCapabilityReportRequestSchema.parse({
     provider: parsed.provider ?? null,
@@ -1626,6 +1627,7 @@ function parseWorkbenchCapabilityQuery(searchParams: URLSearchParams) {
     includeUnavailable: parsed.includeUnavailable ?? null,
     diagnostics: parsed.diagnostics ?? null,
     entrypoint: parsed.entrypoint === 'imagine' ? 'grok-imagine' : parsed.entrypoint ?? null,
+    discoveryAction: parsed.discoveryAction ?? null,
   });
 }
 

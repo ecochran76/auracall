@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildWorkbenchCapabilityReportForCli,
   formatWorkbenchCapabilityReport,
+  normalizeWorkbenchCapabilityDiscoveryAction,
   normalizeWorkbenchCapabilityDiagnostics,
   normalizeWorkbenchCapabilityCategory,
   normalizeWorkbenchCapabilityProvider,
@@ -22,6 +23,10 @@ describe('workbench capabilities CLI helpers', () => {
     );
     expect(normalizeWorkbenchCapabilityEntrypoint('imagine')).toBe('grok-imagine');
     expect(normalizeWorkbenchCapabilityEntrypoint('grok-imagine')).toBe('grok-imagine');
+    expect(normalizeWorkbenchCapabilityDiscoveryAction('grok-imagine-video-mode')).toBe('grok-imagine-video-mode');
+    expect(() => normalizeWorkbenchCapabilityDiscoveryAction('submit-video')).toThrow(
+      'Invalid discovery action "submit-video". Use "grok-imagine-video-mode".',
+    );
   });
 
   it('builds a bounded report request for the reporter', async () => {
@@ -48,6 +53,7 @@ describe('workbench capabilities CLI helpers', () => {
         runtimeProfile: 'default',
         diagnostics: null,
         entrypoint: null,
+        discoveryAction: null,
         includeUnavailable: false,
       },
     ]);
@@ -135,6 +141,7 @@ describe('workbench capabilities CLI helpers', () => {
         target: 'grok',
         diagnostics: 'browser-state',
         entrypoint: 'imagine',
+        discoveryAction: 'grok-imagine-video-mode',
         runtimeProfile: 'default',
       },
     );
@@ -144,6 +151,7 @@ describe('workbench capabilities CLI helpers', () => {
         provider: 'grok',
         diagnostics: 'browser-state',
         entrypoint: 'grok-imagine',
+        discoveryAction: 'grok-imagine-video-mode',
       }),
     ]);
   });

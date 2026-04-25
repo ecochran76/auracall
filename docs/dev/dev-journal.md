@@ -1,3 +1,19 @@
+## 2026-04-24 - Grok Imagine video-mode discovery action
+
+- Current focus:
+  - add an explicit read-only Grok Imagine video-mode audit path through
+    workbench capability discovery without enabling video invocation
+- Progress:
+  - wired `discoveryAction = grok-imagine-video-mode` through CLI, local API,
+    MCP, request schema, browser discovery, and the Grok browser adapter
+  - the Grok adapter now records Image/Video and Speed/Quality controls before
+    and after the Video mode click, exposes that evidence in the feature
+    signature and capability metadata, and restores the original Image/Video
+    mode after the probe
+  - the action does not type into the composer and does not click Submit
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/workbenchCapabilities.test.ts tests/cli/workbenchCapabilitiesCommand.test.ts tests/http.workbenchCapabilities.test.ts tests/mcp.workbenchCapabilities.test.ts --maxWorkers 1`
+
 ## 2026-04-24 - Grok Imagine status readback and video discovery
 
 - Current focus:

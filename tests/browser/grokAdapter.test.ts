@@ -118,6 +118,25 @@ describe('normalizeGrokFeatureSignature', () => {
         modes: ['Image', 'image-to-video', 'Image'],
         labels: [' Imagine ', 'Create with Imagine', 'Imagine'],
         routes: ['https://grok.com/imagine', 'https://grok.com/imagine'],
+        controls: [
+          {
+            tag: 'button',
+            text: 'Video',
+            role: 'radio',
+            checked: 'true',
+            visible: true,
+          },
+        ],
+        discovery_action: {
+          action: 'grok-imagine-video-mode',
+          status: 'observed_video_mode',
+          clicked: true,
+          beforeMode: 'Image',
+          afterMode: 'Video',
+          observedAt: '2026-04-24T12:00:00.000Z',
+          controlsBefore: [{ text: 'Image', checked: 'true' }],
+          controlsAfter: [{ text: 'Video', checked: 'true' }],
+        },
         materialization_controls: [
           {
             tag: 'button',
@@ -170,6 +189,25 @@ describe('normalizeGrokFeatureSignature', () => {
         routes: ['https://grok.com/imagine'],
         href: 'https://grok.com/imagine',
         title: 'Grok',
+        controls: [
+          {
+            tag: 'button',
+            text: 'Video',
+            role: 'radio',
+            checked: 'true',
+            visible: true,
+          },
+        ],
+        discovery_action: {
+          action: 'grok-imagine-video-mode',
+          status: 'observed_video_mode',
+          clicked: true,
+          beforeMode: 'Image',
+          afterMode: 'Video',
+          observedAt: '2026-04-24T12:00:00.000Z',
+          controlsBefore: [{ text: 'Image', checked: 'true' }],
+          controlsAfter: [{ text: 'Video', checked: 'true' }],
+        },
         materialization_controls: [
           {
             tag: 'button',

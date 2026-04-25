@@ -230,11 +230,13 @@
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=grok"`
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=grok&diagnostics=browser-state"`
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=grok&entrypoint=grok-imagine&diagnostics=browser-state"`
+    - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=grok&entrypoint=grok-imagine&discoveryAction=grok-imagine-video-mode"`
     - `auracall capabilities --target gemini --json`
     - `auracall capabilities --target chatgpt --json`
     - `auracall capabilities --target grok --json`
     - `auracall capabilities --target grok --diagnostics browser-state --json`
     - `auracall capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json`
+    - `auracall capabilities --target grok --entrypoint grok-imagine --discovery-action grok-imagine-video-mode --json`
     - `auracall capabilities --target gemini --static --json` for a no-browser
       catalog check
     - use `category=research|media|canvas|connector|skill|app|search|file|other`

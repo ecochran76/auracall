@@ -337,6 +337,20 @@ describe('workbench capability service', () => {
           modes: ['image'],
           labels: ['Imagine'],
           routes: ['https://grok.com/imagine'],
+          controls: [
+            {
+              text: 'Video',
+              role: 'radio',
+              checked: 'true',
+            },
+          ],
+          discovery_action: {
+            action: 'grok-imagine-video-mode',
+            status: 'observed_video_mode',
+            clicked: true,
+            beforeMode: 'Image',
+            afterMode: 'Video',
+          },
           materialization_controls: [
             {
               tag: 'button',
@@ -374,6 +388,16 @@ describe('workbench capability service', () => {
         metadata: expect.objectContaining({
           runState: 'terminal_video',
           terminalVideo: true,
+          controls: [
+            expect.objectContaining({
+              text: 'Video',
+              checked: 'true',
+            }),
+          ],
+          discoveryAction: expect.objectContaining({
+            action: 'grok-imagine-video-mode',
+            afterMode: 'Video',
+          }),
           materializationControls: [
             expect.objectContaining({
               ariaLabel: 'Download',

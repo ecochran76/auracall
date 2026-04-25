@@ -98,6 +98,7 @@ export const WorkbenchCapabilityReportRequestSchema: z.ZodType<WorkbenchCapabili
   includeUnavailable: z.boolean().nullable().optional(),
   diagnostics: z.enum(['browser-state']).nullable().optional(),
   entrypoint: z.enum(['grok-imagine']).nullable().optional(),
+  discoveryAction: z.enum(['grok-imagine-video-mode']).nullable().optional(),
 });
 
 export const WorkbenchCapabilityReportSchema: z.ZodType<WorkbenchCapabilityReport> = z.object({

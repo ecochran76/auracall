@@ -2,6 +2,7 @@ import type { RuntimeRunInspectionBrowserDiagnosticsSummary } from '../runtime/i
 import type { WorkbenchCapabilityEntrypoint } from './entrypoints.js';
 
 export type WorkbenchCapabilityProvider = 'chatgpt' | 'gemini' | 'grok';
+export type WorkbenchCapabilityDiscoveryAction = 'grok-imagine-video-mode';
 
 export type WorkbenchCapabilityCategory =
   | 'research'
@@ -86,6 +87,7 @@ export interface WorkbenchCapabilityReportRequest {
   includeUnavailable?: boolean | null;
   diagnostics?: 'browser-state' | null;
   entrypoint?: WorkbenchCapabilityEntrypoint | null;
+  discoveryAction?: WorkbenchCapabilityDiscoveryAction | null;
 }
 
 export interface WorkbenchCapabilityReport {

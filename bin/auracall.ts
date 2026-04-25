@@ -3691,6 +3691,7 @@ program
   .option('--static', 'Use the static catalog only; do not attach to a managed browser.', false)
   .option('--diagnostics <browser-state>', 'Include bounded browser-state diagnostics for the selected provider.')
   .option('--entrypoint <grok-imagine>', 'Open or reuse a known provider workbench entrypoint before read-only discovery.')
+  .option('--discovery-action <action>', 'Run an explicit read-only provider discovery action such as grok-imagine-video-mode.')
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async function (this: Command) {
     const commandOptions = {
@@ -3731,6 +3732,7 @@ program
       runtimeProfile: userConfig.auracallProfile ?? 'default',
       diagnostics: commandOptions.diagnostics,
       entrypoint: commandOptions.entrypoint,
+      discoveryAction: commandOptions.discoveryAction,
     });
 
     if (commandOptions.json) {

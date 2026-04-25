@@ -65,6 +65,7 @@ describe('http workbench capability adapter', () => {
       expect(status.routes.workbenchCapabilitiesList).toContain('/v1/workbench-capabilities');
       expect(status.routes.workbenchCapabilitiesList).toContain('entrypoint=grok-imagine');
       expect(status.routes.workbenchCapabilitiesList).toContain('diagnostics=browser-state');
+      expect(status.routes.workbenchCapabilitiesList).toContain('discoveryAction=grok-imagine-video-mode');
     } finally {
       await server.close();
     }
@@ -126,7 +127,7 @@ describe('http workbench capability adapter', () => {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:${server.port}/v1/workbench-capabilities?provider=grok&category=media&diagnostics=browser-state&entrypoint=imagine`,
+        `http://127.0.0.1:${server.port}/v1/workbench-capabilities?provider=grok&category=media&diagnostics=browser-state&entrypoint=imagine&discoveryAction=grok-imagine-video-mode`,
       );
       expect(response.status).toBe(200);
       const report = (await response.json()) as Record<string, unknown>;
@@ -149,6 +150,7 @@ describe('http workbench capability adapter', () => {
           provider: 'grok',
           diagnostics: 'browser-state',
           entrypoint: 'grok-imagine',
+          discoveryAction: 'grok-imagine-video-mode',
         }),
       ]);
     } finally {
