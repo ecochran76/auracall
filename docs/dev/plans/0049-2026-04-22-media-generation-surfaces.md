@@ -49,6 +49,11 @@ helpers.
   Gemini's two provider download choices: video with album art and MP3 audio.
   Live music smokes should be opt-in/manual for the same quota and
   provider-churn reasons as video.
+- Gemini generated-media readback now preserves visible music download-option
+  labels from the artifact container and already-open provider menu overlays.
+  This read-only probe records options such as `Download as video with album
+  art` and `Download as MP3` as artifact metadata without clicking the menu or
+  spending generation quota.
 - A first live API image smoke proved capability discovery, tool selection,
   and prompt submission, but Gemini remained in an active `Stop response` state
   until the media-generation timeout, so artifact completion/readback was still
@@ -276,6 +281,10 @@ helpers.
   `gemini.media.create_music` as available and should verify that both
   download variants, video with album art and MP3 audio, are cached when the
   provider exposes both.
+- Read-only Gemini music download-option discovery is covered by adapter
+  fixtures. It should not click download menus during routine validation; if a
+  human has already opened the menu in the managed browser, readback may
+  preserve the visible option labels.
 - Live Grok Imagine smoke only with a configured `XAI_API_KEY` or validated
   browser account path that exposes Imagine.
 - First Grok implementation validation should use read-only managed-browser

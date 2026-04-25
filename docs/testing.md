@@ -229,6 +229,9 @@
       `artifact_materialized`, and `completed`
     - generated music should cache every provider download variant exposed by
       readback, including video with album art and MP3 audio
+    - read-only artifact discovery should preserve already-visible provider
+      download option labels, such as `Download as video with album art` and
+      `Download as MP3`, without clicking the menu during routine validation
   - create a browser-transport Grok image request only after capability
     discovery reports `grok.media.imagine_image` as `available`; the local API
     first checks the explicit `/imagine` entrypoint and fails before prompt

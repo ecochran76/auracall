@@ -221,7 +221,9 @@ Terminology note:
     matching workbench capability, select the matching `Images`/`Music`/`Videos`
     workbench tool, and materialize generated artifacts through the managed
     browser path. Gemini music can cache both provider download variants when
-    readback exposes them: video with album art and MP3 audio. Gemini music/video
+    readback exposes them: video with album art and MP3 audio. Read-only
+    artifact discovery also preserves already-visible provider download option
+    labels without opening the menu. Gemini music/video
     live smokes are quota-sensitive and should stay opt-in/manual; fixture
     coverage is the routine validation path. Grok image requests with
     `transport = browser` now check `grok.media.imagine_image` through the

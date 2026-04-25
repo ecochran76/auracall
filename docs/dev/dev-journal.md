@@ -1,3 +1,20 @@
+## 2026-04-25 - Gemini music download-option discovery
+
+- Focus: add read-only Gemini music DOM discovery for provider download menu
+  variants without spending music-generation quota.
+- Progress: Gemini generated-media readback now preserves visible
+  `downloadOptions` labels from the artifact container and any already-open
+  provider menu overlay. Music inference uses those labels, so readback can
+  classify a generated media artifact with options such as `Download as video
+  with album art` and `Download as MP3` as music even when the backing URI is
+  an MP4.
+- Validation:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/mediaGeneration.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`
+
 ## 2026-04-25 - Gemini music fixture-first executor
 
 - Focus: implement Gemini music without spending live media-generation quota.

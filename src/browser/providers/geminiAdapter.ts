@@ -2488,15 +2488,19 @@ export function inferGeminiGeneratedArtifactMediaType(
   const metadata = artifact.metadata ?? {};
   const directType = typeof metadata.mediaType === 'string' ? metadata.mediaType.trim().toLowerCase() : '';
   if (directType === 'music' || directType === 'video') return directType;
+  const downloadOptions = Array.isArray(metadata.downloadOptions)
+    ? metadata.downloadOptions.filter((entry): entry is string => typeof entry === 'string')
+    : [];
   const labelCandidates = [
     typeof metadata.shareLabel === 'string' ? metadata.shareLabel : '',
     typeof metadata.downloadLabel === 'string' ? metadata.downloadLabel : '',
     typeof metadata.playLabel === 'string' ? metadata.playLabel : '',
     typeof metadata.muteLabel === 'string' ? metadata.muteLabel : '',
+    ...downloadOptions,
   ]
     .join(' ')
     .toLowerCase();
-  if (/\b(track|music|song|remix)\b/.test(labelCandidates)) return 'music';
+  if (/\b(track|music|song|remix|mp3|audio)\b/.test(labelCandidates)) return 'music';
   if (/\b(video|movie)\b/.test(labelCandidates)) return 'video';
   const fileName = extractGeminiArtifactFileName(artifact.uri);
   if (typeof fileName === 'string' && /\b(track|music|song|remix)\b/i.test(fileName)) return 'music';
@@ -3876,14 +3880,27 @@ async function readGeminiConversationContextWithClient(
           .filter((entry) => entry instanceof HTMLElement && visible(entry))
           .map((entry) => normalize(entry.getAttribute('aria-label') || ''))
           .filter(Boolean);
+        const optionNodes = [
+          ...Array.from(scope.querySelectorAll('[role="menuitem"], [role="option"], button, a')),
+          ...Array.from(document.querySelectorAll('[role="menu"] [role="menuitem"], .mat-mdc-menu-panel [role="menuitem"], .cdk-overlay-pane [role="menuitem"], .cdk-overlay-pane button, .cdk-overlay-pane a')),
+        ];
+        const downloadOptions = Array.from(new Set(optionNodes
+          .filter((entry) => entry instanceof HTMLElement && visible(entry))
+          .map((entry) => normalize(
+            entry.getAttribute('aria-label') ||
+            entry.getAttribute('title') ||
+            entry.textContent ||
+            '',
+          ))
+          .filter((label) => /download/i.test(label))));
         const findLabel = (needle) => controls.find((label) => label.toLowerCase().includes(needle)) || '';
         const shareLabel = findLabel('share');
         const downloadLabel = findLabel('download');
         const playLabel = findLabel('play');
         const muteLabel = findLabel('mute');
-        const combined = [shareLabel, downloadLabel, playLabel, muteLabel].join(' ').toLowerCase();
+        const combined = [shareLabel, downloadLabel, playLabel, muteLabel, ...downloadOptions].join(' ').toLowerCase();
         const mediaType =
-          /\b(track|music|song|remix)\b/.test(combined)
+          /\b(track|music|song|remix|mp3|audio)\b/.test(combined)
             ? 'music'
             : /\b(video|movie)\b/.test(combined)
               ? 'video'
@@ -3892,6 +3909,7 @@ async function readGeminiConversationContextWithClient(
           mediaType,
           shareLabel,
           downloadLabel,
+          downloadOptions,
           playLabel,
           muteLabel,
         };
@@ -4067,6 +4085,7 @@ async function readGeminiConversationContextWithClient(
                 height: media.videoHeight || null,
                 shareLabel: controls.shareLabel || undefined,
                 downloadLabel: controls.downloadLabel || undefined,
+                downloadOptions: controls.downloadOptions.length > 0 ? controls.downloadOptions : undefined,
                 playLabel: controls.playLabel || undefined,
                 muteLabel: controls.muteLabel || undefined,
                 hasDownloadButton: Boolean(controls.downloadLabel),
@@ -4384,6 +4403,7 @@ async function readGeminiConversationContextWithClient(
                 height: media.videoHeight || null,
                 shareLabel: controls.shareLabel || undefined,
                 downloadLabel: controls.downloadLabel || undefined,
+                downloadOptions: controls.downloadOptions.length > 0 ? controls.downloadOptions : undefined,
                 playLabel: controls.playLabel || undefined,
                 muteLabel: controls.muteLabel || undefined,
                 hasDownloadButton: Boolean(controls.downloadLabel),

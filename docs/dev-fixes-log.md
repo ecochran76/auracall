@@ -14279,3 +14279,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   media executor should preserve both when readback exposes both variants,
   emit `music_visible`, and keep live validation fixture-first unless an
   operator intentionally spends provider quota.
+- 2026-04-25: Preserve Gemini music download menu labels read-only before
+  automating clicks. In this repo, the music artifact download selector can
+  expose separate labels for video-with-album-art and MP3. Conversation
+  readback should record already-visible option labels from the artifact
+  container or open overlay as metadata, and use those labels for music
+  classification, without opening menus or spending live generation quota.

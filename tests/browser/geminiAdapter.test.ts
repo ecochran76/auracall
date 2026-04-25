@@ -145,6 +145,14 @@ describe('geminiAdapter id helpers', () => {
         downloadLabel: 'Download as MP3',
       },
     })).toBe('music');
+    expect(inferGeminiGeneratedArtifactMediaType({
+      kind: 'generated',
+      uri: 'https://contribution.usercontent.google.com/download?filename=video.mp4',
+      metadata: {
+        downloadLabel: 'Download',
+        downloadOptions: ['Download as video with album art', 'Download as MP3'],
+      },
+    })).toBe('music');
   });
 
   test('normalizes Gemini generated media artifacts into stable titles and metadata', () => {
@@ -157,6 +165,7 @@ describe('geminiAdapter id helpers', () => {
         metadata: {
           shareLabel: 'Share track',
           downloadLabel: 'Download track',
+          downloadOptions: ['Download as video with album art', 'Download as MP3'],
         },
       },
       {
@@ -178,6 +187,7 @@ describe('geminiAdapter id helpers', () => {
         metadata: {
           shareLabel: 'Share track',
           downloadLabel: 'Download track',
+          downloadOptions: ['Download as video with album art', 'Download as MP3'],
           mediaType: 'music',
           fileName: 'before_the_tide_returns.mp4',
         },
