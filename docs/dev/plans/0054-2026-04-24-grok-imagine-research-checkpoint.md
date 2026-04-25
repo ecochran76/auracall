@@ -179,6 +179,19 @@ existing Aura-Call media-generation contract.
     same persisted id
   - MCP media output schemas now reuse the canonical media timeline event
     schema instead of carrying a duplicated event enum
+- Live status-diagnostics dogfood on 2026-04-25 confirms the persisted status
+  path is actionable without a browser-state probe:
+  - request id `medgen_b71e85d09bb140bab52acee054676ba2`
+  - `POST /v1/media-generations?wait=false` returned `running`
+  - first status poll observed `image_visible` while the run was still
+    `running`
+  - terminal status reached `succeeded` with three cached artifacts under
+    `~/.auracall/runtime/media-generations/medgen_b71e85d09bb140bab52acee054676ba2/artifacts`
+  - media status, generic API run status, and CLI run status all exposed
+    matching diagnostics for `grok.media.imagine_image`, submitted tab
+    `6088C5371BC63D7C88C9BB4A6F7DFAD4`, provider route
+    `https://grok.com/imagine`, terminal image state, generated counts, and
+    `visible-tile-browser-capture` materialization
 - Bounded read-only video discovery has started:
   - the live `/imagine` page exposes `Image` and `Video` as visible
     `role = radio` controls, with `Image` checked and `Video` unchecked

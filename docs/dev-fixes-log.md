@@ -14252,3 +14252,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   artifact was materialized. Derive a compact status `diagnostics` block from
   persisted timeline events so API/MCP/CLI callers can inspect those answers
   without re-invoking the provider or taking a live browser snapshot.
+- 2026-04-25: Dogfood persisted media diagnostics before adding more live
+  browser probes. In this repo, a real Grok image run proved
+  `media_generation_status`, generic `run_status`, and CLI `run status` can
+  answer processing state, submitted tab, provider route, generated counts, and
+  artifact cache path from stored timeline evidence alone. Use
+  `diagnostics=browser-state` for unresolved active-run questions, not as the
+  routine first readback.

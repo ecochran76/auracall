@@ -1,3 +1,21 @@
+## 2026-04-25 - Grok media diagnostics dogfood
+
+- Focus: verify the new persisted media status diagnostics on a real
+  browser-backed Grok image run without adding browser-state probes.
+- Progress: capability discovery reported `grok.media.imagine_image` as
+  `available`; local API request
+  `medgen_b71e85d09bb140bab52acee054676ba2` ran through browser transport,
+  observed `image_visible` while still running, then completed with three
+  cached artifacts. Media status, generic API run status, and CLI run status
+  all exposed matching diagnostics for capability, submitted tab, provider
+  route, terminal image state, generated counts, and materialization path.
+- Validation:
+  - `pnpm tsx bin/auracall.ts capabilities --target grok --entrypoint grok-imagine --json`
+  - `curl -s 'http://127.0.0.1:8081/v1/media-generations?wait=false' ...`
+  - `curl -s 'http://127.0.0.1:8081/v1/media-generations/medgen_b71e85d09bb140bab52acee054676ba2/status'`
+  - `curl -s 'http://127.0.0.1:8081/v1/runs/medgen_b71e85d09bb140bab52acee054676ba2/status'`
+  - `pnpm tsx bin/auracall.ts run status medgen_b71e85d09bb140bab52acee054676ba2 --json`
+
 ## 2026-04-24 - Grok video disabled readback probe
 
 - Current focus:
