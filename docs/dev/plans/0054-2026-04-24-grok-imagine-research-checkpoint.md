@@ -22,8 +22,8 @@ existing Aura-Call media-generation contract.
 - The MCP server now builds the same configured browser-backed media/workbench
   service bundle as the local API path for media generation, media status,
   generic run status, and workbench capability tools.
-- Grok video, API execution, and edit/reference workflows still fail durably as
-  not implemented.
+- Grok API execution and edit/reference workflows still fail durably as not
+  implemented.
 - Grok Imagine video-mode auditing now has an explicit workbench capability
   discovery action:
   - CLI: `auracall capabilities --target grok --entrypoint grok-imagine --discovery-action grok-imagine-video-mode --json`
@@ -98,7 +98,8 @@ existing Aura-Call media-generation contract.
     failed readback/status
   - available accounts use a pinned `/imagine` tab, provider run-state polling,
     and remote media materialization from detected terminal image evidence
-  - video remains gated as not implemented
+  - video later adopted the same capability-preflight and submitted-tab
+    readback pattern
 - Durable local API dogfood on 2026-04-24 confirmed browser-backed Grok image
   runs persist processing state and artifacts:
   - request id: `medgen_bb41e86d6d6d4bcea5499bc2c090772c`
@@ -197,7 +198,7 @@ existing Aura-Call media-generation contract.
     visible filmstrip or download controls until generated media is selected or
     produced
   - the probe restored the original Image/Video mode after evidence capture
-- Grok browser video now has a gated executor skeleton:
+- First Grok browser video executor skeleton established the pre-submit guard:
   - media capability preflight requests
     `discoveryAction = grok-imagine-video-mode`
   - the executor receives the discovered workbench capability evidence and
@@ -209,8 +210,7 @@ existing Aura-Call media-generation contract.
   - live local API dogfood id
     `medgen_5db184cae1ea432aae1e6649beb6ed22` confirmed the expected
     pre-submit timeline and no prompt submission
-- Grok video post-submit acceptance criteria are now executable, but not yet
-  wired to Submit:
+- Grok video post-submit acceptance criteria are executable:
   - pending accepts provider `pending`, `generating`, or `progress` evidence
   - terminal success requires `terminal_video` plus generated account video
     evidence, not public/template media
@@ -218,16 +218,16 @@ existing Aura-Call media-generation contract.
     class
   - materialization requires generated video `src`/`href` evidence or a
     visible download/open control
-  - the canonical media timeline now reserves `video_visible` for terminal
-    video observation
+  - the canonical media timeline reserves `video_visible` for terminal video
+    observation
 - Grok video readback now has a fixture-backed decision skeleton:
   - one provider feature signature becomes a `run_state_observed` timeline
     payload and, when ready, the future terminal `video_visible` payload
   - readback decisions are `pending`, `ready`, `failed`, or `continue`
   - first materialization candidates are selected from generated video
     entries, selected generated video tiles, or visible download/open controls
-  - the helper is not yet called after a live Submit; the executor remains
-    pre-submit gated
+  - the helper is shared by the diagnostic readback branch and the normal
+    automated Submit path
 - Grok video polling and remote materialization now have fixture-backed
   primitives:
   - the wait loop polls only an existing tab target through
@@ -236,10 +236,10 @@ existing Aura-Call media-generation contract.
     and failed evidence maps to media-generation failure codes
   - generated video candidates can be cached as `type = video` artifacts with
     materialization source metadata
-  - the executor remains pre-submit gated until these primitives are wired to
-    a real post-submit path
-- Grok video readback primitives are now wired to a disabled executor branch:
-  - normal callers still stop before prompt insertion or Submit
+  - these primitives are now used by the normal post-submit path
+- Grok video readback primitives were first wired to a diagnostic executor
+  branch:
+  - the diagnostic path remains available for already-submitted tabs
   - the diagnostic branch requires `metadata.grokVideoReadbackProbe = true`
     plus an existing `metadata.grokVideoReadbackTabTargetId` and
     `metadata.grokVideoReadbackDevtoolsPort`
@@ -304,6 +304,34 @@ existing Aura-Call media-generation contract.
     `https://grok.com/imagine/post/540a1b45-5ee3-4cb4-8b57-a25dcc2ee9dd`,
     so the readback/download path did not navigate away from the submitted
     conversation
+- Normal Grok browser video submit is now wired behind capability preflight:
+  - capability preflight requests `discoveryAction =
+    grok-imagine-video-mode`
+  - the provider adapter accepts `grok.media.imagine_video`, selects Video
+    mode, inserts the prompt, clicks the composer-scoped Submit control, and
+    returns the submitted tab target plus DevTools endpoint
+  - the executor polls only the submitted tab for terminal generated-video
+    evidence, then materializes the MP4 through the selected-media download
+    control when the direct `assets.grok.com` URL is browser-gated
+  - the first normal live attempt,
+    `medgen_71a1d44956304f83b4f6d97626de6e39`, exposed that the
+    service-level capability derivation did not treat successful
+    Video-mode action evidence as `grok.media.imagine_video`; capability
+    derivation now consumes the action-specific evidence it requested
+  - fixed live validation id:
+    `medgen_ae8dfbd131e346038c4e8bad9a6afcb4`
+  - status observed pending run-state evidence, terminal `video_visible` at
+    poll count `21`, `generatedVideoCount = 1`, and
+    `materializationCandidateSource = generated-video`
+  - media-generation status and generic run status agreed on
+    `status = succeeded`, `artifactCount = 1`, `mimeType = video/mp4`,
+    `materialization = download-button`, and
+    `artifactPollCount = 21`
+  - cached artifact:
+    `~/.auracall/runtime/media-generations/medgen_ae8dfbd131e346038c4e8bad9a6afcb4/artifacts/grok-imagine-video-1.mp4`
+  - local file size: `2,253,656` bytes
+  - post-run browser inspection confirmed the Grok tab stayed on
+    `https://grok.com/imagine/post/47f5b640-a7c7-45ca-b5a7-8f34d7c8148e`
 
 ## Research Findings
 
@@ -408,9 +436,9 @@ Add a browser-first Grok Imagine discovery/audit slice:
 ## Non-Goals
 
 - No xAI API implementation in this slice.
-- No blind Grok Imagine prompt submission. Browser image invocation must pass
-  capability preflight and use the pinned submitted tab plus run-state evidence.
-- No video generation automation in the first implementation slice.
+- No blind Grok Imagine prompt submission. Browser image/video invocation must
+  pass capability preflight and use the pinned submitted tab plus run-state
+  evidence.
 - No image editing, video editing, reference-image workflows, or extensions.
 - No automated infinite-scroll harvesting beyond the currently visible,
   bounded tile set until the preview/full-quality comparison path is proven.
@@ -492,6 +520,9 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - [x] The diagnostic Grok video readback branch can materialize a generated
   account video through the existing tab's selected-media download control
   when direct `assets.grok.com` URL fetches are forbidden.
+- [x] Grok browser video requests can submit through the durable local API,
+  poll terminal generated-video evidence, cache an MP4 artifact, and read back
+  through both media-generation status and generic run status.
 
 ## Validation Plan
 
@@ -576,7 +607,7 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - [x] Bounded read-only Grok video capability discovery:
   - live `/imagine` probe observed Image/Video radio controls
   - `grok.media.imagine_video` is now reported from browser discovery
-    evidence; video execution remains gated
+    evidence
 - [x] Bounded read-only Grok video-mode semantics audit:
   - `pnpm tsx bin/auracall.ts capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --discovery-action grok-imagine-video-mode --json`
   - observed contenteditable composer, disabled Submit, Upload, Aspect Ratio,
@@ -633,6 +664,18 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - cached `grok-imagine-video-1.mp4` as a `4,877,074` byte artifact
   - post-run `browser-tools inspect` confirmed the Grok tab stayed on the same
     `/imagine/post/...` URL
+- [x] Normal durable local API Grok browser video request:
+  - initial preflight regression id:
+    `medgen_71a1d44956304f83b4f6d97626de6e39`
+  - fixed validation id:
+    `medgen_ae8dfbd131e346038c4e8bad9a6afcb4`
+  - status polling observed pending evidence, terminal `video_visible`,
+    `generatedVideoCount = 1`, and `materialization = download-button`
+  - media-generation status and generic run status agreed on terminal success
+    and the cached `grok-imagine-video-1.mp4` artifact
+  - `stat` confirmed a `2,253,656` byte artifact
+  - post-run `browser-tools inspect` confirmed the Grok tab stayed on the
+    submitted `/imagine/post/...` URL
 - [x] API/MCP/status media regression tests:
   - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
 - [x] `pnpm run check`
@@ -642,6 +685,7 @@ Add a browser-first Grok Imagine discovery/audit slice:
 
 ## Next Slice
 
-Keep Grok video Submit and edit/reference workflows gated. The next browser
-slice is a controlled plan for automated Grok Video submit using the now-proven
-status/readback/download path as the acceptance target.
+Keep Grok edit/reference workflows gated. The next browser slice should
+dogfood the normal Grok video path once more with no extra navigation churn,
+then harden operator status diagnostics and move the same browser-first
+pattern to the next media parity gap.

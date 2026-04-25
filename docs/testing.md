@@ -220,16 +220,15 @@
       tiles through the active browser tab, then compare one preview against
       the provider download-button result before using remote media fetch as a
       fallback
-  - create a browser-transport Grok video request to verify the gated
-    pre-submit skeleton, not video generation:
+  - create a browser-transport Grok video request:
     - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"grok","mediaType":"video","transport":"browser","prompt":"Generate a video of an asphalt secret agent"}'`
-    - expected terminal failure is `media_provider_not_implemented` after
-      `capability_discovered`, `executor_started`, `capability_selected`,
-      `composer_ready`, and `submitted_state_observed` with
-      `submitted = false`; no prompt should be inserted
-    - post-submit video readiness is currently covered by unit-test fixture
-      evidence only; `video_visible` is reserved for the future terminal-video
-      observation event once Submit is enabled
+    - expected successful runs include `capability_discovered`,
+      `executor_started`, `browser_target_attached`, `prompt_inserted`,
+      `submit_path_observed`, `prompt_submitted`, repeated
+      `run_state_observed`, `video_visible`, `artifact_materialized`, and
+      `completed`
+    - generated videos should cache as `video/mp4` artifacts, preferably with
+      `materialization = download-button`
     - diagnostic readback of an already-submitted manual Grok video tab is
       gated behind explicit metadata:
       `grokVideoReadbackProbe = true`, `grokVideoReadbackTabTargetId`, and

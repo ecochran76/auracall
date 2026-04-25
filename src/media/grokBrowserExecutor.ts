@@ -131,7 +131,7 @@ async function executeGrokBrowserMediaGeneration(
     );
   }
   if (request.mediaType === 'video') {
-    return executeGrokBrowserVideoSkeleton(input, userConfig);
+    return executeGrokBrowserVideoGeneration(input, userConfig);
   }
   if (request.mediaType !== 'image') {
     throw new MediaGenerationExecutionError(
@@ -311,7 +311,7 @@ async function executeGrokBrowserVideoSkeleton(
   }
   throw new MediaGenerationExecutionError(
     'media_provider_not_implemented',
-    'Grok browser video generation has a pre-submit executor skeleton, but post-submit run-state and artifact materialization acceptance criteria are not implemented yet.',
+    'Grok browser video diagnostic skeleton requires explicit readback probe metadata; normal video generation uses the submitted-tab executor path.',
     {
       provider: 'grok',
       transport: input.request.transport ?? null,
@@ -322,6 +322,123 @@ async function executeGrokBrowserVideoSkeleton(
       videoModeAudit: audit,
     },
   );
+}
+
+async function executeGrokBrowserVideoGeneration(
+  input: MediaGenerationExecutorInput,
+  userConfig: ResolvedUserConfig,
+): Promise<{ artifacts: MediaGenerationArtifact[]; model?: string | null; metadata?: Record<string, unknown> | null }> {
+  if (isGrokVideoReadbackProbeEnabled(input.request.metadata)) {
+    return executeGrokBrowserVideoSkeleton(input, userConfig);
+  }
+  const timeoutMs = resolveMediaTimeoutMs(input.request.metadata);
+  const client = await BrowserAutomationClient.fromConfig(userConfig, { target: 'grok' });
+  const emitPromptProgress = async (event: BrowserProviderPromptProgressEvent): Promise<void> => {
+    const timelineEvent = mapPromptProgressToTimelineEvent(event);
+    if (!timelineEvent) return;
+    await input.emitTimeline?.(timelineEvent);
+  };
+  const promptResult = await client.runPrompt({
+    prompt: input.request.prompt,
+    capabilityId: GROK_VIDEO_CAPABILITY_ID,
+    completionMode: 'prompt_submitted',
+    configuredUrl: GROK_IMAGINE_URL,
+    timeoutMs,
+    onProgress: emitPromptProgress,
+  }, {
+    configuredUrl: GROK_IMAGINE_URL,
+    preserveActiveTab: true,
+    mutationSourcePrefix: 'media:grok-imagine',
+  });
+  const tabTargetId = normalizeNonEmpty(promptResult.tabTargetId);
+  const tabUrl = normalizeNonEmpty(promptResult.url) ?? GROK_IMAGINE_URL;
+  await input.emitTimeline?.({
+    event: 'prompt_submitted',
+    details: {
+      capabilityId: GROK_VIDEO_CAPABILITY_ID,
+      tabTargetId,
+      url: tabUrl,
+    },
+  });
+  if (!tabTargetId) {
+    throw new MediaGenerationExecutionError(
+      'media_generation_readback_failed',
+      'Grok browser video generation submitted without a tab target id for no-navigation readback.',
+      { tabUrl, capabilityId: GROK_VIDEO_CAPABILITY_ID },
+    );
+  }
+  const readback = await waitForGrokImagineTerminalVideoReadback(
+    client,
+    tabTargetId,
+    tabUrl,
+    {
+      host: normalizeNonEmpty(promptResult.devtoolsHost) ?? '127.0.0.1',
+      port: numberOrZero(promptResult.devtoolsPort),
+    },
+    input.request.metadata,
+    timeoutMs,
+    input.emitTimeline,
+  );
+  if (!readback.materializationCandidate) {
+    throw new MediaGenerationExecutionError(
+      'media_generation_artifact_materialization_failed',
+      'Grok browser video generation reached ready state without a materialization candidate.',
+      { tabUrl, tabTargetId, capabilityId: GROK_VIDEO_CAPABILITY_ID },
+    );
+  }
+  const devtoolsPort = numberOrZero(promptResult.devtoolsPort);
+  const artifact = (devtoolsPort
+    ? await materializeGrokVideoCandidateFromBrowser(
+        readback.materializationCandidate,
+        input.artifactDir,
+        1,
+        {
+          host: normalizeNonEmpty(promptResult.devtoolsHost) ?? '127.0.0.1',
+          port: devtoolsPort,
+          targetId: tabTargetId,
+        },
+      ).catch(() => null)
+    : null) ??
+    await materializeGrokVideoCandidate(readback.materializationCandidate, input.artifactDir, 1);
+  if (!artifact) {
+    throw new MediaGenerationExecutionError(
+      'media_generation_artifact_materialization_failed',
+      'Grok browser video generation found a generated video candidate, but it could not be materialized through the browser download control or direct asset URL.',
+      {
+        tabUrl,
+        tabTargetId,
+        capabilityId: GROK_VIDEO_CAPABILITY_ID,
+        materializationCandidate: readback.materializationCandidate,
+      },
+    );
+  }
+  await input.emitTimeline?.({
+    event: 'artifact_materialized',
+    details: {
+      providerArtifactId: artifact.id,
+      path: artifact.path ?? null,
+      uri: artifact.uri ?? null,
+      mimeType: artifact.mimeType ?? null,
+      materialization: artifact.metadata?.materialization ?? null,
+      materializationSource: artifact.metadata?.materializationSource ?? null,
+    },
+  });
+  return {
+    artifacts: [artifact],
+    model: input.request.model ?? null,
+    metadata: {
+      executor: 'grok-browser',
+      capabilityId: GROK_VIDEO_CAPABILITY_ID,
+      tabUrl,
+      tabTargetId,
+      devtoolsHost: normalizeNonEmpty(promptResult.devtoolsHost) ?? null,
+      devtoolsPort: devtoolsPort || null,
+      runState: readback.runState,
+      artifactPollCount: readback.pollCount,
+      generatedArtifactCount: 1,
+      materializationCandidateSource: readback.materializationCandidate.source,
+    },
+  };
 }
 
 async function executeGrokBrowserVideoReadbackProbe(
@@ -773,7 +890,7 @@ export async function waitForGrokImagineTerminalVideoReadback(
   client: Pick<BrowserAutomationClient, 'getFeatureSignature'>,
   tabTargetId: string,
   tabUrl: string,
-  devtools: { host: string; port: number },
+  devtools: { host: string; port?: number | null },
   metadata: Record<string, unknown> | null | undefined,
   timeoutMs: number,
   emitTimeline: MediaGenerationExecutorInput['emitTimeline'],
@@ -788,8 +905,7 @@ export async function waitForGrokImagineTerminalVideoReadback(
       configuredUrl: tabUrl,
       tabUrl,
       tabTargetId,
-      host: devtools.host,
-      port: devtools.port,
+      ...(devtools.port ? { host: devtools.host, port: devtools.port } : {}),
       preserveActiveTab: true,
     });
     const evaluation = evaluateGrokImagineVideoPostSubmitReadback(signature, pollCount);

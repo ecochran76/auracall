@@ -71,6 +71,8 @@ export interface BrowserProviderPromptResult {
   conversationId?: string | null;
   url?: string | null;
   tabTargetId?: string | null;
+  devtoolsHost?: string | null;
+  devtoolsPort?: number | null;
 }
 
 export interface BrowserProviderActiveMediaMaterializationInput {

@@ -974,6 +974,8 @@ type GrokImaginePromptState = {
   mediaUrlCount: number;
   mediaFingerprint: string | null;
   generatedImageCount: number;
+  generatedVideoCount: number;
+  generatedMediaCount: number;
   generatedMediaFingerprint: string | null;
   publicGalleryImageCount: number;
   publicGalleryVisibleTileCount: number;
@@ -1050,7 +1052,9 @@ async function readGrokImaginePromptState(Runtime: ChromeClient['Runtime']): Pro
   const mediaUrls = Array.isArray(imagine.media?.urls)
     ? imagine.media.urls.map((entry) => String(entry ?? '').trim()).filter(Boolean)
     : [];
-  const generatedImageUrls = readGeneratedGrokImageUrls(imagine.media);
+  const generatedImageUrls = readGeneratedGrokMediaUrls(imagine.media, 'image');
+  const generatedVideoUrls = readGeneratedGrokMediaUrls(imagine.media, 'video');
+  const generatedMediaUrls = Array.from(new Set([...generatedImageUrls, ...generatedVideoUrls]));
   const publicGalleryImageCount = countPublicGalleryGrokMediaEntries(imagine.media, 'images');
   const publicGalleryVisibleTileCount = countPublicGalleryGrokMediaEntries(imagine.media, 'visible_tiles');
   const routeKind = classifyGrokImagineRoute(href);
@@ -1080,8 +1084,10 @@ async function readGrokImaginePromptState(Runtime: ChromeClient['Runtime']): Pro
       ? mediaUrls.map((entry) => `${entry.length}:${entry.slice(0, 48)}:${entry.slice(-24)}`).join('|')
       : null,
     generatedImageCount: generatedImageUrls.length,
-    generatedMediaFingerprint: generatedImageUrls.length > 0
-      ? generatedImageUrls.map((entry) => `${entry.length}:${entry.slice(0, 48)}:${entry.slice(-24)}`).join('|')
+    generatedVideoCount: generatedVideoUrls.length,
+    generatedMediaCount: generatedMediaUrls.length,
+    generatedMediaFingerprint: generatedMediaUrls.length > 0
+      ? generatedMediaUrls.map((entry) => `${entry.length}:${entry.slice(0, 48)}:${entry.slice(-24)}`).join('|')
       : null,
     publicGalleryImageCount,
     publicGalleryVisibleTileCount,
@@ -1089,7 +1095,7 @@ async function readGrokImaginePromptState(Runtime: ChromeClient['Runtime']): Pro
       ? 'pending'
       : blocked || accountGated
         ? 'blocked'
-        : generatedImageUrls.length > 0
+        : generatedMediaUrls.length > 0
           ? 'generated_media'
           : hasTerminalNoGeneratedPublicTemplate
             ? 'public_template_no_generated'
@@ -1097,29 +1103,54 @@ async function readGrokImaginePromptState(Runtime: ChromeClient['Runtime']): Pro
   };
 }
 
-function readGeneratedGrokImageUrls(media: unknown): string[] {
+function readGeneratedGrokMediaUrls(media: unknown, kind: 'image' | 'video'): string[] {
   if (!media || typeof media !== 'object') return [];
-  const record = media as { images?: unknown; visible_tiles?: unknown };
-  const entries = [
-    ...(Array.isArray(record.images) ? record.images : []),
-    ...(Array.isArray(record.visible_tiles) ? record.visible_tiles : []),
-  ];
+  const record = media as { images?: unknown; videos?: unknown; visible_tiles?: unknown };
+  const entries = kind === 'video'
+    ? [
+        ...(Array.isArray(record.videos) ? record.videos : []),
+        ...(Array.isArray(record.visible_tiles) ? record.visible_tiles : []),
+      ]
+    : [
+        ...(Array.isArray(record.images) ? record.images : []),
+        ...(Array.isArray(record.visible_tiles) ? record.visible_tiles : []),
+      ];
   const urls: string[] = [];
   for (const entry of entries) {
     if (!entry || typeof entry !== 'object') continue;
     const item = entry as {
+      kind?: unknown;
+      tag?: unknown;
       src?: unknown;
       href?: unknown;
+      poster?: unknown;
       generated?: unknown;
       publicGallery?: unknown;
       public_gallery?: unknown;
     };
     if (item.generated !== true || item.publicGallery === true || item.public_gallery === true) continue;
+    const entryKind = String(item.kind ?? item.tag ?? '').toLowerCase();
+    const rawUrl = typeof item.src === 'string' && item.src.trim()
+      ? item.src.trim()
+      : typeof item.href === 'string' && item.href.trim()
+        ? item.href.trim()
+        : typeof item.poster === 'string' && item.poster.trim()
+          ? item.poster.trim()
+          : null;
+    if (kind === 'video') {
+      const looksVideo = entryKind === 'video' || /\.(mp4|webm|mov)(?:\\?|#|$)/i.test(rawUrl ?? '');
+      if (!looksVideo) continue;
+    } else {
+      const looksVideo = entryKind === 'video' || /\.(mp4|webm|mov)(?:\\?|#|$)/i.test(rawUrl ?? '');
+      if (looksVideo) continue;
+    }
     const url = typeof item.src === 'string' && item.src.trim()
       ? item.src.trim()
       : typeof item.href === 'string' && item.href.trim()
         ? item.href.trim()
-        : null;
+        : typeof item.poster === 'string' && item.poster.trim()
+          ? item.poster.trim()
+          : null;
     if (url) urls.push(url);
   }
   return Array.from(new Set(urls));
@@ -2137,9 +2168,10 @@ export function createGrokAdapter(): Pick<
       input: BrowserProviderPromptInput,
       options?: BrowserProviderListOptions,
     ): Promise<BrowserProviderPromptResult> {
-      if (input.capabilityId !== 'grok.media.imagine_image') {
-        throw new Error(`Grok browser prompt execution only supports grok.media.imagine_image, got ${input.capabilityId ?? 'none'}.`);
+      if (input.capabilityId !== 'grok.media.imagine_image' && input.capabilityId !== 'grok.media.imagine_video') {
+        throw new Error(`Grok browser prompt execution only supports Grok Imagine image/video capabilities, got ${input.capabilityId ?? 'none'}.`);
       }
+      const mode = input.capabilityId === 'grok.media.imagine_video' ? 'Video' : 'Image';
       const targetUrl = input.targetUrl ?? options?.configuredUrl ?? 'https://grok.com/imagine';
       const { client, targetId, shouldClose, host, port } = await connectToGrokTab(
         {
@@ -2168,6 +2200,11 @@ export function createGrokAdapter(): Pick<
           description: 'Grok Imagine document ready',
         }).catch(() => undefined);
         await waitForGrokImagineRoute(client.Runtime, targetUrl);
+        if (mode === 'Video') {
+          await restoreGrokImaginePrimaryMode(client.Runtime, 'Video');
+        } else {
+          await restoreGrokImaginePrimaryMode(client.Runtime, 'Image');
+        }
         await waitForGrokImagineComposer(client.Runtime);
         const baseline = await readGrokImaginePromptState(client.Runtime);
         await emitProgress({
@@ -2218,6 +2255,8 @@ export function createGrokAdapter(): Pick<
             runState: submittedState.runState,
             pending: submittedState.pending,
             generatedImageCount: submittedState.generatedImageCount,
+            generatedVideoCount: submittedState.generatedVideoCount,
+            generatedMediaCount: submittedState.generatedMediaCount,
             publicGalleryImageCount: submittedState.publicGalleryImageCount,
             publicGalleryVisibleTileCount: submittedState.publicGalleryVisibleTileCount,
             mediaUrlCount: submittedState.mediaUrlCount,
@@ -2234,6 +2273,8 @@ export function createGrokAdapter(): Pick<
           text: '',
           url: submittedState.href ?? baseline.href ?? targetUrl,
           tabTargetId: targetId ?? null,
+          devtoolsHost: host,
+          devtoolsPort: port,
         };
       } finally {
         await client.close().catch(() => undefined);

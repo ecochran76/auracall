@@ -575,15 +575,72 @@ describe('Grok browser media generation executor', () => {
     ]);
   });
 
-  it('captures video-mode pre-submit evidence and fails before prompt submission', async () => {
+  it('submits through the guarded Imagine Video path and materializes terminal video evidence', async () => {
     const { createGrokBrowserMediaGenerationExecutor } = await import('../src/media/grokBrowserExecutor.js');
     const executor = createGrokBrowserMediaGenerationExecutor({} as never);
-    const timelineEvents: Array<{ event: string; details?: Record<string, unknown> | null }> = [];
+    const artifactDir = '/tmp/auracall-grok-video-media-artifacts';
+    browserClient.runPrompt.mockImplementationOnce(async (input) => {
+      await input.onProgress?.({
+        phase: 'browser_target_attached',
+        details: {
+          targetId: 'grok-video-tab-1',
+        },
+      });
+      await input.onProgress?.({
+        phase: 'prompt_inserted',
+        details: {
+          targetId: 'grok-video-tab-1',
+          promptLength: input.prompt.length,
+        },
+      });
+      await input.onProgress?.({
+        phase: 'submit_path_observed',
+        details: {
+          targetId: 'grok-video-tab-1',
+          outcome: 'generated_media',
+          routeKind: 'imagine_root',
+          generatedVideoCount: 1,
+          generatedMediaCount: 1,
+        },
+      });
+      return {
+        text: '',
+        url: 'https://grok.com/imagine/post/video-1',
+        tabTargetId: 'grok-video-tab-1',
+      };
+    });
+    browserClient.getFeatureSignature.mockResolvedValueOnce(JSON.stringify({
+      imagine: {
+        href: 'https://grok.com/imagine/post/video-1',
+        run_state: 'terminal_video',
+        pending: false,
+        terminal_video: true,
+        materialization_controls: [{ ariaLabel: 'Download', visible: true }],
+        media: {
+          videos: [{
+            kind: 'video',
+            src: 'https://assets.grok.com/users/test/generated/video-1.mp4',
+            generated: true,
+            selected: true,
+          }],
+          visible_tiles: [],
+          urls: ['https://assets.grok.com/users/test/generated/video-1.mp4'],
+        },
+      },
+    }));
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true,
+      headers: {
+        get: (name: string) => name.toLowerCase() === 'content-type' ? 'video/mp4' : null,
+      },
+      arrayBuffer: async () => Buffer.from('fake grok video bytes').buffer,
+    })));
+    const timelineEvents: string[] = [];
 
-    await expect(executor({
+    const result = await executor({
       id: 'medgen_grok_video_test',
       createdAt: '2026-04-24T12:00:00.000Z',
-      artifactDir: '/tmp/auracall-grok-video-media-artifacts',
+      artifactDir,
       workbenchCapability: {
         id: 'grok.media.imagine_video',
         provider: 'grok',
@@ -617,7 +674,7 @@ describe('Grok browser media generation executor', () => {
         },
       },
       emitTimeline: (event) => {
-        timelineEvents.push(event);
+        timelineEvents.push(event.event);
       },
       request: {
         provider: 'grok',
@@ -625,36 +682,56 @@ describe('Grok browser media generation executor', () => {
         prompt: 'Generate a video of an asphalt secret agent',
         transport: 'browser',
       },
-    })).rejects.toMatchObject({
-      code: 'media_provider_not_implemented',
-      details: {
-        capabilityId: 'grok.media.imagine_video',
-        mediaType: 'video',
-        preSubmitStop: true,
-        videoModeAudit: {
-          generatedMediaSelectorCount: 2,
-          selectedGeneratedMediaCount: 1,
-        },
-      },
     });
 
-    expect(fromConfig).not.toHaveBeenCalled();
-    expect(browserClient.runPrompt).not.toHaveBeenCalled();
-    expect(timelineEvents.map((entry) => entry.event)).toEqual([
-      'capability_selected',
-      'composer_ready',
-      'submitted_state_observed',
+    expect(browserClient.runPrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: 'Generate a video of an asphalt secret agent',
+        capabilityId: 'grok.media.imagine_video',
+        completionMode: 'prompt_submitted',
+        configuredUrl: 'https://grok.com/imagine',
+      }),
+      expect.objectContaining({
+        configuredUrl: 'https://grok.com/imagine',
+        preserveActiveTab: true,
+      }),
+    );
+    expect(browserClient.getFeatureSignature).toHaveBeenCalledWith({
+      configuredUrl: 'https://grok.com/imagine/post/video-1',
+      tabUrl: 'https://grok.com/imagine/post/video-1',
+      tabTargetId: 'grok-video-tab-1',
+      preserveActiveTab: true,
+    });
+    expect(result).toMatchObject({
+      artifacts: [{
+        id: 'grok_imagine_video_1',
+        type: 'video',
+        mimeType: 'video/mp4',
+        fileName: 'grok-imagine-video-1.mp4',
+        metadata: {
+          remoteUrl: 'https://assets.grok.com/users/test/generated/video-1.mp4',
+          materialization: 'remote-media-fetch',
+          materializationSource: 'generated-video',
+        },
+      }],
+      metadata: {
+        executor: 'grok-browser',
+        capabilityId: 'grok.media.imagine_video',
+        tabUrl: 'https://grok.com/imagine/post/video-1',
+        tabTargetId: 'grok-video-tab-1',
+        artifactPollCount: 1,
+        generatedArtifactCount: 1,
+      },
+    });
+    expect(timelineEvents).toEqual([
+      'browser_target_attached',
+      'prompt_inserted',
+      'submit_path_observed',
+      'prompt_submitted',
+      'run_state_observed',
+      'video_visible',
+      'artifact_materialized',
     ]);
-    expect(timelineEvents[1].details).toMatchObject({
-      capabilityId: 'grok.media.imagine_video',
-      composer: [{ tag: 'div', placeholder: 'Type to imagine' }],
-      submitControls: [{ tag: 'button', ariaLabel: 'Submit', disabled: true }],
-    });
-    expect(timelineEvents[2].details).toMatchObject({
-      submitted: false,
-      generatedMediaSelectorCount: 2,
-      selectedGeneratedMediaCount: 1,
-    });
   });
 
   it('runs the disabled Grok video readback probe when explicit metadata provides an existing tab', async () => {

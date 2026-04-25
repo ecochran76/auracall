@@ -207,7 +207,7 @@ export const STATIC_WORKBENCH_CAPABILITY_CATALOG: WorkbenchCapability[] = [
     safety: {
       maySpendCredits: true,
       mayTakeMinutes: true,
-      notes: ['Grok Imagine video browser automation remains gated behind discovery and run-state evidence.'],
+      notes: ['Grok Imagine video browser automation requires live Video-mode discovery and terminal generated-video readback.'],
     },
     source: 'static_catalog',
   },

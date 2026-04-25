@@ -175,11 +175,11 @@ Terminology note:
     `timeline[]` showing processing milestones such as capability discovery,
     capability-gate stops, prompt submission, submit-path observation,
     artifact polling, `image_visible`/`video_visible` terminal media
-    observation, materialization, and terminal completion. Operators can
-    request Grok browser video, but it currently stops before prompt insertion
-    after recording Video-mode pre-submit evidence; video Submit remains gated
-    until post-submit terminal-video and materialization criteria are wired to
-    the executor. A diagnostic-only Grok video readback probe exists for
+    observation, materialization, and terminal completion. Grok browser video
+    requests preflight the explicit Imagine Video mode, submit through the
+    active `/imagine` tab, poll the submitted tab for terminal video evidence,
+    and cache the generated MP4 through the provider download control when
+    available. A diagnostic-only Grok video readback probe exists for
     already-submitted tabs when metadata explicitly provides
     `grokVideoReadbackProbe = true`, `grokVideoReadbackTabTargetId`, and
     `grokVideoReadbackDevtoolsPort`; it bypasses capability preflight and

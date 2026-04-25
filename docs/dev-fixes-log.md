@@ -14230,3 +14230,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `403` to Node/curl while the signed-in browser tab can download the same
   asset through the visible `Download` control. Media readback should prefer
   browser-context download materialization before direct remote fetches.
+- 2026-04-24: Capability gates for mode-specific workbenches must consume the
+  action-specific evidence they requested. In this repo, normal Grok video
+  requests asked for `grok-imagine-video-mode` discovery but still saw the
+  static `unknown` capability when the base signature lacked a generic video
+  mode signal. Treat a successful Video-mode discovery action or video-mode
+  audit as `grok.media.imagine_video` evidence before allowing or denying
+  execution.

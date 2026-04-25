@@ -11,9 +11,9 @@ Owner: Aura-Call CLI
 - Search tools: Grok expects `web_search`; OpenAI’s `web_search_preview` is not accepted.
 - Context: 2M token context for the current Grok 4.20 family.
 - Grok Imagine image/video generation is a separate API surface. Aura-Call has
-  browser-backed Grok Imagine image generation and read-only video discovery;
-  automated Grok video Submit remains gated. Use
-  `docs/grok-imagine-video-readback-runbook.md` for the diagnostic
+  browser-backed Grok Imagine image generation and controlled browser-backed
+  Grok Imagine video generation with status polling and MP4 artifact caching.
+  Use `docs/grok-imagine-video-readback-runbook.md` only for the diagnostic
   existing-tab video readback probe.
 
 ## Browser Automation

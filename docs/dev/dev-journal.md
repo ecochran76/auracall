@@ -21067,3 +21067,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`
+
+## 2026-04-24 - Grok video normal submit path
+
+- Focus: move Grok browser video from diagnostic readback only to controlled
+  normal API/MCP execution using the proven submitted-tab status and download
+  materialization path.
+- Progress: Grok provider prompt execution now accepts
+  `grok.media.imagine_video`, selects Video mode before prompt insertion,
+  detects generated video as generated media after submit, and returns the
+  DevTools port/host with the submitted tab id. The media executor now submits
+  normal video requests, polls the submitted tab for `terminal_video`, and
+  caches the generated MP4 through browser download materialization when
+  possible.
+- Fix: Video-mode capability derivation now treats a successful
+  `grok-imagine-video-mode` discovery action or video-mode audit as live
+  `grok.media.imagine_video` evidence, avoiding a static `unknown` preflight
+  stop after an action-specific probe.
+- Live validation: request `medgen_ae8dfbd131e346038c4e8bad9a6afcb4`
+  submitted normally, observed pending on
+  `https://grok.com/imagine/post/47f5b640-a7c7-45ca-b5a7-8f34d7c8148e`,
+  reached `video_visible` at poll 21, and completed with one
+  `grok-imagine-video-1.mp4` artifact using `materialization =
+  download-button`; generic run status agreed on `succeeded` and the cached
+  file size is `2,253,656` bytes.
+- Validation:
+  - `pnpm vitest run tests/workbenchCapabilities.test.ts tests/mediaGeneration.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`

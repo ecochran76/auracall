@@ -101,7 +101,7 @@ export function deriveGrokWorkbenchCapabilitiesFromFeatureSignature(
       safety: {
         maySpendCredits: true,
         mayTakeMinutes: true,
-        notes: ['Grok Imagine video browser automation remains gated behind discovery and run-state evidence.'],
+        notes: ['Grok Imagine video browser automation requires live Video-mode discovery and terminal generated-video readback.'],
       },
       observedAt,
       source: 'browser_discovery',
@@ -219,7 +219,21 @@ function collectFromObject(source: GrokImagineFeatureObject, signals: GrokImagin
   collectStringArray(entry.routes, signals.routes);
   signals.controls.push(...collectRecordArray(entry.controls, 30));
   const discoveryAction = collectRecord(entry.discovery_action);
-  if (discoveryAction) signals.discoveryAction = discoveryAction;
+  if (discoveryAction) {
+    signals.discoveryAction = discoveryAction;
+    if (
+      discoveryAction.action === 'grok-imagine-video-mode' &&
+      (
+        discoveryAction.status === 'clicked' ||
+        discoveryAction.status === 'already_selected' ||
+        discoveryAction.status === 'observed_video_mode' ||
+        Boolean(discoveryAction.videoModeAudit)
+      )
+    ) {
+      signals.visible = true;
+      signals.video = true;
+    }
+  }
   signals.materializationControls.push(...collectRecordArray(entry.materialization_controls, 30));
   collectMediaEvidence(entry.media, signals.media);
 }
