@@ -14379,3 +14379,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   adapter's CDP path and assert Image and Video `runPrompt` emit
   `capability_selected` with `selected = true` and the expected mode before
   prompt insertion.
+- 2026-04-25: Grok Imagine visible-tile and download-button materialization
+  should be tested at the provider-adapter CDP boundary. Executor tests can
+  prove orchestration, but adapter tests should lock the browser-only behavior:
+  visible tile capture, download-control click, cached file metadata, and
+  preview/full-quality comparison.

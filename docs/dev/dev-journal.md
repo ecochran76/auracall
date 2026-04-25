@@ -21628,3 +21628,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`
+
+## 2026-04-25 - Grok Imagine adapter materialization regression
+
+- Focus: lock the browser-only Grok image materialization behavior into
+  provider-adapter tests after live visible-tile/download-button proof.
+- Progress: the Grok adapter test CDP harness now also covers
+  `materializeActiveMediaArtifacts` for image jobs. The test captures one
+  visible generated tile, clicks the provider download control, records a
+  full-quality artifact, and verifies the comparison reports the download as
+  different from the preview.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`

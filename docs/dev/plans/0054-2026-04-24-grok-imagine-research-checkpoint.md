@@ -252,6 +252,11 @@ existing Aura-Call media-generation contract.
     `selected = true`, and Image checked before prompt insertion
   - Grok Video `runPrompt` emits `capability_selected` with `mode = Video`,
     `selected = true`, and Video checked before prompt insertion
+- Provider-adapter materialization coverage now locks image artifact capture:
+  - `materializeActiveMediaArtifacts` captures visible generated tiles through
+    the adapter CDP path
+  - the same harness clicks the provider download control and records a
+    full-quality artifact with preview/full-quality comparison metadata
 - Bounded read-only video discovery has started:
   - the live `/imagine` page exposes `Image` and `Video` as visible
     `role = radio` controls, with `Image` checked and `Video` unchecked
@@ -640,6 +645,9 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - [x] Live compact status readback exposes Grok video mode selection:
   - `pnpm tsx bin/auracall.ts run status medgen_c81229a3a9cc42a7a969ddb52f27ee59 --json`
 - [x] Provider-adapter regression tests for Grok Image/Video mode selection:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`
+- [x] Provider-adapter regression test for Grok visible-tile plus
+  download-button materialization:
   - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`
 - [x] Bounded live gated media request:
   - `POST /v1/media-generations` with `provider = grok`, `mediaType = image`,

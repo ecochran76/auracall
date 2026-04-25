@@ -1,3 +1,6 @@
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, expect, test, vi } from 'vitest';
 
 const grokRunPromptMocks = vi.hoisted(() => ({
@@ -767,6 +770,71 @@ describe('Grok Imagine runPrompt mode selection', () => {
   });
 });
 
+describe('Grok Imagine materialization', () => {
+  test('captures visible image tiles and the provider download button artifact', async () => {
+    const destDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-grok-adapter-materialize-'));
+    try {
+      grokRunPromptMocks.cdpList.mockReset();
+      grokRunPromptMocks.cdpClose.mockReset();
+      grokRunPromptMocks.connectToChromeTarget.mockReset();
+      grokRunPromptMocks.openOrReuseChromeTarget.mockReset();
+      grokRunPromptMocks.cdpList.mockResolvedValue([
+        {
+          id: 'grok-tab-1',
+          type: 'page',
+          url: 'https://grok.com/imagine',
+        },
+      ]);
+      const client = createFakeGrokImagineMaterializationClient(destDir);
+      grokRunPromptMocks.connectToChromeTarget.mockResolvedValue(client);
+
+      const adapter = createGrokAdapter();
+      expect(adapter.materializeActiveMediaArtifacts).toBeDefined();
+      const files = await adapter.materializeActiveMediaArtifacts!(
+        {
+          capabilityId: 'grok.media.imagine_image',
+          maxItems: 1,
+          compareFullQuality: true,
+        },
+        destDir,
+        {
+          host: '127.0.0.1',
+          port: 9222,
+          configuredUrl: 'https://grok.com/imagine',
+        },
+      );
+
+      expect(files).toHaveLength(2);
+      expect(files[0]).toMatchObject({
+        id: 'grok_imagine_visible_1',
+        name: 'grok-imagine-visible-1.jpg',
+        provider: 'grok',
+        mimeType: 'image/jpeg',
+        metadata: {
+          materialization: 'visible-tile-browser-capture',
+          srcKind: 'data-url',
+          captureMethod: 'data-url',
+        },
+      });
+      expect(files[1]).toMatchObject({
+        id: 'grok_imagine_full_quality_1',
+        name: 'grok-imagine-full-quality.jpg',
+        provider: 'grok',
+        mimeType: 'image/jpeg',
+        metadata: {
+          materialization: 'download-button',
+          previewArtifactId: 'grok_imagine_visible_1',
+        },
+      });
+      expect(files[1]?.metadata?.fullQualityDiffersFromPreview).toBe(true);
+      await expect(fs.stat(files[0]!.localPath!)).resolves.toMatchObject({ size: files[0]!.size });
+      await expect(fs.stat(files[1]!.localPath!)).resolves.toMatchObject({ size: files[1]!.size });
+    } finally {
+      await fs.rm(destDir, { recursive: true, force: true });
+    }
+  });
+});
+
 async function runGrokImaginePromptModeSelectionTest(input: {
   capabilityId: 'grok.media.imagine_image' | 'grok.media.imagine_video';
   expectedMode: 'Image' | 'Video';
@@ -818,6 +886,80 @@ async function runGrokImaginePromptModeSelectionTest(input: {
   return {
     events,
     capabilitySelected: events.find((event) => event.phase === 'capability_selected'),
+  };
+}
+
+function createFakeGrokImagineMaterializationClient(destDir: string) {
+  let downloadName: string | null = null;
+  const visibleBytes = Buffer.from('visible tile jpeg bytes');
+  const fullQualityBytes = Buffer.from('full quality jpeg bytes are different');
+  const visibleDataUrl = `data:image/jpeg;base64,${visibleBytes.toString('base64')}`;
+  const evaluate = vi.fn(async ({ expression }: { expression: string }) => {
+    if (expression.includes('Browser.setDownloadBehavior') || expression.includes('Page.setDownloadBehavior')) {
+      return { result: { value: true } };
+    }
+    if (expression.includes('document.readyState')) {
+      return { result: { value: { readyState: 'complete' } } };
+    }
+    if (expression.includes('new URL(location.href)')) {
+      return { result: { value: { href: 'https://grok.com/imagine', title: 'Imagine - Grok' } } };
+    }
+    if (expression.includes('const maxItems =') && expression.includes('const selectors =')) {
+      return {
+        result: {
+          value: {
+            tiles: [
+              {
+                ordinal: 1,
+                src: visibleDataUrl,
+                srcKind: 'data-url',
+                x: 10,
+                y: 20,
+                width: 256,
+                height: 256,
+                naturalWidth: 512,
+                naturalHeight: 512,
+                selected: false,
+                dataUrl: visibleDataUrl,
+                error: null,
+              },
+            ],
+          },
+        },
+      };
+    }
+    if (expression.includes('__auracallGrokImagineDownloadCapture') && expression.includes('originalAnchorClick')) {
+      downloadName = null;
+      return { result: { value: true } };
+    }
+    if (expression.includes('firstTile') && expression.includes('Download')) {
+      downloadName = 'grok-imagine-full-quality.jpg';
+      await fs.writeFile(path.join(destDir, downloadName), fullQualityBytes);
+      return { result: { value: { ok: true } } };
+    }
+    if (expression.includes('downloadName')) {
+      return {
+        result: {
+          value: {
+            href: null,
+            downloadName,
+          },
+        },
+      };
+    }
+    return { result: { value: true } };
+  });
+  return {
+    Page: {
+      enable: vi.fn(async () => undefined),
+      captureScreenshot: vi.fn(async () => ({ data: visibleBytes.toString('base64') })),
+    },
+    Runtime: {
+      enable: vi.fn(async () => undefined),
+      evaluate,
+    },
+    send: vi.fn(async () => undefined),
+    close: vi.fn(async () => undefined),
   };
 }
 
