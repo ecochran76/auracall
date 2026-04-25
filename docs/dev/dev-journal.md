@@ -1,3 +1,18 @@
+## 2026-04-25 - Gemini music status variant fixture
+
+- Focus: prove Gemini music variants stay identifiable from provider readback
+  through cached artifacts and compact status.
+- Progress: the Gemini music browser executor fixture now carries the visible
+  provider option list plus per-artifact `downloadLabel` and `downloadVariant`
+  metadata for video-with-album-art and MP3 outputs. Compact media status and
+  generic run status preserve those fields beside each distinct cached path.
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/cli.runStatusCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`
+
 ## 2026-04-25 - Compact media status download options
 
 - Focus: expose provider download variant labels through compact status

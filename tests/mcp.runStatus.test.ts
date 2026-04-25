@@ -98,6 +98,8 @@ describe('mcp run_status tool', () => {
               path: '/tmp/Generated image 1.png',
               metadata: {
                 materialization: 'visible-image-screenshot',
+                downloadLabel: 'Download as MP3',
+                downloadVariant: 'mp3',
                 downloadOptions: ['Download as video with album art', 'Download as MP3'],
               },
             },
@@ -128,6 +130,8 @@ describe('mcp run_status tool', () => {
             fileName: 'Generated image 1.png',
             path: '/tmp/Generated image 1.png',
             materialization: 'visible-image-screenshot',
+            downloadLabel: 'Download as MP3',
+            downloadVariant: 'mp3',
             downloadOptions: ['Download as video with album art', 'Download as MP3'],
           },
         ],

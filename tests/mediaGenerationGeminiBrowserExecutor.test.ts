@@ -285,9 +285,11 @@ describe('Gemini browser media generation executor', () => {
 
   it('selects Create music and materializes both video-with-artwork and mp3 variants', async () => {
     const { createGeminiBrowserMediaGenerationExecutor } = await import('../src/media/geminiBrowserExecutor.js');
+    const { summarizeMediaGenerationStatus } = await import('../src/media/statusSummary.js');
     const artifactDir = '/tmp/auracall-media-artifacts';
     const videoPath = path.join(artifactDir, 'spy-theme-with-artwork.mp4');
     const mp3Path = path.join(artifactDir, 'spy-theme.mp3');
+    const downloadOptions = ['Download as video with album art', 'Download as MP3'];
     browserClient.runPrompt.mockResolvedValueOnce({
       text: '',
       conversationId: 'gemini-music-conversation-1',
@@ -305,6 +307,7 @@ describe('Gemini browser media generation executor', () => {
           fileName: 'spy_theme_with_artwork.mp4',
           downloadLabel: 'Download as video with album art',
           downloadVariant: 'video_with_album_art',
+          downloadOptions,
         },
       },
       {
@@ -317,6 +320,7 @@ describe('Gemini browser media generation executor', () => {
           fileName: 'spy_theme.mp3',
           downloadLabel: 'Download as MP3',
           downloadVariant: 'mp3',
+          downloadOptions,
         },
       },
     ]);
@@ -333,7 +337,9 @@ describe('Gemini browser media generation executor', () => {
         metadata: {
           materialization: 'generated-media-fetch',
           mediaType: 'music',
+          downloadLabel: 'Download as video with album art',
           downloadVariant: 'video_with_album_art',
+          downloadOptions,
         },
       })
       .mockResolvedValueOnce({
@@ -348,7 +354,9 @@ describe('Gemini browser media generation executor', () => {
         metadata: {
           materialization: 'generated-media-fetch',
           mediaType: 'music',
+          downloadLabel: 'Download as MP3',
           downloadVariant: 'mp3',
+          downloadOptions,
         },
       });
 
@@ -390,7 +398,9 @@ describe('Gemini browser media generation executor', () => {
           metadata: {
             providerArtifactId: 'artifact-music-video-1',
             mediaType: 'music',
+            downloadLabel: 'Download as video with album art',
             downloadVariant: 'video_with_album_art',
+            downloadOptions,
           },
         },
         {
@@ -402,7 +412,9 @@ describe('Gemini browser media generation executor', () => {
           metadata: {
             providerArtifactId: 'artifact-music-mp3-1',
             mediaType: 'music',
+            downloadLabel: 'Download as MP3',
             downloadVariant: 'mp3',
+            downloadOptions,
           },
         },
       ],
@@ -422,6 +434,48 @@ describe('Gemini browser media generation executor', () => {
       'artifact_materialized',
       'artifact_materialized',
     ]);
+    const status = summarizeMediaGenerationStatus({
+      id: 'medgen_music_test',
+      object: 'media_generation',
+      status: 'succeeded',
+      provider: 'gemini',
+      mediaType: 'music',
+      prompt: 'Create a spy theme song',
+      createdAt: '2026-04-25T12:00:00.000Z',
+      updatedAt: '2026-04-25T12:00:10.000Z',
+      completedAt: '2026-04-25T12:00:10.000Z',
+      artifacts: result.artifacts,
+      timeline: [
+        {
+          event: 'music_visible',
+          at: '2026-04-25T12:00:09.000Z',
+          details: {
+            generatedMusicCount: 2,
+          },
+        },
+        {
+          event: 'completed',
+          at: '2026-04-25T12:00:10.000Z',
+        },
+      ],
+    });
+    expect(status.artifacts).toEqual([
+      expect.objectContaining({
+        id: 'artifact-music-video-1',
+        path: videoPath,
+        downloadLabel: 'Download as video with album art',
+        downloadVariant: 'video_with_album_art',
+        downloadOptions,
+      }),
+      expect.objectContaining({
+        id: 'artifact-music-mp3-1',
+        path: mp3Path,
+        downloadLabel: 'Download as MP3',
+        downloadVariant: 'mp3',
+        downloadOptions,
+      }),
+    ]);
+    expect(new Set(status.artifacts.map((artifact) => artifact.path)).size).toBe(2);
   });
 
   it('polls conversation artifacts after prompt submission before materializing', async () => {

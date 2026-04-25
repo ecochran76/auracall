@@ -17,6 +17,8 @@ export interface MediaGenerationArtifactStatusSummary {
   durationSeconds?: number | null;
   materialization?: string | null;
   remoteUrl?: string | null;
+  downloadLabel?: string | null;
+  downloadVariant?: string | null;
   downloadOptions?: string[] | null;
 }
 
@@ -125,6 +127,8 @@ function summarizeArtifact(artifact: MediaGenerationArtifact): MediaGenerationAr
     durationSeconds: artifact.durationSeconds ?? null,
     materialization: stringOrNull(metadata.materialization),
     remoteUrl: stringOrNull(metadata.remoteUrl),
+    downloadLabel: stringOrNull(metadata.downloadLabel),
+    downloadVariant: stringOrNull(metadata.downloadVariant),
     downloadOptions: stringArrayOrNull(metadata.downloadOptions),
   };
 }

@@ -14290,3 +14290,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   status, generic run status, MCP status tools, and CLI JSON status should
   include those labels on each artifact so operators can choose Gemini music
   variants without fetching the full generation record.
+- 2026-04-25: Preserve per-artifact download labels in compact media status.
+  `downloadOptions` describes the visible provider menu choices, but operators
+  also need to map each cached file to its specific variant. Compact status
+  should carry `downloadLabel` and `downloadVariant` beside the artifact path
+  whenever readback/materialization metadata provides them.

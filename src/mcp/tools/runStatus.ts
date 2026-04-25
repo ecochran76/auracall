@@ -23,6 +23,8 @@ const runStatusArtifactShape = z.object({
   uri: z.string().nullable().optional(),
   mimeType: z.string().nullable().optional(),
   materialization: z.string().nullable().optional(),
+  downloadLabel: z.string().nullable().optional(),
+  downloadVariant: z.string().nullable().optional(),
   downloadOptions: z.array(z.string()).nullable().optional(),
 });
 
