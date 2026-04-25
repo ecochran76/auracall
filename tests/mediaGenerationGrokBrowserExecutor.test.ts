@@ -254,6 +254,81 @@ describe('Grok browser media generation executor', () => {
     });
   });
 
+  it('surfaces repeated public template media as no generated output instead of a generic timeout', async () => {
+    const { createGrokBrowserMediaGenerationExecutor } = await import('../src/media/grokBrowserExecutor.js');
+    const artifactDir = '/tmp/auracall-grok-media-artifacts';
+    browserClient.runPrompt.mockResolvedValueOnce({
+      text: '',
+      url: 'https://grok.com/imagine/templates/template-1',
+      tabTargetId: 'grok-tab-template',
+    });
+    const publicTemplateSignature = JSON.stringify({
+      detector: 'grok-feature-probe-v1',
+      imagine: {
+        href: 'https://grok.com/imagine/templates/template-1',
+        run_state: 'terminal_video',
+        pending: false,
+        terminal_image: true,
+        terminal_video: true,
+        account_gated: false,
+        blocked: false,
+        media: {
+          images: [{
+            src: 'https://imagine-public.x.ai/imagine-public/share-images/template.jpg',
+            generated: false,
+            publicGallery: true,
+            width: 1024,
+            height: 1024,
+          }],
+          videos: [{
+            poster: 'https://imagine-public.x.ai/imagine-public/share-images/template.jpg',
+            publicGallery: true,
+          }],
+          visible_tiles: [{
+            src: 'https://imagine-public.x.ai/imagine-public/share-images/template.jpg',
+            publicGallery: true,
+          }],
+          urls: ['https://imagine-public.x.ai/imagine-public/share-images/template.jpg'],
+        },
+      },
+    });
+    browserClient.getFeatureSignature.mockResolvedValue(publicTemplateSignature);
+
+    const executor = createGrokBrowserMediaGenerationExecutor({} as never);
+    const timelineEvents: string[] = [];
+    await expect(executor({
+      id: 'medgen_grok_test',
+      createdAt: '2026-04-24T12:00:00.000Z',
+      artifactDir,
+      emitTimeline: (event) => {
+        timelineEvents.push(event.event);
+      },
+      request: {
+        provider: 'grok',
+        mediaType: 'image',
+        prompt: 'Generate an image of an asphalt secret agent',
+        transport: 'browser',
+        metadata: {
+          artifactPollIntervalMs: 1,
+        },
+      },
+    })).rejects.toMatchObject({
+      code: 'media_generation_no_generated_output',
+      details: {
+        runState: 'terminal_video',
+        generatedImageCount: 0,
+        publicGalleryImageCount: 1,
+        publicGalleryVisibleTileCount: 1,
+        templateRoute: true,
+        providerHref: 'https://grok.com/imagine/templates/template-1',
+      },
+    });
+
+    expect(browserClient.getFeatureSignature).toHaveBeenCalledTimes(3);
+    expect(timelineEvents).toContain('no_generated_media');
+    expect(timelineEvents).not.toContain('image_visible');
+  });
+
   it('prefers browser-service visible tile capture and records full-quality comparison metadata', async () => {
     const { createGrokBrowserMediaGenerationExecutor } = await import('../src/media/grokBrowserExecutor.js');
     const artifactDir = '/tmp/auracall-grok-media-artifacts';

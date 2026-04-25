@@ -1,3 +1,12 @@
+- 2026-04-24: Classify stable Grok Imagine public/template terminal media as a
+  specific no-generated-output outcome. Once a submitted browser image run has
+  repeatedly observed terminal public/template media with
+  `generatedImageCount = 0`, emit `no_generated_media` and fail with
+  `media_generation_no_generated_output` instead of waiting for the generic
+  provider timeout. Preserve provider href, template-route status, and media
+  counts so API/MCP status callers can understand the provider outcome without
+  rerunning the browser.
+
 - 2026-04-24: Do not let Grok Imagine public gallery/template media satisfy a
   submitted browser image run. The `/imagine/templates/...` surface can expose
   large public share images and videos after a prompt attempt, but those are

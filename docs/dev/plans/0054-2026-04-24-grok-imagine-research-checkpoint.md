@@ -109,6 +109,14 @@ existing Aura-Call media-generation contract.
     materializing public template/gallery media as generated output
   - timeout diagnostics now preserve image, generated-image, visible-tile, and
     media-url counts for operator readback
+- The follow-up status slice now promotes repeated stable public/template
+  terminal media with no generated account image into a specific
+  `media_generation_no_generated_output` failure:
+  - timeline includes `no_generated_media` before terminal `failed`
+  - failure details preserve provider href, template-route flag, public-gallery
+    counts, visible-tile counts, and generated-image count
+  - generic timeout remains reserved for cases without stable terminal
+    public/template evidence
 
 ## Research Findings
 
@@ -263,6 +271,9 @@ Add a browser-first Grok Imagine discovery/audit slice:
   bundle rather than default no-executor services.
 - [x] Grok browser image runs do not treat public gallery/template media as a
   completed generated artifact; success requires generated account media.
+- [x] Stable Grok public/template terminal media with no generated account
+  image gets a specific `media_generation_no_generated_output` failure instead
+  of a generic timeout.
 
 ## Validation Plan
 
@@ -323,6 +334,10 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - returned id: `medgen_3affbd24ef6b4fecb72801a2e78a64c4`
   - observed `terminal_video`/`terminal_image` with `generatedImageCount = 0`
   - failed as `media_generation_provider_timeout`
+- [x] Regression test for repeated public-template no-generated-output:
+  - `tests/mediaGenerationGrokBrowserExecutor.test.ts`
+  - executor emits `no_generated_media` after repeated stable template evidence
+    and fails with `media_generation_no_generated_output`
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
@@ -330,7 +345,6 @@ Add a browser-first Grok Imagine discovery/audit slice:
 ## Next Slice
 
 Keep Grok video and edit/reference workflows gated. The next browser slice
-should improve Grok Imagine submit-state attribution: detect when the provider
-routes to `/imagine/templates/...` with no generated account media and surface
-that as a specific provider/template-route outcome instead of waiting for the
-general media timeout.
+should investigate why Grok can route to `/imagine/templates/...` after prompt
+submission and add a submit-path diagnostic that distinguishes failed send,
+template reuse, and provider-created generated account media.

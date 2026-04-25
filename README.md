@@ -180,7 +180,9 @@ Terminology note:
     status summary with the latest timeline event, artifact cache path, and
     materialization method. Grok browser image jobs require generated account
     media for terminal success; public gallery/template media remains
-    diagnostic evidence and is not cached as generated output.
+    diagnostic evidence and is not cached as generated output. Repeated stable
+    public/template terminal media with no generated account image fails as
+    `media_generation_no_generated_output`.
     Add `diagnostics=browser-state` to either status route during a running
     browser-backed media job to capture the selected provider target,
     document readiness, visible control counts, provider evidence, and a stored

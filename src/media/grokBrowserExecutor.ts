@@ -16,6 +16,7 @@ const GROK_IMAGE_CAPABILITY_ID = 'grok.media.imagine_image';
 const GROK_IMAGINE_URL = 'https://grok.com/imagine';
 
 type GrokImagineEvidence = {
+  href: string | null;
   runState: string | null;
   pending: boolean;
   terminalImage: boolean;
@@ -28,6 +29,22 @@ type GrokImagineEvidence = {
     visibleTiles: Array<Record<string, unknown>>;
     urls: string[];
   };
+};
+
+type GrokImagineEvidenceSummary = {
+  tabUrl: string;
+  runState: string | null;
+  pending: boolean | null;
+  terminalImage: boolean | null;
+  terminalVideo: boolean | null;
+  imageCount: number | null;
+  generatedImageCount: number | null;
+  publicGalleryImageCount: number | null;
+  visibleTileCount: number | null;
+  publicGalleryVisibleTileCount: number | null;
+  mediaUrlCount: number | null;
+  providerHref: string | null;
+  templateRoute: boolean;
 };
 
 export function createGrokBrowserMediaGenerationExecutor(userConfig: ResolvedUserConfig): MediaGenerationExecutor {
@@ -196,6 +213,7 @@ async function waitForGrokImagineTerminalImage(
   const deadline = Date.now() + timeoutMs;
   let pollCount = 0;
   let lastEvidence: GrokImagineEvidence | null = null;
+  let consecutiveTerminalNoGenerated = 0;
   while (Date.now() <= deadline) {
     pollCount += 1;
     const signature = await client.getFeatureSignature({
@@ -217,10 +235,14 @@ async function waitForGrokImagineTerminalImage(
         blocked: evidence.blocked,
         accountGated: evidence.accountGated,
         imageCount: evidence.media.images.length,
-        generatedImageCount: evidence.media.images.filter(isGeneratedGrokImageEntry).length,
+        generatedImageCount: countGeneratedGrokImages(evidence),
+        publicGalleryImageCount: evidence.media.images.filter(isPublicGalleryGrokMediaEntry).length,
         videoCount: evidence.media.videos.length,
         visibleTileCount: evidence.media.visibleTiles.length,
+        publicGalleryVisibleTileCount: evidence.media.visibleTiles.filter(isPublicGalleryGrokMediaEntry).length,
         mediaUrlCount: evidence.media.urls.length,
+        providerHref: evidence.href,
+        templateRoute: isGrokImagineTemplateRoute(evidence.href),
       },
     });
     if (evidence.blocked || evidence.accountGated) {
@@ -248,6 +270,30 @@ async function waitForGrokImagineTerminalImage(
       });
       return { evidence, pollCount };
     }
+    if (hasTerminalPublicTemplateMediaWithoutGeneratedOutput(evidence)) {
+      consecutiveTerminalNoGenerated += 1;
+      if (consecutiveTerminalNoGenerated >= 3) {
+        const details = summarizeGrokImagineEvidence(tabUrl, evidence);
+        await emitTimeline?.({
+          event: 'no_generated_media',
+          details: {
+            pollCount,
+            ...details,
+          },
+        });
+        throw new MediaGenerationExecutionError(
+          'media_generation_no_generated_output',
+          'Grok Imagine reached a public/template media surface after submission, but no generated account image appeared.',
+          {
+            ...details,
+            pollCount,
+            timeoutMs,
+          },
+        );
+      }
+    } else {
+      consecutiveTerminalNoGenerated = 0;
+    }
     const remainingMs = deadline - Date.now();
     if (remainingMs <= 0) break;
     await new Promise((resolve) => setTimeout(resolve, Math.min(pollIntervalMs, remainingMs)));
@@ -256,15 +302,9 @@ async function waitForGrokImagineTerminalImage(
     'media_generation_provider_timeout',
     'Grok browser image generation submitted successfully, but no terminal generated image appeared before the timeout.',
     {
-      tabUrl,
       timeoutMs,
       pollCount,
-      lastRunState: lastEvidence?.runState ?? null,
-      pending: lastEvidence?.pending ?? null,
-      imageCount: lastEvidence?.media.images.length ?? null,
-      generatedImageCount: lastEvidence?.media.images.filter(isGeneratedGrokImageEntry).length ?? null,
-      visibleTileCount: lastEvidence?.media.visibleTiles.length ?? null,
-      mediaUrlCount: lastEvidence?.media.urls.length ?? null,
+      ...summarizeGrokImagineEvidence(tabUrl, lastEvidence),
     },
   );
 }
@@ -314,6 +354,7 @@ function parseGrokImagineEvidence(signature: string | null | undefined): GrokIma
       ? imagine.media as Record<string, unknown>
       : {};
     return {
+      href: normalizeNonEmpty(imagine.href),
       runState: normalizeNonEmpty(imagine.run_state),
       pending: imagine.pending === true,
       terminalImage: imagine.terminal_image === true,
@@ -331,6 +372,7 @@ function parseGrokImagineEvidence(signature: string | null | undefined): GrokIma
     };
   } catch {
     return {
+      href: null,
       runState: null,
       pending: false,
       terminalImage: false,
@@ -344,6 +386,58 @@ function parseGrokImagineEvidence(signature: string | null | undefined): GrokIma
 
 function isGeneratedGrokImageEntry(entry: Record<string, unknown>): boolean {
   return entry.generated === true && entry.publicGallery !== true && entry.public_gallery !== true;
+}
+
+function isPublicGalleryGrokMediaEntry(entry: Record<string, unknown>): boolean {
+  return entry.publicGallery === true ||
+    entry.public_gallery === true ||
+    containsGrokPublicGalleryUrl(entry.src) ||
+    containsGrokPublicGalleryUrl(entry.href) ||
+    containsGrokPublicGalleryUrl(entry.poster);
+}
+
+function containsGrokPublicGalleryUrl(value: unknown): boolean {
+  return typeof value === 'string' && value.includes('imagine-public.x.ai');
+}
+
+function countGeneratedGrokImages(evidence: GrokImagineEvidence | null): number | null {
+  return evidence ? evidence.media.images.filter(isGeneratedGrokImageEntry).length : null;
+}
+
+function hasTerminalPublicTemplateMediaWithoutGeneratedOutput(evidence: GrokImagineEvidence): boolean {
+  if (evidence.pending || evidence.blocked || evidence.accountGated) return false;
+  if (!evidence.terminalImage && !evidence.terminalVideo) return false;
+  if (countGeneratedGrokImages(evidence) !== 0) return false;
+  return isGrokImagineTemplateRoute(evidence.href) ||
+    evidence.media.images.some(isPublicGalleryGrokMediaEntry) ||
+    evidence.media.visibleTiles.some(isPublicGalleryGrokMediaEntry) ||
+    evidence.media.videos.some(isPublicGalleryGrokMediaEntry) ||
+    evidence.media.urls.some((url) => containsGrokPublicGalleryUrl(url));
+}
+
+function isGrokImagineTemplateRoute(href: string | null | undefined): boolean {
+  return typeof href === 'string' && /\/imagine\/templates\//.test(href);
+}
+
+function summarizeGrokImagineEvidence(
+  tabUrl: string,
+  evidence: GrokImagineEvidence | null,
+): GrokImagineEvidenceSummary {
+  return {
+    tabUrl,
+    runState: evidence?.runState ?? null,
+    pending: evidence?.pending ?? null,
+    terminalImage: evidence?.terminalImage ?? null,
+    terminalVideo: evidence?.terminalVideo ?? null,
+    imageCount: evidence?.media.images.length ?? null,
+    generatedImageCount: countGeneratedGrokImages(evidence),
+    publicGalleryImageCount: evidence?.media.images.filter(isPublicGalleryGrokMediaEntry).length ?? null,
+    visibleTileCount: evidence?.media.visibleTiles.length ?? null,
+    publicGalleryVisibleTileCount: evidence?.media.visibleTiles.filter(isPublicGalleryGrokMediaEntry).length ?? null,
+    mediaUrlCount: evidence?.media.urls.length ?? null,
+    providerHref: evidence?.href ?? null,
+    templateRoute: isGrokImagineTemplateRoute(evidence?.href),
+  };
 }
 
 function mapPromptProgressToTimelineEvent(

@@ -20725,3 +20725,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+## 2026-04-24 - Grok Imagine no-generated-output status
+
+- Focus: make the Grok template/public-media route failure actionable instead
+  of waiting for the generic media timeout.
+- Progress: after repeated stable terminal public/template media evidence with
+  no generated account images, Grok browser image execution now emits
+  `no_generated_media` and fails with `media_generation_no_generated_output`.
+  Failure details include provider href, template-route flag, image counts,
+  generated-image count, public-gallery counts, visible-tile count, and media
+  URL count.
+- Guardrail: the detector waits for repeated evidence, so a generated account
+  image that appears on the next poll still wins over the public-template
+  classification.
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`
