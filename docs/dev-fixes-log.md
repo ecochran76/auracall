@@ -1,3 +1,9 @@
+- 2026-04-25: Normal managed browser response/chat execution should queue at
+  the shared browser execution boundary, not inside provider adapters. Use
+  `acquireQueued(...)` for `browser-execution` so response runs and media jobs
+  contend through the same browser-service control plane, while login/setup
+  human flows remain fail-fast.
+
 - 2026-04-25: Browser-backed media generation is the first product path opted
   into queued browser operation dispatch. Queue at the shared browser media
   executor boundary before provider adapters touch CDP, record queue/acquire

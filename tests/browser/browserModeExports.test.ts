@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { runBrowserMode, CHATGPT_URL } from '../../src/browserMode.js';
 import {
   buildThinkingStatusExpressionForTest,
@@ -128,7 +128,7 @@ describe('browserMode exports', () => {
     expect(result.logger.verbose).toBe(true);
   });
 
-  test('browser execution operation refuses an active same-profile probe lock', async () => {
+  test('browser execution operation queues behind an active same-profile probe lock', async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-browser-operation-'));
     setAuracallHomeDirOverrideForTest(tempRoot);
     const managedProfileDir = path.join(tempRoot, 'browser-profiles', 'default', 'grok');
@@ -142,14 +142,68 @@ describe('browserMode exports', () => {
       kind: 'doctor',
       operationClass: 'exclusive-probe',
       ownerPid: process.pid,
+      ownerCommand: 'test-active-probe',
+    });
+    const loggerMessages: string[] = [];
+    const logger = (message: string) => {
+      loggerMessages.push(message);
+    };
+
+    try {
+      if (!active.acquired) return;
+      const queued = acquireBrowserExecutionOperationForTest({
+        managedProfileDir,
+        target: 'grok',
+        logger,
+        queueTimeoutMs: 100,
+        queuePollMs: 5,
+      });
+      await vi.waitFor(() => {
+        expect(loggerMessages.some((message) => message.includes('operation queued'))).toBe(true);
+      });
+      await active.release();
+      const acquired = await queued;
+      expect(acquired?.operation).toMatchObject({
+        kind: 'browser-execution',
+        operationClass: 'exclusive-mutating',
+        serviceTarget: 'grok',
+      });
+      expect(loggerMessages.some((message) => message.includes('operation dispatcher key'))).toBe(true);
+      await acquired?.release();
+    } finally {
+      if (active.acquired) {
+        await active.release();
+      }
+      setAuracallHomeDirOverrideForTest(null);
+      await fs.rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('browser execution operation reports busy after queued acquisition timeout', async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-browser-operation-timeout-'));
+    setAuracallHomeDirOverrideForTest(tempRoot);
+    const managedProfileDir = path.join(tempRoot, 'browser-profiles', 'default', 'gemini');
+    const dispatcher = createFileBackedBrowserOperationDispatcher({
+      lockRoot: path.join(tempRoot, 'browser-operations'),
+      isOwnerAlive: () => true,
+    });
+    const active = await dispatcher.acquire({
+      managedProfileDir,
+      serviceTarget: 'gemini',
+      kind: 'setup',
+      operationClass: 'exclusive-human',
+      ownerPid: process.pid,
+      ownerCommand: 'manual-verification',
     });
 
     try {
       await expect(
         acquireBrowserExecutionOperationForTest({
           managedProfileDir,
-          target: 'grok',
+          target: 'gemini',
           logger: () => undefined,
+          queueTimeoutMs: 1,
+          queuePollMs: 1,
         }),
       ).rejects.toThrow(/Browser operation busy/);
     } finally {

@@ -1,3 +1,16 @@
+## 2026-04-25 - Browser response queued dispatch
+
+- Focus: route normal browser-backed response/chat execution through the same
+  queued browser-service operation dispatcher as browser media.
+- Progress: switched the shared `acquireBrowserExecutionOperation(...)`
+  boundary to `acquireQueued(...)`, added queue/acquire and timeout/busy tests,
+  and kept login/setup/human-verification flows fail-fast.
+- Validation:
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/browser-service/operationDispatcher.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 58`
+  - `git diff --check`
+
 ## 2026-04-25 - Browser media queued dispatch
 
 - Focus: opt the first async browser-backed product path into the browser-service

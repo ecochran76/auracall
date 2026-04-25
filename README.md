@@ -122,6 +122,10 @@ Current browser-mode default posture:
   `auracall --profile <name> login --target chatgpt` instead of waiting in the
   hidden/minimized automation window; API readback also includes those
   recovery fields in `metadata.executionSummary.failureSummary.details`
+- managed browser response/chat runs now wait through the browser-service
+  operation dispatcher when another operation owns the same managed browser
+  profile; login/setup/human-verification flows still surface busy state
+  immediately
 - steps can opt into the deterministic `auracall.step-output.v1` model-output
   envelope for routing, local actions, artifacts, handoffs, and structured
   failures; `/v1/team-runs` accepts top-level `outputContract` and

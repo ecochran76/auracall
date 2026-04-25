@@ -233,6 +233,8 @@ async function acquireBrowserExecutionOperation(options: {
   managedProfileDir: string | null | undefined;
   target: 'chatgpt' | 'grok' | 'gemini';
   logger: BrowserLogger;
+  queueTimeoutMs?: number;
+  queuePollMs?: number;
 }): Promise<BrowserOperationAcquiredResult | null> {
   if (!options.managedProfileDir) {
     return null;
@@ -240,12 +242,27 @@ async function acquireBrowserExecutionOperation(options: {
   const dispatcher = createFileBackedBrowserOperationDispatcher({
     lockRoot: path.join(getAuracallHomeDir(), 'browser-operations'),
   });
-  const acquired = await dispatcher.acquire({
+  const seenBlockedOperationIds = new Set<string>();
+  const acquired = await dispatcher.acquireQueued({
     managedProfileDir: options.managedProfileDir,
     serviceTarget: options.target,
     kind: 'browser-execution',
     operationClass: 'exclusive-mutating',
     ownerCommand: 'browser-execution',
+  }, {
+    timeoutMs: resolveBrowserExecutionQueueNumber(options.queueTimeoutMs, 10 * 60 * 1000),
+    pollMs: resolveBrowserExecutionQueueNumber(options.queuePollMs, 1000),
+    onBlocked: (result, context) => {
+      if (seenBlockedOperationIds.has(result.blockedBy.id)) {
+        return;
+      }
+      seenBlockedOperationIds.add(result.blockedBy.id);
+      options.logger(
+        `[browser] operation queued for ${result.key}; blocked by ` +
+        `${result.blockedBy.kind}/${result.blockedBy.operationClass} ` +
+        `pid=${result.blockedBy.ownerPid} attempt=${context.attempt}`,
+      );
+    },
   });
   if (!acquired.acquired) {
     throw new Error(formatBrowserOperationBusyResult(acquired));
@@ -255,6 +272,13 @@ async function acquireBrowserExecutionOperation(options: {
 }
 
 export const acquireBrowserExecutionOperationForTest = acquireBrowserExecutionOperation;
+
+function resolveBrowserExecutionQueueNumber(value: number | undefined, fallback: number): number {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return Math.trunc(value);
+  }
+  return fallback;
+}
 
 async function withBrowserExecutionOperation<T>(
   config: ReturnType<typeof resolveBrowserConfig>,

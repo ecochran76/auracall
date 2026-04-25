@@ -1,5 +1,23 @@
 # RUNBOOK
 
+## Turn 68 | 2026-04-25
+
+- Active plan:
+  `docs/dev/plans/0058-2026-04-25-browser-response-queued-dispatch.md`
+- Goal: opt normal managed browser response/chat execution into queued
+  browser-service dispatch.
+- Result:
+  - changed `acquireBrowserExecutionOperation(...)` to use
+    `BrowserOperationDispatcher.acquireQueued(...)`
+  - preserved the existing `browser-execution` operation kind and dispatcher key
+  - added queue/acquire and timeout/busy tests
+  - left login/setup/human-verification flows fail-fast
+- Verification target:
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/browser-service/operationDispatcher.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 58`
+  - `git diff --check`
+
 ## Turn 67 | 2026-04-25
 
 - Active plan:

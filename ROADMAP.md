@@ -96,6 +96,11 @@ Current State:
   - media status timelines can show `browser_operation_queued` and
     `browser_operation_acquired`
   - explicit Grok video readback probes use a raw DevTools dispatcher key
+- browser response queued dispatch is closed in
+  [docs/dev/plans/0058-2026-04-25-browser-response-queued-dispatch.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0058-2026-04-25-browser-response-queued-dispatch.md)
+  - normal managed browser response/chat execution now uses
+    `acquireQueued(...)` at the shared browser execution boundary
+  - login/setup/human-verification flows keep fail-fast busy behavior
 - the bounded `0004` operator-facing claimant/readback hardening sub-lane is
   now maintenance-only unless a new concrete mismatch is demonstrated
 - the narrower `api serve` server-local-runner ownership/readback checkpoint is

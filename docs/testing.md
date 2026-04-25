@@ -375,6 +375,10 @@
       same server-owned host/runner path
     - direct browser-backed `/v1/responses` runs now use the configured
       stored-step executor path instead of a no-op wrapper path
+    - managed browser response/chat execution now waits through the
+      browser-service operation dispatcher when another operation owns the same
+      managed browser profile; login/setup/manual-verification flows still
+      surface busy state immediately
     - `api serve` now also persists one bounded local runner record and keeps
       it heartbeated while the server stays up
     - `GET /v1/runtime-runs/inspect` now exposes the bounded queue projection
