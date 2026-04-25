@@ -16,7 +16,7 @@ implemented from what is merely plausible.
 | Streaming text | Supported | N/A | API adapter supports streaming; Gemini web executor returns a completed browser result. |
 | Attachments/files | Not first-class today | Partially supported | Web path supports Aura-Call file input. Current live proof includes inline bundling, direct chat upload-chip reads/fetches for the proven surfaces, and Gem knowledge file CRUD. Account-level Gemini files are still not implemented. |
 | YouTube input | Not documented | Supported | Web executor has an explicit `--youtube` flow. |
-| Generate image | Not documented | Supported | Web/browser path supports `--generate-image`. |
+| Generate image | Supported through `auracall media generate --provider gemini --type image --transport api` with `GEMINI_API_KEY` | Supported | API path uses Gemini API Imagen `models.generateImages`; web/browser path supports durable media generation and legacy `--generate-image`. |
 | Edit image | Not documented | Supported | Web/browser path supports `--edit-image`. |
 | Search/tooling | Partially supported | Not documented | API maps `web_search_preview` to Gemini `googleSearch`; broader Gemini-side search is not yet a committed product surface. |
 | Gem URL targeting | N/A | Supported | Via `--gemini-url` or the selected AuraCall runtime profile's `services.gemini.url`. |
@@ -144,6 +144,10 @@ auracall features diff --target gemini --json
 auracall media generate --provider gemini --type image \
   --prompt "a cute robot holding a banana" --json
 
+# Gemini API image generation path (requires GEMINI_API_KEY)
+auracall media generate --provider gemini --type image --transport api \
+  --prompt "a cute robot holding a banana" --count 1 --aspect-ratio 1:1 --json
+
 # Legacy compatibility shortcut (writes one output file directly)
 auracall --engine browser --model gemini-3-pro \
   --prompt "a cute robot holding a banana" \
@@ -160,6 +164,10 @@ Notes:
 - This path runs fully in Node/TypeScript (no Python/venv dependency).
 - Use `auracall media generate` for new image/music/video automation when you
   need durable ids, status polling, timeline evidence, and cached artifacts.
+  Add `--transport api` for Gemini API image generation through
+  `GEMINI_API_KEY`; the default API image model is Imagen
+  `imagen-4.0-generate-001`, with `--model` available for current Google model
+  ids.
   `--generate-image <file>` is retained as a Gemini-only compatibility
   shortcut for direct one-file browser image saves.
 - `--browser-model-strategy` only affects ChatGPT automation; Gemini web always uses the explicit Gemini model ID.

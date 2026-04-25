@@ -1,3 +1,18 @@
+## 2026-04-25 - Gemini API image execution
+
+- Focus: finish Plan 0055 by comparing the current Google GenAI SDK image
+  surface with Aura-Call's durable media-generation contract.
+- Progress: implemented Gemini API image execution for explicit
+  `transport = api` requests. The executor uses `models.generateImages`,
+  defaults to `imagen-4.0-generate-001`, requires `GEMINI_API_KEY`, forwards
+  count/aspect/size hints, caches returned inline image bytes into the durable
+  artifact directory, and records media timeline events. Plan 0055 is closed.
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGeminiApiExecutor.test.ts tests/cli.mediaGenerationCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 55`
+  - `git diff --check`
+
 ## 2026-04-25 - Legacy Gemini image shortcut decision
 
 - Focus: start Plan 0055 by deciding whether the older Gemini

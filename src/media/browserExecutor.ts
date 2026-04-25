@@ -1,13 +1,18 @@
 import type { ResolvedUserConfig } from '../config.js';
 import type { MediaGenerationExecutor } from './types.js';
 import { MediaGenerationExecutionError } from './service.js';
+import { createGeminiApiMediaGenerationExecutor } from './geminiApiExecutor.js';
 import { createGeminiBrowserMediaGenerationExecutor } from './geminiBrowserExecutor.js';
 import { createGrokBrowserMediaGenerationExecutor } from './grokBrowserExecutor.js';
 
 export function createBrowserMediaGenerationExecutor(userConfig: ResolvedUserConfig): MediaGenerationExecutor {
   const gemini = createGeminiBrowserMediaGenerationExecutor(userConfig);
+  const geminiApi = createGeminiApiMediaGenerationExecutor({ env: process.env });
   const grok = createGrokBrowserMediaGenerationExecutor(userConfig);
   return async (input) => {
+    if (input.request.provider === 'gemini' && input.request.transport === 'api') {
+      return geminiApi(input);
+    }
     if (input.request.provider === 'gemini') {
       return gemini(input);
     }

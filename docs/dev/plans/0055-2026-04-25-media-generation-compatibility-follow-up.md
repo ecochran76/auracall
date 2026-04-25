@@ -1,6 +1,6 @@
 # Media Generation Compatibility Follow-up | 0055-2026-04-25
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Scope
@@ -25,9 +25,11 @@ Plan 0049 closed the shared durable media-generation resource.
   compatibility shortcut for direct one-file Gemini browser image saves. Do
   not wrap it over the durable media-generation service until operators need
   both legacy direct file output and durable media ids from the same command.
-- Gemini API image execution is not implemented in the media-generation service.
-  `transport = api` currently remains a contract shape unless a test seam or
-  future provider adapter handles it.
+- Gemini API image execution is implemented in the media-generation service for
+  `provider = gemini`, `mediaType = image`, and `transport = api`. The executor
+  uses the Google GenAI SDK `models.generateImages` path, defaults to Imagen
+  `imagen-4.0-generate-001`, requires `GEMINI_API_KEY`, and caches returned
+  inline image bytes into the durable media artifact directory.
 - xAI API image/video execution and Grok edit/reference workflows remain
   outside this plan unless explicitly selected later.
 
@@ -41,9 +43,9 @@ Plan 0049 closed the shared durable media-generation resource.
   - errors still name the provider capability or auth problem clearly
   - no silent API/browser fallback occurs
   - durable media-generation id and artifact cache path remain inspectable
-- Add Gemini API image execution only if the configured API key/model path can
-  be validated against the current Gemini image-capable API contract without
-  weakening the browser `Create Image` path.
+- Gemini API image execution is separate from the browser `Create Image` path:
+  explicit `transport = api` uses Imagen API image generation, while default
+  browser media requests continue to use Gemini web tool selection.
 
 ## Non-Goals
 
@@ -59,8 +61,7 @@ Plan 0049 closed the shared durable media-generation resource.
 - If wrapped in a later slice, tests prove the requested file path receives the
   selected image artifact and the durable media-generation record remains
   readable.
-- Gemini API image support is either implemented with focused API adapter tests
-  or explicitly deferred with a provider/API blocker.
+- [x] Gemini API image support is implemented with focused API executor tests.
 - [x] README/testing docs identify the preferred CLI media path and any retained
   compatibility shortcut.
 - Plan 0049 remains closed and does not absorb more compatibility follow-up.
@@ -69,8 +70,14 @@ Plan 0049 closed the shared durable media-generation resource.
 
 - Unit tests for any legacy `--generate-image` wrapper behavior.
 - CLI parser/helper tests for output-path handling if the wrapper is added.
-- Focused media-generation service tests for Gemini API image execution if that
+- [x] Focused media-generation service tests for Gemini API image execution if that
   adapter is implemented.
 - No routine live Gemini video/music quota spend.
 - Live Gemini image smoke only when intentionally validating the legacy wrapper
   or API path on a clean managed browser/profile state.
+
+## Closure
+
+Plan 0055 is closed. The legacy Gemini `--generate-image <file>` flag remains a
+documented compatibility shortcut, and the durable media-generation service now
+supports Gemini API image generation through explicit `transport = api`.

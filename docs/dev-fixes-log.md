@@ -1,3 +1,10 @@
+- 2026-04-25: Keep Gemini API image generation explicit and separate from
+  browser media generation. In this repo, `transport = api` now uses the
+  Google GenAI SDK `models.generateImages` path and caches returned inline
+  image bytes as durable media artifacts, while default Gemini browser media
+  still uses the web `Create Image` tool and the legacy `--generate-image`
+  direct-file shortcut remains unchanged.
+
 - 2026-04-25: Do not migrate legacy direct-file browser flags before the
   operator contract demands it. For Gemini images, `--generate-image <file>`
   remains a compatibility shortcut, while `auracall media generate` is the

@@ -204,6 +204,9 @@
       `pnpm tsx bin/auracall.ts run status <response_id> --json`
   - create a shared-contract CLI media request:
     - `pnpm tsx bin/auracall.ts media generate --provider gemini --type image -p "Generate an image of an asphalt secret agent" --json`
+    - Gemini API image generation uses the same durable contract when
+      `GEMINI_API_KEY` is set:
+      `pnpm tsx bin/auracall.ts media generate --provider gemini --type image --transport api -p "Generate an image of an asphalt secret agent" --count 1 --json`
     - for async browser smokes, add `--no-wait` and poll with
       `pnpm tsx bin/auracall.ts run status <media_generation_id> --json`
     - prefer this command for new media automation and routine operator

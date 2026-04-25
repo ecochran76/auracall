@@ -1,5 +1,26 @@
 # RUNBOOK
 
+## Turn 63 | 2026-04-25
+
+- Active plan:
+  `docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md`
+- Goal: audit the current Gemini API image contract and either implement or
+  defer Gemini API image execution for durable media-generation runs.
+- Result:
+  - added a Gemini API media executor for `provider = gemini`,
+    `mediaType = image`, and explicit `transport = api`
+  - used the Google GenAI SDK `models.generateImages` path with default Imagen
+    model `imagen-4.0-generate-001`, `GEMINI_API_KEY`, count/aspect/size
+    options, inline-byte artifact caching, and focused failure codes
+  - kept browser Gemini media and legacy `--generate-image <file>` behavior
+    unchanged
+  - closed Plan 0055
+- Verification target:
+  - `pnpm vitest run tests/mediaGenerationGeminiApiExecutor.test.ts tests/cli.mediaGenerationCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 55`
+  - `git diff --check`
+
 ## Turn 62 | 2026-04-25
 
 - Active plan:

@@ -66,6 +66,7 @@ auracall capabilities --target grok --entrypoint grok-imagine --discovery-action
 
 # Shared durable media-generation contract from the CLI
 auracall media generate --provider gemini --type image -p "Generate an image of an asphalt secret agent" --json
+auracall media generate --provider gemini --type image --transport api -p "Generate an image of an asphalt secret agent" --count 1 --json
 auracall media generate --provider grok --type image -p "Generate an image of an asphalt secret agent" --count 1 --no-wait
 auracall run status <media_generation_id> --json
 
@@ -151,6 +152,8 @@ Terminology note:
   immediately, then poll it with `auracall run status <id> --json`.
 - Prefer `auracall media generate` for new image/music/video automation because
   it persists the media-generation id, timeline, status, and artifact cache.
+  Gemini image requests can use `--transport api` with `GEMINI_API_KEY`; that
+  path caches Imagen API image bytes into the same durable artifact directory.
   The older Gemini-only `--generate-image <file>` flag remains a
   compatibility shortcut for direct one-file browser image saves and does not
   create a durable media-generation record.
@@ -183,7 +186,11 @@ Terminology note:
   - `POST /v1/media-generations` accepts the shared media-generation contract
     for `provider = gemini|grok`, `mediaType = image|music|video`, prompt,
     optional `model`, `transport`, `count`, `size`, `aspectRatio`, and
-    metadata. By default the route waits for terminal completion; add
+    metadata. Gemini API image generation is supported with
+    `transport = api`, `GEMINI_API_KEY`, and the Imagen
+    `models.generateImages` path; the default model is
+    `imagen-4.0-generate-001`, and generated inline image bytes are cached as
+    durable media artifacts. By default the route waits for terminal completion; add
     `?wait=false` or JSON `"wait": false` to return a running media id
     immediately for polling. The route persists request/readback records with a
     `timeline[]` showing processing milestones such as capability discovery,
