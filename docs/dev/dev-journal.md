@@ -21612,3 +21612,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `curl -s 'http://127.0.0.1:18080/v1/media-generations?wait=false' ...`
   - `curl -s 'http://127.0.0.1:18080/v1/runs/medgen_c81229a3a9cc42a7a969ddb52f27ee59/status'`
   - `pnpm tsx bin/auracall.ts run status medgen_c81229a3a9cc42a7a969ddb52f27ee59 --json`
+
+## 2026-04-25 - Grok Imagine adapter mode-selection regression
+
+- Focus: lock the live Image/Video mode-selection behavior into provider
+  adapter tests instead of relying only on executor fixtures and live proof.
+- Progress: `tests/browser/grokAdapter.test.ts` now mocks the Grok Imagine CDP
+  path and verifies `runPrompt` emits `capability_selected` with
+  `selected = true`, the expected Image/Video mode, clicked-state, and
+  mode-control evidence before `prompt_inserted`.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`

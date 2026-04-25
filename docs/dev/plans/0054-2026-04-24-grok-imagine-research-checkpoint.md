@@ -247,6 +247,11 @@ existing Aura-Call media-generation contract.
   - run reached `terminal_video`, cached one
     `grok-imagine-video-1.mp4`, and materialized through the provider
     download button
+- Provider-adapter regression coverage now locks the mode-selection contract:
+  - Grok Image `runPrompt` emits `capability_selected` with `mode = Image`,
+    `selected = true`, and Image checked before prompt insertion
+  - Grok Video `runPrompt` emits `capability_selected` with `mode = Video`,
+    `selected = true`, and Video checked before prompt insertion
 - Bounded read-only video discovery has started:
   - the live `/imagine` page exposes `Image` and `Video` as visible
     `role = radio` controls, with `Image` checked and `Video` unchecked
@@ -634,6 +639,8 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - `pnpm tsx bin/auracall.ts run status medgen_504d9872bdcc43f1a4327ea2782a1e3a --json`
 - [x] Live compact status readback exposes Grok video mode selection:
   - `pnpm tsx bin/auracall.ts run status medgen_c81229a3a9cc42a7a969ddb52f27ee59 --json`
+- [x] Provider-adapter regression tests for Grok Image/Video mode selection:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`
 - [x] Bounded live gated media request:
   - `POST /v1/media-generations` with `provider = grok`, `mediaType = image`,
     `transport = browser`

@@ -1,7 +1,32 @@
 import { describe, expect, test, vi } from 'vitest';
+
+const grokRunPromptMocks = vi.hoisted(() => ({
+  cdpList: vi.fn(),
+  cdpClose: vi.fn(),
+  connectToChromeTarget: vi.fn(),
+  openOrReuseChromeTarget: vi.fn(),
+}));
+
+vi.mock('chrome-remote-interface', () => ({
+  default: {
+    List: grokRunPromptMocks.cdpList,
+    Close: grokRunPromptMocks.cdpClose,
+  },
+}));
+
+vi.mock('../../packages/browser-service/src/chromeLifecycle.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../packages/browser-service/src/chromeLifecycle.js')>();
+  return {
+    ...actual,
+    connectToChromeTarget: grokRunPromptMocks.connectToChromeTarget,
+    openOrReuseChromeTarget: grokRunPromptMocks.openOrReuseChromeTarget,
+  };
+});
+
 import {
   buildGrokFeatureProbeExpression,
   choosePreferredGrokConversation,
+  createGrokAdapter,
   ensureGrokTabVisible,
   extractGrokAccountFileIdFromUrl,
   mapGrokConversationFileProbes,
@@ -663,3 +688,236 @@ describe('ensureGrokTabVisible', () => {
     expect(evaluate).not.toHaveBeenCalled();
   });
 });
+
+describe('Grok Imagine runPrompt mode selection', () => {
+  test('emits verified Image mode selection before prompt insertion', async () => {
+    const result = await runGrokImaginePromptModeSelectionTest({
+      capabilityId: 'grok.media.imagine_image',
+      expectedMode: 'Image',
+      initialMode: 'Video',
+    });
+
+    expect(result.capabilitySelected).toMatchObject({
+      phase: 'capability_selected',
+      details: {
+        capabilityId: 'grok.media.imagine_image',
+        mode: 'Image',
+        selected: true,
+        clicked: true,
+        modeControls: [
+          {
+            text: 'Image',
+            role: 'radio',
+            checked: 'true',
+            disabled: false,
+          },
+          {
+            text: 'Video',
+            role: 'radio',
+            checked: 'false',
+            disabled: false,
+          },
+        ],
+      },
+    });
+    expect(result.events.map((event) => event.phase)).toEqual([
+      'browser_target_attached',
+      'capability_selected',
+      'composer_ready',
+      'prompt_inserted',
+      'send_attempted',
+      'submit_path_observed',
+      'submitted_state_observed',
+    ]);
+  });
+
+  test('emits verified Video mode selection before prompt insertion', async () => {
+    const result = await runGrokImaginePromptModeSelectionTest({
+      capabilityId: 'grok.media.imagine_video',
+      expectedMode: 'Video',
+      initialMode: 'Image',
+    });
+
+    expect(result.capabilitySelected).toMatchObject({
+      phase: 'capability_selected',
+      details: {
+        capabilityId: 'grok.media.imagine_video',
+        mode: 'Video',
+        selected: true,
+        clicked: true,
+        modeControls: [
+          {
+            text: 'Image',
+            role: 'radio',
+            checked: 'false',
+            disabled: false,
+          },
+          {
+            text: 'Video',
+            role: 'radio',
+            checked: 'true',
+            disabled: false,
+          },
+        ],
+      },
+    });
+    expect(result.events.findIndex((event) => event.phase === 'capability_selected')).toBeLessThan(
+      result.events.findIndex((event) => event.phase === 'prompt_inserted'),
+    );
+  });
+});
+
+async function runGrokImaginePromptModeSelectionTest(input: {
+  capabilityId: 'grok.media.imagine_image' | 'grok.media.imagine_video';
+  expectedMode: 'Image' | 'Video';
+  initialMode: 'Image' | 'Video';
+}): Promise<{
+  events: Array<{ phase: string; details?: Record<string, unknown> }>;
+  capabilitySelected: { phase: string; details?: Record<string, unknown> } | undefined;
+}> {
+  grokRunPromptMocks.cdpList.mockReset();
+  grokRunPromptMocks.cdpClose.mockReset();
+  grokRunPromptMocks.connectToChromeTarget.mockReset();
+  grokRunPromptMocks.openOrReuseChromeTarget.mockReset();
+  grokRunPromptMocks.cdpList.mockResolvedValue([
+    {
+      id: 'grok-tab-1',
+      type: 'page',
+      url: 'https://grok.com/imagine',
+    },
+  ]);
+  const client = createFakeGrokImaginePromptClient(input.initialMode);
+  grokRunPromptMocks.connectToChromeTarget.mockResolvedValue(client);
+  const events: Array<{ phase: string; details?: Record<string, unknown> }> = [];
+
+  const adapter = createGrokAdapter();
+  expect(adapter.runPrompt).toBeDefined();
+  await adapter.runPrompt!(
+    {
+      prompt: 'Generate an asphalt secret agent',
+      capabilityId: input.capabilityId,
+      timeoutMs: 10_000,
+      onProgress: (event) => {
+        events.push(event as { phase: string; details?: Record<string, unknown> });
+      },
+    },
+    {
+      host: '127.0.0.1',
+      port: 9222,
+      configuredUrl: 'https://grok.com/imagine',
+    },
+  );
+
+  expect(grokRunPromptMocks.connectToChromeTarget).toHaveBeenCalledWith({
+    host: '127.0.0.1',
+    port: 9222,
+    target: 'grok-tab-1',
+  });
+  expect(client.close).toHaveBeenCalledTimes(1);
+  expect(client.currentMode).toBe(input.expectedMode);
+  return {
+    events,
+    capabilitySelected: events.find((event) => event.phase === 'capability_selected'),
+  };
+}
+
+function createFakeGrokImaginePromptClient(initialMode: 'Image' | 'Video') {
+  let currentMode = initialMode;
+  let submitted = false;
+  const targetUrl = 'https://grok.com/imagine';
+  const modeControls = () => [
+    {
+      text: 'Image',
+      role: 'radio',
+      checked: currentMode === 'Image' ? 'true' : 'false',
+      disabled: false,
+    },
+    {
+      text: 'Video',
+      role: 'radio',
+      checked: currentMode === 'Video' ? 'true' : 'false',
+      disabled: false,
+    },
+  ];
+  const featureProbe = () => ({
+    imagine: {
+      href: targetUrl,
+      title: 'Imagine - Grok',
+      run_state: submitted ? 'pending' : 'idle',
+      account_gated: false,
+      blocked: false,
+      pending: submitted,
+      terminal_image: false,
+      terminal_video: false,
+      media: {
+        images: [],
+        videos: [],
+        visible_tiles: [],
+        urls: [],
+      },
+    },
+  });
+  const evaluate = vi.fn(async ({ expression }: { expression: string }) => {
+    const targetMode = expression.includes('const targetMode = "Video"') ? 'Video' :
+      expression.includes('const targetMode = "Image"') ? 'Image' :
+        null;
+    if (targetMode && expression.includes('target.click()')) {
+      const clicked = currentMode !== targetMode;
+      currentMode = targetMode;
+      return { result: { value: { clicked, mode: targetMode } } };
+    }
+    if (targetMode && expression.includes('const summarize = (node) =>')) {
+      return {
+        result: {
+          value: currentMode === targetMode
+            ? { mode: targetMode, selected: true, controls: modeControls() }
+            : null,
+        },
+      };
+    }
+    if (expression.includes("detector: 'grok-feature-probe-v1'")) {
+      return { result: { value: featureProbe() } };
+    }
+    if (expression.includes('document.readyState')) {
+      return { result: { value: { readyState: 'complete' } } };
+    }
+    if (expression.includes('new URL(location.href)')) {
+      return { result: { value: { href: targetUrl, title: 'Imagine - Grok' } } };
+    }
+    if (expression.includes('const prompt = ')) {
+      return { result: { value: { ok: true } } };
+    }
+    if (expression.includes('preferred.dispatchEvent')) {
+      submitted = true;
+      return { result: { value: { ok: true, label: 'submit' } } };
+    }
+    if (expression.includes('main textarea, main [contenteditable="true"]') && expression.includes('placeholder')) {
+      return {
+        result: {
+          value: {
+            tag: 'DIV',
+            text: 'Type to imagine',
+            placeholder: 'Type to imagine',
+          },
+        },
+      };
+    }
+    if (expression.includes("const form = composer?.closest?.('form')")) {
+      return { result: { value: { ok: true } } };
+    }
+    return { result: { value: true } };
+  });
+  return {
+    get currentMode() {
+      return currentMode;
+    },
+    Page: {
+      enable: vi.fn(async () => undefined),
+    },
+    Runtime: {
+      enable: vi.fn(async () => undefined),
+      evaluate,
+    },
+    close: vi.fn(async () => undefined),
+  };
+}

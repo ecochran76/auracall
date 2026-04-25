@@ -14374,3 +14374,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   Browser providers can be sticky or modeful, so operators need generic
   `run_status`, media status, and MCP status to show which workbench mode/tool
   was selected before submission.
+- 2026-04-25: Grok Imagine mode selection needs provider-adapter regression
+  coverage, not only executor-level mocked progress or live proof. Mock the
+  adapter's CDP path and assert Image and Video `runPrompt` emit
+  `capability_selected` with `selected = true` and the expected mode before
+  prompt insertion.
