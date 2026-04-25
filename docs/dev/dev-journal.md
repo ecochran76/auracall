@@ -1,3 +1,21 @@
+## 2026-04-24 - Grok video post-submit acceptance contract
+
+- Current focus:
+  - define the executable post-submit acceptance contract for Grok Imagine
+    video before enabling any video Submit click
+- Progress:
+  - added a Grok video acceptance evaluator that classifies pending,
+    terminal-video, generated-account video, public/template video, download
+    controls, and materialization candidates from provider feature-signature
+    evidence
+  - added `video_visible` to the canonical media-generation timeline event
+    contract for the future terminal-video observation point
+  - Grok browser video remains gated: the current executor still stops before
+    prompt insertion or Submit
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+
 ## 2026-04-24 - Grok video executor skeleton
 
 - Current focus:

@@ -48,6 +48,37 @@ type GrokImagineEvidenceSummary = {
   templateRoute: boolean;
 };
 
+export const GROK_VIDEO_POST_SUBMIT_ACCEPTANCE_CONTRACT = {
+  pendingSignal:
+    'After prompt submission, pending is true when Grok Imagine reports pending/generating/progress state before terminal media.',
+  terminalVideoSignal:
+    'Terminal video requires terminal_video=true plus at least one generated, non-public video media entry or selected generated video tile.',
+  generatedVideoIdentity:
+    'Generated video identity must come from provider account media, not imagine-public.x.ai gallery/template media.',
+  materialization:
+    'A video artifact is materializable when a generated video entry/tile has src/href media bytes or a visible download/open control is present for the selected generated item.',
+  failureCases: [
+    'account_gated',
+    'blocked',
+    'terminal_public_template_without_generated_video',
+    'terminal_video_without_materialization_candidate',
+    'timeout_without_terminal_video',
+  ],
+} as const;
+
+export interface GrokImagineVideoAcceptanceEvaluation {
+  pending: boolean;
+  terminalVideo: boolean;
+  generatedVideoCount: number;
+  selectedGeneratedVideoCount: number;
+  publicGalleryVideoCount: number;
+  downloadControlCount: number;
+  materializationCandidateCount: number;
+  publicTemplateWithoutGeneratedVideo: boolean;
+  ready: boolean;
+  failureReason: string | null;
+}
+
 export function createGrokBrowserMediaGenerationExecutor(userConfig: ResolvedUserConfig): MediaGenerationExecutor {
   return async (input) => executeGrokBrowserMediaGeneration(input, userConfig);
 }
@@ -442,8 +473,105 @@ function parseGrokImagineEvidence(signature: string | null | undefined): GrokIma
   }
 }
 
+export function evaluateGrokImagineVideoPostSubmitAcceptance(
+  signature: string | null | undefined,
+): GrokImagineVideoAcceptanceEvaluation {
+  const parsed = parseGrokImagineSignatureObject(signature);
+  const imagine = parsed.imagine;
+  const media = parsed.media;
+  const videos = collectRecordArray(media.videos);
+  const visibleTiles = collectRecordArray(media.visible_tiles);
+  const materializationControls = collectRecordArray(imagine.materialization_controls);
+  const generatedVideos = videos.filter(isGeneratedGrokVideoEntry);
+  const selectedGeneratedVideos = generatedVideos.filter((entry) => entry.selected === true);
+  const selectedGeneratedVideoTiles = visibleTiles.filter((entry) =>
+    isGeneratedGrokVideoEntry(entry) && entry.selected === true);
+  const materializationCandidateCount = generatedVideos.filter(hasGrokVideoMaterializationCandidate).length +
+    selectedGeneratedVideoTiles.filter(hasGrokVideoMaterializationCandidate).length +
+    materializationControls.filter(isGrokDownloadOrOpenControl).length;
+  const publicTemplateWithoutGeneratedVideo = !Boolean(imagine.pending) &&
+    !Boolean(imagine.account_gated) &&
+    !Boolean(imagine.blocked) &&
+    Boolean(imagine.terminal_video) &&
+    generatedVideos.length === 0 &&
+    (isGrokImagineTemplateRoute(normalizeNonEmpty(imagine.href)) ||
+      videos.some(isPublicGalleryGrokMediaEntry) ||
+      visibleTiles.some(isPublicGalleryGrokMediaEntry) ||
+      collectStringArray(media.urls).some((url) => containsGrokPublicGalleryUrl(url)));
+  const runState = normalizeNonEmpty(imagine.run_state)?.toLowerCase();
+  const pending = Boolean(imagine.pending) || runState === 'pending' || runState === 'generating' || runState === 'progress';
+  const terminalVideo = Boolean(imagine.terminal_video);
+  const hasGeneratedSelection = generatedVideos.length > 0 || selectedGeneratedVideoTiles.length > 0;
+  const ready = terminalVideo && hasGeneratedSelection && materializationCandidateCount > 0 && !publicTemplateWithoutGeneratedVideo;
+  const failureReason = Boolean(imagine.account_gated)
+    ? 'account_gated'
+    : Boolean(imagine.blocked)
+      ? 'blocked'
+      : publicTemplateWithoutGeneratedVideo
+        ? 'terminal_public_template_without_generated_video'
+        : terminalVideo && hasGeneratedSelection && materializationCandidateCount === 0
+          ? 'terminal_video_without_materialization_candidate'
+          : null;
+  return {
+    pending,
+    terminalVideo,
+    generatedVideoCount: generatedVideos.length,
+    selectedGeneratedVideoCount: selectedGeneratedVideos.length + selectedGeneratedVideoTiles.length,
+    publicGalleryVideoCount: videos.filter(isPublicGalleryGrokMediaEntry).length,
+    downloadControlCount: materializationControls.filter(isGrokDownloadOrOpenControl).length,
+    materializationCandidateCount,
+    publicTemplateWithoutGeneratedVideo,
+    ready,
+    failureReason,
+  };
+}
+
+function parseGrokImagineSignatureObject(signature: string | null | undefined): {
+  imagine: Record<string, unknown>;
+  media: Record<string, unknown>;
+} {
+  try {
+    const parsed = signature ? JSON.parse(signature) as { imagine?: Record<string, unknown> } : {};
+    const imagine = parsed.imagine && typeof parsed.imagine === 'object' ? parsed.imagine : {};
+    const media = imagine.media && typeof imagine.media === 'object' && !Array.isArray(imagine.media)
+      ? imagine.media as Record<string, unknown>
+      : {};
+    return { imagine, media };
+  } catch {
+    return { imagine: {}, media: {} };
+  }
+}
+
 function isGeneratedGrokImageEntry(entry: Record<string, unknown>): boolean {
   return entry.generated === true && entry.publicGallery !== true && entry.public_gallery !== true;
+}
+
+function isGeneratedGrokVideoEntry(entry: Record<string, unknown>): boolean {
+  if (entry.publicGallery === true || entry.public_gallery === true) return false;
+  if (containsGrokPublicGalleryUrl(entry.src) || containsGrokPublicGalleryUrl(entry.href) || containsGrokPublicGalleryUrl(entry.poster)) {
+    return false;
+  }
+  const kind = normalizeNonEmpty(entry.kind)?.toLowerCase() ?? '';
+  const tag = normalizeNonEmpty(entry.tag)?.toLowerCase() ?? '';
+  const hasVideoIdentity = kind === 'video' || tag === 'video' || normalizeNonEmpty(entry.src)?.endsWith('.mp4') === true;
+  return entry.generated === true && hasVideoIdentity;
+}
+
+function hasGrokVideoMaterializationCandidate(entry: Record<string, unknown>): boolean {
+  const src = normalizeNonEmpty(entry.src);
+  const href = normalizeNonEmpty(entry.href);
+  return Boolean(src || href);
+}
+
+function isGrokDownloadOrOpenControl(entry: Record<string, unknown>): boolean {
+  const haystack = [
+    entry.text,
+    entry.ariaLabel,
+    entry.aria_label,
+    entry.title,
+    entry.href,
+  ].map((value) => String(value ?? '').toLowerCase()).join(' ');
+  return /\b(download|save|export|open)\b/.test(haystack);
 }
 
 function isPublicGalleryGrokMediaEntry(entry: Record<string, unknown>): boolean {
@@ -555,6 +683,11 @@ function collectRecordArray(value: unknown): Array<Record<string, unknown>> {
   if (!Array.isArray(value)) return [];
   return value.filter((entry): entry is Record<string, unknown> =>
     Boolean(entry) && typeof entry === 'object' && !Array.isArray(entry));
+}
+
+function collectStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry) => String(entry ?? '').trim()).filter(Boolean);
 }
 
 function extractGrokVideoModeAudit(metadata: Record<string, unknown> | null | undefined): Record<string, unknown> | null {

@@ -29,6 +29,109 @@ describe('Grok browser media generation executor', () => {
     })));
   });
 
+  it('defines post-submit video acceptance criteria before enabling submit', async () => {
+    const {
+      GROK_VIDEO_POST_SUBMIT_ACCEPTANCE_CONTRACT,
+      evaluateGrokImagineVideoPostSubmitAcceptance,
+    } = await import('../src/media/grokBrowserExecutor.js');
+
+    expect(GROK_VIDEO_POST_SUBMIT_ACCEPTANCE_CONTRACT.failureCases).toContain(
+      'terminal_public_template_without_generated_video',
+    );
+
+    expect(evaluateGrokImagineVideoPostSubmitAcceptance(JSON.stringify({
+      imagine: {
+        run_state: 'generating',
+        pending: false,
+        terminal_video: false,
+        media: { videos: [], visible_tiles: [], urls: [] },
+      },
+    }))).toMatchObject({
+      pending: true,
+      terminalVideo: false,
+      ready: false,
+      failureReason: null,
+    });
+
+    expect(evaluateGrokImagineVideoPostSubmitAcceptance(JSON.stringify({
+      imagine: {
+        href: 'https://grok.com/imagine/templates/template-1',
+        pending: false,
+        terminal_video: true,
+        media: {
+          videos: [{
+            kind: 'video',
+            src: 'https://imagine-public.x.ai/imagine-public/share-videos/template.mp4',
+            publicGallery: true,
+          }],
+          visible_tiles: [],
+          urls: ['https://imagine-public.x.ai/imagine-public/share-videos/template.mp4'],
+        },
+      },
+    }))).toMatchObject({
+      terminalVideo: true,
+      generatedVideoCount: 0,
+      publicTemplateWithoutGeneratedVideo: true,
+      ready: false,
+      failureReason: 'terminal_public_template_without_generated_video',
+    });
+
+    expect(evaluateGrokImagineVideoPostSubmitAcceptance(JSON.stringify({
+      imagine: {
+        href: 'https://grok.com/imagine',
+        pending: false,
+        terminal_video: true,
+        materialization_controls: [{ ariaLabel: 'Download', visible: true }],
+        media: {
+          videos: [{
+            kind: 'video',
+            tag: 'video',
+            src: 'https://assets.grok.com/users/test/generated/video-1.mp4',
+            generated: true,
+            selected: true,
+            publicGallery: false,
+          }],
+          visible_tiles: [],
+          urls: ['https://assets.grok.com/users/test/generated/video-1.mp4'],
+        },
+      },
+    }))).toMatchObject({
+      terminalVideo: true,
+      generatedVideoCount: 1,
+      selectedGeneratedVideoCount: 1,
+      downloadControlCount: 1,
+      materializationCandidateCount: 2,
+      ready: true,
+      failureReason: null,
+    });
+
+    expect(evaluateGrokImagineVideoPostSubmitAcceptance(JSON.stringify({
+      imagine: {
+        href: 'https://grok.com/imagine',
+        pending: false,
+        terminal_video: true,
+        media: {
+          videos: [],
+          visible_tiles: [{
+            kind: 'video',
+            src: 'https://assets.grok.com/users/test/generated/selected-video.mp4',
+            generated: true,
+            selected: true,
+            publicGallery: false,
+          }],
+          urls: ['https://assets.grok.com/users/test/generated/selected-video.mp4'],
+        },
+      },
+    }))).toMatchObject({
+      terminalVideo: true,
+      generatedVideoCount: 0,
+      selectedGeneratedVideoCount: 1,
+      materializationCandidateCount: 1,
+      ready: true,
+      failureReason: null,
+    });
+  });
+
   it('submits through the guarded Imagine path and materializes terminal image evidence', async () => {
     const { createGrokBrowserMediaGenerationExecutor } = await import('../src/media/grokBrowserExecutor.js');
     const artifactDir = '/tmp/auracall-grok-media-artifacts';

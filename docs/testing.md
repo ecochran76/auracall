@@ -227,6 +227,9 @@
       `capability_discovered`, `executor_started`, `capability_selected`,
       `composer_ready`, and `submitted_state_observed` with
       `submitted = false`; no prompt should be inserted
+    - post-submit video readiness is currently covered by unit-test fixture
+      evidence only; `video_visible` is reserved for the future terminal-video
+      observation event once Submit is enabled
     - read back the same id through both
       `/v1/media-generations/<id>/status` and `/v1/runs/<id>/status`; both
       should agree on terminal state, last event, artifact count, and cached

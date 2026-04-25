@@ -209,6 +209,17 @@ existing Aura-Call media-generation contract.
   - live local API dogfood id
     `medgen_5db184cae1ea432aae1e6649beb6ed22` confirmed the expected
     pre-submit timeline and no prompt submission
+- Grok video post-submit acceptance criteria are now executable, but not yet
+  wired to Submit:
+  - pending accepts provider `pending`, `generating`, or `progress` evidence
+  - terminal success requires `terminal_video` plus generated account video
+    evidence, not public/template media
+  - public/template video evidence is classified separately as a failure
+    class
+  - materialization requires generated video `src`/`href` evidence or a
+    visible download/open control
+  - the canonical media timeline now reserves `video_visible` for terminal
+    video observation
 
 ## Research Findings
 
@@ -375,6 +386,9 @@ Add a browser-first Grok Imagine discovery/audit slice:
   submitting a prompt.
 - [x] Grok browser video requests have a durable pre-submit executor skeleton
   that records Video-mode evidence and fails before prompt insertion.
+- [x] Grok video post-submit acceptance criteria classify pending,
+  terminal generated video, public/template reuse, and materialization
+  candidates without enabling Submit.
 
 ## Validation Plan
 
@@ -472,6 +486,10 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - terminal failure: `media_provider_not_implemented`
   - timeline included `capability_selected`, `composer_ready`, and
     `submitted_state_observed` with `submitted = false`
+- [x] Unit test for the Grok video post-submit acceptance contract:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - validates pending/generating evidence, public-template terminal-video
+    failure, generated-account video identity, and materialization candidates
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
@@ -479,5 +497,6 @@ Add a browser-first Grok Imagine discovery/audit slice:
 ## Next Slice
 
 Keep Grok video and edit/reference workflows gated. The next browser slice
-should define post-submit video run-state and artifact materialization
-acceptance criteria before enabling any video Submit click.
+should wire a no-submit post-submit poll/materialization skeleton against
+fixture evidence, then connect the evaluator to the gated executor before any
+live video Submit click is enabled.

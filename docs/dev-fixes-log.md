@@ -1,3 +1,9 @@
+- 2026-04-24: Do not enable volatile video Submit paths until post-submit
+  acceptance is executable. For Grok Imagine video, the gate needs provider
+  evidence that distinguishes pending/generating/progress, generated account
+  video, public/template video reuse, selected generated media, and
+  materialization candidates before any automated Submit click is allowed.
+
 - 2026-04-24: A gated executor skeleton should still persist useful
   pre-submit state. For Grok Imagine video, capability preflight owns the
   explicit Video-mode discovery action, and the executor receives that

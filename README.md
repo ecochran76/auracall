@@ -174,10 +174,12 @@ Terminology note:
     immediately for polling. The route persists request/readback records with a
     `timeline[]` showing processing milestones such as capability discovery,
     capability-gate stops, prompt submission, submit-path observation,
-    artifact polling, materialization, and terminal completion. Operators can
+    artifact polling, `image_visible`/`video_visible` terminal media
+    observation, materialization, and terminal completion. Operators can
     request Grok browser video, but it currently stops before prompt insertion
-    after recording Video-mode pre-submit evidence; video artifact execution
-    remains gated. Operators can poll the generic
+    after recording Video-mode pre-submit evidence; video Submit remains gated
+    until post-submit terminal-video and materialization criteria are wired to
+    the executor. Operators can poll the generic
     `GET /v1/runs/{run_id}/status` surface for response/team chats and media
     jobs. Media jobs also retain the narrower
     `GET /v1/media-generations/{media_generation_id}/status` for a compact
