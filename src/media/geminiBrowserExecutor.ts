@@ -13,7 +13,10 @@ import type {
 } from './types.js';
 import { MediaGenerationExecutionError } from './service.js';
 
-const GEMINI_IMAGE_CAPABILITY_ID = 'gemini.media.create_image';
+const GEMINI_CAPABILITY_IDS: Record<'image' | 'video', string> = {
+  image: 'gemini.media.create_image',
+  video: 'gemini.media.create_video',
+};
 
 export function createGeminiBrowserMediaGenerationExecutor(userConfig: ResolvedUserConfig): MediaGenerationExecutor {
   return async (input) => executeGeminiBrowserMediaGeneration(input, userConfig);
@@ -36,7 +39,7 @@ async function executeGeminiBrowserMediaGeneration(
       },
     );
   }
-  if (request.mediaType !== 'image') {
+  if (request.mediaType === 'music') {
     throw new MediaGenerationExecutionError(
       'media_provider_not_implemented',
       `Gemini browser ${request.mediaType} generation is not implemented yet.`,
@@ -47,6 +50,7 @@ async function executeGeminiBrowserMediaGeneration(
       },
     );
   }
+  const capabilityId = GEMINI_CAPABILITY_IDS[request.mediaType];
 
   const client = await BrowserAutomationClient.fromConfig(userConfig, { target: 'gemini' });
   const emitPromptProgress = async (event: BrowserProviderPromptProgressEvent): Promise<void> => {
@@ -58,7 +62,7 @@ async function executeGeminiBrowserMediaGeneration(
   };
   const promptResult = await client.runPrompt({
     prompt: request.prompt,
-    capabilityId: GEMINI_IMAGE_CAPABILITY_ID,
+    capabilityId,
     completionMode: 'prompt_submitted',
     noProject: true,
     timeoutMs,
@@ -69,7 +73,7 @@ async function executeGeminiBrowserMediaGeneration(
   await input.emitTimeline?.({
     event: 'prompt_submitted',
     details: {
-      capabilityId: GEMINI_IMAGE_CAPABILITY_ID,
+      capabilityId,
       conversationId: conversationId ?? null,
       tabTargetId: tabTargetId ?? null,
       url: promptResult.url ?? null,
@@ -78,7 +82,7 @@ async function executeGeminiBrowserMediaGeneration(
   if (!conversationId) {
     throw new MediaGenerationExecutionError(
       'media_generation_readback_failed',
-      'Gemini browser image generation completed without a conversation id for artifact readback.',
+      `Gemini browser ${request.mediaType} generation completed without a conversation id for artifact readback.`,
       {
         url: promptResult.url ?? null,
       },
@@ -87,7 +91,7 @@ async function executeGeminiBrowserMediaGeneration(
   if (!tabTargetId) {
     throw new MediaGenerationExecutionError(
       'media_generation_readback_failed',
-      'Gemini browser image generation completed without a submitted tab target id for no-navigation artifact readback.',
+      `Gemini browser ${request.mediaType} generation completed without a submitted tab target id for no-navigation artifact readback.`,
       {
         conversationId,
         url: promptResult.url ?? null,
@@ -95,19 +99,20 @@ async function executeGeminiBrowserMediaGeneration(
     );
   }
 
-  const { imageArtifacts, pollCount, lastReadbackError } = await waitForGeminiImageArtifacts(
+  const { artifacts, pollCount, lastReadbackError } = await waitForGeminiMediaArtifacts(
     client,
     conversationId,
     tabTargetId,
     promptResult.url ?? resolveGeminiConversationUrl(conversationId),
+    request.mediaType,
     request.metadata,
     timeoutMs,
     input.emitTimeline,
   );
-  if (imageArtifacts.length === 0) {
+  if (artifacts.length === 0) {
     throw new MediaGenerationExecutionError(
       'media_generation_provider_timeout',
-      'Gemini browser image generation submitted successfully, but no generated image artifact appeared before the timeout.',
+      `Gemini browser ${request.mediaType} generation submitted successfully, but no generated ${request.mediaType} artifact appeared before the timeout.`,
       {
         conversationId,
         timeoutMs,
@@ -117,9 +122,9 @@ async function executeGeminiBrowserMediaGeneration(
     );
   }
 
-  const requestedCount = Math.max(1, Math.min(request.count ?? 1, imageArtifacts.length));
+  const requestedCount = Math.max(1, Math.min(request.count ?? 1, artifacts.length));
   const materialized: MediaGenerationArtifact[] = [];
-  for (const artifact of imageArtifacts.slice(0, requestedCount)) {
+  for (const artifact of artifacts.slice(0, requestedCount)) {
     const file = await client.materializeConversationArtifact(conversationId, artifact, input.artifactDir, {
       listOptions: {
         configuredUrl: promptResult.url ?? resolveGeminiConversationUrl(conversationId),
@@ -144,10 +149,10 @@ async function executeGeminiBrowserMediaGeneration(
   if (materialized.length === 0) {
     throw new MediaGenerationExecutionError(
       'media_generation_artifact_materialization_failed',
-      'Gemini browser image generation exposed artifacts, but none could be materialized.',
+      `Gemini browser ${request.mediaType} generation exposed artifacts, but none could be materialized.`,
       {
         conversationId,
-        artifactIds: imageArtifacts.map((artifact) => artifact.id),
+        artifactIds: artifacts.map((artifact) => artifact.id),
       },
     );
   }
@@ -160,8 +165,8 @@ async function executeGeminiBrowserMediaGeneration(
       conversationId,
       tabUrl: promptResult.url ?? null,
       tabTargetId,
-      capabilityId: GEMINI_IMAGE_CAPABILITY_ID,
-      generatedArtifactCount: imageArtifacts.length,
+      capabilityId,
+      generatedArtifactCount: artifacts.length,
       artifactPollCount: pollCount,
     },
   };
@@ -190,15 +195,16 @@ function normalizeTimelineProgressDetails(details: Record<string, unknown> | nul
   return normalized;
 }
 
-async function waitForGeminiImageArtifacts(
+async function waitForGeminiMediaArtifacts(
   client: BrowserAutomationClient,
   conversationId: string,
   tabTargetId: string,
   tabUrl: string,
+  mediaType: 'image' | 'video',
   metadata: Record<string, unknown> | null | undefined,
   timeoutMs: number,
   emitTimeline: MediaGenerationTimelineEmitter | undefined,
-): Promise<{ imageArtifacts: ConversationArtifact[]; pollCount: number; lastReadbackError?: string | null }> {
+): Promise<{ artifacts: ConversationArtifact[]; pollCount: number; lastReadbackError?: string | null }> {
   const pollIntervalMs = resolveArtifactPollIntervalMs(metadata);
   const deadline = Date.now() + timeoutMs;
   let pollCount = 0;
@@ -214,26 +220,30 @@ async function waitForGeminiImageArtifacts(
         preserveActiveTab: true,
       });
       lastReadbackError = null;
-      const imageArtifacts = lastArtifacts.filter(isImageArtifact);
+      const matchingArtifacts = lastArtifacts.filter((artifact) => isMediaArtifact(artifact, mediaType));
       await emitTimeline?.({
         event: 'artifact_poll',
         details: {
           pollCount,
           artifactCount: lastArtifacts.length,
-          imageArtifactCount: imageArtifacts.length,
+          imageArtifactCount: lastArtifacts.filter((artifact) => isMediaArtifact(artifact, 'image')).length,
+          videoArtifactCount: lastArtifacts.filter((artifact) => isMediaArtifact(artifact, 'video')).length,
           lastReadbackError: null,
         },
       });
-      if (imageArtifacts.length > 0) {
+      if (matchingArtifacts.length > 0) {
         await emitTimeline?.({
-          event: 'image_visible',
+          event: mediaType === 'image' ? 'image_visible' : 'video_visible',
           details: {
             pollCount,
-            generatedArtifactCount: imageArtifacts.length,
-            artifactIds: imageArtifacts.map((artifact) => artifact.id),
+            generatedArtifactCount: matchingArtifacts.length,
+            ...(mediaType === 'image'
+              ? { generatedImageCount: matchingArtifacts.length }
+              : { generatedVideoCount: matchingArtifacts.length }),
+            artifactIds: matchingArtifacts.map((artifact) => artifact.id),
           },
         });
-        return { imageArtifacts, pollCount, lastReadbackError };
+        return { artifacts: matchingArtifacts, pollCount, lastReadbackError };
       }
     } catch (error) {
       lastReadbackError = error instanceof Error ? error.message : String(error);
@@ -242,7 +252,8 @@ async function waitForGeminiImageArtifacts(
         details: {
           pollCount,
           artifactCount: lastArtifacts.length,
-          imageArtifactCount: lastArtifacts.filter(isImageArtifact).length,
+          imageArtifactCount: lastArtifacts.filter((artifact) => isMediaArtifact(artifact, 'image')).length,
+          videoArtifactCount: lastArtifacts.filter((artifact) => isMediaArtifact(artifact, 'video')).length,
           lastReadbackError,
         },
       });
@@ -253,7 +264,7 @@ async function waitForGeminiImageArtifacts(
     }
     await new Promise((resolve) => setTimeout(resolve, Math.min(pollIntervalMs, remainingMs)));
   }
-  return { imageArtifacts: lastArtifacts.filter(isImageArtifact), pollCount, lastReadbackError };
+  return { artifacts: lastArtifacts.filter((artifact) => isMediaArtifact(artifact, mediaType)), pollCount, lastReadbackError };
 }
 
 function resolveGeminiConversationUrl(conversationId: string): string {
@@ -276,8 +287,11 @@ function resolveArtifactPollIntervalMs(metadata: Record<string, unknown> | null 
   return 5_000;
 }
 
-function isImageArtifact(artifact: ConversationArtifact): boolean {
-  return artifact.kind === 'image';
+function isMediaArtifact(artifact: ConversationArtifact, mediaType: 'image' | 'video'): boolean {
+  if (mediaType === 'image') {
+    return artifact.kind === 'image';
+  }
+  return artifact.kind === 'generated' && artifact.metadata?.mediaType === 'video';
 }
 
 function mapGeminiFileToMediaArtifact(
@@ -295,16 +309,22 @@ function mapGeminiFileToMediaArtifact(
     remoteUrl: file.remoteUrl ?? artifact.uri ?? null,
   };
   return {
-    id: file.id || artifact.id || `gemini_image_${ordinal}`,
+    id: file.id || artifact.id || `gemini_${mediaType}_${ordinal}`,
     type: mediaType,
     mimeType: file.mimeType ?? null,
-    fileName: file.name || (localPath ? path.basename(localPath) : `gemini-image-${ordinal}.png`),
+    fileName: file.name || (localPath ? path.basename(localPath) : fallbackGeminiFileName(mediaType, ordinal)),
     path: localPath,
     uri: localPath ? `file://${localPath}` : file.remoteUrl ?? artifact.uri ?? null,
     width: numberOrNull(metadata.width),
     height: numberOrNull(metadata.height),
     metadata,
   };
+}
+
+function fallbackGeminiFileName(mediaType: MediaGenerationType, ordinal: number): string {
+  if (mediaType === 'video') return `gemini-video-${ordinal}.mp4`;
+  if (mediaType === 'music') return `gemini-music-${ordinal}.mp4`;
+  return `gemini-image-${ordinal}.png`;
 }
 
 function normalizeNonEmpty(value: unknown): string | null {

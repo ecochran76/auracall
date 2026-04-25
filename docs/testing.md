@@ -207,6 +207,17 @@
     then selects `Create image`, records media-generation `timeline[]`
     milestones, and materializes generated image artifacts:
     - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"gemini","mediaType":"image","transport":"browser","prompt":"Generate an image of an asphalt secret agent"}'`
+  - create a browser-transport Gemini video request only when intentionally
+    spending one of the small daily Gemini video-generation quota slots:
+    - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"gemini","mediaType":"video","transport":"browser","prompt":"Generate a video of an asphalt secret agent"}'`
+    - routine validation should use fixture tests instead of live video
+      generation
+    - expected successful runs include `capability_discovered`,
+      `executor_started`, `browser_target_attached`, `capability_selected`,
+      `prompt_submitted`, repeated `artifact_poll`, `video_visible`,
+      `artifact_materialized`, and `completed`
+    - generated videos should cache as `video/mp4` artifacts with the
+      materialization method reported in status diagnostics
   - create a browser-transport Grok image request only after capability
     discovery reports `grok.media.imagine_image` as `available`; the local API
     first checks the explicit `/imagine` entrypoint and fails before prompt

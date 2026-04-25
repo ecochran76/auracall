@@ -14266,3 +14266,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   run state with poll count, pending status, and artifact counts so operators
   do not need browser diagnostics just to see that the submitted Gemini run is
   still waiting on media.
+- 2026-04-25: Keep Gemini video validation fixture-first unless an operator
+  explicitly chooses to spend live quota. In this repo, Gemini exposes only a
+  small daily video-generation allowance, while the browser executor can prove
+  the integration contract with mocked submitted-tab readback: select
+  `Create video`, poll generated `video` artifacts, emit `video_visible`, and
+  materialize the generated media. Do not make live video generation part of
+  routine validation.

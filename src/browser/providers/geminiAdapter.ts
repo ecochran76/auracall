@@ -543,6 +543,7 @@ async function selectGeminiWorkbenchCapability(client: ChromeClient, capabilityI
   }
   const labelsByCapabilityId: Record<string, string[]> = {
     'gemini.media.create_image': ['create image', 'images'],
+    'gemini.media.create_video': ['create video', 'videos'],
   };
   const targetLabels = labelsByCapabilityId[normalizedCapabilityId];
   if (!targetLabels) {
@@ -6198,7 +6199,7 @@ export function createGeminiAdapter(): Pick<
         });
         if (input.completionMode === 'prompt_submitted') {
           let result: BrowserProviderPromptResult;
-          if (input.capabilityId === 'gemini.media.create_image') {
+          if (input.capabilityId === 'gemini.media.create_image' || input.capabilityId === 'gemini.media.create_video') {
             result = await waitForGeminiSubmittedMediaPromptResult(
               client.Runtime,
               baseline,

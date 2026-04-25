@@ -1,3 +1,21 @@
+## 2026-04-25 - Gemini video fixture-first executor
+
+- Focus: implement Gemini video without spending live daily video-generation
+  quota.
+- Progress: Gemini browser media execution now supports `mediaType = video`
+  by selecting `gemini.media.create_video`, using the same prompt-submitted
+  no-renavigation path as image, polling the submitted tab for generated video
+  artifacts, emitting `video_visible`, and materializing the generated media
+  artifact. Gemini music remains explicitly gated until its transport/artifact
+  semantics are accepted.
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/browser/geminiAdapter.test.ts tests/mediaStatusSummary.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/browser/geminiAdapter.test.ts tests/mediaStatusSummary.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`
+
 ## 2026-04-25 - Gemini media parity dogfood
 
 - Focus: verify Gemini media capability discovery and the shared status

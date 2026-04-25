@@ -34,10 +34,17 @@ helpers.
   resolved AuraCall runtime profile: it selects `Create image`, submits the
   prompt through the managed Gemini provider adapter, reads generated image
   artifacts from the conversation, and materializes them under the
-  media-generation artifact directory. A first live API smoke proved capability
-  discovery, tool selection, and prompt submission, but Gemini remained in an
-  active `Stop response` state until the media-generation timeout, so artifact
-  completion/readback is still pending.
+  media-generation artifact directory.
+- Gemini browser video execution is fixture-backed and wired through the same
+  browser media executor: it selects `Create video`, submits through the
+  managed Gemini provider adapter, polls the submitted tab for generated video
+  artifacts, emits `video_visible`, and materializes the generated media file.
+  Live video smokes are intentionally not part of routine validation because
+  Gemini exposes only a small daily video-generation quota.
+- A first live API image smoke proved capability discovery, tool selection,
+  and prompt submission, but Gemini remained in an active `Stop response` state
+  until the media-generation timeout, so artifact completion/readback was still
+  pending at that point.
 - Gemini browser image execution now uses prompt-submission completion for the
   generic prompt path, then polls refreshed conversation context for image
   artifacts under the media-generation executor. Missing artifacts now fail as
@@ -112,9 +119,10 @@ helpers.
   implemented Gemini browser image path then completed request
   `medgen_0b72e6f23cb04e0293dc4005ceb6521d` with one cached
   `Generated image 1.png` artifact from conversation `b0450d66b9120b2b`.
-  Music/video are discovered and contract-representable, but still fail in
-  the Gemini browser executor as `media_provider_not_implemented` until the
-  mode-specific submit/readback/materialization paths are implemented.
+  Video is now implemented fixture-first in the Gemini browser executor.
+  Music is discovered and contract-representable, but still fails in the
+  Gemini browser executor as `media_provider_not_implemented` until its
+  transport/artifact semantics are accepted.
 - Media status diagnostics now summarize Gemini `artifact_poll` events as
   `artifact_polling` with pending state, poll count, and artifact counts, so
   operators can distinguish submitted-but-waiting image runs from unknown
@@ -201,8 +209,11 @@ helpers.
   through one API/MCP status envelope.
 - [x] Operators can check the same generic response/team chat and media run
   status through CLI.
-- Gemini music/video generation selects the explicit tool path when those
-  browser adapter paths are implemented.
+- [x] Gemini video generation selects the explicit `Create video` tool path,
+  polls the submitted tab for generated video artifacts, and materializes the
+  generated media file in fixture coverage.
+- Gemini music generation selects the explicit tool path when that browser
+  adapter path is implemented.
 - [x] Gemini browser media requests are gated by the matching workbench
   capability availability before tool selection/execution.
 - [x] Browser media capability-gate failures expose a pre-submit
@@ -246,6 +257,11 @@ helpers.
     `metadata.mediaDiagnostics`
   - cached artifact:
     `~/.auracall/runtime/media-generations/medgen_0b72e6f23cb04e0293dc4005ceb6521d/artifacts/Generated image 1.png`
+- Gemini video validation is fixture-first by default because live Gemini video
+  generations are quota-sensitive. Live video smoke should be a single
+  intentional manual/operator run after capability discovery reports
+  `gemini.media.create_video` as available and the managed browser profile is
+  clear of `google.com/sorry` or CAPTCHA state.
 - Live Grok Imagine smoke only with a configured `XAI_API_KEY` or validated
   browser account path that exposes Imagine.
 - First Grok implementation validation should use read-only managed-browser

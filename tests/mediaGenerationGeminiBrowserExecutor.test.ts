@@ -163,6 +163,126 @@ describe('Gemini browser media generation executor', () => {
     ]);
   });
 
+  it('selects Create video, waits for generated video artifacts, and maps the materialized file', async () => {
+    const { createGeminiBrowserMediaGenerationExecutor } = await import('../src/media/geminiBrowserExecutor.js');
+    const artifactDir = '/tmp/auracall-media-artifacts';
+    const filePath = path.join(artifactDir, 'generated-video.mp4');
+    browserClient.runPrompt.mockResolvedValueOnce({
+      text: '',
+      conversationId: 'gemini-video-conversation-1',
+      url: 'https://gemini.google.com/app/gemini-video-conversation-1',
+      tabTargetId: 'gemini-video-tab-1',
+    });
+    browserClient.readActiveConversationArtifacts.mockResolvedValueOnce([
+      {
+        id: 'artifact-video-1',
+        title: 'Generated video 1',
+        kind: 'generated',
+        uri: 'https://contribution.usercontent.google.com/download?filename=video.mp4',
+        metadata: {
+          mediaType: 'video',
+          fileName: 'video.mp4',
+        },
+      },
+    ]);
+    browserClient.materializeConversationArtifact.mockResolvedValueOnce({
+      id: 'artifact-video-1',
+      name: 'generated-video.mp4',
+      provider: 'gemini',
+      source: 'conversation',
+      size: 4321,
+      mimeType: 'video/mp4',
+      remoteUrl: 'https://contribution.usercontent.google.com/download?filename=video.mp4',
+      localPath: filePath,
+      metadata: {
+        materialization: 'generated-media-fetch',
+        mediaType: 'video',
+      },
+    });
+
+    const executor = createGeminiBrowserMediaGenerationExecutor({} as never);
+    const timelineEvents: string[] = [];
+    const result = await executor({
+      id: 'medgen_video_test',
+      createdAt: '2026-04-25T12:00:00.000Z',
+      artifactDir,
+      emitTimeline: (event) => {
+        timelineEvents.push(event.event);
+      },
+      request: {
+        provider: 'gemini',
+        mediaType: 'video',
+        prompt: 'Generate a video of an asphalt secret agent',
+        transport: 'browser',
+        count: 1,
+      },
+    });
+
+    expect(browserClient.runPrompt).toHaveBeenCalledWith(expect.objectContaining({
+      prompt: 'Generate a video of an asphalt secret agent',
+      capabilityId: 'gemini.media.create_video',
+      completionMode: 'prompt_submitted',
+      noProject: true,
+      timeoutMs: 600000,
+      onProgress: expect.any(Function),
+    }));
+    expect(browserClient.readActiveConversationArtifacts).toHaveBeenCalledWith(
+      'gemini-video-conversation-1',
+      {
+        configuredUrl: 'https://gemini.google.com/app/gemini-video-conversation-1',
+        tabUrl: 'https://gemini.google.com/app/gemini-video-conversation-1',
+        tabTargetId: 'gemini-video-tab-1',
+        preserveActiveTab: true,
+      },
+    );
+    expect(browserClient.materializeConversationArtifact).toHaveBeenCalledWith(
+      'gemini-video-conversation-1',
+      expect.objectContaining({ id: 'artifact-video-1' }),
+      artifactDir,
+      {
+        listOptions: {
+          configuredUrl: 'https://gemini.google.com/app/gemini-video-conversation-1',
+          tabUrl: 'https://gemini.google.com/app/gemini-video-conversation-1',
+          tabTargetId: 'gemini-video-tab-1',
+          preserveActiveTab: true,
+        },
+      },
+    );
+    expect(result).toMatchObject({
+      model: null,
+      artifacts: [
+        {
+          id: 'artifact-video-1',
+          type: 'video',
+          mimeType: 'video/mp4',
+          fileName: 'generated-video.mp4',
+          path: filePath,
+          uri: `file://${filePath}`,
+          metadata: {
+            providerArtifactId: 'artifact-video-1',
+            remoteUrl: 'https://contribution.usercontent.google.com/download?filename=video.mp4',
+            materialization: 'generated-media-fetch',
+            mediaType: 'video',
+          },
+        },
+      ],
+      metadata: {
+        executor: 'gemini-browser',
+        conversationId: 'gemini-video-conversation-1',
+        tabTargetId: 'gemini-video-tab-1',
+        capabilityId: 'gemini.media.create_video',
+        generatedArtifactCount: 1,
+        artifactPollCount: 1,
+      },
+    });
+    expect(timelineEvents).toEqual([
+      'prompt_submitted',
+      'artifact_poll',
+      'video_visible',
+      'artifact_materialized',
+    ]);
+  });
+
   it('polls conversation artifacts after prompt submission before materializing', async () => {
     const { createGeminiBrowserMediaGenerationExecutor } = await import('../src/media/geminiBrowserExecutor.js');
     const artifactDir = '/tmp/auracall-media-artifacts';
@@ -319,7 +439,7 @@ describe('Gemini browser media generation executor', () => {
     expect(browserClient.readActiveConversationArtifacts).not.toHaveBeenCalled();
   });
 
-  it('fails before prompt submission for non-image Gemini browser media', async () => {
+  it('fails before prompt submission for Gemini browser music media', async () => {
     const { createGeminiBrowserMediaGenerationExecutor } = await import('../src/media/geminiBrowserExecutor.js');
     const executor = createGeminiBrowserMediaGenerationExecutor({} as never);
 
