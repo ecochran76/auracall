@@ -1,3 +1,16 @@
+## 2026-04-25 - Media generation plan reconciliation
+
+- Focus: audit Plan 0049 after the CLI media command landed and separate real
+  follow-up from completed shared media contract work.
+- Progress: closed Plan 0049 for the durable media-generation resource across
+  CLI, local API, MCP, status, Gemini browser image/music/video, and Grok
+  Imagine browser image/video. Opened Plan 0055 for the remaining
+  compatibility/API questions: legacy Gemini `--generate-image` migration and
+  Gemini API image execution.
+- Validation:
+  - `pnpm run plans:audit -- --keep 49 --keep 55`
+  - `git diff --check`
+
 ## 2026-04-25 - CLI media command parser coverage
 
 - Focus: lock the actual Commander path for `auracall media generate` without

@@ -1,5 +1,24 @@
 # RUNBOOK
 
+## Turn 61 | 2026-04-25
+
+- Active plan:
+  `docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md`
+- Goal: audit Plan 0049's remaining unchecked items and either close it or
+  split true follow-up into a bounded compatibility plan.
+- Result:
+  - closed Plan 0049 for the shared durable media-generation resource across
+    CLI, local API, MCP, status, and browser-backed Gemini/Grok provider paths
+  - opened
+    `docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md`
+    for legacy Gemini `--generate-image` migration and Gemini API image
+    execution
+  - updated roadmap wiring so provider media core and compatibility/API
+    follow-up are separate planning authorities
+- Verification target:
+  - `pnpm run plans:audit -- --keep 49 --keep 55`
+  - `git diff --check`
+
 ## Turn 60 | 2026-04-25
 
 - Active plan:

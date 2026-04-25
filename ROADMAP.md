@@ -38,12 +38,16 @@ Current State:
     until explicitly selected as the primary lane
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
-    owns the first-class media-generation resource for image/music/video
+    is closed for the first-class media-generation resource across CLI, local
+    API, MCP, and browser-backed Gemini/Grok provider paths
     - Grok Imagine browser-first image/video discovery, invocation, status,
       and materialization are closed in
       [docs/dev/plans/0054-2026-04-24-grok-imagine-research-checkpoint.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0054-2026-04-24-grok-imagine-research-checkpoint.md)
+    - legacy Gemini `--generate-image` migration and Gemini API image support
+      are split to
+      [docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md)
     - xAI API image/video execution and Grok edit/reference workflows remain
-      deferred until selected by a new bounded plan
+      deferred until selected by a separate bounded plan
   - [docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md)
     owns the more general discovery/invocation model for rapidly changing
     chat-workbench capabilities such as Deep Research, ChatGPT apps,
@@ -970,7 +974,8 @@ Current focused reliability slice:
 - [docs/dev/plans/0046-2026-04-22-installed-runtime-dogfood.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0046-2026-04-22-installed-runtime-dogfood.md) (closed)
 - [docs/dev/plans/0047-2026-04-22-status-runner-topology-compaction.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0047-2026-04-22-status-runner-topology-compaction.md) (closed)
 - [docs/dev/plans/0048-2026-04-22-grok-model-drift-checkpoint.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0048-2026-04-22-grok-model-drift-checkpoint.md) (closed)
-- [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md) (open)
+- [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md) (closed)
+- [docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md) (open)
 
 ### Browser Automation Drift Repairs
 See [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md).

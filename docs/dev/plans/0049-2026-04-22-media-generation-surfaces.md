@@ -1,6 +1,6 @@
 # Media Generation Surfaces | 0049-2026-04-22
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Scope
@@ -11,20 +11,29 @@ helpers.
 
 ## Current State
 
+- Closed on 2026-04-25: the shared durable media-generation resource now spans
+  CLI, local API, and MCP creation/readback/status for `gemini|grok` and
+  `image|music|video`, with browser-backed Gemini image/music/video and Grok
+  Imagine image/video provider paths represented by the same request,
+  timeline, artifact, and run-status contract. Gemini API image execution and
+  legacy `--generate-image` compatibility migration are deferred to
+  [0055 Media Generation Compatibility Follow-up](0055-2026-04-25-media-generation-compatibility-follow-up.md).
 - Gemini still has a browser `--generate-image <file>` compatibility path that
   drives Gemini web and saves the first generated image.
-- Gemini also exposes generated music and video surfaces; music can render
-  through a video transport artifact, so the public contract must model
-  `music` separately from `video`.
-- Gemini's web UI exposes a `Create Image` tool in the tool drawer; Aura-Call
-  does not yet have a reusable browser-service media operation that selects the
-  tool drawer explicitly and reports media artifacts through the runtime.
-- Grok Imagine image/video generation is not implemented.
+- Gemini generated music/video are represented through the same durable media
+  contract; music remains distinct from video even when the provider exposes a
+  video transport artifact.
+- Gemini browser media execution selects the explicit tool drawer modes
+  (`Images`, `Music`, `Videos`) and reports artifacts through durable
+  media-generation records.
+- Grok Imagine browser image/video generation is implemented behind capability
+  preflight, submitted-tab status sensing, and browser-owned artifact
+  materialization.
 - The generic API text path does not produce media artifacts for Gemini or
   Grok.
 - The local `api serve` and MCP surfaces now expose the shared durable
   media-generation request/response contract and fake-provider test seams.
-  Provider-backed Gemini/Grok execution is still gated on adapter wiring.
+  Provider-backed browser execution is wired for Gemini and Grok.
 - Gemini browser-transport media requests now consult workbench capability
   discovery before executor invocation. Unknown, blocked, or not-visible
   `Create image`, `Create music`, or `Create video` capability reports fail
@@ -214,8 +223,8 @@ helpers.
   as the discovery/availability layer for provider workbench tools; keep this
   plan focused on the simpler first-class media-generation resource.
 - Keep provider-specific mechanics in provider adapters:
-  - Gemini API adapter uses an image-capable model/configuration and persists
-    returned inline image data or generated image URLs.
+  - Gemini API image execution remains a compatibility/API follow-up in Plan
+    0055.
   - Gemini browser adapter selects the matching tool drawer mode (`Create
     Image`, `Create music`, or `Create video`) before submitting media prompts.
   - Grok adapter/API client owns Grok Imagine image/video specifics.
@@ -235,13 +244,12 @@ helpers.
 
 - [x] CLI can create one Gemini/Grok media-generation request through the
   shared durable media contract.
-- CLI can request one Gemini image and save it through the shared media
-  contract.
-- Gemini music/video requests stay representable through the same contract,
+- [x] CLI can request one Gemini image through the shared durable media
+  contract; legacy direct file-save migration remains deferred to Plan 0055.
+- [x] Gemini music/video requests stay representable through the same contract,
   with music allowed to persist a `video/mp4` transport artifact.
-- Gemini API image generation works when the configured API key/model supports
-  image output, with browser `Create Image` retained as a separate provider
-  path.
+- [x] Gemini API image generation is explicitly split to Plan 0055; browser
+  `Create Image` remains the implemented provider path for this plan.
 - [x] Local API can create and read back one media generation request with durable
   artifact metadata through an injected fake executor.
 - [x] MCP exposes equivalent media generation execution for agents through the
@@ -301,7 +309,7 @@ helpers.
   media runs.
 - [x] CLI helper coverage for generic run-status readback across response and
   media runs.
-- Live Gemini image smoke only after managed-profile state is clear of
+- [x] Live Gemini image smoke only after managed-profile state is clear of
   `google.com/sorry` or captcha pages. Avoid repeated back-to-back Gemini image
   smokes on the same managed browser profile; the next acceptance smoke should
   be one manually observed request from a clean idle `/app` tab.
@@ -318,38 +326,46 @@ helpers.
     `metadata.mediaDiagnostics`
   - cached artifact:
     `~/.auracall/runtime/media-generations/medgen_0b72e6f23cb04e0293dc4005ceb6521d/artifacts/Generated image 1.png`
-- Gemini video validation is fixture-first by default because live Gemini video
+- [x] Gemini video validation is fixture-first by default because live Gemini video
   generations are quota-sensitive. Live video smoke should be a single
   intentional manual/operator run after capability discovery reports
   `gemini.media.create_video` as available and the managed browser profile is
   clear of `google.com/sorry` or CAPTCHA state.
-- Gemini music validation is fixture-first by default for the same
+- [x] Gemini music validation is fixture-first by default for the same
   quota/churn reasons. Live music smoke should be a single intentional
   manual/operator run after capability discovery reports
   `gemini.media.create_music` as available and should verify that both
   download variants, video with album art and MP3 audio, are cached when the
   provider exposes both.
-- Fixture coverage should include both readback shapes: two already-separated
+- [x] Fixture coverage should include both readback shapes: two already-separated
   music artifacts and one generated music artifact whose `downloadOptions`
   drive explicit provider-menu variant selection.
-- Read-only Gemini music download-option discovery is covered by adapter
+- [x] Read-only Gemini music download-option discovery is covered by adapter
   fixtures. It should not click download menus during routine validation; if a
   human has already opened the menu in the managed browser, readback may
   preserve the visible option labels.
-- Live Gemini music dogfood should treat closed-menu `Download track` evidence
+- [x] Live Gemini music dogfood should treat closed-menu `Download track` evidence
   as a successful read-only music detection/status probe, not as proof that all
   hidden provider download variants were discoverable.
-- Open-menu Gemini music dogfood should expect compact status
+- [x] Open-menu Gemini music dogfood should expect compact status
   `downloadOptions` to include `Download track`, `VideoAudio with cover art`,
   and `Audio onlyMP3 track` when those labels are visible.
-- Explicit Gemini music variant materialization must verify the cached file's
+- [x] Explicit Gemini music variant materialization must verify the cached file's
   MIME/extension matches the requested variant; an MP3 request returning the
   default MP4 transport is a failed variant materialization, not a success.
-- Fresh Gemini music readback can hide provider variants behind the generic
+- [x] Fresh Gemini music readback can hide provider variants behind the generic
   `Download track` trigger. Fixture coverage should keep the hidden-option
   shape so future changes continue to request the known MP4-with-art and MP3
   variants instead of caching only the default transport artifact.
-- Live Grok Imagine smoke only with a configured `XAI_API_KEY` or validated
+- [x] Live Grok Imagine smoke only with a configured `XAI_API_KEY` or validated
   browser account path that exposes Imagine.
-- First Grok implementation validation should use read-only managed-browser
+- [x] First Grok implementation validation should use read-only managed-browser
   discovery and captured discovery fixtures before any prompt-submission smoke.
+
+## Closure
+
+Plan 0049 is complete for the shared durable media-generation resource and its
+browser-backed Gemini/Grok provider paths. Keep Gemini API image execution,
+legacy Gemini `--generate-image` file-save migration, xAI API execution, and
+Grok edit/reference workflows outside this plan so future work lands as
+bounded compatibility/provider plans instead of accumulating here.

@@ -14379,6 +14379,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   adapter's CDP path and assert Image and Video `runPrompt` emit
   `capability_selected` with `selected = true` and the expected mode before
   prompt insertion.
+- 2026-04-25: Close shared-contract plans once the core operator surfaces are
+  coherent, and split compatibility/API residue into its own plan. For media
+  generation, Plan 0049 owns the durable CLI/API/MCP/browser-backed resource;
+  legacy Gemini `--generate-image` migration and Gemini API image execution now
+  live under Plan 0055.
 - 2026-04-25: CLI command coverage should exercise Commander parsing without
   live provider work. For `auracall media generate`, register the command
   through an injectable helper so tests can use the real parser/options path
