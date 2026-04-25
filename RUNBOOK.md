@@ -1,5 +1,25 @@
 # RUNBOOK
 
+## Turn 60 | 2026-04-25
+
+- Active plan:
+  `docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md`
+- Goal: add no-live parser-level regression coverage for the actual
+  `auracall media generate` Commander path.
+- Result:
+  - moved media command registration into `src/cli/mediaGenerationCommand.ts`
+    so tests can exercise the real command tree with injected seams
+  - added a Commander parse test for provider/type/prompt/count/aspect-ratio,
+    `--no-wait`, and `--json`
+  - kept browser/provider execution mocked out, so the test cannot open a
+    browser or spend media-generation quota
+- Verification:
+  - `pnpm vitest run tests/cli.mediaGenerationCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 49`
+  - `git diff --check`
+
 ## Turn 59 | 2026-04-25
 
 - Active plan:

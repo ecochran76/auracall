@@ -1,3 +1,4 @@
+import { type Command, type OptionValues } from 'commander';
 import type { ResolvedUserConfig } from '../config.js';
 import { createBrowserMediaGenerationExecutor } from '../media/browserExecutor.js';
 import { createMediaGenerationService, type MediaGenerationService } from '../media/service.js';
@@ -26,6 +27,71 @@ export interface MediaGenerationCliOptions {
 
 export interface MediaGenerationCliDeps {
   service?: Pick<MediaGenerationService, 'createGeneration' | 'createGenerationAsync'>;
+}
+
+export interface RegisterMediaGenerationCliCommandDeps extends MediaGenerationCliDeps {
+  resolveUserConfig: (options: OptionValues) => Promise<ResolvedUserConfig>;
+  parseIntOption: (value: string | undefined) => number | undefined;
+}
+
+export function registerMediaGenerationCliCommand(
+  program: Command,
+  deps: RegisterMediaGenerationCliCommandDeps,
+): Command {
+  const mediaCommand = program
+    .command('media')
+    .description('Create and inspect durable media-generation runs.');
+
+  mediaCommand
+    .command('generate')
+    .description('Create one durable media generation through the shared Gemini/Grok contract.')
+    .requiredOption('--provider <gemini|grok>', 'Provider to use.')
+    .requiredOption('--type <image|music|video>', 'Media type to generate.')
+    .requiredOption('-p, --prompt <prompt>', 'Prompt to send to the provider media tool.')
+    .option('--model <model>', 'Provider model override.')
+    .option('--transport <api|browser|auto>', 'Provider transport path.', 'browser')
+    .option('--count <count>', 'Requested output count, bounded by the media contract.', deps.parseIntOption)
+    .option('--size <size>', 'Provider size/resolution hint.')
+    .option('--aspect-ratio <ratio>', 'Provider aspect-ratio hint.')
+    .option('--json', 'Emit machine-readable JSON output.', false)
+    .option('--wait', 'Wait for terminal completion before returning.', true)
+    .option('--no-wait', 'Return a running media generation id immediately when supported.')
+    .action(async function (this: Command) {
+      const parentOptions =
+        typeof this.parent?.opts === 'function' ? (this.parent.opts() as OptionValues) : ({} as OptionValues);
+      const ownOptions = typeof this.opts === 'function' ? (this.opts() as OptionValues) : ({} as OptionValues);
+      const commandOptions = {
+        ...(program.opts?.() ?? {}),
+        ...parentOptions,
+        ...ownOptions,
+      } as OptionValues;
+      const userConfig = await deps.resolveUserConfig(commandOptions);
+      const response = await createMediaGenerationFromCli(
+        {
+          provider: String(ownOptions.provider ?? ''),
+          mediaType: String(ownOptions.type ?? ''),
+          prompt: String(ownOptions.prompt ?? ''),
+          model: typeof ownOptions.model === 'string' ? ownOptions.model : null,
+          transport: typeof ownOptions.transport === 'string' ? ownOptions.transport : 'browser',
+          count: typeof ownOptions.count === 'number' ? ownOptions.count : null,
+          size: typeof ownOptions.size === 'string' ? ownOptions.size : null,
+          aspectRatio: typeof ownOptions.aspectRatio === 'string' ? ownOptions.aspectRatio : null,
+          wait: ownOptions.wait !== false,
+        },
+        userConfig,
+        {
+          service: deps.service,
+        },
+      );
+
+      if (ownOptions.json) {
+        console.log(JSON.stringify(response, null, 2));
+        return;
+      }
+      console.log(formatMediaGenerationCli(response));
+    });
+
+  return mediaCommand;
 }
 
 export function createConfiguredMediaGenerationService(userConfig: ResolvedUserConfig): MediaGenerationService {

@@ -1,8 +1,10 @@
+import { Command } from 'commander';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
   createMediaGenerationFromCli,
   formatMediaGenerationCli,
+  registerMediaGenerationCliCommand,
 } from '../src/cli/mediaGenerationCommand.js';
 import type { ResolvedUserConfig } from '../src/config.js';
 import type { MediaGenerationResponse } from '../src/media/types.js';
@@ -12,6 +14,76 @@ const userConfig = {
 } as ResolvedUserConfig;
 
 describe('media generation CLI helpers', () => {
+  it('parses the Commander command path and invokes the shared service without live provider work', async () => {
+    const createGenerationAsync = vi.fn(async () => mediaResponse({ status: 'running' }));
+    const resolveUserConfig = vi.fn(async () => userConfig);
+    const logs: string[] = [];
+    const originalLog = console.log;
+    console.log = (value?: unknown) => {
+      logs.push(typeof value === 'string' ? value : JSON.stringify(value));
+    };
+    try {
+      const program = new Command();
+      program.exitOverride();
+      program.configureOutput({
+        writeOut: (value) => logs.push(value),
+        writeErr: (value) => logs.push(value),
+      });
+      registerMediaGenerationCliCommand(program, {
+        resolveUserConfig,
+        parseIntOption: (value) => (value == null ? undefined : Number.parseInt(value, 10)),
+        service: {
+          createGeneration: vi.fn(async () => mediaResponse({ status: 'succeeded' })),
+          createGenerationAsync,
+        },
+      });
+
+      await program.parseAsync([
+        'node',
+        'auracall',
+        'media',
+        'generate',
+        '--provider',
+        'grok',
+        '--type',
+        'image',
+        '--prompt',
+        'Generate an image of an asphalt secret agent',
+        '--count',
+        '1',
+        '--aspect-ratio',
+        '1:1',
+        '--no-wait',
+        '--json',
+      ]);
+    } finally {
+      console.log = originalLog;
+    }
+
+    expect(resolveUserConfig).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'grok',
+      type: 'image',
+      prompt: 'Generate an image of an asphalt secret agent',
+      count: 1,
+      aspectRatio: '1:1',
+      wait: false,
+      json: true,
+    }));
+    expect(createGenerationAsync).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'grok',
+      mediaType: 'image',
+      prompt: 'Generate an image of an asphalt secret agent',
+      count: 1,
+      aspectRatio: '1:1',
+      source: 'cli',
+    }));
+    expect(JSON.parse(logs.join('\n'))).toMatchObject({
+      id: 'medgen_cli_media_1',
+      status: 'running',
+      object: 'media_generation',
+    });
+  });
+
   it('creates a browser media-generation request through the shared contract', async () => {
     const createGeneration = vi.fn(async () => mediaResponse({ status: 'succeeded' }));
 

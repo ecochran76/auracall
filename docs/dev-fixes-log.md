@@ -14379,6 +14379,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   adapter's CDP path and assert Image and Video `runPrompt` emit
   `capability_selected` with `selected = true` and the expected mode before
   prompt insertion.
+- 2026-04-25: CLI command coverage should exercise Commander parsing without
+  live provider work. For `auracall media generate`, register the command
+  through an injectable helper so tests can use the real parser/options path
+  with fake config and media service seams.
 - 2026-04-25: Add new operator media creation through the durable
   media-generation contract before migrating old compatibility flags. In this
   repo, `auracall media generate` now shares API/MCP request semantics and

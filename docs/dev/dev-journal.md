@@ -1,3 +1,19 @@
+## 2026-04-25 - CLI media command parser coverage
+
+- Focus: lock the actual Commander path for `auracall media generate` without
+  live browser/provider work.
+- Progress: moved media command registration into the CLI media helper so tests
+  can parse the real command tree with a fake config resolver and fake durable
+  media service. The regression covers `--provider`, `--type`, `--prompt`,
+  `--count`, `--aspect-ratio`, `--no-wait`, and `--json` flowing into the
+  shared `source = cli` media-generation request.
+- Validation:
+  - `pnpm vitest run tests/cli.mediaGenerationCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 49`
+  - `git diff --check`
+
 ## 2026-04-25 - CLI shared media generation
 
 - Focus: start the next Plan 0049 media-parity slice by closing the CLI create
