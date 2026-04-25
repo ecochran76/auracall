@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createRunStatusToolHandler } from '../src/mcp/tools/runStatus.js';
 import { createGeminiMusicVariantResponse } from './fixtures/geminiMusicStatusFixture.js';
+import { createGrokImagineVideoResponse } from './fixtures/grokImagineStatusFixture.js';
 
 describe('mcp run_status tool', () => {
   it('reads response run status through the shared status envelope', async () => {
@@ -217,6 +218,64 @@ describe('mcp run_status tool', () => {
             materialization: {
               artifactId: 'gemini-artifact:62dd6ff9d85218b1:1:1:mp3',
               materialization: 'generated-media-download-variant',
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it('preserves Grok Imagine video materialization through generic MCP run status', async () => {
+    const handler = createRunStatusToolHandler({
+      responsesService: {
+        readResponse: async () => null,
+      },
+      mediaGenerationService: {
+        readGeneration: async (id) => createGrokImagineVideoResponse(id),
+      },
+    });
+
+    const result = await handler({ id: 'medgen_grok_imagine_video_1' });
+
+    expect(result).toMatchObject({
+      isError: false,
+      content: [
+        {
+          type: 'text',
+          text: 'Run medgen_grok_imagine_video_1 (media_generation) is succeeded; last event completed; artifacts 1.',
+        },
+      ],
+      structuredContent: {
+        id: 'medgen_grok_imagine_video_1',
+        object: 'auracall_run_status',
+        kind: 'media_generation',
+        status: 'succeeded',
+        artifactCount: 1,
+        artifacts: [
+          {
+            id: 'grok_imagine_video_1',
+            fileName: 'grok-imagine-video-1.mp4',
+            mimeType: 'video/mp4',
+            materialization: 'remote-media-fetch',
+          },
+        ],
+        metadata: {
+          tabTargetId: 'grok-video-tab-1',
+          mediaDiagnostics: {
+            capability: {
+              id: 'grok.media.imagine_video',
+              discoveryAction: 'grok-imagine-video-mode',
+            },
+            runState: {
+              runState: 'terminal_video',
+              terminalVideo: true,
+              generatedVideoCount: 1,
+              materializationCandidateSource: 'generated-video',
+            },
+            materialization: {
+              artifactId: 'grok_imagine_video_1',
+              materialization: 'remote-media-fetch',
+              materializationSource: 'generated-video',
             },
           },
         },

@@ -1,3 +1,20 @@
+## 2026-04-25 - Grok Imagine status fixture coverage
+
+- Focus: extend the fixture-first status-surface parity pattern from Gemini
+  music to Grok Imagine video before spending another live browser run.
+- Progress: added a shared persisted Grok Imagine video fixture with terminal
+  generated-video evidence, `grok-imagine-video-1.mp4`, `remote-media-fetch`
+  materialization, and `materializationSource = generated-video`. Status
+  summary, local API media status, local API generic run status, MCP
+  `media_generation_status`, and MCP `run_status` now assert the generated
+  video artifact, submitted tab, `grok-imagine-video-mode` discovery action,
+  terminal video diagnostics, and materialization source.
+- Validation:
+  - `pnpm vitest run tests/mediaStatusSummary.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `git diff --check`
+
 ## 2026-04-25 - Gemini music status fixture coverage
 
 - Focus: lock in the Gemini music status-surface dogfood result without

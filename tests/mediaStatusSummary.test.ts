@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { summarizeMediaGenerationStatus } from '../src/media/statusSummary.js';
 import type { MediaGenerationResponse } from '../src/media/types.js';
 import { createGeminiMusicVariantResponse } from './fixtures/geminiMusicStatusFixture.js';
+import { createGrokImagineVideoResponse } from './fixtures/grokImagineStatusFixture.js';
 
 describe('media generation status summary', () => {
   it('preserves Gemini music MP4 and MP3 variant status from persisted state', () => {
@@ -81,6 +82,78 @@ describe('media generation status summary', () => {
         tabTargetId: 'gemini-tab-1',
         capabilityId: 'gemini.media.create_music',
         artifactPollCount: 5,
+        generatedArtifactCount: 1,
+      },
+    });
+  });
+
+  it('preserves Grok Imagine video materialization status from persisted state', () => {
+    const summary = summarizeMediaGenerationStatus(createGrokImagineVideoResponse());
+
+    expect(summary).toMatchObject({
+      id: 'medgen_grok_imagine_video_1',
+      object: 'media_generation_status',
+      status: 'succeeded',
+      provider: 'grok',
+      mediaType: 'video',
+      artifactCount: 1,
+      lastEvent: {
+        event: 'completed',
+      },
+      artifacts: [
+        {
+          id: 'grok_imagine_video_1',
+          type: 'video',
+          fileName: 'grok-imagine-video-1.mp4',
+          path: '/tmp/grok-imagine-video-1.mp4',
+          mimeType: 'video/mp4',
+          materialization: 'remote-media-fetch',
+          remoteUrl: 'https://assets.grok.com/users/test/generated/video-1.mp4',
+        },
+      ],
+      diagnostics: {
+        capability: {
+          id: 'grok.media.imagine_video',
+          availability: 'available',
+          source: 'browser_discovery',
+          discoveryAction: 'grok-imagine-video-mode',
+        },
+        submittedTab: {
+          targetId: 'grok-video-tab-1',
+          initialUrl: 'https://grok.com/imagine',
+          submittedUrl: 'https://grok.com/imagine/post/video-1',
+        },
+        provider: {
+          latestHref: 'https://grok.com/imagine/post/video-1',
+          routeProgression: [
+            'https://grok.com/imagine/post/video-1',
+          ],
+        },
+        runState: {
+          pollCount: 3,
+          runState: 'terminal_video',
+          pending: false,
+          terminalVideo: true,
+          generatedVideoCount: 1,
+          generatedArtifactCount: 1,
+          materializationCandidateSource: 'generated-video',
+          decision: 'ready',
+        },
+        materialization: {
+          artifactId: 'grok_imagine_video_1',
+          path: '/tmp/grok-imagine-video-1.mp4',
+          mimeType: 'video/mp4',
+          materialization: 'remote-media-fetch',
+          materializationSource: 'generated-video',
+        },
+      },
+      metadata: {
+        source: 'api',
+        transport: 'browser',
+        runtimeProfile: 'default',
+        tabTargetId: 'grok-video-tab-1',
+        capabilityId: 'grok.media.imagine_video',
+        artifactPollCount: 3,
         generatedArtifactCount: 1,
       },
     });

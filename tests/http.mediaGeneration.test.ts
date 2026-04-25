@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import { createResponsesHttpServer } from '../src/http/responsesServer.js';
 import { createGeminiMusicVariantResponse } from './fixtures/geminiMusicStatusFixture.js';
+import { createGrokImagineVideoResponse } from './fixtures/grokImagineStatusFixture.js';
 
 describe('http media generation adapter', () => {
   const cleanup: string[] = [];
@@ -349,6 +350,164 @@ describe('http media generation adapter', () => {
             runState: {
               runState: 'terminal_music',
               terminalMusic: true,
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('preserves Grok Imagine video materialization through local API status routes', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-grok-imagine-status-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const fixture = createGrokImagineVideoResponse();
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        now: () => new Date('2026-04-25T17:20:44.000Z'),
+        workbenchCapabilityCatalog: [
+          {
+            id: 'grok.media.imagine_video',
+            provider: 'grok',
+            providerLabels: ['Imagine', 'Video'],
+            category: 'media',
+            invocationMode: 'post_prompt_action',
+            surfaces: ['local_api', 'mcp', 'browser_service'],
+            availability: 'available',
+            stability: 'observed',
+            requiredInputs: [{ name: 'prompt', required: true }],
+            output: { artifactTypes: ['video'] },
+            safety: { maySpendCredits: true, mayTakeMinutes: true },
+            source: 'test_fixture',
+            metadata: {
+              discoveryAction: {
+                action: 'grok-imagine-video-mode',
+              },
+            },
+          },
+        ],
+        mediaGenerationExecutor: async ({ artifactDir, emitTimeline }) => {
+          for (const event of (fixture.timeline ?? []).filter((entry) => (
+            entry.event !== 'running_persisted' && entry.event !== 'completed'
+          ))) {
+            await emitTimeline?.(event);
+          }
+          const artifact = fixture.artifacts[0];
+          const fileName = artifact.fileName ?? 'grok-imagine-video-1.mp4';
+          const filePath = path.join(artifactDir, fileName);
+          await fs.writeFile(filePath, Buffer.from(`${artifact.id}\n`));
+          return {
+            artifacts: [
+              {
+                ...artifact,
+                path: filePath,
+                uri: `file://${filePath}`,
+              },
+            ],
+            metadata: {
+              tabUrl: 'https://grok.com/imagine/post/video-1',
+              tabTargetId: 'grok-video-tab-1',
+              capabilityId: 'grok.media.imagine_video',
+              generatedArtifactCount: 1,
+              artifactPollCount: 3,
+              materializationCandidateSource: 'generated-video',
+            },
+          };
+        },
+      },
+    );
+
+    try {
+      const createResponse = await fetch(`http://127.0.0.1:${server.port}/v1/media-generations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'grok',
+          mediaType: 'video',
+          transport: 'browser',
+          prompt: fixture.prompt,
+        }),
+      });
+      expect(createResponse.status).toBe(200);
+      const created = (await createResponse.json()) as Record<string, unknown>;
+      expect(created).toMatchObject({
+        object: 'media_generation',
+        status: 'succeeded',
+        provider: 'grok',
+        mediaType: 'video',
+        artifacts: [
+          {
+            fileName: 'grok-imagine-video-1.mp4',
+            mimeType: 'video/mp4',
+          },
+        ],
+      });
+
+      const mediaStatusResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/media-generations/${created.id}/status`,
+      );
+      expect(mediaStatusResponse.status).toBe(200);
+      await expect(mediaStatusResponse.json()).resolves.toMatchObject({
+        id: created.id,
+        object: 'media_generation_status',
+        status: 'succeeded',
+        artifactCount: 1,
+        artifacts: [
+          {
+            id: 'grok_imagine_video_1',
+            fileName: 'grok-imagine-video-1.mp4',
+            path: expect.stringContaining('grok-imagine-video-1.mp4'),
+            mimeType: 'video/mp4',
+            materialization: 'remote-media-fetch',
+            remoteUrl: 'https://assets.grok.com/users/test/generated/video-1.mp4',
+          },
+        ],
+        diagnostics: {
+          capability: {
+            id: 'grok.media.imagine_video',
+            discoveryAction: 'grok-imagine-video-mode',
+          },
+          runState: {
+            runState: 'terminal_video',
+            terminalVideo: true,
+            generatedVideoCount: 1,
+            materializationCandidateSource: 'generated-video',
+          },
+          materialization: {
+            artifactId: 'grok_imagine_video_1',
+            materialization: 'remote-media-fetch',
+            materializationSource: 'generated-video',
+          },
+        },
+      });
+
+      const runStatusResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/runs/${created.id}/status`,
+      );
+      expect(runStatusResponse.status).toBe(200);
+      await expect(runStatusResponse.json()).resolves.toMatchObject({
+        id: created.id,
+        object: 'auracall_run_status',
+        kind: 'media_generation',
+        status: 'succeeded',
+        artifactCount: 1,
+        artifacts: [
+          {
+            fileName: 'grok-imagine-video-1.mp4',
+            materialization: 'remote-media-fetch',
+          },
+        ],
+        metadata: {
+          mediaDiagnostics: {
+            runState: {
+              runState: 'terminal_video',
+              terminalVideo: true,
+            },
+            materialization: {
+              materializationSource: 'generated-video',
             },
           },
         },
