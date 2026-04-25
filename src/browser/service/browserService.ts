@@ -36,6 +36,8 @@ import {
   type BrowserMutationAuditSink,
   type BrowserMutationRecord,
 } from '../../../packages/browser-service/src/service/mutationDispatcher.js';
+import type { BrowserOperationQueueObservationSummary } from '../operationQueueObservations.js';
+import { summarizeBrowserOperationQueueObservations } from '../operationQueueObservations.js';
 
 type ServiceTargetMatchOptions = {
   serviceId: 'chatgpt' | 'grok' | 'gemini';
@@ -95,6 +97,14 @@ export class BrowserService extends BrowserServiceCore {
       return [];
     }
     return this.getMutationLog().list().slice(-normalizedLimit);
+  }
+
+  summarizeBrowserOperationQueue(limit = 20): BrowserOperationQueueObservationSummary {
+    const launchContext = this.resolveLaunchContext(this.serviceTarget);
+    return summarizeBrowserOperationQueueObservations({
+      managedProfileDir: launchContext.managedProfileDir,
+      serviceTarget: this.serviceTarget,
+    }, limit);
   }
 
   async resolveServiceTarget(

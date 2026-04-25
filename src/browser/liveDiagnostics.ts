@@ -74,6 +74,7 @@ export async function probeBrowserRunDiagnostics(
     };
     const screenshot = await captureDiagnosticsScreenshot(client, input);
     const browserMutations = summarizeBrowserMutations(browserService.listRecentBrowserMutations?.(20) ?? []);
+    const browserOperationQueue = browserService.summarizeBrowserOperationQueue?.(20) ?? null;
     return {
       service: input.service,
       ownerStepId: input.stepId,
@@ -90,6 +91,7 @@ export async function probeBrowserRunDiagnostics(
       visibleCounts: pageState.visibleCounts,
       providerEvidence: pageState.providerEvidence,
       browserMutations,
+      browserOperationQueue,
       screenshot,
     };
   } finally {

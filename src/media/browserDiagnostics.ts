@@ -107,6 +107,7 @@ function formatObservedMediaBrowserDiagnostics(
     visibleCounts: observed.visibleCounts,
     providerEvidence: observed.providerEvidence ?? null,
     browserMutations: observed.browserMutations ?? null,
+    browserOperationQueue: observed.browserOperationQueue ?? null,
     screenshot: observed.screenshot ?? null,
   };
 }
@@ -127,6 +128,7 @@ function createUnavailableMediaBrowserDiagnostics(input: {
     document: null,
     visibleCounts: null,
     providerEvidence: null,
+    browserOperationQueue: null,
     screenshot: null,
   };
 }

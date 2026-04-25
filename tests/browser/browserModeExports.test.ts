@@ -13,6 +13,10 @@ import {
 } from '../../src/browser/index.js';
 import { BrowserAutomationError } from '../../src/oracle/errors.js';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
+import {
+  clearBrowserOperationQueueObservationsForTest,
+  summarizeBrowserOperationQueueObservations,
+} from '../../src/browser/operationQueueObservations.js';
 import { createFileBackedBrowserOperationDispatcher } from '../../packages/browser-service/src/service/operationDispatcher.js';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -131,6 +135,7 @@ describe('browserMode exports', () => {
   test('browser execution operation queues behind an active same-profile probe lock', async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-browser-operation-'));
     setAuracallHomeDirOverrideForTest(tempRoot);
+    clearBrowserOperationQueueObservationsForTest();
     const managedProfileDir = path.join(tempRoot, 'browser-profiles', 'default', 'grok');
     const dispatcher = createFileBackedBrowserOperationDispatcher({
       lockRoot: path.join(tempRoot, 'browser-operations'),
@@ -169,11 +174,24 @@ describe('browserMode exports', () => {
         serviceTarget: 'grok',
       });
       expect(loggerMessages.some((message) => message.includes('operation dispatcher key'))).toBe(true);
+      const observations = summarizeBrowserOperationQueueObservations({
+        managedProfileDir,
+        serviceTarget: 'grok',
+      });
+      expect(observations.items.map((item) => item.event)).toEqual(['queued', 'acquired']);
+      expect(observations.latest).toMatchObject({
+        event: 'acquired',
+        operation: {
+          kind: 'browser-execution',
+          operationClass: 'exclusive-mutating',
+        },
+      });
       await acquired?.release();
     } finally {
       if (active.acquired) {
         await active.release();
       }
+      clearBrowserOperationQueueObservationsForTest();
       setAuracallHomeDirOverrideForTest(null);
       await fs.rm(tempRoot, { recursive: true, force: true });
     }
@@ -182,6 +200,7 @@ describe('browserMode exports', () => {
   test('browser execution operation reports busy after queued acquisition timeout', async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-browser-operation-timeout-'));
     setAuracallHomeDirOverrideForTest(tempRoot);
+    clearBrowserOperationQueueObservationsForTest();
     const managedProfileDir = path.join(tempRoot, 'browser-profiles', 'default', 'gemini');
     const dispatcher = createFileBackedBrowserOperationDispatcher({
       lockRoot: path.join(tempRoot, 'browser-operations'),
@@ -206,10 +225,23 @@ describe('browserMode exports', () => {
           queuePollMs: 1,
         }),
       ).rejects.toThrow(/Browser operation busy/);
+      const observations = summarizeBrowserOperationQueueObservations({
+        managedProfileDir,
+        serviceTarget: 'gemini',
+      });
+      expect(observations.latest).toMatchObject({
+        event: 'busy-timeout',
+        blockedBy: {
+          kind: 'setup',
+          operationClass: 'exclusive-human',
+          ownerCommand: 'manual-verification',
+        },
+      });
     } finally {
       if (active.acquired) {
         await active.release();
       }
+      clearBrowserOperationQueueObservationsForTest();
       setAuracallHomeDirOverrideForTest(null);
       await fs.rm(tempRoot, { recursive: true, force: true });
     }

@@ -1975,3 +1975,25 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`
+
+## Turn 67 | 2026-04-25
+
+- Continued implementation plan:
+  `docs/dev/plans/0059-2026-04-25-browser-operation-queue-observability.md`
+- Goal: make browser-operation queue/readiness visible through the same
+  browser-state diagnostics operators already use for runtime/run status.
+- Change:
+  - added a bounded browser-operation queue observation log for response
+    browser execution
+  - recorded `queued`, `acquired`, and `busy-timeout` observations from the
+    queued acquisition path
+  - projected recent queue observations into browser-state diagnostics next to
+    browser mutation history
+  - rendered queue event count and latest queue event in CLI runtime
+    inspection output
+- Verification target:
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/cli/runtimeInspectionCommand.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 59`
+  - `git diff --check`

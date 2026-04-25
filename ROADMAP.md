@@ -101,6 +101,12 @@ Current State:
   - normal managed browser response/chat execution now uses
     `acquireQueued(...)` at the shared browser execution boundary
   - login/setup/human-verification flows keep fail-fast busy behavior
+- browser operation queue observability is closed in
+  [docs/dev/plans/0059-2026-04-25-browser-operation-queue-observability.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0059-2026-04-25-browser-operation-queue-observability.md)
+  - browser-state diagnostics can report recent browser-operation queue events
+    such as `queued`, `acquired`, and `busy-timeout`
+  - CLI runtime inspection renders the queue event count and latest queue event
+    next to browser mutation diagnostics
 - the bounded `0004` operator-facing claimant/readback hardening sub-lane is
   now maintenance-only unless a new concrete mismatch is demonstrated
 - the narrower `api serve` server-local-runner ownership/readback checkpoint is

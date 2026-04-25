@@ -551,6 +551,62 @@ describe('runtime inspection CLI helpers', () => {
           hasActiveAvatarSpinner: true,
           isGenerating: true,
         },
+        browserOperationQueue: {
+          total: 2,
+          latest: {
+            event: 'acquired',
+            at: '2026-04-23T18:10:02.000Z',
+            key: 'managed-profile:/tmp/auracall/browser-profiles/auracall-gemini-pro/gemini::service:gemini',
+            operation: {
+              id: 'browser-operation-2',
+              kind: 'browser-execution',
+              operationClass: 'exclusive-mutating',
+              ownerPid: 12345,
+              ownerCommand: 'browser-execution',
+              startedAt: '2026-04-23T18:10:02.000Z',
+              updatedAt: '2026-04-23T18:10:02.000Z',
+            },
+            blockedBy: null,
+            attempt: null,
+            elapsedMs: null,
+          },
+          items: [
+            {
+              event: 'queued',
+              at: '2026-04-23T18:10:00.000Z',
+              key: 'managed-profile:/tmp/auracall/browser-profiles/auracall-gemini-pro/gemini::service:gemini',
+              operation: null,
+              blockedBy: {
+                id: 'browser-operation-1',
+                kind: 'media-generation',
+                operationClass: 'exclusive-mutating',
+                ownerPid: 12344,
+                ownerCommand: 'media-generation',
+                startedAt: '2026-04-23T18:09:30.000Z',
+                updatedAt: '2026-04-23T18:09:30.000Z',
+              },
+              attempt: 1,
+              elapsedMs: 0,
+            },
+            {
+              event: 'acquired',
+              at: '2026-04-23T18:10:02.000Z',
+              key: 'managed-profile:/tmp/auracall/browser-profiles/auracall-gemini-pro/gemini::service:gemini',
+              operation: {
+                id: 'browser-operation-2',
+                kind: 'browser-execution',
+                operationClass: 'exclusive-mutating',
+                ownerPid: 12345,
+                ownerCommand: 'browser-execution',
+                startedAt: '2026-04-23T18:10:02.000Z',
+                updatedAt: '2026-04-23T18:10:02.000Z',
+              },
+              blockedBy: null,
+              attempt: null,
+              elapsedMs: null,
+            },
+          ],
+        },
         screenshot: {
           path: '/tmp/gemini-cli-diagnostics.png',
           mimeType: 'image/png',
@@ -563,6 +619,8 @@ describe('runtime inspection CLI helpers', () => {
     expect(rendered).toContain('Probe status: observed');
     expect(rendered).toContain('Target: https://gemini.google.com/app');
     expect(rendered).toContain('Visible counts: buttons=10, links=2, modelResponses=1');
+    expect(rendered).toContain('Browser operation queue events: 2');
+    expect(rendered).toContain('Latest browser operation queue event: acquired');
     expect(rendered).toContain('Screenshot: /tmp/gemini-cli-diagnostics.png');
   });
 

@@ -115,6 +115,7 @@ import {
   type BrowserOperationAcquiredResult,
 } from '../../packages/browser-service/src/service/operationDispatcher.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
+import { recordBrowserOperationQueueObservation } from './operationQueueObservations.js';
 import {
   readSimpleProviderGuardState,
   resolveSimpleProviderGuardProfileName,
@@ -257,6 +258,13 @@ async function acquireBrowserExecutionOperation(options: {
         return;
       }
       seenBlockedOperationIds.add(result.blockedBy.id);
+      recordBrowserOperationQueueObservation({
+        event: 'queued',
+        key: result.key,
+        blockedBy: result.blockedBy,
+        attempt: context.attempt,
+        elapsedMs: context.elapsedMs,
+      });
       options.logger(
         `[browser] operation queued for ${result.key}; blocked by ` +
         `${result.blockedBy.kind}/${result.blockedBy.operationClass} ` +
@@ -265,8 +273,18 @@ async function acquireBrowserExecutionOperation(options: {
     },
   });
   if (!acquired.acquired) {
+    recordBrowserOperationQueueObservation({
+      event: 'busy-timeout',
+      key: acquired.key,
+      blockedBy: acquired.blockedBy,
+    });
     throw new Error(formatBrowserOperationBusyResult(acquired));
   }
+  recordBrowserOperationQueueObservation({
+    event: 'acquired',
+    key: acquired.operation.key,
+    operation: acquired.operation,
+  });
   options.logger(`[browser] operation dispatcher key: ${acquired.operation.key}`);
   return acquired;
 }

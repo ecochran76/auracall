@@ -18,6 +18,7 @@ import type {
 import type { ExecutionRunnerStoredRecord } from './runnersStore.js';
 import type { ExecutionRunStoredRecord } from './store.js';
 import type { BrowserMutationRecord } from '../../packages/browser-service/src/service/mutationDispatcher.js';
+import type { BrowserOperationQueueObservation } from '../browser/operationQueueObservations.js';
 
 export interface InspectRuntimeRunInput {
   runId?: string | null;
@@ -117,6 +118,11 @@ export interface RuntimeRunInspectionBrowserDiagnosticsSummary {
     total: number;
     items: BrowserMutationRecord[];
   } | null;
+  browserOperationQueue?: {
+    total: number;
+    latest: BrowserOperationQueueObservation | null;
+    items: BrowserOperationQueueObservation[];
+  } | null;
   screenshot: {
     path: string;
     mimeType: 'image/png';
@@ -134,6 +140,7 @@ export interface RuntimeRunInspectionBrowserDiagnosticsProbeResult {
   visibleCounts: NonNullable<RuntimeRunInspectionBrowserDiagnosticsSummary['visibleCounts']>;
   providerEvidence?: Record<string, unknown> | null;
   browserMutations?: RuntimeRunInspectionBrowserDiagnosticsSummary['browserMutations'];
+  browserOperationQueue?: RuntimeRunInspectionBrowserDiagnosticsSummary['browserOperationQueue'];
   screenshot?: RuntimeRunInspectionBrowserDiagnosticsSummary['screenshot'];
 }
 
@@ -421,6 +428,7 @@ async function inspectRuntimeRunBrowserDiagnostics(input: {
     visibleCounts: observed.visibleCounts,
     providerEvidence: observed.providerEvidence ?? null,
     browserMutations: observed.browserMutations ?? null,
+    browserOperationQueue: observed.browserOperationQueue ?? null,
     screenshot: observed.screenshot ?? null,
   };
 }
@@ -441,6 +449,7 @@ function createUnavailableBrowserDiagnostics(input: {
     document: null,
     visibleCounts: null,
     providerEvidence: null,
+    browserOperationQueue: null,
     screenshot: null,
   };
 }

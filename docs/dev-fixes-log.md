@@ -14445,3 +14445,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   prove orchestration, but adapter tests should lock the browser-only behavior:
   visible tile capture, download-control click, cached file metadata, and
   preview/full-quality comparison.
+- 2026-04-25: Browser-operation queueing is not operator-ready if it only logs
+  to stdout. Record bounded queue observations at the shared acquisition seam
+  and project them through browser-state diagnostics so API/CLI/MCP status
+  consumers can see `queued`, `acquired`, and `busy-timeout` evidence without
+  scraping logs.

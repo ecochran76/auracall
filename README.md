@@ -405,6 +405,9 @@ Terminology note:
         - includes selected target URL/title/id, document readiness, visible
           control counts, provider evidence such as Gemini activity state, and
           a PNG screenshot path under AuraCall diagnostics storage
+        - when a browser run queued behind another same-profile operation,
+          diagnostics can also include recent browser-operation queue events
+          such as `queued`, `acquired`, or `busy-timeout`
         - generic run/media status also supports this switch for active
           browser-backed media jobs and prefers the provider `tabTargetId`
         - workbench capability reports support the same switch for selected

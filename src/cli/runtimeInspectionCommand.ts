@@ -111,6 +111,16 @@ export function formatRuntimeRunInspectionPayload(payload: RuntimeRunInspectionP
         );
       }
     }
+    if (payload.browserDiagnostics.browserOperationQueue) {
+      const latestQueueEvent = payload.browserDiagnostics.browserOperationQueue.latest;
+      lines.push(`  - Browser operation queue events: ${payload.browserDiagnostics.browserOperationQueue.total}`);
+      if (latestQueueEvent) {
+        const blockedBy = latestQueueEvent.blockedBy
+          ? ` blocked by ${latestQueueEvent.blockedBy.kind}/${latestQueueEvent.blockedBy.operationClass} pid=${latestQueueEvent.blockedBy.ownerPid}`
+          : '';
+        lines.push(`  - Latest browser operation queue event: ${latestQueueEvent.event}${blockedBy}`);
+      }
+    }
     if (payload.browserDiagnostics.screenshot) {
       lines.push(`  - Screenshot: ${payload.browserDiagnostics.screenshot.path}`);
       lines.push(`  - Screenshot bytes: ${payload.browserDiagnostics.screenshot.bytes}`);

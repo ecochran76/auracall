@@ -21796,3 +21796,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   different from the preview.
 - Validation:
   - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`
+
+## 2026-04-25 - Browser operation queue diagnostics
+
+- Focus: make queued browser-operation readiness visible in operator status
+  diagnostics instead of only process logs.
+- Progress: response browser execution now records bounded `queued`,
+  `acquired`, and `busy-timeout` observations. Browser-state diagnostics can
+  project recent queue events next to browser mutation history, and CLI runtime
+  inspection renders the count plus latest queue event.
+- Validation:
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/cli/runtimeInspectionCommand.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
