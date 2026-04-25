@@ -232,6 +232,10 @@
     - when Gemini exposes one generated music artifact plus `downloadOptions`,
       the executor should materialize each option as a separate variant by
       selecting the requested visible provider menu item on the submitted tab
+    - when fresh readback exposes only the generic `Download track` control,
+      the executor should still request Gemini's known music variants
+      (`VideoAudio with cover art`, `Audio onlyMP3 track`) for menu-backed
+      materialization
     - explicit variant materialization should fail that variant rather than
       caching the default generated MP4 URL under MP3 metadata
     - read-only artifact discovery should preserve already-visible provider

@@ -77,6 +77,16 @@ helpers.
   probe selected the visible MP3 menu item with CDP pointer events and cached
   `Pavement_Espionage.mp3` as `audio/mpeg`, size `3,780,874`, with
   `materialization = generated-media-download-variant`.
+- A live browser-transport Gemini music service run
+  `medgen_51a010028fbd4079b9a6ba6b33bdb2d2` succeeded end to end: capability
+  discovery, Music tool selection, prompt submission, `music_visible` at poll
+  6, and cached `the_velvet_pursuit.mp4` as `video/mp4`. That fresh artifact
+  exposed only `Download track`, so executor expansion now treats a generated
+  music artifact with a download button and hidden variant labels as eligible
+  for Gemini's known MP4-with-art and MP3 variant requests. A second live run
+  `medgen_170d647a163741fe82a18b4e16e6e03c` selected Music and submitted, but
+  Gemini returned no generated music artifact before timeout; the managed tab
+  stayed healthy and unblocked.
 - A first live API image smoke proved capability discovery, tool selection,
   and prompt submission, but Gemini remained in an active `Stop response` state
   until the media-generation timeout, so artifact completion/readback was still
@@ -325,6 +335,10 @@ helpers.
 - Explicit Gemini music variant materialization must verify the cached file's
   MIME/extension matches the requested variant; an MP3 request returning the
   default MP4 transport is a failed variant materialization, not a success.
+- Fresh Gemini music readback can hide provider variants behind the generic
+  `Download track` trigger. Fixture coverage should keep the hidden-option
+  shape so future changes continue to request the known MP4-with-art and MP3
+  variants instead of caching only the default transport artifact.
 - Live Grok Imagine smoke only with a configured `XAI_API_KEY` or validated
   browser account path that exposes Imagine.
 - First Grok implementation validation should use read-only managed-browser

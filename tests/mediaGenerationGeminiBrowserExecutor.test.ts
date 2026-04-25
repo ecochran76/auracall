@@ -631,6 +631,137 @@ describe('Gemini browser media generation executor', () => {
     ]);
   });
 
+  it('uses known Gemini music variants when a fresh generated track only exposes the Download track control', async () => {
+    const { createGeminiBrowserMediaGenerationExecutor } = await import('../src/media/geminiBrowserExecutor.js');
+    const artifactDir = '/tmp/auracall-media-artifacts';
+    const videoPath = path.join(artifactDir, 'the-velvet-pursuit.mp4');
+    const mp3Path = path.join(artifactDir, 'the-velvet-pursuit.mp3');
+    browserClient.runPrompt.mockResolvedValueOnce({
+      text: '',
+      conversationId: 'gemini-music-hidden-options',
+      url: 'https://gemini.google.com/app/gemini-music-hidden-options',
+      tabTargetId: 'gemini-music-hidden-tab',
+    });
+    browserClient.readActiveConversationArtifacts.mockResolvedValueOnce([
+      {
+        id: 'artifact-music-hidden-1',
+        title: 'The Velvet Pursuit',
+        kind: 'generated',
+        uri: 'https://contribution.usercontent.google.com/download?filename=the_velvet_pursuit.mp4',
+        metadata: {
+          mediaType: 'music',
+          fileName: 'the_velvet_pursuit.mp4',
+          downloadLabel: 'Download track',
+          downloadOptions: ['Download track'],
+          hasDownloadButton: true,
+        },
+      },
+    ]);
+    browserClient.materializeConversationArtifact
+      .mockResolvedValueOnce({
+        id: 'artifact-music-hidden-1:video_with_album_art',
+        name: 'the-velvet-pursuit.mp4',
+        provider: 'gemini',
+        source: 'conversation',
+        size: 9876,
+        mimeType: 'video/mp4',
+        remoteUrl: 'https://contribution.usercontent.google.com/download?filename=the_velvet_pursuit.mp4',
+        localPath: videoPath,
+        metadata: {
+          materialization: 'generated-media-download-variant',
+          mediaType: 'music',
+          downloadLabel: 'VideoAudio with cover art',
+          downloadVariant: 'video_with_album_art',
+          downloadOptions: ['Download track', 'VideoAudio with cover art', 'Audio onlyMP3 track'],
+        },
+      })
+      .mockResolvedValueOnce({
+        id: 'artifact-music-hidden-1:mp3',
+        name: 'the-velvet-pursuit.mp3',
+        provider: 'gemini',
+        source: 'conversation',
+        size: 3456,
+        mimeType: 'audio/mpeg',
+        remoteUrl: 'https://contribution.usercontent.google.com/download?filename=the_velvet_pursuit.mp3',
+        localPath: mp3Path,
+        metadata: {
+          materialization: 'generated-media-download-variant',
+          mediaType: 'music',
+          downloadLabel: 'Audio onlyMP3 track',
+          downloadVariant: 'mp3',
+          downloadOptions: ['Download track', 'VideoAudio with cover art', 'Audio onlyMP3 track'],
+        },
+      });
+
+    const executor = createGeminiBrowserMediaGenerationExecutor({} as never);
+    const result = await executor({
+      id: 'medgen_music_hidden_options_test',
+      createdAt: '2026-04-25T12:00:00.000Z',
+      artifactDir,
+      request: {
+        provider: 'gemini',
+        mediaType: 'music',
+        prompt: 'Create spy music',
+        transport: 'browser',
+      },
+    });
+
+    expect(browserClient.materializeConversationArtifact).toHaveBeenNthCalledWith(
+      1,
+      'gemini-music-hidden-options',
+      expect.objectContaining({
+        id: 'artifact-music-hidden-1:video_with_album_art',
+        metadata: expect.objectContaining({
+          downloadLabel: 'VideoAudio with cover art',
+          downloadVariant: 'video_with_album_art',
+        }),
+      }),
+      artifactDir,
+      {
+        listOptions: expect.objectContaining({
+          downloadVariantLabel: 'VideoAudio with cover art',
+          preserveActiveTab: true,
+        }),
+      },
+    );
+    expect(browserClient.materializeConversationArtifact).toHaveBeenNthCalledWith(
+      2,
+      'gemini-music-hidden-options',
+      expect.objectContaining({
+        id: 'artifact-music-hidden-1:mp3',
+        metadata: expect.objectContaining({
+          downloadLabel: 'Audio onlyMP3 track',
+          downloadVariant: 'mp3',
+        }),
+      }),
+      artifactDir,
+      {
+        listOptions: expect.objectContaining({
+          downloadVariantLabel: 'Audio onlyMP3 track',
+          preserveActiveTab: true,
+        }),
+      },
+    );
+    expect(result.artifacts).toMatchObject([
+      {
+        type: 'music',
+        mimeType: 'video/mp4',
+        path: videoPath,
+        metadata: {
+          downloadVariant: 'video_with_album_art',
+        },
+      },
+      {
+        type: 'music',
+        mimeType: 'audio/mpeg',
+        path: mp3Path,
+        metadata: {
+          downloadVariant: 'mp3',
+        },
+      },
+    ]);
+  });
+
   it('polls conversation artifacts after prompt submission before materializing', async () => {
     const { createGeminiBrowserMediaGenerationExecutor } = await import('../src/media/geminiBrowserExecutor.js');
     const artifactDir = '/tmp/auracall-media-artifacts';

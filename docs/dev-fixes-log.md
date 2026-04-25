@@ -14320,3 +14320,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   media fetch still ran. Treat variant-selection failure as no materialized file
   for that variant, and use CDP pointer events for Gemini menu-item selection
   because synthetic `element.click()` can miss the real download action.
+- 2026-04-25: Fresh Gemini music readback may expose only the generic
+  `Download track` control even though the provider menu contains MP4-with-art
+  and MP3 variants. When a generated music artifact has a download button but
+  no visible variant labels, the media executor should request Gemini's known
+  music variants explicitly so provider-menu materialization can open the menu
+  and select the hidden choices.

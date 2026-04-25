@@ -1,3 +1,28 @@
+## 2026-04-25 - Gemini music live service smokes
+
+- Focus: live-test browser-transport Gemini music through the durable
+  media-generation service after MP3 variant materialization landed.
+- Progress: first live service run `medgen_51a010028fbd4079b9a6ba6b33bdb2d2`
+  succeeded. It discovered `gemini.media.create_music`, selected Music,
+  submitted conversation `692bca4b1fbe8204`, observed `music_visible` at poll
+  6, and cached
+  `~/.auracall/runtime/media-generations/medgen_51a010028fbd4079b9a6ba6b33bdb2d2/artifacts/the_velvet_pursuit.mp4`
+  as `video/mp4` via `generated-media-fetch`. That fresh readback only exposed
+  `Download track`, so the executor did not request MP3. The executor now uses
+  Gemini's known music variants when a generated track exposes a download
+  control but hides variant labels until the menu is opened. A second full live
+  run `medgen_170d647a163741fe82a18b4e16e6e03c` selected Music and submitted
+  conversation `9469a4636595c20e`, but Gemini produced no generated music
+  artifact before the 10-minute timeout; the tab remained healthy and
+  unblocked at `https://gemini.google.com/app/9469a4636595c20e`.
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/browser/geminiAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - live media-generation service run `medgen_51a010028fbd4079b9a6ba6b33bdb2d2`
+  - live media-generation service run `medgen_170d647a163741fe82a18b4e16e6e03c`
+  - `pnpm tsx scripts/browser-tools.ts --browser-target gemini tabs --json`
+
 ## 2026-04-25 - Gemini music MP3 live materialization probe
 
 - Focus: validate the new Gemini music MP3 variant materializer against the

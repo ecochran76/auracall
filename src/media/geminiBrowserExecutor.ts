@@ -19,6 +19,11 @@ const GEMINI_CAPABILITY_IDS: Record<'image' | 'music' | 'video', string> = {
   video: 'gemini.media.create_video',
 };
 
+const GEMINI_MUSIC_DEFAULT_DOWNLOAD_VARIANTS = [
+  'VideoAudio with cover art',
+  'Audio onlyMP3 track',
+] as const;
+
 export function createGeminiBrowserMediaGenerationExecutor(userConfig: ResolvedUserConfig): MediaGenerationExecutor {
   return async (input) => executeGeminiBrowserMediaGeneration(input, userConfig);
 }
@@ -187,10 +192,13 @@ function buildGeminiMaterializationTargets(
       return [{ artifact }];
     }
     const options = normalizeGeminiDownloadOptions(artifact.metadata?.downloadOptions);
-    const providerVariants = options.filter((label) => {
+    let providerVariants = options.filter((label) => {
       const normalized = label.toLowerCase();
       return normalized !== 'download track' && normalized !== normalizeNonEmpty(artifact.metadata?.downloadLabel)?.toLowerCase();
     });
+    if (providerVariants.length === 0 && artifact.metadata?.hasDownloadButton === true) {
+      providerVariants = [...GEMINI_MUSIC_DEFAULT_DOWNLOAD_VARIANTS];
+    }
     if (providerVariants.length <= 1) {
       return [{ artifact }];
     }
