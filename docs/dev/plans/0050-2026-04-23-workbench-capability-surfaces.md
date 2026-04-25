@@ -1,6 +1,6 @@
 # Workbench Capability Surfaces | 0050-2026-04-23
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Scope
@@ -63,6 +63,11 @@ a stable first-class adapter.
   bounded browser-service evidence: selected target/document state, visible
   control counts, provider evidence such as Grok Imagine gating signals, recent
   browser mutation records, and a stored PNG screenshot path.
+- Closed on 2026-04-25: provider-neutral discovery, static catalog, CLI/API/MCP
+  reporting, diagnostics, browser-backed Gemini/ChatGPT/Grok feature-signature
+  mapping, and media-generation preflight are implemented and covered by
+  no-live regression tests. Provider-backed invocation beyond the existing
+  media-generation resource remains opt-in future work per capability.
 
 ## Target Contract
 
@@ -134,7 +139,7 @@ a stable first-class adapter.
 - [x] Unit tests for capability schema, normalization, and availability projection.
 - [x] Unit/static CLI smoke for `auracall capabilities --target gemini --static --json`.
 - [x] Fake-provider API/MCP tests for capability listing.
-- Browser-provider tests for Gemini tool drawer labels and ChatGPT composer
+- [x] Browser-provider tests for Gemini tool drawer labels and ChatGPT composer
   add-on/app/skill labels using captured DOM fixtures or bounded selectors.
 - [x] Unit tests for ChatGPT feature-signature to workbench-capability mapping.
 - [x] Unit tests for Gemini feature-signature to workbench-capability mapping.
@@ -146,3 +151,10 @@ a stable first-class adapter.
 - Provider-backed invocation smokes stay opt-in per capability because Deep
   Research, apps, skills, and connectors can spend time, credits, or external
   account permissions.
+
+## Closure
+
+Plan 0050 is closed for discovery/reporting. Future workbench capability
+invocation should open a new bounded plan per capability family, with an
+explicit opt-in live smoke policy before any Deep Research, app, connector, or
+skill automation spends time, credits, or external-account permissions.

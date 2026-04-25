@@ -1,3 +1,9 @@
+- 2026-04-25: Close capability discovery/reporting separately from provider
+  invocation. Plan 0050 now proves browser-backed feature-signature discovery
+  for Gemini, ChatGPT, and Grok through no-live adapter tests, while
+  Deep Research/app/skill invocation remains a future per-capability plan with
+  explicit opt-in live-smoke rules.
+
 - 2026-04-25: Provider API media access should not become the default next
   lane just because an explicit adapter exists. After adding Gemini
   `transport = api`, park live API validation unless deliberately selected and

@@ -1,5 +1,25 @@
 # RUNBOOK
 
+## Turn 65 | 2026-04-25
+
+- Active plan:
+  `docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md`
+- Goal: continue browser-first capability work after provider API media access
+  was parked.
+- Result:
+  - added no-live browser-discovery adapter coverage for Gemini tool drawer
+    labels, ChatGPT apps/skills/research labels, and Grok Imagine entrypoint
+    discovery options
+  - closed Plan 0050 for capability discovery/reporting across CLI/API/MCP and
+    browser-backed feature-signature mapping
+  - left provider-backed invocation beyond media generation for a future
+    bounded per-capability plan
+- Verification target:
+  - `pnpm vitest run tests/workbenchBrowserDiscovery.test.ts tests/workbenchCapabilities.test.ts tests/http.workbenchCapabilities.test.ts tests/mcp.workbenchCapabilities.test.ts tests/cli/workbenchCapabilitiesCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 50`
+  - `git diff --check`
+
 ## Turn 64 | 2026-04-25
 
 - Active plan:

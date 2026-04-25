@@ -1,3 +1,17 @@
+## 2026-04-25 - Workbench capability discovery closeout
+
+- Focus: continue browser-first work by closing the capability discovery/reporting
+  plan rather than moving into provider API access.
+- Progress: added no-live browser-discovery adapter coverage for Gemini media
+  drawer labels, ChatGPT apps/skills/research labels, and Grok Imagine
+  entrypoint discovery options. Closed Plan 0050 for discovery/reporting and
+  kept broader provider-backed invocation as future per-capability work.
+- Validation:
+  - `pnpm vitest run tests/workbenchBrowserDiscovery.test.ts tests/workbenchCapabilities.test.ts tests/http.workbenchCapabilities.test.ts tests/mcp.workbenchCapabilities.test.ts tests/cli/workbenchCapabilitiesCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 50`
+  - `git diff --check`
+
 ## 2026-04-25 - Provider API access parked
 
 - Focus: respond to the operator decision to sideline provider API access for
