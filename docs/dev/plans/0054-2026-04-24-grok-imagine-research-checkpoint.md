@@ -1,6 +1,6 @@
 # Grok Imagine Research Checkpoint | 0054-2026-04-24
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Scope
@@ -11,6 +11,12 @@ existing Aura-Call media-generation contract.
 
 ## Current State
 
+- Closed on 2026-04-25: the browser-first Grok Imagine checkpoint now has
+  read-only discovery, guarded image/video invocation, submitted-tab status
+  sensing, visible-tile/download-button materialization, compact status
+  diagnostics, live image/video proofs, and provider-adapter regression tests.
+  xAI API execution, edit/reference workflows, and broader provider parity
+  remain separate future plans.
 - Plan 0049 keeps Grok Imagine explicitly gated:
   - image generation is not implemented
   - video generation is not implemented
@@ -525,14 +531,14 @@ Add a browser-first Grok Imagine discovery/audit slice:
 
 ## Acceptance Criteria
 
-- Plan 0049 and roadmap clearly select browser-first Grok Imagine discovery as
+- [x] Plan 0049 and roadmap clearly select browser-first Grok Imagine discovery as
   the next Grok implementation step.
 - [x] Browser discovery remains read-only and dispatcher-owned.
 - [x] Tests cover Grok Imagine capability projection from captured/browser
   discovery evidence.
-- Docs state that xAI API image/video support is deferred, not the current
+- [x] Docs state that xAI API image/video support is deferred, not the current
   implementation target.
-- Live browser audit uses the managed Grok browser profile and stops on
+- [x] Live browser audit uses the managed Grok browser profile and stops on
   account gating, moderation walls, or human-verification pages.
 - [x] One bounded live read-only Grok browser capability probe records the
   current account posture without invoking Imagine.
@@ -607,10 +613,10 @@ Add a browser-first Grok Imagine discovery/audit slice:
 ## Validation Plan
 
 - [x] Unit tests for Grok Imagine browser-discovery evidence mapping.
-- Targeted browser-service/provider tests for dispatcher-owned discovery paths.
+- [x] Targeted browser-service/provider tests for dispatcher-owned discovery paths.
 - [x] Bounded live read-only managed-browser discovery:
   - `pnpm tsx bin/auracall.ts capabilities --target grok --json`
-- Targeted tests for workbench browser diagnostics across CLI/API/MCP/service.
+- [x] Targeted tests for workbench browser diagnostics across CLI/API/MCP/service.
 - [x] Bounded live read-only managed-browser diagnostics:
   - `pnpm tsx bin/auracall.ts capabilities --target grok --diagnostics browser-state --json`
 - [x] Bounded live read-only managed-browser Grok Imagine entrypoint inspection:
@@ -807,7 +813,9 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - [x] `pnpm run plans:audit -- --keep 54`
 - [x] `git diff --check`
 
-## Next Slice
+## Closure
 
-Keep Grok edit/reference workflows gated. The next browser slice should move
-the same browser-first pattern to the next media parity gap.
+Plan 0054 is complete for the browser-first Grok Imagine checkpoint. Keep Grok
+edit/reference workflows and xAI API execution gated until a new bounded plan
+selects them explicitly. The next browser media slice should move the same
+discovery, status, and artifact-readback pattern to the next media parity gap.

@@ -14379,6 +14379,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   adapter's CDP path and assert Image and Video `runPrompt` emit
   `capability_selected` with `selected = true` and the expected mode before
   prompt insertion.
+- 2026-04-25: Close provider research checkpoints when the acceptance surface is
+  proven, and move remaining work into a new bounded plan instead of keeping a
+  completed plan open. For Grok Imagine, browser-first image/video discovery,
+  invocation, status, and materialization are now distinct from future xAI API
+  execution and edit/reference workflows.
 - 2026-04-25: Grok Imagine visible-tile and download-button materialization
   should be tested at the provider-adapter CDP boundary. Executor tests can
   prove orchestration, but adapter tests should lock the browser-only behavior:
