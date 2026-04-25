@@ -1,3 +1,23 @@
+## 2026-04-25 - Gemini music MP3 live materialization probe
+
+- Focus: validate the new Gemini music MP3 variant materializer against the
+  already-open `Pavement Espionage` chat without submitting a new prompt.
+- Progress: first live probe exposed a false positive: the requested
+  `Audio onlyMP3 track` path fell back to the default direct MP4 URL and
+  mislabeled `pavement_espionage.mp4` as the MP3 variant. The adapter now uses
+  CDP pointer events to select the visible provider menu item and refuses the
+  default URL fallback when an explicit variant label was requested. The
+  corrected probe cached
+  `~/.auracall/runtime/media-generations/manual_gemini_music_mp3_probe_1777132538004/artifacts/Pavement_Espionage.mp3`
+  as `audio/mpeg`, size `3,780,874`, with `materialization =
+  generated-media-download-variant`.
+- Validation:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - live active-tab MP3 probe against `https://gemini.google.com/app/c4b327e2a3ba97e6`
+  - `pnpm tsx scripts/browser-tools.ts --browser-target gemini tabs --json`
+
 ## 2026-04-25 - Gemini music variant materialization wiring
 
 - Focus: turn Gemini music download-option readback into explicit MP4/MP3

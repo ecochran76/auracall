@@ -70,6 +70,13 @@ helpers.
   submitted active tab, select the requested option label, and cache the
   captured browser download or anchor response; fixture coverage includes the
   live-style `VideoAudio with cover art` and `Audio onlyMP3 track` labels.
+- A bounded live MP3 materialization probe against the already-open
+  `Pavement Espionage` chat first exposed and then fixed a false-positive
+  fallback: an explicit `Audio onlyMP3 track` request must not cache the
+  default MP4 URL when provider-menu selection fails. The corrected active-tab
+  probe selected the visible MP3 menu item with CDP pointer events and cached
+  `Pavement_Espionage.mp3` as `audio/mpeg`, size `3,780,874`, with
+  `materialization = generated-media-download-variant`.
 - A first live API image smoke proved capability discovery, tool selection,
   and prompt submission, but Gemini remained in an active `Stop response` state
   until the media-generation timeout, so artifact completion/readback was still
@@ -315,6 +322,9 @@ helpers.
 - Open-menu Gemini music dogfood should expect compact status
   `downloadOptions` to include `Download track`, `VideoAudio with cover art`,
   and `Audio onlyMP3 track` when those labels are visible.
+- Explicit Gemini music variant materialization must verify the cached file's
+  MIME/extension matches the requested variant; an MP3 request returning the
+  default MP4 transport is a failed variant materialization, not a success.
 - Live Grok Imagine smoke only with a configured `XAI_API_KEY` or validated
   browser account path that exposes Imagine.
 - First Grok implementation validation should use read-only managed-browser

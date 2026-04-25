@@ -2722,7 +2722,7 @@ function fallbackGeminiMusicVariantExtension(label: string | null | undefined): 
   return inferGeminiMusicDownloadVariantFromLabel(label) === 'mp3' ? '.mp3' : '.mp4';
 }
 
-function geminiGeneratedMediaVariantDownloadExpression(downloadVariantLabel: string): string {
+function geminiGeneratedMediaVariantDownloadPointExpression(downloadVariantLabel: string): string {
   return `(async () => {
     const desired = ${JSON.stringify(downloadVariantLabel)};
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
@@ -2742,31 +2742,45 @@ function geminiGeneratedMediaVariantDownloadExpression(downloadVariantLabel: str
     );
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     const desiredCompact = compact(desired);
-    const triggers = Array.from(document.querySelectorAll('button, [role="button"]'))
-      .filter((node) => visible(node) && /download/i.test(labelOf(node)))
-      .sort((a, b) => {
-        const aLabel = labelOf(a).toLowerCase();
-        const bLabel = labelOf(b).toLowerCase();
-        const score = (label) => (label.includes('track') ? 3 : 0) + (label.includes('download') ? 1 : 0);
-        return score(bLabel) - score(aLabel);
-      });
-    const trigger = triggers[0] || null;
-    if (!(trigger instanceof HTMLElement)) {
-      return { ok: false, reason: 'download-trigger-missing', labels: [] };
-    }
-    trigger.click();
-    await sleep(300);
-    const optionNodes = Array.from(document.querySelectorAll(
-      '[role="menuitem"], [role="option"], [role="menu"] button, .mat-mdc-menu-panel button, .mat-mdc-menu-panel [role="menuitem"], .cdk-overlay-pane button, .cdk-overlay-pane [role="menuitem"]'
-    )).filter((node) => visible(node));
-    const options = optionNodes.map((node) => ({ node, label: labelOf(node) })).filter((entry) => entry.label);
-    const target = options.find((entry) => compact(entry.label) === desiredCompact) ||
+    const readOptions = () => {
+      const optionNodes = Array.from(document.querySelectorAll(
+        '[role="menuitem"], [role="option"], [role="menu"] button, .mat-mdc-menu-panel button, .mat-mdc-menu-panel [role="menuitem"], .cdk-overlay-pane button, .cdk-overlay-pane [role="menuitem"]'
+      )).filter((node) => visible(node));
+      return optionNodes.map((node) => ({ node, label: labelOf(node) })).filter((entry) => entry.label);
+    };
+    let options = readOptions();
+    let target = options.find((entry) => compact(entry.label) === desiredCompact) ||
       options.find((entry) => compact(entry.label).includes(desiredCompact) || desiredCompact.includes(compact(entry.label)));
+    if (!(target?.node instanceof HTMLElement)) {
+      const triggers = Array.from(document.querySelectorAll('button, [role="button"]'))
+        .filter((node) => visible(node) && /download/i.test(labelOf(node)))
+        .sort((a, b) => {
+          const aLabel = labelOf(a).toLowerCase();
+          const bLabel = labelOf(b).toLowerCase();
+          const score = (label) => (label.includes('track') ? 3 : 0) + (label.includes('download') ? 1 : 0);
+          return score(bLabel) - score(aLabel);
+        });
+      const trigger = triggers[0] || null;
+      if (!(trigger instanceof HTMLElement)) {
+        return { ok: false, reason: 'download-trigger-missing', labels: [] };
+      }
+      trigger.click();
+      await sleep(300);
+      options = readOptions();
+      target = options.find((entry) => compact(entry.label) === desiredCompact) ||
+        options.find((entry) => compact(entry.label).includes(desiredCompact) || desiredCompact.includes(compact(entry.label)));
+    }
     if (!(target?.node instanceof HTMLElement)) {
       return { ok: false, reason: 'download-variant-missing', labels: options.map((entry) => entry.label).slice(0, 20) };
     }
-    target.node.click();
-    return { ok: true, label: target.label };
+    target.node.scrollIntoView({ block: 'center', inline: 'center' });
+    const rect = target.node.getBoundingClientRect();
+    return {
+      ok: true,
+      label: target.label,
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
   })()`;
 }
 
@@ -2784,15 +2798,18 @@ async function materializeGeminiGeneratedMediaDownloadVariantWithClient(
   );
   await configureGeminiDownloadBehaviorWithClient(client, destDir);
   await armDownloadCapture(client.Runtime, { stateKey: GEMINI_GENERATED_MEDIA_VARIANT_DOWNLOAD_CAPTURE_STATE_KEY });
-  const clicked = await client.Runtime.evaluate({
-    expression: geminiGeneratedMediaVariantDownloadExpression(downloadVariantLabel),
+  const located = await client.Runtime.evaluate({
+    expression: geminiGeneratedMediaVariantDownloadPointExpression(downloadVariantLabel),
     awaitPromise: true,
     returnByValue: true,
   });
-  const clickedValue = isRecord(clicked.result?.value) ? clicked.result.value : null;
-  if (clickedValue?.ok !== true) {
+  const point = isRecord(located.result?.value) ? located.result.value : null;
+  if (point?.ok !== true || typeof point.x !== 'number' || typeof point.y !== 'number') {
     return null;
   }
+  await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y, button: 'none' });
+  await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+  await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
   const capture = await waitForDownloadCapture(client.Runtime, {
     stateKey: GEMINI_GENERATED_MEDIA_VARIANT_DOWNLOAD_CAPTURE_STATE_KEY,
     timeoutMs: 1_500,
@@ -3713,6 +3730,7 @@ async function materializeGeminiConversationArtifactWithClient(
       if (variantFile) {
         return variantFile;
       }
+      return null;
     }
     if (resolvedArtifact.kind === 'image' && resolvedArtifact.metadata && resolvedArtifact.metadata.hasDownloadButton) {
       await fs.mkdir(destDir, { recursive: true });

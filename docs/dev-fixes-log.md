@@ -14313,3 +14313,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   select the requested visible menu item on the submitted active tab using
   browser-service download capture instead of assuming direct URL fetch covers
   every variant.
+- 2026-04-25: An explicit Gemini music variant request must not fall back to the
+  generated artifact's default URL when provider-menu selection fails. A live
+  MP3 probe initially cached the default `pavement_espionage.mp4` while carrying
+  MP3 metadata because the menu click path missed and the generic generated
+  media fetch still ran. Treat variant-selection failure as no materialized file
+  for that variant, and use CDP pointer events for Gemini menu-item selection
+  because synthetic `element.click()` can miss the real download action.
