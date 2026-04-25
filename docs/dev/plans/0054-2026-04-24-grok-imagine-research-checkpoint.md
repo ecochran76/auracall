@@ -235,6 +235,10 @@ existing Aura-Call media-generation contract.
   - generic run status and MCP `run_status` inherit the same diagnostics block
   - operators can confirm Grok Image/Video mode selection without fetching the
     full media record
+- Live compact-status readback on 2026-04-25 confirmed CLI
+  `run status --json` for `medgen_504d9872bdcc43f1a4327ea2782a1e3a`
+  reported `capabilitySelection` with `grok.media.imagine_image`,
+  `mode = Image`, `selected = true`, Image checked, and Video unchecked.
 - Bounded read-only video discovery has started:
   - the live `/imagine` page exposes `Image` and `Video` as visible
     `role = radio` controls, with `Image` checked and `Video` unchecked
@@ -618,6 +622,8 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - cached one `visible-tile-browser-capture` JPEG artifact
 - [x] Compact status exposes capability-selection evidence:
   - `pnpm vitest run tests/mediaStatusSummary.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+- [x] Live compact status readback exposes Grok image mode selection:
+  - `pnpm tsx bin/auracall.ts run status medgen_504d9872bdcc43f1a4327ea2782a1e3a --json`
 - [x] Bounded live gated media request:
   - `POST /v1/media-generations` with `provider = grok`, `mediaType = image`,
     `transport = browser`

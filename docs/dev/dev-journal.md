@@ -21579,3 +21579,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`
+
+## 2026-04-25 - Compact status capability selection live readback
+
+- Focus: verify the new compact capability-selection diagnostic against a real
+  persisted Grok browser image run.
+- Live readback: CLI `run status --json` for
+  `medgen_504d9872bdcc43f1a4327ea2782a1e3a` returned
+  `metadata.mediaDiagnostics.capabilitySelection` with
+  `capabilityId = grok.media.imagine_image`, `mode = Image`,
+  `selected = true`, `clicked = false`, Image checked, and Video unchecked.
+- Validation:
+  - `pnpm tsx bin/auracall.ts run status medgen_504d9872bdcc43f1a4327ea2782a1e3a --json`
