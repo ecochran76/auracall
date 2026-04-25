@@ -280,6 +280,30 @@ existing Aura-Call media-generation contract.
   - post-run tab inspection still reported the same tab at
     `https://grok.com/imagine`, confirming the corrected probe did not
     navigate the tab
+- A later direct-connect probe on the mature post URL validated status sensing
+  but exposed browser-owned materialization as the missing step:
+  - request id `medgen_19864cb8180b443ebed3a30c8fc37840`
+  - first poll saw `runState = terminal_video`, `generatedVideoCount = 1`,
+    `downloadControlCount = 1`, `materializationCandidateCount = 2`, and
+    provider href
+    `https://grok.com/imagine/post/540a1b45-5ee3-4cb4-8b57-a25dcc2ee9dd`
+  - direct Node/curl fetch of the generated asset URL returned `403` with no
+    bytes, so the selected-media download button is the authoritative cache
+    route for this surface
+  - the readback path now tries the exact tab's visible
+    `aria-label = "Download"` control before falling back to direct URL fetch
+- Live validation after the download-control fix succeeded:
+  - request id `medgen_bc4771f047934deeae2df262c8f41f9b`
+  - media-generation status and generic run status both reported
+    `status = succeeded`, `artifactCount = 1`, and
+    `materialization = download-button`
+  - cached artifact:
+    `~/.auracall/runtime/media-generations/medgen_bc4771f047934deeae2df262c8f41f9b/artifacts/grok-imagine-video-1.mp4`
+  - local file size: `4,877,074` bytes
+  - post-run tab inspection still reported
+    `https://grok.com/imagine/post/540a1b45-5ee3-4cb4-8b57-a25dcc2ee9dd`,
+    so the readback/download path did not navigate away from the submitted
+    conversation
 
 ## Research Findings
 
@@ -465,6 +489,9 @@ Add a browser-first Grok Imagine discovery/audit slice:
   browser-service target resolution.
 - [x] Operators have a bounded manual runbook for validating status/readback on
   a human-submitted Grok Imagine video tab without enabling automated Submit.
+- [x] The diagnostic Grok video readback branch can materialize a generated
+  account video through the existing tab's selected-media download control
+  when direct `assets.grok.com` URL fetches are forbidden.
 
 ## Validation Plan
 
@@ -593,6 +620,19 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - validated status parity and no-navigation behavior
   - ended with `media_generation_no_generated_output` because only
     public/template video evidence was visible
+- [x] Live direct-connect generated-video readback and browser-download
+  materialization:
+  - initial generated-video probe:
+    `medgen_19864cb8180b443ebed3a30c8fc37840`
+  - validated terminal generated-video status sensing but failed direct URL
+    materialization because the asset URL returned `403` outside the browser
+  - fixed validation id:
+    `medgen_bc4771f047934deeae2df262c8f41f9b`
+  - media status and generic run status agreed on `succeeded`,
+    `artifactCount = 1`, and `materialization = download-button`
+  - cached `grok-imagine-video-1.mp4` as a `4,877,074` byte artifact
+  - post-run `browser-tools inspect` confirmed the Grok tab stayed on the same
+    `/imagine/post/...` URL
 - [x] API/MCP/status media regression tests:
   - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
 - [x] `pnpm run check`
@@ -602,8 +642,6 @@ Add a browser-first Grok Imagine discovery/audit slice:
 
 ## Next Slice
 
-Keep Grok video and edit/reference workflows gated. The next browser slice is
-one bounded human-started Grok Imagine video run using
-`docs/grok-imagine-video-readback-runbook.md`, then compare the media status
-and generic run-status readback before deciding whether controlled automated
-Submit can be planned.
+Keep Grok video Submit and edit/reference workflows gated. The next browser
+slice is a controlled plan for automated Grok Video submit using the now-proven
+status/readback/download path as the acceptance target.

@@ -92,14 +92,18 @@ mode-audit side effects.
 Successful readback should cache a `video/mp4` artifact under
 `~/.auracall/runtime/media-generations/<ID>/artifacts` and both status
 surfaces should agree on terminal status, last event, artifact count, and
-cached artifact path.
+cached artifact path. The cache path should prefer Grok's selected-media
+download control (`aria-label = "Download"`) because generated
+`assets.grok.com/users/.../generated_video.mp4` URLs can return `403` to
+non-browser fetches even when the signed-in browser can download the file.
 
 Expected failure classes:
 
 - `media_generation_no_generated_output`: only public/template video evidence
   was visible.
 - `media_generation_artifact_materialization_failed`: terminal generated
-  video evidence appeared but no cacheable candidate was available.
+  video evidence appeared but neither the selected-media download control nor
+  the direct asset URL produced a local artifact.
 - `media_generation_provider_timeout`: no terminal generated video appeared
   before timeout.
 - `media_generation_provider_blocked`: Grok exposed account, safety, rate

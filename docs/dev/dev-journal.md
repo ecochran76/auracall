@@ -21038,3 +21038,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`
+
+## 2026-04-24 - Grok video readback download materialization
+
+- Focus: finish the generated-video readback path after status sensing found a
+  real Grok account video but direct asset fetching failed.
+- Finding: request `medgen_19864cb8180b443ebed3a30c8fc37840` observed
+  `runState = terminal_video`, `generatedVideoCount = 1`,
+  `downloadControlCount = 1`, and the post URL
+  `https://grok.com/imagine/post/540a1b45-5ee3-4cb4-8b57-a25dcc2ee9dd`, but
+  direct fetch of the `assets.grok.com/users/.../generated_video.mp4` URL
+  returned `403`.
+- Fix: the diagnostic readback branch now attaches to the exact submitted tab,
+  configures browser download behavior, clicks the visible selected-media
+  `Download` button, waits for a local file, and only then falls back to the
+  direct asset URL.
+- Live validation: request `medgen_bc4771f047934deeae2df262c8f41f9b`
+  succeeded through both media-generation status and generic run status with
+  one `video/mp4` artifact cached at
+  `~/.auracall/runtime/media-generations/medgen_bc4771f047934deeae2df262c8f41f9b/artifacts/grok-imagine-video-1.mp4`
+  using `materialization = download-button`; the file size is `4,877,074`
+  bytes and post-run inspection kept the Grok tab on the same `/imagine/post/`
+  URL.
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`

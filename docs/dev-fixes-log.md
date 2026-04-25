@@ -14224,3 +14224,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   appending timeline events. Use temp-file plus rename writes so readers see a
   complete previous record or a complete next record, never an empty/truncated
   JSON payload.
+- 2026-04-24: Treat provider download controls as authoritative when generated
+  media URLs are browser-session scoped. In this repo, Grok Imagine generated
+  video URLs under `assets.grok.com/users/.../generated_video.mp4` can return
+  `403` to Node/curl while the signed-in browser tab can download the same
+  asset through the visible `Download` control. Media readback should prefer
+  browser-context download materialization before direct remote fetches.

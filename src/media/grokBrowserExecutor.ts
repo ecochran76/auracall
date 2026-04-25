@@ -3,6 +3,9 @@ import path from 'node:path';
 import { BrowserAutomationClient } from '../browser/client.js';
 import type { FileRef } from '../browser/providers/domain.js';
 import type { BrowserProviderPromptProgressEvent } from '../browser/providers/types.js';
+import type { ChromeClient } from '../browser/types.js';
+import { armDownloadCapture, waitForDownloadCapture } from '../browser/service/ui.js';
+import { connectToChromeTarget } from '../../packages/browser-service/src/chromeLifecycle.js';
 import type { ResolvedUserConfig } from '../config.js';
 import {
   type MediaGenerationArtifact,
@@ -379,17 +382,24 @@ async function executeGrokBrowserVideoReadbackProbe(
       },
     );
   }
-  const artifact = await materializeGrokVideoCandidate(readback.materializationCandidate, input.artifactDir, 1);
+  const artifact = await materializeGrokVideoCandidateFromBrowser(
+    readback.materializationCandidate,
+    input.artifactDir,
+    1,
+    { host: devtoolsHost, port: devtoolsPort, targetId: tabTargetId },
+  ).catch(() => null) ??
+    await materializeGrokVideoCandidate(readback.materializationCandidate, input.artifactDir, 1);
   if (!artifact) {
     throw new MediaGenerationExecutionError(
       'media_generation_artifact_materialization_failed',
-      'Grok browser video readback found a generated video candidate, but it could not be materialized.',
+      'Grok browser video readback found a generated video candidate, but it could not be materialized through the browser download control or direct asset URL.',
       {
         tabUrl,
         tabTargetId,
         capabilityId: GROK_VIDEO_CAPABILITY_ID,
         readbackProbe: true,
         materializationCandidate: readback.materializationCandidate,
+        downloadControlSelector: 'button[aria-label*="Download" i], button[title*="Download" i], [role="button"][aria-label*="Download" i]',
       },
     );
   }
@@ -852,6 +862,163 @@ export async function materializeGrokVideoCandidate(
       selected: candidate.selected,
     },
   };
+}
+
+async function materializeGrokVideoCandidateFromBrowser(
+  candidate: GrokImagineVideoMaterializationCandidate,
+  artifactDir: string,
+  ordinal: number,
+  target: { host: string; port: number; targetId: string },
+): Promise<MediaGenerationArtifact | null> {
+  await fs.mkdir(artifactDir, { recursive: true });
+  const client = await connectToChromeTarget({ host: target.host, port: target.port, target: target.targetId });
+  try {
+    await Promise.all([
+      client.Page.enable().catch(() => undefined),
+      client.Runtime.enable().catch(() => undefined),
+    ]);
+    await configureGrokVideoDownloadBehavior(client, artifactDir);
+    await armDownloadCapture(client.Runtime, { stateKey: '__auracallGrokImagineVideoDownloadCapture' });
+    const click = await client.Runtime.evaluate({
+      expression: `(async () => {
+        const visible = (node) => {
+          if (!(node instanceof HTMLElement)) return false;
+          const style = getComputedStyle(node);
+          if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+          const rect = node.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+        const controls = Array.from(document.querySelectorAll('button[aria-label*="Download" i], button[title*="Download" i], [role="button"][aria-label*="Download" i]'))
+          .filter((node) => node instanceof HTMLElement && visible(node) && !node.disabled && node.getAttribute('aria-disabled') !== 'true');
+        const control = controls[0] || null;
+        if (!(control instanceof HTMLElement)) {
+          return { ok: false, reason: 'download-control-missing' };
+        }
+        control.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+        control.click();
+        return {
+          ok: true,
+          ariaLabel: control.getAttribute('aria-label') || null,
+          title: control.getAttribute('title') || null,
+        };
+      })()`,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    const clickValue = click.result?.value as { ok?: boolean } | undefined;
+    if (clickValue?.ok !== true) {
+      return null;
+    }
+    const capture = await waitForDownloadCapture(client.Runtime, {
+      stateKey: '__auracallGrokImagineVideoDownloadCapture',
+      timeoutMs: 1_500,
+      pollMs: 100,
+    });
+    const filePath = await waitForGrokVideoDownloadedFile(artifactDir, 15_000);
+    if (!filePath) {
+      return null;
+    }
+    return await mapGrokVideoDownloadFileToArtifact(filePath, candidate, ordinal, capture.href || null);
+  } finally {
+    await client.close().catch(() => undefined);
+  }
+}
+
+async function configureGrokVideoDownloadBehavior(client: ChromeClient, downloadPath: string): Promise<void> {
+  const cdpClient = client as unknown as { send?: (method: string, params?: Record<string, unknown>) => Promise<unknown> };
+  if (typeof cdpClient.send !== 'function') return;
+  try {
+    await cdpClient.send('Browser.setDownloadBehavior', {
+      behavior: 'allow',
+      downloadPath,
+      eventsEnabled: true,
+    });
+    return;
+  } catch {
+    // Fall back to the older Page domain when Browser.setDownloadBehavior is unavailable.
+  }
+  try {
+    await cdpClient.send('Page.setDownloadBehavior', {
+      behavior: 'allow',
+      downloadPath,
+    });
+  } catch {
+    // Leave downloads unconfigured; the direct URL fetch fallback still has a chance.
+  }
+}
+
+async function waitForGrokVideoDownloadedFile(destDir: string, timeoutMs: number): Promise<string | null> {
+  const deadline = Date.now() + timeoutMs;
+  let lastPath: string | null = null;
+  let lastSize = -1;
+  let stableCount = 0;
+  while (Date.now() < deadline) {
+    const entries = await fs.readdir(destDir, { withFileTypes: true }).catch(() => []);
+    const candidates = entries
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name)
+      .filter((name) =>
+        /^grok-imagine-video-\d+\./.test(name) ||
+        (!name.endsWith('.crdownload') && !name.endsWith('.tmp') && /\.(mp4|webm|mov)$/i.test(name)))
+      .sort();
+    for (const name of candidates) {
+      const candidatePath = path.join(destDir, name);
+      const stat = await fs.stat(candidatePath).catch(() => null);
+      if (!stat || stat.size <= 0) continue;
+      if (candidatePath === lastPath && stat.size === lastSize) stableCount += 1;
+      else {
+        lastPath = candidatePath;
+        lastSize = stat.size;
+        stableCount = 0;
+      }
+      if (stableCount >= 1) return candidatePath;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return null;
+}
+
+async function mapGrokVideoDownloadFileToArtifact(
+  filePath: string,
+  candidate: GrokImagineVideoMaterializationCandidate,
+  ordinal: number,
+  downloadHref: string | null,
+): Promise<MediaGenerationArtifact> {
+  const mimeType = inferVideoMimeTypeFromPath(filePath, candidate.mimeType ?? null);
+  const extension = resolveVideoExtension(mimeType, filePath);
+  const canonicalName = `grok-imagine-video-${ordinal}.${extension}`;
+  const canonicalPath = path.join(path.dirname(filePath), canonicalName);
+  let outputPath = filePath;
+  if (path.basename(filePath) !== canonicalName) {
+    await fs.rename(filePath, canonicalPath).catch(async () => {
+      await fs.copyFile(filePath, canonicalPath);
+      await fs.unlink(filePath).catch(() => undefined);
+    });
+    outputPath = canonicalPath;
+  }
+  return {
+    id: `grok_imagine_video_${ordinal}`,
+    type: 'video',
+    mimeType,
+    fileName: path.basename(outputPath),
+    path: outputPath,
+    uri: `file://${outputPath}`,
+    metadata: {
+      providerArtifactId: `grok_imagine_video_${ordinal}`,
+      remoteUrl: normalizeNonEmpty(candidate.remoteUrl),
+      downloadHref: normalizeNonEmpty(downloadHref),
+      materialization: 'download-button',
+      materializationSource: candidate.source,
+      selected: candidate.selected,
+    },
+  };
+}
+
+function inferVideoMimeTypeFromPath(filePath: string, fallback: string | null): string {
+  const lower = filePath.toLowerCase();
+  if (lower.endsWith('.webm')) return 'video/webm';
+  if (lower.endsWith('.mov')) return 'video/quicktime';
+  return fallback || 'video/mp4';
 }
 
 function parseGrokImagineSignatureObject(signature: string | null | undefined): {
