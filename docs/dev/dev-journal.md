@@ -1,3 +1,18 @@
+## 2026-04-25 - Compact media status download options
+
+- Focus: expose provider download variant labels through compact status
+  surfaces without forcing operators to fetch full media generation records.
+- Progress: media status summaries now copy artifact `metadata.downloadOptions`
+  into compact artifact entries. The same field flows through local API
+  `/v1/media-generations/{id}/status`, generic `/v1/runs/{id}/status`, MCP
+  `media_generation_status`, MCP `run_status`, and CLI JSON run status.
+- Validation:
+  - `pnpm vitest run tests/mediaStatusSummary.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/cli.runStatusCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`
+
 ## 2026-04-25 - Gemini music download-option discovery
 
 - Focus: add read-only Gemini music DOM discovery for provider download menu

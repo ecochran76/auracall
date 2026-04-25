@@ -14285,3 +14285,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   readback should record already-visible option labels from the artifact
   container or open overlay as metadata, and use those labels for music
   classification, without opening menus or spending live generation quota.
+- 2026-04-25: Surface provider download variants on compact status, not only
+  full artifact metadata. When readback records `downloadOptions`, media
+  status, generic run status, MCP status tools, and CLI JSON status should
+  include those labels on each artifact so operators can choose Gemini music
+  variants without fetching the full generation record.

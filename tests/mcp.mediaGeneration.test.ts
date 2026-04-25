@@ -190,6 +190,7 @@ describe('mcp media_generation tool', () => {
             metadata: {
               materialization: 'visible-image-screenshot',
               remoteUrl: 'blob:https://gemini.google.com/status',
+              downloadOptions: ['Download as video with album art', 'Download as MP3'],
             },
           },
         ],
@@ -251,6 +252,7 @@ describe('mcp media_generation tool', () => {
             path: '/tmp/Generated image 1.png',
             materialization: 'visible-image-screenshot',
             remoteUrl: 'blob:https://gemini.google.com/status',
+            downloadOptions: ['Download as video with album art', 'Download as MP3'],
           },
         ],
         diagnostics: {

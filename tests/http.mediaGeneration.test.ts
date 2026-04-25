@@ -35,6 +35,9 @@ describe('http media generation adapter', () => {
                 fileName: 'asphalt-agent.png',
                 path: filePath,
                 uri: `file://${filePath}`,
+                metadata: {
+                  downloadOptions: ['Download as video with album art', 'Download as MP3'],
+                },
               },
             ],
           };
@@ -96,6 +99,7 @@ describe('http media generation adapter', () => {
             id: 'artifact_http_1',
             fileName: 'asphalt-agent.png',
             path: expect.stringContaining('asphalt-agent.png'),
+            downloadOptions: ['Download as video with album art', 'Download as MP3'],
           },
         ],
         timeline: [
@@ -153,6 +157,7 @@ describe('http media generation adapter', () => {
             id: 'artifact_http_1',
             fileName: 'asphalt-agent.png',
             path: expect.stringContaining('asphalt-agent.png'),
+            downloadOptions: ['Download as video with album art', 'Download as MP3'],
           },
         ],
         lastEvent: {

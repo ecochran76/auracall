@@ -232,6 +232,9 @@
     - read-only artifact discovery should preserve already-visible provider
       download option labels, such as `Download as video with album art` and
       `Download as MP3`, without clicking the menu during routine validation
+    - `/v1/media-generations/<id>/status`, `/v1/runs/<id>/status`, MCP
+      `media_generation_status`, MCP `run_status`, and CLI `run status --json`
+      should surface those labels as compact artifact `downloadOptions`
   - create a browser-transport Grok image request only after capability
     discovery reports `grok.media.imagine_image` as `available`; the local API
     first checks the explicit `/imagine` entrypoint and fails before prompt

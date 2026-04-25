@@ -191,7 +191,10 @@ Terminology note:
     narrower
     `GET /v1/media-generations/{media_generation_id}/status` for a compact
     status summary with the latest timeline event, artifact cache path, and
-    materialization method. Media status also includes a derived
+    materialization method. When provider readback exposes named download
+    variants, status artifacts include compact `downloadOptions` labels so
+    callers can distinguish outputs such as Gemini music MP4-with-art versus
+    MP3 without fetching the full generation record. Media status also includes a derived
     `diagnostics` block from persisted timeline evidence so operators can see
     capability preflight, submitted tab, provider route progression, artifact
     polling/progress counts, terminal run-state counts, and materialization

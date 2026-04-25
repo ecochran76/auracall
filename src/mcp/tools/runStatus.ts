@@ -23,6 +23,7 @@ const runStatusArtifactShape = z.object({
   uri: z.string().nullable().optional(),
   mimeType: z.string().nullable().optional(),
   materialization: z.string().nullable().optional(),
+  downloadOptions: z.array(z.string()).nullable().optional(),
 });
 
 const runStatusStepShape = z.object({

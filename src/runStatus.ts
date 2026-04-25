@@ -25,6 +25,7 @@ export interface AuraCallRunStatusArtifactSummary {
   uri?: string | null;
   mimeType?: string | null;
   materialization?: string | null;
+  downloadOptions?: string[] | null;
 }
 
 export interface AuraCallRunStatus {
@@ -122,6 +123,7 @@ function summarizeMediaRunStatus(summary: MediaGenerationStatusSummary): AuraCal
       uri: artifact.uri ?? null,
       mimeType: artifact.mimeType ?? null,
       materialization: artifact.materialization ?? null,
+      downloadOptions: artifact.downloadOptions ?? null,
     })),
     metadata: {
       ...summary.metadata,

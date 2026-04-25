@@ -104,8 +104,9 @@ helpers.
 - Operators can now read a compact media-generation status summary through
   local API `GET /v1/media-generations/{media_generation_id}/status` and MCP
   tool `media_generation_status`. Both surfaces report current status, latest
-  timeline event, artifact cache path, and materialization method without
-  creating a new provider request.
+  timeline event, artifact cache path, materialization method, and compact
+  artifact `downloadOptions` labels when provider readback exposes named
+  variants, without creating a new provider request.
 - API and MCP media creation now support opt-in async creation with
   `wait=false`, returning a running media generation id while the same durable
   executor path continues in the background.
@@ -114,7 +115,8 @@ helpers.
   compact envelope for response/team chats and media generations. Media-specific
   status remains a narrow helper, not the primary cross-run polling surface.
 - CLI now has matching generic readback through `auracall run status <id>` and
-  `--json`, backed by the same durable run-status reader as API/MCP.
+  `--json`, backed by the same durable run-status reader as API/MCP, including
+  compact media artifact `downloadOptions` when available.
 - Grok Imagine research is captured in
   [0054 Grok Imagine Research Checkpoint](0054-2026-04-24-grok-imagine-research-checkpoint.md):
   - implement browser-first Imagine discovery on the managed Grok profile
@@ -221,6 +223,8 @@ helpers.
   through one API/MCP status envelope.
 - [x] Operators can check the same generic response/team chat and media run
   status through CLI.
+- [x] Compact media status artifacts expose provider download-option labels,
+  including Gemini music variant labels, through API, MCP, and CLI readback.
 - [x] Gemini video generation selects the explicit `Create video` tool path,
   polls the submitted tab for generated video artifacts, and materializes the
   generated media file in fixture coverage.

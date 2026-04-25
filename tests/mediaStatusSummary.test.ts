@@ -25,6 +25,7 @@ describe('media generation status summary', () => {
           metadata: {
             materialization: 'download-button',
             materializationSource: 'generated-video',
+            downloadOptions: ['Download as video with album art', 'Download as MP3'],
           },
         },
       ],
@@ -122,6 +123,12 @@ describe('media generation status summary', () => {
 
     const summary = summarizeMediaGenerationStatus(response);
 
+    expect(summary.artifacts).toEqual([
+      expect.objectContaining({
+        id: 'grok_imagine_video_1',
+        downloadOptions: ['Download as video with album art', 'Download as MP3'],
+      }),
+    ]);
     expect(summary.diagnostics).toEqual({
       capability: {
         id: 'grok.media.imagine_video',

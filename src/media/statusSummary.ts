@@ -17,6 +17,7 @@ export interface MediaGenerationArtifactStatusSummary {
   durationSeconds?: number | null;
   materialization?: string | null;
   remoteUrl?: string | null;
+  downloadOptions?: string[] | null;
 }
 
 export interface MediaGenerationStatusSummary {
@@ -124,6 +125,7 @@ function summarizeArtifact(artifact: MediaGenerationArtifact): MediaGenerationAr
     durationSeconds: artifact.durationSeconds ?? null,
     materialization: stringOrNull(metadata.materialization),
     remoteUrl: stringOrNull(metadata.remoteUrl),
+    downloadOptions: stringArrayOrNull(metadata.downloadOptions),
   };
 }
 
@@ -285,4 +287,10 @@ function booleanOrNull(value: unknown): boolean | null {
 
 function stringOrNull(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+function stringArrayOrNull(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  const entries = uniqueStrings(value.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0));
+  return entries.length > 0 ? entries : null;
 }

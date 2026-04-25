@@ -82,6 +82,7 @@ const mediaGenerationStatusArtifactShape = z.object({
   durationSeconds: z.number().nullable().optional(),
   materialization: z.string().nullable().optional(),
   remoteUrl: z.string().nullable().optional(),
+  downloadOptions: z.array(z.string()).nullable().optional(),
 });
 
 const mediaGenerationStatusOutputShape = {
