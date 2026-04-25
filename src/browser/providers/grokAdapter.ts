@@ -527,10 +527,41 @@ function normalizeGrokDiscoveryAction(value: unknown): Record<string, unknown> |
     controlsBefore: normalizeGrokEvidenceArray(record.controlsBefore, 20),
     controlsAfter: normalizeGrokEvidenceArray(record.controlsAfter, 20),
   };
+  const videoModeAudit = normalizeGrokVideoModeAudit(record.videoModeAudit);
+  if (videoModeAudit) {
+    normalized.videoModeAudit = videoModeAudit;
+  }
   if (typeof record.error === 'string' && record.error.trim()) {
     normalized.error = record.error.trim().slice(0, 500);
   }
   return normalized;
+}
+
+function normalizeGrokVideoModeAudit(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  return {
+    mode: typeof record.mode === 'string' && record.mode.trim() ? record.mode.trim() : null,
+    href: typeof record.href === 'string' && record.href.trim() ? record.href.trim() : null,
+    title: typeof record.title === 'string' && record.title.trim() ? record.title.trim() : null,
+    composer: normalizeGrokEvidenceArray(record.composer, 5),
+    submitControls: normalizeGrokEvidenceArray(record.submitControls, 10),
+    uploadControls: normalizeGrokEvidenceArray(record.uploadControls, 10),
+    aspectControls: normalizeGrokEvidenceArray(record.aspectControls, 10),
+    modeControls: normalizeGrokEvidenceArray(record.modeControls, 20),
+    filmstrip: normalizeGrokEvidenceArray(record.filmstrip, 20),
+    downloadControls: normalizeGrokEvidenceArray(record.downloadControls, 20),
+    visibleMedia: normalizeGrokEvidenceArray(record.visibleMedia, 40),
+    generatedMediaSelectorCount: Number.isFinite(Number(record.generatedMediaSelectorCount))
+      ? Number(record.generatedMediaSelectorCount)
+      : 0,
+    selectedGeneratedMediaCount: Number.isFinite(Number(record.selectedGeneratedMediaCount))
+      ? Number(record.selectedGeneratedMediaCount)
+      : 0,
+    observedAt: typeof record.observedAt === 'string' && record.observedAt.trim() ? record.observedAt.trim() : null,
+  };
 }
 
 type GrokImagineDiscoveryActionResult = {
@@ -545,6 +576,130 @@ async function readGrokFeatureSignature(client: ChromeClient): Promise<string | 
     returnByValue: true,
   });
   return normalizeGrokFeatureSignature(result?.value);
+}
+
+function buildGrokImagineVideoModeAuditUpdateExpression(): string {
+  return `(() => {
+    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+    const isVisible = (node) => {
+      if (!(node instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(node);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+    const elementSummary = (node) => {
+      const rect = node.getBoundingClientRect();
+      return {
+        tag: String(node.tagName || '').toLowerCase(),
+        text: normalize(node.textContent || '') || null,
+        ariaLabel: normalize(node.getAttribute('aria-label') || '') || null,
+        title: normalize(node.getAttribute('title') || '') || null,
+        role: normalize(node.getAttribute('role') || '') || null,
+        type: normalize(node.getAttribute('type') || '') || null,
+        checked: normalize(node.getAttribute('aria-checked') || '') || null,
+        disabled: Boolean(node.disabled) || normalize(node.getAttribute('aria-disabled') || '') === 'true',
+        visible: isVisible(node),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      };
+    };
+    const readControls = () => Array.from(document.querySelectorAll('[role="radio"], button'))
+      .filter((node) => node instanceof HTMLElement)
+      .filter(isVisible)
+      .map((node) => {
+        const text = normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('title') || '');
+        return {
+          tag: String(node.tagName || '').toLowerCase(),
+          text: text || null,
+          role: normalize(node.getAttribute('role') || '') || null,
+          checked: normalize(node.getAttribute('aria-checked') || '') || null,
+          disabled: Boolean(node.disabled) || normalize(node.getAttribute('aria-disabled') || '') === 'true',
+        };
+      })
+      .filter((entry) => /^(Image|Video|Speed|Quality)$/.test(String(entry.text || '')))
+      .slice(0, 20);
+    const readVideoModeAudit = () => {
+      const allButtons = Array.from(document.querySelectorAll('button, [role="button"], [role="radio"], [aria-label], [title]'))
+        .filter((node) => node instanceof HTMLElement)
+        .filter(isVisible);
+      const composer = Array.from(document.querySelectorAll('main textarea, main [contenteditable="true"], textarea, [contenteditable="true"]'))
+        .filter((node) => node instanceof HTMLElement)
+        .filter(isVisible)
+        .slice(0, 5)
+        .map((node) => ({
+          ...elementSummary(node),
+          contenteditable: normalize(node.getAttribute('contenteditable') || '') || null,
+          placeholder: normalize(node.getAttribute('placeholder') || node.querySelector('[data-placeholder]')?.getAttribute('data-placeholder') || '') || null,
+        }));
+      const byLabel = (pattern, limit = 10) => allButtons
+        .filter((node) => {
+          const label = normalize([node.textContent, node.getAttribute('aria-label'), node.getAttribute('title')].filter(Boolean).join(' '));
+          return pattern.test(label);
+        })
+        .slice(0, limit)
+        .map(elementSummary);
+      const filmstrip = Array.from(document.querySelectorAll('[data-filmstrip-scroll="true"] [data-filmstrip-item="true"], [data-filmstrip-scroll="true"] button'))
+        .filter((node) => node instanceof HTMLElement)
+        .filter(isVisible)
+        .slice(0, 20)
+        .map((node) => {
+          const img = node.querySelector('img');
+          return {
+            ...elementSummary(node),
+            selected: node.matches('[tabindex="0"], .ring-white, [aria-selected="true"], [data-selected="true"]'),
+            imageSrc: normalize(img?.currentSrc || img?.src || img?.getAttribute('src') || '') || null,
+            imageAlt: normalize(img?.getAttribute('alt') || '') || null,
+          };
+        });
+      const visibleMedia = Array.from(document.querySelectorAll('main img, main video, [data-filmstrip-scroll="true"] img, [data-filmstrip-scroll="true"] video, img[src*="assets.grok.com/users"], video[src*="assets.grok.com/users"]'))
+        .filter((node) => node instanceof HTMLElement)
+        .filter(isVisible)
+        .slice(0, 40)
+        .map((node) => {
+          const rect = node.getBoundingClientRect();
+          const src = normalize(node.currentSrc || node.src || node.getAttribute('src') || '');
+          const poster = normalize(node.getAttribute('poster') || '');
+          const tileButton = node.closest?.('button[data-filmstrip-item="true"], button');
+          return {
+            tag: String(node.tagName || '').toLowerCase(),
+            src: src || null,
+            poster: poster || null,
+            alt: normalize(node.getAttribute('alt') || '') || null,
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+            selected: Boolean(tileButton?.matches?.('[tabindex="0"], .ring-white, [aria-selected="true"], [data-selected="true"]')),
+            generated: /\\/generated\\//.test(src) || src.includes('assets.grok.com/users/'),
+            publicGallery: src.includes('imagine-public.x.ai') || poster.includes('imagine-public.x.ai'),
+          };
+        });
+      return {
+        mode: 'Video',
+        href: location.href || null,
+        title: document.title || null,
+        composer,
+        submitControls: byLabel(/\\b(submit|send|generate|create)\\b/i),
+        uploadControls: byLabel(/\\b(upload|drop|media|image|attach)\\b/i),
+        aspectControls: byLabel(/\\b(aspect ratio|\\d+\\s*:\\s*\\d+)\\b/i),
+        modeControls: readControls(),
+        filmstrip,
+        downloadControls: byLabel(/\\b(download|save|export|open|share|copy)\\b/i, 20),
+        visibleMedia,
+        generatedMediaSelectorCount: visibleMedia.filter((entry) => entry.generated).length,
+        selectedGeneratedMediaCount: visibleMedia.filter((entry) => entry.generated && entry.selected).length,
+        observedAt: new Date().toISOString(),
+      };
+    };
+    const record = window.__auracallGrokImagineDiscoveryAction;
+    if (record && typeof record === 'object') {
+      record.controlsAfter = readControls();
+      const selected = record.controlsAfter.find((entry) => (entry.text === 'Image' || entry.text === 'Video') && entry.checked === 'true');
+      record.afterMode = selected ? selected.text : null;
+      record.status = record.afterMode === 'Video' ? 'observed_video_mode' : record.status;
+      record.videoModeAudit = record.afterMode === 'Video' ? readVideoModeAudit() : null;
+    }
+    return record || null;
+  })()`;
 }
 
 async function performGrokImagineDiscoveryAction(
@@ -580,6 +735,93 @@ async function performGrokImagineDiscoveryAction(
         })
         .filter((entry) => /^(Image|Video|Speed|Quality)$/.test(String(entry.text || '')))
         .slice(0, 20);
+      const elementSummary = (node) => {
+        const rect = node.getBoundingClientRect();
+        return {
+          tag: String(node.tagName || '').toLowerCase(),
+          text: normalize(node.textContent || '') || null,
+          ariaLabel: normalize(node.getAttribute('aria-label') || '') || null,
+          title: normalize(node.getAttribute('title') || '') || null,
+          role: normalize(node.getAttribute('role') || '') || null,
+          type: normalize(node.getAttribute('type') || '') || null,
+          checked: normalize(node.getAttribute('aria-checked') || '') || null,
+          disabled: Boolean(node.disabled) || normalize(node.getAttribute('aria-disabled') || '') === 'true',
+          visible: isVisible(node),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        };
+      };
+      const readVideoModeAudit = () => {
+        const allButtons = Array.from(document.querySelectorAll('button, [role="button"], [role="radio"], [aria-label], [title]'))
+          .filter((node) => node instanceof HTMLElement)
+          .filter(isVisible);
+        const composer = Array.from(document.querySelectorAll('main textarea, main [contenteditable="true"], textarea, [contenteditable="true"]'))
+          .filter((node) => node instanceof HTMLElement)
+          .filter(isVisible)
+          .slice(0, 5)
+          .map((node) => ({
+            ...elementSummary(node),
+            contenteditable: normalize(node.getAttribute('contenteditable') || '') || null,
+            placeholder: normalize(node.getAttribute('placeholder') || node.querySelector('[data-placeholder]')?.getAttribute('data-placeholder') || '') || null,
+          }));
+        const byLabel = (pattern, limit = 10) => allButtons
+          .filter((node) => {
+            const label = normalize([node.textContent, node.getAttribute('aria-label'), node.getAttribute('title')].filter(Boolean).join(' '));
+            return pattern.test(label);
+          })
+          .slice(0, limit)
+          .map(elementSummary);
+        const filmstrip = Array.from(document.querySelectorAll('[data-filmstrip-scroll="true"] [data-filmstrip-item="true"], [data-filmstrip-scroll="true"] button'))
+          .filter((node) => node instanceof HTMLElement)
+          .filter(isVisible)
+          .slice(0, 20)
+          .map((node) => {
+            const img = node.querySelector('img');
+            return {
+              ...elementSummary(node),
+              selected: node.matches('[tabindex="0"], .ring-white, [aria-selected="true"], [data-selected="true"]'),
+              imageSrc: normalize(img?.currentSrc || img?.src || img?.getAttribute('src') || '') || null,
+              imageAlt: normalize(img?.getAttribute('alt') || '') || null,
+            };
+          });
+        const visibleMedia = Array.from(document.querySelectorAll('main img, main video, [data-filmstrip-scroll="true"] img, [data-filmstrip-scroll="true"] video, img[src*="assets.grok.com/users"], video[src*="assets.grok.com/users"]'))
+          .filter((node) => node instanceof HTMLElement)
+          .filter(isVisible)
+          .slice(0, 40)
+          .map((node) => {
+            const rect = node.getBoundingClientRect();
+            const src = normalize(node.currentSrc || node.src || node.getAttribute('src') || '');
+            const poster = normalize(node.getAttribute('poster') || '');
+            const tileButton = node.closest?.('button[data-filmstrip-item="true"], button');
+            return {
+              tag: String(node.tagName || '').toLowerCase(),
+              src: src || null,
+              poster: poster || null,
+              alt: normalize(node.getAttribute('alt') || '') || null,
+              width: Math.round(rect.width),
+              height: Math.round(rect.height),
+              selected: Boolean(tileButton?.matches?.('[tabindex="0"], .ring-white, [aria-selected="true"], [data-selected="true"]')),
+              generated: /\\/generated\\//.test(src) || src.includes('assets.grok.com/users/'),
+              publicGallery: src.includes('imagine-public.x.ai') || poster.includes('imagine-public.x.ai'),
+            };
+          });
+        return {
+          mode: 'Video',
+          href: location.href || null,
+          title: document.title || null,
+          composer,
+          submitControls: byLabel(/\\b(submit|send|generate|create)\\b/i),
+          uploadControls: byLabel(/\\b(upload|drop|media|image|attach)\\b/i),
+          aspectControls: byLabel(/\\b(aspect ratio|\\d+\\s*:\\s*\\d+)\\b/i),
+          modeControls: readControls(),
+          filmstrip,
+          downloadControls: byLabel(/\\b(download|save|export|open|share|copy)\\b/i, 20),
+          visibleMedia,
+          generatedMediaSelectorCount: visibleMedia.filter((entry) => entry.generated).length,
+          selectedGeneratedMediaCount: visibleMedia.filter((entry) => entry.generated && entry.selected).length,
+          observedAt: new Date().toISOString(),
+        };
+      };
       const selectedPrimaryMode = (controls) => {
         const selected = controls.find((entry) => (entry.text === 'Image' || entry.text === 'Video') && entry.checked === 'true');
         return selected ? selected.text : null;
@@ -620,6 +862,7 @@ async function performGrokImagineDiscoveryAction(
         afterMode,
         controlsBefore,
         controlsAfter,
+        videoModeAudit: afterMode === 'Video' ? readVideoModeAudit() : null,
         observedAt: new Date().toISOString(),
         error,
       };
@@ -647,32 +890,7 @@ async function performGrokImagineDiscoveryAction(
       },
     ).catch(() => undefined);
     await Runtime.evaluate({
-      expression: `(() => {
-        const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-        const readControls = () => Array.from(document.querySelectorAll('[role="radio"], button'))
-          .filter((node) => node instanceof HTMLElement)
-          .filter((node) => {
-            const style = window.getComputedStyle(node);
-            const rect = node.getBoundingClientRect();
-            return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
-          })
-          .map((node) => ({
-            text: normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('title') || '') || null,
-            role: normalize(node.getAttribute('role') || '') || null,
-            checked: normalize(node.getAttribute('aria-checked') || '') || null,
-            disabled: Boolean(node.disabled) || normalize(node.getAttribute('aria-disabled') || '') === 'true',
-          }))
-          .filter((entry) => /^(Image|Video|Speed|Quality)$/.test(String(entry.text || '')))
-          .slice(0, 20);
-        const record = window.__auracallGrokImagineDiscoveryAction;
-        if (record && typeof record === 'object') {
-          record.controlsAfter = readControls();
-          const selected = record.controlsAfter.find((entry) => (entry.text === 'Image' || entry.text === 'Video') && entry.checked === 'true');
-          record.afterMode = selected ? selected.text : null;
-          record.status = record.afterMode === 'Video' ? 'observed_video_mode' : record.status;
-        }
-        return record || null;
-      })()`,
+      expression: buildGrokImagineVideoModeAuditUpdateExpression(),
       returnByValue: true,
     }).catch(() => undefined);
   }

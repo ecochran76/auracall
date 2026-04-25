@@ -33,6 +33,10 @@ existing Aura-Call media-generation contract.
   - the action may click the Video radio, records before/after control
     evidence, restores the original Image/Video mode, and does not type or
     submit a prompt
+  - Video-mode audit evidence now includes composer, disabled submit state
+    before text entry, upload controls, aspect-ratio controls, filmstrip
+    entries, download controls, visible media, and generated/selected media
+    counts
 - Static/read-only workbench capability reporting now includes conservative
   Grok Imagine image/video entries.
 - The Grok browser adapter now exposes a read-only feature signature that can
@@ -183,6 +187,16 @@ existing Aura-Call media-generation contract.
   - the live workbench capability probe now reports
     `grok.media.imagine_video` from browser discovery without submitting a
     video generation request
+- Bounded live video-mode audit on 2026-04-24 confirmed:
+  - `discoveryAction = grok-imagine-video-mode` clicked Video from Image and
+    observed `status = observed_video_mode`
+  - Video mode kept a contenteditable `Type to imagine` composer and disabled
+    `Submit` before prompt text
+  - visible controls included `Upload` and `Aspect Ratio = 2:3`
+  - root-state Video mode exposed generated/selected media counts but no
+    visible filmstrip or download controls until generated media is selected or
+    produced
+  - the probe restored the original Image/Video mode after evidence capture
 
 ## Research Findings
 
@@ -344,6 +358,9 @@ Add a browser-first Grok Imagine discovery/audit slice:
   distinguish pending/generated/template/blocked post-send states.
 - [x] Live Grok submit-path dogfood records `submit_path_observed` and terminal
   no-generated-output status through the local API status path.
+- [x] Explicit Grok Video-mode discovery records composer/input requirements,
+  generated-media selector counts, and materialization-control evidence without
+  submitting a prompt.
 
 ## Validation Plan
 
@@ -429,6 +446,11 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - live `/imagine` probe observed Image/Video radio controls
   - `grok.media.imagine_video` is now reported from browser discovery
     evidence; video execution remains gated
+- [x] Bounded read-only Grok video-mode semantics audit:
+  - `pnpm tsx bin/auracall.ts capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --discovery-action grok-imagine-video-mode --json`
+  - observed contenteditable composer, disabled Submit, Upload, Aspect Ratio,
+    generated/selected media counts, and no root-state filmstrip/download
+    controls
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
@@ -436,8 +458,7 @@ Add a browser-first Grok Imagine discovery/audit slice:
 ## Next Slice
 
 Keep Grok video and edit/reference workflows gated. The next browser slice
-should implement a read-only video semantics audit: switch to Video only if it
-can be done as an explicit discovery action, record the mode transition,
-composer/input requirements, generated-media filmstrip semantics, and download
-controls, then decide whether video invocation needs its own executor instead
-of sharing the image path.
+should add a video-specific executor skeleton that shares only the proven
+composer/mode-selection primitives with image generation, then fails before
+submission until post-submit video run-state and artifact materialization
+acceptance criteria are defined.

@@ -5,6 +5,13 @@
   grok-imagine-video-mode`), preserve before/after control evidence, restore
   the original Image/Video mode, and never type or submit a prompt.
 
+- 2026-04-24: For volatile provider video workbenches, capture mode-specific
+  invocation semantics before sharing an image executor path. Grok Imagine
+  Video mode exposes the same composer shell but different generated-media
+  selection/download context, so the read-only discovery action should preserve
+  composer, submit, upload, aspect ratio, filmstrip, download, visible-media,
+  and generated/selected counts before any video automation is added.
+
 - 2026-04-24: Do not duplicate media timeline event enums in MCP tool output
   schemas. The API/store schema already owns `MediaGenerationTimelineEvent`;
   MCP media status should reuse that canonical schema so events such as

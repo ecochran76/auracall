@@ -136,6 +136,22 @@ describe('normalizeGrokFeatureSignature', () => {
           observedAt: '2026-04-24T12:00:00.000Z',
           controlsBefore: [{ text: 'Image', checked: 'true' }],
           controlsAfter: [{ text: 'Video', checked: 'true' }],
+          videoModeAudit: {
+            mode: 'Video',
+            href: 'https://grok.com/imagine',
+            title: 'Imagine - Grok',
+            composer: [{ tag: 'div', contenteditable: 'true', placeholder: 'Type to imagine' }],
+            submitControls: [{ tag: 'button', ariaLabel: 'Submit', disabled: true }],
+            uploadControls: [{ tag: 'button', ariaLabel: 'Upload' }],
+            aspectControls: [{ tag: 'button', ariaLabel: 'Aspect Ratio', text: '2:3' }],
+            modeControls: [{ text: 'Video', checked: 'true' }],
+            filmstrip: [{ tag: 'button', selected: true, imageSrc: 'https://assets.grok.com/users/u/generated/a/image.jpg' }],
+            downloadControls: [{ tag: 'button', ariaLabel: 'Download' }],
+            visibleMedia: [{ tag: 'img', src: 'https://assets.grok.com/users/u/generated/a/image.jpg', generated: true, selected: true }],
+            generatedMediaSelectorCount: 1,
+            selectedGeneratedMediaCount: 1,
+            observedAt: '2026-04-24T12:00:01.000Z',
+          },
         },
         materialization_controls: [
           {
@@ -207,6 +223,36 @@ describe('normalizeGrokFeatureSignature', () => {
           observedAt: '2026-04-24T12:00:00.000Z',
           controlsBefore: [{ text: 'Image', checked: 'true' }],
           controlsAfter: [{ text: 'Video', checked: 'true' }],
+          videoModeAudit: {
+            mode: 'Video',
+            href: 'https://grok.com/imagine',
+            title: 'Imagine - Grok',
+            composer: [{ tag: 'div', contenteditable: 'true', placeholder: 'Type to imagine' }],
+            submitControls: [{ tag: 'button', ariaLabel: 'Submit', disabled: true }],
+            uploadControls: [{ tag: 'button', ariaLabel: 'Upload' }],
+            aspectControls: [{ tag: 'button', ariaLabel: 'Aspect Ratio', text: '2:3' }],
+            modeControls: [{ text: 'Video', checked: 'true' }],
+            filmstrip: [
+              {
+                tag: 'button',
+                selected: true,
+                imageSrc: 'https://assets.grok.com/users/u/generated/a/image.jpg',
+              },
+            ],
+            downloadControls: [{ tag: 'button', ariaLabel: 'Download' }],
+            visibleMedia: [
+              {
+                tag: 'img',
+                src: 'https://assets.grok.com/users/u/generated/a/image.jpg',
+                srcKind: 'remote-url',
+                generated: true,
+                selected: true,
+              },
+            ],
+            generatedMediaSelectorCount: 1,
+            selectedGeneratedMediaCount: 1,
+            observedAt: '2026-04-24T12:00:01.000Z',
+          },
         },
         materialization_controls: [
           {
