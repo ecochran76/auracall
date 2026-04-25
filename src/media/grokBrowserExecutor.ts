@@ -79,6 +79,33 @@ export interface GrokImagineVideoAcceptanceEvaluation {
   failureReason: string | null;
 }
 
+export interface GrokImagineVideoMaterializationCandidate {
+  source: 'generated-video' | 'selected-tile' | 'download-control';
+  remoteUrl: string | null;
+  mimeType: string | null;
+  selected: boolean;
+}
+
+export type GrokImagineVideoReadbackDecision =
+  | 'pending'
+  | 'ready'
+  | 'failed'
+  | 'continue';
+
+export interface GrokImagineVideoReadbackEvaluation extends GrokImagineVideoAcceptanceEvaluation {
+  decision: GrokImagineVideoReadbackDecision;
+  pollCount: number;
+  runState: string | null;
+  providerHref: string | null;
+  visibleTileCount: number;
+  mediaUrlCount: number;
+  materializationCandidate: GrokImagineVideoMaterializationCandidate | null;
+  failureReason: string | null;
+  timelineDetails: Record<string, unknown>;
+  runStateTimelineEvent: Omit<MediaGenerationTimelineEvent, 'at'>;
+  terminalTimelineEvent: Omit<MediaGenerationTimelineEvent, 'at'> | null;
+}
+
 export function createGrokBrowserMediaGenerationExecutor(userConfig: ResolvedUserConfig): MediaGenerationExecutor {
   return async (input) => executeGrokBrowserMediaGeneration(input, userConfig);
 }
@@ -526,6 +553,106 @@ export function evaluateGrokImagineVideoPostSubmitAcceptance(
   };
 }
 
+export function evaluateGrokImagineVideoPostSubmitReadback(
+  signature: string | null | undefined,
+  pollCount = 1,
+): GrokImagineVideoReadbackEvaluation {
+  const parsed = parseGrokImagineSignatureObject(signature);
+  const imagine = parsed.imagine;
+  const media = parsed.media;
+  const acceptance = evaluateGrokImagineVideoPostSubmitAcceptance(signature);
+  const runState = normalizeNonEmpty(imagine.run_state);
+  const providerHref = normalizeNonEmpty(imagine.href);
+  const visibleTileCount = collectRecordArray(media.visible_tiles).length;
+  const mediaUrlCount = collectStringArray(media.urls).length;
+  const materializationCandidate = selectGrokImagineVideoMaterializationCandidate(signature);
+  const decision: GrokImagineVideoReadbackDecision = acceptance.ready
+    ? 'ready'
+    : acceptance.failureReason
+      ? 'failed'
+      : acceptance.pending
+        ? 'pending'
+        : 'continue';
+  const timelineDetails = {
+    pollCount,
+    runState,
+    pending: acceptance.pending,
+    terminalVideo: acceptance.terminalVideo,
+    generatedVideoCount: acceptance.generatedVideoCount,
+    selectedGeneratedVideoCount: acceptance.selectedGeneratedVideoCount,
+    publicGalleryVideoCount: acceptance.publicGalleryVideoCount,
+    downloadControlCount: acceptance.downloadControlCount,
+    materializationCandidateCount: acceptance.materializationCandidateCount,
+    materializationCandidateSource: materializationCandidate?.source ?? null,
+    publicTemplateWithoutGeneratedVideo: acceptance.publicTemplateWithoutGeneratedVideo,
+    mediaUrlCount,
+    visibleTileCount,
+    providerHref,
+    decision,
+    failureReason: acceptance.failureReason,
+  };
+  return {
+    ...acceptance,
+    decision,
+    pollCount,
+    runState,
+    providerHref,
+    visibleTileCount,
+    mediaUrlCount,
+    materializationCandidate,
+    timelineDetails: {
+      ...timelineDetails,
+    },
+    runStateTimelineEvent: {
+      event: 'run_state_observed',
+      details: timelineDetails,
+    },
+    terminalTimelineEvent: acceptance.ready
+      ? {
+          event: 'video_visible',
+          details: {
+            pollCount,
+            generatedVideoCount: acceptance.generatedVideoCount,
+            selectedGeneratedVideoCount: acceptance.selectedGeneratedVideoCount,
+            materializationCandidateCount: acceptance.materializationCandidateCount,
+            materializationCandidateSource: materializationCandidate?.source ?? null,
+            mediaUrlCount,
+            visibleTileCount,
+            providerHref,
+          },
+        }
+      : null,
+  };
+}
+
+export function selectGrokImagineVideoMaterializationCandidate(
+  signature: string | null | undefined,
+): GrokImagineVideoMaterializationCandidate | null {
+  const parsed = parseGrokImagineSignatureObject(signature);
+  const videos = collectRecordArray(parsed.media.videos);
+  const visibleTiles = collectRecordArray(parsed.media.visible_tiles);
+  const materializationControls = collectRecordArray(parsed.imagine.materialization_controls);
+  const generatedVideo = videos.find((entry) => isGeneratedGrokVideoEntry(entry) && hasGrokVideoMaterializationCandidate(entry));
+  if (generatedVideo) {
+    return mapGrokVideoMaterializationCandidate('generated-video', generatedVideo);
+  }
+  const selectedTile = visibleTiles.find((entry) =>
+    isGeneratedGrokVideoEntry(entry) && entry.selected === true && hasGrokVideoMaterializationCandidate(entry));
+  if (selectedTile) {
+    return mapGrokVideoMaterializationCandidate('selected-tile', selectedTile);
+  }
+  const downloadControl = materializationControls.find(isGrokDownloadOrOpenControl);
+  if (downloadControl) {
+    return {
+      source: 'download-control',
+      remoteUrl: normalizeNonEmpty(downloadControl.href),
+      mimeType: null,
+      selected: Boolean(downloadControl.selected),
+    };
+  }
+  return null;
+}
+
 function parseGrokImagineSignatureObject(signature: string | null | undefined): {
   imagine: Record<string, unknown>;
   media: Record<string, unknown>;
@@ -572,6 +699,19 @@ function isGrokDownloadOrOpenControl(entry: Record<string, unknown>): boolean {
     entry.href,
   ].map((value) => String(value ?? '').toLowerCase()).join(' ');
   return /\b(download|save|export|open)\b/.test(haystack);
+}
+
+function mapGrokVideoMaterializationCandidate(
+  source: GrokImagineVideoMaterializationCandidate['source'],
+  entry: Record<string, unknown>,
+): GrokImagineVideoMaterializationCandidate {
+  const remoteUrl = normalizeNonEmpty(entry.src) ?? normalizeNonEmpty(entry.href);
+  return {
+    source,
+    remoteUrl,
+    mimeType: normalizeNonEmpty(entry.mimeType) ?? normalizeNonEmpty(entry.mime_type) ?? 'video/mp4',
+    selected: Boolean(entry.selected),
+  };
 }
 
 function isPublicGalleryGrokMediaEntry(entry: Record<string, unknown>): boolean {

@@ -1,3 +1,9 @@
+- 2026-04-24: Keep video readback decisions reusable before wiring Submit.
+  For Grok Imagine video, one provider feature signature should produce the
+  same timeline details, terminal `video_visible` payload, failure reason, and
+  materialization candidate whether it is exercised by fixtures, a future
+  wait loop, or the executor path.
+
 - 2026-04-24: Do not enable volatile video Submit paths until post-submit
   acceptance is executable. For Grok Imagine video, the gate needs provider
   evidence that distinguishes pending/generating/progress, generated account

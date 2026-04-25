@@ -220,6 +220,14 @@ existing Aura-Call media-generation contract.
     visible download/open control
   - the canonical media timeline now reserves `video_visible` for terminal
     video observation
+- Grok video readback now has a fixture-backed decision skeleton:
+  - one provider feature signature becomes a `run_state_observed` timeline
+    payload and, when ready, the future terminal `video_visible` payload
+  - readback decisions are `pending`, `ready`, `failed`, or `continue`
+  - first materialization candidates are selected from generated video
+    entries, selected generated video tiles, or visible download/open controls
+  - the helper is not yet called after a live Submit; the executor remains
+    pre-submit gated
 
 ## Research Findings
 
@@ -389,6 +397,9 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - [x] Grok video post-submit acceptance criteria classify pending,
   terminal generated video, public/template reuse, and materialization
   candidates without enabling Submit.
+- [x] Grok video readback decisions produce reusable timeline payloads and
+  materialization candidate selection from fixture evidence without enabling
+  Submit.
 
 ## Validation Plan
 
@@ -490,6 +501,11 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
   - validates pending/generating evidence, public-template terminal-video
     failure, generated-account video identity, and materialization candidates
+- [x] Unit test for the Grok video readback skeleton:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - validates pending/progress, terminal ready, public-template failure,
+    missing-materialization failure, selected-tile candidate selection, and
+    future `video_visible` timeline payloads
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
@@ -497,6 +513,6 @@ Add a browser-first Grok Imagine discovery/audit slice:
 ## Next Slice
 
 Keep Grok video and edit/reference workflows gated. The next browser slice
-should wire a no-submit post-submit poll/materialization skeleton against
-fixture evidence, then connect the evaluator to the gated executor before any
-live video Submit click is enabled.
+should add the private wait-loop/materialization function that consumes the
+readback helper, still fixture-tested first, before any live video Submit click
+is enabled.

@@ -1,3 +1,21 @@
+## 2026-04-24 - Grok video readback skeleton
+
+- Current focus:
+  - wire fixture-backed post-submit video readback decisions without enabling
+    live Grok video Submit
+- Progress:
+  - added a Grok video readback helper that converts one provider feature
+    signature into a `run_state_observed` payload, a terminal `video_visible`
+    payload when ready, and a decision of pending/ready/failed/continue
+  - added first-candidate selection for generated video entries, selected
+    generated video tiles, and visible download/open controls
+  - fixture tests now cover pending/progress, terminal generated video,
+    selected generated tile materialization, public-template failure, and
+    terminal video without a materialization candidate
+  - Grok browser video remains gated before prompt insertion or Submit
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+
 ## 2026-04-24 - Grok video post-submit acceptance contract
 
 - Current focus:
