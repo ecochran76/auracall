@@ -178,7 +178,9 @@ Terminology note:
     jobs. Media jobs also retain the narrower
     `GET /v1/media-generations/{media_generation_id}/status` for a compact
     status summary with the latest timeline event, artifact cache path, and
-    materialization method.
+    materialization method. Grok browser image jobs require generated account
+    media for terminal success; public gallery/template media remains
+    diagnostic evidence and is not cached as generated output.
     Add `diagnostics=browser-state` to either status route during a running
     browser-backed media job to capture the selected provider target,
     document readiness, visible control counts, provider evidence, and a stored

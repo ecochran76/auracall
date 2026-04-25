@@ -1,3 +1,17 @@
+- 2026-04-24: Do not let Grok Imagine public gallery/template media satisfy a
+  submitted browser image run. The `/imagine/templates/...` surface can expose
+  large public share images and videos after a prompt attempt, but those are
+  not proof that the account generated a new artifact. Terminal browser media
+  success should require provider evidence marked as generated and not
+  `publicGallery`; keep public/template media as diagnostics or explicit
+  visible-tile materialization evidence only.
+
+- 2026-04-24: Grok visible-tile materialization needs a screenshot fallback for
+  template/public media. Browser-side serialization can fail for cross-origin
+  public share images even when the tile is visibly rendered. Capture the tile
+  rectangle through `Page.captureScreenshot` before falling back to remote URL
+  fetches when the goal is operator-visible browser evidence.
+
 - 2026-04-24: Treat Grok Imagine browser support as discoverable before it is
   invokable. In this repo, the first browser-first slice should only expose
   static and read-only managed-browser evidence for Imagine image/video

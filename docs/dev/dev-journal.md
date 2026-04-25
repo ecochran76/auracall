@@ -20706,3 +20706,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/workbenchCapabilities.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+## 2026-04-24 - Grok Imagine generated-media gating
+
+- Focus: prevent Grok Imagine template/gallery media from satisfying a newly
+  submitted browser image run.
+- Progress: Grok prompt-submission and media-readback paths now distinguish
+  generated account media from public gallery/template evidence. Visible-tile
+  materialization still supports template-route screenshot fallback for
+  diagnostics and manual artifact capture, but terminal generation success now
+  requires generated image evidence.
+- Live dogfood: local API request
+  `medgen_3affbd24ef6b4fecb72801a2e78a64c4` stayed on the submitted tab,
+  observed `terminal_video`/`terminal_image` page evidence with
+  `generatedImageCount = 0`, and failed as
+  `media_generation_provider_timeout` instead of caching public template media
+  as a generated artifact.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm run check`

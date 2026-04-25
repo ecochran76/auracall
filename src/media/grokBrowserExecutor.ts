@@ -138,7 +138,9 @@ async function executeGrokBrowserMediaGeneration(
       },
     });
   }
-  const imageEntries = evidence.media.images.filter((entry) => normalizeNonEmpty(entry.src) || normalizeNonEmpty(entry.href));
+  const imageEntries = evidence.media.images
+    .filter(isGeneratedGrokImageEntry)
+    .filter((entry) => normalizeNonEmpty(entry.src) || normalizeNonEmpty(entry.href));
   const requestedCount = Math.max(1, Math.min(request.count ?? 1, imageEntries.length));
   for (const entry of imageEntries.slice(0, requestedCount)) {
     if (artifacts.length > 0) break;
@@ -215,6 +217,7 @@ async function waitForGrokImagineTerminalImage(
         blocked: evidence.blocked,
         accountGated: evidence.accountGated,
         imageCount: evidence.media.images.length,
+        generatedImageCount: evidence.media.images.filter(isGeneratedGrokImageEntry).length,
         videoCount: evidence.media.videos.length,
         visibleTileCount: evidence.media.visibleTiles.length,
         mediaUrlCount: evidence.media.urls.length,
@@ -232,12 +235,13 @@ async function waitForGrokImagineTerminalImage(
         },
       );
     }
-    if (evidence.terminalImage && evidence.media.images.length > 0) {
+    const generatedImages = evidence.media.images.filter(isGeneratedGrokImageEntry);
+    if (evidence.terminalImage && generatedImages.length > 0) {
       await emitTimeline?.({
         event: 'image_visible',
         details: {
           pollCount,
-          generatedArtifactCount: evidence.media.images.length,
+          generatedArtifactCount: generatedImages.length,
           visibleTileCount: evidence.media.visibleTiles.length,
           mediaUrlCount: evidence.media.urls.length,
         },
@@ -257,6 +261,10 @@ async function waitForGrokImagineTerminalImage(
       pollCount,
       lastRunState: lastEvidence?.runState ?? null,
       pending: lastEvidence?.pending ?? null,
+      imageCount: lastEvidence?.media.images.length ?? null,
+      generatedImageCount: lastEvidence?.media.images.filter(isGeneratedGrokImageEntry).length ?? null,
+      visibleTileCount: lastEvidence?.media.visibleTiles.length ?? null,
+      mediaUrlCount: lastEvidence?.media.urls.length ?? null,
     },
   );
 }
@@ -332,6 +340,10 @@ function parseGrokImagineEvidence(signature: string | null | undefined): GrokIma
       media: { images: [], videos: [], visibleTiles: [], urls: [] },
     };
   }
+}
+
+function isGeneratedGrokImageEntry(entry: Record<string, unknown>): boolean {
+  return entry.generated === true && entry.publicGallery !== true && entry.public_gallery !== true;
 }
 
 function mapPromptProgressToTimelineEvent(

@@ -100,6 +100,15 @@ existing Aura-Call media-generation contract.
     `/imagine/templates/...` route and cached a remote media fetch, while the
     earlier direct executor path proved visible-tile/download-button capture
     can produce local browser-derived artifacts
+- Durable local API dogfood after generated-media tightening confirmed the
+  false-success path is now blocked:
+  - request id: `medgen_3affbd24ef6b4fecb72801a2e78a64c4`
+  - the submitted tab reported `terminal_video`/`terminal_image`,
+    `imageCount = 20`, and `generatedImageCount = 0`
+  - the run failed as `media_generation_provider_timeout` instead of
+    materializing public template/gallery media as generated output
+  - timeout diagnostics now preserve image, generated-image, visible-tile, and
+    media-url counts for operator readback
 
 ## Research Findings
 
@@ -252,6 +261,8 @@ Add a browser-first Grok Imagine discovery/audit slice:
   status and generic run status.
 - [x] MCP media/workbench tools use the configured browser-backed service
   bundle rather than default no-executor services.
+- [x] Grok browser image runs do not treat public gallery/template media as a
+  completed generated artifact; success requires generated account media.
 
 ## Validation Plan
 
@@ -303,6 +314,15 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - status polling observed `image_visible` before `completed`
   - media-generation status and generic run status both reported the cached
     artifact
+- [x] Regression test for public-template false terminal media:
+  - `tests/mediaGenerationGrokBrowserExecutor.test.ts`
+  - executor observes a public template image first with
+    `generatedImageCount = 0`, waits, then succeeds only after generated
+    account media appears
+- [x] Bounded durable local API Grok browser image false-success check:
+  - returned id: `medgen_3affbd24ef6b4fecb72801a2e78a64c4`
+  - observed `terminal_video`/`terminal_image` with `generatedImageCount = 0`
+  - failed as `media_generation_provider_timeout`
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
@@ -310,6 +330,7 @@ Add a browser-first Grok Imagine discovery/audit slice:
 ## Next Slice
 
 Keep Grok video and edit/reference workflows gated. The next browser slice
-should make durable API/MCP Grok image runs prefer active visible-tile and
-download-button materialization on `/imagine/templates/...` routes before
-falling back to remote public-gallery media URLs.
+should improve Grok Imagine submit-state attribution: detect when the provider
+routes to `/imagine/templates/...` with no generated account media and surface
+that as a specific provider/template-route outcome instead of waiting for the
+general media timeout.

@@ -506,6 +506,8 @@ type GrokImaginePromptState = {
   terminalVideo: boolean;
   mediaUrlCount: number;
   mediaFingerprint: string | null;
+  generatedImageCount: number;
+  generatedMediaFingerprint: string | null;
 };
 
 async function waitForGrokImagineRoute(Runtime: ChromeClient['Runtime'], targetUrl: string): Promise<void> {
@@ -570,13 +572,14 @@ async function readGrokImaginePromptState(Runtime: ChromeClient['Runtime']): Pro
       pending?: unknown;
       terminal_image?: unknown;
       terminal_video?: unknown;
-      media?: { urls?: unknown };
+      media?: { images?: unknown; visible_tiles?: unknown; urls?: unknown };
     };
   } | undefined;
   const imagine = probe?.imagine && typeof probe.imagine === 'object' ? probe.imagine : {};
   const mediaUrls = Array.isArray(imagine.media?.urls)
     ? imagine.media.urls.map((entry) => String(entry ?? '').trim()).filter(Boolean)
     : [];
+  const generatedImageUrls = readGeneratedGrokImageUrls(imagine.media);
   return {
     href: typeof imagine.href === 'string' && imagine.href.trim() ? imagine.href.trim() : null,
     title: typeof imagine.title === 'string' && imagine.title.trim() ? imagine.title.trim() : null,
@@ -590,7 +593,39 @@ async function readGrokImaginePromptState(Runtime: ChromeClient['Runtime']): Pro
     mediaFingerprint: mediaUrls.length > 0
       ? mediaUrls.map((entry) => `${entry.length}:${entry.slice(0, 48)}:${entry.slice(-24)}`).join('|')
       : null,
+    generatedImageCount: generatedImageUrls.length,
+    generatedMediaFingerprint: generatedImageUrls.length > 0
+      ? generatedImageUrls.map((entry) => `${entry.length}:${entry.slice(0, 48)}:${entry.slice(-24)}`).join('|')
+      : null,
   };
+}
+
+function readGeneratedGrokImageUrls(media: unknown): string[] {
+  if (!media || typeof media !== 'object') return [];
+  const record = media as { images?: unknown; visible_tiles?: unknown };
+  const entries = [
+    ...(Array.isArray(record.images) ? record.images : []),
+    ...(Array.isArray(record.visible_tiles) ? record.visible_tiles : []),
+  ];
+  const urls: string[] = [];
+  for (const entry of entries) {
+    if (!entry || typeof entry !== 'object') continue;
+    const item = entry as {
+      src?: unknown;
+      href?: unknown;
+      generated?: unknown;
+      publicGallery?: unknown;
+      public_gallery?: unknown;
+    };
+    if (item.generated !== true || item.publicGallery === true || item.public_gallery === true) continue;
+    const url = typeof item.src === 'string' && item.src.trim()
+      ? item.src.trim()
+      : typeof item.href === 'string' && item.href.trim()
+        ? item.href.trim()
+        : null;
+    if (url) urls.push(url);
+  }
+  return Array.from(new Set(urls));
 }
 
 async function setGrokImaginePrompt(
@@ -679,10 +714,9 @@ async function waitForGrokImagineSubmittedState(
       last.pending ||
       last.blocked ||
       last.accountGated ||
-      (last.terminalImage && !baseline.terminalImage) ||
-      (last.terminalVideo && !baseline.terminalVideo) ||
-      last.mediaUrlCount > baseline.mediaUrlCount ||
-      (last.mediaFingerprint !== null && last.mediaFingerprint !== baseline.mediaFingerprint)
+      (last.generatedImageCount > 0 && last.generatedImageCount > baseline.generatedImageCount) ||
+      (last.generatedMediaFingerprint !== null && last.generatedMediaFingerprint !== baseline.generatedMediaFingerprint) ||
+      (last.mediaUrlCount > baseline.mediaUrlCount && last.generatedImageCount > 0)
     ) {
       return last;
     }
@@ -695,6 +729,8 @@ type GrokCapturedImageTile = {
   ordinal: number;
   src: string | null;
   srcKind: string | null;
+  x: number | null;
+  y: number | null;
   width: number | null;
   height: number | null;
   naturalWidth: number | null;
@@ -715,7 +751,12 @@ async function materializeGrokImagineVisibleImagesWithClient(
   const captured = await captureGrokImagineVisibleImageTiles(client.Runtime, maxItems);
   const files: FileRef[] = [];
   for (const tile of captured.tiles) {
-    const parsed = parseImageDataUrl(tile.dataUrl ?? '');
+    let parsed = parseImageDataUrl(tile.dataUrl ?? '');
+    let captureMethod = 'data-url';
+    if (!parsed) {
+      parsed = await captureGrokVisibleTileScreenshot(client, tile);
+      captureMethod = 'screenshot';
+    }
     if (!parsed) continue;
     const ext = extensionForMimeType(parsed.mimeType);
     const fileName = `grok-imagine-visible-${tile.ordinal}.${ext}`;
@@ -738,6 +779,7 @@ async function materializeGrokImagineVisibleImagesWithClient(
         height: tile.naturalHeight ?? tile.height ?? null,
         srcKind: tile.srcKind,
         selected: tile.selected,
+        captureMethod,
       },
     });
   }
@@ -762,7 +804,8 @@ async function captureGrokImagineVisibleImageTiles(
         const style = getComputedStyle(node);
         if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
         const rect = node.getBoundingClientRect();
-        return rect.width >= 40 && rect.height >= 40;
+        if (rect.width < 40 || rect.height < 40) return false;
+        return rect.right > 0 && rect.bottom > 0 && rect.left < window.innerWidth && rect.top < window.innerHeight;
       };
       const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       const classify = (src) => {
@@ -791,27 +834,41 @@ async function captureGrokImagineVisibleImageTiles(
         }
       };
       const selectors = [
+        'img[src*="imagine-public.x.ai/imagine-public/share-images/"]',
+        'main img[src*="imagine-public.x.ai/imagine-public/share-images/"]',
         '#imagine-masonry-section-0 img',
         '[data-filmstrip-scroll="true"] img',
         'main img[src^="data:image/"]',
         'main img[src^="blob:"]',
+        'img[src*="assets.grok.com/users/"]',
         'main img[src*="assets.grok.com/users/"]',
         'main img[src*="/generated/"]',
       ];
       const seen = new Set();
-      const images = [];
+      const candidates = [];
+      const isTemplateRoute = /\\/imagine\\/templates\\//.test(location.pathname);
       for (const selector of selectors) {
         for (const img of Array.from(document.querySelectorAll(selector))) {
           if (!(img instanceof HTMLImageElement) || seen.has(img) || !visible(img)) continue;
           seen.add(img);
           const src = img.currentSrc || img.src || '';
-          const generated = src.startsWith('data:image/') || src.startsWith('blob:') || /assets\\.grok\\.com\\/users\\//.test(src) || /\\/generated\\//.test(src);
+          const rect = img.getBoundingClientRect();
+          const area = rect.width * rect.height;
+          const templateShareImage = isTemplateRoute && /imagine-public\\.x\\.ai\\/imagine-public\\/share-images\\//.test(src) && area >= 100_000;
+          const generated = src.startsWith('data:image/') || src.startsWith('blob:') || /assets\\.grok\\.com\\/users\\//.test(src) || /\\/generated\\//.test(src) || templateShareImage;
           if (!generated) continue;
-          images.push(img);
-          if (images.length >= maxItems) break;
+          candidates.push({
+            img,
+            score: (templateShareImage ? 1_000_000 : 0) + area,
+          });
+          if (candidates.length >= maxItems * 3) break;
         }
-        if (images.length >= maxItems) break;
+        if (candidates.length >= maxItems * 3) break;
       }
+      const images = candidates
+        .sort((a, b) => b.score - a.score)
+        .slice(0, maxItems)
+        .map((entry) => entry.img);
       const tiles = [];
       for (const [index, img] of images.entries()) {
         const src = img.currentSrc || img.src || '';
@@ -821,6 +878,8 @@ async function captureGrokImagineVisibleImageTiles(
           ordinal: index + 1,
           src,
           srcKind: classify(src),
+          x: Math.round(rect.x),
+          y: Math.round(rect.y),
           width: Math.round(rect.width),
           height: Math.round(rect.height),
           naturalWidth: img.naturalWidth || null,
@@ -842,6 +901,40 @@ async function captureGrokImagineVisibleImageTiles(
   };
 }
 
+async function captureGrokVisibleTileScreenshot(
+  client: ChromeClient,
+  tile: GrokCapturedImageTile,
+): Promise<{ mimeType: string; buffer: Buffer } | null> {
+  const x = typeof tile.x === 'number' ? tile.x : null;
+  const y = typeof tile.y === 'number' ? tile.y : null;
+  const width = typeof tile.width === 'number' ? tile.width : null;
+  const height = typeof tile.height === 'number' ? tile.height : null;
+  if (x === null || y === null || width === null || height === null || width <= 0 || height <= 0) {
+    return null;
+  }
+  try {
+    const capture = await client.Page.captureScreenshot({
+      format: 'png',
+      fromSurface: true,
+      clip: {
+        x: Math.max(0, x),
+        y: Math.max(0, y),
+        width: Math.max(1, width),
+        height: Math.max(1, height),
+        scale: 1,
+      },
+    });
+    const data = typeof capture.data === 'string' ? capture.data : '';
+    if (!data) return null;
+    return {
+      mimeType: 'image/png',
+      buffer: Buffer.from(data, 'base64'),
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function materializeGrokFullQualityDownload(
   client: ChromeClient,
   destDir: string,
@@ -858,7 +951,15 @@ async function materializeGrokFullQualityDownload(
         return rect.width > 0 && rect.height > 0;
       };
       const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-      const firstTile = document.querySelector('#imagine-masonry-section-0 img, main img[src^="data:image/"], main img[src^="blob:"], main img[src*="assets.grok.com/users/"], main img[src*="/generated/"]');
+      const firstTile = Array.from(document.querySelectorAll('img[src*="imagine-public.x.ai/imagine-public/share-images/"], #imagine-masonry-section-0 img, main img[src^="data:image/"], main img[src^="blob:"], img[src*="assets.grok.com/users/"], main img[src*="/generated/"]'))
+        .filter((node) => node instanceof HTMLElement && visible(node))
+        .sort((a, b) => {
+          const area = (node) => {
+            const rect = node.getBoundingClientRect();
+            return rect.width * rect.height;
+          };
+          return area(b) - area(a);
+        })[0] || null;
       if (firstTile instanceof HTMLElement && visible(firstTile)) {
         (firstTile.closest('button,[role="button"],a') || firstTile).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
         (firstTile.closest('button,[role="button"],a') || firstTile).click();

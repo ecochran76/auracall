@@ -64,13 +64,15 @@ describe('Grok browser media generation executor', () => {
         media: {
           images: [
             {
-              src: 'https://imagine-public.x.ai/generated/image-1.jpg',
+              src: 'https://assets.grok.com/users/test/generated/image-1.jpg',
+              generated: true,
+              publicGallery: false,
               width: 1024,
               height: 1024,
             },
           ],
           videos: [],
-          urls: ['https://imagine-public.x.ai/generated/image-1.jpg'],
+          urls: ['https://assets.grok.com/users/test/generated/image-1.jpg'],
         },
       },
     }));
@@ -140,7 +142,7 @@ describe('Grok browser media generation executor', () => {
           width: 1024,
           height: 1024,
           metadata: {
-            remoteUrl: 'https://imagine-public.x.ai/generated/image-1.jpg',
+            remoteUrl: 'https://assets.grok.com/users/test/generated/image-1.jpg',
             materialization: 'remote-media-fetch',
           },
         },
@@ -165,6 +167,93 @@ describe('Grok browser media generation executor', () => {
     ]);
   });
 
+  it('does not treat public template media as completed generated image output', async () => {
+    const { createGrokBrowserMediaGenerationExecutor } = await import('../src/media/grokBrowserExecutor.js');
+    const artifactDir = '/tmp/auracall-grok-media-artifacts';
+    browserClient.runPrompt.mockResolvedValueOnce({
+      text: '',
+      url: 'https://grok.com/imagine',
+      tabTargetId: 'grok-tab-template',
+    });
+    browserClient.getFeatureSignature
+      .mockResolvedValueOnce(JSON.stringify({
+        detector: 'grok-feature-probe-v1',
+        imagine: {
+          run_state: 'terminal_image',
+          pending: false,
+          terminal_image: true,
+          terminal_video: true,
+          account_gated: false,
+          blocked: false,
+          media: {
+            images: [{
+              src: 'https://imagine-public.x.ai/imagine-public/share-images/template.jpg',
+              generated: false,
+              publicGallery: true,
+              width: 1024,
+              height: 1024,
+            }],
+            videos: [],
+            urls: ['https://imagine-public.x.ai/imagine-public/share-images/template.jpg'],
+          },
+        },
+      }))
+      .mockResolvedValueOnce(JSON.stringify({
+        detector: 'grok-feature-probe-v1',
+        imagine: {
+          run_state: 'terminal_image',
+          pending: false,
+          terminal_image: true,
+          terminal_video: false,
+          account_gated: false,
+          blocked: false,
+          media: {
+            images: [{
+              src: 'https://assets.grok.com/users/test/generated/image-2.jpg',
+              generated: true,
+              publicGallery: false,
+              width: 1024,
+              height: 1024,
+            }],
+            videos: [],
+            urls: ['https://assets.grok.com/users/test/generated/image-2.jpg'],
+          },
+        },
+      }));
+
+    const executor = createGrokBrowserMediaGenerationExecutor({} as never);
+    const observedGeneratedCounts: number[] = [];
+    const result = await executor({
+      id: 'medgen_grok_test',
+      createdAt: '2026-04-24T12:00:00.000Z',
+      artifactDir,
+      emitTimeline: (event) => {
+        if (event.event === 'run_state_observed') {
+          observedGeneratedCounts.push(Number(event.details?.generatedImageCount ?? 0));
+        }
+      },
+      request: {
+        provider: 'grok',
+        mediaType: 'image',
+        prompt: 'Generate an image of an asphalt secret agent',
+        transport: 'browser',
+        metadata: {
+          artifactPollIntervalMs: 1,
+        },
+      },
+    });
+
+    expect(browserClient.getFeatureSignature).toHaveBeenCalledTimes(2);
+    expect(observedGeneratedCounts).toEqual([0, 1]);
+    expect(result.artifacts[0]).toMatchObject({
+      id: 'grok_imagine_image_1',
+      metadata: {
+        remoteUrl: 'https://assets.grok.com/users/test/generated/image-2.jpg',
+        materialization: 'remote-media-fetch',
+      },
+    });
+  });
+
   it('prefers browser-service visible tile capture and records full-quality comparison metadata', async () => {
     const { createGrokBrowserMediaGenerationExecutor } = await import('../src/media/grokBrowserExecutor.js');
     const artifactDir = '/tmp/auracall-grok-media-artifacts';
@@ -183,7 +272,12 @@ describe('Grok browser media generation executor', () => {
         account_gated: false,
         blocked: false,
         media: {
-          images: [{ src: 'data:image/jpeg;base64,<omitted 200 chars>', srcKind: 'data-url' }],
+          images: [{
+            src: 'data:image/jpeg;base64,<omitted 200 chars>',
+            srcKind: 'data-url',
+            generated: true,
+            publicGallery: false,
+          }],
           videos: [],
           visible_tiles: [{ srcKind: 'data-url', selected: true }],
           urls: [],
