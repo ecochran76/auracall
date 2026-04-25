@@ -1,8 +1,91 @@
 import { describe, expect, it } from 'vitest';
 import { summarizeMediaGenerationStatus } from '../src/media/statusSummary.js';
 import type { MediaGenerationResponse } from '../src/media/types.js';
+import { createGeminiMusicVariantResponse } from './fixtures/geminiMusicStatusFixture.js';
 
 describe('media generation status summary', () => {
+  it('preserves Gemini music MP4 and MP3 variant status from persisted state', () => {
+    const summary = summarizeMediaGenerationStatus(createGeminiMusicVariantResponse());
+
+    expect(summary).toMatchObject({
+      id: 'medgen_gemini_music_variants_1',
+      object: 'media_generation_status',
+      status: 'succeeded',
+      provider: 'gemini',
+      mediaType: 'music',
+      artifactCount: 2,
+      lastEvent: {
+        event: 'completed',
+      },
+      artifacts: [
+        {
+          id: 'gemini-artifact:62dd6ff9d85218b1:1:1:video_with_album_art',
+          type: 'music',
+          fileName: 'Midnight_at_the_Harbor.mp4',
+          path: '/tmp/Midnight_at_the_Harbor.mp4',
+          mimeType: 'video/mp4',
+          materialization: 'generated-media-download-variant',
+          downloadLabel: 'VideoAudio with cover art',
+          downloadVariant: 'video_with_album_art',
+          downloadOptions: ['Download track'],
+        },
+        {
+          id: 'gemini-artifact:62dd6ff9d85218b1:1:1:mp3',
+          type: 'music',
+          fileName: 'Midnight_at_the_Harbor.mp3',
+          path: '/tmp/Midnight_at_the_Harbor.mp3',
+          mimeType: 'audio/mpeg',
+          materialization: 'generated-media-download-variant',
+          downloadLabel: 'Audio onlyMP3 track',
+          downloadVariant: 'mp3',
+          downloadOptions: ['Download track'],
+        },
+      ],
+      diagnostics: {
+        capability: {
+          id: 'gemini.media.create_music',
+          availability: 'available',
+          source: 'browser_discovery',
+        },
+        submittedTab: {
+          targetId: 'gemini-tab-1',
+          initialUrl: 'https://gemini.google.com/app',
+          submittedUrl: 'https://gemini.google.com/app/62dd6ff9d85218b1',
+        },
+        provider: {
+          latestHref: 'https://gemini.google.com/app/62dd6ff9d85218b1',
+          routeProgression: [
+            'https://gemini.google.com/app',
+            'https://gemini.google.com/app/62dd6ff9d85218b1',
+          ],
+        },
+        runState: {
+          pollCount: 5,
+          runState: 'terminal_music',
+          terminalMusic: true,
+          generatedMusicCount: 1,
+          generatedArtifactCount: 1,
+        },
+        materialization: {
+          artifactId: 'gemini-artifact:62dd6ff9d85218b1:1:1:mp3',
+          path: '/tmp/Midnight_at_the_Harbor.mp3',
+          mimeType: 'audio/mpeg',
+          materialization: 'generated-media-download-variant',
+        },
+      },
+      metadata: {
+        source: 'api',
+        transport: 'browser',
+        runtimeProfile: 'default',
+        conversationId: '62dd6ff9d85218b1',
+        tabTargetId: 'gemini-tab-1',
+        capabilityId: 'gemini.media.create_music',
+        artifactPollCount: 5,
+        generatedArtifactCount: 1,
+      },
+    });
+  });
+
   it('summarizes provider path, run state, and materialization diagnostics from persisted timeline', () => {
     const response: MediaGenerationResponse = {
       id: 'medgen_status_diagnostics_1',

@@ -5,6 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import { createResponsesHttpServer } from '../src/http/responsesServer.js';
+import { createGeminiMusicVariantResponse } from './fixtures/geminiMusicStatusFixture.js';
 
 describe('http media generation adapter', () => {
   const cleanup: string[] = [];
@@ -189,6 +190,167 @@ describe('http media generation adapter', () => {
         browserDiagnostics: {
           probeStatus: 'unavailable',
           reason: `media generation ${created.id} is not actively running`,
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('preserves Gemini music variants through local API status routes', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-gemini-music-status-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const fixture = createGeminiMusicVariantResponse();
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        now: () => new Date('2026-04-25T16:50:02.035Z'),
+        workbenchCapabilityCatalog: [
+          {
+            id: 'gemini.media.create_music',
+            provider: 'gemini',
+            providerLabels: ['Create music', 'Create Music', 'Music'],
+            category: 'media',
+            invocationMode: 'tool_drawer_selection',
+            surfaces: ['local_api', 'mcp', 'browser_service'],
+            availability: 'available',
+            stability: 'observed',
+            requiredInputs: [{ name: 'prompt', required: true }],
+            output: { artifactTypes: ['music'] },
+            safety: { maySpendCredits: true, mayTakeMinutes: true },
+            source: 'test_fixture',
+          },
+        ],
+        mediaGenerationExecutor: async ({ artifactDir, emitTimeline }) => {
+          for (const event of (fixture.timeline ?? []).filter((entry) => (
+            entry.event !== 'running_persisted' && entry.event !== 'completed'
+          ))) {
+            await emitTimeline?.(event);
+          }
+          const artifacts = await Promise.all(fixture.artifacts.map(async (artifact) => {
+            const fileName = artifact.fileName ?? artifact.id;
+            const filePath = path.join(artifactDir, fileName);
+            await fs.writeFile(filePath, Buffer.from(`${artifact.id}\n`));
+            return {
+              ...artifact,
+              path: filePath,
+              uri: `file://${filePath}`,
+            };
+          }));
+          return {
+            artifacts,
+            metadata: {
+              conversationId: '62dd6ff9d85218b1',
+              tabTargetId: 'gemini-tab-1',
+              capabilityId: 'gemini.media.create_music',
+              generatedArtifactCount: 1,
+              artifactPollCount: 5,
+            },
+          };
+        },
+      },
+    );
+
+    try {
+      const createResponse = await fetch(`http://127.0.0.1:${server.port}/v1/media-generations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'gemini',
+          mediaType: 'music',
+          transport: 'browser',
+          prompt: fixture.prompt,
+        }),
+      });
+      expect(createResponse.status).toBe(200);
+      const created = (await createResponse.json()) as Record<string, unknown>;
+      expect(created).toMatchObject({
+        object: 'media_generation',
+        status: 'succeeded',
+        provider: 'gemini',
+        mediaType: 'music',
+        artifacts: [
+          {
+            fileName: 'Midnight_at_the_Harbor.mp4',
+            mimeType: 'video/mp4',
+          },
+          {
+            fileName: 'Midnight_at_the_Harbor.mp3',
+            mimeType: 'audio/mpeg',
+          },
+        ],
+      });
+
+      const mediaStatusResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/media-generations/${created.id}/status`,
+      );
+      expect(mediaStatusResponse.status).toBe(200);
+      await expect(mediaStatusResponse.json()).resolves.toMatchObject({
+        id: created.id,
+        object: 'media_generation_status',
+        status: 'succeeded',
+        artifactCount: 2,
+        artifacts: [
+          {
+            fileName: 'Midnight_at_the_Harbor.mp4',
+            path: expect.stringContaining('Midnight_at_the_Harbor.mp4'),
+            mimeType: 'video/mp4',
+            materialization: 'generated-media-download-variant',
+            downloadLabel: 'VideoAudio with cover art',
+            downloadVariant: 'video_with_album_art',
+            downloadOptions: ['Download track'],
+          },
+          {
+            fileName: 'Midnight_at_the_Harbor.mp3',
+            path: expect.stringContaining('Midnight_at_the_Harbor.mp3'),
+            mimeType: 'audio/mpeg',
+            materialization: 'generated-media-download-variant',
+            downloadLabel: 'Audio onlyMP3 track',
+            downloadVariant: 'mp3',
+            downloadOptions: ['Download track'],
+          },
+        ],
+        diagnostics: {
+          runState: {
+            runState: 'terminal_music',
+            terminalMusic: true,
+            generatedMusicCount: 1,
+          },
+          materialization: {
+            artifactId: 'gemini-artifact:62dd6ff9d85218b1:1:1:mp3',
+            materialization: 'generated-media-download-variant',
+          },
+        },
+      });
+
+      const runStatusResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/runs/${created.id}/status`,
+      );
+      expect(runStatusResponse.status).toBe(200);
+      await expect(runStatusResponse.json()).resolves.toMatchObject({
+        id: created.id,
+        object: 'auracall_run_status',
+        kind: 'media_generation',
+        status: 'succeeded',
+        artifactCount: 2,
+        artifacts: [
+          {
+            fileName: 'Midnight_at_the_Harbor.mp4',
+            downloadVariant: 'video_with_album_art',
+          },
+          {
+            fileName: 'Midnight_at_the_Harbor.mp3',
+            downloadVariant: 'mp3',
+          },
+        ],
+        metadata: {
+          mediaDiagnostics: {
+            runState: {
+              runState: 'terminal_music',
+              terminalMusic: true,
+            },
+          },
         },
       });
     } finally {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRunStatusToolHandler } from '../src/mcp/tools/runStatus.js';
+import { createGeminiMusicVariantResponse } from './fixtures/geminiMusicStatusFixture.js';
 
 describe('mcp run_status tool', () => {
   it('reads response run status through the shared status envelope', async () => {
@@ -155,6 +156,69 @@ describe('mcp run_status tool', () => {
         browserDiagnostics: {
           probeStatus: 'unavailable',
           reason: 'media generation medgen_status_1 is not actively running',
+        },
+      },
+    });
+  });
+
+  it('preserves Gemini music variants through generic MCP run status', async () => {
+    const handler = createRunStatusToolHandler({
+      responsesService: {
+        readResponse: async () => null,
+      },
+      mediaGenerationService: {
+        readGeneration: async (id) => createGeminiMusicVariantResponse(id),
+      },
+    });
+
+    const result = await handler({ id: 'medgen_gemini_music_variants_1' });
+
+    expect(result).toMatchObject({
+      isError: false,
+      content: [
+        {
+          type: 'text',
+          text: 'Run medgen_gemini_music_variants_1 (media_generation) is succeeded; last event completed; artifacts 2.',
+        },
+      ],
+      structuredContent: {
+        id: 'medgen_gemini_music_variants_1',
+        object: 'auracall_run_status',
+        kind: 'media_generation',
+        status: 'succeeded',
+        artifactCount: 2,
+        artifacts: [
+          {
+            fileName: 'Midnight_at_the_Harbor.mp4',
+            mimeType: 'video/mp4',
+            materialization: 'generated-media-download-variant',
+            downloadLabel: 'VideoAudio with cover art',
+            downloadVariant: 'video_with_album_art',
+            downloadOptions: ['Download track'],
+          },
+          {
+            fileName: 'Midnight_at_the_Harbor.mp3',
+            mimeType: 'audio/mpeg',
+            materialization: 'generated-media-download-variant',
+            downloadLabel: 'Audio onlyMP3 track',
+            downloadVariant: 'mp3',
+            downloadOptions: ['Download track'],
+          },
+        ],
+        metadata: {
+          conversationId: '62dd6ff9d85218b1',
+          tabTargetId: 'gemini-tab-1',
+          mediaDiagnostics: {
+            runState: {
+              runState: 'terminal_music',
+              terminalMusic: true,
+              generatedMusicCount: 1,
+            },
+            materialization: {
+              artifactId: 'gemini-artifact:62dd6ff9d85218b1:1:1:mp3',
+              materialization: 'generated-media-download-variant',
+            },
+          },
         },
       },
     });

@@ -1,3 +1,20 @@
+## 2026-04-25 - Gemini music status fixture coverage
+
+- Focus: lock in the Gemini music status-surface dogfood result without
+  spending provider quota or touching the browser.
+- Progress: added a shared persisted Gemini music fixture with the two cached
+  outputs from the successful live shape: MP4-with-art and MP3. Status summary,
+  local API media status, local API generic run status, MCP
+  `media_generation_status`, and MCP `run_status` now all assert
+  `downloadLabel`, `downloadVariant`, `downloadOptions`, cache paths,
+  terminal music diagnostics, and `generated-media-download-variant`
+  materialization for the paired artifacts.
+- Validation:
+  - `pnpm vitest run tests/mediaStatusSummary.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `git diff --check`
+
 ## 2026-04-25 - Gemini music status surface dogfood
 
 - Focus: confirm the successful Gemini music run is inspectable through public
