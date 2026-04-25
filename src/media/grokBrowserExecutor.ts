@@ -191,10 +191,11 @@ async function executeGrokBrowserMediaGeneration(
     timeoutMs,
     input.emitTimeline,
   );
+  const requestedVisibleTileCount = resolveGrokImageRequestedVisibleTileCount(request.count, request.metadata);
   const activeFiles = await client.materializeActiveMediaArtifacts({
     capabilityId: GROK_IMAGE_CAPABILITY_ID,
     mediaType: 'image',
-    maxItems: resolveVisibleTileMaterializationLimit(request.metadata),
+    maxItems: requestedVisibleTileCount,
     compareFullQuality: true,
   }, input.artifactDir, {
     configuredUrl: tabUrl,
@@ -223,9 +224,8 @@ async function executeGrokBrowserMediaGeneration(
   const imageEntries = evidence.media.images
     .filter(isGeneratedGrokImageEntry)
     .filter((entry) => normalizeNonEmpty(entry.src) || normalizeNonEmpty(entry.href));
-  const requestedCount = Math.max(1, Math.min(request.count ?? 1, imageEntries.length));
-  for (const entry of imageEntries.slice(0, requestedCount)) {
-    if (artifacts.length > 0) break;
+  const fallbackRemainingCount = Math.max(0, requestedVisibleTileCount - artifacts.length);
+  for (const entry of imageEntries.slice(0, fallbackRemainingCount)) {
     const artifact = await materializeGrokImageEntry(entry, input.artifactDir, artifacts.length + 1);
     if (!artifact) continue;
     artifacts.push(artifact);
@@ -262,6 +262,8 @@ async function executeGrokBrowserMediaGeneration(
       runState: evidence.runState,
       artifactPollCount: pollCount,
       generatedArtifactCount: artifacts.length,
+      requestedVisibleTileCount,
+      visibleTileMaterializationLimit: requestedVisibleTileCount,
     },
   };
 }
@@ -1321,12 +1323,18 @@ function resolveArtifactPollIntervalMs(metadata: Record<string, unknown> | null 
   return 5_000;
 }
 
-function resolveVisibleTileMaterializationLimit(metadata: Record<string, unknown> | null | undefined): number {
+function resolveGrokImageRequestedVisibleTileCount(
+  requestCount: number | null | undefined,
+  metadata: Record<string, unknown> | null | undefined,
+): number {
+  if (typeof requestCount === 'number' && Number.isFinite(requestCount)) {
+    return Math.max(1, Math.min(Math.trunc(requestCount), 8));
+  }
   const candidate = metadata?.visibleTileMaterializationLimit;
   if (typeof candidate === 'number' && Number.isFinite(candidate)) {
-    return Math.max(1, Math.min(candidate, 24));
+    return Math.max(1, Math.min(Math.trunc(candidate), 8));
   }
-  return 12;
+  return 8;
 }
 
 function isGrokVideoReadbackProbeEnabled(metadata: Record<string, unknown> | null | undefined): boolean {

@@ -527,7 +527,7 @@ describe('Grok browser media generation executor', () => {
       {
         capabilityId: 'grok.media.imagine_image',
         mediaType: 'image',
-        maxItems: 12,
+        maxItems: 8,
         compareFullQuality: true,
       },
       artifactDir,
@@ -573,6 +573,85 @@ describe('Grok browser media generation executor', () => {
       'image_visible',
       'artifact_materialized',
     ]);
+  });
+
+  it('defaults Grok image materialization to eight visible tiles and honors request count', async () => {
+    const { createGrokBrowserMediaGenerationExecutor } = await import('../src/media/grokBrowserExecutor.js');
+    const artifactDir = '/tmp/auracall-grok-media-artifacts';
+    browserClient.runPrompt.mockResolvedValue({
+      text: '',
+      url: 'https://grok.com/imagine',
+      tabTargetId: 'grok-tab-count',
+    });
+    browserClient.getFeatureSignature.mockResolvedValue(JSON.stringify({
+      detector: 'grok-feature-probe-v1',
+      imagine: {
+        run_state: 'terminal_image',
+        pending: false,
+        terminal_image: true,
+        terminal_video: false,
+        media: {
+          images: Array.from({ length: 10 }, (_, index) => ({
+            src: `https://assets.grok.com/users/test/generated/image-${index + 1}.jpg`,
+            generated: true,
+            publicGallery: false,
+          })),
+          videos: [],
+          urls: Array.from({ length: 10 }, (_, index) =>
+            `https://assets.grok.com/users/test/generated/image-${index + 1}.jpg`),
+        },
+      },
+    }));
+
+    const executor = createGrokBrowserMediaGenerationExecutor({} as never);
+    const defaultResult = await executor({
+      id: 'medgen_grok_default_count',
+      createdAt: '2026-04-25T12:00:00.000Z',
+      artifactDir,
+      request: {
+        provider: 'grok',
+        mediaType: 'image',
+        prompt: 'Generate images of an asphalt secret agent',
+        transport: 'browser',
+      },
+    });
+    const countedResult = await executor({
+      id: 'medgen_grok_counted',
+      createdAt: '2026-04-25T12:00:00.000Z',
+      artifactDir,
+      request: {
+        provider: 'grok',
+        mediaType: 'image',
+        prompt: 'Generate images of an asphalt secret agent',
+        transport: 'browser',
+        count: 3,
+      },
+    });
+
+    expect(browserClient.materializeActiveMediaArtifacts).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ maxItems: 8 }),
+      artifactDir,
+      expect.any(Object),
+    );
+    expect(browserClient.materializeActiveMediaArtifacts).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ maxItems: 3 }),
+      artifactDir,
+      expect.any(Object),
+    );
+    expect(defaultResult.artifacts).toHaveLength(8);
+    expect(countedResult.artifacts).toHaveLength(3);
+    expect(defaultResult.metadata).toMatchObject({
+      requestedVisibleTileCount: 8,
+      visibleTileMaterializationLimit: 8,
+      generatedArtifactCount: 8,
+    });
+    expect(countedResult.metadata).toMatchObject({
+      requestedVisibleTileCount: 3,
+      visibleTileMaterializationLimit: 3,
+      generatedArtifactCount: 3,
+    });
   });
 
   it('submits through the guarded Imagine Video path and materializes terminal video evidence', async () => {

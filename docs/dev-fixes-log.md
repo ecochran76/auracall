@@ -14346,3 +14346,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `run_status`, and MCP `media_generation_status` all agreed on
   `succeeded`, one cached artifact, and diagnostics showing `terminal_video`
   plus `download-button` materialization.
+- 2026-04-25: Grok Imagine image generation should treat multiple visible
+  generated tiles as normal output. In this repo, Grok often renders several
+  images per prompt, and the no-churn path can capture currently visible tiles
+  without scrolling. Default browser image materialization to eight visible
+  generated tiles, honor request `count` for smaller batches, and keep scroll
+  expansion out of the routine path.

@@ -21480,3 +21480,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `curl -s http://127.0.0.1:18080/v1/runs/medgen_1fa77fb386a6421b881d1e019e9673af/status`
   - `curl -s http://127.0.0.1:18080/v1/media-generations/medgen_1fa77fb386a6421b881d1e019e9673af/status`
   - direct MCP handler calls for `run_status` and `media_generation_status`
+
+## 2026-04-25 - Grok Imagine multi-image visible-tile default
+
+- Focus: make Grok Imagine image generation take advantage of the provider's
+  multi-image wall without increasing browser churn or scrolling into
+  additional generation.
+- Progress: Grok browser image execution now resolves a
+  `requestedVisibleTileCount` from request `count`, defaulting to 8. That value
+  drives the browser-service visible-tile capture limit and the remote media
+  fallback limit. The provider adapter's direct visible-tile materializer also
+  defaults to 8 and clamps the escape-hatch limit to the shared count ceiling.
+- Operator behavior: callers can request fewer images with `count`; when count
+  is omitted, Aura-Call captures up to eight currently visible generated tiles
+  from the submitted Imagine page and still avoids scrolling the masonry wall.
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`

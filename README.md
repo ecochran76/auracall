@@ -207,7 +207,10 @@ Terminology note:
     `media_generation_no_generated_output`; inspect `diagnostics` or
     `submit_path_observed` to see whether Grok reported pending generation,
     generated media, blocked state, or public-template reuse after the send
-    click.
+    click. Grok browser image jobs default to scraping up to eight currently
+    visible generated tiles from the submitted Imagine page; pass `count` to
+    request fewer visible tiles. The default capture path does not scroll the
+    wall to trigger additional provider generation.
     Add `diagnostics=browser-state` to either status route during a running
     browser-backed media job to capture the selected provider target,
     document readiness, visible control counts, provider evidence, and a stored

@@ -192,6 +192,15 @@ existing Aura-Call media-generation contract.
     `6088C5371BC63D7C88C9BB4A6F7DFAD4`, provider route
     `https://grok.com/imagine`, terminal image state, generated counts, and
     `visible-tile-browser-capture` materialization
+- Grok image materialization now treats multi-image output as the normal case:
+  - browser image requests default to `requestedVisibleTileCount = 8`
+  - caller `count` controls the visible-tile scrape limit, bounded by the
+    shared media contract
+  - the visible-tile capture path only uses currently visible generated tiles
+    on the submitted Imagine page and does not scroll the masonry wall to
+    trigger additional provider work
+  - metadata preserves `requestedVisibleTileCount` and
+    `visibleTileMaterializationLimit` for status/readback
 - Bounded read-only video discovery has started:
   - the live `/imagine` page exposes `Image` and `Video` as visible
     `role = radio` controls, with `Image` checked and `Video` unchecked
@@ -492,6 +501,8 @@ Add a browser-first Grok Imagine discovery/audit slice:
   through the active browser tab and compare one preview against the
   provider-owned full-quality download-button path before falling back to
   remote media fetch.
+- [x] Grok browser image materialization defaults to eight visible generated
+  tiles and honors the request `count` as the visible-tile scrape limit.
 - [x] Grok browser image generation can run through the durable local API
   media-generation service path and be read back through both media-generation
   status and generic run status.

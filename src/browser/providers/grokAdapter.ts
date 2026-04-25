@@ -1410,7 +1410,7 @@ async function materializeGrokImagineVisibleImagesWithClient(
   destDir: string,
   options: { maxItems?: number | null; compareFullQuality?: boolean },
 ): Promise<FileRef[]> {
-  const maxItems = Math.max(1, Math.min(Number(options.maxItems ?? 12) || 12, 24));
+  const maxItems = Math.max(1, Math.min(Math.trunc(Number(options.maxItems ?? 8) || 8), 8));
   await fs.mkdir(destDir, { recursive: true });
   await configureGrokDownloadBehaviorWithClient(client, destDir);
   const captured = await captureGrokImagineVisibleImageTiles(client.Runtime, maxItems);
