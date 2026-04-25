@@ -1,5 +1,28 @@
 # RUNBOOK
 
+## Turn 59 | 2026-04-25
+
+- Active plan:
+  `docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md`
+- Goal: start the next media-parity slice by adding a CLI create path on the
+  shared durable media-generation contract.
+- Result:
+  - added `auracall media generate` for `gemini|grok` and
+    `image|music|video`
+  - wired CLI creation through the same durable media-generation service used
+    by API/MCP, with `source = cli`, browser transport default, and `--no-wait`
+    async creation for run-status polling
+  - kept legacy Gemini `--generate-image` as a compatibility side path until a
+    later explicit migration slice
+  - updated README, testing docs, Plan 0049, dev journal, and fixes log
+- Verification:
+  - `pnpm vitest run tests/cli.mediaGenerationCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm tsx bin/auracall.ts media generate --help`
+  - `pnpm run plans:audit -- --keep 49`
+  - `git diff --check`
+
 ## Turn 58 | 2026-04-25
 
 - Active plan:

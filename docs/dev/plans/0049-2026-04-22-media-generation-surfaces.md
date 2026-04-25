@@ -11,8 +11,8 @@ helpers.
 
 ## Current State
 
-- Gemini has a browser `--generate-image <file>` path that drives Gemini web
-  and saves the first generated image.
+- Gemini still has a browser `--generate-image <file>` compatibility path that
+  drives Gemini web and saves the first generated image.
 - Gemini also exposes generated music and video surfaces; music can render
   through a video transport artifact, so the public contract must model
   `music` separately from `video`.
@@ -151,10 +151,16 @@ helpers.
 - CLI now has matching generic readback through `auracall run status <id>` and
   `--json`, backed by the same durable run-status reader as API/MCP, including
   compact media artifact download labels/variants when available.
+- CLI media creation now has a shared-contract surface:
+  - `auracall media generate --provider gemini|grok --type image|music|video`
+  - requests use the durable media-generation service with `source = cli`
+  - `--no-wait` returns a running media id for `auracall run status <id>`
+  - the legacy Gemini `--generate-image <file>` flag remains as a compatibility
+    side path until a later migration decides whether to retire or wrap it
 - Grok Imagine research is captured in
   [0054 Grok Imagine Research Checkpoint](0054-2026-04-24-grok-imagine-research-checkpoint.md):
-  - implement browser-first Imagine discovery on the managed Grok profile
-    before provider invocation
+  - browser-first Imagine discovery, image/video invocation, status readback,
+    and materialization are closed for the managed Grok profile
   - keep xAI API image/video execution as a later adapter path
   - use API research only as background context for media concepts, not as the
     first implementation target
@@ -185,8 +191,9 @@ helpers.
   - aspect ratio / size / count when supported
   - output artifact destination
   - source surface: CLI, local API, or MCP
-- Route CLI `--generate-image` through that contract instead of keeping it as a
-  Gemini-only side path.
+- Add a durable CLI media creation surface on the shared contract; keep
+  `--generate-image` as a Gemini-only compatibility side path until migration
+  criteria are explicit.
 - Extend local `api serve` with a bounded media-generation request/readback
   surface.
 - Extend MCP with the same bounded media request/readback surface.
@@ -226,6 +233,8 @@ helpers.
 
 ## Acceptance Criteria
 
+- [x] CLI can create one Gemini/Grok media-generation request through the
+  shared durable media contract.
 - CLI can request one Gemini image and save it through the shared media
   contract.
 - Gemini music/video requests stay representable through the same contract,
@@ -270,9 +279,9 @@ helpers.
 - [x] Browser media capability-gate failures expose a pre-submit
   `capability_unavailable` timeline event and compact capability metadata on
   failed readback/status.
-- Grok Imagine implementation is either green for image generation or remains
+- [x] Grok Imagine implementation is either green for image generation or remains
   explicitly gated with a provider/API credential blocker.
-- Docs state which provider/media combinations are implemented, gated, or not
+- [x] Docs state which provider/media combinations are implemented, gated, or not
   yet available.
 - [x] Grok Imagine research identifies browser-first discovery as the first
   implementation target and keeps xAI API execution deferred.
@@ -280,7 +289,8 @@ helpers.
 ## Validation Plan
 
 - [x] Unit tests for media request schema, routing, and artifact readback.
-- Provider-adapter tests for Gemini tool-selection intent and Grok Imagine
+- [x] CLI helper coverage for shared-contract media creation.
+- [x] Provider-adapter tests for Gemini tool-selection intent and Grok Imagine
   request mapping.
 - [x] Local API smoke for create/readback on a fake provider.
 - [x] MCP smoke for the same fake provider path.

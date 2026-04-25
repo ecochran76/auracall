@@ -202,6 +202,10 @@
       `curl http://127.0.0.1:8080/v1/runs/<response_id>/status`
     - CLI parity for the same durable status envelope:
       `pnpm tsx bin/auracall.ts run status <response_id> --json`
+  - create a shared-contract CLI media request:
+    - `pnpm tsx bin/auracall.ts media generate --provider gemini --type image -p "Generate an image of an asphalt secret agent" --json`
+    - for async browser smokes, add `--no-wait` and poll with
+      `pnpm tsx bin/auracall.ts run status <media_generation_id> --json`
   - create a browser-transport Gemini image request only after capability
     discovery reports `gemini.media.create_image` as `available`; the local API
     then selects `Create image`, records media-generation `timeline[]`

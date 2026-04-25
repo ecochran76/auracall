@@ -64,6 +64,11 @@ auracall capabilities --target grok --diagnostics browser-state --json
 auracall capabilities --target grok --entrypoint grok-imagine --diagnostics browser-state --json
 auracall capabilities --target grok --entrypoint grok-imagine --discovery-action grok-imagine-video-mode --json
 
+# Shared durable media-generation contract from the CLI
+auracall media generate --provider gemini --type image -p "Generate an image of an asphalt secret agent" --json
+auracall media generate --provider grok --type image -p "Generate an image of an asphalt secret agent" --count 1 --no-wait
+auracall run status <media_generation_id> --json
+
 # Save and diff live feature snapshots
 auracall features snapshot --target gemini --json
 auracall features diff --target gemini --json
@@ -140,6 +145,10 @@ Terminology note:
   `auracall run status <id>` or `auracall run status <id> --json`; this uses
   the same `auracall_run_status` envelope as API `GET /v1/runs/{run_id}/status`
   and MCP `run_status`.
+- CLI media creation uses the same durable media-generation contract as local
+  API and MCP through `auracall media generate --provider gemini|grok --type
+  image|music|video -p <prompt>`. Use `--no-wait` to return a running media id
+  immediately, then poll it with `auracall run status <id> --json`.
 - A bounded local OpenAI-compatible responses adapter is available for
   development through `auracall api serve`. Start it with
   `auracall --profile <name> api serve` to bind response, runtime, workbench,

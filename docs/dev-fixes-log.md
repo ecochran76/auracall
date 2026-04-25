@@ -14379,6 +14379,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   adapter's CDP path and assert Image and Video `runPrompt` emit
   `capability_selected` with `selected = true` and the expected mode before
   prompt insertion.
+- 2026-04-25: Add new operator media creation through the durable
+  media-generation contract before migrating old compatibility flags. In this
+  repo, `auracall media generate` now shares API/MCP request semantics and
+  persisted status, while the older Gemini-only `--generate-image` path remains
+  stable until explicit migration criteria exist.
 - 2026-04-25: Close provider research checkpoints when the acceptance surface is
   proven, and move remaining work into a new bounded plan instead of keeping a
   completed plan open. For Grok Imagine, browser-first image/video discovery,

@@ -1,3 +1,19 @@
+## 2026-04-25 - CLI shared media generation
+
+- Focus: start the next Plan 0049 media-parity slice by closing the CLI create
+  gap without rewriting the legacy Gemini-only `--generate-image` path.
+- Progress: added `auracall media generate` on top of the shared durable
+  media-generation service. The command supports `provider = gemini|grok`,
+  `type = image|music|video`, browser transport by default, `--no-wait` async
+  creation, and compact human output. Docs now show CLI creation as the same
+  contract used by API/MCP, while `--generate-image` remains a compatibility
+  side path.
+- Validation:
+  - `pnpm vitest run tests/cli.mediaGenerationCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 49`
+  - `git diff --check`
+
 ## 2026-04-25 - Grok Imagine plan closure
 
 - Focus: review Plan 0054 against the completed browser-first Grok Imagine
