@@ -21016,3 +21016,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`
+
+## 2026-04-24 - Grok video readback direct-connect live validation
+
+- Live probe: corrected readback request
+  `medgen_08245dd8c6744e7ba57ea87d241c453b` used tab target
+  `6088C5371BC63D7C88C9BB4A6F7DFAD4`, DevTools port `38261`, host
+  `127.0.0.1`, and current tab URL `https://grok.com/imagine`.
+- Result: both `/v1/media-generations/{id}/status` and
+  `/v1/runs/{id}/status` agreed on terminal `failed` with
+  `media_generation_no_generated_output`.
+- Evidence: the first readback poll saw `runState = terminal_video`,
+  `terminalVideo = true`, `generatedVideoCount = 0`,
+  `publicGalleryVideoCount = 3`, `visibleTileCount = 14`, and
+  `mediaUrlCount = 17`, so the status path correctly rejected public/template
+  video media as generated output.
+- Guardrail check: post-run `browser-tools inspect --browser-target grok
+  --json` still reported the target tab at `https://grok.com/imagine`; the
+  corrected probe did not move it to a post/template route or open another
+  Grok page.
+- Validation:
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`

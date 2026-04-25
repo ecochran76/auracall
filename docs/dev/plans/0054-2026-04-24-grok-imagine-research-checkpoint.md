@@ -266,6 +266,20 @@ existing Aura-Call media-generation contract.
     `media_generation_no_generated_output`
   - the readback contract now requires `grokVideoReadbackDevtoolsPort` to
     prevent that fallback
+- The corrected direct-connect probe then validated no-navigation status
+  readback, but did not find generated account video:
+  - request id `medgen_08245dd8c6744e7ba57ea87d241c453b`
+  - metadata included tab target id `6088C5371BC63D7C88C9BB4A6F7DFAD4`,
+    DevTools port `38261`, host `127.0.0.1`, and tab URL
+    `https://grok.com/imagine`
+  - media-generation status and generic run status agreed on terminal
+    `media_generation_no_generated_output`
+  - first readback poll saw `terminal_video`, `generatedVideoCount = 0`,
+    `publicGalleryVideoCount = 3`, `visibleTileCount = 14`, and
+    `mediaUrlCount = 17`
+  - post-run tab inspection still reported the same tab at
+    `https://grok.com/imagine`, confirming the corrected probe did not
+    navigate the tab
 
 ## Research Findings
 
@@ -574,6 +588,11 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - [x] Executor unit test for the direct-connect readback contract:
   - validates that missing `grokVideoReadbackDevtoolsPort` fails before
     `BrowserAutomationClient.fromConfig` and before `getFeatureSignature`
+- [x] Corrected live direct-connect readback:
+  - `medgen_08245dd8c6744e7ba57ea87d241c453b`
+  - validated status parity and no-navigation behavior
+  - ended with `media_generation_no_generated_output` because only
+    public/template video evidence was visible
 - [x] API/MCP/status media regression tests:
   - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
 - [x] `pnpm run check`
