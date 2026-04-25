@@ -82,6 +82,13 @@ Current State:
     to approved browser-service control points
   - raw mutating CDP scripts stay available only as explicit guarded
     development escape hatches
+- browser operation queued dispatch is closed in
+  [docs/dev/plans/0056-2026-04-25-browser-operation-queued-dispatch.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0056-2026-04-25-browser-operation-queued-dispatch.md)
+  - `BrowserOperationDispatcher.acquireQueued(...)` gives future service/API/MCP
+    callers an opt-in wait-for-turn primitive under the same browser-service
+    dispatcher key
+  - existing fail-fast `acquire(...)` semantics remain available for
+    hard-stop human/login/operator flows
 - the bounded `0004` operator-facing claimant/readback hardening sub-lane is
   now maintenance-only unless a new concrete mismatch is demonstrated
 - the narrower `api serve` server-local-runner ownership/readback checkpoint is

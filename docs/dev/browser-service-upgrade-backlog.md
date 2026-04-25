@@ -56,6 +56,10 @@ and concrete:
   but prefer the family path in new docs. Do not move provider-dependent Grok
   helpers into `packages/browser-service` until they no longer import
   AuraCall app/provider modules.
+- `BrowserOperationDispatcher.acquireQueued(...)` now provides an explicit
+  browser-service wait-for-turn primitive for future service/API/MCP browser
+  callers. Keep fail-fast `acquire(...)` for human/login/operator hard stops
+  where an immediate structured busy result is more useful than waiting.
 
 ## Current DOM-drift repair plan (2026-03-28)
 

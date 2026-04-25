@@ -51,6 +51,17 @@ export interface BrowserOperationAcquireInput extends BrowserOperationKeyInput {
   devTools?: BrowserOperationDevTools;
 }
 
+export interface BrowserOperationAcquireQueuedOptions {
+  timeoutMs?: number;
+  pollMs?: number;
+  onBlocked?: (result: BrowserOperationBusyResult, context: BrowserOperationQueueWaitContext) => void | Promise<void>;
+}
+
+export interface BrowserOperationQueueWaitContext {
+  attempt: number;
+  elapsedMs: number;
+}
+
 export interface BrowserOperationBusyResult {
   acquired: false;
   key: string;
@@ -70,6 +81,10 @@ export type BrowserOperationAcquireResult =
 
 export interface BrowserOperationDispatcher {
   acquire(input: BrowserOperationAcquireInput): Promise<BrowserOperationAcquireResult>;
+  acquireQueued(
+    input: BrowserOperationAcquireInput,
+    options?: BrowserOperationAcquireQueuedOptions,
+  ): Promise<BrowserOperationAcquireResult>;
   getActive(key: string): Promise<BrowserOperationRecord | null>;
 }
 
@@ -84,6 +99,8 @@ export interface FileBackedBrowserOperationDispatcherOptions extends BrowserOper
 
 const BUSY_RECOVERY =
   'Wait for the active browser operation to finish, or close the stale browser/service process before retrying.';
+const DEFAULT_QUEUE_TIMEOUT_MS = 30_000;
+const DEFAULT_QUEUE_POLL_MS = 250;
 
 export function buildBrowserOperationKey(input: BrowserOperationKeyInput): string {
   if (input.managedProfileDir) {
@@ -174,6 +191,13 @@ class InMemoryBrowserOperationDispatcher implements BrowserOperationDispatcher {
     };
   }
 
+  async acquireQueued(
+    input: BrowserOperationAcquireInput,
+    options: BrowserOperationAcquireQueuedOptions = {},
+  ): Promise<BrowserOperationAcquireResult> {
+    return acquireQueuedWithPolling(() => this.acquire(input), options);
+  }
+
   async getActive(key: string): Promise<BrowserOperationRecord | null> {
     const existing = this.active.get(key) ?? null;
     if (existing && !this.isOwnerAlive(existing.ownerPid)) {
@@ -232,6 +256,13 @@ class FileBackedBrowserOperationDispatcher implements BrowserOperationDispatcher
         return busyResult(key, existing);
       }
     }
+  }
+
+  async acquireQueued(
+    input: BrowserOperationAcquireInput,
+    options: BrowserOperationAcquireQueuedOptions = {},
+  ): Promise<BrowserOperationAcquireResult> {
+    return acquireQueuedWithPolling(() => this.acquire(input), options);
   }
 
   async getActive(key: string): Promise<BrowserOperationRecord | null> {
@@ -296,6 +327,47 @@ function busyResult(key: string, blockedBy: BrowserOperationRecord): BrowserOper
     blockedBy,
     recovery: BUSY_RECOVERY,
   };
+}
+
+async function acquireQueuedWithPolling(
+  acquire: () => Promise<BrowserOperationAcquireResult>,
+  options: BrowserOperationAcquireQueuedOptions,
+): Promise<BrowserOperationAcquireResult> {
+  const timeoutMs = normalizeNonNegativeInteger(options.timeoutMs, DEFAULT_QUEUE_TIMEOUT_MS);
+  const pollMs = normalizePositiveInteger(options.pollMs, DEFAULT_QUEUE_POLL_MS);
+  const startedAt = Date.now();
+  let attempt = 0;
+  let lastBusy: BrowserOperationBusyResult | null = null;
+
+  while (true) {
+    attempt += 1;
+    const result = await acquire();
+    if (result.acquired) {
+      return result;
+    }
+    lastBusy = result;
+    const elapsedMs = Date.now() - startedAt;
+    await options.onBlocked?.(result, { attempt, elapsedMs });
+    if (elapsedMs >= timeoutMs) {
+      return lastBusy;
+    }
+    await delay(Math.min(pollMs, Math.max(0, timeoutMs - elapsedMs)));
+  }
+}
+
+function normalizeNonNegativeInteger(value: number | undefined, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+  return Math.max(0, Math.trunc(value));
+}
+
+function normalizePositiveInteger(value: number | undefined, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
+  return Math.max(1, Math.trunc(value));
+}
+
+function delay(ms: number): Promise<void> {
+  if (ms <= 0) return Promise.resolve();
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function isNodeError(error: unknown, code: string): boolean {

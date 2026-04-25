@@ -1,3 +1,17 @@
+## 2026-04-25 - Browser operation queued dispatch
+
+- Focus: keep browser service as the single control plane for future bursts of
+  service/API/MCP browser work.
+- Progress: added opt-in `BrowserOperationDispatcher.acquireQueued(...)` while
+  preserving existing fail-fast acquisition for hard-stop human/login/operator
+  flows. Covered in-memory and file-backed wait-for-turn behavior plus timeout
+  busy readback.
+- Validation:
+  - `pnpm vitest run tests/browser-service/operationDispatcher.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 56`
+  - `git diff --check`
+
 ## 2026-04-25 - Workbench capability discovery closeout
 
 - Focus: continue browser-first work by closing the capability discovery/reporting

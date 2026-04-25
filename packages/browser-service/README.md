@@ -150,6 +150,12 @@ Legacy direct-CDP development scripts in Aura-Call are guarded separately and
 require an explicit `--allow-raw-cdp` flag or `AURACALL_ALLOW_RAW_CDP=1` escape
 hatch.
 
+Callers that need a wait-for-turn path should use
+`BrowserOperationDispatcher.acquireQueued(...)` instead of building retry loops
+around DevTools calls. Plain `acquire(...)` remains the right primitive for
+hard-stop flows such as human verification, login, setup, and operator probes
+where a structured busy response should be surfaced immediately.
+
 ## Current anti-bot boundary
 
 The package now classifies blocking pages first-class through structured

@@ -1,5 +1,22 @@
 # RUNBOOK
 
+## Turn 66 | 2026-04-25
+
+- Active plan:
+  `docs/dev/plans/0056-2026-04-25-browser-operation-queued-dispatch.md`
+- Goal: continue the browser-service control-plane lane by adding an opt-in
+  queued dispatch primitive for future service/API/MCP browser callers.
+- Result:
+  - added `BrowserOperationDispatcher.acquireQueued(...)`
+  - preserved existing fail-fast `acquire(...)` behavior for hard-stop flows
+  - covered queued in-memory and file-backed acquisition plus timeout/busy
+    readback
+- Verification target:
+  - `pnpm vitest run tests/browser-service/operationDispatcher.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 56`
+  - `git diff --check`
+
 ## Turn 65 | 2026-04-25
 
 - Active plan:

@@ -1,3 +1,9 @@
+- 2026-04-25: Keep browser operation queueing inside the browser-service
+  dispatcher. Future service/API/MCP callers should use
+  `BrowserOperationDispatcher.acquireQueued(...)` when they need to wait for a
+  browser profile turn; hard-stop flows should keep fail-fast `acquire(...)`
+  busy results so human-verification and login blockers stay explicit.
+
 - 2026-04-25: Close capability discovery/reporting separately from provider
   invocation. Plan 0050 now proves browser-backed feature-signature discovery
   for Gemini, ChatGPT, and Grok through no-live adapter tests, while
