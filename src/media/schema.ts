@@ -57,6 +57,8 @@ export const MediaGenerationTimelineEventSchema: z.ZodType<MediaGenerationTimeli
     'capability_discovered',
     'capability_unavailable',
     'executor_started',
+    'browser_operation_queued',
+    'browser_operation_acquired',
     'browser_target_attached',
     'gemini_surface_ready',
     'capability_selected',

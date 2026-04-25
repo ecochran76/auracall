@@ -1,5 +1,24 @@
 # RUNBOOK
 
+## Turn 67 | 2026-04-25
+
+- Active plan:
+  `docs/dev/plans/0057-2026-04-25-browser-media-queued-dispatch.md`
+- Goal: opt the first async browser product path into queued browser-service
+  dispatch.
+- Result:
+  - wrapped Gemini/Grok browser media execution in
+    `BrowserOperationDispatcher.acquireQueued(...)`
+  - added media timeline events `browser_operation_queued` and
+    `browser_operation_acquired`
+  - kept Gemini API transport and human/login flows outside queued dispatch
+  - used raw DevTools operation keys for explicit Grok video readback probes
+- Verification target:
+  - `pnpm vitest run tests/mediaBrowserExecutor.test.ts tests/browser-service/operationDispatcher.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 57`
+  - `git diff --check`
+
 ## Turn 66 | 2026-04-25
 
 - Active plan:

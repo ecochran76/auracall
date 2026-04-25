@@ -207,7 +207,12 @@ Terminology note:
     direct-connects to that tab without submitting, navigating, reloading, or
     opening/reusing the Imagine entrypoint. Use
     `docs/grok-imagine-video-readback-runbook.md` for the bounded manual live
-    probe. Operators can poll the generic `GET /v1/runs/{run_id}/status`
+    probe. Browser-backed Gemini/Grok media jobs wait through the
+    browser-service operation dispatcher before provider adapters touch CDP;
+    timelines can include `browser_operation_queued` and
+    `browser_operation_acquired` when another operation already owns the same
+    managed browser profile or raw DevTools endpoint. Operators can poll the
+    generic `GET /v1/runs/{run_id}/status`
     surface for response/team chats and media jobs. Media jobs also retain the
     narrower
     `GET /v1/media-generations/{media_generation_id}/status` for a compact

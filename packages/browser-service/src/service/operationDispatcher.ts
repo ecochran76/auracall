@@ -15,6 +15,7 @@ export type BrowserOperationKind =
   | 'doctor'
   | 'features'
   | 'browser-execution'
+  | 'media-generation'
   | 'browser-tools'
   | 'unknown';
 

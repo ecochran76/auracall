@@ -1,3 +1,17 @@
+## 2026-04-25 - Browser media queued dispatch
+
+- Focus: opt the first async browser-backed product path into the browser-service
+  queued operation dispatcher.
+- Progress: wrapped Gemini/Grok browser media generation in queued dispatcher
+  acquisition, added media timeline events for queue/acquire visibility, kept
+  API transport outside browser dispatch, and keyed explicit Grok video readback
+  probes by raw DevTools endpoint.
+- Validation:
+  - `pnpm vitest run tests/mediaBrowserExecutor.test.ts tests/browser-service/operationDispatcher.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 57`
+  - `git diff --check`
+
 ## 2026-04-25 - Browser operation queued dispatch
 
 - Focus: keep browser service as the single control plane for future bursts of

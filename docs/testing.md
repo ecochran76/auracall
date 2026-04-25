@@ -225,9 +225,10 @@
     - routine validation should use fixture tests instead of live video
       generation
     - expected successful runs include `capability_discovered`,
-      `executor_started`, `browser_target_attached`, `capability_selected`,
-      `prompt_submitted`, repeated `artifact_poll`, `video_visible`,
-      `artifact_materialized`, and `completed`
+      `executor_started`, optional `browser_operation_queued`,
+      `browser_operation_acquired`, `browser_target_attached`,
+      `capability_selected`, `prompt_submitted`, repeated `artifact_poll`,
+      `video_visible`, `artifact_materialized`, and `completed`
     - generated videos should cache as `video/mp4` artifacts with the
       materialization method reported in status diagnostics
   - create a browser-transport Gemini music request only when intentionally
@@ -236,9 +237,10 @@
     - routine validation should use fixture tests instead of live music
       generation
     - expected successful runs include `capability_discovered`,
-      `executor_started`, `browser_target_attached`, `capability_selected`,
-      `prompt_submitted`, repeated `artifact_poll`, `music_visible`,
-      `artifact_materialized`, and `completed`
+      `executor_started`, optional `browser_operation_queued`,
+      `browser_operation_acquired`, `browser_target_attached`,
+      `capability_selected`, `prompt_submitted`, repeated `artifact_poll`,
+      `music_visible`, `artifact_materialized`, and `completed`
     - generated music should cache every provider download variant exposed by
       readback, including video with album art and MP3 audio
     - when Gemini exposes one generated music artifact plus `downloadOptions`,
@@ -354,6 +356,7 @@
     - CLI parity for the same durable status envelope:
       `pnpm tsx bin/auracall.ts run status <media_generation_id> --json`
     - inspect `timeline[]` for `running_persisted`, `executor_started`,
+      optional `browser_operation_queued`, `browser_operation_acquired`,
       provider-specific progress, and terminal `completed|failed` evidence
   - create bounded team run:
     - `curl -s http://127.0.0.1:8080/v1/team-runs -H 'Content-Type: application/json' -d '{"teamId":"ops","objective":"Reply with one bounded team result.","responseFormat":"markdown","maxTurns":2}'`

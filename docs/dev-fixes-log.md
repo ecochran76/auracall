@@ -1,3 +1,9 @@
+- 2026-04-25: Browser-backed media generation is the first product path opted
+  into queued browser operation dispatch. Queue at the shared browser media
+  executor boundary before provider adapters touch CDP, record queue/acquire
+  timeline events for status readers, and use raw DevTools keys only for
+  explicit existing-tab readback probes.
+
 - 2026-04-25: Keep browser operation queueing inside the browser-service
   dispatcher. Future service/API/MCP callers should use
   `BrowserOperationDispatcher.acquireQueued(...)` when they need to wait for a
