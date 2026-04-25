@@ -159,6 +159,63 @@ describe('media generation status summary', () => {
     });
   });
 
+  it('preserves Grok Imagine visible tile request limits in compact status metadata', () => {
+    const response: MediaGenerationResponse = {
+      id: 'medgen_grok_image_visible_tiles_1',
+      object: 'media_generation',
+      status: 'succeeded',
+      provider: 'grok',
+      mediaType: 'image',
+      prompt: 'Generate images of an asphalt secret agent',
+      createdAt: '2026-04-25T18:06:42.573Z',
+      updatedAt: '2026-04-25T18:06:56.312Z',
+      completedAt: '2026-04-25T18:06:56.312Z',
+      artifacts: [
+        {
+          id: 'grok_imagine_visible_1',
+          type: 'image',
+          fileName: 'grok-imagine-visible-1.png',
+          path: '/tmp/grok-imagine-visible-1.png',
+          mimeType: 'image/png',
+          metadata: {
+            materialization: 'visible-tile-browser-capture',
+          },
+        },
+      ],
+      metadata: {
+        source: 'api',
+        transport: 'browser',
+        runtimeProfile: 'default',
+        tabTargetId: 'grok-tab-1',
+        capabilityId: 'grok.media.imagine_image',
+        artifactPollCount: 1,
+        generatedArtifactCount: 3,
+        requestedVisibleTileCount: 8,
+        visibleTileMaterializationLimit: 8,
+      },
+      timeline: [
+        {
+          event: 'completed',
+          at: '2026-04-25T18:06:56.312Z',
+          details: {
+            status: 'succeeded',
+            artifactCount: 1,
+          },
+        },
+      ],
+    };
+
+    const summary = summarizeMediaGenerationStatus(response);
+
+    expect(summary.metadata).toMatchObject({
+      requestedVisibleTileCount: 8,
+      visibleTileMaterializationLimit: 8,
+      generatedArtifactCount: 3,
+      tabTargetId: 'grok-tab-1',
+      capabilityId: 'grok.media.imagine_image',
+    });
+  });
+
   it('summarizes provider path, run state, and materialization diagnostics from persisted timeline', () => {
     const response: MediaGenerationResponse = {
       id: 'medgen_status_diagnostics_1',

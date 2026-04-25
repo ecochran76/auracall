@@ -48,6 +48,8 @@ export interface MediaGenerationStatusSummary {
     failureCode?: unknown;
     artifactPollCount?: unknown;
     generatedArtifactCount?: unknown;
+    requestedVisibleTileCount?: unknown;
+    visibleTileMaterializationLimit?: unknown;
   };
 }
 
@@ -145,6 +147,8 @@ function summarizeMetadata(metadata: Record<string, unknown> | null): MediaGener
     failureCode: metadata?.failureCode ?? null,
     artifactPollCount: metadata?.artifactPollCount ?? null,
     generatedArtifactCount: metadata?.generatedArtifactCount ?? null,
+    requestedVisibleTileCount: metadata?.requestedVisibleTileCount ?? null,
+    visibleTileMaterializationLimit: metadata?.visibleTileMaterializationLimit ?? null,
   };
 }
 

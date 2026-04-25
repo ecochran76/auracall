@@ -14352,3 +14352,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   without scrolling. Default browser image materialization to eight visible
   generated tiles, honor request `count` for smaller batches, and keep scroll
   expansion out of the routine path.
+- 2026-04-25: Compact media status must report requested capture limits, not
+  only realized artifact counts. A live Grok image run requested the default
+  eight visible-tile cap but only three tiles were capturable without scrolling;
+  status needed `requestedVisibleTileCount` and
+  `visibleTileMaterializationLimit` so operators could distinguish "requested
+  up to eight" from "provider exposed three visible artifacts."

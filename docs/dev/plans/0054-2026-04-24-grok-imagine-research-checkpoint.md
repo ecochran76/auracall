@@ -201,6 +201,14 @@ existing Aura-Call media-generation contract.
     trigger additional provider work
   - metadata preserves `requestedVisibleTileCount` and
     `visibleTileMaterializationLimit` for status/readback
+- Live default-count dogfood on 2026-04-25 confirmed:
+  - request id `medgen_602435d913ee4e12a2c8bf93fd043f8c`
+  - omitted `count`, reached `terminal_image`, and recorded
+    `requestedVisibleTileCount = 8`
+  - the provider exposed three capturable visible generated tiles without
+    scrolling, all cached as `visible-tile-browser-capture`
+  - compact run status now exposes both requested limit and realized artifact
+    count
 - Bounded read-only video discovery has started:
   - the live `/imagine` page exposes `Image` and `Video` as visible
     `role = radio` controls, with `Image` checked and `Video` unchecked

@@ -21496,3 +21496,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   from the submitted Imagine page and still avoids scrolling the masonry wall.
 - Validation:
   - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+
+## 2026-04-25 - Grok Imagine default visible-tile live proof
+
+- Focus: dogfood the default Grok image count path and verify status exposes
+  the requested visible-tile limit.
+- Live validation: request `medgen_602435d913ee4e12a2c8bf93fd043f8c`
+  submitted one prompt on the existing `/imagine` tab
+  `6088C5371BC63D7C88C9BB4A6F7DFAD4`, reached `terminal_image` on poll 1,
+  and completed with three `visible-tile-browser-capture` artifacts. The
+  request omitted `count`; persisted metadata recorded
+  `requestedVisibleTileCount = 8` and `visibleTileMaterializationLimit = 8`.
+- Finding: the current prompt/page state exposed only three capturable visible
+  generated tiles without scrolling. The default cap is therefore a maximum,
+  not a guarantee that Grok will always render eight immediately visible
+  generated tiles for every prompt.
+- Fix: compact media/generic run status now preserves
+  `requestedVisibleTileCount` and `visibleTileMaterializationLimit`, so
+  operators can confirm the default count path without fetching the full
+  generation record.
+- Validation:
+  - live browser media generation request through `createMediaGenerationService`
+  - `pnpm tsx bin/auracall.ts run status medgen_602435d913ee4e12a2c8bf93fd043f8c --json`
+  - `pnpm vitest run tests/mediaStatusSummary.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
