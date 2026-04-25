@@ -14320,6 +14320,19 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   media fetch still ran. Treat variant-selection failure as no materialized file
   for that variant, and use CDP pointer events for Gemini menu-item selection
   because synthetic `element.click()` can miss the real download action.
+- 2026-04-25: Gemini generated music download controls can be actionable while
+  rendered at `opacity: 0`. In this repo, a fresh music run exposed
+  `Download track` on the generated track, but the MP4/MP3 variant picker
+  rejected the control as invisible and materialized nothing. For Gemini media
+  action controls, prefer an actionable predicate based on display,
+  visibility, pointer-events, and nonzero geometry; do not reject opacity-zero
+  controls that still accept pointer events.
+- 2026-04-25: Clear transient Gemini overlays before opening the Tools drawer
+  for capability selection. In this repo, an open upload/menu overlay left the
+  surface healthy but caused a pre-submit `Gemini tools drawer did not open`
+  failure. When drawer rows are not already present, send Escape before the
+  drawer open attempt so capability selection starts from a clean overlay
+  state.
 - 2026-04-25: Fresh Gemini music readback may expose only the generic
   `Download track` control even though the provider menu contains MP4-with-art
   and MP3 variants. When a generated music artifact has a download button but

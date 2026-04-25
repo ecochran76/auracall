@@ -471,6 +471,8 @@ async function ensureGeminiToolsDrawerOpen(client: ChromeClient): Promise<boolea
   if (existingRows.matched.length > 0) {
     return true;
   }
+  await pressEscape(client).catch(() => undefined);
+  await new Promise((resolve) => setTimeout(resolve, 150));
   const programmaticOpen = await client.Runtime.evaluate({
     expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
@@ -2722,15 +2724,15 @@ function fallbackGeminiMusicVariantExtension(label: string | null | undefined): 
   return inferGeminiMusicDownloadVariantFromLabel(label) === 'mp3' ? '.mp3' : '.mp4';
 }
 
-function geminiGeneratedMediaVariantDownloadPointExpression(downloadVariantLabel: string): string {
+export function geminiGeneratedMediaVariantDownloadPointExpression(downloadVariantLabel: string): string {
   return `(async () => {
     const desired = ${JSON.stringify(downloadVariantLabel)};
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
     const compact = (value) => normalize(value).toLowerCase().replace(/[^a-z0-9]+/g, '');
-    const visible = (node) => {
+    const actionable = (node) => {
       if (!(node instanceof HTMLElement)) return false;
       const style = getComputedStyle(node);
-      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+      if (style.display === 'none' || style.visibility === 'hidden' || style.pointerEvents === 'none') return false;
       const rect = node.getBoundingClientRect();
       return rect.width > 0 && rect.height > 0;
     };
@@ -2745,7 +2747,7 @@ function geminiGeneratedMediaVariantDownloadPointExpression(downloadVariantLabel
     const readOptions = () => {
       const optionNodes = Array.from(document.querySelectorAll(
         '[role="menuitem"], [role="option"], [role="menu"] button, .mat-mdc-menu-panel button, .mat-mdc-menu-panel [role="menuitem"], .cdk-overlay-pane button, .cdk-overlay-pane [role="menuitem"]'
-      )).filter((node) => visible(node));
+      )).filter((node) => actionable(node));
       return optionNodes.map((node) => ({ node, label: labelOf(node) })).filter((entry) => entry.label);
     };
     let options = readOptions();
@@ -2753,7 +2755,7 @@ function geminiGeneratedMediaVariantDownloadPointExpression(downloadVariantLabel
       options.find((entry) => compact(entry.label).includes(desiredCompact) || desiredCompact.includes(compact(entry.label)));
     if (!(target?.node instanceof HTMLElement)) {
       const triggers = Array.from(document.querySelectorAll('button, [role="button"]'))
-        .filter((node) => visible(node) && /download/i.test(labelOf(node)))
+        .filter((node) => actionable(node) && /download/i.test(labelOf(node)))
         .sort((a, b) => {
           const aLabel = labelOf(a).toLowerCase();
           const bLabel = labelOf(b).toLowerCase();

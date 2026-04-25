@@ -1,3 +1,28 @@
+## 2026-04-25 - Gemini music hidden variant live green
+
+- Focus: finish the Gemini music service path so fresh browser runs cache both
+  provider variants after the menu labels are hidden behind `Download track`.
+- Progress: the failed run `medgen_737bb1c64d104f6db84d3052d87e6593`
+  submitted and observed `music_visible`, but materialized nothing because the
+  live `Download track` button is actionable at `opacity: 0`. The Gemini
+  variant picker now treats non-hidden, pointer-enabled nodes as actionable
+  instead of rejecting opacity-zero controls. A second pre-submit failure
+  `medgen_04ea9ef015f547bebaf9522648648bc3` showed an open upload/menu
+  overlay can block the Tools drawer, so the drawer opener now clears overlays
+  with Escape before selecting a capability. The full live service run
+  `medgen_779d86976a8f4e9faa7f7b7e542a97a5` succeeded, submitted
+  conversation `62dd6ff9d85218b1`, observed `music_visible` at poll 5, and
+  cached both
+  `~/.auracall/runtime/media-generations/medgen_779d86976a8f4e9faa7f7b7e542a97a5/artifacts/Midnight_at_the_Harbor.mp4`
+  and
+  `~/.auracall/runtime/media-generations/medgen_779d86976a8f4e9faa7f7b7e542a97a5/artifacts/Midnight_at_the_Harbor.mp3`
+  via `generated-media-download-variant`.
+- Validation:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm run build`
+  - materialization-only retry against conversation `b1cb32d4af54605d`
+  - live media-generation service run `medgen_779d86976a8f4e9faa7f7b7e542a97a5`
+
 ## 2026-04-25 - Gemini music live service smokes
 
 - Focus: live-test browser-transport Gemini music through the durable

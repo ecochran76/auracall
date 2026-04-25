@@ -5,6 +5,7 @@ import {
   createGeminiAdapter,
   deriveGeminiFeatureProbeFromUiList,
   geminiGeneratedImageDownloadButtonTagExpression,
+  geminiGeneratedMediaVariantDownloadPointExpression,
   inferGeminiGeneratedArtifactMediaType,
   geminiConversationSurfaceReadyExpression,
   extractGeminiProjectIdFromUrl,
@@ -221,6 +222,13 @@ describe('geminiAdapter id helpers', () => {
         },
       },
     ]);
+  });
+
+  test('treats opacity-zero Gemini music download controls as actionable', () => {
+    const expression = geminiGeneratedMediaVariantDownloadPointExpression('Audio onlyMP3 track');
+
+    expect(expression).toContain("style.pointerEvents === 'none'");
+    expect(expression).not.toContain("style.opacity === '0'");
   });
 
   test('normalizes Gemini deep research document artifacts to the document title', () => {
