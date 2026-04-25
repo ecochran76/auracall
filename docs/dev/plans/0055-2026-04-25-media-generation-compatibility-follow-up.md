@@ -21,6 +21,10 @@ Plan 0049 closed the shared durable media-generation resource.
 - The legacy Gemini `--generate-image <file>` path still bypasses the durable
   media-generation record and writes directly through the older Gemini web
   executor.
+- Decision on 2026-04-25: keep `--generate-image <file>` as a documented
+  compatibility shortcut for direct one-file Gemini browser image saves. Do
+  not wrap it over the durable media-generation service until operators need
+  both legacy direct file output and durable media ids from the same command.
 - Gemini API image execution is not implemented in the media-generation service.
   `transport = api` currently remains a contract shape unless a test seam or
   future provider adapter handles it.
@@ -29,11 +33,10 @@ Plan 0049 closed the shared durable media-generation resource.
 
 ## Target Contract
 
-- Decide whether legacy `--generate-image <file>` should:
-  - remain a documented compatibility shortcut, or
-  - wrap `auracall media generate --provider gemini --type image` and copy the
-    selected artifact to the requested path.
-- If wrapping the legacy flag, preserve operator expectations:
+- Legacy `--generate-image <file>` remains a documented compatibility shortcut.
+- If a later slice wraps the legacy flag over
+  `auracall media generate --provider gemini --type image`, preserve operator
+  expectations:
   - one output file path remains honored
   - errors still name the provider capability or auth problem clearly
   - no silent API/browser fallback occurs
@@ -51,14 +54,14 @@ Plan 0049 closed the shared durable media-generation resource.
 
 ## Acceptance Criteria
 
-- Legacy `--generate-image` migration has an explicit decision:
-  - compatibility-only with docs, or
-  - wrapper over durable media generation with focused tests.
-- If wrapped, tests prove the requested file path receives the selected image
-  artifact and the durable media-generation record remains readable.
+- [x] Legacy `--generate-image` migration has an explicit decision:
+  compatibility-only with docs.
+- If wrapped in a later slice, tests prove the requested file path receives the
+  selected image artifact and the durable media-generation record remains
+  readable.
 - Gemini API image support is either implemented with focused API adapter tests
   or explicitly deferred with a provider/API blocker.
-- README/testing docs identify the preferred CLI media path and any retained
+- [x] README/testing docs identify the preferred CLI media path and any retained
   compatibility shortcut.
 - Plan 0049 remains closed and does not absorb more compatibility follow-up.
 

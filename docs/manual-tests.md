@@ -48,14 +48,17 @@ human-submitted existing tab with the diagnostic readback probe.
 
 ### Gemini browser mode (Gemini web / cookies)
 
-Run this whenever you touch the Gemini web client or the `--generate-image` / `--edit-image` plumbing.
+Run this whenever you touch the Gemini web client or the legacy
+`--generate-image` / `--edit-image` plumbing. For new image/music/video media
+automation, prefer the durable `auracall media generate` command and the
+media-generation API/MCP smokes in `docs/testing.md`.
 
 Prereqs:
 - Chrome profile is signed into `gemini.google.com`.
 - If Gemini is currently on `google.com/sorry` or a CAPTCHA page, clear it
   manually before running these smokes.
 
-1. Generate an image:
+1. Generate an image through the legacy direct-file shortcut:
    `pnpm run auracall -- --engine browser --model gemini-3-pro --prompt "a cute robot holding a banana" --generate-image /tmp/gemini-gen.jpg --aspect 1:1 --wait --verbose`
    - Confirm the output file exists and is a real image (`file /tmp/gemini-gen.jpg`).
 2. Edit an image:

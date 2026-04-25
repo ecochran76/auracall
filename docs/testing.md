@@ -206,6 +206,10 @@
     - `pnpm tsx bin/auracall.ts media generate --provider gemini --type image -p "Generate an image of an asphalt secret agent" --json`
     - for async browser smokes, add `--no-wait` and poll with
       `pnpm tsx bin/auracall.ts run status <media_generation_id> --json`
+    - prefer this command for new media automation and routine operator
+      smokes; the older Gemini-only `--generate-image <file>` flag is a
+      compatibility shortcut for direct one-file browser image saves and does
+      not produce a durable media-generation record
   - create a browser-transport Gemini image request only after capability
     discovery reports `gemini.media.create_image` as `available`; the local API
     then selects `Create image`, records media-generation `timeline[]`

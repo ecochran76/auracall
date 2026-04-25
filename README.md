@@ -91,7 +91,7 @@ auracall setup --target grok --skip-login --skip-verify --json
 # If you re-log your source Chrome profile later, rerun setup/login to refresh Aura-Call's managed profile
 auracall setup --target grok --force-reseed-managed-profile
 
-# Gemini browser mode (no API key; uses Chrome cookies from gemini.google.com)
+# Legacy Gemini browser image shortcut (compatibility-only direct file save)
 auracall --engine browser --model gemini-3-pro --prompt "a cute robot holding a banana" --generate-image out.jpg --aspect 1:1
 
 # Sessions (list and replay)
@@ -149,6 +149,11 @@ Terminology note:
   API and MCP through `auracall media generate --provider gemini|grok --type
   image|music|video -p <prompt>`. Use `--no-wait` to return a running media id
   immediately, then poll it with `auracall run status <id> --json`.
+- Prefer `auracall media generate` for new image/music/video automation because
+  it persists the media-generation id, timeline, status, and artifact cache.
+  The older Gemini-only `--generate-image <file>` flag remains a
+  compatibility shortcut for direct one-file browser image saves and does not
+  create a durable media-generation record.
 - A bounded local OpenAI-compatible responses adapter is available for
   development through `auracall api serve`. Start it with
   `auracall --profile <name> api serve` to bind response, runtime, workbench,
@@ -850,7 +855,7 @@ npx -y auracall auracall-mcp
 | `--remote-host`, `--remote-token` | Use a remote `auracall serve` host (browser). |
 | `--remote-chrome <host:port>` | Attach to an existing remote Chrome session (browser). From WSL, `windows-loopback:<port>` now relays to a Windows Chrome listening on Windows `127.0.0.1:<port>` without raw WSL->Windows CDP TCP. |
 | `--youtube <url>` | YouTube video URL to analyze (Gemini browser mode). |
-| `--generate-image <file>` | Generate image and save to file (Gemini browser mode). |
+| `--generate-image <file>` | Legacy Gemini browser image shortcut that saves one file directly; prefer `auracall media generate` for durable media runs. |
 | `--edit-image <file>` | Edit existing image with `--output` (Gemini browser mode). |
 | `--azure-endpoint`, `--azure-deployment`, `--azure-api-version` | Target Azure OpenAI endpoints (picks Azure client automatically). |
 

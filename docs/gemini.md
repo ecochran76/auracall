@@ -140,7 +140,11 @@ auracall features --target gemini --json
 auracall features snapshot --target gemini --json
 auracall features diff --target gemini --json
 
-# Generate an image (writes an output file)
+# Preferred durable image generation path
+auracall media generate --provider gemini --type image \
+  --prompt "a cute robot holding a banana" --json
+
+# Legacy compatibility shortcut (writes one output file directly)
 auracall --engine browser --model gemini-3-pro \
   --prompt "a cute robot holding a banana" \
   --generate-image out.jpg --aspect 1:1
@@ -154,6 +158,10 @@ auracall --engine browser --model gemini-3-pro \
 Notes:
 - If your logged-in Gemini account can’t access “Pro”, Aura-Call will auto-fallback to a supported model for web runs (and logs the fallback in verbose mode).
 - This path runs fully in Node/TypeScript (no Python/venv dependency).
+- Use `auracall media generate` for new image/music/video automation when you
+  need durable ids, status polling, timeline evidence, and cached artifacts.
+  `--generate-image <file>` is retained as a Gemini-only compatibility
+  shortcut for direct one-file browser image saves.
 - `--browser-model-strategy` only affects ChatGPT automation; Gemini web always uses the explicit Gemini model ID.
 - Linux: Gemini web mode decrypts Chrome cookies via `secret-tool` (libsecret). If you see `Failed to read Linux keyring via secret-tool`, install `libsecret-tools` or pass inline cookies with `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/cookies.json`.
 - Linux: Gemini web mode decrypts Chrome cookies via `secret-tool` (libsecret). If you see `Failed to read Linux keyring via secret-tool`, install `libsecret-tools` or prefer the runtime-profile-scoped export file:

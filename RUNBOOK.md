@@ -1,5 +1,22 @@
 # RUNBOOK
 
+## Turn 62 | 2026-04-25
+
+- Active plan:
+  `docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md`
+- Goal: make the legacy Gemini `--generate-image <file>` decision explicit
+  before changing behavior.
+- Result:
+  - kept `--generate-image <file>` as a documented compatibility shortcut for
+    direct one-file Gemini browser image saves
+  - documented `auracall media generate` as the preferred durable
+    image/music/video path because it preserves media ids, status polling,
+    timeline evidence, and cached artifacts
+  - left Gemini API image execution as the remaining Plan 0055 follow-up
+- Verification target:
+  - `pnpm run plans:audit -- --keep 55`
+  - `git diff --check`
+
 ## Turn 61 | 2026-04-25
 
 - Active plan:

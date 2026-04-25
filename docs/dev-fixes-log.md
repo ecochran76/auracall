@@ -1,3 +1,9 @@
+- 2026-04-25: Do not migrate legacy direct-file browser flags before the
+  operator contract demands it. For Gemini images, `--generate-image <file>`
+  remains a compatibility shortcut, while `auracall media generate` is the
+  preferred durable path for media ids, status polling, timeline evidence, and
+  cached artifacts.
+
 - 2026-04-24: Existing-tab readback needs both target id and DevTools port.
   A Chrome target id alone is not enough for a remote API/MCP request because
   provider list-option building cannot infer the DevTools endpoint without

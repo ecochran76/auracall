@@ -1,3 +1,15 @@
+## 2026-04-25 - Legacy Gemini image shortcut decision
+
+- Focus: start Plan 0055 by deciding whether the older Gemini
+  `--generate-image <file>` flag should be migrated immediately.
+- Progress: kept `--generate-image <file>` as a compatibility-only direct-file
+  shortcut and documented `auracall media generate` as the preferred durable
+  CLI media path for ids, status, timeline evidence, and cached artifacts.
+  Gemini API image execution remains the active Plan 0055 follow-up.
+- Validation:
+  - `pnpm run plans:audit -- --keep 55`
+  - `git diff --check`
+
 ## 2026-04-25 - Media generation plan reconciliation
 
 - Focus: audit Plan 0049 after the CLI media command landed and separate real
