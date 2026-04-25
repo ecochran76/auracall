@@ -14339,3 +14339,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   no visible variant labels, the media executor should request Gemini's known
   music variants explicitly so provider-menu materialization can open the menu
   and select the hidden choices.
+- 2026-04-25: Live media dogfood is not complete until the persisted run is
+  checked through every operator-facing status surface. For Grok Imagine video,
+  the proof run `medgen_1fa77fb386a6421b881d1e019e9673af` succeeded only after
+  CLI `run status`, local API generic run status, local API media status, MCP
+  `run_status`, and MCP `media_generation_status` all agreed on
+  `succeeded`, one cached artifact, and diagnostics showing `terminal_video`
+  plus `download-button` materialization.

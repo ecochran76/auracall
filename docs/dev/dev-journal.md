@@ -21450,3 +21450,33 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`
+
+## 2026-04-25 - Grok Imagine video status dogfood
+
+- Focus: prove the fixture-backed Grok Imagine video status path against a live
+  browser run, including materialization and operator status readback.
+- Live validation: request `medgen_1fa77fb386a6421b881d1e019e9673af`
+  submitted normally on tab `6088C5371BC63D7C88C9BB4A6F7DFAD4`, moved from
+  `https://grok.com/imagine` to
+  `https://grok.com/imagine/post/1a13085c-e1f6-4e73-a1f9-8762c815c150`,
+  reached `terminal_video` at poll 5, emitted `video_visible`, and completed
+  at `2026-04-25T17:41:34.575Z` with one cached
+  `grok-imagine-video-1.mp4` artifact.
+- Status proof: CLI `run status`, local API `/v1/runs/{id}/status`, local API
+  `/v1/media-generations/{id}/status`, MCP `run_status`, and MCP
+  `media_generation_status` all returned `succeeded` with `artifactCount = 1`.
+  The generic run status and MCP surfaces included `runState =
+  terminal_video`, `generatedVideoCount = 1`, `materialization =
+  download-button`, and `materializationSource = generated-video`.
+- Artifact: cached file
+  `~/.auracall/runtime/media-generations/medgen_1fa77fb386a6421b881d1e019e9673af/artifacts/grok-imagine-video-1.mp4`
+  is `video/mp4` and about `2.0M`; the provider URL was recorded from
+  `assets.grok.com`.
+- Validation:
+  - `pnpm tsx bin/auracall.ts capabilities --target grok --entrypoint grok-imagine --discovery-action grok-imagine-video-mode --json`
+  - live browser media generation request through `createMediaGenerationService`
+  - `pnpm tsx bin/auracall.ts run status medgen_1fa77fb386a6421b881d1e019e9673af --json`
+  - `pnpm tsx bin/auracall.ts api serve --port 18080 --no-recover-runs-on-start`
+  - `curl -s http://127.0.0.1:18080/v1/runs/medgen_1fa77fb386a6421b881d1e019e9673af/status`
+  - `curl -s http://127.0.0.1:18080/v1/media-generations/medgen_1fa77fb386a6421b881d1e019e9673af/status`
+  - direct MCP handler calls for `run_status` and `media_generation_status`
