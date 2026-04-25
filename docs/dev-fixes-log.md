@@ -14295,3 +14295,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   also need to map each cached file to its specific variant. Compact status
   should carry `downloadLabel` and `downloadVariant` beside the artifact path
   whenever readback/materialization metadata provides them.
+- 2026-04-25: Closed Gemini music download menus only expose the visible
+  `Download track` control to read-only DOM/status probes. Do not treat a
+  missing MP4/MP3 variant list as a failed music readback when no provider menu
+  overlay is open; reserve variant enumeration for fixture coverage,
+  human-opened menus, or explicit non-routine materialization probes.

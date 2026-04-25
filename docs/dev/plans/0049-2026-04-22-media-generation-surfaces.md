@@ -54,6 +54,12 @@ helpers.
   This read-only probe records options such as `Download as video with album
   art` and `Download as MP3` as artifact metadata without clicking the menu or
   spending generation quota.
+- A live read-only probe against an already-open Gemini music chat confirmed
+  active-tab artifact readback can classify generated music and preserve the
+  visible `Download track` control in compact status without navigation or
+  quota spend. With the menu closed, Gemini did not expose hidden MP4/MP3
+  variant labels in the DOM; those require an already-open menu or an explicit
+  non-routine menu-opening/materialization probe.
 - A first live API image smoke proved capability discovery, tool selection,
   and prompt submission, but Gemini remained in an active `Stop response` state
   until the media-generation timeout, so artifact completion/readback was still
@@ -290,6 +296,9 @@ helpers.
   fixtures. It should not click download menus during routine validation; if a
   human has already opened the menu in the managed browser, readback may
   preserve the visible option labels.
+- Live Gemini music dogfood should treat closed-menu `Download track` evidence
+  as a successful read-only music detection/status probe, not as proof that all
+  hidden provider download variants were discoverable.
 - Live Grok Imagine smoke only with a configured `XAI_API_KEY` or validated
   browser account path that exposes Imagine.
 - First Grok implementation validation should use read-only managed-browser

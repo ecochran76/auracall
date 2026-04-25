@@ -1,3 +1,22 @@
+## 2026-04-25 - Gemini music read-only live probe
+
+- Focus: dogfood Gemini music artifact readback on an already-open generated
+  music chat without spending generation quota or mutating the page.
+- Progress: read-only active-tab artifact readback on
+  `https://gemini.google.com/app/c4b327e2a3ba97e6` found one generated music
+  artifact, classified it as terminal music, and compact status preserved
+  `downloadLabel = Download track` plus `downloadOptions = [Download track]`.
+  A separate DOM census confirmed the visible controls were `Download track`,
+  `Share track`, `Play video`, `Mute track`, and `Create music`; no menu
+  overlay was open, so hidden MP4/MP3 variant choices were not visible to the
+  read-only probe.
+- Validation:
+  - `pnpm tsx scripts/browser-tools.ts --browser-target gemini tabs --json`
+  - `node --input-type=module -e '...'` using built `dist/` modules for
+    `BrowserAutomationClient.readActiveConversationArtifacts(...)`
+  - `pnpm tsx scripts/browser-tools.ts --browser-target gemini eval --url-contains c4b327e2a3ba97e6 'JSON.stringify(...)'`
+  - `pnpm tsx scripts/browser-tools.ts --browser-target gemini tabs --json`
+
 ## 2026-04-25 - Gemini music status variant fixture
 
 - Focus: prove Gemini music variants stay identifiable from provider readback
