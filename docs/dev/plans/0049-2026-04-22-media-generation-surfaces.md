@@ -63,10 +63,13 @@ helpers.
 - A bounded live open-menu probe on the same chat showed Gemini's music
   download menu labels as `VideoAudio with cover art` and `Audio onlyMP3
   track`. Adapter readback now preserves both labels when that menu is already
-  visible, including Gemini's concatenated menu-panel text shape. The current
-  default materializer still caches the already-exposed MP4 track URL; selecting
-  and caching the MP3 menu item remains a separate explicit variant-selection
-  task.
+  visible, including Gemini's concatenated menu-panel text shape.
+- Gemini music materialization now expands a single generated music artifact
+  with visible provider download options into explicit variant-labeled
+  materialization targets. The adapter can open the download menu on the
+  submitted active tab, select the requested option label, and cache the
+  captured browser download or anchor response; fixture coverage includes the
+  live-style `VideoAudio with cover art` and `Audio onlyMP3 track` labels.
 - A first live API image smoke proved capability discovery, tool selection,
   and prompt submission, but Gemini remained in an active `Stop response` state
   until the media-generation timeout, so artifact completion/readback was still
@@ -299,6 +302,9 @@ helpers.
   `gemini.media.create_music` as available and should verify that both
   download variants, video with album art and MP3 audio, are cached when the
   provider exposes both.
+- Fixture coverage should include both readback shapes: two already-separated
+  music artifacts and one generated music artifact whose `downloadOptions`
+  drive explicit provider-menu variant selection.
 - Read-only Gemini music download-option discovery is covered by adapter
   fixtures. It should not click download menus during routine validation; if a
   human has already opened the menu in the managed browser, readback may

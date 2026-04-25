@@ -2671,6 +2671,7 @@ async function configureGeminiDownloadBehaviorWithClient(
 async function waitForGeminiDownloadedFile(
   destDir: string,
   timeoutMs = 20_000,
+  options: { excludeNames?: ReadonlySet<string> } = {},
 ): Promise<string | null> {
   const deadline = Date.now() + timeoutMs;
   let lastPath: string | null = null;
@@ -2679,7 +2680,11 @@ async function waitForGeminiDownloadedFile(
   while (Date.now() < deadline) {
     const entries = await fs.readdir(destDir, { withFileTypes: true }).catch(() => []);
     const fileNames = entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
-    const completed = fileNames.filter((name) => !name.endsWith('.crdownload') && !name.endsWith('.tmp'));
+    const completed = fileNames.filter((name) =>
+      !name.endsWith('.crdownload') &&
+      !name.endsWith('.tmp') &&
+      !options.excludeNames?.has(name)
+    );
     if (completed.length > 0) {
       const candidatePath = path.join(destDir, completed.sort()[0]!);
       const stat = await fs.stat(candidatePath).catch(() => null);
@@ -2703,6 +2708,160 @@ async function waitForGeminiDownloadedFile(
 
 const GEMINI_GENERATED_IMAGE_DOWNLOAD_BUTTON_ATTR = 'data-auracall-gemini-generated-image-download';
 const GEMINI_GENERATED_IMAGE_DOWNLOAD_CAPTURE_STATE_KEY = '__auracallGeminiGeneratedImageDownloadCapture';
+const GEMINI_GENERATED_MEDIA_VARIANT_DOWNLOAD_CAPTURE_STATE_KEY = '__auracallGeminiGeneratedMediaVariantDownloadCapture';
+
+function inferGeminiMusicDownloadVariantFromLabel(label: string | null | undefined): string | null {
+  const normalized = String(label ?? '').trim().toLowerCase();
+  if (!normalized) return null;
+  if (/\bmp3\b|audio only/.test(normalized)) return 'mp3';
+  if (/cover art|album art|\bvideo\b/.test(normalized)) return 'video_with_album_art';
+  return null;
+}
+
+function fallbackGeminiMusicVariantExtension(label: string | null | undefined): string {
+  return inferGeminiMusicDownloadVariantFromLabel(label) === 'mp3' ? '.mp3' : '.mp4';
+}
+
+function geminiGeneratedMediaVariantDownloadExpression(downloadVariantLabel: string): string {
+  return `(async () => {
+    const desired = ${JSON.stringify(downloadVariantLabel)};
+    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+    const compact = (value) => normalize(value).toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const visible = (node) => {
+      if (!(node instanceof HTMLElement)) return false;
+      const style = getComputedStyle(node);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+    const labelOf = (node) => normalize(
+      node.getAttribute('aria-label') ||
+      node.getAttribute('title') ||
+      node.textContent ||
+      ''
+    );
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const desiredCompact = compact(desired);
+    const triggers = Array.from(document.querySelectorAll('button, [role="button"]'))
+      .filter((node) => visible(node) && /download/i.test(labelOf(node)))
+      .sort((a, b) => {
+        const aLabel = labelOf(a).toLowerCase();
+        const bLabel = labelOf(b).toLowerCase();
+        const score = (label) => (label.includes('track') ? 3 : 0) + (label.includes('download') ? 1 : 0);
+        return score(bLabel) - score(aLabel);
+      });
+    const trigger = triggers[0] || null;
+    if (!(trigger instanceof HTMLElement)) {
+      return { ok: false, reason: 'download-trigger-missing', labels: [] };
+    }
+    trigger.click();
+    await sleep(300);
+    const optionNodes = Array.from(document.querySelectorAll(
+      '[role="menuitem"], [role="option"], [role="menu"] button, .mat-mdc-menu-panel button, .mat-mdc-menu-panel [role="menuitem"], .cdk-overlay-pane button, .cdk-overlay-pane [role="menuitem"]'
+    )).filter((node) => visible(node));
+    const options = optionNodes.map((node) => ({ node, label: labelOf(node) })).filter((entry) => entry.label);
+    const target = options.find((entry) => compact(entry.label) === desiredCompact) ||
+      options.find((entry) => compact(entry.label).includes(desiredCompact) || desiredCompact.includes(compact(entry.label)));
+    if (!(target?.node instanceof HTMLElement)) {
+      return { ok: false, reason: 'download-variant-missing', labels: options.map((entry) => entry.label).slice(0, 20) };
+    }
+    target.node.click();
+    return { ok: true, label: target.label };
+  })()`;
+}
+
+async function materializeGeminiGeneratedMediaDownloadVariantWithClient(
+  client: ChromeClient,
+  artifact: ConversationArtifact,
+  destDir: string,
+  downloadVariantLabel: string,
+): Promise<FileRef | null> {
+  await fs.mkdir(destDir, { recursive: true });
+  const existingNames = new Set(
+    (await fs.readdir(destDir, { withFileTypes: true }).catch(() => []))
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name),
+  );
+  await configureGeminiDownloadBehaviorWithClient(client, destDir);
+  await armDownloadCapture(client.Runtime, { stateKey: GEMINI_GENERATED_MEDIA_VARIANT_DOWNLOAD_CAPTURE_STATE_KEY });
+  const clicked = await client.Runtime.evaluate({
+    expression: geminiGeneratedMediaVariantDownloadExpression(downloadVariantLabel),
+    awaitPromise: true,
+    returnByValue: true,
+  });
+  const clickedValue = isRecord(clicked.result?.value) ? clicked.result.value : null;
+  if (clickedValue?.ok !== true) {
+    return null;
+  }
+  const capture = await waitForDownloadCapture(client.Runtime, {
+    stateKey: GEMINI_GENERATED_MEDIA_VARIANT_DOWNLOAD_CAPTURE_STATE_KEY,
+    timeoutMs: 1_500,
+    pollMs: 100,
+  });
+  const capturedHref = normalizeWhitespace(capture.href ?? '');
+  const capturedName = normalizeWhitespace(capture.downloadName ?? '');
+  const downloadVariant = inferGeminiMusicDownloadVariantFromLabel(downloadVariantLabel);
+  if (capturedHref) {
+    try {
+      const { buffer, contentType, contentDisposition } = await fetchGeminiBinaryWithClient(client, capturedHref);
+      const fallbackBaseName =
+        extractFilenameFromContentDisposition(contentDisposition) ||
+        extractGeminiArtifactFileName(capturedHref) ||
+        capturedName ||
+        artifact.title;
+      const fileName = ensureGeminiArtifactExtension(
+        fallbackBaseName,
+        geminiContentTypeToExtension(contentType) || fallbackGeminiMusicVariantExtension(downloadVariantLabel),
+      );
+      const destPath = path.join(destDir, fileName);
+      await fs.writeFile(destPath, buffer);
+      return {
+        id: artifact.id,
+        name: fileName,
+        provider: 'gemini',
+        source: 'conversation',
+        size: buffer.byteLength,
+        mimeType: contentType ?? inferGeminiArtifactMimeType(fileName),
+        remoteUrl: capturedHref,
+        localPath: destPath,
+        metadata: {
+          artifactKind: artifact.kind,
+          artifactTitle: artifact.title,
+          materialization: 'generated-media-download-variant-anchor-fetch',
+          ...(artifact.metadata ?? {}),
+          downloadLabel: downloadVariantLabel,
+          ...(downloadVariant ? { downloadVariant } : {}),
+        },
+      };
+    } catch {
+      // Fall through to browser-native download polling.
+    }
+  }
+  const downloadedPath = await waitForGeminiDownloadedFile(destDir, 10_000, { excludeNames: existingNames });
+  if (!downloadedPath) {
+    return null;
+  }
+  const stat = await fs.stat(downloadedPath);
+  const fileName = path.basename(downloadedPath);
+  return {
+    id: artifact.id,
+    name: fileName,
+    provider: 'gemini',
+    source: 'conversation',
+    size: stat.size,
+    mimeType: inferGeminiArtifactMimeType(fileName),
+    remoteUrl: capturedHref || artifact.uri,
+    localPath: downloadedPath,
+    metadata: {
+      artifactKind: artifact.kind,
+      artifactTitle: artifact.title,
+      materialization: capturedHref ? 'generated-media-download-variant-anchor-fetch' : 'generated-media-download-variant',
+      ...(artifact.metadata ?? {}),
+      downloadLabel: downloadVariantLabel,
+      ...(downloadVariant ? { downloadVariant } : {}),
+    },
+  };
+}
 
 export function geminiGeneratedImageDownloadButtonTagExpression(
   artifact: Pick<ConversationArtifact, 'id' | 'uri' | 'messageIndex'>,
@@ -3458,7 +3617,7 @@ async function materializeGeminiConversationArtifactWithClient(
   conversationId: string,
   artifact: ConversationArtifact,
   destDir: string,
-  options: { allowNavigation?: boolean } = {},
+  options: { allowNavigation?: boolean; downloadVariantLabel?: string | null } = {},
 ): Promise<FileRef | null> {
   if (!(await isGeminiConversationSurfaceAlreadyReady(client, conversationId))) {
     if (options.allowNavigation === false) {
@@ -3539,6 +3698,22 @@ async function materializeGeminiConversationArtifactWithClient(
   if (resolvedArtifact.kind === 'generated' || resolvedArtifact.kind === 'image') {
     const remoteUrl = typeof resolvedArtifact.uri === 'string' ? resolvedArtifact.uri.trim() : '';
     if (!remoteUrl) return null;
+    const downloadVariantLabel = normalizeWhitespace(options.downloadVariantLabel ?? '');
+    if (
+      resolvedArtifact.kind === 'generated' &&
+      resolvedArtifact.metadata?.mediaType === 'music' &&
+      downloadVariantLabel
+    ) {
+      const variantFile = await materializeGeminiGeneratedMediaDownloadVariantWithClient(
+        client,
+        resolvedArtifact,
+        destDir,
+        downloadVariantLabel,
+      );
+      if (variantFile) {
+        return variantFile;
+      }
+    }
     if (resolvedArtifact.kind === 'image' && resolvedArtifact.metadata && resolvedArtifact.metadata.hasDownloadButton) {
       await fs.mkdir(destDir, { recursive: true });
       await configureGeminiDownloadBehaviorWithClient(client, destDir);
@@ -6375,6 +6550,7 @@ export function createGeminiAdapter(): Pick<
           destDir,
           {
             allowNavigation: options?.preserveActiveTab !== true,
+            downloadVariantLabel: options?.downloadVariantLabel ?? null,
           },
         );
       } finally {

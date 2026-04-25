@@ -14305,3 +14305,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   under the `Download track` trigger. Open-menu readback should preserve visible
   menu-item labels that mention audio, MP3, track, video, or cover art, and
   split Gemini's concatenated menu-panel text shape when necessary.
+- 2026-04-25: Gemini music materialization must expand one generated artifact
+  into provider download variants when readback exposes option labels. In this
+  repo, the live page showed one MP4-backed artifact plus menu options for
+  video-with-cover-art and MP3. The executor should create explicit
+  variant-labeled materialization targets, and the provider adapter should
+  select the requested visible menu item on the submitted active tab using
+  browser-service download capture instead of assuming direct URL fetch covers
+  every variant.

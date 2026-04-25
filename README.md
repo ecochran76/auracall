@@ -225,7 +225,9 @@ Terminology note:
     matching workbench capability, select the matching `Images`/`Music`/`Videos`
     workbench tool, and materialize generated artifacts through the managed
     browser path. Gemini music can cache both provider download variants when
-    readback exposes them: video with album art and MP3 audio. Read-only
+    readback exposes them: video with album art and MP3 audio. If Gemini
+    exposes one music artifact plus visible option labels, Aura-Call expands
+    those labels into separate provider-menu materialization requests. Read-only
     artifact discovery also preserves already-visible provider download option
     labels without opening the menu. Gemini music/video
     live smokes are quota-sensitive and should stay opt-in/manual; fixture

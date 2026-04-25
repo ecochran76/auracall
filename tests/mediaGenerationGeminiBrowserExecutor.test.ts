@@ -478,6 +478,159 @@ describe('Gemini browser media generation executor', () => {
     expect(new Set(status.artifacts.map((artifact) => artifact.path)).size).toBe(2);
   });
 
+  it('expands one Gemini music artifact with visible download options into explicit variant materialization requests', async () => {
+    const { createGeminiBrowserMediaGenerationExecutor } = await import('../src/media/geminiBrowserExecutor.js');
+    const artifactDir = '/tmp/auracall-media-artifacts';
+    const videoPath = path.join(artifactDir, 'pavement-espionage.mp4');
+    const mp3Path = path.join(artifactDir, 'pavement-espionage.mp3');
+    const downloadOptions = ['Download track', 'VideoAudio with cover art', 'Audio onlyMP3 track'];
+    browserClient.runPrompt.mockResolvedValueOnce({
+      text: '',
+      conversationId: 'gemini-music-single-artifact',
+      url: 'https://gemini.google.com/app/gemini-music-single-artifact',
+      tabTargetId: 'gemini-music-single-tab',
+    });
+    browserClient.readActiveConversationArtifacts.mockResolvedValueOnce([
+      {
+        id: 'artifact-music-1',
+        title: 'Pavement Espionage',
+        kind: 'generated',
+        uri: 'https://contribution.usercontent.google.com/download?filename=pavement_espionage.mp4',
+        metadata: {
+          mediaType: 'music',
+          fileName: 'pavement_espionage.mp4',
+          downloadLabel: 'Download track',
+          downloadOptions,
+        },
+      },
+    ]);
+    browserClient.materializeConversationArtifact
+      .mockResolvedValueOnce({
+        id: 'artifact-music-1:video_with_album_art',
+        name: 'pavement-espionage.mp4',
+        provider: 'gemini',
+        source: 'conversation',
+        size: 9876,
+        mimeType: 'video/mp4',
+        remoteUrl: 'https://contribution.usercontent.google.com/download?filename=pavement_espionage.mp4',
+        localPath: videoPath,
+        metadata: {
+          materialization: 'generated-media-download-variant-anchor-fetch',
+          mediaType: 'music',
+          downloadLabel: 'VideoAudio with cover art',
+          downloadVariant: 'video_with_album_art',
+          downloadOptions,
+        },
+      })
+      .mockResolvedValueOnce({
+        id: 'artifact-music-1:mp3',
+        name: 'pavement-espionage.mp3',
+        provider: 'gemini',
+        source: 'conversation',
+        size: 3456,
+        mimeType: 'audio/mpeg',
+        remoteUrl: 'https://contribution.usercontent.google.com/download?filename=pavement_espionage.mp3',
+        localPath: mp3Path,
+        metadata: {
+          materialization: 'generated-media-download-variant-anchor-fetch',
+          mediaType: 'music',
+          downloadLabel: 'Audio onlyMP3 track',
+          downloadVariant: 'mp3',
+          downloadOptions,
+        },
+      });
+
+    const executor = createGeminiBrowserMediaGenerationExecutor({} as never);
+    const timelineDetails: Array<Record<string, unknown> | null | undefined> = [];
+    const result = await executor({
+      id: 'medgen_music_single_artifact_test',
+      createdAt: '2026-04-25T12:00:00.000Z',
+      artifactDir,
+      emitTimeline: (event) => {
+        if (event.event === 'artifact_materialized') {
+          timelineDetails.push(event.details);
+        }
+      },
+      request: {
+        provider: 'gemini',
+        mediaType: 'music',
+        prompt: 'Create a spy theme song',
+        transport: 'browser',
+      },
+    });
+
+    expect(browserClient.materializeConversationArtifact).toHaveBeenNthCalledWith(
+      1,
+      'gemini-music-single-artifact',
+      expect.objectContaining({
+        id: 'artifact-music-1:video_with_album_art',
+        metadata: expect.objectContaining({
+          downloadLabel: 'VideoAudio with cover art',
+          downloadVariant: 'video_with_album_art',
+        }),
+      }),
+      artifactDir,
+      {
+        listOptions: expect.objectContaining({
+          tabTargetId: 'gemini-music-single-tab',
+          preserveActiveTab: true,
+          downloadVariantLabel: 'VideoAudio with cover art',
+        }),
+      },
+    );
+    expect(browserClient.materializeConversationArtifact).toHaveBeenNthCalledWith(
+      2,
+      'gemini-music-single-artifact',
+      expect.objectContaining({
+        id: 'artifact-music-1:mp3',
+        metadata: expect.objectContaining({
+          downloadLabel: 'Audio onlyMP3 track',
+          downloadVariant: 'mp3',
+        }),
+      }),
+      artifactDir,
+      {
+        listOptions: expect.objectContaining({
+          tabTargetId: 'gemini-music-single-tab',
+          preserveActiveTab: true,
+          downloadVariantLabel: 'Audio onlyMP3 track',
+        }),
+      },
+    );
+    expect(result.artifacts).toMatchObject([
+      {
+        id: 'artifact-music-1:video_with_album_art',
+        type: 'music',
+        mimeType: 'video/mp4',
+        path: videoPath,
+        metadata: {
+          downloadLabel: 'VideoAudio with cover art',
+          downloadVariant: 'video_with_album_art',
+        },
+      },
+      {
+        id: 'artifact-music-1:mp3',
+        type: 'music',
+        mimeType: 'audio/mpeg',
+        path: mp3Path,
+        metadata: {
+          downloadLabel: 'Audio onlyMP3 track',
+          downloadVariant: 'mp3',
+        },
+      },
+    ]);
+    expect(timelineDetails).toEqual([
+      expect.objectContaining({
+        downloadLabel: 'VideoAudio with cover art',
+        downloadVariant: 'video_with_album_art',
+      }),
+      expect.objectContaining({
+        downloadLabel: 'Audio onlyMP3 track',
+        downloadVariant: 'mp3',
+      }),
+    ]);
+  });
+
   it('polls conversation artifacts after prompt submission before materializing', async () => {
     const { createGeminiBrowserMediaGenerationExecutor } = await import('../src/media/geminiBrowserExecutor.js');
     const artifactDir = '/tmp/auracall-media-artifacts';

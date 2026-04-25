@@ -229,6 +229,9 @@
       `artifact_materialized`, and `completed`
     - generated music should cache every provider download variant exposed by
       readback, including video with album art and MP3 audio
+    - when Gemini exposes one generated music artifact plus `downloadOptions`,
+      the executor should materialize each option as a separate variant by
+      selecting the requested visible provider menu item on the submitted tab
     - read-only artifact discovery should preserve already-visible provider
       download option labels, such as `Download as video with album art` and
       `Download as MP3`, without clicking the menu during routine validation

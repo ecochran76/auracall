@@ -112,31 +112,36 @@ async function executeGeminiBrowserMediaGeneration(
     );
   }
 
+  const materializationTargets = buildGeminiMaterializationTargets(artifacts, request.mediaType);
   const requestedCount = request.mediaType === 'music'
-    ? artifacts.length
-    : Math.max(1, Math.min(request.count ?? 1, artifacts.length));
+    ? materializationTargets.length
+    : Math.max(1, Math.min(request.count ?? 1, materializationTargets.length));
   const materialized: MediaGenerationArtifact[] = [];
-  for (const artifact of artifacts.slice(0, requestedCount)) {
-    const file = await client.materializeConversationArtifact(conversationId, artifact, input.artifactDir, {
-      listOptions: {
-        configuredUrl: promptResult.url ?? resolveGeminiConversationUrl(conversationId),
-        tabUrl: promptResult.url ?? resolveGeminiConversationUrl(conversationId),
-        tabTargetId,
-        preserveActiveTab: true,
-      },
+  for (const target of materializationTargets.slice(0, requestedCount)) {
+    const listOptions = {
+      configuredUrl: promptResult.url ?? resolveGeminiConversationUrl(conversationId),
+      tabUrl: promptResult.url ?? resolveGeminiConversationUrl(conversationId),
+      tabTargetId,
+      preserveActiveTab: true,
+      ...(target.downloadVariantLabel ? { downloadVariantLabel: target.downloadVariantLabel } : {}),
+    };
+    const file = await client.materializeConversationArtifact(conversationId, target.artifact, input.artifactDir, {
+      listOptions,
     });
     if (!file) continue;
     await input.emitTimeline?.({
       event: 'artifact_materialized',
       details: {
-        providerArtifactId: artifact.id,
+        providerArtifactId: target.artifact.id,
         fileName: file.name || null,
         path: file.localPath ?? null,
         mimeType: file.mimeType ?? null,
         materialization: file.metadata?.materialization ?? null,
+        downloadLabel: file.metadata?.downloadLabel ?? target.downloadVariantLabel ?? null,
+        downloadVariant: file.metadata?.downloadVariant ?? inferGeminiMusicDownloadVariant(target.downloadVariantLabel) ?? null,
       },
     });
-    materialized.push(mapGeminiFileToMediaArtifact(file, artifact, request.mediaType, materialized.length + 1));
+    materialized.push(mapGeminiFileToMediaArtifact(file, target.artifact, request.mediaType, materialized.length + 1));
   }
   if (materialized.length === 0) {
     throw new MediaGenerationExecutionError(
@@ -162,6 +167,78 @@ async function executeGeminiBrowserMediaGeneration(
       artifactPollCount: pollCount,
     },
   };
+}
+
+interface GeminiMaterializationTarget {
+  artifact: ConversationArtifact;
+  downloadVariantLabel?: string | null;
+}
+
+function buildGeminiMaterializationTargets(
+  artifacts: ConversationArtifact[],
+  mediaType: MediaGenerationType,
+): GeminiMaterializationTarget[] {
+  if (mediaType !== 'music') {
+    return artifacts.map((artifact) => ({ artifact }));
+  }
+  return artifacts.flatMap((artifact) => {
+    const existingVariant = normalizeNonEmpty(artifact.metadata?.downloadVariant);
+    if (existingVariant) {
+      return [{ artifact }];
+    }
+    const options = normalizeGeminiDownloadOptions(artifact.metadata?.downloadOptions);
+    const providerVariants = options.filter((label) => {
+      const normalized = label.toLowerCase();
+      return normalized !== 'download track' && normalized !== normalizeNonEmpty(artifact.metadata?.downloadLabel)?.toLowerCase();
+    });
+    if (providerVariants.length <= 1) {
+      return [{ artifact }];
+    }
+    return providerVariants.map((label) => {
+      const variant = inferGeminiMusicDownloadVariant(label);
+      return {
+        artifact: {
+          ...artifact,
+          id: `${artifact.id}:${variant ?? sanitizeGeminiVariantId(label)}`,
+          metadata: {
+            ...(artifact.metadata ?? {}),
+            downloadLabel: label,
+            ...(variant ? { downloadVariant: variant } : {}),
+            downloadOptions: options,
+          },
+        },
+        downloadVariantLabel: label,
+      };
+    });
+  });
+}
+
+function normalizeGeminiDownloadOptions(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const options: string[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    const label = normalizeNonEmpty(item);
+    if (!label) continue;
+    const key = label.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    options.push(label);
+  }
+  return options;
+}
+
+function inferGeminiMusicDownloadVariant(label: unknown): string | null {
+  const normalized = String(label ?? '').trim().toLowerCase();
+  if (!normalized) return null;
+  if (/\bmp3\b|audio only/.test(normalized)) return 'mp3';
+  if (/cover art|album art|\bvideo\b/.test(normalized)) return 'video_with_album_art';
+  return null;
+}
+
+function sanitizeGeminiVariantId(label: string): string {
+  const normalized = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  return normalized || 'variant';
 }
 
 function mapGeminiPromptProgressToTimelineEvent(

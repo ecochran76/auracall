@@ -1,3 +1,18 @@
+## 2026-04-25 - Gemini music variant materialization wiring
+
+- Focus: turn Gemini music download-option readback into explicit MP4/MP3
+  materialization requests without spending live generation quota.
+- Progress: the Gemini browser media executor now expands a single generated
+  music artifact with visible provider options into per-variant materialization
+  targets. The Gemini adapter accepts a `downloadVariantLabel`, opens the
+  provider download menu on the submitted active tab, selects the requested
+  option, and caches the resulting browser download or captured anchor. This
+  covers the live `VideoAudio with cover art` and `Audio onlyMP3 track` labels
+  while preserving the no-post-submit-navigation path.
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/browser/geminiAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+
 ## 2026-04-25 - Gemini music open-menu variant readback
 
 - Focus: verify hidden Gemini music download variants on the already-open
