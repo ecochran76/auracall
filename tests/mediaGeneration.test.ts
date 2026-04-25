@@ -592,6 +592,7 @@ describe('media generation service', () => {
       metadata: {
         grokVideoReadbackProbe: true,
         grokVideoReadbackTabTargetId: 'manual-tab-1',
+        grokVideoReadbackDevtoolsPort: 38261,
       },
     });
 
@@ -603,6 +604,7 @@ describe('media generation service', () => {
       metadata: {
         grokVideoReadbackProbe: true,
         grokVideoReadbackTabTargetId: 'manual-tab-1',
+        grokVideoReadbackDevtoolsPort: 38261,
         executorSawCapability: null,
       },
       artifacts: [

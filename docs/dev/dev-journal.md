@@ -7,9 +7,11 @@
   - Grok browser video still emits pre-submit context and stops for normal
     callers before prompt insertion or Submit
   - added `metadata.grokVideoReadbackProbe = true` plus
-    `metadata.grokVideoReadbackTabTargetId` as a diagnostic-only path that
-    polls an existing tab target, emits `run_state_observed`/`video_visible`,
-    and materializes a generated video candidate
+    `metadata.grokVideoReadbackTabTargetId` as a diagnostic-only path; the
+    later live probe tightened this to also require
+    `metadata.grokVideoReadbackDevtoolsPort` so polling can direct-connect to
+    the existing tab target, emit `run_state_observed`/`video_visible`, and
+    materialize a generated video candidate
   - the probe branch never calls `runPrompt` and does not navigate or reload
     the provider page
 - Validation:
@@ -20987,6 +20989,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   bot guards stop automation.
 - Validation:
   - `pnpm vitest run tests/mediaGeneration.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`
+
+## 2026-04-24 - Grok video readback direct-connect gap
+
+- Live probe: human-started Grok Imagine video readback request
+  `medgen_6af3f99688dc4424abebbe29c580cd41` was submitted against tab target
+  `6088C5371BC63D7C88C9BB4A6F7DFAD4` on DevTools port `38261`.
+- Finding: the API metadata carried the tab target id but not the DevTools
+  port, so provider option building could not direct-connect to the target and
+  fell back through browser-service target resolution. The tab moved from
+  `/imagine/post/...` to `/imagine`, then readback failed as
+  `media_generation_no_generated_output`.
+- Fix: require `grokVideoReadbackDevtoolsPort` for diagnostic
+  video readback, pass host/port through every `getFeatureSignature` poll, and
+  update the runbook to copy tab id, port, and current tab URL from
+  `browser-tools inspect`.
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts --maxWorkers 1`
   - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
   - `pnpm run check`
   - `pnpm run build`

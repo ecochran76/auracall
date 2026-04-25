@@ -327,6 +327,8 @@ async function executeGrokBrowserVideoReadbackProbe(
 ): Promise<{ artifacts: MediaGenerationArtifact[]; model?: string | null; metadata?: Record<string, unknown> | null }> {
   const tabTargetId = normalizeNonEmpty(input.request.metadata?.grokVideoReadbackTabTargetId);
   const tabUrl = normalizeNonEmpty(input.request.metadata?.grokVideoReadbackTabUrl) ?? GROK_IMAGINE_URL;
+  const devtoolsPort = resolveReadbackDevtoolsPort(input.request.metadata?.grokVideoReadbackDevtoolsPort);
+  const devtoolsHost = normalizeNonEmpty(input.request.metadata?.grokVideoReadbackDevtoolsHost) ?? '127.0.0.1';
   if (!tabTargetId) {
     throw new MediaGenerationExecutionError(
       'media_generation_readback_failed',
@@ -340,12 +342,27 @@ async function executeGrokBrowserVideoReadbackProbe(
       },
     );
   }
+  if (!devtoolsPort) {
+    throw new MediaGenerationExecutionError(
+      'media_generation_readback_failed',
+      'Grok browser video readback probe requires metadata.grokVideoReadbackDevtoolsPort so it can attach directly to the existing submitted tab without browser-service target fallback.',
+      {
+        provider: 'grok',
+        transport: input.request.transport ?? null,
+        mediaType: 'video',
+        capabilityId: GROK_VIDEO_CAPABILITY_ID,
+        readbackProbe: true,
+        tabTargetId,
+      },
+    );
+  }
   const timeoutMs = resolveMediaTimeoutMs(input.request.metadata);
   const client = await BrowserAutomationClient.fromConfig(userConfig, { target: 'grok' });
   const readback = await waitForGrokImagineTerminalVideoReadback(
     client,
     tabTargetId,
     tabUrl,
+    { host: devtoolsHost, port: devtoolsPort },
     input.request.metadata,
     timeoutMs,
     input.emitTimeline,
@@ -395,6 +412,8 @@ async function executeGrokBrowserVideoReadbackProbe(
       capabilityId: GROK_VIDEO_CAPABILITY_ID,
       tabUrl,
       tabTargetId,
+      devtoolsHost,
+      devtoolsPort,
       readbackProbe: true,
       runState: readback.runState,
       artifactPollCount: readback.pollCount,
@@ -744,6 +763,7 @@ export async function waitForGrokImagineTerminalVideoReadback(
   client: Pick<BrowserAutomationClient, 'getFeatureSignature'>,
   tabTargetId: string,
   tabUrl: string,
+  devtools: { host: string; port: number },
   metadata: Record<string, unknown> | null | undefined,
   timeoutMs: number,
   emitTimeline: MediaGenerationExecutorInput['emitTimeline'],
@@ -758,6 +778,8 @@ export async function waitForGrokImagineTerminalVideoReadback(
       configuredUrl: tabUrl,
       tabUrl,
       tabTargetId,
+      host: devtools.host,
+      port: devtools.port,
       preserveActiveTab: true,
     });
     const evaluation = evaluateGrokImagineVideoPostSubmitReadback(signature, pollCount);
@@ -1074,6 +1096,15 @@ function extractGrokVideoModeAudit(metadata: Record<string, unknown> | null | un
 function normalizeNonEmpty(value: unknown): string | null {
   const trimmed = typeof value === 'string' ? value.trim() : '';
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function resolveReadbackDevtoolsPort(value: unknown): number | null {
+  const candidate = typeof value === 'number'
+    ? value
+    : typeof value === 'string'
+      ? Number.parseInt(value, 10)
+      : NaN;
+  return Number.isInteger(candidate) && candidate > 0 && candidate < 65536 ? candidate : null;
 }
 
 function numberOrNull(value: unknown): number | null {

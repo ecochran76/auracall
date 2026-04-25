@@ -241,7 +241,8 @@ existing Aura-Call media-generation contract.
 - Grok video readback primitives are now wired to a disabled executor branch:
   - normal callers still stop before prompt insertion or Submit
   - the diagnostic branch requires `metadata.grokVideoReadbackProbe = true`
-    and an existing `metadata.grokVideoReadbackTabTargetId`
+    plus an existing `metadata.grokVideoReadbackTabTargetId` and
+    `metadata.grokVideoReadbackDevtoolsPort`
   - the branch polls that existing tab, emits the normal media timeline, and
     can materialize a generated video artifact
   - the branch never calls `runPrompt`, navigates, reloads, or opens a new
@@ -252,10 +253,19 @@ existing Aura-Call media-generation contract.
 - The manual readback procedure is documented in
   `docs/grok-imagine-video-readback-runbook.md`:
   - human starts the Grok video run
-  - Aura-Call attaches to the existing DevTools tab id only
+  - Aura-Call attaches to the existing DevTools tab id and DevTools port only
   - status is read back through both media-generation status and generic run
     status
   - no Submit click, navigation, reload, or entrypoint open/reuse is allowed
+- A first human-started probe exposed a contract gap:
+  - request id `medgen_6af3f99688dc4424abebbe29c580cd41`
+  - the request carried a tab id but no DevTools port
+  - provider option building could not direct-connect to the tab and fell back
+    through browser-service target resolution
+  - the tab moved from `/imagine/post/...` to `/imagine`, and status failed as
+    `media_generation_no_generated_output`
+  - the readback contract now requires `grokVideoReadbackDevtoolsPort` to
+    prevent that fallback
 
 ## Research Findings
 
@@ -436,6 +446,9 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - [x] The diagnostic Grok video readback branch bypasses service-level
   capability preflight so no entrypoint discovery or Video-mode mode-audit
   side effects can occur before existing-tab attachment.
+- [x] The diagnostic Grok video readback branch requires a DevTools port with
+  the tab target id, so existing-tab polling cannot fall back through
+  browser-service target resolution.
 - [x] Operators have a bounded manual runbook for validating status/readback on
   a human-submitted Grok Imagine video tab without enabling automated Submit.
 
@@ -558,6 +571,9 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - validates that `grokVideoReadbackProbe = true` skips capability preflight,
     leaves `workbenchCapability` unset, and invokes the executor without
     `capability_discovered`
+- [x] Executor unit test for the direct-connect readback contract:
+  - validates that missing `grokVideoReadbackDevtoolsPort` fails before
+    `BrowserAutomationClient.fromConfig` and before `getFeatureSignature`
 - [x] API/MCP/status media regression tests:
   - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
 - [x] `pnpm run check`

@@ -334,6 +334,7 @@ describe('Grok browser media generation executor', () => {
       browserClient,
       'grok-video-tab-1',
       'https://grok.com/imagine',
+      { host: '127.0.0.1', port: 38261 },
       { artifactPollIntervalMs: 1 },
       30000,
       (event) => {
@@ -347,6 +348,8 @@ describe('Grok browser media generation executor', () => {
       configuredUrl: 'https://grok.com/imagine',
       tabUrl: 'https://grok.com/imagine',
       tabTargetId: 'grok-video-tab-1',
+      host: '127.0.0.1',
+      port: 38261,
       preserveActiveTab: true,
     });
     expect(browserClient.getFeatureSignature).toHaveBeenCalledTimes(2);
@@ -404,6 +407,7 @@ describe('Grok browser media generation executor', () => {
       browserClient,
       'grok-video-tab-2',
       'https://grok.com/imagine',
+      { host: '127.0.0.1', port: 38261 },
       { artifactPollIntervalMs: 1 },
       30000,
       (event) => {
@@ -710,6 +714,7 @@ describe('Grok browser media generation executor', () => {
           grokVideoReadbackProbe: true,
           grokVideoReadbackTabTargetId: 'grok-video-tab-probe',
           grokVideoReadbackTabUrl: 'https://grok.com/imagine',
+          grokVideoReadbackDevtoolsPort: 38261,
           artifactPollIntervalMs: 1,
         },
       },
@@ -718,6 +723,12 @@ describe('Grok browser media generation executor', () => {
     expect(fromConfig).toHaveBeenCalledWith({}, { target: 'grok' });
     expect(browserClient.runPrompt).not.toHaveBeenCalled();
     expect(browserClient.getFeatureSignature).toHaveBeenCalledTimes(2);
+    expect(browserClient.getFeatureSignature).toHaveBeenCalledWith(expect.objectContaining({
+      host: '127.0.0.1',
+      port: 38261,
+      tabTargetId: 'grok-video-tab-probe',
+      preserveActiveTab: true,
+    }));
     expect(timelineEvents).toEqual([
       'capability_selected',
       'composer_ready',
@@ -747,6 +758,33 @@ describe('Grok browser media generation executor', () => {
         generatedArtifactCount: 1,
       },
     });
+  });
+
+  it('rejects the Grok video readback probe without an explicit DevTools port', async () => {
+    const { createGrokBrowserMediaGenerationExecutor } = await import('../src/media/grokBrowserExecutor.js');
+    const executor = createGrokBrowserMediaGenerationExecutor({} as never);
+
+    await expect(executor({
+      id: 'medgen_grok_video_probe_missing_port',
+      createdAt: '2026-04-24T12:00:00.000Z',
+      artifactDir: '/tmp/auracall-grok-video-media-artifacts',
+      request: {
+        provider: 'grok',
+        mediaType: 'video',
+        prompt: 'Generate a video of an asphalt secret agent',
+        transport: 'browser',
+        metadata: {
+          grokVideoReadbackProbe: true,
+          grokVideoReadbackTabTargetId: 'grok-video-tab-probe',
+        },
+      },
+    })).rejects.toMatchObject({
+      code: 'media_generation_readback_failed',
+      message: expect.stringContaining('grokVideoReadbackDevtoolsPort'),
+    });
+
+    expect(fromConfig).not.toHaveBeenCalled();
+    expect(browserClient.getFeatureSignature).not.toHaveBeenCalled();
   });
 
   it('does not treat public template media as completed generated image output', async () => {

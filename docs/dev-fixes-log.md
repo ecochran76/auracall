@@ -1,3 +1,11 @@
+- 2026-04-24: Existing-tab readback needs both target id and DevTools port.
+  A Chrome target id alone is not enough for a remote API/MCP request because
+  provider list-option building cannot infer the DevTools endpoint without
+  resolving a browser-service target, which can reopen or reuse the provider
+  entrypoint. Diagnostic Grok Imagine video readback must require
+  `grokVideoReadbackDevtoolsPort` with `grokVideoReadbackTabTargetId` and
+  pass both through `getFeatureSignature`.
+
 - 2026-04-24: Existing-tab diagnostic probes must bypass capability preflight
   when the preflight can touch provider UI. For Grok Imagine video readback,
   `grokVideoReadbackProbe = true` must skip the normal
@@ -8,8 +16,9 @@
 - 2026-04-24: Diagnostic video readback must require an explicit existing-tab
   contract. For Grok Imagine video, any executor branch that exercises
   post-submit polling before live Submit is enabled must require metadata such
-  as `grokVideoReadbackProbe = true` and `grokVideoReadbackTabTargetId`, and
-  it must not call `runPrompt`, navigate, or reload.
+  as `grokVideoReadbackProbe = true`, `grokVideoReadbackTabTargetId`, and
+  `grokVideoReadbackDevtoolsPort`, and it must not call `runPrompt`,
+  navigate, reload, or fall back to provider target resolution.
 
 - 2026-04-24: Keep volatile video polling tab-scoped and no-navigation.
   Grok Imagine video readback should poll the already submitted tab target via

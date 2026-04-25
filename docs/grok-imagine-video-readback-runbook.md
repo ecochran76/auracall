@@ -10,7 +10,8 @@ Aura-Call click Video Submit.
 - The human operator selects Video mode and submits the prompt manually.
 - Aura-Call attaches to the existing tab only.
 - The diagnostic request must include `grokVideoReadbackProbe = true` and
-  `grokVideoReadbackTabTargetId`.
+  both `grokVideoReadbackTabTargetId` and
+  `grokVideoReadbackDevtoolsPort`.
 - The readback probe must not submit, navigate, reload, or open/reuse the
   Grok Imagine entrypoint.
 - Stop after one bounded run. If an account gate, rate limit, bot guard, or
@@ -38,8 +39,9 @@ pnpm tsx scripts/browser-tools.ts --browser-target grok inspect --json
 ```
 
 Find the Chrome session for the managed Grok browser profile and copy the tab
-`id` whose URL is the submitted `grok.com/imagine` tab. If there are multiple
-Imagine tabs, close extras or use the exact tab id for the submitted run.
+`id`, the session `port`, and the tab `url` for the submitted
+`grok.com/imagine` tab. If there are multiple Imagine tabs, close extras or
+use the exact tab id for the submitted run.
 
 Optional bounded sanity check:
 
@@ -62,7 +64,9 @@ curl -s 'http://127.0.0.1:8080/v1/media-generations?wait=false' \
     "metadata": {
       "grokVideoReadbackProbe": true,
       "grokVideoReadbackTabTargetId": "<TARGET_ID>",
-      "grokVideoReadbackTabUrl": "https://grok.com/imagine",
+      "grokVideoReadbackDevtoolsPort": <DEVTOOLS_PORT>,
+      "grokVideoReadbackDevtoolsHost": "127.0.0.1",
+      "grokVideoReadbackTabUrl": "<CURRENT_TAB_URL>",
       "artifactPollIntervalMs": 1000,
       "timeoutMs": 300000
     }

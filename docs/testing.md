@@ -232,10 +232,12 @@
       observation event once Submit is enabled
     - diagnostic readback of an already-submitted manual Grok video tab is
       gated behind explicit metadata:
-      `grokVideoReadbackProbe = true` plus `grokVideoReadbackTabTargetId`;
-      it must poll the existing tab only and must not submit, navigate, or
-      reload; use `docs/grok-imagine-video-readback-runbook.md` for the
-      bounded manual live probe
+      `grokVideoReadbackProbe = true`, `grokVideoReadbackTabTargetId`, and
+      `grokVideoReadbackDevtoolsPort`; it must direct-connect to the existing
+      tab only and must not submit, navigate, reload, or fall back to
+      browser-service target resolution; use
+      `docs/grok-imagine-video-readback-runbook.md` for the bounded manual
+      live probe
     - read back the same id through both
       `/v1/media-generations/<id>/status` and `/v1/runs/<id>/status`; both
       should agree on terminal state, last event, artifact count, and cached

@@ -181,9 +181,10 @@ Terminology note:
     until post-submit terminal-video and materialization criteria are wired to
     the executor. A diagnostic-only Grok video readback probe exists for
     already-submitted tabs when metadata explicitly provides
-    `grokVideoReadbackProbe = true` and `grokVideoReadbackTabTargetId`; it
-    bypasses capability preflight and does not submit, navigate, reload, or
-    open/reuse the Imagine entrypoint. Use
+    `grokVideoReadbackProbe = true`, `grokVideoReadbackTabTargetId`, and
+    `grokVideoReadbackDevtoolsPort`; it bypasses capability preflight and
+    direct-connects to that tab without submitting, navigating, reloading, or
+    opening/reusing the Imagine entrypoint. Use
     `docs/grok-imagine-video-readback-runbook.md` for the bounded manual live
     probe. Operators can poll the generic `GET /v1/runs/{run_id}/status`
     surface for response/team chats and media jobs. Media jobs also retain the
