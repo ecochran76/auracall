@@ -21591,3 +21591,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `selected = true`, `clicked = false`, Image checked, and Video unchecked.
 - Validation:
   - `pnpm tsx bin/auracall.ts run status medgen_504d9872bdcc43f1a4327ea2782a1e3a --json`
+
+## 2026-04-25 - Grok video compact status live readback
+
+- Focus: prove compact status reports current Grok Video mode selection and
+  terminal video materialization on a fresh live run.
+- Live validation: request `medgen_c81229a3a9cc42a7a969ddb52f27ee59`
+  submitted through local API `POST /v1/media-generations?wait=false` with
+  `provider = grok`, `mediaType = video`, and `transport = browser`.
+- Result: generic `run status --json` reported
+  `metadata.mediaDiagnostics.capabilitySelection` with
+  `capabilityId = grok.media.imagine_video`, `mode = Video`,
+  `selected = true`, `clicked = true`, Image unchecked, and Video checked.
+  The run reached `terminal_video`, `generatedVideoCount = 1`, and succeeded
+  with `download-button` materialization.
+- Artifact:
+  `~/.auracall/runtime/media-generations/medgen_c81229a3a9cc42a7a969ddb52f27ee59/artifacts/grok-imagine-video-1.mp4`
+  is `2,257,838` bytes.
+- Validation:
+  - `curl -s 'http://127.0.0.1:18080/v1/media-generations?wait=false' ...`
+  - `curl -s 'http://127.0.0.1:18080/v1/runs/medgen_c81229a3a9cc42a7a969ddb52f27ee59/status'`
+  - `pnpm tsx bin/auracall.ts run status medgen_c81229a3a9cc42a7a969ddb52f27ee59 --json`
