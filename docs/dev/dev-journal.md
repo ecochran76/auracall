@@ -1,3 +1,25 @@
+## 2026-04-25 - Gemini music open-menu variant readback
+
+- Focus: verify hidden Gemini music download variants on the already-open
+  `Pavement Espionage` chat without generating new media.
+- Progress: opening the existing `Download track` control exposed Gemini's
+  live menu labels `VideoAudio with cover art` and `Audio onlyMP3 track`. The
+  first open-menu readback only preserved the first variant, so the adapter now
+  collects visible menu panel labels and splits Gemini's concatenated
+  `Video...Audio only...` text shape. Rebuilt readback preserved
+  `downloadOptions = [Download track, VideoAudio with cover art, Audio onlyMP3 track]`
+  on the generated music artifact and compact status. The default materializer
+  cached the visible MP4 track at
+  `~/.auracall/runtime/media-generations/manual_gemini_music_probe_1777131088559/artifacts/pavement_espionage.mp4`;
+  MP3 materialization remains a separate explicit variant-selection task.
+- Validation:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - live open-menu readback using built `dist/` modules and `BrowserAutomationClient.readActiveConversationArtifacts(...)`
+  - `pnpm tsx scripts/browser-tools.ts --browser-target gemini tabs --json`
+
 ## 2026-04-25 - Gemini music read-only live probe
 
 - Focus: dogfood Gemini music artifact readback on an already-open generated

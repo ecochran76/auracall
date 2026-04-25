@@ -153,6 +153,22 @@ describe('geminiAdapter id helpers', () => {
         downloadOptions: ['Download as video with album art', 'Download as MP3'],
       },
     })).toBe('music');
+    expect(inferGeminiGeneratedArtifactMediaType({
+      kind: 'generated',
+      uri: 'https://contribution.usercontent.google.com/download?filename=pavement_espionage.mp4',
+      metadata: {
+        downloadLabel: 'Download track',
+        downloadOptions: ['VideoAudio with cover art', 'Audio onlyMP3 track'],
+      },
+    })).toBe('music');
+    expect(inferGeminiGeneratedArtifactMediaType({
+      kind: 'generated',
+      uri: 'https://contribution.usercontent.google.com/download?filename=pavement_espionage.mp4',
+      metadata: {
+        downloadLabel: 'Download track',
+        downloadOptions: ['VideoAudio with cover artAudio onlyMP3 track'],
+      },
+    })).toBe('music');
   });
 
   test('normalizes Gemini generated media artifacts into stable titles and metadata', () => {
@@ -165,7 +181,7 @@ describe('geminiAdapter id helpers', () => {
         metadata: {
           shareLabel: 'Share track',
           downloadLabel: 'Download track',
-          downloadOptions: ['Download as video with album art', 'Download as MP3'],
+          downloadOptions: ['VideoAudio with cover art', 'Audio onlyMP3 track'],
         },
       },
       {
@@ -187,7 +203,7 @@ describe('geminiAdapter id helpers', () => {
         metadata: {
           shareLabel: 'Share track',
           downloadLabel: 'Download track',
-          downloadOptions: ['Download as video with album art', 'Download as MP3'],
+          downloadOptions: ['VideoAudio with cover art', 'Audio onlyMP3 track'],
           mediaType: 'music',
           fileName: 'before_the_tide_returns.mp4',
         },

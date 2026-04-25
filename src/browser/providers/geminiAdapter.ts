@@ -3880,19 +3880,28 @@ async function readGeminiConversationContextWithClient(
           .filter((entry) => entry instanceof HTMLElement && visible(entry))
           .map((entry) => normalize(entry.getAttribute('aria-label') || ''))
           .filter(Boolean);
-        const optionNodes = [
-          ...Array.from(scope.querySelectorAll('[role="menuitem"], [role="option"], button, a')),
-          ...Array.from(document.querySelectorAll('[role="menu"] [role="menuitem"], .mat-mdc-menu-panel [role="menuitem"], .cdk-overlay-pane [role="menuitem"], .cdk-overlay-pane button, .cdk-overlay-pane a')),
-        ];
-        const downloadOptions = Array.from(new Set(optionNodes
+        const labelForOption = (entry) => normalize(
+          entry.getAttribute('aria-label') ||
+          entry.getAttribute('title') ||
+          entry.textContent ||
+          '',
+        );
+        const expandDownloadOptionLabels = (labels) => labels.flatMap((label) => {
+          const audioOnlyIndex = label.indexOf('Audio only');
+          if (audioOnlyIndex > 0 && /cover art/i.test(label.slice(0, audioOnlyIndex))) {
+            return [label.slice(0, audioOnlyIndex), label.slice(audioOnlyIndex)].map(normalize).filter(Boolean);
+          }
+          return [label];
+        });
+        const scopedDownloadOptions = Array.from(scope.querySelectorAll('[role="menuitem"], [role="option"], button, a'))
           .filter((entry) => entry instanceof HTMLElement && visible(entry))
-          .map((entry) => normalize(
-            entry.getAttribute('aria-label') ||
-            entry.getAttribute('title') ||
-            entry.textContent ||
-            '',
-          ))
-          .filter((label) => /download/i.test(label))));
+          .map(labelForOption)
+          .filter((label) => /download/i.test(label));
+        const visibleMenuOptionLabels = expandDownloadOptionLabels(Array.from(document.querySelectorAll('[role="menu"], [role="menu"] [role="menuitem"], .mat-mdc-menu-panel, .mat-mdc-menu-panel [role="menuitem"], .cdk-overlay-pane, .cdk-overlay-pane [role="menuitem"], .cdk-overlay-pane button, .cdk-overlay-pane a'))
+          .filter((entry) => entry instanceof HTMLElement && visible(entry))
+          .map(labelForOption)
+          .filter((label) => /\b(download|audio|mp3|track|video)\b|cover art|with album art/i.test(label)));
+        const downloadOptions = Array.from(new Set([...scopedDownloadOptions, ...visibleMenuOptionLabels]));
         const findLabel = (needle) => controls.find((label) => label.toLowerCase().includes(needle)) || '';
         const shareLabel = findLabel('share');
         const downloadLabel = findLabel('download');

@@ -60,6 +60,13 @@ helpers.
   quota spend. With the menu closed, Gemini did not expose hidden MP4/MP3
   variant labels in the DOM; those require an already-open menu or an explicit
   non-routine menu-opening/materialization probe.
+- A bounded live open-menu probe on the same chat showed Gemini's music
+  download menu labels as `VideoAudio with cover art` and `Audio onlyMP3
+  track`. Adapter readback now preserves both labels when that menu is already
+  visible, including Gemini's concatenated menu-panel text shape. The current
+  default materializer still caches the already-exposed MP4 track URL; selecting
+  and caching the MP3 menu item remains a separate explicit variant-selection
+  task.
 - A first live API image smoke proved capability discovery, tool selection,
   and prompt submission, but Gemini remained in an active `Stop response` state
   until the media-generation timeout, so artifact completion/readback was still
@@ -299,6 +306,9 @@ helpers.
 - Live Gemini music dogfood should treat closed-menu `Download track` evidence
   as a successful read-only music detection/status probe, not as proof that all
   hidden provider download variants were discoverable.
+- Open-menu Gemini music dogfood should expect compact status
+  `downloadOptions` to include `Download track`, `VideoAudio with cover art`,
+  and `Audio onlyMP3 track` when those labels are visible.
 - Live Grok Imagine smoke only with a configured `XAI_API_KEY` or validated
   browser account path that exposes Imagine.
 - First Grok implementation validation should use read-only managed-browser

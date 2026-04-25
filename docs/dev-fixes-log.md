@@ -14300,3 +14300,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   missing MP4/MP3 variant list as a failed music readback when no provider menu
   overlay is open; reserve variant enumeration for fixture coverage,
   human-opened menus, or explicit non-routine materialization probes.
+- 2026-04-25: Gemini music menu variants may not include the word "download".
+  Live Gemini exposed `VideoAudio with cover art` and `Audio onlyMP3 track`
+  under the `Download track` trigger. Open-menu readback should preserve visible
+  menu-item labels that mention audio, MP3, track, video, or cover art, and
+  split Gemini's concatenated menu-panel text shape when necessary.
