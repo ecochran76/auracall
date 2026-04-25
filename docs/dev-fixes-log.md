@@ -1,3 +1,15 @@
+- 2026-04-24: Do not duplicate media timeline event enums in MCP tool output
+  schemas. The API/store schema already owns `MediaGenerationTimelineEvent`;
+  MCP media status should reuse that canonical schema so events such as
+  `submit_path_observed` and `no_generated_media` do not validate in storage
+  while drifting out of the MCP contract.
+
+- 2026-04-24: Grok Imagine mode discovery must scan radio controls, not only
+  buttons and generic button roles. The current `/imagine` workbench exposes
+  Image/Video and Speed/Quality as `role = radio` buttons, so read-only
+  capability discovery should include `[role="radio"]` and preserve checked
+  state before any video invocation work is attempted.
+
 - 2026-04-24: Scope Grok Imagine prompt submission to the composer form and
   wait for submit enablement after ProseMirror input. Broad control labels such
   as `go` or `arrow` can match public template cards like `Go Skiing` instead

@@ -199,6 +199,14 @@ describe('mcp media_generation tool', () => {
             at: '2026-04-23T03:44:32.561Z',
           },
           {
+            event: 'submit_path_observed',
+            at: '2026-04-23T03:45:12.951Z',
+            details: {
+              outcome: 'generated_media',
+              label: 'submit',
+            },
+          },
+          {
             event: 'completed',
             at: '2026-04-23T03:45:22.951Z',
             details: {
@@ -222,6 +230,20 @@ describe('mcp media_generation tool', () => {
         lastEvent: {
           event: 'completed',
         },
+        timeline: [
+          {
+            event: 'running_persisted',
+          },
+          {
+            event: 'submit_path_observed',
+            details: {
+              outcome: 'generated_media',
+            },
+          },
+          {
+            event: 'completed',
+          },
+        ],
         artifacts: [
           {
             id: 'artifact_status_1',

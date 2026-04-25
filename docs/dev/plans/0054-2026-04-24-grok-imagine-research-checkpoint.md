@@ -154,6 +154,26 @@ existing Aura-Call media-generation contract.
     `send_attempted.ok = true`, `label = submit`,
     `submit_path_observed.outcome = generated_media`, and four cached
     artifacts
+- Durable status readback after the submit-control fix confirms API/CLI/MCP
+  parity on the fixed image path:
+  - request id `medgen_b6d1209802934b5bab20f5cb5f358af7`
+  - media status and generic run status both reported `succeeded`,
+    `lastEvent = completed`, `artifactCount = 1`, and the same cached
+    `grok-imagine-visible-1.jpg`
+  - direct MCP tool-handler readback returned matching
+    `media_generation_status` and `run_status` structured content for the
+    same persisted id
+  - MCP media output schemas now reuse the canonical media timeline event
+    schema instead of carrying a duplicated event enum
+- Bounded read-only video discovery has started:
+  - the live `/imagine` page exposes `Image` and `Video` as visible
+    `role = radio` controls, with `Image` checked and `Video` unchecked
+  - feature discovery now scans radio controls and preserves mode-control
+    text, checked state, type, disabled state, and geometry in provider
+    evidence
+  - the live workbench capability probe now reports
+    `grok.media.imagine_video` from browser discovery without submitting a
+    video generation request
 
 ## Research Findings
 
@@ -392,6 +412,14 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - fixed validation id: `medgen_60f410b013da4e3480b57f1f3072d93f`
   - timeline observed `send_attempted.ok = true`, `label = submit`,
     `generated_media`, and four artifacts
+- [x] Durable API/MCP status readback on the fixed Grok image path:
+  - request id: `medgen_b6d1209802934b5bab20f5cb5f358af7`
+  - media status, generic run status, CLI run status, and direct MCP tool
+    handlers agree on terminal success and the cached visible-tile artifact
+- [x] Bounded read-only Grok video capability discovery:
+  - live `/imagine` probe observed Image/Video radio controls
+  - `grok.media.imagine_video` is now reported from browser discovery
+    evidence; video execution remains gated
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
@@ -399,7 +427,8 @@ Add a browser-first Grok Imagine discovery/audit slice:
 ## Next Slice
 
 Keep Grok video and edit/reference workflows gated. The next browser slice
-should exercise one more durable API/MCP status readback against the now-fixed
-Grok Imagine image path, then move to bounded Grok video discovery without
-submitting video generation until its composer, filmstrip, and download
-semantics are separately mapped.
+should implement a read-only video semantics audit: switch to Video only if it
+can be done as an explicit discovery action, record the mode transition,
+composer/input requirements, generated-media filmstrip semantics, and download
+controls, then decide whether video invocation needs its own executor instead
+of sharing the image path.

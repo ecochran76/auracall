@@ -1,3 +1,35 @@
+## 2026-04-24 - Grok Imagine status readback and video discovery
+
+- Current focus:
+  - prove the fixed Grok image path through durable API/MCP status readback and
+    begin bounded read-only video discovery
+- Progress:
+  - local API dogfood created
+    `medgen_b6d1209802934b5bab20f5cb5f358af7` with `wait=false`
+  - `/v1/media-generations/{id}/status` and `/v1/runs/{id}/status` both
+    reported `succeeded`, `lastEvent = completed`, `artifactCount = 1`, and
+    the same cached JPEG at
+    `~/.auracall/runtime/media-generations/medgen_b6d1209802934b5bab20f5cb5f358af7/artifacts/grok-imagine-visible-1.jpg`
+  - media status preserved `send_attempted.ok = true`, `label = submit`, and
+    `submit_path_observed.outcome = generated_media`
+  - direct MCP tool-handler readback of the same id returned
+    `media_generation_status` and generic `run_status` with matching terminal
+    state and artifact path
+  - replaced the MCP media timeline output schema's duplicated event enum with
+    the canonical `MediaGenerationTimelineEventSchema`, so new events such as
+    `submit_path_observed` and `no_generated_media` stay in lockstep
+  - read-only Grok `/imagine` capability discovery now scans `role = radio`
+    controls and records Image/Video mode controls, Speed/Quality controls,
+    Upload, Submit, and Aspect Ratio evidence without submitting a video run
+  - live read-only capability probe now reports `grok.media.imagine_image` and
+    `grok.media.imagine_video` from `browser_discovery`; video execution
+    remains unimplemented and gated from provider invocation
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/workbenchCapabilities.test.ts tests/mcp.mediaGeneration.test.ts --maxWorkers 1`
+  - bounded live local API Grok browser image request with `wait=false`
+  - direct MCP media/run status tool-handler readback for the same persisted id
+  - bounded read-only `/v1/workbench-capabilities?provider=grok&entrypoint=grok-imagine&diagnostics=browser-state`
+
 ## 2026-04-24 - Grok Imagine composer submit control
 
 - Current focus:

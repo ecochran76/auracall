@@ -176,7 +176,7 @@ export function buildGrokFeatureProbeExpression(): string {
       const normalized = normalize(value);
       if (normalized) routes.push(normalized);
     };
-    const controls = Array.from(document.querySelectorAll('a[href], button, [role="button"], [role="tab"], [aria-label], [title]')).slice(0, 800);
+    const controls = Array.from(document.querySelectorAll('a[href], button, [role="button"], [role="radio"], [role="tab"], [aria-label], [title]')).slice(0, 800);
     for (const node of controls) {
       const text = normalize(node.textContent || '');
       const aria = normalize(node.getAttribute?.('aria-label') || '');
@@ -184,21 +184,35 @@ export function buildGrokFeatureProbeExpression(): string {
       const href = normalize(node.getAttribute?.('href') || '');
       const haystack = lower([text, aria, title, href].filter(Boolean).join(' '));
       if (!haystack) continue;
-      if (haystack.includes('imagine') || haystack.includes('/imagine')) {
+      const role = normalize(node.getAttribute?.('role') || '');
+      const type = normalize(node.getAttribute?.('type') || '');
+      const imagineRoute = lower(String(location.href || '')).includes('/imagine');
+      const imagineLabel = haystack.includes('imagine') || haystack.includes('/imagine');
+      const imagineWorkbenchControl = imagineRoute && (
+        (role === 'radio' && /\\b(image|video|speed|quality)\\b/.test(haystack)) ||
+        type === 'submit' ||
+        /\\b(upload|aspect ratio)\\b/.test(lower([aria, title].filter(Boolean).join(' ')))
+      );
+      if (imagineLabel) {
         addLabel(text || aria || title || 'Imagine');
         if (href) addRoute(href);
-        if (matchedControls.length < 20) {
-          const rect = rectSummary(node);
-          matchedControls.push({
-            tag: String(node.tagName || '').toLowerCase(),
-            text: text || null,
-            ariaLabel: aria || null,
-            title: title || null,
-            href: href || null,
-            role: normalize(node.getAttribute?.('role') || '') || null,
-            visible: isVisible(node),
-          });
-        }
+      }
+      if ((imagineLabel || imagineWorkbenchControl) && matchedControls.length < 20) {
+        const rect = rectSummary(node);
+        matchedControls.push({
+          tag: String(node.tagName || '').toLowerCase(),
+          text: text || null,
+          ariaLabel: aria || null,
+          title: title || null,
+          href: href || null,
+          role: role || null,
+          type: type || null,
+          checked: normalize(node.getAttribute?.('aria-checked') || '') || null,
+          disabled: Boolean(node.disabled) || normalize(node.getAttribute?.('aria-disabled') || '') === 'true',
+          visible: isVisible(node),
+          width: rect?.width ?? null,
+          height: rect?.height ?? null,
+        });
       }
       if (/download|save|export|open|share|copy link|copy|post/.test(haystack) && materializationControls.length < 30 && isVisible(node)) {
         const rect = rectSummary(node);

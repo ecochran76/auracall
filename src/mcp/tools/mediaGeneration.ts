@@ -5,7 +5,10 @@ import {
   type MediaGenerationService,
 } from '../../media/service.js';
 import { probeMediaGenerationBrowserDiagnostics } from '../../media/browserDiagnostics.js';
-import { MediaGenerationRequestSchema } from '../../media/schema.js';
+import {
+  MediaGenerationRequestSchema,
+  MediaGenerationTimelineEventSchema,
+} from '../../media/schema.js';
 import { summarizeMediaGenerationStatus } from '../../media/statusSummary.js';
 import type { MediaGenerationRequest, MediaGenerationResponse } from '../../media/types.js';
 
@@ -36,30 +39,7 @@ const mediaGenerationArtifactShape = z.object({
   metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
-const mediaGenerationTimelineEventShape = z.object({
-  event: z.enum([
-    'running_persisted',
-    'capability_discovered',
-    'capability_unavailable',
-    'executor_started',
-    'browser_target_attached',
-    'gemini_surface_ready',
-    'capability_selected',
-    'composer_ready',
-    'prompt_inserted',
-    'send_attempted',
-    'submitted_state_observed',
-    'prompt_submitted',
-    'run_state_observed',
-    'artifact_poll',
-    'image_visible',
-    'artifact_materialized',
-    'completed',
-    'failed',
-  ]),
-  at: z.string(),
-  details: z.record(z.string(), z.unknown()).nullable().optional(),
-});
+const mediaGenerationTimelineEventShape = MediaGenerationTimelineEventSchema;
 
 const mediaGenerationOutputShape = {
   id: z.string(),
