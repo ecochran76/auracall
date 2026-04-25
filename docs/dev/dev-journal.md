@@ -21519,3 +21519,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - live browser media generation request through `createMediaGenerationService`
   - `pnpm tsx bin/auracall.ts run status medgen_602435d913ee4e12a2c8bf93fd043f8c --json`
   - `pnpm vitest run tests/mediaStatusSummary.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+
+## 2026-04-25 - Grok Imagine strict mode selection
+
+- Focus: prevent Grok image requests from inheriting a previously selected
+  Video mode on the sticky `/imagine` workbench.
+- Progress: the Grok provider adapter now selects and verifies the requested
+  primary Image/Video radio mode before prompt insertion for both
+  `grok.media.imagine_image` and `grok.media.imagine_video`, then emits
+  `capability_selected` with the observed mode-control state.
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/browser/grokAdapter.test.ts tests/mediaStatusSummary.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`

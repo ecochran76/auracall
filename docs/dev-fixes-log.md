@@ -14358,3 +14358,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   status needed `requestedVisibleTileCount` and
   `visibleTileMaterializationLimit` so operators could distinguish "requested
   up to eight" from "provider exposed three visible artifacts."
+- 2026-04-25: Grok Imagine primary mode is sticky across runs. Before
+  submitting an image or video prompt, the browser adapter must select and
+  verify the requested Image/Video radio mode on the current `/imagine` page
+  and record that state in the media timeline. Do not rely on prior discovery
+  or the last live run's mode.

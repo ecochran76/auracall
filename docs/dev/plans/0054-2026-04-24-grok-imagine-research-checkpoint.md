@@ -209,6 +209,15 @@ existing Aura-Call media-generation contract.
     scrolling, all cached as `visible-tile-browser-capture`
   - compact run status now exposes both requested limit and realized artifact
     count
+- Normal Grok browser image/video submit now verifies the requested primary
+  Imagine mode before prompt insertion:
+  - `grok.media.imagine_image` selects and verifies Image mode on the current
+    `/imagine` page before writing the prompt
+  - `grok.media.imagine_video` selects and verifies Video mode before writing
+    the prompt
+  - both paths emit `capability_selected` with the observed mode controls so
+    operators can tell whether the adapter clicked the sticky Image/Video
+    switch
 - Bounded read-only video discovery has started:
   - the live `/imagine` page exposes `Image` and `Video` as visible
     `role = radio` controls, with `Image` checked and `Video` unchecked
@@ -581,6 +590,10 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - [x] Unit tests for Grok visible-tile materialization and full-quality
   comparison routing:
   - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+- [x] Unit tests for Grok Imagine pre-submit Image/Video mode selection:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - image and video paths emit `capability_selected` after verifying the
+    requested primary mode
 - [x] Bounded live gated media request:
   - `POST /v1/media-generations` with `provider = grok`, `mediaType = image`,
     `transport = browser`

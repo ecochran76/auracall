@@ -570,6 +570,13 @@ type GrokImagineDiscoveryActionResult = {
   restoreMode: 'Image' | 'Video' | null;
 };
 
+type GrokImaginePrimaryModeSelection = {
+  mode: 'Image' | 'Video';
+  selected: boolean;
+  clicked: boolean;
+  controls: Array<Record<string, unknown>>;
+};
+
 async function readGrokFeatureSignature(client: ChromeClient): Promise<string | null> {
   const { result } = await client.Runtime.evaluate({
     expression: buildGrokFeatureProbeExpression(),
@@ -950,11 +957,12 @@ async function performGrokImagineDiscoveryAction(
 async function restoreGrokImaginePrimaryMode(
   Runtime: ChromeClient['Runtime'],
   mode: GrokImagineDiscoveryActionResult['restoreMode'],
-): Promise<void> {
+  options: { required?: boolean } = {},
+): Promise<GrokImaginePrimaryModeSelection | null> {
   if (mode !== 'Image' && mode !== 'Video') {
-    return;
+    return null;
   }
-  await Runtime.evaluate({
+  const clickResult = await Runtime.evaluate({
     expression: `(() => {
       const targetMode = ${JSON.stringify(mode)};
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
@@ -975,21 +983,46 @@ async function restoreGrokImaginePrimaryMode(
     })()`,
     returnByValue: true,
   }).catch(() => undefined);
-  await waitForPredicate(
+  const clicked = Boolean((clickResult?.result?.value as { clicked?: unknown } | undefined)?.clicked);
+  const ready = await waitForPredicate(
     Runtime,
     `(() => {
       const targetMode = ${JSON.stringify(mode)};
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-      const target = Array.from(document.querySelectorAll('[role="radio"], button'))
+      const summarize = (node) => ({
+        text: normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('title') || '') || null,
+        role: normalize(node.getAttribute('role') || '') || null,
+        checked: normalize(node.getAttribute('aria-checked') || '') || null,
+        disabled: Boolean(node.disabled) || normalize(node.getAttribute('aria-disabled') || '') === 'true',
+      });
+      const controls = Array.from(document.querySelectorAll('[role="radio"], button'))
         .filter((node) => node instanceof HTMLElement)
-        .find((node) => normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('title') || '') === targetMode);
-      return target && normalize(target.getAttribute('aria-checked') || '') === 'true' ? { mode: targetMode } : null;
+        .map(summarize)
+        .filter((entry) => entry.text === 'Image' || entry.text === 'Video');
+      const target = controls.find((entry) => entry.text === targetMode);
+      return target && target.checked === 'true' ? { mode: targetMode, selected: true, controls } : null;
     })()`,
     {
       timeoutMs: 5000,
       description: `Grok Imagine ${mode} mode restore`,
     },
-  ).catch(() => undefined);
+  ).catch((error) => {
+    if (options.required) throw error;
+    return { ok: false, value: null, attempts: 0, elapsedMs: 0 };
+  });
+  if (ready.ok) {
+    const value = ready.value as { controls?: Array<Record<string, unknown>> } | undefined;
+    return {
+      mode,
+      selected: true,
+      clicked,
+      controls: Array.isArray(value?.controls) ? value.controls : [],
+    };
+  }
+  if (options.required) {
+    throw new Error(`Grok Imagine ${mode} mode could not be selected before prompt submission.`);
+  }
+  return null;
 }
 
 type GrokImaginePromptState = {
@@ -2234,11 +2267,17 @@ export function createGrokAdapter(): Pick<
           description: 'Grok Imagine document ready',
         }).catch(() => undefined);
         await waitForGrokImagineRoute(client.Runtime, targetUrl);
-        if (mode === 'Video') {
-          await restoreGrokImaginePrimaryMode(client.Runtime, 'Video');
-        } else {
-          await restoreGrokImaginePrimaryMode(client.Runtime, 'Image');
-        }
+        const modeSelection = await restoreGrokImaginePrimaryMode(client.Runtime, mode, { required: true });
+        await emitProgress({
+          phase: 'capability_selected',
+          details: {
+            capabilityId: input.capabilityId,
+            mode,
+            selected: modeSelection?.selected ?? false,
+            clicked: modeSelection?.clicked ?? false,
+            modeControls: modeSelection?.controls ?? [],
+          },
+        });
         await waitForGrokImagineComposer(client.Runtime);
         const baseline = await readGrokImaginePromptState(client.Runtime);
         await emitProgress({

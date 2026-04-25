@@ -438,6 +438,15 @@ describe('Grok browser media generation executor', () => {
         },
       });
       await input.onProgress?.({
+        phase: 'capability_selected',
+        details: {
+          capabilityId: 'grok.media.imagine_image',
+          mode: 'Image',
+          selected: true,
+          clicked: true,
+        },
+      });
+      await input.onProgress?.({
         phase: 'prompt_inserted',
         details: {
           targetId: 'grok-tab-1',
@@ -566,6 +575,7 @@ describe('Grok browser media generation executor', () => {
     });
     expect(timelineEvents).toEqual([
       'browser_target_attached',
+      'capability_selected',
       'prompt_inserted',
       'submit_path_observed',
       'prompt_submitted',
@@ -663,6 +673,15 @@ describe('Grok browser media generation executor', () => {
         phase: 'browser_target_attached',
         details: {
           targetId: 'grok-video-tab-1',
+        },
+      });
+      await input.onProgress?.({
+        phase: 'capability_selected',
+        details: {
+          capabilityId: 'grok.media.imagine_video',
+          mode: 'Video',
+          selected: true,
+          clicked: true,
         },
       });
       await input.onProgress?.({
@@ -804,6 +823,7 @@ describe('Grok browser media generation executor', () => {
     });
     expect(timelineEvents).toEqual([
       'browser_target_attached',
+      'capability_selected',
       'prompt_inserted',
       'submit_path_observed',
       'prompt_submitted',
