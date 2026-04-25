@@ -19,6 +19,7 @@ export type MediaGenerationTimelineEventName =
   | 'composer_ready'
   | 'prompt_inserted'
   | 'send_attempted'
+  | 'submit_path_observed'
   | 'submitted_state_observed'
   | 'prompt_submitted'
   | 'run_state_observed'

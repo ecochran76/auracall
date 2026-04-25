@@ -86,6 +86,7 @@ export type BrowserProviderPromptProgressPhase =
   | 'composer_ready'
   | 'prompt_inserted'
   | 'send_attempted'
+  | 'submit_path_observed'
   | 'submitted_state_observed';
 
 export interface BrowserProviderPromptProgressEvent {

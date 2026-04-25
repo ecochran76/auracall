@@ -1,3 +1,11 @@
+- 2026-04-24: Grok Imagine prompt submission needs a separate submit-path
+  milestone before artifact polling. `send_attempted` only proves Aura-Call
+  clicked a candidate control; it does not prove the workbench accepted a new
+  generation. Emit `submit_path_observed` with outcome, route kind, provider
+  href, generated count, and public-template counts so operators can
+  distinguish generated media, pending generation, blocked state, and template
+  reuse without waiting for artifact polling.
+
 - 2026-04-24: Classify stable Grok Imagine public/template terminal media as a
   specific no-generated-output outcome. Once a submitted browser image run has
   repeatedly observed terminal public/template media with

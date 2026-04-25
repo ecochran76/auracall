@@ -46,6 +46,15 @@ describe('Grok browser media generation executor', () => {
           promptLength: input.prompt.length,
         },
       });
+      await input.onProgress?.({
+        phase: 'submit_path_observed',
+        details: {
+          targetId: 'grok-tab-1',
+          outcome: 'generated_media',
+          routeKind: 'imagine_root',
+          generatedImageCount: 1,
+        },
+      });
       return {
         text: '',
         url: 'https://grok.com/imagine',
@@ -160,6 +169,7 @@ describe('Grok browser media generation executor', () => {
     expect(timelineEvents).toEqual([
       'browser_target_attached',
       'prompt_inserted',
+      'submit_path_observed',
       'prompt_submitted',
       'run_state_observed',
       'image_visible',

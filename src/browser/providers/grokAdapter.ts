@@ -498,6 +498,7 @@ async function readGrokFeatureSignature(client: ChromeClient): Promise<string | 
 type GrokImaginePromptState = {
   href: string | null;
   title: string | null;
+  routeKind: 'imagine_root' | 'imagine_template' | 'other';
   runState: string | null;
   accountGated: boolean;
   blocked: boolean;
@@ -508,6 +509,9 @@ type GrokImaginePromptState = {
   mediaFingerprint: string | null;
   generatedImageCount: number;
   generatedMediaFingerprint: string | null;
+  publicGalleryImageCount: number;
+  publicGalleryVisibleTileCount: number;
+  submitPathOutcome: 'pending' | 'generated_media' | 'public_template_no_generated' | 'blocked' | 'idle';
 };
 
 async function waitForGrokImagineRoute(Runtime: ChromeClient['Runtime'], targetUrl: string): Promise<void> {
@@ -576,19 +580,35 @@ async function readGrokImaginePromptState(Runtime: ChromeClient['Runtime']): Pro
     };
   } | undefined;
   const imagine = probe?.imagine && typeof probe.imagine === 'object' ? probe.imagine : {};
+  const href = typeof imagine.href === 'string' && imagine.href.trim() ? imagine.href.trim() : null;
   const mediaUrls = Array.isArray(imagine.media?.urls)
     ? imagine.media.urls.map((entry) => String(entry ?? '').trim()).filter(Boolean)
     : [];
   const generatedImageUrls = readGeneratedGrokImageUrls(imagine.media);
+  const publicGalleryImageCount = countPublicGalleryGrokMediaEntries(imagine.media, 'images');
+  const publicGalleryVisibleTileCount = countPublicGalleryGrokMediaEntries(imagine.media, 'visible_tiles');
+  const routeKind = classifyGrokImagineRoute(href);
+  const accountGated = imagine.account_gated === true;
+  const blocked = imagine.blocked === true;
+  const pending = imagine.pending === true;
+  const terminalImage = imagine.terminal_image === true;
+  const terminalVideo = imagine.terminal_video === true;
+  const hasTerminalNoGeneratedPublicTemplate = !pending &&
+    !accountGated &&
+    !blocked &&
+    generatedImageUrls.length === 0 &&
+    (terminalImage || terminalVideo) &&
+    (routeKind === 'imagine_template' || publicGalleryImageCount > 0 || publicGalleryVisibleTileCount > 0);
   return {
-    href: typeof imagine.href === 'string' && imagine.href.trim() ? imagine.href.trim() : null,
+    href,
     title: typeof imagine.title === 'string' && imagine.title.trim() ? imagine.title.trim() : null,
+    routeKind,
     runState: typeof imagine.run_state === 'string' && imagine.run_state.trim() ? imagine.run_state.trim() : null,
-    accountGated: imagine.account_gated === true,
-    blocked: imagine.blocked === true,
-    pending: imagine.pending === true,
-    terminalImage: imagine.terminal_image === true,
-    terminalVideo: imagine.terminal_video === true,
+    accountGated,
+    blocked,
+    pending,
+    terminalImage,
+    terminalVideo,
     mediaUrlCount: mediaUrls.length,
     mediaFingerprint: mediaUrls.length > 0
       ? mediaUrls.map((entry) => `${entry.length}:${entry.slice(0, 48)}:${entry.slice(-24)}`).join('|')
@@ -597,6 +617,17 @@ async function readGrokImaginePromptState(Runtime: ChromeClient['Runtime']): Pro
     generatedMediaFingerprint: generatedImageUrls.length > 0
       ? generatedImageUrls.map((entry) => `${entry.length}:${entry.slice(0, 48)}:${entry.slice(-24)}`).join('|')
       : null,
+    publicGalleryImageCount,
+    publicGalleryVisibleTileCount,
+    submitPathOutcome: pending
+      ? 'pending'
+      : blocked || accountGated
+        ? 'blocked'
+        : generatedImageUrls.length > 0
+          ? 'generated_media'
+          : hasTerminalNoGeneratedPublicTemplate
+            ? 'public_template_no_generated'
+            : 'idle',
   };
 }
 
@@ -668,7 +699,45 @@ async function setGrokImaginePrompt(
   return value?.ok ? { ok: true } : { ok: false, reason: value?.reason ?? 'prompt insertion failed' };
 }
 
-async function submitGrokImaginePrompt(Runtime: ChromeClient['Runtime']): Promise<{ ok: boolean; reason?: string }> {
+function countPublicGalleryGrokMediaEntries(media: unknown, key: 'images' | 'visible_tiles'): number {
+  if (!media || typeof media !== 'object') return 0;
+  const record = media as { images?: unknown; visible_tiles?: unknown };
+  const entries = Array.isArray(record[key]) ? record[key] : [];
+  return entries.filter((entry) => {
+    if (!entry || typeof entry !== 'object') return false;
+    const item = entry as {
+      src?: unknown;
+      href?: unknown;
+      poster?: unknown;
+      publicGallery?: unknown;
+      public_gallery?: unknown;
+    };
+    return item.publicGallery === true ||
+      item.public_gallery === true ||
+      isGrokPublicGalleryUrl(item.src) ||
+      isGrokPublicGalleryUrl(item.href) ||
+      isGrokPublicGalleryUrl(item.poster);
+  }).length;
+}
+
+function isGrokPublicGalleryUrl(value: unknown): boolean {
+  return typeof value === 'string' && value.includes('imagine-public.x.ai');
+}
+
+function classifyGrokImagineRoute(href: string | null): 'imagine_root' | 'imagine_template' | 'other' {
+  if (!href) return 'other';
+  try {
+    const url = new URL(href);
+    if (url.pathname === '/imagine') return 'imagine_root';
+    if (/^\/imagine\/templates\//.test(url.pathname)) return 'imagine_template';
+  } catch {
+    if (href.includes('/imagine/templates/')) return 'imagine_template';
+    if (href.includes('/imagine')) return 'imagine_root';
+  }
+  return 'other';
+}
+
+async function submitGrokImaginePrompt(Runtime: ChromeClient['Runtime']): Promise<{ ok: boolean; reason?: string; label?: string | null }> {
   const { result } = await Runtime.evaluate({
     expression: `(() => {
       const visible = (node) => {
@@ -697,8 +766,10 @@ async function submitGrokImaginePrompt(Runtime: ChromeClient['Runtime']): Promis
     })()`,
     returnByValue: true,
   });
-  const value = result?.value as { ok?: boolean; reason?: string } | undefined;
-  return value?.ok ? { ok: true } : { ok: false, reason: value?.reason ?? 'send click failed' };
+  const value = result?.value as { ok?: boolean; reason?: string; label?: string | null } | undefined;
+  return value?.ok
+    ? { ok: true, label: typeof value.label === 'string' ? value.label : null }
+    : { ok: false, reason: value?.reason ?? 'send click failed' };
 }
 
 async function waitForGrokImagineSubmittedState(
@@ -708,8 +779,17 @@ async function waitForGrokImagineSubmittedState(
 ): Promise<GrokImaginePromptState> {
   const deadline = Date.now() + Math.max(10_000, Math.min(timeoutMs, 600_000));
   let last = baseline;
+  let consecutivePublicTemplateNoGenerated = 0;
   while (Date.now() <= deadline) {
     last = await readGrokImaginePromptState(Runtime);
+    if (last.submitPathOutcome === 'public_template_no_generated') {
+      consecutivePublicTemplateNoGenerated += 1;
+      if (consecutivePublicTemplateNoGenerated >= 2) {
+        return last;
+      }
+    } else {
+      consecutivePublicTemplateNoGenerated = 0;
+    }
     if (
       last.pending ||
       last.blocked ||
@@ -1589,12 +1669,28 @@ export function createGrokAdapter(): Pick<
             targetId: targetId ?? null,
             ok: submitted.ok,
             reason: submitted.reason ?? null,
+            label: submitted.label ?? null,
           },
         });
         if (!submitted.ok) {
           throw new Error(submitted.reason ?? 'Grok Imagine send control was not found.');
         }
         const submittedState = await waitForGrokImagineSubmittedState(client.Runtime, baseline, input.timeoutMs ?? 300_000);
+        await emitProgress({
+          phase: 'submit_path_observed',
+          details: {
+            targetId: targetId ?? null,
+            outcome: submittedState.submitPathOutcome,
+            routeKind: submittedState.routeKind,
+            href: submittedState.href,
+            runState: submittedState.runState,
+            pending: submittedState.pending,
+            generatedImageCount: submittedState.generatedImageCount,
+            publicGalleryImageCount: submittedState.publicGalleryImageCount,
+            publicGalleryVisibleTileCount: submittedState.publicGalleryVisibleTileCount,
+            mediaUrlCount: submittedState.mediaUrlCount,
+          },
+        });
         await emitProgress({
           phase: 'submitted_state_observed',
           details: {

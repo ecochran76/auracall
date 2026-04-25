@@ -20746,3 +20746,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 54`
   - `git diff --check`
+
+## 2026-04-24 - Grok Imagine submit-path diagnostics
+
+- Focus: make Grok prompt submission report what path the workbench took after
+  the send click.
+- Progress: Grok browser prompt execution now emits `submit_path_observed`
+  between `send_attempted` and `submitted_state_observed`. Details include
+  outcome, route kind, provider href, run state, pending flag, generated-image
+  count, public-gallery image/tile counts, and media URL count.
+- Guardrail: `runPrompt` now returns early after repeated
+  `public_template_no_generated` submit-path evidence, letting the media
+  executor classify `media_generation_no_generated_output` promptly instead of
+  spending the whole prompt-submission timeout waiting for generated media.
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 54`
+  - `git diff --check`

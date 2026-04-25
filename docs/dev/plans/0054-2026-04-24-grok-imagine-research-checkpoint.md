@@ -117,6 +117,15 @@ existing Aura-Call media-generation contract.
     counts, visible-tile counts, and generated-image count
   - generic timeout remains reserved for cases without stable terminal
     public/template evidence
+- Grok submit-path diagnostics now emit `submit_path_observed` after the send
+  click:
+  - outcomes include `pending`, `generated_media`,
+    `public_template_no_generated`, `blocked`, and `idle`
+  - details preserve route kind, provider href, run state, generated-image
+    count, public-gallery image/tile counts, and media URL count
+  - repeated `public_template_no_generated` evidence returns prompt submission
+    control to the media executor early so status can fail as
+    `media_generation_no_generated_output`
 
 ## Research Findings
 
@@ -274,6 +283,8 @@ Add a browser-first Grok Imagine discovery/audit slice:
 - [x] Stable Grok public/template terminal media with no generated account
   image gets a specific `media_generation_no_generated_output` failure instead
   of a generic timeout.
+- [x] Grok prompt submission emits submit-path diagnostics so operators can
+  distinguish pending/generated/template/blocked post-send states.
 
 ## Validation Plan
 
@@ -338,6 +349,9 @@ Add a browser-first Grok Imagine discovery/audit slice:
   - `tests/mediaGenerationGrokBrowserExecutor.test.ts`
   - executor emits `no_generated_media` after repeated stable template evidence
     and fails with `media_generation_no_generated_output`
+- [x] Submit-path timeline coverage:
+  - `tests/mediaGenerationGrokBrowserExecutor.test.ts`
+  - verifies `submit_path_observed` flows through media timelines
 - `pnpm run check`
 - `pnpm run plans:audit -- --keep 54`
 - `git diff --check`
@@ -345,6 +359,6 @@ Add a browser-first Grok Imagine discovery/audit slice:
 ## Next Slice
 
 Keep Grok video and edit/reference workflows gated. The next browser slice
-should investigate why Grok can route to `/imagine/templates/...` after prompt
-submission and add a submit-path diagnostic that distinguishes failed send,
-template reuse, and provider-created generated account media.
+should run one bounded live Grok dogfood with the new submit-path timeline and
+use the observed outcome to decide whether the next fix belongs in composer
+send selection, route handling, or provider capability/gating classification.
