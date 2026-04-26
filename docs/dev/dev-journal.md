@@ -43,6 +43,14 @@
   targeted only ChatGPT but failed with `chatgpt_identity_not_detected` because
   no live managed browser was present, confirming passive mode does not relaunch
   Chrome. Launched browser roots were closed after validation.
+- Installed-runtime rollout: `pnpm run install:user-runtime` refreshed
+  `~/.auracall/user-runtime` from this checkout at
+  `2026-04-26T21:48:57.817Z`. From `/tmp`, `~/.local/bin/auracall profile
+  identity-smoke --help` exposed `--all-bound` / `--all`, and
+  `~/.local/bin/auracall --profile default profile identity-smoke --all-bound
+  --include-negative --json` passed for ChatGPT, Gemini, and Grok. The installed
+  smoke opened the three default managed browser roots and they were closed
+  after validation.
 
 ## 2026-04-26 - Grok browser auth/account preflight
 
