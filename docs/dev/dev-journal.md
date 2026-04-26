@@ -1,3 +1,19 @@
+## 2026-04-25 - Grok Imagine materialization diagnostics
+
+- Focus: make the next Grok live smoke diagnosable without extra browser churn
+  by surfacing why visible-tile capture or full-quality download comparison did
+  not materialize expected artifacts.
+- Progress: added bounded `grokMaterializationDiagnostics` for Grok Imagine
+  image materialization. The provider adapter now records selected tile
+  fingerprints, source kind/length/prefix, score, tile surface, capture
+  outcomes, screenshot fallback failures, and download-button
+  attempted/clicked/file/reason state. The executor lifts that object into run
+  metadata and an `artifact_poll` timeline event so API/MCP/CLI status readers
+  can inspect the provider-side materialization decision after a run.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts tests/cli.runStatusCommand.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+
 ## 2026-04-25 - Grok Imagine installed status and data-url hardening
 
 - Focus: continue Plan 0061 after the installed Grok smoke by checking whether

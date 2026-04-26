@@ -228,6 +228,16 @@ describe('media generation status summary', () => {
         generatedArtifactCount: 3,
         requestedVisibleTileCount: 8,
         visibleTileMaterializationLimit: 8,
+        grokMaterializationDiagnostics: {
+          requestedMaxItems: 8,
+          selectedTileCount: 4,
+          materializedVisibleTileCount: 3,
+          fullQualityDownload: {
+            attempted: true,
+            ok: false,
+            reason: 'download-button-missing',
+          },
+        },
       },
       timeline: [
         {
@@ -247,6 +257,11 @@ describe('media generation status summary', () => {
       requestedVisibleTileCount: 8,
       visibleTileMaterializationLimit: 8,
       generatedArtifactCount: 3,
+      grokMaterializationDiagnostics: {
+        requestedMaxItems: 8,
+        selectedTileCount: 4,
+        materializedVisibleTileCount: 3,
+      },
       tabTargetId: 'grok-tab-1',
       capabilityId: 'grok.media.imagine_image',
     });

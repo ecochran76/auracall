@@ -205,6 +205,19 @@ async function executeGrokBrowserMediaGeneration(
     preserveActiveTab: true,
     mutationSourcePrefix: 'media:grok-imagine',
   }).catch(() => []);
+  const activeMaterializationDiagnostics = extractGrokMaterializationDiagnostics(activeFiles);
+  await input.emitTimeline?.({
+    event: 'artifact_poll',
+    details: {
+      materializationSource: 'grok-browser-service',
+      requestedVisibleTileCount,
+      activeFileCount: activeFiles.length,
+      visibleFileCount: activeFiles.filter((file) => file.metadata?.materialization === 'visible-tile-browser-capture').length,
+      fullQualityFileCount: activeFiles.filter((file) => file.metadata?.materialization === 'download-button' ||
+        file.metadata?.materialization === 'download-button-anchor-fetch').length,
+      grokMaterializationDiagnostics: activeMaterializationDiagnostics,
+    },
+  });
   const activeArtifacts = activeFiles.map((file, index) => mapGrokFileToMediaArtifact(file, index + 1));
   const artifacts: MediaGenerationArtifact[] = [];
   for (const artifact of activeArtifacts) {
@@ -276,6 +289,7 @@ async function executeGrokBrowserMediaGeneration(
       generatedArtifactCount: artifacts.length,
       requestedVisibleTileCount,
       visibleTileMaterializationLimit: requestedVisibleTileCount,
+      grokMaterializationDiagnostics: activeMaterializationDiagnostics,
     },
   };
 }
@@ -1383,6 +1397,16 @@ function mapGrokFileToMediaArtifact(file: FileRef, ordinal: number): MediaGenera
       checksumSha256: file.checksumSha256 ?? null,
     },
   };
+}
+
+function extractGrokMaterializationDiagnostics(files: FileRef[]): Record<string, unknown> | null {
+  for (const file of files) {
+    const diagnostics = file.metadata?.grokMaterializationDiagnostics;
+    if (diagnostics && typeof diagnostics === 'object' && !Array.isArray(diagnostics)) {
+      return diagnostics as Record<string, unknown>;
+    }
+  }
+  return null;
 }
 
 function collectRecordArray(value: unknown): Array<Record<string, unknown>> {

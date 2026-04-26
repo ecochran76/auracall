@@ -55,6 +55,7 @@ export interface MediaGenerationStatusSummary {
     generatedArtifactCount?: unknown;
     requestedVisibleTileCount?: unknown;
     visibleTileMaterializationLimit?: unknown;
+    grokMaterializationDiagnostics?: unknown;
   };
 }
 
@@ -166,6 +167,7 @@ function summarizeMetadata(metadata: Record<string, unknown> | null): MediaGener
     generatedArtifactCount: metadata?.generatedArtifactCount ?? null,
     requestedVisibleTileCount: metadata?.requestedVisibleTileCount ?? null,
     visibleTileMaterializationLimit: metadata?.visibleTileMaterializationLimit ?? null,
+    grokMaterializationDiagnostics: metadata?.grokMaterializationDiagnostics ?? null,
   };
 }
 

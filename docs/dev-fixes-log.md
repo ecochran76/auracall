@@ -1,3 +1,10 @@
+- 2026-04-25: Browser media materialization needs bounded provider diagnostics
+  before repeated live smokes. For Grok Imagine, record selected tile
+  fingerprints, source kind/length/prefix, capture outcome, and full-quality
+  download attempted/clicked/reason state in run metadata and timeline so the
+  next live run explains whether a miss came from DOM selection, data capture,
+  screenshot fallback, or provider download controls.
+
 - 2026-04-25: Do not treat redacted provider signatures as materializable
   media. Grok Imagine feature signatures may preserve data-URL shape while
   replacing the body with `<omitted ...>` for compact status output; fallback

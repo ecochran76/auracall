@@ -816,6 +816,32 @@ describe('Grok Imagine materialization', () => {
           captureMethod: 'data-url',
         },
       });
+      expect(files[0]?.metadata?.grokMaterializationDiagnostics).toMatchObject({
+        requestedMaxItems: 3,
+        selectedTileCount: 3,
+        materializedVisibleTileCount: 3,
+        tileSelection: expect.arrayContaining([
+          expect.objectContaining({
+            ordinal: 1,
+            srcKind: 'data-url',
+            sourceFingerprint: expect.any(String),
+          }),
+        ]),
+        tileMaterialization: expect.arrayContaining([
+          expect.objectContaining({
+            ordinal: 1,
+            outcome: 'captured',
+            captureMethod: 'data-url',
+            fileName: 'grok-imagine-visible-1.jpg',
+          }),
+        ]),
+        fullQualityDownload: expect.objectContaining({
+          attempted: true,
+          ok: true,
+          clicked: true,
+          fileName: 'grok-imagine-full-quality.jpg',
+        }),
+      });
       expect(files[1]).toMatchObject({
         id: 'grok_imagine_visible_2',
         name: 'grok-imagine-visible-2.jpg',

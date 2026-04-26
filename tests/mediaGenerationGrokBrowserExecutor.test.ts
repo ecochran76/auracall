@@ -581,6 +581,7 @@ describe('Grok browser media generation executor', () => {
       'prompt_submitted',
       'run_state_observed',
       'image_visible',
+      'artifact_poll',
       'artifact_materialized',
     ]);
   });
@@ -1171,6 +1172,28 @@ describe('Grok browser media generation executor', () => {
           height: 413,
           srcKind: 'data-url',
           selected: true,
+          grokMaterializationDiagnostics: {
+            requestedMaxItems: 5,
+            selectedTileCount: 1,
+            materializedVisibleTileCount: 1,
+            tileSelection: [{
+              ordinal: 1,
+              srcKind: 'data-url',
+              sourceFingerprint: 'tile-fp',
+            }],
+            tileMaterialization: [{
+              ordinal: 1,
+              outcome: 'captured',
+              captureMethod: 'data-url',
+              fileName: 'grok-imagine-visible-1.jpg',
+            }],
+            fullQualityDownload: {
+              attempted: true,
+              ok: true,
+              clicked: true,
+              fileName: 'grok-imagine-full-quality.jpg',
+            },
+          },
         },
       },
       {
@@ -1191,13 +1214,13 @@ describe('Grok browser media generation executor', () => {
     ]);
 
     const executor = createGrokBrowserMediaGenerationExecutor({} as never);
-    const timelineEvents: string[] = [];
+    const timelineEvents: Array<{ event: string; details?: Record<string, unknown> | null }> = [];
     const result = await executor({
       id: 'medgen_grok_test',
       createdAt: '2026-04-24T12:00:00.000Z',
       artifactDir,
       emitTimeline: (event) => {
-        timelineEvents.push(event.event);
+        timelineEvents.push(event);
       },
       request: {
         provider: 'grok',
@@ -1245,7 +1268,25 @@ describe('Grok browser media generation executor', () => {
         }),
       }),
     ]));
-    expect(timelineEvents).toContain('artifact_materialized');
+    expect(timelineEvents.map((event) => event.event)).toContain('artifact_poll');
+    expect(timelineEvents.find((event) => event.event === 'artifact_poll')?.details).toMatchObject({
+      materializationSource: 'grok-browser-service',
+      requestedVisibleTileCount: 5,
+      activeFileCount: 2,
+      visibleFileCount: 1,
+      fullQualityFileCount: 1,
+      grokMaterializationDiagnostics: {
+        requestedMaxItems: 5,
+        selectedTileCount: 1,
+      },
+    });
+    expect(timelineEvents.map((event) => event.event)).toContain('artifact_materialized');
+    expect(result.metadata).toMatchObject({
+      grokMaterializationDiagnostics: {
+        requestedMaxItems: 5,
+        materializedVisibleTileCount: 1,
+      },
+    });
     expect(fetch).not.toHaveBeenCalled();
   });
 

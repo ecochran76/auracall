@@ -1427,6 +1427,11 @@ type GrokCapturedImageTile = {
   ordinal: number;
   src: string | null;
   srcKind: string | null;
+  sourceLength?: number | null;
+  sourcePrefix?: string | null;
+  score?: number | null;
+  tileSurface?: string | null;
+  captureError?: string | null;
   x: number | null;
   y: number | null;
   width: number | null;
@@ -1436,6 +1441,55 @@ type GrokCapturedImageTile = {
   selected: boolean;
   dataUrl?: string | null;
   error?: string | null;
+};
+
+type GrokTileSelectionDiagnostic = {
+  ordinal: number;
+  srcKind: string | null;
+  sourceLength: number | null;
+  sourcePrefix: string | null;
+  sourceFingerprint: string | null;
+  score: number | null;
+  tileSurface: string | null;
+  x: number | null;
+  y: number | null;
+  width: number | null;
+  height: number | null;
+  naturalWidth: number | null;
+  naturalHeight: number | null;
+  selected: boolean;
+  captureError: string | null;
+};
+
+type GrokTileMaterializationDiagnostic = GrokTileSelectionDiagnostic & {
+  outcome: 'captured' | 'screenshot-fallback' | 'failed';
+  captureMethod: string | null;
+  fileName: string | null;
+  size: number | null;
+  mimeType: string | null;
+  failureReason: string | null;
+};
+
+type GrokFullQualityDownloadDiagnostic = {
+  attempted: boolean;
+  ok: boolean;
+  reason: string | null;
+  clicked: boolean | null;
+  downloadName: string | null;
+  remoteUrl: string | null;
+  fileName: string | null;
+  size: number | null;
+  previewArtifactId: string | null;
+  fullQualityDiffersFromPreview: boolean | null;
+};
+
+type GrokImageMaterializationDiagnostics = {
+  requestedMaxItems: number;
+  selectedTileCount: number;
+  materializedVisibleTileCount: number;
+  tileSelection: GrokTileSelectionDiagnostic[];
+  tileMaterialization: GrokTileMaterializationDiagnostic[];
+  fullQualityDownload: GrokFullQualityDownloadDiagnostic;
 };
 
 async function materializeGrokImagineVisibleImagesWithClient(
@@ -1448,6 +1502,8 @@ async function materializeGrokImagineVisibleImagesWithClient(
   await configureGrokDownloadBehaviorWithClient(client, destDir);
   const captured = await captureGrokImagineVisibleImageTiles(client.Runtime, maxItems);
   const files: FileRef[] = [];
+  const tileSelection = captured.tiles.map(summarizeGrokCapturedTile);
+  const tileMaterialization: GrokTileMaterializationDiagnostic[] = [];
   for (const tile of captured.tiles) {
     let parsed = parseImageDataUrl(tile.dataUrl ?? '');
     let captureMethod = 'data-url';
@@ -1455,11 +1511,31 @@ async function materializeGrokImagineVisibleImagesWithClient(
       parsed = await captureGrokVisibleTileScreenshot(client, tile);
       captureMethod = 'screenshot';
     }
-    if (!parsed) continue;
+    if (!parsed) {
+      tileMaterialization.push({
+        ...summarizeGrokCapturedTile(tile),
+        outcome: 'failed',
+        captureMethod: null,
+        fileName: null,
+        size: null,
+        mimeType: null,
+        failureReason: tile.error ?? tile.captureError ?? 'data-url-and-screenshot-capture-failed',
+      });
+      continue;
+    }
     const ext = extensionForMimeType(parsed.mimeType);
     const fileName = `grok-imagine-visible-${tile.ordinal}.${ext}`;
     const filePath = path.join(destDir, fileName);
     await fs.writeFile(filePath, parsed.buffer);
+    tileMaterialization.push({
+      ...summarizeGrokCapturedTile(tile),
+      outcome: captureMethod === 'screenshot' ? 'screenshot-fallback' : 'captured',
+      captureMethod,
+      fileName,
+      size: parsed.buffer.byteLength,
+      mimeType: parsed.mimeType,
+      failureReason: null,
+    });
     files.push({
       id: `grok_imagine_visible_${tile.ordinal}`,
       name: fileName,
@@ -1481,13 +1557,62 @@ async function materializeGrokImagineVisibleImagesWithClient(
       },
     });
   }
+  let fullQualityDownload: GrokFullQualityDownloadDiagnostic = {
+    attempted: options.compareFullQuality !== false && files.length > 0,
+    ok: false,
+    reason: files.length > 0
+      ? (options.compareFullQuality === false ? 'compare-disabled' : 'not-attempted')
+      : 'no-visible-artifact',
+    clicked: null,
+    downloadName: null,
+    remoteUrl: null,
+    fileName: null,
+    size: null,
+    previewArtifactId: files[0]?.id ?? null,
+    fullQualityDiffersFromPreview: null,
+  };
   if (options.compareFullQuality !== false && files.length > 0) {
     const comparison = await materializeGrokFullQualityDownload(client, destDir, files[0]);
-    if (comparison) {
-      files.push(comparison);
+    fullQualityDownload = comparison.diagnostics;
+    if (comparison.file) {
+      files.push(comparison.file);
     }
   }
+  const diagnostics: GrokImageMaterializationDiagnostics = {
+    requestedMaxItems: maxItems,
+    selectedTileCount: captured.tiles.length,
+    materializedVisibleTileCount: files.filter((file) => file.metadata?.materialization === 'visible-tile-browser-capture').length,
+    tileSelection,
+    tileMaterialization,
+    fullQualityDownload,
+  };
+  for (const file of files) {
+    file.metadata = {
+      ...(file.metadata ?? {}),
+      grokMaterializationDiagnostics: diagnostics,
+    };
+  }
   return files;
+}
+
+function summarizeGrokCapturedTile(tile: GrokCapturedImageTile): GrokTileSelectionDiagnostic {
+  return {
+    ordinal: tile.ordinal,
+    srcKind: tile.srcKind ?? null,
+    sourceLength: numberOrNull(tile.sourceLength),
+    sourcePrefix: typeof tile.sourcePrefix === 'string' ? tile.sourcePrefix : summarizeSourcePrefix(tile.src),
+    sourceFingerprint: sourceFingerprint(tile.src),
+    score: numberOrNull(tile.score),
+    tileSurface: typeof tile.tileSurface === 'string' ? tile.tileSurface : null,
+    x: numberOrNull(tile.x),
+    y: numberOrNull(tile.y),
+    width: numberOrNull(tile.width),
+    height: numberOrNull(tile.height),
+    naturalWidth: numberOrNull(tile.naturalWidth),
+    naturalHeight: numberOrNull(tile.naturalHeight),
+    selected: tile.selected,
+    captureError: tile.error ?? tile.captureError ?? null,
+  };
 }
 
 async function captureGrokImagineVisibleImageTiles(
@@ -1563,20 +1688,28 @@ async function captureGrokImagineVisibleImageTiles(
             /assets\\.grok\\.com\\/users\\//.test(src) || /\\/generated\\//.test(src) ? 1_750_000 :
             templateShareImage ? 1_000_000 :
             0;
+          const tileSurface = masonryGenerated
+            ? (img.closest('[data-filmstrip-scroll="true"]') ? 'filmstrip' : 'masonry')
+            : (templateShareImage ? 'template' : 'main');
           candidates.push({
             img,
             score: generatedScore + area,
+            src,
+            srcKind: classify(src),
+            sourceLength: src.length,
+            sourcePrefix: src.slice(0, 80),
+            tileSurface,
           });
           if (candidates.length >= maxItems * 3) break;
         }
         if (candidates.length >= maxItems * 3) break;
       }
-      const images = candidates
+      const selectedCandidates = candidates
         .sort((a, b) => b.score - a.score)
-        .slice(0, maxItems)
-        .map((entry) => entry.img);
+        .slice(0, maxItems);
       const tiles = [];
-      for (const [index, img] of images.entries()) {
+      for (const [index, candidate] of selectedCandidates.entries()) {
+        const img = candidate.img;
         const src = img.currentSrc || img.src || '';
         const captured = await toDataUrl(src);
         const rect = img.getBoundingClientRect();
@@ -1584,6 +1717,11 @@ async function captureGrokImagineVisibleImageTiles(
           ordinal: index + 1,
           src,
           srcKind: classify(src),
+          sourceLength: src.length,
+          sourcePrefix: src.slice(0, 80),
+          score: candidate.score,
+          tileSurface: candidate.tileSurface,
+          captureError: captured.error,
           x: Math.round(rect.x),
           y: Math.round(rect.y),
           width: Math.round(rect.width),
@@ -1645,7 +1783,19 @@ async function materializeGrokFullQualityDownload(
   client: ChromeClient,
   destDir: string,
   previewFile: FileRef,
-): Promise<FileRef | null> {
+): Promise<{ file: FileRef | null; diagnostics: GrokFullQualityDownloadDiagnostic }> {
+  const baseDiagnostics: GrokFullQualityDownloadDiagnostic = {
+    attempted: true,
+    ok: false,
+    reason: null,
+    clicked: null,
+    downloadName: null,
+    remoteUrl: null,
+    fileName: null,
+    size: null,
+    previewArtifactId: previewFile.id,
+    fullQualityDiffersFromPreview: null,
+  };
   await armDownloadCapture(client.Runtime, { stateKey: '__auracallGrokImagineDownloadCapture' });
   const clicked = await client.Runtime.evaluate({
     expression: `(async () => {
@@ -1693,7 +1843,14 @@ async function materializeGrokFullQualityDownload(
   });
   const clickedValue = clicked.result?.value as { ok?: boolean; reason?: string } | undefined;
   if (clickedValue?.ok !== true) {
-    return null;
+    return {
+      file: null,
+      diagnostics: {
+        ...baseDiagnostics,
+        clicked: false,
+        reason: clickedValue?.reason ?? 'download-click-failed',
+      },
+    };
   }
   const capture = await waitForDownloadCapture(client.Runtime, {
     stateKey: '__auracallGrokImagineDownloadCapture',
@@ -1711,12 +1868,24 @@ async function materializeGrokFullQualityDownload(
       await fs.writeFile(filePath, Buffer.from(await response.arrayBuffer()));
     }
   }
-  if (!filePath) return null;
+  if (!filePath) {
+    return {
+      file: null,
+      diagnostics: {
+        ...baseDiagnostics,
+        clicked: true,
+        reason: 'download-file-missing',
+        downloadName: capture.downloadName ?? null,
+        remoteUrl,
+      },
+    };
+  }
   const stat = await fs.stat(filePath);
   const buffer = await fs.readFile(filePath);
   const previewSha = previewFile.checksumSha256 ?? null;
   const fullQualitySha = sha256Hex(buffer);
-  return {
+  const fullQualityDiffersFromPreview = previewSha ? previewSha !== fullQualitySha || previewFile.size !== stat.size : null;
+  const file: FileRef = {
     id: 'grok_imagine_full_quality_1',
     name: path.basename(filePath),
     provider: 'grok',
@@ -1732,7 +1901,21 @@ async function materializeGrokFullQualityDownload(
       previewArtifactId: previewFile.id,
       previewSize: previewFile.size ?? null,
       previewChecksumSha256: previewSha,
-      fullQualityDiffersFromPreview: previewSha ? previewSha !== fullQualitySha || previewFile.size !== stat.size : null,
+      fullQualityDiffersFromPreview,
+    },
+  };
+  return {
+    file,
+    diagnostics: {
+      ...baseDiagnostics,
+      ok: true,
+      reason: null,
+      clicked: true,
+      downloadName: capture.downloadName ?? path.basename(filePath),
+      remoteUrl,
+      fileName: path.basename(filePath),
+      size: stat.size,
+      fullQualityDiffersFromPreview,
     },
   };
 }
@@ -1822,6 +2005,19 @@ function ensureExtension(fileName: string, extension: string): string {
 
 function sha256Hex(buffer: Buffer): string {
   return createHash('sha256').update(buffer).digest('hex');
+}
+
+function numberOrNull(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function summarizeSourcePrefix(value: string | null | undefined): string | null {
+  return typeof value === 'string' && value.length > 0 ? value.slice(0, 80) : null;
+}
+
+function sourceFingerprint(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return createHash('sha256').update(value).digest('hex').slice(0, 16);
 }
 
 export function isGrokMainSidebarOpenProbe(probe: GrokMainSidebarProbe | null | undefined): boolean {

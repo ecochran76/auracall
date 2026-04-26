@@ -53,10 +53,14 @@ profile, queued dispatcher, and registry-first DevTools authority.
   in the installed CLI: no tiny placeholder artifacts were filed. That same
   run reported four generated images but only one materialized visible artifact,
   so live multi-tile capture remains open.
+- Current source now records bounded `grokMaterializationDiagnostics` in run
+  metadata and the `artifact_poll` timeline: selected tile fingerprints,
+  source kind/length/prefix, score/surface, capture outcomes, and
+  full-quality download attempted/clicked/file/reason state.
 - Remaining live gap: the installed smoke did not produce a linked
-  full-quality download-button comparison artifact, and the provider adapter
-  needs observable tile-selection diagnostics before the preview-vs-download
-  criterion can close.
+  full-quality download-button comparison artifact. The next installed smoke
+  should use the new diagnostics to decide whether the blocker is DOM tile
+  selection, data capture, screenshot fallback, or provider download controls.
 
 ## Scope
 
