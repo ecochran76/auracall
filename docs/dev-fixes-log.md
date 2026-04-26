@@ -1,3 +1,18 @@
+- 2026-04-25: Do not make subcommands reuse a required option name from the
+  root CLI without a fallback. The full AuraCall CLI already owns
+  `-p/--prompt` for text runs, so `media generate --prompt ...` was parsed as
+  root prompt state and the media subcommand rejected the request before
+  browser launch. Media generation now accepts prompt text from the subcommand
+  option, a positional media prompt, or the root prompt fallback.
+
+- 2026-04-25: Treat installed-runtime media smokes as versioned evidence.
+  The installed Grok image smoke proved no-navigation submitted-tab behavior,
+  visible-tile default count metadata, and cache filing, but that installed
+  runtime did not include the newest checksum/full-quality status fields. When
+  validating freshly committed media status fields, either update the installed
+  runtime first or use the source runtime explicitly and record which surface
+  produced the evidence.
+
 - 2026-04-25: Normal managed browser response/chat execution should queue at
   the shared browser execution boundary, not inside provider adapters. Use
   `acquireQueued(...)` for `browser-execution` so response runs and media jobs

@@ -1,3 +1,34 @@
+## 2026-04-25 - Grok Imagine installed media smoke
+
+- Focus: dogfood Plan 0061 through the installed local API path without adding
+  another browser navigation or provider generation.
+- Progress: ran one installed-runtime Grok image request through
+  `auracall-grok-auto` on API port `18088`. The run
+  `medgen_5daf6d6e792848bda1e980d5d7b10d12` succeeded on submitted tab
+  `6088C5371BC63D7C88C9BB4A6F7DFAD4`, stayed on
+  `https://grok.com/imagine`, attached to Grok DevTools port `38261`, and
+  cached five visible-tile artifacts under
+  `~/.auracall/runtime/media-generations/medgen_5daf6d6e792848bda1e980d5d7b10d12/artifacts`.
+  Status reported `requestedVisibleTileCount = 8`,
+  `visibleTileMaterializationLimit = 8`, `generatedArtifactCount = 5`, and
+  route progression `["https://grok.com/imagine"]`.
+- Finding: the installed `media generate` CLI rejected a valid media prompt
+  before browser launch because the full CLI's root `-p/--prompt` option
+  collided with the media subcommand's required prompt option. The source fix
+  now accepts media prompt text from the subcommand option, positional command
+  argument, or root prompt fallback and covers the full-program collision.
+- Finding: the installed runtime is behind the newest Plan 0061 status
+  contract. The smoke cached five visible-tile images, but did not emit
+  checksum fields or a linked full-quality comparison artifact, so
+  `fullQualityDiffersFromPreview` remained `null` for the live installed run.
+- Validation:
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto api serve --port 18088 --no-recover-runs-on-start`
+  - `curl -s 'http://127.0.0.1:18088/v1/media-generations?wait=false' ...`
+  - `curl -s 'http://127.0.0.1:18088/v1/media-generations/medgen_5daf6d6e792848bda1e980d5d7b10d12/status?diagnostics=browser-state'`
+  - `pnpm tsx bin/auracall.ts run status medgen_5daf6d6e792848bda1e980d5d7b10d12 --json`
+  - `pnpm vitest run tests/cli.mediaGenerationCommand.test.ts tests/mediaStatusSummary.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+
 ## 2026-04-25 - Browser response queued dispatch
 
 - Focus: route normal browser-backed response/chat execution through the same

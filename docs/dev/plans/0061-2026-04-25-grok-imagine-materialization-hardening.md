@@ -27,6 +27,19 @@ profile, queued dispatcher, and registry-first DevTools authority.
   preview-vs-full-quality comparison metadata, and the focused adapter
   regression proves multiple visible tiles plus one linked full-quality
   download comparison artifact without live provider work.
+- Installed-runtime dogfood on 2026-04-25 created
+  `medgen_5daf6d6e792848bda1e980d5d7b10d12` through
+  `auracall-grok-auto` and proved the submitted Grok Imagine tab stayed on
+  `https://grok.com/imagine`, used DevTools port `38261`, requested the default
+  visible-tile limit `8`, and cached five visible-tile image artifacts. The
+  same run also showed the installed runtime had not yet picked up the newest
+  checksum/full-quality comparison status fields, so that evidence remains a
+  source-or-updated-runtime validation item.
+- The installed CLI prompt path had a full-program option collision:
+  `media generate --prompt ...` was rejected before browser launch when the
+  root CLI also owned `-p/--prompt`. The source command now accepts media prompt
+  text from the command option, a positional media prompt, or the root prompt
+  fallback.
 
 ## Scope
 
