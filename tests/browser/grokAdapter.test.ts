@@ -129,6 +129,35 @@ describe('checkGrokBrowserAuthPreflight', () => {
       },
     });
   });
+
+  test('fails when no expected Grok identity is configured', async () => {
+    const Runtime = createFakeAuthRuntime([
+      {
+        href: 'https://grok.com/imagine',
+        title: 'Imagine - Grok',
+        bodyText: 'Type to imagine',
+        guestAuthCta: false,
+      },
+      {
+        id: 'c4d43034-7f30-462b-918b-59779bcba208',
+        name: 'Eric C',
+        handle: '@SwantonDoug',
+        email: 'ez86944@gmail.com',
+        source: 'next-data',
+        guestAuthCta: false,
+      },
+    ]);
+
+    await expect(checkGrokBrowserAuthPreflight(Runtime)).resolves.toMatchObject({
+      ok: false,
+      reason: 'grok_expected_identity_missing',
+      expectedIdentity: null,
+      expectedServiceAccountId: null,
+      actualIdentity: {
+        email: 'ez86944@gmail.com',
+      },
+    });
+  });
 });
 
 describe('extractGrokProjectIdFromUrl', () => {
@@ -869,6 +898,11 @@ describe('Grok Imagine materialization', () => {
           host: '127.0.0.1',
           port: 9222,
           configuredUrl: 'https://grok.com/imagine',
+          expectedUserIdentity: {
+            email: 'ez86944@gmail.com',
+            source: 'profile',
+          },
+          expectedServiceAccountId: 'service-account:grok:ez86944@gmail.com',
         },
       );
 
@@ -1000,6 +1034,11 @@ async function runGrokImaginePromptModeSelectionTest(input: {
       host: '127.0.0.1',
       port: 9222,
       configuredUrl: 'https://grok.com/imagine',
+      expectedUserIdentity: {
+        email: 'ez86944@gmail.com',
+        source: 'profile',
+      },
+      expectedServiceAccountId: 'service-account:grok:ez86944@gmail.com',
     },
   );
 
@@ -1034,6 +1073,20 @@ function createFakeGrokImagineMaterializationClient(destDir: string) {
     }
     if (expression.includes('new URL(location.href)')) {
       return { result: { value: { href: 'https://grok.com/imagine', title: 'Imagine - Grok' } } };
+    }
+    if (expression.includes('const identity = { id: null, name: null, handle: null, email: null, source: null }')) {
+      return {
+        result: {
+          value: {
+            id: 'c4d43034-7f30-462b-918b-59779bcba208',
+            name: 'Eric C',
+            handle: '@SwantonDoug',
+            email: 'ez86944@gmail.com',
+            source: 'next-data',
+            guestAuthCta: false,
+          },
+        },
+      };
     }
     if (expression.includes('const maxItems =') && expression.includes('const selectors =')) {
       const maxItemsMatch = expression.match(/const maxItems = ([0-9]+)/);
@@ -1168,6 +1221,20 @@ function createFakeGrokImaginePromptClient(initialMode: 'Image' | 'Video') {
     }
     if (expression.includes('new URL(location.href)')) {
       return { result: { value: { href: targetUrl, title: 'Imagine - Grok' } } };
+    }
+    if (expression.includes('const identity = { id: null, name: null, handle: null, email: null, source: null }')) {
+      return {
+        result: {
+          value: {
+            id: 'c4d43034-7f30-462b-918b-59779bcba208',
+            name: 'Eric C',
+            handle: '@SwantonDoug',
+            email: 'ez86944@gmail.com',
+            source: 'next-data',
+            guestAuthCta: false,
+          },
+        },
+      };
     }
     if (expression.includes('const prompt = ')) {
       return { result: { value: { ok: true } } };

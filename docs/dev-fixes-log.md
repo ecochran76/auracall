@@ -6,6 +6,13 @@
   provider identity before prompt submission or media materialization when an
   expected account is configured.
 
+- 2026-04-26: Treat a missing runtime-profile service identity as unsafe, not
+  as permission to run. A signed-in provider browser with no configured
+  expected identity can pollute identity-scoped caches or use the wrong
+  account silently; fail before prompt submission/materialization and require
+  the operator to bind the detected service account to the AuraCall runtime
+  profile.
+
 - 2026-04-26: Timeline event type changes must update both TypeScript unions
   and the persisted response Zod schema. Adding `provider_auth_preflight` only
   to the TypeScript type let tests pass but caused a live media run to fail

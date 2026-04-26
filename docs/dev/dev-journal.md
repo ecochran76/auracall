@@ -31,6 +31,15 @@
   (grok_sign_in_required at https://grok.com/imagine); expected
   wrong-account-for-auth-preflight-smoke@example.invalid, found signed out`.
   The temporary config change was restored and the managed browser was closed.
+- Follow-up hardening: no configured service identity is now itself an error
+  for Grok browser runs. The adapter detects the signed-in Grok account first
+  and fails with `grok_expected_identity_missing` before prompt submission or
+  materialization when the selected AuraCall runtime profile has no expected
+  Grok account. This prevents cross-account cache contamination and accidental
+  use of an unbound browser profile. Local config backup
+  `~/.auracall/config.json.bak-2026-04-26-grok-auto-identity` was written, and
+  `profiles.auracall-grok-auto.services.grok.identity` was bound to the same
+  account as `default`: `ez86944@gmail.com`.
 
 ## 2026-04-26 - Grok Imagine action-surface activation
 

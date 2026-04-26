@@ -1065,26 +1065,11 @@ export async function checkGrokBrowserAuthPreflight(
   const page = await readGrokAuthPageState(Runtime);
   const expectedIdentity = normalizeExpectedProviderIdentity(options.expectedUserIdentity);
   const expectedServiceAccountId = normalizeStringOrNull(options.expectedServiceAccountId);
-  const requiresExpectedIdentityCheck = Boolean(expectedIdentity || expectedServiceAccountId);
   const authChallengeReason = classifyGrokAuthChallenge(page);
   if (authChallengeReason) {
     return {
       ok: false,
       reason: authChallengeReason,
-      href: page.href,
-      title: page.title,
-      expectedServiceAccountId,
-      expectedIdentity,
-      actualIdentity: null,
-      guestAuthCta: page.guestAuthCta,
-      bodyText: page.bodyText,
-    };
-  }
-
-  if (!requiresExpectedIdentityCheck) {
-    return {
-      ok: true,
-      reason: null,
       href: page.href,
       title: page.title,
       expectedServiceAccountId,
@@ -1101,6 +1086,20 @@ export async function checkGrokBrowserAuthPreflight(
     return {
       ok: false,
       reason: detected.guestAuthCta || page.guestAuthCta ? 'grok_sign_in_required' : 'grok_identity_not_detected',
+      href: page.href,
+      title: page.title,
+      expectedServiceAccountId,
+      expectedIdentity,
+      actualIdentity,
+      guestAuthCta: detected.guestAuthCta || page.guestAuthCta,
+      bodyText: page.bodyText,
+    };
+  }
+
+  if (!expectedIdentity && !expectedServiceAccountId) {
+    return {
+      ok: false,
+      reason: 'grok_expected_identity_missing',
       href: page.href,
       title: page.title,
       expectedServiceAccountId,
@@ -1145,6 +1144,14 @@ async function assertGrokBrowserAuthPreflight(
   const preflight = await checkGrokBrowserAuthPreflight(Runtime, options);
   if (preflight.ok) {
     return preflight;
+  }
+  if (preflight.reason === 'grok_expected_identity_missing') {
+    const actual = describeProviderIdentity(preflight.actualIdentity) ?? 'detected signed-in account';
+    const location = preflight.href ? ` at ${preflight.href}` : '';
+    throw new Error(
+      `Grok browser auth preflight failed (${preflight.reason}${location}); no expected Grok account is configured, found ${actual}. ` +
+        'Bind the detected account to this AuraCall runtime profile before retrying.',
+    );
   }
   const expected = describeProviderIdentity(preflight.expectedIdentity) ?? preflight.expectedServiceAccountId ?? 'configured Grok account';
   const actual = describeProviderIdentity(preflight.actualIdentity) ?? (preflight.guestAuthCta ? 'signed out' : 'unknown account');

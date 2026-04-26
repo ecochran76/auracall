@@ -97,6 +97,10 @@ profile, queued dispatcher, and registry-first DevTools authority.
   profile has a configured Grok service identity it also fails fast on
   undetected or mismatched provider account state before any prompt or
   materialization action.
+- Source follow-up: missing Grok service identity on the selected AuraCall
+  runtime profile is now a preflight error after a signed-in account is
+  detected, so browser media cannot run against an unbound account and pollute
+  identity-scoped caches.
 
 ## Scope
 
@@ -133,6 +137,8 @@ profile, queued dispatcher, and registry-first DevTools authority.
 - The provider adapter fails fast before submission/materialization when the
   managed browser profile is signed out, blocked on an auth challenge, or not
   the account expected by the selected AuraCall runtime profile.
+- The provider adapter fails fast before submission/materialization when the
+  selected AuraCall runtime profile has no expected Grok identity configured.
 - A focused regression test covers visible-tile multi-artifact materialization
   and full-quality download comparison metadata without live provider work.
 - One narrow installed-runtime dogfood run proves the live path after focused
