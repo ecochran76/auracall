@@ -69,6 +69,13 @@ and concrete:
   - Remaining dogfood item: rerun the queue-diagnostics smoke only after the
     installed runtime contains this guard, using the existing Grok managed
     browser profile and no direct conversation re-navigation.
+  - Installed-runtime smoke proved the guard but found a profile/config
+    blocker: `auracall-grok-auto` resolves to the canonical managed browser
+    profile `browser-profiles/auracall-grok-auto/grok`, while the active
+    logged-in Grok browser is registered under `browser-profiles/default/grok`
+    and the shared default browser family still has fixed port `45011`
+    occupied by Gemini. Resolve the runtime profile and debug-port ownership
+    before repeating browser queue dogfood.
 
 ## Current DOM-drift repair plan (2026-03-28)
 

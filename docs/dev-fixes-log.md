@@ -14461,3 +14461,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `resolveServiceTarget(...)` so cross-profile ports are ignored in favor of
   the expected live managed browser profile, or fail closed before any tab scan
   or navigation.
+- 2026-04-25: The cross-profile guard turns a silent wrong-browser attach into
+  an explicit profile/config problem. After installation, an
+  `auracall-grok-auto` smoke refused Gemini's `45011` port because the runtime
+  canonical managed browser profile was
+  `browser-profiles/auracall-grok-auto/grok`, while the logged-in Grok browser
+  remained under `browser-profiles/default/grok` on port `38261`. Fix the
+  runtime profile/port ownership before rerunning live queue dogfood.

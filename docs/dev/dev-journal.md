@@ -21838,3 +21838,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   closed before scanning tabs or navigating the wrong browser.
 - Validation:
   - `pnpm vitest run tests/browser/browserService.test.ts`
+
+## 2026-04-25 - Installed cross-profile guard smoke
+
+- Focus: verify the installed runtime uses the browser-service cross-profile
+  DevTools guard before repeating queue-diagnostics dogfooding.
+- Progress: `pnpm run install:user-runtime` refreshed
+  `~/.auracall/user-runtime`, and installed
+  `dist/src/browser/service/browserService.js` contains the guard messages
+  `Ignoring selected DevTools port` and
+  `Refusing to use a cross-profile browser target`.
+- Live smoke: started installed API server on port `18084`, held a Grok
+  browser-operation lock, and submitted response run
+  `resp_98ef2e84b7894bfaa77414d9746f5a48`.
+- Result: browser-state diagnostics refused Gemini's `45011` DevTools port
+  for Grok instead of scanning or navigating that browser. The refusal exposed
+  the next blocker: the runtime canonical managed browser profile for
+  `auracall-grok-auto` resolves to
+  `~/.auracall/browser-profiles/auracall-grok-auto/grok`, while the currently
+  logged-in Grok browser is registered at
+  `~/.auracall/browser-profiles/default/grok` on port `38261`, and the shared
+  default browser family still carries fixed `debugPort = 45011`.
+- Cleanup: stopped the API server and lock holder; no browser-operation lock
+  files remained.
+- Validation:
+  - `/home/ecochran76/.local/bin/auracall --version`
+  - `rg -n "Refusing to use a cross-profile browser target|Ignoring selected DevTools port" ~/.auracall/user-runtime/node_modules/auracall/dist/src/browser/service/browserService.js`
+  - `curl 'http://127.0.0.1:18084/v1/runs/resp_98ef2e84b7894bfaa77414d9746f5a48/status?diagnostics=browser-state'`
+  - `find ~/.auracall/browser-operations -maxdepth 1 -type f -print`
