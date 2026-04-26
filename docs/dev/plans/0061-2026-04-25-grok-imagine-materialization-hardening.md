@@ -81,6 +81,16 @@ profile, queued dispatcher, and registry-first DevTools authority.
   show the download path selects the first current masonry tile
   (`f1c111415ebdbfa6`) but finds zero download-button candidates, so the next
   slice should discover the provider action surface after tile activation.
+- Source follow-up: full-quality download discovery now activates likely
+  masonry tile wrapper ancestors, not just the `img` node, and records bounded
+  post-activation action-button labels. This preserves the browser-service
+  control-plane path while making the next live miss actionable without extra
+  ad hoc DOM probing.
+- Live validation gate: before retesting the action-surface patch, manually
+  clear the managed Grok browser profile. A read-only browser-tools check found
+  `auracall-grok-auto/grok` on a Google Accounts password challenge for
+  `ecochran76@gmail.com` with "Too many failed attempts", so further live
+  automation would only churn the auth blocker.
 
 ## Scope
 

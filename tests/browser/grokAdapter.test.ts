@@ -839,6 +839,12 @@ describe('Grok Imagine materialization', () => {
           attempted: true,
           ok: true,
           clicked: true,
+          tileCandidateCount: 3,
+          selectedTileSourceFingerprint: 'fake-selected-tile',
+          downloadButtonCandidateCount: 1,
+          downloadButtonLabels: ['Download'],
+          actionSurfaceButtonCount: 2,
+          actionSurfaceButtonLabels: ['Download', 'Share'],
           fileName: 'grok-imagine-full-quality.jpg',
         }),
       });
@@ -992,7 +998,19 @@ function createFakeGrokImagineMaterializationClient(destDir: string) {
     if (expression.includes('firstTile') && expression.includes('Download')) {
       downloadName = 'grok-imagine-full-quality.jpg';
       await fs.writeFile(path.join(destDir, downloadName), fullQualityBytes);
-      return { result: { value: { ok: true } } };
+      return {
+        result: {
+          value: {
+            ok: true,
+            tileCandidateCount: 3,
+            selectedTileSourceFingerprint: 'fake-selected-tile',
+            downloadButtonCandidateCount: 1,
+            downloadButtonLabels: ['Download'],
+            actionSurfaceButtonCount: 2,
+            actionSurfaceButtonLabels: ['Download', 'Share'],
+          },
+        },
+      };
     }
     if (expression.includes('downloadName')) {
       return {

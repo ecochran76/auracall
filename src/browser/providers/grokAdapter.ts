@@ -1479,6 +1479,8 @@ type GrokFullQualityDownloadDiagnostic = {
   selectedTileSourceFingerprint?: string | null;
   downloadButtonCandidateCount?: number | null;
   downloadButtonLabels?: string[] | null;
+  actionSurfaceButtonCount?: number | null;
+  actionSurfaceButtonLabels?: string[] | null;
   downloadName: string | null;
   remoteUrl: string | null;
   fileName: string | null;
@@ -1803,6 +1805,8 @@ async function materializeGrokFullQualityDownload(
     selectedTileSourceFingerprint: null,
     downloadButtonCandidateCount: null,
     downloadButtonLabels: null,
+    actionSurfaceButtonCount: null,
+    actionSurfaceButtonLabels: null,
     downloadName: null,
     remoteUrl: null,
     fileName: null,
@@ -1848,26 +1852,64 @@ async function materializeGrokFullQualityDownload(
           }
         }
       };
+      const dispatchPress = (node) => {
+        if (!(node instanceof HTMLElement)) return;
+        const rect = node.getBoundingClientRect();
+        const clientX = Math.max(1, Math.round(rect.left + rect.width / 2));
+        const clientY = Math.max(1, Math.round(rect.top + rect.height / 2));
+        const pointerInit = { bubbles: true, cancelable: true, composed: true, clientX, clientY, pointerId: 1, pointerType: 'mouse', isPrimary: true };
+        const mouseInit = { bubbles: true, cancelable: true, composed: true, clientX, clientY, button: 0, buttons: 1 };
+        for (const eventName of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+          try {
+            const event = eventName.startsWith('pointer')
+              ? new PointerEvent(eventName, pointerInit)
+              : new MouseEvent(eventName, mouseInit);
+            node.dispatchEvent(event);
+          } catch {
+            node.dispatchEvent(new Event(eventName, { bubbles: true, cancelable: true }));
+          }
+        }
+      };
+      const tileActivationTargets = (node) => {
+        if (!(node instanceof HTMLElement)) return [];
+        const targets = [];
+        const add = (candidate) => {
+          if (candidate instanceof HTMLElement && !targets.includes(candidate) && visible(candidate)) {
+            targets.push(candidate);
+          }
+        };
+        add(node);
+        add(node.closest('button,[role="button"],a,[data-filmstrip-item="true"]'));
+        const imageRect = node.getBoundingClientRect();
+        let cursor = node.parentElement;
+        for (let depth = 0; cursor && depth < 6; depth += 1, cursor = cursor.parentElement) {
+          if (!(cursor instanceof HTMLElement)) continue;
+          const rect = cursor.getBoundingClientRect();
+          const similarTileBox = rect.width >= imageRect.width * 0.8 && rect.height >= imageRect.height * 0.8;
+          const masonryWrapper = Boolean(cursor.closest('[id^="imagine-masonry-section"]')) &&
+            /transition-transform|origin-center|group|relative|overflow-hidden/.test(String(cursor.getAttribute('class') || ''));
+          if (similarTileBox || masonryWrapper) add(cursor);
+        }
+        return targets;
+      };
       const activate = async (node) => {
         if (!(node instanceof HTMLElement)) return false;
         node.scrollIntoView({ block: 'center', inline: 'center' });
         await sleep(100);
-        const clickable = node.closest('button,[role="button"],a,[data-filmstrip-item="true"]') || node;
-        for (const target of [node, clickable]) {
-          if (target instanceof HTMLElement) {
-            firePointerSequence(target);
-            target.focus?.({ preventScroll: true });
-          }
+        const targets = tileActivationTargets(node);
+        for (const target of targets) {
+          firePointerSequence(target);
+          target.focus?.({ preventScroll: true });
+          await sleep(100);
         }
-        await sleep(250);
-        firePointerSequence(clickable);
-        clickable.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true }));
-        clickable.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true }));
-        clickable.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-        clickable.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
-        clickable.click();
-        await sleep(900);
-        firePointerSequence(clickable);
+        for (const target of targets) {
+          firePointerSequence(target);
+          dispatchPress(target);
+          await sleep(450);
+          if (findDownloadButtons().length > 0) break;
+        }
+        await sleep(700);
+        for (const target of targets) firePointerSequence(target);
         await sleep(300);
         return true;
       };
@@ -1888,6 +1930,9 @@ async function materializeGrokFullQualityDownload(
           button.querySelector('mat-icon')?.getAttribute('fonticon') ||
           '';
       }).filter(Boolean);
+      const readActionSurfaceButtons = () => Array.from(document.querySelectorAll('button,[role="button"],a'))
+        .filter((node) => node instanceof HTMLElement && visible(node) && node.getAttribute('aria-disabled') !== 'true')
+        .slice(0, 30);
       const findDownloadButtons = () => Array.from(document.querySelectorAll(downloadButtonSelector))
         .filter((node) => node instanceof HTMLElement && visible(node) && !node.disabled && node.getAttribute('aria-disabled') !== 'true');
       const isRemoteGeneratedAsset = (src) => /assets\\.grok\\.com\\/users\\//.test(src) || /\\/generated\\//.test(src);
@@ -1936,6 +1981,7 @@ async function materializeGrokFullQualityDownload(
           if (buttons.length > 0) break;
         }
       }
+      const actionSurfaceButtons = readActionSurfaceButtons();
       const button = buttons[0] || null;
       if (!(button instanceof HTMLElement)) {
         return {
@@ -1945,6 +1991,8 @@ async function materializeGrokFullQualityDownload(
           selectedTileSourceFingerprint,
           downloadButtonCandidateCount: buttons.length,
           downloadButtonLabels: readButtonLabels(buttons),
+          actionSurfaceButtonCount: actionSurfaceButtons.length,
+          actionSurfaceButtonLabels: readButtonLabels(actionSurfaceButtons),
         };
       }
       firePointerSequence(button);
@@ -1955,6 +2003,8 @@ async function materializeGrokFullQualityDownload(
         selectedTileSourceFingerprint,
         downloadButtonCandidateCount: buttons.length,
         downloadButtonLabels: readButtonLabels(buttons),
+        actionSurfaceButtonCount: actionSurfaceButtons.length,
+        actionSurfaceButtonLabels: readButtonLabels(actionSurfaceButtons),
       };
     })()`,
     awaitPromise: true,
@@ -1967,6 +2017,8 @@ async function materializeGrokFullQualityDownload(
     selectedTileSourceFingerprint?: string | null;
     downloadButtonCandidateCount?: number;
     downloadButtonLabels?: string[];
+    actionSurfaceButtonCount?: number;
+    actionSurfaceButtonLabels?: string[];
   } | undefined;
   if (clickedValue?.ok !== true) {
     return {
@@ -1979,6 +2031,8 @@ async function materializeGrokFullQualityDownload(
         selectedTileSourceFingerprint: clickedValue?.selectedTileSourceFingerprint ?? null,
         downloadButtonCandidateCount: numberOrNull(clickedValue?.downloadButtonCandidateCount),
         downloadButtonLabels: Array.isArray(clickedValue?.downloadButtonLabels) ? clickedValue.downloadButtonLabels : null,
+        actionSurfaceButtonCount: numberOrNull(clickedValue?.actionSurfaceButtonCount),
+        actionSurfaceButtonLabels: Array.isArray(clickedValue?.actionSurfaceButtonLabels) ? clickedValue.actionSurfaceButtonLabels : null,
       },
     };
   }
@@ -2011,6 +2065,8 @@ async function materializeGrokFullQualityDownload(
         selectedTileSourceFingerprint: clickedValue.selectedTileSourceFingerprint ?? null,
         downloadButtonCandidateCount: numberOrNull(clickedValue.downloadButtonCandidateCount),
         downloadButtonLabels: Array.isArray(clickedValue.downloadButtonLabels) ? clickedValue.downloadButtonLabels : null,
+        actionSurfaceButtonCount: numberOrNull(clickedValue.actionSurfaceButtonCount),
+        actionSurfaceButtonLabels: Array.isArray(clickedValue.actionSurfaceButtonLabels) ? clickedValue.actionSurfaceButtonLabels : null,
       },
     };
   }
@@ -2049,6 +2105,8 @@ async function materializeGrokFullQualityDownload(
       selectedTileSourceFingerprint: clickedValue.selectedTileSourceFingerprint ?? null,
       downloadButtonCandidateCount: numberOrNull(clickedValue.downloadButtonCandidateCount),
       downloadButtonLabels: Array.isArray(clickedValue.downloadButtonLabels) ? clickedValue.downloadButtonLabels : null,
+      actionSurfaceButtonCount: numberOrNull(clickedValue.actionSurfaceButtonCount),
+      actionSurfaceButtonLabels: Array.isArray(clickedValue.actionSurfaceButtonLabels) ? clickedValue.actionSurfaceButtonLabels : null,
       downloadName: capture.downloadName ?? path.basename(filePath),
       remoteUrl,
       fileName: path.basename(filePath),

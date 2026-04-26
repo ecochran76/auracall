@@ -1,3 +1,10 @@
+- 2026-04-26: Do not assume a managed provider browser profile remains
+  authenticated after a successful media run. A later read-only Grok
+  browser-tools check found `auracall-grok-auto/grok` on a Google Accounts
+  password challenge for `ecochran76@gmail.com` with "Too many failed
+  attempts"; stop live Grok automation and require human clearance before the
+  next smoke.
+
 - 2026-04-26: Do not let tiny remote Grok Imagine thumbnails satisfy media
   materialization. Live installed run
   `medgen_daab8a2e82674e8e8b17ce799a31087b` reported generated images but

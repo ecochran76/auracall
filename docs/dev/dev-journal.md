@@ -1,3 +1,32 @@
+## 2026-04-26 - Grok Imagine action-surface activation
+
+- Focus: continue Plan 0061 without another generation after the installed
+  thumbnail dogfood isolated the remaining miss to full-quality action-surface
+  discovery.
+- Progress: audited the live managed browser state through browser-service
+  tools. The completed `/imagine` tab was no longer present, so the slice used
+  the cached run diagnostics and code path instead of submitting another
+  prompt. The previous adapter clicked the selected `img` unless it found a
+  button/role/a ancestor; Grok masonry tiles are nested inside wrapper divs that
+  can own the actual selection behavior.
+- Fix: full-quality download discovery now activates the selected masonry
+  image plus its likely tile wrapper ancestors with pointer/mouse coordinates,
+  then records a bounded visible action-button census. A future miss will show
+  both `downloadButtonCandidateCount` and `actionSurfaceButtonLabels`, so the
+  next live smoke can distinguish "tile did not select" from "selected surface
+  has renamed/moved the download action".
+- Live gate: a read-only browser-tools auth check after the patch found the
+  managed Grok browser profile on a Google Accounts password challenge for
+  `ecochran76@gmail.com` with "Too many failed attempts", not on an
+  authenticated Grok workbench. No further Grok live automation should run on
+  `auracall-grok-auto/grok` until that profile is manually cleared.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run plans:audit -- --keep 61`
+  - `git diff --check`
+  - `pnpm tsx scripts/browser-service/browser-tools.ts --auracall-profile auracall-grok-auto --browser-target grok search --text 'Sign in' --visible-only --limit 20 --json`
+
 ## 2026-04-26 - Grok Imagine thumbnail rejection and download diagnostics
 
 - Focus: continue Plan 0061 with installed Grok dogfood evidence instead of
