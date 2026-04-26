@@ -21866,3 +21866,42 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `rg -n "Refusing to use a cross-profile browser target|Ignoring selected DevTools port" ~/.auracall/user-runtime/node_modules/auracall/dist/src/browser/service/browserService.js`
   - `curl 'http://127.0.0.1:18084/v1/runs/resp_98ef2e84b7894bfaa77414d9746f5a48/status?diagnostics=browser-state'`
   - `find ~/.auracall/browser-operations -maxdepth 1 -type f -print`
+
+## 2026-04-25 - Browser profile namespace resolution
+
+- Focus: make managed browser profile identity derive from the selected
+  browser profile, not from the AuraCall runtime profile.
+- Progress: resolver APIs now carry `auracallProfileName` for runtime-profile
+  identity and `browserProfileName` for managed browser profile derivation.
+  `resolveUserBrowserLaunchContext(...)` feeds `browserProfileName` from
+  `profiles.<runtime>.browserFamily` / `browserProfile`, so
+  `auracall-grok-auto` can correctly reuse browser profile `default` and its
+  managed `default/grok` profile.
+- Validation:
+  - `pnpm vitest run tests/browser/profileResolution.test.ts tests/browser/config.test.ts tests/browser/browserService.test.ts tests/browser/portResolution.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `git diff --check`
+
+## 2026-04-25 - Queue diagnostics smoke after profile namespace fix
+
+- Focus: prove the installed runtime can report queued browser work on the
+  correct managed browser profile without attaching to Gemini.
+- Progress: `pnpm run install:user-runtime` refreshed the installed wrapper.
+  Installed resolver readback for `auracall-grok-auto` reported
+  `browserProfileId = default`, `managedProfileDir =
+  ~/.auracall/browser-profiles/default/grok`, and
+  `resolveBrowserListTarget(..., "grok")` returned port `38261`.
+- Live smoke: started installed API server on port `18085`, held a
+  browser-operation lock for `default/grok`, submitted response run
+  `resp_0019f0a06dff4d51b50114832bfceb43`, and polled
+  `/v1/runs/{id}/status?diagnostics=browser-state`.
+- Result: diagnostics targeted Grok port `38261`, selected the existing Grok
+  AuraCall project tab, and reported `browserOperationQueue.total = 1` with
+  `latest.event = queued` blocked by the held
+  `live-queue-smoke-browser-profile-namespace` lock.
+- Cleanup: stopped the API server and lock holder before releasing queued
+  browser execution; no browser-operation lock files remained.
+- Validation:
+  - `node --input-type=module ... resolveUserBrowserLaunchContext(...)`
+  - `node --input-type=module ... resolveBrowserListTarget(...)`
+  - `curl 'http://127.0.0.1:18085/v1/runs/resp_0019f0a06dff4d51b50114832bfceb43/status?diagnostics=browser-state'`

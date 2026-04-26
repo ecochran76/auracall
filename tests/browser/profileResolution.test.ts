@@ -691,6 +691,46 @@ describe('resolveBrowserProfileResolution', () => {
     expect(result.resolution.launchProfile).toEqual(result.launchProfile);
   });
 
+  test('uses selected browser family as managed browser profile namespace', () => {
+    const result = resolveUserBrowserLaunchContext(
+      {
+        auracallProfile: 'auracall-grok-auto',
+        browser: {
+          target: 'grok',
+          chromePath: '/usr/bin/google-chrome',
+          chromeProfile: 'Default',
+          managedProfileRoot: '/home/test/.auracall/browser-profiles',
+          manualLoginProfileDir: '/home/test/.auracall/browser-profiles/default/grok',
+          wslChromePreference: 'wsl',
+        },
+        profiles: {
+          'auracall-grok-auto': {
+            browserFamily: 'default',
+            defaultService: 'grok',
+          },
+        },
+        browserFamilies: {
+          default: {
+            chromePath: '/usr/bin/google-chrome',
+          },
+        },
+      } as never,
+      'grok',
+    );
+
+    expect(result.resolution.profileFamily).toMatchObject({
+      profileName: 'auracall-grok-auto',
+      browserProfileId: 'default',
+      defaultService: 'grok',
+    });
+    expect(result.resolvedConfig.manualLoginProfileDir).toBe(
+      '/home/test/.auracall/browser-profiles/default/grok',
+    );
+    expect(result.launchProfile.manualLoginProfileDir).toBe(
+      '/home/test/.auracall/browser-profiles/default/grok',
+    );
+  });
+
   test('derives managed browser profile identity from resolved browser config', async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-managed-launch-'));
     const sourceCookiePath = path.join(tempRoot, 'source', 'Default', 'Network', 'Cookies');
@@ -717,6 +757,26 @@ describe('resolveBrowserProfileResolution', () => {
     expect(result.configuredChromeProfile).toBe('Default');
     expect(result.managedChromeProfile).toBe('Default');
     expect(result.bootstrapCookiePath).toBe(sourceCookiePath);
+  });
+
+  test('derives managed browser profile identity from browser profile namespace', async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-managed-browser-profile-'));
+    const result = resolveManagedBrowserLaunchContextFromResolvedConfig({
+      auracallProfile: 'auracall-grok-auto',
+      browserProfileName: 'default',
+      browser: {
+        target: 'grok',
+        chromePath: '/usr/bin/google-chrome',
+        chromeProfile: 'Default',
+        managedProfileRoot: path.join(tempRoot, 'managed-root'),
+        manualLoginProfileDir: path.join(tempRoot, 'managed-root', 'default', 'grok'),
+        wslChromePreference: 'wsl',
+      },
+      target: 'grok',
+    });
+
+    expect(result.managedProfileDir).toBe(path.join(tempRoot, 'managed-root', 'default', 'grok'));
+    expect(result.defaultManagedProfileDir).toBe(path.join(tempRoot, 'managed-root', 'default', 'grok'));
   });
 
   test('builds a reusable launch context from session config', async () => {

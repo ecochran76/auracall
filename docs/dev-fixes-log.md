@@ -14468,3 +14468,15 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `browser-profiles/auracall-grok-auto/grok`, while the logged-in Grok browser
   remained under `browser-profiles/default/grok` on port `38261`. Fix the
   runtime profile/port ownership before rerunning live queue dogfood.
+- 2026-04-25: AuraCall runtime profiles and browser profiles must stay separate
+  in launch-context resolution. Runtime profile `auracall-grok-auto` selects
+  browser family `default`, so managed browser profile derivation should use
+  `default/grok`; using the runtime-profile name created
+  `auracall-grok-auto/grok` and orphaned the logged-in profile. Carry a
+  separate browser-profile namespace through browser config/profile resolution.
+- 2026-04-25: Queue-diagnostics dogfood should prove both profile targeting
+  and queue observability. After separating runtime and browser-profile
+  namespaces, installed `auracall-grok-auto` resolved Grok to
+  `browser-profiles/default/grok` and registry port `38261`; the live API
+  status surface reported `browserOperationQueue.latest.event = queued` while
+  the held lock blocked browser execution.

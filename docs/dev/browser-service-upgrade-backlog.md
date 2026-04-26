@@ -76,6 +76,14 @@ and concrete:
     and the shared default browser family still has fixed port `45011`
     occupied by Gemini. Resolve the runtime profile and debug-port ownership
     before repeating browser queue dogfood.
+  - Follow-up fix: launch-context resolution now carries a browser-profile
+    namespace separate from the AuraCall runtime profile, so runtime profiles
+    that select browser family `default` derive managed profiles under
+    `browser-profiles/default/<service>`.
+  - Installed dogfood after the namespace fix proved the original queue
+    diagnostic goal: `auracall-grok-auto` targeted Grok port `38261` and
+    `/v1/runs/{id}/status?diagnostics=browser-state` reported the queued
+    browser operation blocked on the held `default/grok` lock.
 
 ## Current DOM-drift repair plan (2026-03-28)
 

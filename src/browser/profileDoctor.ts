@@ -331,9 +331,11 @@ export async function inspectBrowserDoctorState(
   } = {},
 ): Promise<BrowserDoctorReport> {
   const target = options.target ?? (userConfig.browser?.target as BrowserDoctorTarget | undefined) ?? 'chatgpt';
-  const { resolvedConfig: resolved, launchProfile } = resolveUserBrowserLaunchContext(userConfig, target);
+  const launchContext = resolveUserBrowserLaunchContext(userConfig, target);
+  const { resolvedConfig: resolved, launchProfile } = launchContext;
   const managedLaunchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
     auracallProfile: userConfig.auracallProfile ?? null,
+    browserProfileName: launchContext.resolution.profileFamily.browserProfileId,
     browser: resolved,
     target,
   });

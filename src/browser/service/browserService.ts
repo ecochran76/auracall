@@ -250,9 +250,15 @@ export class BrowserService extends BrowserServiceCore {
   private resolveLaunchContext(target: BrowserProfileTarget) {
     return resolveManagedBrowserLaunchContextFromResolvedConfig({
       auracallProfile: this.userConfig.auracallProfile ?? null,
+      browserProfileName: this.resolveLaunchBrowserProfileName(),
       browser: this.getConfig(),
       target,
     });
+  }
+
+  private resolveLaunchBrowserProfileName(): string | null {
+    const context = resolveUserBrowserLaunchContext(this.userConfig, this.serviceTarget);
+    return context.resolution.profileFamily.browserProfileId;
   }
 
   private getMutationLog(): ReturnType<typeof createInMemoryBrowserMutationLog> {

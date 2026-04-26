@@ -183,17 +183,19 @@ function asRemoteChrome(value: unknown): { host: string; port: number } | undefi
 
 export function resolveBrowserProfileResolutionFromResolvedConfig(input: {
   auracallProfile?: string | null;
+  browserProfileName?: string | null;
   browser?: MutableBrowserConfig | null;
   target?: ServiceId | null;
 }): ResolvedBrowserProfileResolution {
   const rawBrowser = isRecord(input.browser) ? input.browser : {};
   const target = input.target ?? (asNonEmptyString(rawBrowser.target) as ServiceId | undefined) ?? null;
+  const managedProfileName = input.browserProfileName ?? input.auracallProfile ?? 'default';
   const manualLoginProfileDir =
     asNonEmptyString(rawBrowser.manualLoginProfileDir) ??
     (target
       ? resolveManagedProfileDir({
           managedProfileRoot: asNonEmptyString(rawBrowser.managedProfileRoot) ?? null,
-          auracallProfileName: input.auracallProfile ?? 'default',
+          auracallProfileName: managedProfileName,
           target,
         })
       : undefined);
@@ -205,21 +207,26 @@ export function resolveBrowserProfileResolutionFromResolvedConfig(input: {
   return resolveBrowserProfileResolution({
     merged: { browser },
     profileName: input.auracallProfile ?? null,
-    profile: {},
+    profile: input.browserProfileName ? { browserFamily: input.browserProfileName } : {},
     browser,
   });
 }
 
 export function resolveUserBrowserLaunchContext(
-  userConfig: Pick<ResolvedUserConfig, 'auracallProfile' | 'browser'>,
+  userConfig: Pick<ResolvedUserConfig, 'auracallProfile' | 'browser'> & MutableConfig,
   target: ServiceId,
 ): ResolvedUserBrowserLaunchContext {
+  const browserProfileName = resolveSelectedBrowserProfileName(userConfig);
   const resolvedConfig = resolveBrowserConfig({
     ...(userConfig.browser ?? {}),
     target,
-  }, { auracallProfileName: userConfig.auracallProfile ?? null });
+  }, {
+    auracallProfileName: userConfig.auracallProfile ?? null,
+    browserProfileName,
+  });
   const resolution = resolveBrowserProfileResolutionFromResolvedConfig({
     auracallProfile: userConfig.auracallProfile ?? null,
+    browserProfileName,
     browser: resolvedConfig,
     target,
   });
@@ -232,6 +239,7 @@ export function resolveUserBrowserLaunchContext(
 
 export function resolveManagedBrowserLaunchContextFromResolvedConfig(input: {
   auracallProfile?: string | null;
+  browserProfileName?: string | null;
   browser?: MutableBrowserConfig | null;
   target?: ServiceId | null;
 }): ResolvedManagedBrowserLaunchContext {
@@ -239,6 +247,7 @@ export function resolveManagedBrowserLaunchContextFromResolvedConfig(input: {
   const target = input.target ?? (asNonEmptyString(rawBrowser.target) as ServiceId | undefined) ?? 'chatgpt';
   const resolution = resolveBrowserProfileResolutionFromResolvedConfig({
     auracallProfile: input.auracallProfile ?? null,
+    browserProfileName: input.browserProfileName ?? null,
     browser: rawBrowser,
     target,
   });
@@ -250,14 +259,14 @@ export function resolveManagedBrowserLaunchContextFromResolvedConfig(input: {
       launchProfile.manualLoginProfileDir ?? asNonEmptyString(rawBrowser.manualLoginProfileDir) ?? null,
     managedProfileRoot:
       launchProfile.managedProfileRoot ?? asNonEmptyString(rawBrowser.managedProfileRoot) ?? null,
-    auracallProfileName: input.auracallProfile ?? 'default',
+    auracallProfileName: input.browserProfileName ?? input.auracallProfile ?? 'default',
     target,
   });
   const defaultManagedProfileDir = resolveManagedProfileDir({
     configuredDir: null,
     managedProfileRoot:
       launchProfile.managedProfileRoot ?? asNonEmptyString(rawBrowser.managedProfileRoot) ?? null,
-    auracallProfileName: input.auracallProfile ?? 'default',
+    auracallProfileName: input.browserProfileName ?? input.auracallProfile ?? 'default',
     target,
   });
   const managedChromeProfile = resolveManagedProfileName(managedProfileDir, configuredChromeProfile);
@@ -524,4 +533,13 @@ export function resolveBrowserProfileResolution(input: {
     serviceBinding,
     launchProfile,
   };
+}
+
+function resolveSelectedBrowserProfileName(
+  userConfig: Pick<ResolvedUserConfig, 'auracallProfile'> & MutableConfig,
+): string | null {
+  const selection = resolveRuntimeSelection(userConfig, {
+    explicitProfileName: userConfig.auracallProfile ?? null,
+  });
+  return selection.browserProfileId ?? null;
 }

@@ -30,6 +30,7 @@ export async function resolveBrowserListTarget(
   const { resolvedConfig: resolved } = resolveUserBrowserLaunchContext(userConfig, target);
   const launchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
     auracallProfile: userConfig.auracallProfile ?? null,
+    browserProfileName: launchContextBrowserProfileName(userConfig, target),
     browser: resolved,
     target,
   });
@@ -45,4 +46,14 @@ export async function resolveBrowserListTarget(
     registryPath,
     resolveHost: () => '127.0.0.1',
   });
+}
+
+function launchContextBrowserProfileName(
+  userConfig: ResolvedUserConfig,
+  target: BrowserProfileTarget,
+): string | null {
+  return resolveUserBrowserLaunchContext(
+    userConfig as ResolvedUserConfig & Record<string, unknown>,
+    target,
+  ).resolution.profileFamily.browserProfileId;
 }

@@ -59,7 +59,7 @@ export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
 
 export function resolveBrowserConfig(
   config: BrowserAutomationConfig | undefined,
-  options: { auracallProfileName?: string | null } = {},
+  options: { auracallProfileName?: string | null; browserProfileName?: string | null } = {},
 ): ResolvedBrowserConfig {
   const debugPortEnv = parseDebugPort(
     process.env.AURACALL_BROWSER_PORT ?? process.env.AURACALL_BROWSER_DEBUG_PORT,
@@ -134,10 +134,11 @@ export function resolveBrowserConfig(
     resolvedChromePath,
     sourceCookiePath: resolvedBootstrapCookiePath ?? resolvedCookiePath,
   });
+  const managedProfileName = options.browserProfileName ?? options.auracallProfileName ?? null;
   const resolvedProfileDir = normalizeManualLoginProfileDir(resolveManagedProfileDir({
     configuredDir: explicitProfileDir,
     managedProfileRoot,
-    auracallProfileName: options.auracallProfileName ?? null,
+    auracallProfileName: managedProfileName,
     target,
   }));
   const resolvedChromeProfile = resolveProfileDirectoryName(
@@ -182,6 +183,8 @@ export function resolveBrowserConfig(
     normalizeBlockingProfileAction(mapProfileConflictAction(config?.profileConflictAction)) ??
     DEFAULT_BROWSER_CONFIG.blockingProfileAction;
   const launchResolution = resolveBrowserProfileResolutionFromResolvedConfig({
+    auracallProfile: options.auracallProfileName ?? null,
+    browserProfileName: managedProfileName,
     browser: {
       ...(config ?? {}),
       target,

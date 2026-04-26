@@ -251,6 +251,18 @@ describe('resolveBrowserConfig', () => {
     expect(resolved.manualLoginProfileDir).toMatch(/browser-profiles\/default\/grok$/);
   });
 
+  test('uses browserProfileName option for managed profile derivation', () => {
+    const resolved = resolveBrowserConfig({
+      target: 'grok',
+      managedProfileRoot: '/tmp/auracall/browser-profiles',
+    }, {
+      auracallProfileName: 'auracall-grok-auto',
+      browserProfileName: 'default',
+    });
+
+    expect(resolved.manualLoginProfileDir).toBe('/tmp/auracall/browser-profiles/default/grok');
+  });
+
   test('uses Gemini URLs for Gemini browser targets instead of inheriting ChatGPT defaults', () => {
     const resolved = resolveBrowserConfig({
       target: 'gemini',
