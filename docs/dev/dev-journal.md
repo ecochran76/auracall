@@ -20,6 +20,17 @@
   `consult@polymerconsultinggroup.com`; both in-memory negative checks failed
   with `chatgpt_expected_identity_missing` as intended. The launched managed
   browser roots were closed after the smoke.
+- Follow-up default provider smoke: default Grok already had an expected
+  identity and passed as `Eric C` / `@SwantonDoug` /
+  `ez86944@gmail.com`, with the in-memory negative check returning
+  `grok_expected_identity_missing`. Default Gemini initially failed safely with
+  `gemini_expected_identity_missing` while detecting `Eric Cochran`
+  / `ecochran76@gmail.com`; that detected identity was bound into
+  `~/.auracall/config.json` after writing backup
+  `~/.auracall/config.json.bak-20260426152223-gemini-identity`. The rerun
+  passed with clean JSON stdout and `gemini_expected_identity_missing` for the
+  in-memory negative check. The launched default Grok/Gemini browser roots were
+  closed after the smoke.
 
 ## 2026-04-26 - Grok browser auth/account preflight
 
