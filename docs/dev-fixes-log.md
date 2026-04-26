@@ -1,3 +1,11 @@
+- 2026-04-26: Identity-smoke launch must respect the selected browser profile
+  namespace, not derive managed profile identity from the AuraCall runtime
+  profile name. `auracall-grok-auto` selects browser family `default`, so a
+  launch-if-needed identity smoke must open `browser-profiles/default/grok`,
+  not `browser-profiles/auracall-grok-auto/grok`. The login launch resolver now
+  preserves the resolved browser-family profile name and honors the resolved
+  `browser.manualLoginProfileDir` before falling back to derived paths.
+
 - 2026-04-26: Account-binding smokes should be one no-prompt command, not a
   hand sequence of login, doctor, capability discovery, and temporary config
   edits. `auracall profile identity-smoke --target <provider> --include-negative

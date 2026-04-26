@@ -51,6 +51,17 @@
   --include-negative --json` passed for ChatGPT, Gemini, and Grok. The installed
   smoke opened the three default managed browser roots and they were closed
   after validation.
+- Launch-path fix: an installed `auracall-grok-auto` identity gate exposed a
+  namespace regression in launch-if-needed mode. The runtime profile selects
+  browser family `default`, but the identity-smoke launch path opened
+  `browser-profiles/auracall-grok-auto/grok` and failed with
+  `grok_identity_not_detected`. Source now preserves the selected browser
+  profile namespace and honors the resolved `browser.manualLoginProfileDir`
+  before deriving a managed profile path. Source validation passed with
+  `--profile auracall-grok-auto profile identity-smoke --all-bound
+  --include-negative --json`, reporting managed profile
+  `~/.auracall/browser-profiles/default/grok` and identity
+  `ez86944@gmail.com`.
 
 ## 2026-04-26 - Grok browser auth/account preflight
 

@@ -153,6 +153,7 @@ import {
   type NotificationSettings,
 } from '../src/cli/notifier.js';
 import { configPath, loadUserConfig, scaffoldDefaultConfigFile, type ResolvedUserConfig, type UserConfig } from '../src/config.js';
+import { getPreferredRuntimeProfile, getRuntimeProfileBrowserProfileId } from '../src/config/model.js';
 import { shouldBlockDuplicatePrompt } from '../src/cli/duplicatePromptGuard.js';
 import os from 'node:os';
 import path from 'node:path';
@@ -7212,6 +7213,10 @@ function resolveBrowserLoginLaunchOptions(
   userConfig: ResolvedUserConfig,
   target: 'chatgpt' | 'gemini' | 'grok',
 ): BrowserLoginLaunchOptions {
+  const activeRuntimeProfile = getPreferredRuntimeProfile(userConfig, {
+    explicitProfileName: userConfig.auracallProfile ?? null,
+  });
+  const browserProfileName = getRuntimeProfileBrowserProfileId(activeRuntimeProfile) ?? userConfig.auracallProfile ?? null;
   const resolvedBrowser = resolveBrowserConfig({
     ...userConfig.browser,
     chromePath: commandOptions.browserChromePath ?? userConfig.browser?.chromePath ?? undefined,
@@ -7224,9 +7229,13 @@ function resolveBrowserLoginLaunchOptions(
     manualLogin: true,
     manualLoginProfileDir:
       commandOptions.browserManualLoginProfileDir ??
+      userConfig.browser?.manualLoginProfileDir ??
       resolveManagedProfileDirForUserConfig(userConfig, target),
     target,
-  }, { auracallProfileName: userConfig.auracallProfile ?? null });
+  }, {
+    auracallProfileName: userConfig.auracallProfile ?? null,
+    browserProfileName,
+  });
   const chromePath = resolvedBrowser.chromePath ?? undefined;
   if (!chromePath) {
     throw new Error('Missing browser chromePath. Set browser.chromePath in config or pass --browser-chrome-path.');

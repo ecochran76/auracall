@@ -101,6 +101,11 @@ profile, queued dispatcher, and registry-first DevTools authority.
   runtime profile is now a preflight error after a signed-in account is
   detected, so browser media cannot run against an unbound account and pollute
   identity-scoped caches.
+- Source follow-up: the profile identity-smoke launch path now preserves the
+  selected browser profile namespace when a runtime profile like
+  `auracall-grok-auto` points at browser family `default`. Source validation
+  proved `auracall-grok-auto` launches/probes `browser-profiles/default/grok`
+  instead of the runtime-profile-derived `browser-profiles/auracall-grok-auto/grok`.
 
 ## Scope
 
