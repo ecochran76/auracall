@@ -14488,3 +14488,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   is already listening, switch that managed-profile launch to auto port
   selection so stale shared browser-family ports do not pull another service's
   browser into the run.
+- 2026-04-25: After the fixed-port fallback, live dogfood should verify the
+  installed runtime against both run output and browser-state evidence. The
+  `auracall-grok-auto` installed API smoke completed
+  `resp_3ba7d7621c084558814b6453a1ece212`, Grok diagnostics targeted
+  `default/grok` on port `38261`, and registry readback still showed Gemini
+  isolated on `default/gemini` port `45011`.

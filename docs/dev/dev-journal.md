@@ -21919,3 +21919,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   likely cross-service endpoint.
 - Validation:
   - `pnpm vitest run tests/browser-service/browserServiceCore.test.ts tests/browser/browserService.test.ts tests/browser-service/manualLogin.test.ts`
+
+## 2026-04-25 - Installed Grok fixed-port dogfood
+
+- Focus: live-check the installed runtime after the managed fixed-port fallback
+  so `auracall-grok-auto` keeps using the Grok managed browser profile instead
+  of the stale shared fixed port.
+- Result: installed `api serve` on port `18087` completed response run
+  `resp_3ba7d7621c084558814b6453a1ece212` with output
+  `AURACALL_GROK_FIXED_PORT_SMOKE_OK`. Follow-up installed capability
+  diagnostics for Grok targeted registry port `38261` on
+  `~/.auracall/browser-profiles/default/grok`; registry state still kept
+  Gemini isolated on `45011` under
+  `~/.auracall/browser-profiles/default/gemini`.
+- Validation:
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto api serve --port 18087 --no-recover-runs-on-start`
+  - `POST /v1/responses` with `model = grok-4.20`
+  - `GET /v1/responses/resp_3ba7d7621c084558814b6453a1ece212`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto capabilities --target grok --diagnostics browser-state --json`
+  - `~/.auracall/browser-state.json` registry readback

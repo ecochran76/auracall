@@ -89,6 +89,10 @@ and concrete:
     selected it first. That keeps the profile registry as the normal authority
     and leaves raw fixed ports as explicit attach/diagnostic paths rather than
     accidental cross-service launch inputs.
+  - Installed dogfood after the fixed-port fallback completed a Grok response
+    run and confirmed browser-state diagnostics on `default/grok` port `38261`
+    while Gemini remained registered separately on `default/gemini` port
+    `45011`.
 
 ## Current DOM-drift repair plan (2026-03-28)
 
