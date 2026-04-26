@@ -107,6 +107,11 @@ Current State:
     such as `queued`, `acquired`, and `busy-timeout`
   - CLI runtime inspection renders the queue event count and latest queue event
     next to browser mutation diagnostics
+- browser operation queue status proof is closed in
+  [docs/dev/plans/0060-2026-04-25-browser-operation-queue-status-proof.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0060-2026-04-25-browser-operation-queue-status-proof.md)
+  - generic local API response run status and MCP `run_status` now have
+    controlled coverage proving `browserOperationQueue` survives the
+    browser-state diagnostics boundary
 - the bounded `0004` operator-facing claimant/readback hardening sub-lane is
   now maintenance-only unless a new concrete mismatch is demonstrated
 - the narrower `api serve` server-local-runner ownership/readback checkpoint is

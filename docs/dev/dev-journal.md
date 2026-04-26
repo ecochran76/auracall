@@ -21808,3 +21808,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/cli/runtimeInspectionCommand.test.ts --maxWorkers 1`
   - `pnpm exec tsc --noEmit`
+
+## 2026-04-25 - Browser operation queue status-surface proof
+
+- Focus: verify queue diagnostics at the generic API/MCP status boundaries
+  operators poll during dogfooding.
+- Progress: HTTP generic response run status and MCP `run_status` now have
+  controlled tests proving `browserOperationQueue.latest` is preserved under
+  `diagnostics=browser-state`. MCP `run_status` gained an injectable browser
+  diagnostics probe seam for deterministic tests while defaulting to the live
+  probe in normal use.
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`

@@ -2382,7 +2382,6 @@ describe('http responses adapter', () => {
         ],
       }),
     );
-
     const server = await createResponsesHttpServer(
       { host: '127.0.0.1', port: 0 },
       {
@@ -4803,7 +4802,6 @@ describe('http responses adapter', () => {
         events: [],
       }),
     );
-
     const server = await createResponsesHttpServer(
       { host: '127.0.0.1', port: 0 },
       {
@@ -4911,7 +4909,6 @@ describe('http responses adapter', () => {
         events: [],
       }),
     );
-
     const server = await createResponsesHttpServer(
       { host: '127.0.0.1', port: 0 },
       {
@@ -4984,6 +4981,163 @@ describe('http responses adapter', () => {
             screenshot: {
               path: '/tmp/gemini-http-diagnostics.png',
               bytes: 2048,
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('preserves browser operation queue diagnostics through generic response run status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-run-status-browser-queue-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const control = createExecutionRuntimeControl();
+    const runId = 'resp_http_browser_queue_1';
+    const stepId = `${runId}:step:1`;
+    const createdAt = '2026-04-25T18:30:00.000Z';
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'direct',
+          sourceId: null,
+          status: 'running',
+          createdAt,
+          updatedAt: createdAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Probe queued browser diagnostics.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'auracall-gemini-pro',
+            service: 'gemini',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'auracall-gemini-pro',
+            browserProfileId: 'default',
+            service: 'gemini',
+            kind: 'prompt',
+            status: 'running',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Probe queued browser diagnostics.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: createdAt,
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: createdAt,
+        }),
+        events: [],
+      }),
+    );
+    const latestQueueEvent = {
+      event: 'queued' as const,
+      at: '2026-04-25T18:30:04.000Z',
+      key: `managed-profile:${homeDir}/browser-profiles/auracall-gemini-pro/gemini::service:gemini`,
+      operation: null,
+      blockedBy: {
+        id: 'operation-http-blocker',
+        kind: 'media-generation' as const,
+        operationClass: 'exclusive-mutating' as const,
+        ownerPid: 23456,
+        ownerCommand: 'media-generation',
+        startedAt: '2026-04-25T18:29:30.000Z',
+        updatedAt: '2026-04-25T18:29:30.000Z',
+      },
+      attempt: 1,
+      elapsedMs: 0,
+    };
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        probeRuntimeRunBrowserDiagnostics: async ({ step }) => ({
+          service: step.service,
+          ownerStepId: step.id,
+          observedAt: '2026-04-25T18:30:05.000Z',
+          source: 'browser-service',
+          target: {
+            host: '127.0.0.1',
+            port: 9222,
+            targetId: 'gemini-tab-queue-http',
+            url: 'https://gemini.google.com/app',
+            title: 'Google Gemini',
+          },
+          document: {
+            url: 'https://gemini.google.com/app',
+            title: 'Google Gemini',
+            readyState: 'complete',
+            visibilityState: 'visible',
+            focused: true,
+            bodyTextLength: 700,
+          },
+          visibleCounts: {
+            buttons: 10,
+            links: 2,
+            inputs: 0,
+            textareas: 0,
+            contenteditables: 1,
+            modelResponses: 1,
+          },
+          providerEvidence: {
+            hasActiveAvatarSpinner: true,
+            isGenerating: true,
+          },
+          browserOperationQueue: {
+            total: 1,
+            latest: latestQueueEvent,
+            items: [latestQueueEvent],
+          },
+        }),
+      },
+    );
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/runs/${runId}/status?diagnostics=browser-state`,
+      );
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        id: runId,
+        object: 'auracall_run_status',
+        kind: 'response',
+        browserDiagnostics: {
+          probeStatus: 'observed',
+          service: 'gemini',
+          ownerStepId: stepId,
+          browserOperationQueue: {
+            total: 1,
+            latest: {
+              event: 'queued',
+              blockedBy: {
+                kind: 'media-generation',
+                operationClass: 'exclusive-mutating',
+                ownerPid: 23456,
+              },
             },
           },
         },

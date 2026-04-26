@@ -7,7 +7,11 @@ import {
   createDefaultRuntimeRunBrowserDiagnosticsProbe,
 } from '../../http/responsesServer.js';
 import { readAuraCallRunStatus } from '../../runStatus.js';
-import { inspectRuntimeRun } from '../../runtime/inspection.js';
+import {
+  inspectRuntimeRun,
+  type ProbeRuntimeRunBrowserDiagnosticsInput,
+  type RuntimeRunInspectionBrowserDiagnosticsProbeResult,
+} from '../../runtime/inspection.js';
 
 const runStatusInputShape = {
   id: z.string().min(1),
@@ -58,6 +62,9 @@ const runStatusOutputShape = {
 export interface RegisterRunStatusToolDeps {
   responsesService?: Pick<ExecutionResponsesService, 'readResponse'>;
   mediaGenerationService?: Pick<MediaGenerationService, 'readGeneration'>;
+  probeRuntimeRunBrowserDiagnostics?: (
+    input: ProbeRuntimeRunBrowserDiagnosticsInput,
+  ) => Promise<RuntimeRunInspectionBrowserDiagnosticsProbeResult | null>;
 }
 
 export function registerRunStatusTool(
@@ -75,11 +82,18 @@ export function registerRunStatusTool(
       inputSchema: runStatusInputShape,
       outputSchema: runStatusOutputShape,
     },
-    createRunStatusToolHandler({ responsesService, mediaGenerationService }),
+    createRunStatusToolHandler({
+      responsesService,
+      mediaGenerationService,
+      probeRuntimeRunBrowserDiagnostics: deps.probeRuntimeRunBrowserDiagnostics,
+    }),
   );
 }
 
-export function createRunStatusToolHandler(deps: Required<RegisterRunStatusToolDeps>) {
+export function createRunStatusToolHandler(
+  deps: Required<Pick<RegisterRunStatusToolDeps, 'responsesService' | 'mediaGenerationService'>> &
+    Pick<RegisterRunStatusToolDeps, 'probeRuntimeRunBrowserDiagnostics'>,
+) {
   return async (input: unknown) => {
     const textContent = (text: string) => [{ type: 'text' as const, text }];
     const payload = z.object(runStatusInputShape).parse(input);
@@ -95,7 +109,8 @@ export function createRunStatusToolHandler(deps: Required<RegisterRunStatusToolD
         const inspection = await inspectRuntimeRun({
           runId: status.id,
           includeBrowserDiagnostics: true,
-          probeBrowserDiagnostics: createDefaultRuntimeRunBrowserDiagnosticsProbe(),
+          probeBrowserDiagnostics:
+            deps.probeRuntimeRunBrowserDiagnostics ?? createDefaultRuntimeRunBrowserDiagnosticsProbe(),
         });
         status.browserDiagnostics = inspection.browserDiagnostics;
       } else {

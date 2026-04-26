@@ -1997,3 +1997,23 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run check`
   - `pnpm run plans:audit -- --keep 59`
   - `git diff --check`
+
+## Turn 68 | 2026-04-25
+
+- Continued implementation plan:
+  `docs/dev/plans/0060-2026-04-25-browser-operation-queue-status-proof.md`
+- Goal: prove browser-operation queue diagnostics survive generic API and MCP
+  run-status surfaces without live provider churn.
+- Change:
+  - added local API coverage for
+    `/v1/runs/{run_id}/status?diagnostics=browser-state` preserving a latest
+    queued browser-operation event
+  - added MCP `run_status` coverage for the same diagnostics shape
+  - made the MCP response-run browser diagnostics probe injectable for
+    controlled tests while preserving the default live probe behavior
+- Verification target:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 60`
+  - `git diff --check`

@@ -1,9 +1,29 @@
-import { describe, expect, it } from 'vitest';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
+import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import { createRunStatusToolHandler } from '../src/mcp/tools/runStatus.js';
+import { createExecutionRuntimeControl } from '../src/runtime/control.js';
+import {
+  createExecutionRun,
+  createExecutionRunRecordBundle,
+  createExecutionRunSharedState,
+  createExecutionRunStep,
+} from '../src/runtime/model.js';
+import { createExecutionResponsesService } from '../src/runtime/responsesService.js';
+import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../src/teams/types.js';
 import { createGeminiMusicVariantResponse } from './fixtures/geminiMusicStatusFixture.js';
 import { createGrokImagineVideoResponse } from './fixtures/grokImagineStatusFixture.js';
 
 describe('mcp run_status tool', () => {
+  const cleanup: string[] = [];
+
+  afterEach(async () => {
+    setAuracallHomeDirOverrideForTest(null);
+    await Promise.all(cleanup.splice(0).map((entry) => fs.rm(entry, { recursive: true, force: true })));
+  });
+
   it('reads response run status through the shared status envelope', async () => {
     const handler = createRunStatusToolHandler({
       responsesService: {
@@ -292,6 +312,164 @@ describe('mcp run_status tool', () => {
               artifactId: 'grok_imagine_video_1',
               materialization: 'remote-media-fetch',
               materializationSource: 'generated-video',
+            },
+          },
+        },
+      },
+    });
+  });
+
+  it('preserves browser operation queue diagnostics through generic MCP response run status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-mcp-run-status-browser-queue-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const control = createExecutionRuntimeControl();
+    const runId = 'resp_mcp_browser_queue_1';
+    const stepId = `${runId}:step:1`;
+    const createdAt = '2026-04-25T18:40:00.000Z';
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'direct',
+          sourceId: null,
+          status: 'running',
+          createdAt,
+          updatedAt: createdAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Probe queued browser diagnostics.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'auracall-gemini-pro',
+            service: 'gemini',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'auracall-gemini-pro',
+            browserProfileId: 'default',
+            service: 'gemini',
+            kind: 'prompt',
+            status: 'running',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Probe queued browser diagnostics.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: createdAt,
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: createdAt,
+        }),
+        events: [],
+      }),
+    );
+    const latestQueueEvent = {
+      event: 'queued' as const,
+      at: '2026-04-25T18:40:04.000Z',
+      key: `managed-profile:${homeDir}/browser-profiles/auracall-gemini-pro/gemini::service:gemini`,
+      operation: null,
+      blockedBy: {
+        id: 'operation-mcp-blocker',
+        kind: 'browser-execution' as const,
+        operationClass: 'exclusive-mutating' as const,
+        ownerPid: 34567,
+        ownerCommand: 'browser-execution',
+        startedAt: '2026-04-25T18:39:30.000Z',
+        updatedAt: '2026-04-25T18:39:30.000Z',
+      },
+      attempt: 1,
+      elapsedMs: 0,
+    };
+
+    const handler = createRunStatusToolHandler({
+      responsesService: createExecutionResponsesService({ control }),
+      mediaGenerationService: {
+        readGeneration: async () => null,
+      },
+      probeRuntimeRunBrowserDiagnostics: async ({ step }) => ({
+        service: step.service,
+        ownerStepId: step.id,
+        observedAt: '2026-04-25T18:40:05.000Z',
+        source: 'browser-service',
+        target: {
+          host: '127.0.0.1',
+          port: 9222,
+          targetId: 'gemini-tab-queue-mcp',
+          url: 'https://gemini.google.com/app',
+          title: 'Google Gemini',
+        },
+        document: {
+          url: 'https://gemini.google.com/app',
+          title: 'Google Gemini',
+          readyState: 'complete',
+          visibilityState: 'visible',
+          focused: true,
+          bodyTextLength: 700,
+        },
+        visibleCounts: {
+          buttons: 10,
+          links: 2,
+          inputs: 0,
+          textareas: 0,
+          contenteditables: 1,
+          modelResponses: 1,
+        },
+        providerEvidence: {
+          hasActiveAvatarSpinner: true,
+          isGenerating: true,
+        },
+        browserOperationQueue: {
+          total: 1,
+          latest: latestQueueEvent,
+          items: [latestQueueEvent],
+        },
+      }),
+    });
+
+    const result = await handler({
+      id: runId,
+      diagnostics: 'browser-state',
+    });
+
+    expect(result).toMatchObject({
+      isError: false,
+      structuredContent: {
+        id: runId,
+        object: 'auracall_run_status',
+        kind: 'response',
+        browserDiagnostics: {
+          probeStatus: 'observed',
+          service: 'gemini',
+          ownerStepId: stepId,
+          browserOperationQueue: {
+            total: 1,
+            latest: {
+              event: 'queued',
+              blockedBy: {
+                kind: 'browser-execution',
+                operationClass: 'exclusive-mutating',
+                ownerPid: 34567,
+              },
             },
           },
         },

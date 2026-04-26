@@ -14450,3 +14450,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   and project them through browser-state diagnostics so API/CLI/MCP status
   consumers can see `queued`, `acquired`, and `busy-timeout` evidence without
   scraping logs.
+- 2026-04-25: Status-surface diagnostics need controlled proof seams. MCP
+  `run_status` should allow an injected browser diagnostics probe in tests so
+  response-run browser-state payloads can be verified without touching live
+  provider pages.
