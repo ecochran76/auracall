@@ -67,6 +67,11 @@ describe('run status CLI helpers', () => {
             mimeType: 'image/png',
             metadata: {
               materialization: 'visible-image-screenshot',
+              checksumSha256: 'preview-sha',
+              previewArtifactId: 'preview-artifact',
+              previewSize: 123,
+              previewChecksumSha256: 'source-sha',
+              fullQualityDiffersFromPreview: true,
             },
           },
         ],
@@ -93,6 +98,11 @@ describe('run status CLI helpers', () => {
           type: 'image',
           fileName: 'asphalt-secret-agent.png',
           materialization: 'visible-image-screenshot',
+          checksumSha256: 'preview-sha',
+          previewArtifactId: 'preview-artifact',
+          previewSize: 123,
+          previewChecksumSha256: 'source-sha',
+          fullQualityDiffersFromPreview: true,
         },
       ],
     });

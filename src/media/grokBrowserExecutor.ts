@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { BrowserAutomationClient } from '../browser/client.js';
 import type { FileRef } from '../browser/providers/domain.js';
@@ -224,10 +225,21 @@ async function executeGrokBrowserMediaGeneration(
   const imageEntries = evidence.media.images
     .filter(isGeneratedGrokImageEntry)
     .filter((entry) => normalizeNonEmpty(entry.src) || normalizeNonEmpty(entry.href));
-  const fallbackRemainingCount = Math.max(0, requestedVisibleTileCount - artifacts.length);
-  for (const entry of imageEntries.slice(0, fallbackRemainingCount)) {
+  const seenFallbackRemoteUrls = new Set(
+    artifacts
+      .map((artifact) => normalizeNonEmpty(artifact.metadata?.remoteUrl))
+      .filter((value): value is string => Boolean(value)),
+  );
+  for (const entry of imageEntries) {
+    if (artifacts.length >= requestedVisibleTileCount) break;
+    const remoteUrl = normalizeNonEmpty(entry.src) ?? normalizeNonEmpty(entry.href);
+    if (remoteUrl && seenFallbackRemoteUrls.has(remoteUrl)) continue;
     const artifact = await materializeGrokImageEntry(entry, input.artifactDir, artifacts.length + 1);
     if (!artifact) continue;
+    const materializedRemoteUrl = normalizeNonEmpty(artifact.metadata?.remoteUrl);
+    if (materializedRemoteUrl) {
+      seenFallbackRemoteUrls.add(materializedRemoteUrl);
+    }
     artifacts.push(artifact);
     await input.emitTimeline?.({
       event: 'artifact_materialized',
@@ -666,18 +678,29 @@ async function materializeGrokImageEntry(
   ordinal: number,
 ): Promise<MediaGenerationArtifact | null> {
   const remoteUrl = normalizeNonEmpty(entry.src) ?? normalizeNonEmpty(entry.href);
-  if (!remoteUrl || remoteUrl.startsWith('blob:') || remoteUrl.startsWith('data:')) {
+  if (!remoteUrl || remoteUrl.startsWith('blob:')) {
     return null;
   }
-  const response = await fetch(remoteUrl);
-  if (!response.ok) {
-    return null;
+  let bytes: Buffer;
+  let mimeType: string;
+  let materialization = 'remote-media-fetch';
+  if (remoteUrl.startsWith('data:image/')) {
+    const parsed = parseImageDataUrl(remoteUrl);
+    if (!parsed) return null;
+    bytes = parsed.buffer;
+    mimeType = parsed.mimeType;
+    materialization = 'visible-tile-data-url';
+  } else {
+    const response = await fetch(remoteUrl);
+    if (!response.ok) {
+      return null;
+    }
+    mimeType = response.headers.get('content-type')?.split(';')[0]?.trim() || 'image/jpeg';
+    bytes = Buffer.from(await response.arrayBuffer());
   }
-  const mimeType = response.headers.get('content-type')?.split(';')[0]?.trim() || 'image/jpeg';
   const extension = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg';
   const fileName = `grok-imagine-${ordinal}.${extension}`;
   const filePath = path.join(artifactDir, fileName);
-  const bytes = Buffer.from(await response.arrayBuffer());
   await fs.mkdir(artifactDir, { recursive: true });
   await fs.writeFile(filePath, bytes);
   return {
@@ -692,7 +715,8 @@ async function materializeGrokImageEntry(
     metadata: {
       providerArtifactId: `grok_imagine_image_${ordinal}`,
       remoteUrl,
-      materialization: 'remote-media-fetch',
+      materialization,
+      checksumSha256: sha256Hex(bytes),
     },
   };
 }
@@ -1387,6 +1411,22 @@ function extractGrokVideoModeAudit(metadata: Record<string, unknown> | null | un
 function normalizeNonEmpty(value: unknown): string | null {
   const trimmed = typeof value === 'string' ? value.trim() : '';
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function parseImageDataUrl(value: string): { mimeType: string; buffer: Buffer } | null {
+  const match = value.match(/^data:(image\/[a-z0-9.+-]+);base64,([A-Za-z0-9+/]+={0,2})$/i);
+  if (!match?.[1] || !match?.[2]) return null;
+  if (match[2].length % 4 !== 0) return null;
+  const buffer = Buffer.from(match[2], 'base64');
+  if (buffer.length < 32) return null;
+  return {
+    mimeType: match[1].toLowerCase(),
+    buffer,
+  };
+}
+
+function sha256Hex(buffer: Buffer): string {
+  return crypto.createHash('sha256').update(buffer).digest('hex');
 }
 
 function resolveReadbackDevtoolsPort(value: unknown): number | null {

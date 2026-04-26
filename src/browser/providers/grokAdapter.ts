@@ -1555,9 +1555,17 @@ async function captureGrokImagineVisibleImageTiles(
           const templateShareImage = isTemplateRoute && /imagine-public\\.x\\.ai\\/imagine-public\\/share-images\\//.test(src) && area >= 100_000;
           const generated = src.startsWith('data:image/') || src.startsWith('blob:') || /assets\\.grok\\.com\\/users\\//.test(src) || /\\/generated\\//.test(src) || templateShareImage;
           if (!generated) continue;
+          const masonryGenerated = Boolean(img.closest('[id^="imagine-masonry-section"], [data-filmstrip-scroll="true"]'));
+          const generatedScore =
+            masonryGenerated && src.startsWith('data:image/') ? 3_000_000 :
+            src.startsWith('data:image/') ? 2_750_000 :
+            src.startsWith('blob:') ? 2_500_000 :
+            /assets\\.grok\\.com\\/users\\//.test(src) || /\\/generated\\//.test(src) ? 1_750_000 :
+            templateShareImage ? 1_000_000 :
+            0;
           candidates.push({
             img,
-            score: (templateShareImage ? 1_000_000 : 0) + area,
+            score: generatedScore + area,
           });
           if (candidates.length >= maxItems * 3) break;
         }
@@ -1652,11 +1660,19 @@ async function materializeGrokFullQualityDownload(
       const firstTile = Array.from(document.querySelectorAll('img[src*="imagine-public.x.ai/imagine-public/share-images/"], #imagine-masonry-section-0 img, main img[src^="data:image/"], main img[src^="blob:"], img[src*="assets.grok.com/users/"], main img[src*="/generated/"]'))
         .filter((node) => node instanceof HTMLElement && visible(node))
         .sort((a, b) => {
-          const area = (node) => {
+          const score = (node) => {
             const rect = node.getBoundingClientRect();
-            return rect.width * rect.height;
+            const src = node instanceof HTMLImageElement ? (node.currentSrc || node.src || '') : '';
+            const masonryGenerated = Boolean(node.closest('[id^="imagine-masonry-section"], [data-filmstrip-scroll="true"]'));
+            const generatedScore =
+              masonryGenerated && src.startsWith('data:image/') ? 3_000_000 :
+              src.startsWith('data:image/') ? 2_750_000 :
+              src.startsWith('blob:') ? 2_500_000 :
+              /assets\\.grok\\.com\\/users\\//.test(src) || /\\/generated\\//.test(src) ? 1_750_000 :
+              0;
+            return generatedScore + rect.width * rect.height;
           };
-          return area(b) - area(a);
+          return score(b) - score(a);
         })[0] || null;
       if (firstTile instanceof HTMLElement && visible(firstTile)) {
         (firstTile.closest('button,[role="button"],a') || firstTile).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));

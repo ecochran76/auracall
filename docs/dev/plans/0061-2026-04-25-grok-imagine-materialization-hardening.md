@@ -40,6 +40,23 @@ profile, queued dispatcher, and registry-first DevTools authority.
   root CLI also owned `-p/--prompt`. The source command now accepts media prompt
   text from the command option, a positional media prompt, or the root prompt
   fallback.
+- Updated installed-runtime dogfood on 2026-04-25 created
+  `medgen_e455048f119f4fde9ba48bbb8524f194` through the installed CLI after
+  refreshing the user runtime. The request stayed on the submitted
+  `https://grok.com/imagine` tab and generic `run status --json` surfaced
+  artifact checksums, requested visible-tile count, and route diagnostics. The
+  run exposed one hardening issue now fixed in source: redacted
+  `data:image/...;base64,<omitted ...>` signature values must be skipped rather
+  than cached as tiny placeholder artifacts.
+- Follow-up installed-runtime dogfood
+  `medgen_c96d0cc5f7c44bc9ab094d0f4ecbae98` proved the redacted-data-url fix
+  in the installed CLI: no tiny placeholder artifacts were filed. That same
+  run reported four generated images but only one materialized visible artifact,
+  so live multi-tile capture remains open.
+- Remaining live gap: the installed smoke did not produce a linked
+  full-quality download-button comparison artifact, and the provider adapter
+  needs observable tile-selection diagnostics before the preview-vs-download
+  criterion can close.
 
 ## Scope
 
@@ -83,6 +100,8 @@ profile, queued dispatcher, and registry-first DevTools authority.
 - Focused Grok adapter/media executor tests for multi-tile materialization and
   preview/download comparison metadata.
 - `pnpm exec tsc --noEmit`
+- Installed-runtime `auracall run status <id> --json` check for checksum and
+  preview-vs-full-quality fields after `pnpm run install:user-runtime`.
 - `pnpm run plans:audit -- --keep 61`
 - `git diff --check`
 - One installed-runtime Grok browser smoke after unit/type validation, using

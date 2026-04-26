@@ -1221,7 +1221,7 @@ describe('Grok browser media generation executor', () => {
         mutationSourcePrefix: 'media:grok-imagine',
       }),
     );
-    expect(result.artifacts).toMatchObject([
+    expect(result.artifacts.slice(0, 2)).toMatchObject([
       {
         id: 'grok_imagine_visible_1',
         metadata: {
@@ -1237,7 +1237,104 @@ describe('Grok browser media generation executor', () => {
         },
       },
     ]);
+    expect(result.artifacts).toHaveLength(2);
+    expect(result.artifacts).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          materialization: 'visible-tile-data-url',
+        }),
+      }),
+    ]));
     expect(timelineEvents).toContain('artifact_materialized');
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('caches generated data-url tiles when active browser materialization captures fewer than the requested visible set', async () => {
+    const { createGrokBrowserMediaGenerationExecutor } = await import('../src/media/grokBrowserExecutor.js');
+    const artifactDir = '/tmp/auracall-grok-media-artifacts';
+    const dataUrl = `data:image/png;base64,${Buffer.from('fallback data url image with enough bytes for validation').toString('base64')}`;
+    browserClient.runPrompt.mockResolvedValueOnce({
+      text: '',
+      url: 'https://grok.com/imagine',
+      tabTargetId: 'grok-tab-3',
+    });
+    browserClient.getFeatureSignature.mockResolvedValueOnce(JSON.stringify({
+      detector: 'grok-feature-probe-v1',
+      imagine: {
+        run_state: 'terminal_image',
+        pending: false,
+        terminal_image: true,
+        terminal_video: false,
+        account_gated: false,
+        blocked: false,
+        media: {
+          images: [{
+            src: dataUrl,
+            srcKind: 'data-url',
+            generated: true,
+            publicGallery: false,
+            width: 272,
+            height: 423,
+          }],
+          videos: [],
+          visible_tiles: [{ src: dataUrl, srcKind: 'data-url', generated: true, publicGallery: false }],
+          urls: [dataUrl],
+        },
+      },
+    }));
+    browserClient.materializeActiveMediaArtifacts.mockResolvedValueOnce([
+      {
+        id: 'grok_imagine_visible_1',
+        name: 'grok-imagine-visible-1.jpg',
+        provider: 'grok',
+        source: 'conversation',
+        size: 10,
+        mimeType: 'image/jpeg',
+        localPath: path.join(artifactDir, 'grok-imagine-visible-1.jpg'),
+        checksumSha256: 'preview-sha',
+        metadata: {
+          materialization: 'visible-tile-browser-capture',
+        },
+      },
+    ]);
+
+    const executor = createGrokBrowserMediaGenerationExecutor({} as never);
+    const result = await executor({
+      id: 'medgen_grok_test',
+      createdAt: '2026-04-24T12:00:00.000Z',
+      artifactDir,
+      request: {
+        provider: 'grok',
+        mediaType: 'image',
+        prompt: 'Generate an image of an asphalt secret agent',
+        transport: 'browser',
+        count: 2,
+      },
+    });
+
+    expect(result.artifacts).toMatchObject([
+      {
+        id: 'grok_imagine_visible_1',
+        metadata: {
+          materialization: 'visible-tile-browser-capture',
+        },
+      },
+      {
+        id: 'grok_imagine_image_2',
+        mimeType: 'image/png',
+        fileName: 'grok-imagine-2.png',
+        width: 272,
+        height: 423,
+        metadata: {
+          materialization: 'visible-tile-data-url',
+          remoteUrl: dataUrl,
+          checksumSha256: expect.any(String),
+        },
+      },
+    ]);
+    expect(result.metadata).toMatchObject({
+      generatedArtifactCount: 2,
+      requestedVisibleTileCount: 2,
+    });
   });
 });

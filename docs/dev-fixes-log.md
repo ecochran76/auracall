@@ -1,3 +1,15 @@
+- 2026-04-25: Do not treat redacted provider signatures as materializable
+  media. Grok Imagine feature signatures may preserve data-URL shape while
+  replacing the body with `<omitted ...>` for compact status output; fallback
+  materialization must validate base64 and skip redacted values instead of
+  writing tiny placeholder files and inflating artifact counts.
+
+- 2026-04-25: Generic run status must preserve media artifact evidence, not
+  only paths and MIME types. Checksum, preview artifact id, preview checksum,
+  remote URL, and preview-vs-full-quality comparison fields are operator
+  evidence for browser media dogfood and should survive the media-status to
+  run-status projection.
+
 - 2026-04-25: Do not make subcommands reuse a required option name from the
   root CLI without a fallback. The full AuraCall CLI already owns
   `-p/--prompt` for text runs, so `media generate --prompt ...` was parsed as

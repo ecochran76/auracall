@@ -25,6 +25,12 @@ export interface AuraCallRunStatusArtifactSummary {
   uri?: string | null;
   mimeType?: string | null;
   materialization?: string | null;
+  remoteUrl?: string | null;
+  checksumSha256?: string | null;
+  previewArtifactId?: string | null;
+  previewSize?: number | null;
+  previewChecksumSha256?: string | null;
+  fullQualityDiffersFromPreview?: boolean | null;
   downloadLabel?: string | null;
   downloadVariant?: string | null;
   downloadOptions?: string[] | null;
@@ -125,6 +131,12 @@ function summarizeMediaRunStatus(summary: MediaGenerationStatusSummary): AuraCal
       uri: artifact.uri ?? null,
       mimeType: artifact.mimeType ?? null,
       materialization: artifact.materialization ?? null,
+      remoteUrl: artifact.remoteUrl ?? null,
+      checksumSha256: artifact.checksumSha256 ?? null,
+      previewArtifactId: artifact.previewArtifactId ?? null,
+      previewSize: artifact.previewSize ?? null,
+      previewChecksumSha256: artifact.previewChecksumSha256 ?? null,
+      fullQualityDiffersFromPreview: artifact.fullQualityDiffersFromPreview ?? null,
       downloadLabel: artifact.downloadLabel ?? null,
       downloadVariant: artifact.downloadVariant ?? null,
       downloadOptions: artifact.downloadOptions ?? null,

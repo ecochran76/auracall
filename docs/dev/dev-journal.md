@@ -1,3 +1,40 @@
+## 2026-04-25 - Grok Imagine installed status and data-url hardening
+
+- Focus: continue Plan 0061 after the installed Grok smoke by checking whether
+  the updated runtime could report processing/materialization state and cache
+  multiple visible artifacts without re-navigation.
+- Progress: refreshed the user runtime, started the installed API on port
+  `18089`, and ran the installed CLI smoke
+  `medgen_e455048f119f4fde9ba48bbb8524f194` through
+  `auracall-grok-auto`. The submitted tab stayed on
+  `https://grok.com/imagine`, route progression remained
+  `["https://grok.com/imagine"]`, and `run status --json` now reports checksum
+  fields through the generic run-status surface. The run also exposed a real
+  fallback bug: redacted feature-signature data URLs such as
+  `data:image/png;base64,<omitted ...>` were being decoded into tiny placeholder
+  files and counted as artifacts.
+- Fix: reject invalid/redacted base64 data URLs before fallback
+  materialization and dedupe fallback candidates against already captured
+  browser artifacts. Valid generated data URLs remain cacheable when active
+  browser materialization captures fewer than the requested visible set.
+- Follow-up smoke: after reinstalling the runtime with the redacted-data-url
+  fix, `medgen_c96d0cc5f7c44bc9ab094d0f4ecbae98` succeeded with the submitted
+  tab still on `https://grok.com/imagine` and no tiny placeholder artifacts.
+  It reported `generatedImageCount = 4`, but materialized only one visible
+  browser-captured artifact, so the multi-tile live criterion is still not
+  satisfied.
+- Remaining: the live installed smoke still did not produce a linked
+  full-quality download-button comparison artifact, and the browser capture
+  path needs observable tile-selection diagnostics before Plan 0061 can close.
+- Validation:
+  - `/home/ecochran76/.local/bin/auracall --version`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media generate --provider grok --type image --transport browser --prompt "Generate images of an asphalt secret agent with a red pocket square" --no-wait --json`
+  - `/home/ecochran76/.local/bin/auracall run status medgen_e455048f119f4fde9ba48bbb8524f194 --json`
+  - `find ~/.auracall/runtime/media-generations/medgen_e455048f119f4fde9ba48bbb8524f194/artifacts -maxdepth 1 -type f -printf '%f %s bytes\n'`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media generate --provider grok --type image --transport browser --prompt "Generate images of an asphalt secret agent holding a brass key" --no-wait --json`
+  - `/home/ecochran76/.local/bin/auracall run status medgen_c96d0cc5f7c44bc9ab094d0f4ecbae98 --json`
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/browser/grokAdapter.test.ts tests/cli.runStatusCommand.test.ts tests/mediaStatusSummary.test.ts --maxWorkers 1`
+
 ## 2026-04-25 - Grok Imagine installed media smoke
 
 - Focus: dogfood Plan 0061 through the installed local API path without adding
