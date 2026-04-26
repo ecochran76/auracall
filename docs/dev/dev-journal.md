@@ -20,6 +20,17 @@
 - Validation:
   - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts --maxWorkers 1`
   - `pnpm exec tsc --noEmit`
+- Follow-up validation: a first live source smoke exposed that
+  `MediaGenerationTimelineEventSchema` also needed the new
+  `provider_auth_preflight` event. After adding it, the focused tests and
+  `tsc` passed. A normal `auracall-grok-auto` smoke then succeeded because the
+  runtime profile has no configured Grok identity expectation. A temporary
+  negative smoke with an intentionally wrong profile identity failed before
+  `capability_selected`, `composer_ready`, `prompt_inserted`, or
+  `send_attempted` with `Grok browser auth preflight failed
+  (grok_sign_in_required at https://grok.com/imagine); expected
+  wrong-account-for-auth-preflight-smoke@example.invalid, found signed out`.
+  The temporary config change was restored and the managed browser was closed.
 
 ## 2026-04-26 - Grok Imagine action-surface activation
 
