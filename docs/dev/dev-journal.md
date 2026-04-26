@@ -50,6 +50,16 @@
   `profiles.wsl-chrome-2.services.chatgpt.identity.email` is bound to
   `consult@polymerconsultinggroup.com`. No Grok or Gemini identity was added
   to `wsl-chrome-2`.
+- Live ChatGPT identity smoke: default doctor detected auth-session identity
+  `ecochran76@gmail.com` on `browser-profiles/default/chatgpt` and capability
+  discovery succeeded. `wsl-chrome-2` first had no registered DevTools session,
+  so a bounded `login --target chatgpt` launched the managed profile on port
+  `38183`; doctor then detected auth-session identity
+  `consult@polymerconsultinggroup.com` and capability discovery succeeded.
+  A temporary negative smoke removed `profiles.default.services.chatgpt.identity`
+  and `capabilities --target chatgpt` failed before discovery with
+  `chatgpt_expected_identity_missing`, found `ecochran76@gmail.com`. The config
+  was restored immediately.
 
 ## 2026-04-26 - Grok Imagine action-surface activation
 

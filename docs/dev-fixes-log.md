@@ -19,6 +19,11 @@
   adapters. Runtime-supplied explicit null expectations must fail after account
   detection; omitted raw adapter options may remain a test/debug escape hatch.
 
+- 2026-04-26: Serialize live probes for one managed browser profile. A
+  `wsl-chrome-2` ChatGPT capability probe correctly failed with the browser
+  operation busy guard while doctor owned the same profile, so use doctor first
+  and rerun capability discovery after the exclusive probe exits.
+
 - 2026-04-26: Timeline event type changes must update both TypeScript unions
   and the persisted response Zod schema. Adding `provider_auth_preflight` only
   to the TypeScript type let tests pass but caused a live media run to fail
