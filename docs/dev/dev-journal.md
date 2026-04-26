@@ -1,3 +1,26 @@
+## 2026-04-26 - profile identity smoke command
+
+- Focus: turn the ChatGPT account-binding smoke into a repeatable no-prompt
+  command so operators do not have to chain login, doctor, capability
+  discovery, and temporary config edits by hand.
+- Progress: added `auracall profile identity-smoke --target
+  <chatgpt|gemini|grok> [--include-negative] [--json]`. The command launches
+  the managed browser only if no live DevTools session is registered, probes
+  identity under the browser-service operation dispatcher, verifies the
+  selected AuraCall runtime profile's configured service identity, and can run
+  the missing-identity negative path in memory without touching user config.
+- Validation so far:
+  - `pnpm vitest run tests/cli/profileIdentitySmokeCommand.test.ts tests/browser/providerIdentityPreflight.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run plans:audit -- --keep 8`
+  - `pnpm tsx bin/auracall.ts --profile default profile identity-smoke --target chatgpt --include-negative --json`
+  - `pnpm tsx bin/auracall.ts --profile wsl-chrome-2 profile identity-smoke --target chatgpt --include-negative --json`
+- Live result: default ChatGPT matched `ecochran76@gmail.com`;
+  `wsl-chrome-2` ChatGPT matched
+  `consult@polymerconsultinggroup.com`; both in-memory negative checks failed
+  with `chatgpt_expected_identity_missing` as intended. The launched managed
+  browser roots were closed after the smoke.
+
 ## 2026-04-26 - Grok browser auth/account preflight
 
 - Focus: fail fast when the managed Grok browser profile is signed out, trapped

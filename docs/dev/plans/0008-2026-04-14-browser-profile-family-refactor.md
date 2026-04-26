@@ -127,6 +127,10 @@ This selects service-scoped defaults, independent of browser-profile wiring:
 - service-specific expected account identity; a signed-in browser with no
   bound identity is an error for runtime-backed browser operations, not an
   implicit permission to use whatever account is present
+- a no-prompt operator smoke, `auracall profile identity-smoke --target
+  <provider> --include-negative --json`, to verify the selected AuraCall
+  runtime profile's bound service identity against the live managed browser
+  account without mutating config or submitting a prompt
 
 ### Phase D: Resolve Browser Launch Profile
 

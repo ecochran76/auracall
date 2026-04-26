@@ -52,6 +52,9 @@ auracall setup --target grok \
 # Machine-readable browser doctor output
 auracall doctor --target grok --json
 
+# No-prompt account binding smoke for the selected AuraCall runtime profile
+auracall profile identity-smoke --target chatgpt --include-negative --json
+
 # Machine-readable live browser feature discovery
 auracall features --target gemini --json
 

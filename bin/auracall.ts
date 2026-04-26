@@ -103,6 +103,12 @@ import {
   normalizeWorkbenchCapabilityProvider,
 } from '../src/cli/workbenchCapabilitiesCommand.js';
 import {
+  buildProfileIdentitySmokeReport,
+  formatProfileIdentitySmokeReport,
+  normalizeProfileIdentitySmokeProvider,
+  resolveProfileIdentitySmokeExitCode,
+} from '../src/cli/profileIdentitySmokeCommand.js';
+import {
   registerMediaGenerationCliCommand,
 } from '../src/cli/mediaGenerationCommand.js';
 import { createWorkbenchCapabilityService } from '../src/workbench/service.js';
@@ -8027,6 +8033,92 @@ profileCommand
       return;
     }
     console.log(formatProfileListReport(report));
+  });
+
+profileCommand
+  .command('identity-smoke')
+  .description('Run a no-prompt browser identity smoke for one runtime-profile service.')
+  .option('--target <chatgpt|gemini|grok>', 'Choose provider to inspect (chatgpt, gemini, or grok).')
+  .option('--no-launch-if-needed', 'Do not launch the managed browser when no live DevTools session is registered.')
+  .option('--include-negative', 'Also run an in-memory missing-identity negative check.', false)
+  .option('--prune-browser-state', 'Remove dead entries from ~/.auracall/browser-state.json before reporting.', false)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const target = normalizeProfileIdentitySmokeProvider(commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt');
+    const {
+      inspectBrowserDoctorState,
+      inspectBrowserDoctorIdentity,
+      withBrowserProbeOperation,
+    } = await import('../src/browser/profileDoctor.js');
+    const shouldLaunchIfNeeded = commandOptions.launchIfNeeded !== false;
+    let launchedBrowser = false;
+    let localReport = await inspectBrowserDoctorState(userConfig, {
+      target,
+      pruneDeadRegistryEntries: Boolean(commandOptions.pruneBrowserState),
+    });
+
+    if (!localReport.managedRegistryEntry?.alive && shouldLaunchIfNeeded) {
+      const launchOptions = resolveBrowserLoginLaunchOptions(commandOptions, userConfig, target);
+      const launch = async () => {
+        const client = await BrowserAutomationClient.fromConfig(userConfig, {
+          target: target === 'grok' ? 'grok' : 'chatgpt',
+        });
+        await client.login({
+          target,
+          ...launchOptions,
+          exportCookies: false,
+          managedProfileSeedPolicy: 'reseed-if-source-newer',
+        });
+      };
+      if (commandOptions.json) {
+        await withStdoutRedirectedToStderr(launch);
+      } else {
+        await launch();
+      }
+      launchedBrowser = true;
+      localReport = await inspectBrowserDoctorState(userConfig, {
+        target,
+        pruneDeadRegistryEntries: Boolean(commandOptions.pruneBrowserState),
+      });
+    }
+
+    let identityStatus: Awaited<ReturnType<typeof inspectBrowserDoctorIdentity>> = {
+      target,
+      supported: true,
+      attempted: false,
+      identity: null,
+      error: null,
+      reason: 'no-live-managed-browser',
+    };
+    if (localReport.managedRegistryEntry?.alive) {
+      await withBrowserProbeOperation(target, localReport, 'doctor', async () => {
+        identityStatus = await inspectBrowserDoctorIdentity(userConfig, {
+          target,
+          localReport,
+        });
+      });
+    }
+
+    const report = buildProfileIdentitySmokeReport({
+      config: userConfig as unknown as Record<string, unknown>,
+      target,
+      runtimeProfileId: userConfig.auracallProfile ?? null,
+      explicitAgentId:
+        typeof (cliOptions as CliOptions).agent === 'string' ? (cliOptions as CliOptions).agent?.trim() || null : null,
+      actualIdentity: identityStatus.identity,
+      identityStatus,
+      localReport,
+      launchedBrowser,
+      includeNegative: Boolean(commandOptions.includeNegative),
+    });
+    process.exitCode = resolveProfileIdentitySmokeExitCode(report);
+    if (commandOptions.json) {
+      console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+    console.log(formatProfileIdentitySmokeReport(report));
   });
 
 const configCommand = program
