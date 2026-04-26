@@ -14454,3 +14454,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `run_status` should allow an injected browser diagnostics probe in tests so
   response-run browser-state payloads can be verified without touching live
   provider pages.
+- 2026-04-25: Browser service target resolution must not trust a selected
+  DevTools port more than managed browser profile ownership. A live
+  `auracall-grok-auto` API smoke resolved to the Gemini profile's port
+  `45011` even though Grok had its own registered profile/port. Guard
+  `resolveServiceTarget(...)` so cross-profile ports are ignored in favor of
+  the expected live managed browser profile, or fail closed before any tab scan
+  or navigation.

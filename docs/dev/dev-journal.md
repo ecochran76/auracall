@@ -21821,3 +21821,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
   - `pnpm exec tsc --noEmit`
+
+## 2026-04-25 - Browser service cross-profile DevTools guard
+
+- Focus: stop API/server browser work from adopting a DevTools port that
+  belongs to another managed browser profile.
+- Live finding: queue-diagnostics dogfooding against `auracall-grok-auto`
+  repeatedly resolved Grok work to the Gemini managed browser profile on port
+  `45011`, while the Grok managed browser profile had its own active DevTools
+  endpoint on port `38261`. This made the queue proof invalid and created
+  unnecessary provider/browser churn.
+- Progress: `BrowserService.resolveServiceTarget(...)` now compares the
+  selected DevTools port's registry owner against the expected managed browser
+  profile. If the port belongs to another managed browser profile, it switches
+  to the expected live registry instance when available; otherwise it fails
+  closed before scanning tabs or navigating the wrong browser.
+- Validation:
+  - `pnpm vitest run tests/browser/browserService.test.ts`

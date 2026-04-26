@@ -111,8 +111,7 @@ export class BrowserService extends BrowserServiceCore {
     options: ServiceTargetMatchOptions,
   ): Promise<ServiceTargetResolution> {
     const launchContext = this.resolveLaunchContext(options.serviceId);
-    const launchProfile = launchContext.launchProfile;
-    const target = await this.resolveDevToolsTarget({
+    let target = await this.resolveDevToolsTarget({
       host: undefined,
       port: undefined,
       ensurePort: options.ensurePort,
@@ -122,20 +121,52 @@ export class BrowserService extends BrowserServiceCore {
       return { host: target.host, port: target.port };
     }
 
-    const resolved = this.getConfig();
     const classifiedInstances = await listInstancesWithLiveness({ registryPath: this.registryPath });
-    const knownInstances = classifiedInstances.map(({ instance }) => instance);
-    const matchedByPort = classifiedInstances.find(({ instance, alive }) =>
-      alive && instance.port === target.port && (target.host ? instance.host === target.host : true),
-    )?.instance;
     const expectedProfilePath = launchContext.managedProfileDir;
     const expectedProfileName = launchContext.managedChromeProfile;
+    let matchedByPort = classifiedInstances.find(({ instance, alive }) =>
+      alive && instance.port === target.port && (target.host ? instance.host === target.host : true),
+    )?.instance;
+    const selectedPortProfileMismatch = matchedByPort
+      ? !matchesManagedProfile(matchedByPort, expectedProfilePath, expectedProfileName)
+      : false;
+    if (matchedByPort && selectedPortProfileMismatch) {
+      const expectedInstance = classifiedInstances.find(({ instance, alive }) =>
+        alive && matchesManagedProfile(instance, expectedProfilePath, expectedProfileName),
+      )?.instance;
+      if (expectedInstance?.port) {
+        if (options.logger) {
+          options.logger(
+            `[browser-service] Ignoring selected DevTools port ${target.port} because it belongs to ` +
+              `${matchedByPort.profilePath ?? 'unknown'}::${matchedByPort.profileName ?? 'Default'}; ` +
+              `using expected managed browser profile ${expectedProfilePath}::${expectedProfileName} ` +
+              `on port ${expectedInstance.port}.`,
+          );
+        }
+        target = {
+          ...target,
+          host: expectedInstance.host ?? target.host,
+          port: expectedInstance.port,
+        };
+        matchedByPort = expectedInstance;
+      } else {
+        throw new Error(
+          `Resolved DevTools port ${target.port} belongs to ${matchedByPort.profilePath ?? 'unknown'}::${matchedByPort.profileName ?? 'Default'}, ` +
+            `not expected managed browser profile ${expectedProfilePath}::${expectedProfileName}. ` +
+            'Refusing to use a cross-profile browser target.',
+        );
+      }
+    }
+    const targetPort = target.port;
+    if (!targetPort) {
+      return { host: target.host, port: target.port };
+    }
     const profilePath = matchedByPort?.profilePath ?? expectedProfilePath;
     const profileName = matchedByPort?.profileName ?? expectedProfileName;
     const discardedRegistryCandidates = collectDiscardedRegistryCandidates({
       classifiedInstances,
       targetHost: target.host ?? '127.0.0.1',
-      targetPort: target.port,
+      targetPort,
       expectedProfilePath,
       expectedProfileName,
     });
@@ -239,6 +270,19 @@ function resolveMutationLogKey(userConfig: ResolvedUserConfig, target: BrowserPr
     ? userConfig.auracallProfile.trim()
     : 'default';
   return `auracall-runtime-profile:${runtimeProfile}::service:${target}`;
+}
+
+function matchesManagedProfile(
+  instance: { profilePath?: string; profileName?: string },
+  expectedProfilePath: string,
+  expectedProfileName: string,
+): boolean {
+  if (!instance.profilePath) return false;
+  const instanceProfileName = (instance.profileName ?? 'Default').trim().toLowerCase();
+  return (
+    path.resolve(instance.profilePath) === path.resolve(expectedProfilePath) &&
+    instanceProfileName === expectedProfileName.trim().toLowerCase()
+  );
 }
 
 function createConfiguredUrlMatcher(

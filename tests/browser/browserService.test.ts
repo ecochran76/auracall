@@ -318,6 +318,124 @@ describe('BrowserService resolveServiceTarget', () => {
     );
   });
 
+  test('does not scan a selected DevTools port from a different managed browser profile', async () => {
+    loggerMessages.length = 0;
+    stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce([
+      {
+        instance: {
+          pid: 1111,
+          port: 9222,
+          host: '127.0.0.1',
+          profilePath: '/tmp/managed-root/mixed/gemini',
+          profileName: 'Default',
+          type: 'chrome',
+          launchedAt: new Date().toISOString(),
+          lastSeenAt: new Date().toISOString(),
+        },
+        alive: true,
+        liveness: 'alive',
+      },
+      {
+        instance: {
+          pid: 2222,
+          port: 9333,
+          host: '127.0.0.1',
+          profilePath: '/tmp/managed-root/mixed/grok',
+          profileName: 'Default',
+          type: 'chrome',
+          launchedAt: new Date().toISOString(),
+          lastSeenAt: new Date().toISOString(),
+        },
+        alive: true,
+        liveness: 'alive',
+      },
+    ] as any);
+    instanceScannerMocks.scanRegisteredInstance.mockResolvedValueOnce({
+      instance: {
+        pid: 2222,
+        port: 9333,
+        host: '127.0.0.1',
+        profilePath: '/tmp/managed-root/mixed/grok',
+        profileName: 'Default',
+        type: 'chrome',
+        launchedAt: new Date().toISOString(),
+        lastSeenAt: new Date().toISOString(),
+      },
+      tabs: [
+        { targetId: 'grok-expected', url: 'https://grok.com/', title: 'Grok', type: 'page' },
+      ],
+    });
+
+    const service = BrowserService.fromConfig(
+      {
+        auracallProfile: 'mixed',
+        browser: {
+          target: 'grok',
+          managedProfileRoot: '/tmp/managed-root',
+          chromeProfile: 'Default',
+        },
+      } as unknown as ResolvedUserConfig,
+      'grok',
+    );
+
+    const target = await service.resolveServiceTarget({
+      serviceId: 'grok',
+      configuredUrl: 'https://grok.com/',
+      ensurePort: true,
+      logger: (message) => loggerMessages.push(message),
+    });
+
+    expect(target.port).toBe(9333);
+    expect(target.tab?.targetId).toBe('grok-expected');
+    expect(instanceScannerMocks.scanRegisteredInstance).toHaveBeenLastCalledWith(
+      { registryPath: expect.stringContaining('browser-state.json') },
+      '/tmp/managed-root/mixed/grok',
+      'Default',
+      expect.any(Function),
+      {},
+    );
+    expect(loggerMessages.some((message) => message.includes('Ignoring selected DevTools port 9222'))).toBe(true);
+  });
+
+  test('fails closed when a selected DevTools port belongs to another managed browser profile', async () => {
+    stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce([
+      {
+        instance: {
+          pid: 1111,
+          port: 9222,
+          host: '127.0.0.1',
+          profilePath: '/tmp/managed-root/mixed/gemini',
+          profileName: 'Default',
+          type: 'chrome',
+          launchedAt: new Date().toISOString(),
+          lastSeenAt: new Date().toISOString(),
+        },
+        alive: true,
+        liveness: 'alive',
+      },
+    ] as any);
+
+    const service = BrowserService.fromConfig(
+      {
+        auracallProfile: 'mixed',
+        browser: {
+          target: 'grok',
+          managedProfileRoot: '/tmp/managed-root',
+          chromeProfile: 'Default',
+        },
+      } as unknown as ResolvedUserConfig,
+      'grok',
+    );
+
+    const scanCountBefore = instanceScannerMocks.scanRegisteredInstance.mock.calls.length;
+    await expect(service.resolveServiceTarget({
+      serviceId: 'grok',
+      configuredUrl: 'https://grok.com/',
+      ensurePort: true,
+    })).rejects.toThrow('Refusing to use a cross-profile browser target');
+    expect(instanceScannerMocks.scanRegisteredInstance).toHaveBeenCalledTimes(scanCountBefore);
+  });
+
   test('reports discarded stale registry candidates for the selected port and expected profile', async () => {
     loggerMessages.length = 0;
     stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce([

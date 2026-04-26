@@ -60,6 +60,15 @@ and concrete:
   browser-service wait-for-turn primitive for future service/API/MCP browser
   callers. Keep fail-fast `acquire(...)` for human/login/operator hard stops
   where an immediate structured busy result is more useful than waiting.
+- 2026-04-25 follow-up:
+  - Browser-service target resolution now treats managed browser profile
+    ownership as stronger authority than a selected DevTools port. If a port
+    resolves to another managed browser profile, service targeting switches to
+    the expected live registered profile when possible and otherwise fails
+    closed before scanning tabs or navigating.
+  - Remaining dogfood item: rerun the queue-diagnostics smoke only after the
+    installed runtime contains this guard, using the existing Grok managed
+    browser profile and no direct conversation re-navigation.
 
 ## Current DOM-drift repair plan (2026-03-28)
 
