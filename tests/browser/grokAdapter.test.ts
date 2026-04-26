@@ -28,6 +28,7 @@ vi.mock('../../packages/browser-service/src/chromeLifecycle.js', async (importOr
 
 import {
   buildGrokFeatureProbeExpression,
+  checkGrokBrowserAuthPreflight,
   choosePreferredGrokConversation,
   createGrokAdapter,
   ensureGrokTabVisible,
@@ -49,6 +50,18 @@ import {
 } from '../../src/browser/providers/grokAdapter.js';
 import type { ChromeClient } from '../../src/browser/types.js';
 
+function createFakeAuthRuntime(values: unknown[]): ChromeClient['Runtime'] {
+  const queue = [...values];
+  return {
+    enable: vi.fn(async () => undefined),
+    evaluate: vi.fn(async () => ({
+      result: {
+        value: queue.shift() ?? null,
+      },
+    })),
+  } as unknown as ChromeClient['Runtime'];
+}
+
 describe('extractGrokIdentityFromSerializedScripts', () => {
   test('parses Grok user identity from Next flight data', () => {
     const scriptText =
@@ -60,6 +73,60 @@ describe('extractGrokIdentityFromSerializedScripts', () => {
       email: 'ez86944@gmail.com',
       handle: '@SwantonDoug',
       source: 'next-flight',
+    });
+  });
+});
+
+describe('checkGrokBrowserAuthPreflight', () => {
+  test('fails on Google account password challenge before Grok automation', async () => {
+    const Runtime = createFakeAuthRuntime([
+      {
+        href: 'https://accounts.google.com/v3/signin/challenge/pwd',
+        title: 'Welcome',
+        bodyText: 'Welcome ecochran76@gmail.com Too many failed attempts Enter your password',
+        guestAuthCta: false,
+      },
+    ]);
+
+    await expect(checkGrokBrowserAuthPreflight(Runtime)).resolves.toMatchObject({
+      ok: false,
+      reason: 'google_account_too_many_failed_attempts',
+      href: 'https://accounts.google.com/v3/signin/challenge/pwd',
+      actualIdentity: null,
+    });
+  });
+
+  test('fails when configured Grok identity differs from detected identity', async () => {
+    const Runtime = createFakeAuthRuntime([
+      {
+        href: 'https://grok.com/imagine',
+        title: 'Imagine - Grok',
+        bodyText: 'Type to imagine',
+        guestAuthCta: false,
+      },
+      {
+        id: null,
+        name: 'Other User',
+        handle: '@other',
+        email: 'other@example.com',
+        source: 'next-data',
+        guestAuthCta: false,
+      },
+    ]);
+
+    await expect(checkGrokBrowserAuthPreflight(Runtime, {
+      expectedUserIdentity: {
+        email: 'operator@example.com',
+        source: 'profile',
+      },
+      expectedServiceAccountId: 'service-account:grok:operator@example.com',
+    })).resolves.toMatchObject({
+      ok: false,
+      reason: 'grok_account_mismatch',
+      expectedServiceAccountId: 'service-account:grok:operator@example.com',
+      actualIdentity: {
+        email: 'other@example.com',
+      },
     });
   });
 });
@@ -725,6 +792,7 @@ describe('Grok Imagine runPrompt mode selection', () => {
     });
     expect(result.events.map((event) => event.phase)).toEqual([
       'browser_target_attached',
+      'provider_auth_preflight',
       'capability_selected',
       'composer_ready',
       'prompt_inserted',

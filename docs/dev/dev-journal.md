@@ -1,3 +1,26 @@
+## 2026-04-26 - Grok browser auth/account preflight
+
+- Focus: fail fast when the managed Grok browser profile is signed out, trapped
+  in a Google auth challenge, or logged into a different account than the
+  selected AuraCall runtime profile expects.
+- Progress: provider list options now carry the runtime profile's configured
+  service identity into browser adapters. Grok Imagine prompt submission and
+  active media materialization run an auth/account preflight before provider
+  automation touches mode controls, prompt insertion, or tile capture.
+- Fix: obvious signed-out/auth-challenge states, including
+  `accounts.google.com` password challenges and "Too many failed attempts",
+  hard-stop for all runs. When the AuraCall runtime profile has an expected
+  Grok identity, the preflight also verifies the detected Grok account and
+  fails with a specific mismatch/undetected-identity reason before submitting
+  work. Profiles without configured expected identity still avoid slow identity
+  probes on normal workbench pages.
+- Live gate: no further Grok live automation was run because the managed
+  `auracall-grok-auto/grok` profile was already observed on a Google Accounts
+  password challenge. Clear that profile manually before the next live smoke.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+
 ## 2026-04-26 - Grok Imagine action-surface activation
 
 - Focus: continue Plan 0061 without another generation after the installed

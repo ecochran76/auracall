@@ -91,6 +91,12 @@ profile, queued dispatcher, and registry-first DevTools authority.
   `auracall-grok-auto/grok` on a Google Accounts password challenge for
   `ecochran76@gmail.com` with "Too many failed attempts", so further live
   automation would only churn the auth blocker.
+- Source follow-up: Grok Imagine now runs an auth/account preflight before
+  prompt submission and active media materialization. The preflight hard-stops
+  signed-out/auth-challenge states for all runs, and when the AuraCall runtime
+  profile has a configured Grok service identity it also fails fast on
+  undetected or mismatched provider account state before any prompt or
+  materialization action.
 
 ## Scope
 
@@ -124,6 +130,9 @@ profile, queued dispatcher, and registry-first DevTools authority.
   evidence.
 - The provider adapter never re-navigates after prompt submission while waiting
   for generated media or materializing artifacts.
+- The provider adapter fails fast before submission/materialization when the
+  managed browser profile is signed out, blocked on an auth challenge, or not
+  the account expected by the selected AuraCall runtime profile.
 - A focused regression test covers visible-tile multi-artifact materialization
   and full-quality download comparison metadata without live provider work.
 - One narrow installed-runtime dogfood run proves the live path after focused

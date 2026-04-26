@@ -1,3 +1,11 @@
+- 2026-04-26: Browser provider runs must fail fast when the managed browser
+  profile is signed out, blocked on an account challenge, or not the account
+  expected by the selected AuraCall runtime profile. Carry the configured
+  service identity into provider adapters, hard-stop notorious auth blockers
+  such as `accounts.google.com` password challenges, and verify the detected
+  provider identity before prompt submission or media materialization when an
+  expected account is configured.
+
 - 2026-04-26: Do not assume a managed provider browser profile remains
   authenticated after a successful media run. A later read-only Grok
   browser-tools check found `auracall-grok-auto/grok` on a Google Accounts

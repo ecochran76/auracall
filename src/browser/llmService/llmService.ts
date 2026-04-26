@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { ResolvedUserConfig } from '../../config.js';
+import { resolveConfiguredServiceAccountId } from '../../config/serviceAccountIdentity.js';
 import { getPreferredRuntimeProfile, getPreferredRuntimeProfileName } from '../../config/model.js';
 import type {
   BrowserProviderActiveMediaMaterializationInput,
@@ -406,6 +407,14 @@ export abstract class LlmService {
       browserService: this.browserService,
       mutationAudit: overrides.mutationAudit ?? this.browserService.getMutationAuditSink?.(),
       mutationSourcePrefix: overrides.mutationSourcePrefix ?? `provider:${this.providerId}`,
+      expectedUserIdentity: overrides.expectedUserIdentity ?? this.resolveProfileServiceIdentity(this.providerId),
+      expectedServiceAccountId: overrides.expectedServiceAccountId ?? resolveConfiguredServiceAccountId(
+        this.userConfig as unknown as Record<string, unknown>,
+        {
+          serviceId: this.providerId,
+          runtimeProfileId: this.resolveActiveProfileName(),
+        },
+      ),
     };
   }
 

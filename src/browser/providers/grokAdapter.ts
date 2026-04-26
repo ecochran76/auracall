@@ -1046,6 +1046,227 @@ type GrokImaginePromptState = {
   submitPathOutcome: 'pending' | 'generated_media' | 'public_template_no_generated' | 'blocked' | 'idle';
 };
 
+type GrokBrowserAuthPreflightResult = {
+  ok: boolean;
+  reason: string | null;
+  href: string | null;
+  title: string | null;
+  expectedServiceAccountId: string | null;
+  expectedIdentity: ProviderUserIdentity | null;
+  actualIdentity: ProviderUserIdentity | null;
+  guestAuthCta: boolean;
+  bodyText: string | null;
+};
+
+export async function checkGrokBrowserAuthPreflight(
+  Runtime: ChromeClient['Runtime'],
+  options: Pick<BrowserProviderListOptions, 'expectedUserIdentity' | 'expectedServiceAccountId'> = {},
+): Promise<GrokBrowserAuthPreflightResult> {
+  const page = await readGrokAuthPageState(Runtime);
+  const expectedIdentity = normalizeExpectedProviderIdentity(options.expectedUserIdentity);
+  const expectedServiceAccountId = normalizeStringOrNull(options.expectedServiceAccountId);
+  const requiresExpectedIdentityCheck = Boolean(expectedIdentity || expectedServiceAccountId);
+  const authChallengeReason = classifyGrokAuthChallenge(page);
+  if (authChallengeReason) {
+    return {
+      ok: false,
+      reason: authChallengeReason,
+      href: page.href,
+      title: page.title,
+      expectedServiceAccountId,
+      expectedIdentity,
+      actualIdentity: null,
+      guestAuthCta: page.guestAuthCta,
+      bodyText: page.bodyText,
+    };
+  }
+
+  if (!requiresExpectedIdentityCheck) {
+    return {
+      ok: true,
+      reason: null,
+      href: page.href,
+      title: page.title,
+      expectedServiceAccountId,
+      expectedIdentity,
+      actualIdentity: null,
+      guestAuthCta: page.guestAuthCta,
+      bodyText: page.bodyText,
+    };
+  }
+
+  const detected = await detectGrokSignedInIdentity(Runtime);
+  const actualIdentity = detected.identity;
+  if (!actualIdentity) {
+    return {
+      ok: false,
+      reason: detected.guestAuthCta || page.guestAuthCta ? 'grok_sign_in_required' : 'grok_identity_not_detected',
+      href: page.href,
+      title: page.title,
+      expectedServiceAccountId,
+      expectedIdentity,
+      actualIdentity,
+      guestAuthCta: detected.guestAuthCta || page.guestAuthCta,
+      bodyText: page.bodyText,
+    };
+  }
+
+  if (expectedIdentity && !providerIdentitiesMatch(expectedIdentity, actualIdentity)) {
+    return {
+      ok: false,
+      reason: 'grok_account_mismatch',
+      href: page.href,
+      title: page.title,
+      expectedServiceAccountId,
+      expectedIdentity,
+      actualIdentity,
+      guestAuthCta: detected.guestAuthCta || page.guestAuthCta,
+      bodyText: page.bodyText,
+    };
+  }
+
+  return {
+    ok: true,
+    reason: null,
+    href: page.href,
+    title: page.title,
+    expectedServiceAccountId,
+    expectedIdentity,
+    actualIdentity,
+    guestAuthCta: detected.guestAuthCta || page.guestAuthCta,
+    bodyText: page.bodyText,
+  };
+}
+
+async function assertGrokBrowserAuthPreflight(
+  Runtime: ChromeClient['Runtime'],
+  options: BrowserProviderListOptions | undefined,
+): Promise<GrokBrowserAuthPreflightResult> {
+  const preflight = await checkGrokBrowserAuthPreflight(Runtime, options);
+  if (preflight.ok) {
+    return preflight;
+  }
+  const expected = describeProviderIdentity(preflight.expectedIdentity) ?? preflight.expectedServiceAccountId ?? 'configured Grok account';
+  const actual = describeProviderIdentity(preflight.actualIdentity) ?? (preflight.guestAuthCta ? 'signed out' : 'unknown account');
+  const location = preflight.href ? ` at ${preflight.href}` : '';
+  throw new Error(
+    `Grok browser auth preflight failed (${preflight.reason ?? 'unknown'}${location}); expected ${expected}, found ${actual}. ` +
+      'Clear the managed browser profile login state before retrying.',
+  );
+}
+
+async function readGrokAuthPageState(Runtime: ChromeClient['Runtime']): Promise<{
+  href: string | null;
+  title: string | null;
+  bodyText: string | null;
+  guestAuthCta: boolean;
+}> {
+  const { result } = await Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const visible = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const style = getComputedStyle(node);
+        const rect = node.getBoundingClientRect();
+        return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+      };
+      const bodyText = normalize(document.body?.innerText || document.documentElement?.innerText || '');
+      const guestAuthCta = Array.from(document.querySelectorAll('a,button,[role="button"]')).some((node) => {
+        if (!visible(node)) return false;
+        const label = normalize(node.getAttribute('aria-label') || node.textContent || '');
+        return /^(sign in|log in|login|create account|sign up)$/i.test(label);
+      });
+      return {
+        href: location.href || null,
+        title: document.title || null,
+        bodyText: bodyText.slice(0, 500),
+        guestAuthCta,
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const value = result?.value as {
+    href?: unknown;
+    title?: unknown;
+    bodyText?: unknown;
+    guestAuthCta?: unknown;
+  } | undefined;
+  return {
+    href: normalizeStringOrNull(value?.href),
+    title: normalizeStringOrNull(value?.title),
+    bodyText: normalizeStringOrNull(value?.bodyText),
+    guestAuthCta: value?.guestAuthCta === true,
+  };
+}
+
+function classifyGrokAuthChallenge(page: { href: string | null; title: string | null; bodyText: string | null; guestAuthCta: boolean }): string | null {
+  const href = (page.href ?? '').toLowerCase();
+  const title = (page.title ?? '').toLowerCase();
+  const body = (page.bodyText ?? '').toLowerCase();
+  if (/accounts\.google\.com/.test(href)) {
+    if (body.includes('too many failed attempts')) return 'google_account_too_many_failed_attempts';
+    if (body.includes('enter your password') || href.includes('/signin/challenge/')) return 'google_account_password_challenge';
+    return 'google_account_auth_challenge';
+  }
+  if (/\/signin|\/login|\/account\/login/.test(href)) {
+    return 'grok_sign_in_required';
+  }
+  if (page.guestAuthCta || /\bsign in\b|\blog in\b|\blogin\b/.test(body) || title.includes('sign in')) {
+    return 'grok_sign_in_required';
+  }
+  return null;
+}
+
+function normalizeExpectedProviderIdentity(identity: ProviderUserIdentity | null | undefined): ProviderUserIdentity | null {
+  if (!identity) return null;
+  const normalized: ProviderUserIdentity = {};
+  if (normalizeStringOrNull(identity.id)) normalized.id = normalizeStringOrNull(identity.id) ?? undefined;
+  if (normalizeStringOrNull(identity.email)) normalized.email = normalizeStringOrNull(identity.email) ?? undefined;
+  if (normalizeIdentityComparable(identity.handle)) normalized.handle = identity.handle?.trim();
+  if (normalizeStringOrNull(identity.name)) normalized.name = normalizeStringOrNull(identity.name) ?? undefined;
+  if (!normalized.id && !normalized.email && !normalized.handle && !normalized.name) return null;
+  normalized.source = identity.source;
+  return normalized;
+}
+
+function providerIdentitiesMatch(expected: ProviderUserIdentity, actual: ProviderUserIdentity): boolean {
+  const comparablePairs: Array<[unknown, unknown]> = [
+    [expected.id, actual.id],
+    [expected.email, actual.email],
+    [expected.handle, actual.handle],
+    [expected.name, actual.name],
+  ];
+  let hadComparableExpected = false;
+  for (const [left, right] of comparablePairs) {
+    const expectedValue = normalizeIdentityComparable(left);
+    if (!expectedValue) continue;
+    hadComparableExpected = true;
+    const actualValue = normalizeIdentityComparable(right);
+    if (actualValue && actualValue === expectedValue) return true;
+  }
+  return !hadComparableExpected;
+}
+
+function normalizeIdentityComparable(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().replace(/^@+/, '').replace(/\s+/g, ' ').toLowerCase();
+  return normalized || null;
+}
+
+function normalizeStringOrNull(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim();
+  return normalized || null;
+}
+
+function describeProviderIdentity(identity: ProviderUserIdentity | null | undefined): string | null {
+  if (!identity) return null;
+  return normalizeStringOrNull(identity.email) ??
+    normalizeStringOrNull(identity.handle) ??
+    normalizeStringOrNull(identity.name) ??
+    normalizeStringOrNull(identity.id);
+}
+
 async function waitForGrokImagineRoute(Runtime: ChromeClient['Runtime'], targetUrl: string): Promise<void> {
   await waitForPredicate(
     Runtime,
@@ -2674,6 +2895,19 @@ export function createGrokAdapter(): Pick<
           timeoutMs: 10_000,
           description: 'Grok Imagine document ready',
         }).catch(() => undefined);
+        const authPreflight = await assertGrokBrowserAuthPreflight(client.Runtime, options);
+        await emitProgress({
+          phase: 'provider_auth_preflight',
+          details: {
+            ok: true,
+            href: authPreflight.href,
+            title: authPreflight.title,
+            expectedServiceAccountId: authPreflight.expectedServiceAccountId,
+            expectedIdentity: authPreflight.expectedIdentity,
+            actualIdentity: authPreflight.actualIdentity,
+            guestAuthCta: authPreflight.guestAuthCta,
+          },
+        });
         await waitForGrokImagineRoute(client.Runtime, targetUrl);
         const modeSelection = await restoreGrokImaginePrimaryMode(client.Runtime, mode, { required: true });
         await emitProgress({
@@ -2789,6 +3023,7 @@ export function createGrokAdapter(): Pick<
           timeoutMs: 10_000,
           description: 'Grok Imagine document ready for media materialization',
         }).catch(() => undefined);
+        await assertGrokBrowserAuthPreflight(client.Runtime, options);
         await waitForGrokImagineRoute(client.Runtime, targetUrl);
         return await materializeGrokImagineVisibleImagesWithClient(client, destDir, {
           maxItems: input.maxItems,

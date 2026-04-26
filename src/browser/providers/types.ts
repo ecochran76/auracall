@@ -46,6 +46,8 @@ export interface BrowserProviderListOptions {
   modelLabel?: string;
   mutationAudit?: BrowserMutationAuditSink;
   mutationSourcePrefix?: string;
+  expectedUserIdentity?: ProviderUserIdentity | null;
+  expectedServiceAccountId?: string | null;
 }
 
 export interface ProviderUserIdentity {
@@ -85,6 +87,7 @@ export interface BrowserProviderActiveMediaMaterializationInput {
 
 export type BrowserProviderPromptProgressPhase =
   | 'browser_target_attached'
+  | 'provider_auth_preflight'
   | 'gemini_surface_ready'
   | 'capability_selected'
   | 'composer_ready'
