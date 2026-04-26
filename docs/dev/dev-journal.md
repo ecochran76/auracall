@@ -9,6 +9,9 @@
   identity under the browser-service operation dispatcher, verifies the
   selected AuraCall runtime profile's configured service identity, and can run
   the missing-identity negative path in memory without touching user config.
+  Follow-up wiring added `--all-bound` as the normal dogfood gate for every
+  service with a configured expected identity on the selected profile, plus
+  explicit `--all` for intentionally checking unbound services too.
 - Validation so far:
   - `pnpm vitest run tests/cli/profileIdentitySmokeCommand.test.ts tests/browser/providerIdentityPreflight.test.ts --maxWorkers 1`
   - `pnpm exec tsc --noEmit`
@@ -31,6 +34,15 @@
   passed with clean JSON stdout and `gemini_expected_identity_missing` for the
   in-memory negative check. The launched default Grok/Gemini browser roots were
   closed after the smoke.
+- Profile-wide gate validation: `--profile default profile identity-smoke
+  --all-bound --include-negative --json` passed for ChatGPT, Gemini, and Grok.
+  `--profile wsl-chrome-2 profile identity-smoke --all-bound
+  --include-negative --json` targeted only ChatGPT and passed as
+  `consult@polymerconsultinggroup.com`, leaving unbound Grok/Gemini out of the
+  gate as intended. A passive `--no-launch-if-needed` check on `wsl-chrome-2`
+  targeted only ChatGPT but failed with `chatgpt_identity_not_detected` because
+  no live managed browser was present, confirming passive mode does not relaunch
+  Chrome. Launched browser roots were closed after validation.
 
 ## 2026-04-26 - Grok browser auth/account preflight
 

@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildProfileIdentitySmokeBatchReport,
   buildProfileIdentitySmokeReport,
+  formatProfileIdentitySmokeBatchReport,
   formatProfileIdentitySmokeReport,
   normalizeProfileIdentitySmokeProvider,
   resolveConfiguredProviderIdentity,
+  resolveProfileIdentitySmokeBatchExitCode,
   resolveProfileIdentitySmokeExitCode,
+  resolveProfileIdentitySmokeTargets,
 } from '../../src/cli/profileIdentitySmokeCommand.js';
 
 describe('profile identity smoke CLI helpers', () => {
@@ -49,6 +53,55 @@ describe('profile identity smoke CLI helpers', () => {
       serviceAccountId: 'service-account:chatgpt:profile@example.com',
       source: 'profile',
     });
+  });
+
+  it('resolves all-bound targets from configured provider identities', () => {
+    const config = {
+      activeProfile: 'work',
+      profiles: {
+        work: {
+          services: {
+            chatgpt: {
+              identity: { email: 'consult@example.com' },
+            },
+            grok: {
+              manualLoginProfileDir: '/tmp/grok',
+            },
+          },
+        },
+      },
+      services: {
+        gemini: {
+          identity: { email: 'global-gemini@example.com' },
+        },
+      },
+    };
+
+    expect(
+      resolveProfileIdentitySmokeTargets(config, {
+        allBound: true,
+        runtimeProfileId: 'work',
+      }),
+    ).toEqual(['chatgpt', 'gemini']);
+    expect(
+      resolveProfileIdentitySmokeTargets(config, {
+        all: true,
+        runtimeProfileId: 'work',
+      }),
+    ).toEqual(['chatgpt', 'gemini', 'grok']);
+    expect(
+      resolveProfileIdentitySmokeTargets(config, {
+        explicitTarget: 'grok',
+        runtimeProfileId: 'work',
+      }),
+    ).toEqual(['grok']);
+    expect(() =>
+      resolveProfileIdentitySmokeTargets(config, {
+        explicitTarget: 'grok',
+        allBound: true,
+        runtimeProfileId: 'work',
+      }),
+    ).toThrow('Use --target with a single smoke, or --all/--all-bound for a profile-wide smoke.');
   });
 
   it('falls back to global identity and account id', () => {
@@ -139,5 +192,55 @@ describe('profile identity smoke CLI helpers', () => {
     });
     expect(resolveProfileIdentitySmokeExitCode(report)).toBe(1);
     expect(formatProfileIdentitySmokeReport(report)).toContain('FAIL grok_expected_identity_missing');
+  });
+
+  it('builds and formats batch reports', () => {
+    const passingReport = buildProfileIdentitySmokeReport({
+      config: {
+        activeProfile: 'default',
+        profiles: {
+          default: {
+            services: {
+              chatgpt: {
+                identity: { email: 'ecochran76@gmail.com' },
+              },
+            },
+          },
+        },
+      },
+      target: 'chatgpt',
+      runtimeProfileId: 'default',
+      actualIdentity: { email: 'ecochran76@gmail.com' },
+      identityStatus: { attempted: true },
+      localReport: {},
+    });
+    const failingReport = buildProfileIdentitySmokeReport({
+      config: {
+        activeProfile: 'default',
+        profiles: {
+          default: {
+            services: {},
+          },
+        },
+      },
+      target: 'gemini',
+      runtimeProfileId: 'default',
+      actualIdentity: { email: 'ecochran76@gmail.com' },
+      identityStatus: { attempted: true },
+      localReport: {},
+    });
+    const batch = buildProfileIdentitySmokeBatchReport({
+      mode: 'all',
+      runtimeProfile: 'default',
+      reports: [passingReport, failingReport],
+      generatedAt: '2026-04-26T12:00:00.000Z',
+    });
+
+    expect(batch.ok).toBe(false);
+    expect(batch.targets).toEqual(['chatgpt', 'gemini']);
+    expect(resolveProfileIdentitySmokeBatchExitCode(batch)).toBe(1);
+    expect(formatProfileIdentitySmokeBatchReport(batch)).toContain('Profile identity smoke batch: FAIL');
+    expect(formatProfileIdentitySmokeBatchReport(batch)).toContain('- chatgpt: PASS');
+    expect(formatProfileIdentitySmokeBatchReport(batch)).toContain('- gemini: FAIL gemini_expected_identity_missing');
   });
 });

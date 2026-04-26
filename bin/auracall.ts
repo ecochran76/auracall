@@ -103,10 +103,13 @@ import {
   normalizeWorkbenchCapabilityProvider,
 } from '../src/cli/workbenchCapabilitiesCommand.js';
 import {
+  buildProfileIdentitySmokeBatchReport,
   buildProfileIdentitySmokeReport,
+  formatProfileIdentitySmokeBatchReport,
   formatProfileIdentitySmokeReport,
-  normalizeProfileIdentitySmokeProvider,
+  resolveProfileIdentitySmokeBatchExitCode,
   resolveProfileIdentitySmokeExitCode,
+  resolveProfileIdentitySmokeTargets,
 } from '../src/cli/profileIdentitySmokeCommand.js';
 import {
   registerMediaGenerationCliCommand,
@@ -8039,6 +8042,8 @@ profileCommand
   .command('identity-smoke')
   .description('Run a no-prompt browser identity smoke for one runtime-profile service.')
   .option('--target <chatgpt|gemini|grok>', 'Choose provider to inspect (chatgpt, gemini, or grok).')
+  .option('--all-bound', 'Smoke every provider with a configured expected identity on the selected runtime profile.', false)
+  .option('--all', 'Smoke every supported provider, including unbound services.', false)
   .option('--no-launch-if-needed', 'Do not launch the managed browser when no live DevTools session is registered.')
   .option('--include-negative', 'Also run an in-memory missing-identity negative check.', false)
   .option('--prune-browser-state', 'Remove dead entries from ~/.auracall/browser-state.json before reporting.', false)
@@ -8046,73 +8051,111 @@ profileCommand
   .action(async (commandOptions) => {
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
-    const target = normalizeProfileIdentitySmokeProvider(commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt');
     const {
       inspectBrowserDoctorState,
       inspectBrowserDoctorIdentity,
       withBrowserProbeOperation,
     } = await import('../src/browser/profileDoctor.js');
     const shouldLaunchIfNeeded = commandOptions.launchIfNeeded !== false;
-    let launchedBrowser = false;
-    let localReport = await inspectBrowserDoctorState(userConfig, {
-      target,
-      pruneDeadRegistryEntries: Boolean(commandOptions.pruneBrowserState),
+    const explicitAgentId =
+      typeof (cliOptions as CliOptions).agent === 'string' ? (cliOptions as CliOptions).agent?.trim() || null : null;
+    const targets = resolveProfileIdentitySmokeTargets(userConfig as unknown as Record<string, unknown>, {
+      explicitTarget: commandOptions.target,
+      all: Boolean(commandOptions.all),
+      allBound: Boolean(commandOptions.allBound),
+      runtimeProfileId: userConfig.auracallProfile ?? null,
+      explicitAgentId,
+      fallbackTarget: userConfig.browser?.target ?? 'chatgpt',
     });
+    if (targets.length === 0) {
+      throw new Error('No bound provider identities found for the selected AuraCall runtime profile.');
+    }
 
-    if (!localReport.managedRegistryEntry?.alive && shouldLaunchIfNeeded) {
-      const launchOptions = resolveBrowserLoginLaunchOptions(commandOptions, userConfig, target);
-      const launch = async () => {
-        const client = await BrowserAutomationClient.fromConfig(userConfig, {
-          target: target === 'grok' ? 'grok' : 'chatgpt',
-        });
-        await client.login({
-          target,
-          ...launchOptions,
-          exportCookies: false,
-          managedProfileSeedPolicy: 'reseed-if-source-newer',
-        });
-      };
-      if (commandOptions.json) {
-        await withStdoutRedirectedToStderr(launch);
-      } else {
-        await launch();
-      }
-      launchedBrowser = true;
-      localReport = await inspectBrowserDoctorState(userConfig, {
+    const runSmokeTarget = async (target: (typeof targets)[number]) => {
+      let launchedBrowser = false;
+      let localReport = await inspectBrowserDoctorState(userConfig, {
         target,
         pruneDeadRegistryEntries: Boolean(commandOptions.pruneBrowserState),
       });
-    }
 
-    let identityStatus: Awaited<ReturnType<typeof inspectBrowserDoctorIdentity>> = {
-      target,
-      supported: true,
-      attempted: false,
-      identity: null,
-      error: null,
-      reason: 'no-live-managed-browser',
-    };
-    if (localReport.managedRegistryEntry?.alive) {
-      await withBrowserProbeOperation(target, localReport, 'doctor', async () => {
-        identityStatus = await inspectBrowserDoctorIdentity(userConfig, {
+      if (!localReport.managedRegistryEntry?.alive && shouldLaunchIfNeeded) {
+        const launchOptions = resolveBrowserLoginLaunchOptions(commandOptions, userConfig, target);
+        const launch = async () => {
+          const client = await BrowserAutomationClient.fromConfig(userConfig, {
+            target: target === 'grok' ? 'grok' : 'chatgpt',
+          });
+          await client.login({
+            target,
+            ...launchOptions,
+            exportCookies: false,
+            managedProfileSeedPolicy: 'reseed-if-source-newer',
+          });
+        };
+        if (commandOptions.json) {
+          await withStdoutRedirectedToStderr(launch);
+        } else {
+          await launch();
+        }
+        launchedBrowser = true;
+        localReport = await inspectBrowserDoctorState(userConfig, {
           target,
-          localReport,
+          pruneDeadRegistryEntries: Boolean(commandOptions.pruneBrowserState),
         });
-      });
-    }
+      }
 
-    const report = buildProfileIdentitySmokeReport({
-      config: userConfig as unknown as Record<string, unknown>,
-      target,
-      runtimeProfileId: userConfig.auracallProfile ?? null,
-      explicitAgentId:
-        typeof (cliOptions as CliOptions).agent === 'string' ? (cliOptions as CliOptions).agent?.trim() || null : null,
-      actualIdentity: identityStatus.identity,
-      identityStatus,
-      localReport,
-      launchedBrowser,
-      includeNegative: Boolean(commandOptions.includeNegative),
-    });
+      let identityStatus: Awaited<ReturnType<typeof inspectBrowserDoctorIdentity>> = {
+        target,
+        supported: true,
+        attempted: false,
+        identity: null,
+        error: null,
+        reason: 'no-live-managed-browser',
+      };
+      if (localReport.managedRegistryEntry?.alive) {
+        await withBrowserProbeOperation(target, localReport, 'doctor', async () => {
+          identityStatus = await inspectBrowserDoctorIdentity(userConfig, {
+            target,
+            localReport,
+          });
+        });
+      }
+
+      return buildProfileIdentitySmokeReport({
+        config: userConfig as unknown as Record<string, unknown>,
+        target,
+        runtimeProfileId: userConfig.auracallProfile ?? null,
+        explicitAgentId,
+        actualIdentity: identityStatus.identity,
+        identityStatus,
+        localReport,
+        launchedBrowser,
+        includeNegative: Boolean(commandOptions.includeNegative),
+      });
+    };
+
+    const reports = [];
+    for (const target of targets) {
+      reports.push(await runSmokeTarget(target));
+    }
+    const batchMode = commandOptions.all ? 'all' : commandOptions.allBound ? 'all-bound' : null;
+    if (batchMode) {
+      const batchReport = buildProfileIdentitySmokeBatchReport({
+        reports,
+        mode: batchMode,
+        runtimeProfile: userConfig.auracallProfile ?? null,
+      });
+      process.exitCode = resolveProfileIdentitySmokeBatchExitCode(batchReport);
+      if (commandOptions.json) {
+        console.log(JSON.stringify(batchReport, null, 2));
+        return;
+      }
+      console.log(formatProfileIdentitySmokeBatchReport(batchReport));
+      return;
+    }
+    const report = reports[0];
+    if (!report) {
+      throw new Error('No profile identity smoke report was produced.');
+    }
     process.exitCode = resolveProfileIdentitySmokeExitCode(report);
     if (commandOptions.json) {
       console.log(JSON.stringify(report, null, 2));

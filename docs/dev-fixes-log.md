@@ -1,9 +1,11 @@
 - 2026-04-26: Account-binding smokes should be one no-prompt command, not a
   hand sequence of login, doctor, capability discovery, and temporary config
   edits. `auracall profile identity-smoke --target <provider> --include-negative
-  --json` now launches the managed browser only when no live DevTools session
-  exists, probes provider identity through the browser-service operation
-  dispatcher, checks the selected AuraCall runtime profile's configured service
+  --json` checks one provider, and `--all-bound` is the normal dogfood gate for
+  every provider with a configured expected identity on the selected AuraCall
+  runtime profile. The command launches the managed browser only when no live
+  DevTools session exists, probes provider identity through the browser-service
+  operation dispatcher, checks the selected runtime profile's configured service
   identity, and runs an in-memory missing-identity negative check without
   mutating `~/.auracall/config.json`.
 

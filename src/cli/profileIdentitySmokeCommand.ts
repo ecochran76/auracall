@@ -11,8 +11,14 @@ type MutableRecord = Record<string, unknown>;
 
 export const PROFILE_IDENTITY_SMOKE_CONTRACT = 'auracall.profile-identity-smoke';
 export const PROFILE_IDENTITY_SMOKE_CONTRACT_VERSION = 1;
+export const PROFILE_IDENTITY_SMOKE_BATCH_CONTRACT = 'auracall.profile-identity-smoke.batch';
 
 export type ProfileIdentitySmokeProvider = BrowserProviderConfig['id'];
+export const PROFILE_IDENTITY_SMOKE_PROVIDERS: readonly ProfileIdentitySmokeProvider[] = [
+  'chatgpt',
+  'gemini',
+  'grok',
+];
 
 export interface ResolvedConfiguredProviderIdentity {
   identity: ProviderUserIdentity | null;
@@ -42,6 +48,17 @@ export interface ProfileIdentitySmokeReport {
   negative: ProfileIdentitySmokeNegativeCheck;
 }
 
+export interface ProfileIdentitySmokeBatchReport {
+  contract: typeof PROFILE_IDENTITY_SMOKE_BATCH_CONTRACT;
+  version: typeof PROFILE_IDENTITY_SMOKE_CONTRACT_VERSION;
+  generatedAt: string;
+  runtimeProfile: string | null;
+  mode: 'all' | 'all-bound';
+  targets: ProfileIdentitySmokeProvider[];
+  reports: ProfileIdentitySmokeReport[];
+  ok: boolean;
+}
+
 function isRecord(value: unknown): value is MutableRecord {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
@@ -62,6 +79,39 @@ export function normalizeProfileIdentitySmokeProvider(value: unknown): ProfileId
     return normalized;
   }
   throw new Error(`Invalid provider "${String(value)}". Use "chatgpt", "gemini", or "grok".`);
+}
+
+export function resolveProfileIdentitySmokeTargets(
+  config: MutableRecord,
+  input: {
+    explicitTarget?: unknown;
+    all?: boolean;
+    allBound?: boolean;
+    runtimeProfileId?: string | null;
+    explicitAgentId?: string | null;
+    fallbackTarget?: unknown;
+  },
+): ProfileIdentitySmokeProvider[] {
+  if (input.all && input.allBound) {
+    throw new Error('Use only one of --all or --all-bound.');
+  }
+  if (input.explicitTarget && (input.all || input.allBound)) {
+    throw new Error('Use --target with a single smoke, or --all/--all-bound for a profile-wide smoke.');
+  }
+  if (input.all) {
+    return [...PROFILE_IDENTITY_SMOKE_PROVIDERS];
+  }
+  if (input.allBound) {
+    return PROFILE_IDENTITY_SMOKE_PROVIDERS.filter((providerId) => {
+      const expected = resolveConfiguredProviderIdentity(config, {
+        providerId,
+        runtimeProfileId: input.runtimeProfileId,
+        explicitAgentId: input.explicitAgentId ?? null,
+      });
+      return Boolean(expected.identity || expected.serviceAccountId);
+    });
+  }
+  return [normalizeProfileIdentitySmokeProvider(input.explicitTarget ?? input.fallbackTarget ?? 'chatgpt')];
 }
 
 export function resolveConfiguredProviderIdentity(
@@ -164,6 +214,28 @@ export function resolveProfileIdentitySmokeExitCode(report: ProfileIdentitySmoke
   return report.preflight.ok && report.negative.ok ? 0 : 1;
 }
 
+export function buildProfileIdentitySmokeBatchReport(input: {
+  reports: ProfileIdentitySmokeReport[];
+  mode: 'all' | 'all-bound';
+  runtimeProfile?: string | null;
+  generatedAt?: string;
+}): ProfileIdentitySmokeBatchReport {
+  return {
+    contract: PROFILE_IDENTITY_SMOKE_BATCH_CONTRACT,
+    version: PROFILE_IDENTITY_SMOKE_CONTRACT_VERSION,
+    generatedAt: input.generatedAt ?? new Date().toISOString(),
+    runtimeProfile: input.runtimeProfile ?? input.reports[0]?.runtimeProfile ?? null,
+    mode: input.mode,
+    targets: input.reports.map((report) => report.target),
+    reports: input.reports,
+    ok: input.reports.every((report) => resolveProfileIdentitySmokeExitCode(report) === 0),
+  };
+}
+
+export function resolveProfileIdentitySmokeBatchExitCode(report: ProfileIdentitySmokeBatchReport): number {
+  return report.ok ? 0 : 1;
+}
+
 export function formatProfileIdentitySmokeReport(report: ProfileIdentitySmokeReport): string {
   const expected =
     describeProviderIdentity(report.expected.identity) ??
@@ -186,4 +258,24 @@ export function formatProfileIdentitySmokeReport(report: ProfileIdentitySmokeRep
   ]
     .filter(Boolean)
     .join('\n');
+}
+
+export function formatProfileIdentitySmokeBatchReport(report: ProfileIdentitySmokeBatchReport): string {
+  const header = `Profile identity smoke batch: ${report.ok ? 'PASS' : 'FAIL'} (${report.mode}, AuraCall runtime profile ${
+    report.runtimeProfile ?? '(none)'
+  })`;
+  const body = report.reports
+    .map((single) => {
+      const expected =
+        describeProviderIdentity(single.expected.identity) ??
+        single.expected.serviceAccountId ??
+        '(missing expected identity)';
+      const actual = describeProviderIdentity(single.actualIdentity) ?? '(identity not detected)';
+      const status = single.preflight.ok && single.negative.ok ? 'PASS' : `FAIL ${single.preflight.reason ?? 'unknown'}`;
+      return `- ${single.target}: ${status}; expected ${expected}; actual ${actual}; launched ${
+        single.launchedBrowser ? 'yes' : 'no'
+      }`;
+    })
+    .join('\n');
+  return `${header}\n${body}`;
 }
