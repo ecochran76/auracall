@@ -14482,3 +14482,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   the held lock blocked browser execution. After the held lease expired, the
   same smoke run recovered and completed successfully through the Grok browser
   path.
+- 2026-04-25: Managed browser profile launches should not treat an occupied
+  configured fixed DevTools port as normal launch input after registry lookup
+  failed. Probe the configured fixed port at the launch fallback; if something
+  is already listening, switch that managed-profile launch to auto port
+  selection so stale shared browser-family ports do not pull another service's
+  browser into the run.

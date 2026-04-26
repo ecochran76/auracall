@@ -77,6 +77,7 @@ export class BrowserService {
         path.join(os.homedir(), '.browser-service', 'browser-profile');
       const profileName = this.resolvedConfig.chromeProfile ?? 'Default';
       const url = options.launchUrl ?? 'about:blank';
+      const launchDebugPort = await this.resolveLaunchDebugPort(options.defaultProfileDir);
       const { chrome } = await this.deps.launchManualLoginSession({
         chromePath: this.resolvedConfig.chromePath ?? 'google-chrome',
         profileName,
@@ -85,8 +86,8 @@ export class BrowserService {
         logger: () => undefined,
         hideWindow: this.resolvedConfig.hideWindow,
         debugPortRange: this.resolvedConfig.debugPortRange ?? undefined,
-        debugPort: this.resolvedConfig.debugPort ?? undefined,
-        debugPortStrategy: this.resolvedConfig.debugPortStrategy ?? undefined,
+        debugPort: launchDebugPort.debugPort,
+        debugPortStrategy: launchDebugPort.debugPortStrategy,
         serviceTabLimit: this.resolvedConfig.serviceTabLimit ?? undefined,
         blankTabLimit: this.resolvedConfig.blankTabLimit ?? undefined,
         collapseDisposableWindows: this.resolvedConfig.collapseDisposableWindows,
@@ -97,6 +98,27 @@ export class BrowserService {
       return { host, port, launched: true };
     }
     return { host, port, launched: false };
+  }
+
+  private async resolveLaunchDebugPort(defaultProfileDir?: string): Promise<{
+    debugPort?: number;
+    debugPortStrategy?: ResolvedBrowserConfig['debugPortStrategy'];
+  }> {
+    const debugPort = this.resolvedConfig.debugPort ?? undefined;
+    const debugPortStrategy = this.resolvedConfig.debugPortStrategy ?? undefined;
+    if (!defaultProfileDir || !debugPort || debugPortStrategy === 'auto') {
+      return { debugPort, debugPortStrategy };
+    }
+    const occupied = await isDevToolsResponsive({
+      host: '127.0.0.1',
+      port: debugPort,
+      attempts: 1,
+      timeoutMs: 500,
+    });
+    if (!occupied) {
+      return { debugPort, debugPortStrategy };
+    }
+    return { debugPort: undefined, debugPortStrategy: 'auto' };
   }
 
   async connectDevTools(): Promise<{ client: ChromeClient; port: number }> {

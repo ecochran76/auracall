@@ -21907,3 +21907,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `node --input-type=module ... resolveBrowserListTarget(...)`
   - `curl 'http://127.0.0.1:18085/v1/runs/resp_0019f0a06dff4d51b50114832bfceb43/status?diagnostics=browser-state'`
   - `/home/ecochran76/.local/bin/auracall run status resp_0019f0a06dff4d51b50114832bfceb43 --json`
+
+## 2026-04-25 - Managed launch fixed-port fallback
+
+- Focus: finish the debug-port ownership slice by preventing stale shared
+  fixed ports from driving managed browser profile launches.
+- Progress: the browser-service core launch fallback now probes a configured
+  fixed DevTools port before using it for a managed browser profile. If the
+  port is already occupied and registry/list-target lookup did not select it,
+  the launch falls back to auto port selection instead of trying to reuse a
+  likely cross-service endpoint.
+- Validation:
+  - `pnpm vitest run tests/browser-service/browserServiceCore.test.ts tests/browser/browserService.test.ts tests/browser-service/manualLogin.test.ts`

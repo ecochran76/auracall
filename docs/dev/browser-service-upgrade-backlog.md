@@ -84,6 +84,11 @@ and concrete:
     diagnostic goal: `auracall-grok-auto` targeted Grok port `38261` and
     `/v1/runs/{id}/status?diagnostics=browser-state` reported the queued
     browser operation blocked on the held `default/grok` lock.
+  - Follow-up fix: managed browser profile launch fallback now treats an
+    occupied configured fixed DevTools port as stale unless registry/list-target
+    selected it first. That keeps the profile registry as the normal authority
+    and leaves raw fixed ports as explicit attach/diagnostic paths rather than
+    accidental cross-service launch inputs.
 
 ## Current DOM-drift repair plan (2026-03-28)
 
