@@ -6,7 +6,11 @@ import { createGeminiApiMediaGenerationExecutor } from './geminiApiExecutor.js';
 import { createGeminiBrowserMediaGenerationExecutor } from './geminiBrowserExecutor.js';
 import { createGrokBrowserMediaGenerationExecutor } from './grokBrowserExecutor.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
-import { resolveManagedProfileDirForUserConfig } from '../browser/profileStore.js';
+import {
+  resolveManagedBrowserLaunchContextFromResolvedConfig,
+  resolveUserBrowserLaunchContext,
+} from '../browser/service/profileResolution.js';
+import type { BrowserProfileTarget } from '../browser/profileStore.js';
 import {
   buildBrowserOperationKey,
   createFileBackedBrowserOperationDispatcher,
@@ -119,7 +123,7 @@ function resolveBrowserMediaOperationInput(
       },
     };
   }
-  const managedProfileDir = resolveManagedProfileDirForUserConfig(userConfig, provider);
+  const managedProfileDir = resolveBrowserMediaManagedProfileDir(userConfig, provider);
   return {
     managedProfileDir,
     serviceTarget: provider,
@@ -127,6 +131,20 @@ function resolveBrowserMediaOperationInput(
     operationClass: 'exclusive-mutating' as const,
     ownerCommand: `media-generation:${provider}:${input.request.mediaType}`,
   };
+}
+
+function resolveBrowserMediaManagedProfileDir(
+  userConfig: ResolvedUserConfig,
+  provider: BrowserProfileTarget,
+): string {
+  const launchContext = resolveUserBrowserLaunchContext(userConfig, provider);
+  const managedLaunchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
+    auracallProfile: userConfig.auracallProfile ?? null,
+    browserProfileName: launchContext.resolution.profileFamily.browserProfileId ?? null,
+    browser: launchContext.resolvedConfig,
+    target: provider,
+  });
+  return managedLaunchContext.managedProfileDir;
 }
 
 function createBrowserOperationBusyError(result: BrowserOperationBusyResult): MediaGenerationExecutionError {

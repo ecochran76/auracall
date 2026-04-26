@@ -1,3 +1,11 @@
+- 2026-04-26: Browser-media operation queue keys must use the same managed
+  browser profile namespace as browser-service launch/attach. A runtime profile
+  like `auracall-grok-auto` can select browser family `default`; media
+  generation must therefore acquire the dispatcher lock for
+  `browser-profiles/default/grok`, not a runtime-profile-derived
+  `browser-profiles/auracall-grok-auto/grok`. The media executor now derives
+  its managed profile path through the shared browser launch-context resolver.
+
 - 2026-04-26: Identity-smoke launch must respect the selected browser profile
   namespace, not derive managed profile identity from the AuraCall runtime
   profile name. `auracall-grok-auto` selects browser family `default`, so a

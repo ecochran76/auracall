@@ -189,6 +189,76 @@ describe('browser media generation executor queueing', () => {
     await active.release();
   });
 
+  it('keys media browser operations by the selected browser profile namespace', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-media-browser-family-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const userConfig = {
+      auracallProfile: 'auracall-grok-auto',
+      browser: {
+        target: 'grok',
+        chromePath: '/usr/bin/google-chrome',
+        chromeProfile: 'Default',
+        managedProfileRoot: path.join(homeDir, 'browser-profiles'),
+        wslChromePreference: 'wsl',
+      },
+      profiles: {
+        'auracall-grok-auto': {
+          browserFamily: 'default',
+          defaultService: 'grok',
+        },
+      },
+      browserFamilies: {
+        default: {
+          chromePath: '/usr/bin/google-chrome',
+        },
+      },
+    } as never;
+    mediaExecutorMocks.grokBrowserExecutor.mockResolvedValueOnce({
+      artifacts: [
+        {
+          id: 'artifact_1',
+          type: 'image',
+          mimeType: 'image/png',
+        },
+      ],
+      metadata: {
+        executor: 'grok-browser-test',
+      },
+    });
+    const { createBrowserMediaGenerationExecutor } = await import('../src/media/browserExecutor.js');
+    const executor = createBrowserMediaGenerationExecutor(userConfig);
+    const timeline: Array<{ event: string; details?: Record<string, unknown> | null }> = [];
+
+    const result = await executor({
+      id: 'medgen_browser_family_1',
+      createdAt: '2026-04-25T12:00:00.000Z',
+      artifactDir: path.join(homeDir, 'artifacts'),
+      emitTimeline: async (event) => {
+        timeline.push(event);
+      },
+      request: {
+        provider: 'grok',
+        mediaType: 'image',
+        prompt: 'Generate an image of an asphalt secret agent',
+        transport: 'browser',
+      },
+    });
+
+    expect(result.artifacts).toMatchObject([{ id: 'artifact_1' }]);
+    expect(timeline).toHaveLength(1);
+    expect(timeline[0]).toMatchObject({
+      event: 'browser_operation_acquired',
+      details: {
+        dispatcherKey: `managed-profile:${path.join(homeDir, 'browser-profiles', 'default', 'grok')}::service:grok`,
+        operation: {
+          managedProfileDir: path.join(homeDir, 'browser-profiles', 'default', 'grok'),
+          serviceTarget: 'grok',
+        },
+      },
+    });
+  });
+
   it('uses a raw DevTools dispatcher key for explicit Grok video readback probes', async () => {
     const { resolveBrowserMediaOperationKeyForTest } = await import('../src/media/browserExecutor.js');
     const key = resolveBrowserMediaOperationKeyForTest({} as never, {

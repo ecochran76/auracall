@@ -62,6 +62,21 @@
   --include-negative --json`, reporting managed profile
   `~/.auracall/browser-profiles/default/grok` and identity
   `ez86944@gmail.com`.
+- Media queue follow-up: installed Grok media dogfood then exposed the same
+  namespace issue in the browser-media dispatcher metadata. The run attached to
+  the healthy `default/grok` browser but reported a dispatcher key derived from
+  `auracall-grok-auto/grok`. Source now derives media operation managed profile
+  paths through the shared browser launch-context resolver, and focused tests
+  prove the acquired key is `browser-profiles/default/grok` for the
+  `auracall-grok-auto` runtime profile.
+- Installed-runtime recheck: after `pnpm run install:user-runtime`, the
+  installed `auracall-grok-auto` identity gate passed and reported
+  `managed-profile:~/.auracall/browser-profiles/default/grok::service:grok`.
+  Installed media smoke `medgen_d18550b966b146bab6395535dc6ac59c` also
+  reported the same media dispatcher key, stayed on `https://grok.com/imagine`,
+  and cached four current visible data-url image tiles. The remaining provider
+  gap is still full-quality download discovery:
+  `fullQualityDownload.reason = download-button-missing`.
 
 ## 2026-04-26 - Grok browser auth/account preflight
 

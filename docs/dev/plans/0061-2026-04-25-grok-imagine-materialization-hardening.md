@@ -106,6 +106,18 @@ profile, queued dispatcher, and registry-first DevTools authority.
   `auracall-grok-auto` points at browser family `default`. Source validation
   proved `auracall-grok-auto` launches/probes `browser-profiles/default/grok`
   instead of the runtime-profile-derived `browser-profiles/auracall-grok-auto/grok`.
+- Source follow-up: browser-media operation queueing now uses the same
+  browser-family-aware launch-context resolver. The dispatcher key and
+  `managedProfileDir` for `auracall-grok-auto` media runs now resolve to
+  `browser-profiles/default/grok`, matching the browser service attach/launch
+  authority instead of only the AuraCall runtime profile name.
+- Installed-runtime dogfood after refreshing the user runtime created
+  `medgen_d18550b966b146bab6395535dc6ac59c`. The media timeline acquired
+  `managed-profile:~/.auracall/browser-profiles/default/grok::service:grok`,
+  matching the identity-smoke gate and browser service authority. The run
+  stayed on `https://grok.com/imagine` and cached four current visible
+  data-url image tiles. Full-quality comparison remains open with
+  `download-button-missing`.
 
 ## Scope
 
@@ -120,6 +132,9 @@ profile, queued dispatcher, and registry-first DevTools authority.
   materially different from the visible preview artifact.
 - Keep all CDP interactions behind browser-service dispatcher/control-plane
   paths or explicit raw-debug escape hatches.
+- Ensure dispatcher queue keys, browser launch/attach paths, status metadata,
+  and provider adapters agree on the selected managed browser profile namespace
+  before live dogfood is considered valid.
 
 ## Non-Goals
 
@@ -146,6 +161,8 @@ profile, queued dispatcher, and registry-first DevTools authority.
   selected AuraCall runtime profile has no expected Grok identity configured.
 - A focused regression test covers visible-tile multi-artifact materialization
   and full-quality download comparison metadata without live provider work.
+- A focused regression test covers browser-media dispatcher key derivation for
+  runtime profiles that select a different browser profile family.
 - One narrow installed-runtime dogfood run proves the live path after focused
   tests pass.
 
