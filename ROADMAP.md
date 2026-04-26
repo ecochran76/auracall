@@ -15,8 +15,8 @@ Current State:
 - planning-authority migration is complete
 - the current product sequence is now pruned to one primary active
   implementation lane:
-  - service/runner orchestration beyond the current single-host bounded
-    local-runner bridge
+  - Grok Imagine materialization hardening after the browser-service
+    control-plane live proof
 - supporting maintenance work is allowed only when it directly protects that
   lane or fixes a newly reproduced mismatch
 - closed browser reliability exception:
@@ -35,7 +35,8 @@ Current State:
   - service-state/passive monitoring is maintenance-only unless a new
     provider-owned evidence seam appears
   - config/browser/provider work stays bounded maintenance or side-track work
-    until explicitly selected as the primary lane
+    unless explicitly selected as the primary lane; Plan 0061 is the current
+    selected provider slice
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local
@@ -51,6 +52,13 @@ Current State:
         remains the active priority
     - xAI API image/video execution and Grok edit/reference workflows remain
       deferred until selected by a separate bounded plan
+  - [docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md)
+    is open as the next browser-first provider slice after the browser-service
+    control-plane fixes
+    - focus: harden Grok Imagine multi-image visible-tile materialization,
+      default visible capture count `8`, preview-vs-full-quality download
+      comparison evidence, and installed-runtime dogfood
+    - non-goal: xAI API media execution and Grok edit/reference workflows
   - [docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md)
     is closed for the more general discovery/reporting model for rapidly changing
     chat-workbench capabilities such as Deep Research, ChatGPT apps,
@@ -922,12 +930,13 @@ Safety note:
 
 ### Now
 
-- Primary active lane checkpoint: service mode and runner orchestration is
+- Primary active lane checkpoint: service mode and runner orchestration remains
   paused after the current single-host bounded local-runner bridge reached a
   coherent ownership checkpoint
-- Immediate next action: reconcile and review the accumulated service/runner
-  and browser-service checkpoints before selecting any new primary
-  implementation lane
+- Immediate next action: execute
+  [docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md)
+  against the installed `auracall-grok-auto` runtime now that Grok profile,
+  fixed-port, queued-dispatch, and status-diagnostics behavior are live-proven
 - Supporting maintenance: bounded config/team-service corrections only when
   they are required to preserve the primary lane's existing semantics
 - Supporting maintenance: roadmap, runbook, and validation hygiene that keeps
@@ -939,9 +948,10 @@ Safety note:
   until the installed copy has carried normal use for a short period
 - Current provider-drift checkpoint:
   - plain `grok` now resolves to current `grok-4.20` text support
-  - next bounded implementation target is first-class media generation across
-    CLI, local API, and MCP, tracked in
+  - first-class media generation across CLI, local API, and MCP is closed in
     [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
+  - the next bounded implementation target is Grok Imagine materialization
+    hardening under Plan 0061
 
 ### Soon
 
@@ -1011,6 +1021,7 @@ Current focused reliability slice:
 - [docs/dev/plans/0048-2026-04-22-grok-model-drift-checkpoint.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0048-2026-04-22-grok-model-drift-checkpoint.md) (closed)
 - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md) (closed)
 - [docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md) (closed)
+- [docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md) (open)
 
 ### Browser Automation Drift Repairs
 See [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md).

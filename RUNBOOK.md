@@ -2017,3 +2017,22 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run check`
   - `pnpm run plans:audit -- --keep 60`
   - `git diff --check`
+
+## Turn 69 | 2026-04-25
+
+- Continued implementation plan:
+  `docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md`
+- Goal: close the browser-service control-plane detour and return the active
+  execution board to Grok Imagine materialization hardening.
+- Change:
+  - opened Plan 0061 as the bounded follow-up for Grok Imagine multi-image
+    visible-tile materialization, default count `8`, preview-vs-full-quality
+    download comparison evidence, and installed-runtime dogfood
+  - updated `ROADMAP.md` so Plan 0061 is the selected active provider slice
+    after the profile, fixed-port, queued-dispatch, and status-diagnostics
+    browser-service proofs
+  - kept xAI API media execution and Grok edit/reference workflows deferred to
+    later bounded plans
+- Verification target:
+  - `pnpm run plans:audit -- --keep 61`
+  - `git diff --check`

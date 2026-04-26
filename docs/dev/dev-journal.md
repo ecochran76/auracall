@@ -21938,3 +21938,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `GET /v1/responses/resp_3ba7d7621c084558814b6453a1ece212`
   - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto capabilities --target grok --diagnostics browser-state --json`
   - `~/.auracall/browser-state.json` registry readback
+
+## 2026-04-25 - Grok Imagine materialization plan handoff
+
+- Focus: close the browser-service control-plane detour and make the next
+  provider slice explicit.
+- Progress: opened Plan 0061 for Grok Imagine materialization hardening and
+  updated the roadmap/runbook so the active next implementation target is
+  multi-image visible-tile capture, default count `8`, preview-vs-full-quality
+  download comparison evidence, and one installed-runtime Grok dogfood run.
+- Validation:
+  - `pnpm run plans:audit -- --keep 61`
+  - `git diff --check`

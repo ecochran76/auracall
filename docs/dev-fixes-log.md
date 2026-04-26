@@ -14494,3 +14494,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `resp_3ba7d7621c084558814b6453a1ece212`, Grok diagnostics targeted
   `default/grok` on port `38261`, and registry readback still showed Gemini
   isolated on `default/gemini` port `45011`.
+- 2026-04-25: Do not reopen a closed provider research checkpoint just because
+  browser-service hardening temporarily interrupted provider work. Keep the
+  closed Grok Imagine Plan 0054 as history and open a narrow follow-up plan
+  for the next materialization slice, with browser-service control-plane work
+  treated as proven substrate unless a fresh mismatch appears.
