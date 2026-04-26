@@ -14499,3 +14499,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   closed Grok Imagine Plan 0054 as history and open a narrow follow-up plan
   for the next materialization slice, with browser-service control-plane work
   treated as proven substrate unless a fresh mismatch appears.
+- 2026-04-25: Grok Imagine full-quality download comparison is only useful to
+  operators if status surfaces preserve the comparison metadata, not just the
+  artifact file path. Compact media status now carries checksum,
+  previewArtifactId, preview checksum/size, and
+  fullQualityDiffersFromPreview for materialized artifacts.

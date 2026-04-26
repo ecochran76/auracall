@@ -23,6 +23,10 @@ profile, queued dispatcher, and registry-first DevTools authority.
 - Grok Imagine can produce multiple images per prompt. The current default
   capture target is the visible generated-tile set, with a sensible default
   limit of `8` so routine smokes do not scroll-trigger additional generation.
+- First Plan 0061 slice: compact media status now preserves checksum and
+  preview-vs-full-quality comparison metadata, and the focused adapter
+  regression proves multiple visible tiles plus one linked full-quality
+  download comparison artifact without live provider work.
 
 ## Scope
 

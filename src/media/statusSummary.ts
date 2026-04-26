@@ -17,6 +17,11 @@ export interface MediaGenerationArtifactStatusSummary {
   durationSeconds?: number | null;
   materialization?: string | null;
   remoteUrl?: string | null;
+  checksumSha256?: string | null;
+  previewArtifactId?: string | null;
+  previewSize?: number | null;
+  previewChecksumSha256?: string | null;
+  fullQualityDiffersFromPreview?: boolean | null;
   downloadLabel?: string | null;
   downloadVariant?: string | null;
   downloadOptions?: string[] | null;
@@ -136,6 +141,11 @@ function summarizeArtifact(artifact: MediaGenerationArtifact): MediaGenerationAr
     durationSeconds: artifact.durationSeconds ?? null,
     materialization: stringOrNull(metadata.materialization),
     remoteUrl: stringOrNull(metadata.remoteUrl),
+    checksumSha256: stringOrNull(metadata.checksumSha256),
+    previewArtifactId: stringOrNull(metadata.previewArtifactId),
+    previewSize: numberOrNull(metadata.previewSize),
+    previewChecksumSha256: stringOrNull(metadata.previewChecksumSha256),
+    fullQualityDiffersFromPreview: booleanOrNull(metadata.fullQualityDiffersFromPreview),
     downloadLabel: stringOrNull(metadata.downloadLabel),
     downloadVariant: stringOrNull(metadata.downloadVariant),
     downloadOptions: stringArrayOrNull(metadata.downloadOptions),

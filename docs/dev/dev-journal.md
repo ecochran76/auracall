@@ -21950,3 +21950,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm run plans:audit -- --keep 61`
   - `git diff --check`
+
+## 2026-04-25 - Grok Imagine materialization status evidence
+
+- Focus: start Plan 0061 with a code-level materialization audit and the first
+  non-live hardening slice.
+- Progress: compact media status now preserves per-artifact checksum and
+  preview-vs-full-quality comparison evidence. The Grok adapter regression now
+  proves multiple visible image tiles are captured in one materialization pass
+  while the full-quality download comparison remains linked to the first
+  preview artifact.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run plans:audit -- --keep 61`
+  - `git diff --check`

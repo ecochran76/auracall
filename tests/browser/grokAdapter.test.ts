@@ -793,7 +793,7 @@ describe('Grok Imagine materialization', () => {
       const files = await adapter.materializeActiveMediaArtifacts!(
         {
           capabilityId: 'grok.media.imagine_image',
-          maxItems: 1,
+          maxItems: 3,
           compareFullQuality: true,
         },
         destDir,
@@ -804,7 +804,7 @@ describe('Grok Imagine materialization', () => {
         },
       );
 
-      expect(files).toHaveLength(2);
+      expect(files).toHaveLength(4);
       expect(files[0]).toMatchObject({
         id: 'grok_imagine_visible_1',
         name: 'grok-imagine-visible-1.jpg',
@@ -817,6 +817,28 @@ describe('Grok Imagine materialization', () => {
         },
       });
       expect(files[1]).toMatchObject({
+        id: 'grok_imagine_visible_2',
+        name: 'grok-imagine-visible-2.jpg',
+        provider: 'grok',
+        mimeType: 'image/jpeg',
+        metadata: {
+          materialization: 'visible-tile-browser-capture',
+          srcKind: 'data-url',
+          captureMethod: 'data-url',
+        },
+      });
+      expect(files[2]).toMatchObject({
+        id: 'grok_imagine_visible_3',
+        name: 'grok-imagine-visible-3.jpg',
+        provider: 'grok',
+        mimeType: 'image/jpeg',
+        metadata: {
+          materialization: 'visible-tile-browser-capture',
+          srcKind: 'data-url',
+          captureMethod: 'data-url',
+        },
+      });
+      expect(files[3]).toMatchObject({
         id: 'grok_imagine_full_quality_1',
         name: 'grok-imagine-full-quality.jpg',
         provider: 'grok',
@@ -826,9 +848,11 @@ describe('Grok Imagine materialization', () => {
           previewArtifactId: 'grok_imagine_visible_1',
         },
       });
-      expect(files[1]?.metadata?.fullQualityDiffersFromPreview).toBe(true);
+      expect(files[3]?.metadata?.fullQualityDiffersFromPreview).toBe(true);
       await expect(fs.stat(files[0]!.localPath!)).resolves.toMatchObject({ size: files[0]!.size });
       await expect(fs.stat(files[1]!.localPath!)).resolves.toMatchObject({ size: files[1]!.size });
+      await expect(fs.stat(files[2]!.localPath!)).resolves.toMatchObject({ size: files[2]!.size });
+      await expect(fs.stat(files[3]!.localPath!)).resolves.toMatchObject({ size: files[3]!.size });
     } finally {
       await fs.rm(destDir, { recursive: true, force: true });
     }
@@ -891,9 +915,13 @@ async function runGrokImaginePromptModeSelectionTest(input: {
 
 function createFakeGrokImagineMaterializationClient(destDir: string) {
   let downloadName: string | null = null;
-  const visibleBytes = Buffer.from('visible tile jpeg bytes');
+  const visibleBytes = [
+    Buffer.from('visible tile one jpeg bytes'),
+    Buffer.from('visible tile two jpeg bytes'),
+    Buffer.from('visible tile three jpeg bytes'),
+  ];
   const fullQualityBytes = Buffer.from('full quality jpeg bytes are different');
-  const visibleDataUrl = `data:image/jpeg;base64,${visibleBytes.toString('base64')}`;
+  const visibleDataUrls = visibleBytes.map((bytes) => `data:image/jpeg;base64,${bytes.toString('base64')}`);
   const evaluate = vi.fn(async ({ expression }: { expression: string }) => {
     if (expression.includes('Browser.setDownloadBehavior') || expression.includes('Page.setDownloadBehavior')) {
       return { result: { value: true } };
@@ -905,25 +933,25 @@ function createFakeGrokImagineMaterializationClient(destDir: string) {
       return { result: { value: { href: 'https://grok.com/imagine', title: 'Imagine - Grok' } } };
     }
     if (expression.includes('const maxItems =') && expression.includes('const selectors =')) {
+      const maxItemsMatch = expression.match(/const maxItems = ([0-9]+)/);
+      const maxItems = maxItemsMatch ? Number(maxItemsMatch[1]) : 1;
       return {
         result: {
           value: {
-            tiles: [
-              {
-                ordinal: 1,
-                src: visibleDataUrl,
-                srcKind: 'data-url',
-                x: 10,
-                y: 20,
-                width: 256,
-                height: 256,
-                naturalWidth: 512,
-                naturalHeight: 512,
-                selected: false,
-                dataUrl: visibleDataUrl,
-                error: null,
-              },
-            ],
+            tiles: visibleDataUrls.slice(0, maxItems).map((dataUrl, index) => ({
+              ordinal: index + 1,
+              src: dataUrl,
+              srcKind: 'data-url',
+              x: 10 + index * 20,
+              y: 20 + index * 20,
+              width: 256,
+              height: 256,
+              naturalWidth: 512,
+              naturalHeight: 512,
+              selected: index === 0,
+              dataUrl,
+              error: null,
+            })),
           },
         },
       };
@@ -952,7 +980,7 @@ function createFakeGrokImagineMaterializationClient(destDir: string) {
   return {
     Page: {
       enable: vi.fn(async () => undefined),
-      captureScreenshot: vi.fn(async () => ({ data: visibleBytes.toString('base64') })),
+      captureScreenshot: vi.fn(async () => ({ data: visibleBytes[0]!.toString('base64') })),
     },
     Runtime: {
       enable: vi.fn(async () => undefined),

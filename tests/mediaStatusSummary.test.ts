@@ -199,6 +199,22 @@ describe('media generation status summary', () => {
           mimeType: 'image/png',
           metadata: {
             materialization: 'visible-tile-browser-capture',
+            checksumSha256: 'preview-sha',
+          },
+        },
+        {
+          id: 'grok_imagine_full_quality_1',
+          type: 'image',
+          fileName: 'grok-imagine-full-quality.jpg',
+          path: '/tmp/grok-imagine-full-quality.jpg',
+          mimeType: 'image/jpeg',
+          metadata: {
+            materialization: 'download-button',
+            checksumSha256: 'full-sha',
+            previewArtifactId: 'grok_imagine_visible_1',
+            previewSize: 12345,
+            previewChecksumSha256: 'preview-sha',
+            fullQualityDiffersFromPreview: true,
           },
         },
       ],
@@ -234,6 +250,22 @@ describe('media generation status summary', () => {
       tabTargetId: 'grok-tab-1',
       capabilityId: 'grok.media.imagine_image',
     });
+    expect(summary.artifacts).toMatchObject([
+      {
+        id: 'grok_imagine_visible_1',
+        materialization: 'visible-tile-browser-capture',
+        checksumSha256: 'preview-sha',
+      },
+      {
+        id: 'grok_imagine_full_quality_1',
+        materialization: 'download-button',
+        checksumSha256: 'full-sha',
+        previewArtifactId: 'grok_imagine_visible_1',
+        previewSize: 12345,
+        previewChecksumSha256: 'preview-sha',
+        fullQualityDiffersFromPreview: true,
+      },
+    ]);
   });
 
   it('summarizes provider path, run state, and materialization diagnostics from persisted timeline', () => {
