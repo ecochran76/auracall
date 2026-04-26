@@ -875,6 +875,9 @@ describe('Grok Imagine materialization', () => {
         },
       });
       expect(files[3]?.metadata?.fullQualityDiffersFromPreview).toBe(true);
+      const evalExpressions = client.Runtime.evaluate.mock.calls.map(([arg]) => String(arg.expression ?? ''));
+      expect(evalExpressions.some((expression) => expression.includes('isSubstantialRemotePreview'))).toBe(true);
+      expect(evalExpressions.some((expression) => expression.includes('rect.width >= 120'))).toBe(true);
       await expect(fs.stat(files[0]!.localPath!)).resolves.toMatchObject({ size: files[0]!.size });
       await expect(fs.stat(files[1]!.localPath!)).resolves.toMatchObject({ size: files[1]!.size });
       await expect(fs.stat(files[2]!.localPath!)).resolves.toMatchObject({ size: files[2]!.size });

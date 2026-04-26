@@ -1,3 +1,10 @@
+- 2026-04-26: Do not let tiny remote Grok Imagine thumbnails satisfy media
+  materialization. Live installed run
+  `medgen_daab8a2e82674e8e8b17ce799a31087b` reported generated images but
+  selected a stale 48 px `assets.grok.com` image as the only artifact; remote
+  Grok generated assets now need to be displayed as a substantial preview
+  before they count, while current data-url/blob masonry outputs still count.
+
 - 2026-04-25: Browser media materialization needs bounded provider diagnostics
   before repeated live smokes. For Grok Imagine, record selected tile
   fingerprints, source kind/length/prefix, capture outcome, and full-quality

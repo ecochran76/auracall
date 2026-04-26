@@ -1,3 +1,27 @@
+## 2026-04-26 - Grok Imagine thumbnail rejection and download diagnostics
+
+- Focus: continue Plan 0061 with installed Grok dogfood evidence instead of
+  adding more browser churn.
+- Progress: refreshed the user runtime and ran two installed CLI Grok image
+  smokes through `auracall-grok-auto`. Run
+  `medgen_549e131d631745ba8a9f5a38164b34d6` stayed on
+  `https://grok.com/imagine`, reported `requestedVisibleTileCount = 8`, and
+  cached five visible artifacts, including four current masonry data-url tiles.
+  The same diagnostics showed full-quality download selection still failing
+  with `download-button-missing`. Run
+  `medgen_daab8a2e82674e8e8b17ce799a31087b` exposed a stricter bug: when
+  current masonry tiles were not materializable, a stale 48 px remote
+  `assets.grok.com` preview could satisfy artifact capture.
+- Fix: keep the richer full-quality download diagnostics and reject tiny
+  remote Grok generated assets as materialization/download candidates unless
+  they are displayed as a substantial preview. Current data-url/blob masonry
+  outputs remain eligible.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run plans:audit -- --keep 61`
+  - `git diff --check`
+
 ## 2026-04-25 - Grok Imagine materialization diagnostics
 
 - Focus: make the next Grok live smoke diagnosable without extra browser churn

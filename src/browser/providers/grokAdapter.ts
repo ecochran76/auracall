@@ -1475,6 +1475,10 @@ type GrokFullQualityDownloadDiagnostic = {
   ok: boolean;
   reason: string | null;
   clicked: boolean | null;
+  tileCandidateCount?: number | null;
+  selectedTileSourceFingerprint?: string | null;
+  downloadButtonCandidateCount?: number | null;
+  downloadButtonLabels?: string[] | null;
   downloadName: string | null;
   remoteUrl: string | null;
   fileName: string | null;
@@ -1670,6 +1674,12 @@ async function captureGrokImagineVisibleImageTiles(
       const seen = new Set();
       const candidates = [];
       const isTemplateRoute = /\\/imagine\\/templates\\//.test(location.pathname);
+      const isRemoteGeneratedAsset = (src) => /assets\\.grok\\.com\\/users\\//.test(src) || /\\/generated\\//.test(src);
+      const isSubstantialRemotePreview = (src, rect) =>
+        isRemoteGeneratedAsset(src) &&
+        rect.width >= 120 &&
+        rect.height >= 120 &&
+        rect.width * rect.height >= 40_000;
       for (const selector of selectors) {
         for (const img of Array.from(document.querySelectorAll(selector))) {
           if (!(img instanceof HTMLImageElement) || seen.has(img) || !visible(img)) continue;
@@ -1678,14 +1688,14 @@ async function captureGrokImagineVisibleImageTiles(
           const rect = img.getBoundingClientRect();
           const area = rect.width * rect.height;
           const templateShareImage = isTemplateRoute && /imagine-public\\.x\\.ai\\/imagine-public\\/share-images\\//.test(src) && area >= 100_000;
-          const generated = src.startsWith('data:image/') || src.startsWith('blob:') || /assets\\.grok\\.com\\/users\\//.test(src) || /\\/generated\\//.test(src) || templateShareImage;
+          const generated = src.startsWith('data:image/') || src.startsWith('blob:') || isSubstantialRemotePreview(src, rect) || templateShareImage;
           if (!generated) continue;
           const masonryGenerated = Boolean(img.closest('[id^="imagine-masonry-section"], [data-filmstrip-scroll="true"]'));
           const generatedScore =
             masonryGenerated && src.startsWith('data:image/') ? 3_000_000 :
             src.startsWith('data:image/') ? 2_750_000 :
             src.startsWith('blob:') ? 2_500_000 :
-            /assets\\.grok\\.com\\/users\\//.test(src) || /\\/generated\\//.test(src) ? 1_750_000 :
+            isSubstantialRemotePreview(src, rect) ? 1_750_000 :
             templateShareImage ? 1_000_000 :
             0;
           const tileSurface = masonryGenerated
@@ -1789,6 +1799,10 @@ async function materializeGrokFullQualityDownload(
     ok: false,
     reason: null,
     clicked: null,
+    tileCandidateCount: null,
+    selectedTileSourceFingerprint: null,
+    downloadButtonCandidateCount: null,
+    downloadButtonLabels: null,
     downloadName: null,
     remoteUrl: null,
     fileName: null,
@@ -1802,13 +1816,93 @@ async function materializeGrokFullQualityDownload(
       const visible = (node) => {
         if (!(node instanceof HTMLElement)) return false;
         const style = getComputedStyle(node);
-        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        if (style.display === 'none' || style.visibility === 'hidden') return false;
         const rect = node.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
       };
+      const sourceFingerprint = async (value) => {
+        if (!value || !globalThis.crypto?.subtle) return null;
+        try {
+          const bytes = new TextEncoder().encode(value);
+          const hash = await crypto.subtle.digest('SHA-256', bytes);
+          return Array.from(new Uint8Array(hash)).slice(0, 8).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+        } catch {
+          return null;
+        }
+      };
       const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-      const firstTile = Array.from(document.querySelectorAll('img[src*="imagine-public.x.ai/imagine-public/share-images/"], #imagine-masonry-section-0 img, main img[src^="data:image/"], main img[src^="blob:"], img[src*="assets.grok.com/users/"], main img[src*="/generated/"]'))
-        .filter((node) => node instanceof HTMLElement && visible(node))
+      const firePointerSequence = (node) => {
+        if (!(node instanceof HTMLElement)) return;
+        const rect = node.getBoundingClientRect();
+        const clientX = Math.max(1, Math.round(rect.left + rect.width / 2));
+        const clientY = Math.max(1, Math.round(rect.top + rect.height / 2));
+        const init = { bubbles: true, cancelable: true, composed: true, clientX, clientY, pointerId: 1, pointerType: 'mouse', isPrimary: true };
+        for (const eventName of ['pointerover', 'mouseover', 'pointermove', 'mousemove', 'pointerenter', 'mouseenter']) {
+          try {
+            const event = eventName.startsWith('pointer')
+              ? new PointerEvent(eventName, init)
+              : new MouseEvent(eventName, init);
+            node.dispatchEvent(event);
+          } catch {
+            node.dispatchEvent(new Event(eventName, { bubbles: true, cancelable: true }));
+          }
+        }
+      };
+      const activate = async (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        node.scrollIntoView({ block: 'center', inline: 'center' });
+        await sleep(100);
+        const clickable = node.closest('button,[role="button"],a,[data-filmstrip-item="true"]') || node;
+        for (const target of [node, clickable]) {
+          if (target instanceof HTMLElement) {
+            firePointerSequence(target);
+            target.focus?.({ preventScroll: true });
+          }
+        }
+        await sleep(250);
+        firePointerSequence(clickable);
+        clickable.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true }));
+        clickable.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true }));
+        clickable.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+        clickable.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+        clickable.click();
+        await sleep(900);
+        firePointerSequence(clickable);
+        await sleep(300);
+        return true;
+      };
+      const downloadButtonSelector = [
+        'button[data-test-id="download-generated-image-button"]',
+        'button[aria-label*="Download" i]',
+        'button[title*="Download" i]',
+        'button[mattooltip*="Download" i]',
+        '[role="button"][aria-label*="Download" i]',
+        '[aria-label*="Download full size" i]',
+      ].join(',');
+      const readButtonLabels = (buttons) => buttons.slice(0, 8).map((button) => {
+        if (!(button instanceof HTMLElement)) return '';
+        return button.getAttribute('aria-label') ||
+          button.getAttribute('title') ||
+          button.getAttribute('mattooltip') ||
+          button.textContent?.trim() ||
+          button.querySelector('mat-icon')?.getAttribute('fonticon') ||
+          '';
+      }).filter(Boolean);
+      const findDownloadButtons = () => Array.from(document.querySelectorAll(downloadButtonSelector))
+        .filter((node) => node instanceof HTMLElement && visible(node) && !node.disabled && node.getAttribute('aria-disabled') !== 'true');
+      const isRemoteGeneratedAsset = (src) => /assets\\.grok\\.com\\/users\\//.test(src) || /\\/generated\\//.test(src);
+      const isSubstantialRemotePreview = (src, rect) =>
+        isRemoteGeneratedAsset(src) &&
+        rect.width >= 120 &&
+        rect.height >= 120 &&
+        rect.width * rect.height >= 40_000;
+      const tileCandidates = Array.from(document.querySelectorAll('img[src*="imagine-public.x.ai/imagine-public/share-images/"], #imagine-masonry-section-0 img, main img[src^="data:image/"], main img[src^="blob:"], img[src*="assets.grok.com/users/"], main img[src*="/generated/"]'))
+        .filter((node) => {
+          if (!(node instanceof HTMLImageElement) || !visible(node)) return false;
+          const src = node.currentSrc || node.src || '';
+          const rect = node.getBoundingClientRect();
+          return src.startsWith('data:image/') || src.startsWith('blob:') || isSubstantialRemotePreview(src, rect);
+        })
         .sort((a, b) => {
           const score = (node) => {
             const rect = node.getBoundingClientRect();
@@ -1818,30 +1912,62 @@ async function materializeGrokFullQualityDownload(
               masonryGenerated && src.startsWith('data:image/') ? 3_000_000 :
               src.startsWith('data:image/') ? 2_750_000 :
               src.startsWith('blob:') ? 2_500_000 :
-              /assets\\.grok\\.com\\/users\\//.test(src) || /\\/generated\\//.test(src) ? 1_750_000 :
+              isSubstantialRemotePreview(src, rect) ? 1_750_000 :
               0;
             return generatedScore + rect.width * rect.height;
           };
           return score(b) - score(a);
-        })[0] || null;
+        });
+      const firstTile = tileCandidates[0] || null;
+      let selectedTileSourceFingerprint = null;
       if (firstTile instanceof HTMLElement && visible(firstTile)) {
-        (firstTile.closest('button,[role="button"],a') || firstTile).dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
-        (firstTile.closest('button,[role="button"],a') || firstTile).click();
-        await sleep(700);
+        const src = firstTile instanceof HTMLImageElement ? (firstTile.currentSrc || firstTile.src || '') : '';
+        selectedTileSourceFingerprint = await sourceFingerprint(src);
+        await activate(firstTile);
       }
-      const buttons = Array.from(document.querySelectorAll('button[aria-label*="Download" i], button[title*="Download" i], [role="button"][aria-label*="Download" i]'))
-        .filter((node) => visible(node) && !node.disabled && node.getAttribute('aria-disabled') !== 'true');
+      let buttons = findDownloadButtons();
+      if (buttons.length === 0 && firstTile instanceof HTMLElement) {
+        const anchors = [firstTile, firstTile.parentElement, firstTile.closest('[class*="group"],[class*="relative"],[role="button"],button,a')].filter(Boolean);
+        for (const anchor of anchors) {
+          if (!(anchor instanceof HTMLElement)) continue;
+          firePointerSequence(anchor);
+          await sleep(250);
+          buttons = findDownloadButtons();
+          if (buttons.length > 0) break;
+        }
+      }
       const button = buttons[0] || null;
       if (!(button instanceof HTMLElement)) {
-        return { ok: false, reason: 'download-button-missing' };
+        return {
+          ok: false,
+          reason: 'download-button-missing',
+          tileCandidateCount: tileCandidates.length,
+          selectedTileSourceFingerprint,
+          downloadButtonCandidateCount: buttons.length,
+          downloadButtonLabels: readButtonLabels(buttons),
+        };
       }
+      firePointerSequence(button);
       button.click();
-      return { ok: true };
+      return {
+        ok: true,
+        tileCandidateCount: tileCandidates.length,
+        selectedTileSourceFingerprint,
+        downloadButtonCandidateCount: buttons.length,
+        downloadButtonLabels: readButtonLabels(buttons),
+      };
     })()`,
     awaitPromise: true,
     returnByValue: true,
   });
-  const clickedValue = clicked.result?.value as { ok?: boolean; reason?: string } | undefined;
+  const clickedValue = clicked.result?.value as {
+    ok?: boolean;
+    reason?: string;
+    tileCandidateCount?: number;
+    selectedTileSourceFingerprint?: string | null;
+    downloadButtonCandidateCount?: number;
+    downloadButtonLabels?: string[];
+  } | undefined;
   if (clickedValue?.ok !== true) {
     return {
       file: null,
@@ -1849,6 +1975,10 @@ async function materializeGrokFullQualityDownload(
         ...baseDiagnostics,
         clicked: false,
         reason: clickedValue?.reason ?? 'download-click-failed',
+        tileCandidateCount: numberOrNull(clickedValue?.tileCandidateCount),
+        selectedTileSourceFingerprint: clickedValue?.selectedTileSourceFingerprint ?? null,
+        downloadButtonCandidateCount: numberOrNull(clickedValue?.downloadButtonCandidateCount),
+        downloadButtonLabels: Array.isArray(clickedValue?.downloadButtonLabels) ? clickedValue.downloadButtonLabels : null,
       },
     };
   }
@@ -1877,6 +2007,10 @@ async function materializeGrokFullQualityDownload(
         reason: 'download-file-missing',
         downloadName: capture.downloadName ?? null,
         remoteUrl,
+        tileCandidateCount: numberOrNull(clickedValue.tileCandidateCount),
+        selectedTileSourceFingerprint: clickedValue.selectedTileSourceFingerprint ?? null,
+        downloadButtonCandidateCount: numberOrNull(clickedValue.downloadButtonCandidateCount),
+        downloadButtonLabels: Array.isArray(clickedValue.downloadButtonLabels) ? clickedValue.downloadButtonLabels : null,
       },
     };
   }
@@ -1911,6 +2045,10 @@ async function materializeGrokFullQualityDownload(
       ok: true,
       reason: null,
       clicked: true,
+      tileCandidateCount: numberOrNull(clickedValue.tileCandidateCount),
+      selectedTileSourceFingerprint: clickedValue.selectedTileSourceFingerprint ?? null,
+      downloadButtonCandidateCount: numberOrNull(clickedValue.downloadButtonCandidateCount),
+      downloadButtonLabels: Array.isArray(clickedValue.downloadButtonLabels) ? clickedValue.downloadButtonLabels : null,
       downloadName: capture.downloadName ?? path.basename(filePath),
       remoteUrl,
       fileName: path.basename(filePath),

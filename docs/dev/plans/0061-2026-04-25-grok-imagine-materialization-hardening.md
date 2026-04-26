@@ -57,10 +57,24 @@ profile, queued dispatcher, and registry-first DevTools authority.
   metadata and the `artifact_poll` timeline: selected tile fingerprints,
   source kind/length/prefix, score/surface, capture outcomes, and
   full-quality download attempted/clicked/file/reason state.
+- Installed-runtime dogfood on 2026-04-26 created
+  `medgen_549e131d631745ba8a9f5a38164b34d6` after refreshing the user runtime.
+  It stayed on `https://grok.com/imagine`, reported
+  `requestedVisibleTileCount = 8`, cached five visible artifacts, and proved
+  the diagnostics can distinguish four current masonry data-url tiles from one
+  remote preview. The full-quality path still reported
+  `download-button-missing`.
+- Follow-up installed-runtime dogfood
+  `medgen_daab8a2e82674e8e8b17ce799a31087b` exposed that remote
+  `assets.grok.com` residue can be stale and tiny: it selected a 48 px preview
+  even though run state reported generated images. Source now rejects tiny
+  remote Grok generated assets as visible-tile and download-selection
+  candidates unless they are displayed as substantial previews; current
+  data-url/blob masonry outputs remain eligible.
 - Remaining live gap: the installed smoke did not produce a linked
   full-quality download-button comparison artifact. The next installed smoke
-  should use the new diagnostics to decide whether the blocker is DOM tile
-  selection, data capture, screenshot fallback, or provider download controls.
+  should use the new diagnostics to confirm the current masonry tiles are
+  selected and then continue download-button discovery.
 
 ## Scope
 
