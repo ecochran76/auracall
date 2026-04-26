@@ -71,10 +71,16 @@ profile, queued dispatcher, and registry-first DevTools authority.
   remote Grok generated assets as visible-tile and download-selection
   candidates unless they are displayed as substantial previews; current
   data-url/blob masonry outputs remain eligible.
+- Installed-runtime dogfood after installing `9912cd3a` created
+  `medgen_47fae2a0df8e4ed9999d1955b6a67d69` and proved the thumbnail guard in
+  the user runtime: the run materialized four artifacts, all selected tiles
+  were current `data-url` masonry images at `272x426`, and no stale remote
+  thumbnail was counted.
 - Remaining live gap: the installed smoke did not produce a linked
-  full-quality download-button comparison artifact. The next installed smoke
-  should use the new diagnostics to confirm the current masonry tiles are
-  selected and then continue download-button discovery.
+  full-quality download-button comparison artifact. The newest diagnostics
+  show the download path selects the first current masonry tile
+  (`f1c111415ebdbfa6`) but finds zero download-button candidates, so the next
+  slice should discover the provider action surface after tile activation.
 
 ## Scope
 

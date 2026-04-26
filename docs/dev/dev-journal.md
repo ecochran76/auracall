@@ -16,11 +16,21 @@
   remote Grok generated assets as materialization/download candidates unless
   they are displayed as a substantial preview. Current data-url/blob masonry
   outputs remain eligible.
+- Follow-up dogfood: after reinstalling the user runtime from
+  `9912cd3a`, installed run
+  `medgen_47fae2a0df8e4ed9999d1955b6a67d69` succeeded with four materialized
+  artifacts. Diagnostics selected only current `data-url` masonry tiles
+  (`272x426`, four distinct fingerprints), proving the stale 48 px remote
+  thumbnail no longer counts. Full-quality download is still the remaining
+  blocker: `tileCandidateCount = 4`, selected tile fingerprint
+  `f1c111415ebdbfa6`, but `downloadButtonCandidateCount = 0`.
 - Validation:
   - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts --maxWorkers 1`
   - `pnpm exec tsc --noEmit`
   - `pnpm run plans:audit -- --keep 61`
   - `git diff --check`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media generate --provider grok --type image --transport browser --prompt "Generate images of an asphalt secret agent reading a coded newspaper" --no-wait --json`
+  - `/home/ecochran76/.local/bin/auracall run status medgen_47fae2a0df8e4ed9999d1955b6a67d69 --json`
 
 ## 2026-04-25 - Grok Imagine materialization diagnostics
 
