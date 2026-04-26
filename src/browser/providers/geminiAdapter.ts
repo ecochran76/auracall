@@ -34,6 +34,11 @@ import type {
   BrowserProviderPromptResult,
   ProviderUserIdentity,
 } from './types.js';
+import {
+  assertProviderIdentityPreflight,
+  checkProviderIdentityPreflight,
+  providerIdentityPreflightRequested,
+} from './identityPreflight.js';
 import type {
   Conversation,
   ConversationArtifact,
@@ -1136,6 +1141,19 @@ async function readGeminiUserIdentity(client: ChromeClient): Promise<ProviderUse
     returnByValue: true,
   });
   return extractGeminiIdentityFromLabel(typeof result?.value === 'string' ? result.value : null);
+}
+
+async function assertGeminiExpectedIdentity(
+  client: ChromeClient,
+  options?: BrowserProviderListOptions,
+): Promise<void> {
+  if (!providerIdentityPreflightRequested(options)) return;
+  assertProviderIdentityPreflight({
+    providerId: 'gemini',
+    actualIdentity: await readGeminiUserIdentity(client),
+    expectedIdentity: options?.expectedUserIdentity,
+    expectedServiceAccountId: options?.expectedServiceAccountId,
+  });
 }
 
 async function clickGeminiFeatureProbeTarget(
@@ -6321,6 +6339,7 @@ export function createGeminiAdapter(): Pick<
         resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL),
       );
       try {
+        await assertGeminiExpectedIdentity(client, options);
         return await readGeminiFeatureSignature(client);
       } finally {
         await client.close().catch(() => undefined);
@@ -6332,6 +6351,7 @@ export function createGeminiAdapter(): Pick<
     async listProjects(options?: BrowserProviderListOptions): Promise<Project[]> {
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, GEMINI_GEMS_VIEW_URL);
       try {
+        await assertGeminiExpectedIdentity(client, options);
         await navigateToGeminiGemsViewPage(client);
         return await scrapeGeminiProjects(client);
       } finally {
@@ -6348,6 +6368,7 @@ export function createGeminiAdapter(): Pick<
         : resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL);
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, targetUrl);
       try {
+        await assertGeminiExpectedIdentity(client, options);
         await navigateToGeminiConversationSurface(client, targetUrl);
         return await scrapeGeminiConversations(client, normalizedProjectId ?? undefined);
       } finally {
@@ -6376,6 +6397,34 @@ export function createGeminiAdapter(): Pick<
             targetUrl,
           },
         });
+        const authPreflight = providerIdentityPreflightRequested(options)
+          ? checkProviderIdentityPreflight({
+              providerId: 'gemini',
+              actualIdentity: await readGeminiUserIdentity(client),
+              expectedIdentity: options?.expectedUserIdentity,
+              expectedServiceAccountId: options?.expectedServiceAccountId,
+            })
+          : null;
+        if (authPreflight) {
+          await emitProgress({
+            phase: 'provider_auth_preflight',
+            details: {
+              ok: authPreflight.ok,
+              reason: authPreflight.reason,
+              expectedServiceAccountId: authPreflight.expectedServiceAccountId,
+              expectedIdentity: authPreflight.expectedIdentity,
+              actualIdentity: authPreflight.actualIdentity,
+            },
+          });
+          if (!authPreflight.ok) {
+            assertProviderIdentityPreflight({
+              providerId: 'gemini',
+              actualIdentity: authPreflight.actualIdentity,
+              expectedIdentity: authPreflight.expectedIdentity,
+              expectedServiceAccountId: authPreflight.expectedServiceAccountId,
+            });
+          }
+        }
         await navigateToGeminiConversationSurface(client, targetUrl);
         await emitProgress({
           phase: 'gemini_surface_ready',
@@ -6474,6 +6523,7 @@ export function createGeminiAdapter(): Pick<
     ): Promise<Project | null> {
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, GEMINI_GEM_CREATE_URL);
       try {
+        await assertGeminiExpectedIdentity(client, options);
         return await createGeminiProjectWithClient(client, input);
       } finally {
         await client.close().catch(() => undefined);
@@ -6498,6 +6548,7 @@ export function createGeminiAdapter(): Pick<
           : resolveGeminiConversationUrl(normalizedConversationId),
       );
       try {
+        await assertGeminiExpectedIdentity(client, options);
         return await readGeminiConversationContextWithClient(client, normalizedConversationId, {
           allowNavigation: options?.preserveActiveTab !== true,
         });
@@ -6524,6 +6575,7 @@ export function createGeminiAdapter(): Pick<
         options.tabUrl ?? options.configuredUrl ?? GEMINI_APP_URL,
       );
       try {
+        await assertGeminiExpectedIdentity(client, options);
         if (options.tabTargetId && targetId && targetId !== options.tabTargetId) {
           throw new Error(
             `Gemini active artifact read rebound to target ${targetId} instead of submitted target ${options.tabTargetId}.`,
@@ -6558,6 +6610,7 @@ export function createGeminiAdapter(): Pick<
           : resolveGeminiConversationUrl(normalizedConversationId),
       );
       try {
+        await assertGeminiExpectedIdentity(client, options);
         if (options?.tabTargetId && targetId && targetId !== options.tabTargetId) {
           throw new Error(
             `Gemini artifact materialization rebound to target ${targetId} instead of submitted target ${options.tabTargetId}.`,
@@ -6597,6 +6650,7 @@ export function createGeminiAdapter(): Pick<
           : resolveGeminiConversationUrl(normalizedConversationId),
       );
       try {
+        await assertGeminiExpectedIdentity(client, options);
         if (options?.tabTargetId && targetId && targetId !== options.tabTargetId) {
           throw new Error(
             `Gemini conversation file download rebound to target ${targetId} instead of submitted target ${options.tabTargetId}.`,
@@ -6627,6 +6681,7 @@ export function createGeminiAdapter(): Pick<
         resolveGeminiConversationUrl(normalizedConversationId),
       );
       try {
+        await assertGeminiExpectedIdentity(client, options);
         await renameGeminiConversationOnPage(client, normalizedConversationId, newTitle);
       } finally {
         await client.close().catch(() => undefined);
@@ -6650,6 +6705,7 @@ export function createGeminiAdapter(): Pick<
       );
       const trace: GeminiDeleteTrace = [];
       try {
+        await assertGeminiExpectedIdentity(client, options);
         await openGeminiConversationActionsMenuOnConversationPage(client, normalizedConversationId);
         await selectGeminiConversationDeleteMenuItem(client, trace);
         await clickGeminiConversationDeleteConfirmations(client, trace);
@@ -6678,6 +6734,7 @@ export function createGeminiAdapter(): Pick<
       const targetUrl = resolveGeminiConversationUrl(normalizedConversationId);
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, targetUrl);
       try {
+        await assertGeminiExpectedIdentity(client, options);
         await validateGeminiConversationUrlWithClient(client, normalizedConversationId);
       } finally {
         await client.close().catch(() => undefined);
@@ -6696,6 +6753,7 @@ export function createGeminiAdapter(): Pick<
         resolveGeminiEditProjectUrl(normalizedProjectId),
       );
       try {
+        await assertGeminiExpectedIdentity(client, options);
         await navigateToGeminiEditPage(client, normalizedProjectId);
         const setName = await setInputValue(client.Runtime, {
           selector: GEMINI_GEM_NAME_INPUT_SELECTOR,
@@ -6751,6 +6809,7 @@ export function createGeminiAdapter(): Pick<
         resolveGeminiEditProjectUrl(normalizedProjectId),
       );
       try {
+        await assertGeminiExpectedIdentity(client, options);
         await navigateToGeminiEditPage(client, normalizedProjectId);
         await openGeminiKnowledgeUploadMenu(client.Runtime);
         const fileNames = filePaths.map((filePath) => path.basename(filePath));
@@ -6811,6 +6870,7 @@ export function createGeminiAdapter(): Pick<
         resolveGeminiEditProjectUrl(normalizedProjectId),
       );
       try {
+        await assertGeminiExpectedIdentity(client, options);
         await navigateToGeminiEditPage(client, normalizedProjectId);
         await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(() => undefined);
         let files = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
@@ -6840,6 +6900,7 @@ export function createGeminiAdapter(): Pick<
         resolveGeminiEditProjectUrl(normalizedProjectId),
       );
       try {
+        await assertGeminiExpectedIdentity(client, options);
         await navigateToGeminiEditPage(client, normalizedProjectId);
         await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(() => undefined);
         await waitForGeminiProjectKnowledgeHydrated(client.Runtime, 8_000);
@@ -6894,6 +6955,7 @@ export function createGeminiAdapter(): Pick<
         resolveGeminiProjectUrl(normalizedProjectId),
       );
       try {
+        await assertGeminiExpectedIdentity(client, options);
         await openGeminiProjectActionsMenuOnProjectPage(client, normalizedProjectId);
         await selectGeminiProjectDeleteMenuItem(client);
         await clickGeminiDeleteConfirmations(client);

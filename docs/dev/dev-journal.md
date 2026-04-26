@@ -12,8 +12,7 @@
   hard-stop for all runs. When the AuraCall runtime profile has an expected
   Grok identity, the preflight also verifies the detected Grok account and
   fails with a specific mismatch/undetected-identity reason before submitting
-  work. Profiles without configured expected identity still avoid slow identity
-  probes on normal workbench pages.
+  work.
 - Live gate: no further Grok live automation was run because the managed
   `auracall-grok-auto/grok` profile was already observed on a Google Accounts
   password challenge. Clear that profile manually before the next live smoke.
@@ -40,6 +39,17 @@
   `~/.auracall/config.json.bak-2026-04-26-grok-auto-identity` was written, and
   `profiles.auracall-grok-auto.services.grok.identity` was bound to the same
   account as `default`: `ez86944@gmail.com`.
+- Cross-provider hardening: ChatGPT and Gemini now use the shared provider
+  identity preflight before browser-backed discovery, chat/project readback,
+  mutation, media prompt submission, and artifact materialization whenever the
+  runtime layer supplies identity expectation fields. Explicit null identity is
+  treated as unsafe and fails after detecting the signed-in account. Local
+  config backup `~/.auracall/config.json.bak-2026-04-26-chatgpt-bound-identities`
+  was written; `profiles.default.services.chatgpt.identity.email` is bound to
+  `ecochran76@gmail.com`, and
+  `profiles.wsl-chrome-2.services.chatgpt.identity.email` is bound to
+  `consult@polymerconsultinggroup.com`. No Grok or Gemini identity was added
+  to `wsl-chrome-2`.
 
 ## 2026-04-26 - Grok Imagine action-surface activation
 

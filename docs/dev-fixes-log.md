@@ -13,6 +13,12 @@
   the operator to bind the detected service account to the AuraCall runtime
   profile.
 
+- 2026-04-26: Keep account-bound browser preflight centralized across
+  providers. ChatGPT and Gemini should share the same identity expectation
+  semantics as Grok while keeping provider-specific identity probes in their
+  adapters. Runtime-supplied explicit null expectations must fail after account
+  detection; omitted raw adapter options may remain a test/debug escape hatch.
+
 - 2026-04-26: Timeline event type changes must update both TypeScript unions
   and the persisted response Zod schema. Adding `provider_auth_preflight` only
   to the TypeScript type let tests pass but caused a live media run to fail

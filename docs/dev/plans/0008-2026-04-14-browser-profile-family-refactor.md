@@ -124,6 +124,9 @@ This selects service-scoped defaults, independent of browser-profile wiring:
 - provider model defaults
 - provider feature flags
 - service-specific managed profile identity
+- service-specific expected account identity; a signed-in browser with no
+  bound identity is an error for runtime-backed browser operations, not an
+  implicit permission to use whatever account is present
 
 ### Phase D: Resolve Browser Launch Profile
 

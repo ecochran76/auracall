@@ -18,6 +18,10 @@ import type {
 } from './domain.js';
 import type { BrowserProvider, BrowserProviderListOptions, ProviderUserIdentity } from './types.js';
 import {
+  assertProviderIdentityPreflight,
+  providerIdentityPreflightRequested,
+} from './identityPreflight.js';
+import {
   armDownloadCapture,
   collectVisibleOverlayInventory,
   closeDialog,
@@ -3601,6 +3605,19 @@ async function readChatgptUserIdentity(client: ChromeClient): Promise<ProviderUs
   );
 }
 
+async function assertChatgptExpectedIdentity(
+  client: ChromeClient,
+  options?: BrowserProviderListOptions,
+): Promise<void> {
+  if (!providerIdentityPreflightRequested(options)) return;
+  assertProviderIdentityPreflight({
+    providerId: 'chatgpt',
+    actualIdentity: await readChatgptUserIdentity(client),
+    expectedIdentity: options?.expectedUserIdentity,
+    expectedServiceAccountId: options?.expectedServiceAccountId,
+  });
+}
+
 function buildChatgptFeatureProbeExpression(): string {
   const detector = JSON.stringify(CHATGPT_FEATURE_DETECTOR);
   const flagTokens = JSON.stringify(CHATGPT_FEATURE_FLAG_TOKENS);
@@ -6677,6 +6694,7 @@ export function createChatgptAdapter(): Pick<
     async getFeatureSignature(options?: BrowserProviderListOptions): Promise<string | null> {
       const { client } = await connectToChatgptTab(options, options?.configuredUrl ?? CHATGPT_HOME_URL);
       try {
+        await assertChatgptExpectedIdentity(client, options);
         return await readChatgptFeatureSignature(client);
       } finally {
         await client.close().catch(() => undefined);
@@ -6686,6 +6704,7 @@ export function createChatgptAdapter(): Pick<
       const attempt = async (currentOptions?: BrowserProviderListOptions): Promise<Project[]> => {
         const { client } = await connectToChatgptTab(currentOptions, currentOptions?.configuredUrl ?? CHATGPT_HOME_URL);
         try {
+          await assertChatgptExpectedIdentity(client, currentOptions);
           await ensureChatgptSidebarOpen(client);
           return await scrapeChatgptProjects(client);
         } finally {
@@ -6714,6 +6733,7 @@ export function createChatgptAdapter(): Pick<
           : (currentOptions?.configuredUrl ?? CHATGPT_HOME_URL);
         const { client } = await connectToChatgptTab(currentOptions, targetUrl);
         try {
+          await assertChatgptExpectedIdentity(client, currentOptions);
           return await scrapeChatgptConversations(client, normalizedProjectId, debugContext);
         } finally {
           await client.close().catch(() => undefined);
@@ -6745,6 +6765,7 @@ export function createChatgptAdapter(): Pick<
         resolveChatgptConversationUrl(conversationId, normalizedProjectId),
       );
       try {
+        await assertChatgptExpectedIdentity(client, options);
         return await readChatgptConversationContextWithClient(
           client,
           conversationId,
@@ -6770,6 +6791,7 @@ export function createChatgptAdapter(): Pick<
         resolveChatgptConversationUrl(conversationId, normalizedProjectId),
       );
       try {
+        await assertChatgptExpectedIdentity(client, options);
         return await withChatgptBlockingSurfaceRecovery(
           client,
           `listChatgptConversationFiles:${conversationId}`,
@@ -6805,6 +6827,7 @@ export function createChatgptAdapter(): Pick<
         resolveChatgptConversationUrl(conversationId, normalizedProjectId),
       );
       try {
+        await assertChatgptExpectedIdentity(client, options);
         return await materializeChatgptConversationArtifactWithClient(
           client,
           conversationId,
@@ -6830,6 +6853,7 @@ export function createChatgptAdapter(): Pick<
         resolveChatgptConversationUrl(conversationId, normalizedProjectId),
       );
       try {
+        await assertChatgptExpectedIdentity(client, options);
         if (!normalizedProjectId) {
           await renameChatgptConversationWithClient(client, conversationId, newTitle, normalizedProjectId);
           return;
@@ -6867,6 +6891,7 @@ export function createChatgptAdapter(): Pick<
         resolveChatgptConversationUrl(conversationId, normalizedProjectId),
       );
       try {
+        await assertChatgptExpectedIdentity(client, options);
         await deleteChatgptConversationWithClient(client, conversationId, normalizedProjectId);
       } finally {
         await client.close().catch(() => undefined);
@@ -6875,6 +6900,7 @@ export function createChatgptAdapter(): Pick<
     async openCreateProjectModal(options?: BrowserProviderListOptions): Promise<void> {
       const { client } = await connectToChatgptTab(options, options?.configuredUrl ?? CHATGPT_HOME_URL);
       try {
+        await assertChatgptExpectedIdentity(client, options);
         await openCreateProjectModalWithClient(client);
       } finally {
         await client.close().catch(() => undefined);
@@ -6886,6 +6912,7 @@ export function createChatgptAdapter(): Pick<
     ): Promise<void> {
       const { client } = await connectToChatgptTab(options, options?.configuredUrl ?? CHATGPT_HOME_URL);
       try {
+        await assertChatgptExpectedIdentity(client, options);
         await openCreateProjectModalWithClient(client);
         await setCreateProjectFieldsWithClient(client, fields);
       } finally {
@@ -6895,6 +6922,7 @@ export function createChatgptAdapter(): Pick<
     async clickCreateProjectConfirm(options?: BrowserProviderListOptions): Promise<void> {
       const { client } = await connectToChatgptTab(options, options?.configuredUrl ?? CHATGPT_HOME_URL);
       try {
+        await assertChatgptExpectedIdentity(client, options);
         await clickCreateProjectConfirmWithClient(client);
       } finally {
         await client.close().catch(() => undefined);
@@ -6912,6 +6940,7 @@ export function createChatgptAdapter(): Pick<
     ): Promise<Project | null> {
       const { client } = await connectToChatgptTab(options, options?.configuredUrl ?? CHATGPT_HOME_URL);
       try {
+        await assertChatgptExpectedIdentity(client, options);
         await navigateToChatgptUrl(client, options?.configuredUrl ?? CHATGPT_HOME_URL);
         const initialProjects = await scrapeChatgptProjects(client);
         const initialProjectIds = new Set(initialProjects.map((project) => project.id));
@@ -7007,6 +7036,7 @@ export function createChatgptAdapter(): Pick<
       if (filePaths.length === 0) return;
       const { client } = await connectToChatgptTab(options, resolveChatgptProjectSourcesUrl(projectId));
       try {
+        await assertChatgptExpectedIdentity(client, options);
         await uploadChatgptProjectSourceFilesWithClient(client, projectId, filePaths);
       } finally {
         await client.close().catch(() => undefined);
@@ -7018,6 +7048,7 @@ export function createChatgptAdapter(): Pick<
     ): Promise<FileRef[]> {
       const { client } = await connectToChatgptTab(options, resolveChatgptProjectSourcesUrl(projectId));
       try {
+        await assertChatgptExpectedIdentity(client, options);
         await openProjectSourcesTab(client, projectId);
         const initial = await readChatgptProjectSourceFilesSettled(client, { timeoutMs: 8_000 });
         if (initial.length > 0) {
@@ -7036,6 +7067,7 @@ export function createChatgptAdapter(): Pick<
     ): Promise<void> {
       const { client } = await connectToChatgptTab(options, resolveChatgptProjectSourcesUrl(projectId));
       try {
+        await assertChatgptExpectedIdentity(client, options);
         await openProjectSourcesTab(client, projectId);
         const listedFiles = await readChatgptProjectSourceFilesSettled(client);
         const matchedFileName = findChatgptProjectSourceName(listedFiles, fileName);
@@ -7123,6 +7155,7 @@ export function createChatgptAdapter(): Pick<
       }
       const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
       try {
+        await assertChatgptExpectedIdentity(client, options);
         await applyProjectSettings(client, projectId, { instructions });
         await waitForProjectSettingsApplied(client, projectId, { instructions });
       } finally {
@@ -7135,6 +7168,7 @@ export function createChatgptAdapter(): Pick<
     ): Promise<{ text: string; model?: string | null }> {
       const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
       try {
+        await assertChatgptExpectedIdentity(client, options);
         await openProjectSettingsPanel(client, projectId);
         const snapshot = await readProjectSettingsSnapshot(client);
         return { text: snapshot.text, model: null };
@@ -7146,6 +7180,7 @@ export function createChatgptAdapter(): Pick<
     async renameProject(projectId: string, newTitle: string, options?: BrowserProviderListOptions): Promise<void> {
       const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
       try {
+        await assertChatgptExpectedIdentity(client, options);
         await applyProjectSettings(client, projectId, { name: newTitle });
         await waitForProjectSettingsApplied(client, projectId, { name: newTitle });
       } finally {
@@ -7155,6 +7190,7 @@ export function createChatgptAdapter(): Pick<
     async selectRemoveProjectItem(projectId: string, options?: BrowserProviderListOptions): Promise<void> {
       const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
       try {
+        await assertChatgptExpectedIdentity(client, options);
         await openProjectSettingsPanel(client, projectId);
         const settingsRootSelector = await tagProjectSettingsDialog(client, { name: true, instructions: true });
         await withUiDiagnostics(
@@ -7198,6 +7234,7 @@ export function createChatgptAdapter(): Pick<
     async pushProjectRemoveConfirmation(projectId: string, options?: BrowserProviderListOptions): Promise<void> {
       const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
       try {
+        await assertChatgptExpectedIdentity(client, options);
         const pressDeleteConfirmation = async (): Promise<{ ok?: boolean; reason?: string } | undefined> => {
           const { result } = await client.Runtime.evaluate({
             expression: `(() => {
