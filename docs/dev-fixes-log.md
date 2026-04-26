@@ -14479,4 +14479,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   namespaces, installed `auracall-grok-auto` resolved Grok to
   `browser-profiles/default/grok` and registry port `38261`; the live API
   status surface reported `browserOperationQueue.latest.event = queued` while
-  the held lock blocked browser execution.
+  the held lock blocked browser execution. After the held lease expired, the
+  same smoke run recovered and completed successfully through the Grok browser
+  path.

@@ -21899,9 +21899,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   AuraCall project tab, and reported `browserOperationQueue.total = 1` with
   `latest.event = queued` blocked by the held
   `live-queue-smoke-browser-profile-namespace` lock.
-- Cleanup: stopped the API server and lock holder before releasing queued
-  browser execution; no browser-operation lock files remained.
+- Completion: a follow-up cleanup attempt on port `18086` recovered the smoke
+  run after the lease expired; the run completed with step status `succeeded`.
+  No browser-operation lock files remained after stopping the server.
 - Validation:
   - `node --input-type=module ... resolveUserBrowserLaunchContext(...)`
   - `node --input-type=module ... resolveBrowserListTarget(...)`
   - `curl 'http://127.0.0.1:18085/v1/runs/resp_0019f0a06dff4d51b50114832bfceb43/status?diagnostics=browser-state'`
+  - `/home/ecochran76/.local/bin/auracall run status resp_0019f0a06dff4d51b50114832bfceb43 --json`
