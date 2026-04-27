@@ -270,6 +270,16 @@ profile, queued dispatcher, and registry-first DevTools authority.
   artifact fields already returned by compact status payloads. This keeps
   service callers from treating Grok full-quality comparison metadata as
   undeclared extra JSON.
+- Installed-runtime schema/readback proof: after refreshing
+  `~/.auracall/user-runtime`, existing run
+  `medgen_fde3e1e604f24a95a2162e6ed1a58c59` was read through installed CLI,
+  installed local API, and installed MCP without submitting provider work.
+  API `/v1/runs/{id}/status`, API `/v1/media-generations/{id}/status`, MCP
+  `run_status`, and MCP `media_generation_status` all reported
+  `artifactCount = 5` and preserved the full-quality artifact checksum,
+  preview artifact id, preview size/checksum, and
+  `fullQualityDiffersFromPreview = true`; installed MCP tool schemas also
+  advertised those fields.
 
 ## Scope
 

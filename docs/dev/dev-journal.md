@@ -7,8 +7,26 @@
   `previewChecksumSha256`, and `fullQualityDiffersFromPreview`, matching the
   existing TypeScript summaries, HTTP status payloads, CLI JSON status, and
   persisted Grok/Gemini artifact metadata.
+- Installed-runtime readback: after `pnpm run install:user-runtime`, existing
+  Grok run `medgen_fde3e1e604f24a95a2162e6ed1a58c59` was read without
+  submitting provider work through installed CLI, local API, and MCP. API
+  `/v1/runs/{id}/status`, API `/v1/media-generations/{id}/status`, MCP
+  `run_status`, and MCP `media_generation_status` all returned `succeeded`
+  with `artifactCount = 5`. The full-quality artifact
+  `grok_imagine_full_quality_1` reported `content.png`,
+  `materialization = download-button-anchor-fetch`, checksum
+  `69d78880298ae08157737eec5ce80098c8ea8095bbe59d7632d1a09177ec3bcd`,
+  `previewArtifactId = grok_imagine_visible_1`, `previewSize = 103476`,
+  preview checksum
+  `3a756c019328780de02b4c0cd8be60ecd8a2888bf93337a2692acd7c0a7b98b8`, and
+  `fullQualityDiffersFromPreview = true`. Installed MCP `listTools` also
+  advertised all five comparison fields in both status tool output schemas.
 - Validation:
   - `pnpm vitest run tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm run install:user-runtime`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto run status medgen_fde3e1e604f24a95a2162e6ed1a58c59 --json`
+  - installed local API readbacks on port `18081`
+  - installed MCP `listTools`, `run_status`, and `media_generation_status`
 
 ## 2026-04-26 - profile identity smoke command
 
