@@ -22107,6 +22107,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   mode-control evidence before `prompt_inserted`.
 - Validation:
   - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`
+
+## 2026-04-27 - Grok installed post-submit smoke after files fallback
+
+- Focus: prove the updated installed runtime still preserves the fresh
+  post-submit no-navigation path after adding the resumed/direct `/files`
+  fallback.
+- Result: installed run `medgen_ada664ba3db24de4821cac245ec74714`
+  succeeded with four visible masonry artifacts.
+- Evidence: `run status` reported `generatedArtifactCount = 4`,
+  `requestedVisibleTileCount = 4`, `materializedVisibleTileCount = 4`,
+  `tileSurface = masonry`, `runState = terminal_image`, and route progression
+  stayed limited to `https://grok.com/imagine`. Full-quality remained
+  diagnostic-only in the post-submit context with `saved-gallery-required`,
+  `primaryTileActivationAllowed = false`, `clicked = false`,
+  `savedGalleryUrl = https://grok.com/imagine/saved`, and
+  `filesUrl = https://grok.com/files`.
+- Validation:
+  - `pnpm run install:user-runtime`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media generate --provider grok --type image -p "Generate an image of an asphalt secret agent" --count 4 --json`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto run status medgen_ada664ba3db24de4821cac245ec74714 --json`
   - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
   - `pnpm run check`
   - `pnpm run build`

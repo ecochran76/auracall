@@ -14702,3 +14702,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   now tries `/imagine/saved` first and then `/files` when saved generations do
   not expose a download control. Saved-gallery readiness also searches every
   `[id^="imagine-masonry-section"]` container instead of only section `0`.
+- 2026-04-27: Installed dogfood after the Grok `/files` fallback confirmed the
+  fresh post-submit path did not re-navigate. Run
+  `medgen_ada664ba3db24de4821cac245ec74714` cached four masonry artifacts,
+  kept route progression to `https://grok.com/imagine`, and returned
+  `saved-gallery-required` with `savedGalleryUrl` and `filesUrl` diagnostics
+  while `primaryTileActivationAllowed = false` and `clicked = false`.

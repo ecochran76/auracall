@@ -199,6 +199,15 @@ profile, queued dispatcher, and registry-first DevTools authority.
   post-submit path remains no-navigation and returns diagnostics if no direct
   download control is visible. The saved-gallery readiness probe now covers all
   `[id^="imagine-masonry-section"]` sections.
+- Installed proof after the `/files` fallback: run
+  `medgen_ada664ba3db24de4821cac245ec74714` captured four requested visible
+  masonry artifacts through the installed `auracall-grok-auto` path, reported
+  `generatedArtifactCount = 4`, `materializedVisibleTileCount = 4`, and kept
+  route progression limited to `https://grok.com/imagine`. The fresh
+  post-submit full-quality diagnostic stayed no-navigation with
+  `saved-gallery-required`, `primaryTileActivationAllowed = false`,
+  `clicked = false`, `savedGalleryUrl = https://grok.com/imagine/saved`, and
+  `filesUrl = https://grok.com/files`.
 
 ## Scope
 
