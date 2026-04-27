@@ -17,7 +17,9 @@ Owner: Aura-Call CLI
   masonry/filmstrip media is stable and visible tiles are cached. Resumed or
   direct full-quality materialization may then use the provider's saved
   generations (`/imagine/saved`) and files (`/files`) surfaces to find a
-  download control.
+  download control. Operators can rerun that resumed path against an existing
+  durable image run with:
+  `auracall media materialize <media_generation_id> --count 1 --json`.
   Use `docs/grok-imagine-video-readback-runbook.md` only for the diagnostic
   existing-tab video readback probe.
 

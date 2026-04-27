@@ -8,7 +8,10 @@ import {
 import type {
   MediaGenerationExecutor,
   MediaGenerationFailure,
+  MediaGenerationMaterializeOptions,
+  MediaGenerationMaterializer,
   MediaGenerationRequest,
+  MediaGenerationArtifact,
   MediaGenerationResponse,
   MediaGenerationTimelineEvent,
   MediaGenerationType,
@@ -20,6 +23,7 @@ export interface MediaGenerationServiceDeps {
   generateId?: () => string;
   store?: MediaGenerationRecordStore;
   executor?: MediaGenerationExecutor;
+  materializer?: MediaGenerationMaterializer;
   capabilityReporter?: WorkbenchCapabilityReporter | null;
   runtimeProfile?: string | null;
 }
@@ -27,6 +31,7 @@ export interface MediaGenerationServiceDeps {
 export interface MediaGenerationService {
   createGeneration(request: MediaGenerationRequest): Promise<MediaGenerationResponse>;
   createGenerationAsync?(request: MediaGenerationRequest): Promise<MediaGenerationResponse>;
+  materializeGeneration?(id: string, options?: MediaGenerationMaterializeOptions): Promise<MediaGenerationResponse>;
   readGeneration(id: string): Promise<MediaGenerationResponse | null>;
 }
 
@@ -35,6 +40,7 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
   const generateId = deps.generateId ?? (() => `medgen_${randomUUID().replace(/-/g, '')}`);
   const store = deps.store ?? createMediaGenerationRecordStore();
   const executor = deps.executor ?? defaultMediaGenerationExecutor;
+  const materializer = deps.materializer ?? null;
   const capabilityReporter = deps.capabilityReporter ?? null;
   const runtimeProfile = deps.runtimeProfile ?? null;
 
@@ -48,6 +54,66 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
       const context = await initializeGeneration(input);
       void executeGeneration(context);
       return context.runningResponse;
+    },
+
+    async materializeGeneration(id, options = {}) {
+      if (!materializer) {
+        throw new MediaGenerationExecutionError(
+          'media_materializer_not_implemented',
+          'Media generation resumed materialization is not configured for this runtime.',
+        );
+      }
+      const record = await store.readRecord(id);
+      if (!record) {
+        throw new MediaGenerationExecutionError(
+          'media_generation_not_found',
+          `Media generation ${id} was not found.`,
+          { id },
+        );
+      }
+      const existing = record.response;
+      const timeline = [...(existing.timeline ?? [])];
+      let currentResponse = existing;
+      const persistTimelineEvent = async (
+        event: Omit<MediaGenerationTimelineEvent, 'at'> & { at?: string },
+      ): Promise<void> => {
+        const at = event.at ?? now().toISOString();
+        timeline.push({
+          event: event.event,
+          at,
+          details: normalizeTimelineDetails(event.details),
+        });
+        currentResponse = MediaGenerationResponseSchema.parse({
+          ...currentResponse,
+          updatedAt: at,
+          timeline: [...timeline],
+        } satisfies MediaGenerationResponse);
+        await store.writeResponse(currentResponse, { persistedAt: at });
+      };
+      await store.ensureStorage();
+      await fs.mkdir(store.getArtifactDir(id), { recursive: true });
+      const result = await materializer({
+        response: existing,
+        artifactDir: store.getArtifactDir(id),
+        options,
+        emitTimeline: persistTimelineEvent,
+      });
+      const updatedAt = now().toISOString();
+      const response = MediaGenerationResponseSchema.parse({
+        ...currentResponse,
+        updatedAt,
+        artifacts: mergeMediaGenerationArtifacts(currentResponse.artifacts, result.artifacts),
+        model: result.model ?? currentResponse.model ?? null,
+        timeline,
+        metadata: {
+          ...(currentResponse.metadata ?? {}),
+          ...(result.metadata ?? {}),
+          resumedMaterializedAt: updatedAt,
+          resumedArtifactCount: result.artifacts.length,
+        },
+      } satisfies MediaGenerationResponse);
+      await store.writeResponse(response, { persistedAt: updatedAt });
+      return response;
     },
 
     async readGeneration(id) {
@@ -226,6 +292,27 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
       return response;
     }
   }
+}
+
+function mergeMediaGenerationArtifacts(
+  existing: MediaGenerationArtifact[],
+  incoming: MediaGenerationArtifact[],
+): MediaGenerationArtifact[] {
+  const order: string[] = [];
+  const byId = new Map<string, MediaGenerationArtifact>();
+  for (const artifact of existing) {
+    if (!byId.has(artifact.id)) {
+      order.push(artifact.id);
+    }
+    byId.set(artifact.id, artifact);
+  }
+  for (const artifact of incoming) {
+    if (!byId.has(artifact.id)) {
+      order.push(artifact.id);
+    }
+    byId.set(artifact.id, artifact);
+  }
+  return order.map((id) => byId.get(id)).filter((entry): entry is MediaGenerationArtifact => Boolean(entry));
 }
 
 export async function defaultMediaGenerationExecutor(): Promise<never> {

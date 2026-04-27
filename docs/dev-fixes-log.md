@@ -1,3 +1,10 @@
+- 2026-04-27: Grok Imagine full-quality retry now has an explicit operator
+  command. `auracall media materialize <media_generation_id> --count 1 --json`
+  resumes artifact materialization for an existing durable Grok image run,
+  routes the browser work through the managed-profile operation dispatcher,
+  preserves the run's terminal status, and merges new artifacts into the
+  existing media-generation cache instead of submitting another prompt.
+
 - 2026-04-26: Do not primary-click Grok Imagine root tiles while searching for
   full-quality downloads. A normal tile click can open an immature post route,
   toast "post not found, returning home", and leave the page on blurry root

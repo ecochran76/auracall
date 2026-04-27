@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createMediaGenerationFromCli,
   formatMediaGenerationCli,
+  materializeMediaGenerationFromCli,
   registerMediaGenerationCliCommand,
 } from '../src/cli/mediaGenerationCommand.js';
 import type { ResolvedUserConfig } from '../src/config.js';
@@ -208,6 +209,84 @@ describe('media generation CLI helpers', () => {
       source: 'cli',
     }));
     expect(formatMediaGenerationCli(response)).toContain('Poll: auracall run status medgen_cli_media_1');
+  });
+
+  it('parses the materialize command and invokes resumed materialization', async () => {
+    const materializeGeneration = vi.fn(async () => mediaResponse({ status: 'succeeded' }));
+    const resolveUserConfig = vi.fn(async () => userConfig);
+    const logs: string[] = [];
+    const originalLog = console.log;
+    console.log = (value?: unknown) => {
+      logs.push(typeof value === 'string' ? value : JSON.stringify(value));
+    };
+    try {
+      const program = new Command();
+      program.exitOverride();
+      program.configureOutput({
+        writeOut: (value) => logs.push(value),
+        writeErr: (value) => logs.push(value),
+      });
+      registerMediaGenerationCliCommand(program, {
+        resolveUserConfig,
+        parseIntOption: (value) => (value == null ? undefined : Number.parseInt(value, 10)),
+        service: {
+          createGeneration: vi.fn(async () => mediaResponse({ status: 'succeeded' })),
+          createGenerationAsync: vi.fn(async () => mediaResponse({ status: 'running' })),
+          materializeGeneration,
+        },
+      });
+
+      await program.parseAsync([
+        'node',
+        'auracall',
+        'media',
+        'materialize',
+        'medgen_cli_media_1',
+        '--count',
+        '1',
+        '--json',
+      ]);
+    } finally {
+      console.log = originalLog;
+    }
+
+    expect(resolveUserConfig).toHaveBeenCalledWith(expect.objectContaining({
+      count: 1,
+      json: true,
+    }));
+    expect(materializeGeneration).toHaveBeenCalledWith('medgen_cli_media_1', {
+      count: 1,
+      compareFullQuality: true,
+      source: 'cli',
+    });
+    expect(JSON.parse(logs.join('\n'))).toMatchObject({
+      id: 'medgen_cli_media_1',
+      status: 'succeeded',
+    });
+  });
+
+  it('materializes an existing generation through the shared CLI helper', async () => {
+    const materializeGeneration = vi.fn(async () => mediaResponse({ status: 'succeeded' }));
+
+    await materializeMediaGenerationFromCli(
+      {
+        id: 'medgen_cli_media_1',
+        count: 2,
+      },
+      userConfig,
+      {
+        service: {
+          createGeneration: vi.fn(async () => mediaResponse({ status: 'succeeded' })),
+          materializeGeneration,
+        },
+      },
+    );
+
+    expect(materializeGeneration).toHaveBeenCalledWith('medgen_cli_media_1', {
+      count: 2,
+      compareFullQuality: true,
+      source: 'cli',
+    });
   });
 
   it('formats cached artifacts and failures for terminal readback', () => {

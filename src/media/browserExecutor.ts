@@ -1,10 +1,20 @@
 import path from 'node:path';
 import type { ResolvedUserConfig } from '../config.js';
-import type { MediaGenerationExecutor } from './types.js';
+import { BrowserAutomationClient } from '../browser/client.js';
+import type {
+  MediaGenerationExecutor,
+  MediaGenerationExecutorInput,
+  MediaGenerationMaterializer,
+} from './types.js';
 import { MediaGenerationExecutionError } from './service.js';
 import { createGeminiApiMediaGenerationExecutor } from './geminiApiExecutor.js';
 import { createGeminiBrowserMediaGenerationExecutor } from './geminiBrowserExecutor.js';
-import { createGrokBrowserMediaGenerationExecutor } from './grokBrowserExecutor.js';
+import {
+  createGrokBrowserMediaGenerationExecutor,
+  extractGrokMaterializationDiagnostics,
+  GROK_IMAGE_CAPABILITY_ID,
+  mapGrokFileToMediaArtifact,
+} from './grokBrowserExecutor.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
 import {
   resolveManagedBrowserLaunchContextFromResolvedConfig,
@@ -45,6 +55,102 @@ export function createBrowserMediaGenerationExecutor(userConfig: ResolvedUserCon
         mediaType: input.request.mediaType,
       },
     );
+  };
+}
+
+export function createBrowserMediaGenerationMaterializer(userConfig: ResolvedUserConfig): MediaGenerationMaterializer {
+  return async (input) => {
+    const { response } = input;
+    if (response.provider !== 'grok' || response.mediaType !== 'image') {
+      throw new MediaGenerationExecutionError(
+        'media_materializer_not_implemented',
+        `Resumed browser media materialization is currently implemented for Grok image runs only.`,
+        {
+          provider: response.provider,
+          mediaType: response.mediaType,
+        },
+      );
+    }
+    const count = resolveMaterializationCount(input.options?.count, 1);
+    const executorInput: MediaGenerationExecutorInput = {
+      id: response.id,
+      createdAt: response.createdAt,
+      artifactDir: input.artifactDir,
+      emitTimeline: input.emitTimeline,
+      request: {
+        provider: response.provider,
+        mediaType: response.mediaType,
+        prompt: response.prompt,
+        model: response.model ?? null,
+        transport: 'browser',
+        count,
+        source: input.options?.source ?? null,
+        metadata: {
+          ...(response.metadata ?? {}),
+          ...(input.options?.metadata ?? {}),
+          visibleTileMaterializationLimit: count,
+          grokFullQualityMaterializationMode: 'resumed',
+        },
+      },
+    };
+    return withQueuedBrowserMediaOperation(userConfig, executorInput, async () => {
+      await input.emitTimeline?.({
+        event: 'artifact_poll',
+        details: {
+          materializationSource: 'grok-browser-service-resume',
+          requestedVisibleTileCount: count,
+          fullQualityActivationContext: 'resumed',
+        },
+      });
+      const client = await BrowserAutomationClient.fromConfig(userConfig, { target: 'grok' });
+      const files = await client.materializeActiveMediaArtifacts({
+        capabilityId: GROK_IMAGE_CAPABILITY_ID,
+        mediaType: 'image',
+        maxItems: count,
+        compareFullQuality: input.options?.compareFullQuality !== false,
+        fullQualityActivationContext: 'resumed',
+      }, input.artifactDir, {
+        configuredUrl: 'https://grok.com/imagine',
+        preserveActiveTab: true,
+        mutationSourcePrefix: 'media:grok-imagine-resume',
+      });
+      const diagnostics = extractGrokMaterializationDiagnostics(files);
+      await input.emitTimeline?.({
+        event: 'artifact_poll',
+        details: {
+          materializationSource: 'grok-browser-service-resume',
+          activeFileCount: files.length,
+          visibleFileCount: files.filter((file) => file.metadata?.materialization === 'visible-tile-browser-capture').length,
+          fullQualityFileCount: files.filter((file) => file.metadata?.materialization === 'download-button' ||
+            file.metadata?.materialization === 'download-button-anchor-fetch').length,
+          grokMaterializationDiagnostics: diagnostics,
+        },
+      });
+      const artifacts = files.map((file, index) => mapGrokFileToMediaArtifact(file, index + 1));
+      for (const artifact of artifacts) {
+        await input.emitTimeline?.({
+          event: 'artifact_materialized',
+          details: {
+            providerArtifactId: artifact.id,
+            path: artifact.path ?? null,
+            uri: artifact.uri ?? null,
+            mimeType: artifact.mimeType ?? null,
+            materialization: artifact.metadata?.materialization ?? null,
+            fullQualityDiffersFromPreview: artifact.metadata?.fullQualityDiffersFromPreview ?? null,
+            resumed: true,
+          },
+        });
+      }
+      return {
+        artifacts,
+        model: response.model ?? null,
+        metadata: {
+          materializer: 'grok-browser-resume',
+          requestedVisibleTileCount: count,
+          grokMaterializationDiagnostics: diagnostics,
+        },
+      };
+    });
   };
 }
 
@@ -180,6 +286,13 @@ function resolveQueueNumber(value: unknown, fallback: number): number {
   return parsed ?? fallback;
 }
 
+function resolveMaterializationCount(value: number | null | undefined, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.max(1, Math.min(Math.trunc(value), 8));
+}
+
 function resolvePositiveInteger(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
     return Math.trunc(value);
@@ -202,6 +315,13 @@ function normalizeNonEmpty(value: unknown): string | null {
 export function resolveBrowserMediaOperationKeyForTest(
   userConfig: ResolvedUserConfig,
   input: Parameters<MediaGenerationExecutor>[0],
+): string {
+  return buildBrowserOperationKey(resolveBrowserMediaOperationInput(userConfig, input));
+}
+
+export function resolveBrowserMediaMaterializationOperationKeyForTest(
+  userConfig: ResolvedUserConfig,
+  input: MediaGenerationExecutorInput,
 ): string {
   return buildBrowserOperationKey(resolveBrowserMediaOperationInput(userConfig, input));
 }

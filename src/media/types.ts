@@ -120,3 +120,27 @@ export interface MediaGenerationExecutorResult {
 export type MediaGenerationExecutor = (
   input: MediaGenerationExecutorInput,
 ) => Promise<MediaGenerationExecutorResult>;
+
+export interface MediaGenerationMaterializeOptions {
+  count?: number | null;
+  compareFullQuality?: boolean | null;
+  source?: MediaGenerationSource | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface MediaGenerationMaterializerInput {
+  response: MediaGenerationResponse;
+  artifactDir: string;
+  options?: MediaGenerationMaterializeOptions;
+  emitTimeline?: MediaGenerationTimelineEmitter;
+}
+
+export interface MediaGenerationMaterializerResult {
+  artifacts: MediaGenerationArtifact[];
+  model?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export type MediaGenerationMaterializer = (
+  input: MediaGenerationMaterializerInput,
+) => Promise<MediaGenerationMaterializerResult>;

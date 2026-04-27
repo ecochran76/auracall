@@ -16,7 +16,7 @@ import {
 } from './types.js';
 import { MediaGenerationExecutionError } from './service.js';
 
-const GROK_IMAGE_CAPABILITY_ID = 'grok.media.imagine_image';
+export const GROK_IMAGE_CAPABILITY_ID = 'grok.media.imagine_image';
 const GROK_VIDEO_CAPABILITY_ID = 'grok.media.imagine_video';
 const GROK_IMAGINE_URL = 'https://grok.com/imagine';
 
@@ -1447,7 +1447,7 @@ function isGrokVideoReadbackProbeEnabled(metadata: Record<string, unknown> | nul
   return metadata?.grokVideoReadbackProbe === true;
 }
 
-function mapGrokFileToMediaArtifact(file: FileRef, ordinal: number): MediaGenerationArtifact {
+export function mapGrokFileToMediaArtifact(file: FileRef, ordinal: number): MediaGenerationArtifact {
   const metadata = file.metadata ?? {};
   return {
     id: file.id || `grok_imagine_image_${ordinal}`,
@@ -1467,7 +1467,7 @@ function mapGrokFileToMediaArtifact(file: FileRef, ordinal: number): MediaGenera
   };
 }
 
-function extractGrokMaterializationDiagnostics(files: FileRef[]): Record<string, unknown> | null {
+export function extractGrokMaterializationDiagnostics(files: FileRef[]): Record<string, unknown> | null {
   for (const file of files) {
     const diagnostics = file.metadata?.grokMaterializationDiagnostics;
     if (diagnostics && typeof diagnostics === 'object' && !Array.isArray(diagnostics)) {

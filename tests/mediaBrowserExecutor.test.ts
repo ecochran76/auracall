@@ -281,4 +281,34 @@ describe('browser media generation executor queueing', () => {
 
     expect(key).toBe('devtools:127.0.0.1:38261');
   });
+
+  it('keys resumed Grok image materialization through the same managed browser service queue', async () => {
+    const { resolveBrowserMediaMaterializationOperationKeyForTest } = await import('../src/media/browserExecutor.js');
+    const userConfig = {
+      auracallProfile: 'auracall-grok-auto',
+      browser: {
+        managedProfileRoot: '/tmp/auracall-browser-profiles',
+      },
+      profiles: {
+        'auracall-grok-auto': {
+          browserFamily: 'default',
+          defaultService: 'grok',
+        },
+      },
+    } as never;
+
+    const key = resolveBrowserMediaMaterializationOperationKeyForTest(userConfig, {
+      id: 'medgen_resume_key',
+      createdAt: '2026-04-25T12:00:00.000Z',
+      artifactDir: '/tmp/artifacts',
+      request: {
+        provider: 'grok',
+        mediaType: 'image',
+        prompt: 'Resume Grok materialization',
+        transport: 'browser',
+      },
+    });
+
+    expect(key).toBe('managed-profile:/tmp/auracall-browser-profiles/default/grok::service:grok');
+  });
 });

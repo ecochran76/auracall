@@ -1,6 +1,9 @@
 import { type Command, type OptionValues } from 'commander';
 import type { ResolvedUserConfig } from '../config.js';
-import { createBrowserMediaGenerationExecutor } from '../media/browserExecutor.js';
+import {
+  createBrowserMediaGenerationExecutor,
+  createBrowserMediaGenerationMaterializer,
+} from '../media/browserExecutor.js';
 import { createMediaGenerationService, type MediaGenerationService } from '../media/service.js';
 import { summarizeMediaGenerationStatus } from '../media/statusSummary.js';
 import type {
@@ -25,8 +28,13 @@ export interface MediaGenerationCliOptions {
   wait?: boolean;
 }
 
+export interface MediaGenerationMaterializeCliOptions {
+  id: string;
+  count?: number | null;
+}
+
 export interface MediaGenerationCliDeps {
-  service?: Pick<MediaGenerationService, 'createGeneration' | 'createGenerationAsync'>;
+  service?: Pick<MediaGenerationService, 'createGeneration' | 'createGenerationAsync' | 'materializeGeneration'>;
 }
 
 export interface RegisterMediaGenerationCliCommandDeps extends MediaGenerationCliDeps {
@@ -101,6 +109,41 @@ export function registerMediaGenerationCliCommand(
       console.log(formatMediaGenerationCli(response));
     });
 
+  mediaCommand
+    .command('materialize')
+    .description('Resume artifact materialization for an existing durable media generation.')
+    .argument('<id>', 'Durable media generation id to materialize.')
+    .option('--count <count>', 'Maximum visible provider tiles to inspect while resuming.', deps.parseIntOption)
+    .option('--json', 'Emit machine-readable JSON output.', false)
+    .action(async function (this: Command, id: string) {
+      const parentOptions =
+        typeof this.parent?.opts === 'function' ? (this.parent.opts() as OptionValues) : ({} as OptionValues);
+      const ownOptions = typeof this.opts === 'function' ? (this.opts() as OptionValues) : ({} as OptionValues);
+      const rootOptions = program.opts?.() ?? {};
+      const commandOptions = {
+        ...rootOptions,
+        ...parentOptions,
+        ...ownOptions,
+      } as OptionValues;
+      const userConfig = await deps.resolveUserConfig(commandOptions);
+      const response = await materializeMediaGenerationFromCli(
+        {
+          id,
+          count: typeof ownOptions.count === 'number' ? ownOptions.count : null,
+        },
+        userConfig,
+        {
+          service: deps.service,
+        },
+      );
+
+      if (ownOptions.json) {
+        console.log(JSON.stringify(response, null, 2));
+        return;
+      }
+      console.log(formatMediaGenerationCli(response));
+    });
+
   return mediaCommand;
 }
 
@@ -111,6 +154,7 @@ export function createConfiguredMediaGenerationService(userConfig: ResolvedUserC
   });
   return createMediaGenerationService({
     executor: createBrowserMediaGenerationExecutor(userConfig),
+    materializer: createBrowserMediaGenerationMaterializer(userConfig),
     capabilityReporter: workbenchCapabilityReporter,
     runtimeProfile: typeof userConfig.auracallProfile === 'string' ? userConfig.auracallProfile : null,
   });
@@ -138,6 +182,23 @@ export async function createMediaGenerationFromCli(
     return service.createGenerationAsync(request);
   }
   return service.createGeneration(request);
+}
+
+export async function materializeMediaGenerationFromCli(
+  options: MediaGenerationMaterializeCliOptions,
+  userConfig: ResolvedUserConfig,
+  deps: MediaGenerationCliDeps = {},
+): Promise<MediaGenerationResponse> {
+  const id = normalizeRequiredId(options.id);
+  const service = deps.service ?? createConfiguredMediaGenerationService(userConfig);
+  if (!service.materializeGeneration) {
+    throw new Error('Media generation materialization is not available in this runtime.');
+  }
+  return service.materializeGeneration(id, {
+    count: options.count ?? null,
+    compareFullQuality: true,
+    source: 'cli',
+  });
 }
 
 export function formatMediaGenerationCli(response: MediaGenerationResponse): string {
@@ -203,4 +264,12 @@ function parsePrompt(value: string): string {
 function normalizeOptionalString(value: string | null | undefined): string | null {
   const normalized = value?.trim();
   return normalized ? normalized : null;
+}
+
+function normalizeRequiredId(value: string): string {
+  const normalized = value.trim();
+  if (!normalized) {
+    throw new Error('Media generation id is required.');
+  }
+  return normalized;
 }

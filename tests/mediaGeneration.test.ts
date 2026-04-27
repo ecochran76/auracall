@@ -201,6 +201,125 @@ describe('media generation service', () => {
     await expect(service.readGeneration('medgen_failure_1')).resolves.toEqual(created);
   });
 
+  it('resumes materialization for an existing generation without changing terminal status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-media-generation-resume-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    let nowIndex = 0;
+    const nowValues = [
+      '2026-04-25T12:00:00.000Z',
+      '2026-04-25T12:00:01.000Z',
+      '2026-04-25T12:00:02.000Z',
+      '2026-04-25T12:00:03.000Z',
+      '2026-04-25T12:00:04.000Z',
+      '2026-04-25T12:00:05.000Z',
+      '2026-04-25T12:00:06.000Z',
+    ];
+    const service = createMediaGenerationService({
+      now: () => new Date(nowValues[Math.min(nowIndex++, nowValues.length - 1)]),
+      generateId: () => 'medgen_resume_1',
+      executor: async ({ artifactDir }) => {
+        const filePath = path.join(artifactDir, 'preview.png');
+        await fs.writeFile(filePath, Buffer.from('preview'));
+        return {
+          artifacts: [
+            {
+              id: 'preview_1',
+              type: 'image',
+              fileName: 'preview.png',
+              path: filePath,
+              mimeType: 'image/png',
+              metadata: {
+                materialization: 'visible-tile-browser-capture',
+              },
+            },
+          ],
+          metadata: {
+            executor: 'fixture',
+          },
+        };
+      },
+      materializer: async ({ artifactDir, options, emitTimeline }) => {
+        await emitTimeline?.({
+          event: 'artifact_poll',
+          details: {
+            materializationSource: 'grok-browser-service-resume',
+            requestedVisibleTileCount: options?.count ?? null,
+          },
+        });
+        const filePath = path.join(artifactDir, 'full-quality.png');
+        await fs.writeFile(filePath, Buffer.from('full quality'));
+        await emitTimeline?.({
+          event: 'artifact_materialized',
+          details: {
+            providerArtifactId: 'full_quality_1',
+            path: filePath,
+            materialization: 'download-button',
+            resumed: true,
+          },
+        });
+        return {
+          artifacts: [
+            {
+              id: 'full_quality_1',
+              type: 'image',
+              fileName: 'full-quality.png',
+              path: filePath,
+              mimeType: 'image/png',
+              metadata: {
+                materialization: 'download-button',
+              },
+            },
+          ],
+          metadata: {
+            materializer: 'fixture-resume',
+          },
+        };
+      },
+    });
+
+    const created = await service.createGeneration({
+      provider: 'grok',
+      mediaType: 'image',
+      prompt: 'Generate an image of an asphalt secret agent',
+      transport: 'browser',
+      source: 'cli',
+    });
+    const materialized = await service.materializeGeneration?.('medgen_resume_1', {
+      count: 1,
+      compareFullQuality: true,
+      source: 'cli',
+    });
+
+    expect(materialized).toMatchObject({
+      id: 'medgen_resume_1',
+      status: 'succeeded',
+      artifacts: [
+        { id: 'preview_1' },
+        {
+          id: 'full_quality_1',
+          metadata: {
+            materialization: 'download-button',
+          },
+        },
+      ],
+      metadata: {
+        executor: 'fixture',
+        materializer: 'fixture-resume',
+        resumedArtifactCount: 1,
+      },
+    });
+    expect(materialized?.completedAt).toBe(created.completedAt);
+    expect(materialized?.timeline?.map((entry) => entry.event)).toEqual([
+      'running_persisted',
+      'executor_started',
+      'completed',
+      'artifact_poll',
+      'artifact_materialized',
+    ]);
+    await expect(service.readGeneration('medgen_resume_1')).resolves.toEqual(materialized);
+  });
+
   it('accepts Gemini music generation requests in the shared contract', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-media-generation-music-'));
     cleanup.push(homeDir);

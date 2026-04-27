@@ -22108,6 +22108,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`
 
+## 2026-04-27 - Grok resumed media materialization command
+
+- Focus: give operators an explicit way to retry Grok Imagine full-quality
+  discovery after a fresh no-navigation image run completes.
+- Fix: added `auracall media materialize <media_generation_id> --count 1
+  --json`. The command calls a new media-generation service materializer, keeps
+  completed run status intact, merges newly materialized artifacts into the
+  existing artifact directory, and uses the browser-service operation
+  dispatcher for the same managed Grok browser profile.
+- Validation:
+  - `pnpm vitest run tests/mediaGeneration.test.ts tests/cli.mediaGenerationCommand.test.ts tests/mediaBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+
 ## 2026-04-27 - Grok installed post-submit smoke after files fallback
 
 - Focus: prove the updated installed runtime still preserves the fresh

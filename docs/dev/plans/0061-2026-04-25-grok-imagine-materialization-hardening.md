@@ -208,6 +208,12 @@ profile, queued dispatcher, and registry-first DevTools authority.
   `saved-gallery-required`, `primaryTileActivationAllowed = false`,
   `clicked = false`, `savedGalleryUrl = https://grok.com/imagine/saved`, and
   `filesUrl = https://grok.com/files`.
+- Source follow-up: `auracall media materialize <media_generation_id>` now
+  resumes materialization for an existing durable Grok image run without
+  submitting another prompt. The service preserves the completed run status,
+  merges newly materialized artifacts into the existing artifact directory, and
+  routes the browser work through the same managed-profile operation
+  dispatcher used by normal browser media generation.
 
 ## Scope
 
@@ -223,6 +229,8 @@ profile, queued dispatcher, and registry-first DevTools authority.
 - If direct root-tile download controls are absent, follow the provider's
   saved-generation workflow via `https://grok.com/imagine/saved` rather than
   opening immature per-post routes.
+- Provide an explicit operator retry path for saved-gallery/files
+  full-quality discovery after a fresh no-navigation run completes.
 - Do not primary-click generated tiles/cards on a fresh post-submit page.
   Trusted CDP can be used for hover/move diagnostics, but mouse press/release
   on the tile is treated as navigation-prone until a specific non-navigating
