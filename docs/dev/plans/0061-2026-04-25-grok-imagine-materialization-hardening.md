@@ -252,6 +252,19 @@ profile, queued dispatcher, and registry-first DevTools authority.
   resumed Files scanner now scores compact file anchors/rows so nearby
   virtualized video rows cannot hide valid image entries, and files-detail
   readiness waits for the download button instead of any detail image.
+- Routine repeatability proof: installed user-runtime run
+  `medgen_fde3e1e604f24a95a2162e6ed1a58c59` generated four visible PNG
+  artifacts, `run status` reported all four checksums, and the first explicit
+  `media materialize ... --count 1 --json` added
+  `grok_imagine_full_quality_1` / `content.png` through
+  `https://grok.com/files?file=7f618274-c6fb-4fcb-a80b-5d6a8c4c7146` with
+  `activationContext = files`, one `Download Image` control, and six image
+  candidates.
+- Source follow-up from the repeatability run: resumed full-quality
+  materialization now goes directly to Grok Files even if active `/imagine`
+  tiles are still visible. The older active-page/saved-gallery-first route
+  could recapture a visible tile and require a second materialize call from
+  `/files`.
 
 ## Scope
 

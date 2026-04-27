@@ -14738,3 +14738,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   score the compact file anchor/row, not broad virtualized ancestors, because
   nearby `generated_video.mp4` rows can otherwise mask valid `image.png`
   entries.
+- 2026-04-27: Resumed Grok image materialization should route full-quality
+  recovery directly through Grok Files even when active `/imagine` tiles are
+  still visible. Trying the active page/saved-gallery branch first can file a
+  duplicate visible-tile recapture and require a second operator retry from
+  `/files`; direct Files detail selection made the first retry succeed on
+  `medgen_fde3e1e604f24a95a2162e6ed1a58c59`.

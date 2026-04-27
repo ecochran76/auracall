@@ -22549,3 +22549,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media generate --provider grok --type image -p "Generate an image of a copper key on a foggy windowsill" --count 4 --json`
   - `pnpm tsx scripts/browser-tools.ts --auracall-profile auracall-grok-auto --browser-target grok nav https://grok.com/files`
   - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media materialize medgen_49c1a5b32878483bbc20cca7159b1fee --count 1 --json`
+
+## 2026-04-27 - Grok routine repeatability proof
+
+- Focus: repeat the installed-runtime operator path without extra browser
+  diagnostics: fresh generate, `run status`, then first explicit
+  `media materialize`.
+- Fix: resumed full-quality materialization now uses Grok Files directly
+  instead of trying the active `/imagine` page or saved-gallery branch first.
+  The prior path could recapture a visible tile and then require a second
+  materialize call from `/files`.
+- Live result: run `medgen_fde3e1e604f24a95a2162e6ed1a58c59` generated four
+  visible PNG artifacts, `run status` reported all four checksums, and the
+  first `media materialize ... --count 1 --json` added
+  `grok_imagine_full_quality_1` / `content.png` with
+  `activationContext = files`, `fullQualityFileCount = 1`, one
+  `Download Image` control, and six image candidates.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media generate --provider grok --type image -p "Generate an image of a red umbrella under northern lights" --count 4 --json`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto run status medgen_fde3e1e604f24a95a2162e6ed1a58c59 --json`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media materialize medgen_fde3e1e604f24a95a2162e6ed1a58c59 --count 1 --json`

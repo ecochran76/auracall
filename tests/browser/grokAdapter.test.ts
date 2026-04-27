@@ -989,6 +989,7 @@ describe('Grok Imagine materialization', () => {
           capabilityId: 'grok.media.imagine_image',
           maxItems: 3,
           compareFullQuality: true,
+          fullQualityActivationContext: 'post-submit',
         },
         destDir,
         {
@@ -1150,7 +1151,7 @@ describe('Grok Imagine materialization', () => {
     }
   });
 
-  test('uses saved gallery fallback for resumed full-quality materialization', async () => {
+  test('uses Grok files directly for resumed full-quality materialization', async () => {
     const destDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-grok-adapter-saved-fallback-'));
     try {
       grokRunPromptMocks.cdpList.mockReset();
@@ -1164,7 +1165,7 @@ describe('Grok Imagine materialization', () => {
           url: 'https://grok.com/imagine',
         },
       ]);
-      const client = createFakeGrokImagineSavedFallbackClient(destDir);
+      const client = createFakeGrokImagineFilesFallbackClient(destDir);
       grokRunPromptMocks.connectToChromeTarget.mockResolvedValue(client);
 
       const adapter = createGrokAdapter();
@@ -1187,11 +1188,15 @@ describe('Grok Imagine materialization', () => {
         },
       );
 
-      expect(client.Page.navigate).toHaveBeenCalledWith({ url: 'https://grok.com/imagine/saved' });
+      expect(client.Page.navigate).not.toHaveBeenCalledWith({ url: 'https://grok.com/imagine/saved' });
+      expect(client.Page.navigate).toHaveBeenCalledWith({ url: 'https://grok.com/files' });
+      expect(client.Page.navigate).toHaveBeenCalledWith({
+        url: 'https://grok.com/files?file=7f618274-c6fb-4fcb-a80b-5d6a8c4c7146',
+      });
       expect(files).toHaveLength(2);
       expect(files[1]).toMatchObject({
         id: 'grok_imagine_full_quality_1',
-        name: 'grok-imagine-saved-full-quality.jpg',
+        name: 'grok-imagine-files-full-quality.jpg',
         metadata: {
           materialization: 'download-button',
           previewArtifactId: 'grok_imagine_visible_1',
@@ -1201,10 +1206,11 @@ describe('Grok Imagine materialization', () => {
         fullQualityDownload: expect.objectContaining({
           ok: true,
           clicked: true,
-          activationContext: 'saved-gallery',
+          activationContext: 'files',
           primaryTileActivationAllowed: true,
           savedGalleryUrl: 'https://grok.com/imagine/saved',
           filesUrl: 'https://grok.com/files',
+          filesDetailUrl: 'https://grok.com/files?file=7f618274-c6fb-4fcb-a80b-5d6a8c4c7146',
         }),
       });
     } finally {
@@ -1212,7 +1218,7 @@ describe('Grok Imagine materialization', () => {
     }
   });
 
-  test('falls back to Grok files when saved gallery has no download surface', async () => {
+  test('opens Grok files detail when saved gallery has no download surface', async () => {
     const destDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-grok-adapter-files-fallback-'));
     try {
       grokRunPromptMocks.cdpList.mockReset();
@@ -1249,7 +1255,7 @@ describe('Grok Imagine materialization', () => {
         },
       );
 
-      expect(client.Page.navigate).toHaveBeenCalledWith({ url: 'https://grok.com/imagine/saved' });
+      expect(client.Page.navigate).not.toHaveBeenCalledWith({ url: 'https://grok.com/imagine/saved' });
       expect(client.Page.navigate).toHaveBeenCalledWith({ url: 'https://grok.com/files' });
       expect(client.Page.navigate).toHaveBeenCalledWith({
         url: 'https://grok.com/files?file=7f618274-c6fb-4fcb-a80b-5d6a8c4c7146',

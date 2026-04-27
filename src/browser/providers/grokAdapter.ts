@@ -1903,7 +1903,7 @@ async function materializeGrokImagineVisibleImagesWithClient(
   };
   if (options.compareFullQuality !== false && fallbackPreviewFile) {
     const comparison =
-      fullQualityActivationContext === 'resumed' && files.length === 0
+      fullQualityActivationContext === 'resumed'
         ? await materializeGrokFullQualityDownloadFromFiles(client, destDir, fallbackPreviewFile)
         : await materializeGrokFullQualityDownload(client, destDir, fallbackPreviewFile, {
             allowPrimaryTileActivation: Boolean(options.allowFullQualityPrimaryTileActivation),
