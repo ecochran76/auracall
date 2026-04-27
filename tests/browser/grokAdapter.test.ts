@@ -996,6 +996,62 @@ describe('Grok Imagine materialization', () => {
     }
   });
 
+  test('uses submitted Grok tab target for active materialization without URL reselection', async () => {
+    const destDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-grok-adapter-submitted-tab-'));
+    try {
+      grokRunPromptMocks.cdpList.mockReset();
+      grokRunPromptMocks.cdpClose.mockReset();
+      grokRunPromptMocks.connectToChromeTarget.mockReset();
+      grokRunPromptMocks.openOrReuseChromeTarget.mockReset();
+      grokRunPromptMocks.cdpList.mockResolvedValue([
+        {
+          id: 'stale-root-tab',
+          type: 'page',
+          url: 'https://grok.com/imagine',
+        },
+        {
+          id: 'submitted-imagine-tab',
+          type: 'page',
+          url: 'https://grok.com/imagine',
+        },
+      ]);
+      const client = createFakeGrokImagineMaterializationClient(destDir);
+      grokRunPromptMocks.connectToChromeTarget.mockResolvedValue(client);
+
+      const adapter = createGrokAdapter();
+      await adapter.materializeActiveMediaArtifacts!(
+        {
+          capabilityId: 'grok.media.imagine_image',
+          maxItems: 1,
+          compareFullQuality: false,
+        },
+        destDir,
+        {
+          host: '127.0.0.1',
+          port: 9222,
+          configuredUrl: 'https://grok.com/imagine',
+          tabTargetId: 'submitted-imagine-tab',
+          preserveActiveTab: true,
+          expectedUserIdentity: {
+            email: 'ez86944@gmail.com',
+            source: 'profile',
+          },
+          expectedServiceAccountId: 'service-account:grok:ez86944@gmail.com',
+        },
+      );
+
+      expect(grokRunPromptMocks.connectToChromeTarget).toHaveBeenCalledWith({
+        host: '127.0.0.1',
+        port: 9222,
+        target: 'submitted-imagine-tab',
+      });
+      expect(grokRunPromptMocks.openOrReuseChromeTarget).not.toHaveBeenCalled();
+      expect(grokRunPromptMocks.cdpClose).not.toHaveBeenCalled();
+    } finally {
+      await fs.rm(destDir, { recursive: true, force: true });
+    }
+  });
+
   test('uses saved gallery fallback for resumed full-quality materialization', async () => {
     const destDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-grok-adapter-saved-fallback-'));
     try {

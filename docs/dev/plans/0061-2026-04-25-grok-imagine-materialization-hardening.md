@@ -157,6 +157,10 @@ profile, queued dispatcher, and registry-first DevTools authority.
   with zero tile/download candidates on the follow-up readback. The next source
   slice should capture DOM/screenshot evidence immediately after the trusted
   click and refine the card/action-surface selector from that live state.
+- Submitted-tab fence: active materialization now treats the submitted
+  `tabTargetId` as authoritative. When present, Grok tab connection attaches to
+  that exact target or fails closed instead of reselecting a stale same-origin
+  `/imagine` tab through URL matching.
 - Tooling follow-up: `scripts/browser-tools.ts` now resolves managed browser
   profiles through the same browser-family-aware launch context as product
   paths. This prevents diagnostics for `auracall-grok-auto` from launching the
@@ -209,6 +213,8 @@ profile, queued dispatcher, and registry-first DevTools authority.
   evidence.
 - The provider adapter never re-navigates after prompt submission while waiting
   for generated media or materializing artifacts.
+- Submitted-run materialization attaches to the submitted tab target id and
+  does not use URL-based open/reuse selection when that target id is available.
 - The provider adapter fails fast before submission/materialization when the
   managed browser profile is signed out, blocked on an auth challenge, or not
   the account expected by the selected AuraCall runtime profile.

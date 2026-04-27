@@ -14661,3 +14661,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   discovery still saw no download button. The next provider fix should capture
   DOM/screenshot evidence immediately after the trusted click and adjust the
   card/action-surface target from live evidence, without re-navigating.
+- 2026-04-26: For submitted Grok Imagine runs, the submitted tab target id must
+  outrank URL matching. `connectToGrokTab` ignored `tabTargetId` during active
+  media materialization, so it could reselect a stale same-origin tab and route
+  through `openOrReuseChromeTarget`, which can focus that target by navigating
+  to the requested URL. Treat explicit submitted targets as authoritative and
+  fail closed if the target is unavailable.

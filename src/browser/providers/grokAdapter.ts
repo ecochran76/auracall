@@ -5517,6 +5517,18 @@ async function connectToGrokTab(
   const resolvedPort = port;
   const targets = await CDP.List({ host, port: resolvedPort });
   const candidates = targets.filter((target) => target.type === 'page' && target.url?.includes('grok.com'));
+  const requestedTargetId = resolveGrokTargetId(options?.tabTargetId);
+  if (requestedTargetId) {
+    const requestedTarget = candidates.find((target) => resolveGrokTargetId(target) === requestedTargetId);
+    if (!requestedTarget) {
+      throw new Error(`Requested Grok tab target ${requestedTargetId} is not available on the selected DevTools port.`);
+    }
+    const client = await connectToChromeTarget({ host, port: resolvedPort, target: requestedTargetId });
+    await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+    annotateClientMutationContext(client, options, 'provider:grok');
+    setClientSuppressFocus(client, resolveBrowserTabPolicy(options).suppressFocus);
+    return { client, targetId: requestedTargetId, shouldClose: false, host, port: resolvedPort, usedExisting: true };
+  }
   const preferred = selectPreferredGrokTarget(candidates, preferredUrl);
   const serviceResolved = resolvedTargetIdFromService
     ? candidates.find((target) => resolveGrokTargetId(target) === resolvedTargetIdFromService)

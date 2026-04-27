@@ -22321,3 +22321,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run plans:audit -- --keep 61`
   - `git diff --check`
   - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media generate --provider grok --type image -p "Generate an image of an asphalt secret agent" --count 1 --json`
+
+## 2026-04-26 - Grok submitted-tab materialization fence
+
+- Focus: audit why Grok Imagine could appear to leave the submitted page after
+  prompt submission despite `preserveActiveTab`.
+- Finding: active media materialization passed the submitted `tabTargetId`, but
+  `connectToGrokTab` ignored it and reselected by URL/origin. When URL
+  selection falls through to `openOrReuseChromeTarget`, same-origin reuse can
+  focus the selected target with navigation to the requested URL.
+- Fix: `connectToGrokTab` now treats an explicit `tabTargetId` as authoritative
+  for Grok. Submitted-run materialization attaches to that exact page target or
+  fails closed; it no longer falls back to URL-based open/reuse selection.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - `git diff --check`
