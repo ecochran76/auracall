@@ -22379,3 +22379,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm exec tsc --noEmit`
   - `pnpm run plans:audit -- --keep 61`
   - `git diff --check`
+
+## 2026-04-26 - Grok passive Imagine readiness probe
+
+- Focus: submit one Grok Imagine image prompt, then avoid all generated-tile
+  clicks/navigation and passively poll the submitted tab DOM plus screenshots.
+- Finding: the first live passive run stayed on `https://grok.com/imagine` for
+  the full 180 seconds, but exposed a classifier bug: root/Discover placeholder
+  media could be reported as `generated_media` immediately after submit. A
+  follow-up run showed the real readiness signal is generated `data:image`
+  tiles under `imagine-masonry-section-*`; download controls are not visible
+  without selecting/opening a tile, so passive readiness must not require a
+  download button.
+- Fix: Grok feature probing no longer treats root Discover data previews as
+  generated media unless they are inside generated masonry/filmstrip surfaces.
+  `prompt_submitted` observation is capped at 15 seconds so media execution can
+  perform the long no-navigation poll, and the executor waits for a stable
+  generated image batch before materialization.
+- Tooling: added
+  `scripts/browser-service/grok-imagine-passive-smoke.ts`, which submits
+  through AuraCall browser services and then uses the raw-CDP escape hatch only
+  for read-only DOM/screenshot polling of the exact submitted tab.
+- Validation:
+  - `AURACALL_ALLOW_RAW_CDP=1 pnpm tsx scripts/browser-service/grok-imagine-passive-smoke.ts --prompt "Generate an image of an asphalt secret agent" --duration-ms 180000 --interval-ms 3000 --screenshot-every 1`
+  - `AURACALL_ALLOW_RAW_CDP=1 pnpm tsx scripts/browser-service/grok-imagine-passive-smoke.ts --prompt "Generate an image of an asphalt secret agent" --duration-ms 90000 --interval-ms 3000 --screenshot-every 5`
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`

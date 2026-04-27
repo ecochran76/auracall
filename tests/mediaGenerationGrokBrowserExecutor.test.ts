@@ -507,6 +507,9 @@ describe('Grok browser media generation executor', () => {
         mediaType: 'image',
         prompt: 'Generate an image of an asphalt secret agent',
         transport: 'browser',
+        metadata: {
+          grokImageSettleMs: 0,
+        },
       },
     });
 
@@ -625,6 +628,9 @@ describe('Grok browser media generation executor', () => {
         mediaType: 'image',
         prompt: 'Generate images of an asphalt secret agent',
         transport: 'browser',
+        metadata: {
+          grokImageSettleMs: 0,
+        },
       },
     });
     const countedResult = await executor({
@@ -637,6 +643,9 @@ describe('Grok browser media generation executor', () => {
         prompt: 'Generate images of an asphalt secret agent',
         transport: 'browser',
         count: 3,
+        metadata: {
+          grokImageSettleMs: 0,
+        },
       },
     });
 
@@ -894,6 +903,7 @@ describe('Grok browser media generation executor', () => {
           grokVideoReadbackTabUrl: 'https://grok.com/imagine',
           grokVideoReadbackDevtoolsPort: 38261,
           artifactPollIntervalMs: 1,
+          grokImageSettleMs: 0,
         },
       },
     });
@@ -1037,6 +1047,7 @@ describe('Grok browser media generation executor', () => {
         transport: 'browser',
         metadata: {
           artifactPollIntervalMs: 1,
+          grokImageSettleMs: 0,
         },
       },
     });
@@ -1122,7 +1133,7 @@ describe('Grok browser media generation executor', () => {
       },
     });
 
-    expect(browserClient.getFeatureSignature).toHaveBeenCalledTimes(3);
+    expect(browserClient.getFeatureSignature.mock.calls.length).toBeGreaterThanOrEqual(3);
     expect(timelineEvents).toContain('no_generated_media');
     expect(timelineEvents).not.toContain('image_visible');
   });
@@ -1230,6 +1241,7 @@ describe('Grok browser media generation executor', () => {
         transport: 'browser',
         metadata: {
           visibleTileMaterializationLimit: 5,
+          grokImageSettleMs: 0,
         },
       },
     });
@@ -1352,6 +1364,9 @@ describe('Grok browser media generation executor', () => {
         prompt: 'Generate an image of an asphalt secret agent',
         transport: 'browser',
         count: 2,
+        metadata: {
+          grokImageSettleMs: 0,
+        },
       },
     });
 

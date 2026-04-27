@@ -14678,3 +14678,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   initial materialization stayed on `/imagine`. Fresh post-submit full-quality
   discovery should fail with diagnostics when no download control is visible;
   only resumed/direct saved-gallery workflows may intentionally navigate.
+- 2026-04-26: Grok Imagine readiness should be based on stable generated
+  masonry/filmstrip media, not root Discover placeholders or visible download
+  buttons. Passive live polling showed the submitted tab stays on
+  `https://grok.com/imagine` while generated `data:image` tiles appear under
+  `imagine-masonry-section-*`; download controls are not visible until a tile
+  is selected/opened, so post-submit readback must remain no-navigation and
+  wait for stable generated media before materialization.

@@ -274,6 +274,13 @@ export function buildGrokFeatureProbeExpression(): string {
         ariaLabel: normalize(node.getAttribute?.('aria-label') || '') || null,
         role: normalize(node.getAttribute?.('role') || '') || null,
       }));
+    const routePath = (() => {
+      try {
+        return new URL(locationHref).pathname.replace(/\\/+$/, '') || '/';
+      } catch {
+        return '';
+      }
+    })();
     const readMedia = (selector, kind, limit = 20) => Array.from(document.querySelectorAll(selector))
       .filter((node) => isVisible(node))
       .map((node) => {
@@ -286,6 +293,12 @@ export function buildGrokFeatureProbeExpression(): string {
         const className = normalize(node.getAttribute?.('class') || '');
         const selected = Boolean(tileButton?.matches?.('[tabindex="0"], .ring-white, [aria-selected="true"], [data-selected="true"]'));
         const url = lower([src, poster, href].filter(Boolean).join(' '));
+        const isRootDiscoverDataPreview = routePath === '/imagine' && !tileRoot && url.includes('data:image/');
+        const generated =
+          url.includes('/generated/') ||
+          url.includes('blob:') ||
+          (url.includes('data:image/') && Boolean(tileRoot)) ||
+          (url.includes('assets.grok.com/users/') && !isRootDiscoverDataPreview);
         return {
           kind,
           tag: String(node.tagName || '').toLowerCase(),
@@ -297,8 +310,8 @@ export function buildGrokFeatureProbeExpression(): string {
           height: rect?.height ?? null,
           selected,
           tileSurface: tileRoot?.matches?.('[data-filmstrip-scroll="true"]') ? 'filmstrip' : tileRoot ? 'masonry' : null,
-          generated: url.includes('/generated/') || url.includes('assets.grok.com/users/') || url.includes('blob:') || url.includes('data:image/'),
-          publicGallery: url.includes('imagine-public.x.ai'),
+          generated,
+          publicGallery: url.includes('imagine-public.x.ai') || isRootDiscoverDataPreview,
           className: className || null,
         };
       })
@@ -3147,7 +3160,13 @@ export function createGrokAdapter(): Pick<
         if (!submitted.ok) {
           throw new Error(submitted.reason ?? 'Grok Imagine send control was not found.');
         }
-        const submittedState = await waitForGrokImagineSubmittedState(client.Runtime, baseline, input.timeoutMs ?? 300_000);
+        const submittedState = await waitForGrokImagineSubmittedState(
+          client.Runtime,
+          baseline,
+          input.completionMode === 'prompt_submitted'
+            ? Math.min(input.timeoutMs ?? 300_000, 15_000)
+            : input.timeoutMs ?? 300_000,
+        );
         await emitProgress({
           phase: 'submit_path_observed',
           details: {

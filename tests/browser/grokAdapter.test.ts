@@ -188,7 +188,7 @@ describe('normalizeGrokFeatureSignature', () => {
     expect(() => new Function(`return ${buildGrokFeatureProbeExpression()};`)).not.toThrow();
   });
 
-  test('does not classify a passive SuperGrok upsell as an Imagine account gate', () => {
+  test('does not classify root Discover data previews as generated Imagine media', () => {
     const probe = evaluateGrokFeatureProbeWithFakeDom({
       bodyText: 'Discover kittens Think Harder Image Video Speed Quality 2:3 Upgrade to SuperGrok',
       controls: [
@@ -213,6 +213,50 @@ describe('normalizeGrokFeatureSignature', () => {
     expect(probe.imagine.account_gated).toBe(false);
     expect(probe.imagine.run_state).toBe('terminal_image');
     expect(probe.imagine.terminal_image).toBe(true);
+    expect(probe.imagine.media).toMatchObject({
+      images: [
+        expect.objectContaining({
+          generated: false,
+          publicGallery: true,
+        }),
+      ],
+    });
+  });
+
+  test('classifies masonry data previews as generated Imagine media', () => {
+    const probe = evaluateGrokFeatureProbeWithFakeDom({
+      bodyText: 'Discover kittens Think Harder Image Video Speed Quality 2:3',
+      controls: [
+        fakeElement('button', { text: 'Image', width: 80, height: 32 }),
+        fakeElement('button', { text: 'Video', width: 80, height: 32 }),
+        fakeElement('button', { ariaLabel: 'Submit', width: 40, height: 40 }),
+      ],
+      composerInputs: [
+        fakeElement('div', { text: 'Type to imagine', placeholder: 'Type to imagine', width: 400, height: 48 }),
+      ],
+      images: [
+        fakeImage({
+          src: `data:image/jpeg;base64,${Buffer.from('preview image bytes').toString('base64')}`,
+          alt: 'Generated image',
+          width: 277,
+          height: 413,
+          closestSelectors: ['[id^="imagine-masonry-section"]'],
+        }),
+      ],
+    });
+
+    expect(probe.imagine.account_gated).toBe(false);
+    expect(probe.imagine.run_state).toBe('terminal_image');
+    expect(probe.imagine.terminal_image).toBe(true);
+    expect(probe.imagine.media).toMatchObject({
+      images: [
+        expect.objectContaining({
+          generated: true,
+          publicGallery: false,
+          tileSurface: 'masonry',
+        }),
+      ],
+    });
   });
 
   test('keeps contextual Imagine generation gates when no ready composer or media is visible', () => {
@@ -448,6 +492,7 @@ class FakeElement {
     width?: number;
     height?: number;
     disabled?: boolean;
+    closestSelectors?: string[];
   } = {}) {
     this.tagName = tagName.toUpperCase();
     this.textContent = options.text ?? '';
@@ -462,6 +507,7 @@ class FakeElement {
     if (options.href) this.attrs.set('href', options.href);
     if (options.placeholder) this.attrs.set('placeholder', options.placeholder);
     if (options.alt) this.attrs.set('alt', options.alt);
+    if (options.closestSelectors?.length) this.attrs.set('data-fake-closest-selectors', options.closestSelectors.join('\n'));
   }
 
   getAttribute(name: string): string | null {
@@ -472,7 +518,11 @@ class FakeElement {
     return { width: this.width, height: this.height };
   }
 
-  closest(): null {
+  closest(selector?: string): FakeElement | null {
+    const selectors = (this.attrs.get('data-fake-closest-selectors') ?? '').split('\n').filter(Boolean);
+    if (selector && selectors.some((entry) => selector.includes(entry) || entry.includes(selector))) {
+      return new FakeElement('div', { width: this.width, height: this.height });
+    }
     return null;
   }
 

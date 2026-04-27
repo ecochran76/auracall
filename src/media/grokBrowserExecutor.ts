@@ -588,12 +588,18 @@ async function waitForGrokImagineTerminalImage(
   emitTimeline: MediaGenerationExecutorInput['emitTimeline'],
 ): Promise<{ evidence: GrokImagineEvidence; pollCount: number }> {
   const pollIntervalMs = resolveArtifactPollIntervalMs(metadata);
+  const settleMs = resolveGrokImageSettleMs(metadata);
+  const requiredStablePolls = resolveGrokImageStablePolls(metadata);
   const deadline = Date.now() + timeoutMs;
   let pollCount = 0;
   let lastEvidence: GrokImagineEvidence | null = null;
   let consecutiveTerminalNoGenerated = 0;
+  let firstGeneratedAt: number | null = null;
+  let lastGeneratedFingerprint: string | null = null;
+  let stableGeneratedPolls = 0;
   while (Date.now() <= deadline) {
     pollCount += 1;
+    const now = Date.now();
     const signature = await client.getFeatureSignature({
       configuredUrl: tabUrl,
       tabUrl,
@@ -637,6 +643,40 @@ async function waitForGrokImagineTerminalImage(
     }
     const generatedImages = evidence.media.images.filter(isGeneratedGrokImageEntry);
     if (evidence.terminalImage && generatedImages.length > 0) {
+      const generatedFingerprint = fingerprintGrokGeneratedImages(generatedImages);
+      if (firstGeneratedAt === null) {
+        firstGeneratedAt = now;
+        lastGeneratedFingerprint = generatedFingerprint;
+        stableGeneratedPolls = 1;
+      } else if (generatedFingerprint === lastGeneratedFingerprint) {
+        stableGeneratedPolls += 1;
+      } else {
+        lastGeneratedFingerprint = generatedFingerprint;
+        stableGeneratedPolls = 1;
+      }
+      const settledForMs = now - firstGeneratedAt;
+      if (settledForMs < settleMs || stableGeneratedPolls < requiredStablePolls) {
+        await emitTimeline?.({
+          event: 'artifact_poll',
+          details: {
+            materializationSource: 'grok-browser-wait',
+            decision: 'wait_for_stable_image_batch',
+            pollCount,
+            generatedArtifactCount: generatedImages.length,
+            stableGeneratedPolls,
+            requiredStablePolls,
+            settledForMs,
+            settleMs,
+            providerHref: evidence.href,
+          },
+        });
+        const remainingMs = deadline - Date.now();
+        if (remainingMs <= 0) break;
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.min(pollIntervalMs, Math.max(250, settleMs - settledForMs), remainingMs)),
+        );
+        continue;
+      }
       await emitTimeline?.({
         event: 'image_visible',
         details: {
@@ -734,6 +774,14 @@ async function materializeGrokImageEntry(
       checksumSha256: sha256Hex(bytes),
     },
   };
+}
+
+function fingerprintGrokGeneratedImages(entries: Array<Record<string, unknown>>): string {
+  return entries
+    .map((entry) => normalizeNonEmpty(entry.src) ?? normalizeNonEmpty(entry.href) ?? normalizeNonEmpty(entry.poster) ?? '')
+    .filter(Boolean)
+    .sort()
+    .join('|');
 }
 
 function parseGrokImagineEvidence(signature: string | null | undefined): GrokImagineEvidence {
@@ -1360,6 +1408,25 @@ function resolveArtifactPollIntervalMs(metadata: Record<string, unknown> | null 
     return Math.max(250, Math.min(candidate, 30_000));
   }
   return 5_000;
+}
+
+function resolveGrokImageSettleMs(metadata: Record<string, unknown> | null | undefined): number {
+  const candidate = metadata?.grokImageSettleMs;
+  if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+    return Math.max(0, Math.min(candidate, 120_000));
+  }
+  return 12_000;
+}
+
+function resolveGrokImageStablePolls(metadata: Record<string, unknown> | null | undefined): number {
+  const candidate = metadata?.grokImageStablePolls;
+  if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+    return Math.max(1, Math.min(Math.trunc(candidate), 10));
+  }
+  if (metadata?.grokImageSettleMs === 0) {
+    return 1;
+  }
+  return 2;
 }
 
 function resolveGrokImageRequestedVisibleTileCount(

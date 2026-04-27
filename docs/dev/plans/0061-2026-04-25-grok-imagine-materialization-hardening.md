@@ -172,6 +172,12 @@ profile, queued dispatcher, and registry-first DevTools authority.
   and remove it from fresh post-submit materialization. If no download control
   is visible, keep the visible-tile artifact and return diagnostics instead of
   pressing into a provider post route.
+- Passive readiness correction: live passive polling showed Grok can render
+  generated images on the submitted `/imagine` tab as masonry `data:image`
+  tiles without exposing download controls. Root Discover placeholders can look
+  image-like but are not generated media. Readiness should therefore require a
+  stable generated masonry/filmstrip batch and should not require or attempt a
+  post-submit tile click.
 - Tooling follow-up: `scripts/browser-tools.ts` now resolves managed browser
   profiles through the same browser-family-aware launch context as product
   paths. This prevents diagnostics for `auracall-grok-auto` from launching the
@@ -192,16 +198,13 @@ profile, queued dispatcher, and registry-first DevTools authority.
 - If direct root-tile download controls are absent, follow the provider's
   saved-generation workflow via `https://grok.com/imagine/saved` rather than
   opening immature per-post routes.
-- Permit primary tile activation only for fresh post-submit image runs; once
-  the page has been left, treat root tiles as stale and route through
-  `https://grok.com/imagine/saved` or Grok files.
-- Use trusted CDP mouse activation only in the fresh post-submit path; synthetic
-  in-page click events alone are not sufficient evidence that the provider
-  action surface has been opened.
 - Do not primary-click generated tiles/cards on a fresh post-submit page.
   Trusted CDP can be used for hover/move diagnostics, but mouse press/release
   on the tile is treated as navigation-prone until a specific non-navigating
   download control is identified.
+- Treat generated masonry/filmstrip media as the passive readiness signal.
+  Download buttons are optional post-readiness materialization evidence, not a
+  prerequisite for deciding the image run has completed.
 - Record saved-gallery and files URLs in diagnostics when full-quality
   materialization cannot find a direct download surface.
 - Keep all CDP interactions behind browser-service dispatcher/control-plane
@@ -239,14 +242,15 @@ profile, queued dispatcher, and registry-first DevTools authority.
   and full-quality download comparison metadata without live provider work.
 - A focused regression test covers the resumed/direct saved-gallery fallback
   without live provider work.
-- A focused regression test covers trusted CDP tile activation for fresh
-  post-submit full-quality discovery without live provider work.
+- A focused regression test covers root Discover data previews so they do not
+  masquerade as generated Grok Imagine media.
 - A focused regression test covers browser-media dispatcher key derivation for
   runtime profiles that select a different browser profile family.
 - One narrow installed-runtime dogfood run proves the live path after focused
   tests pass.
-- Live dogfood must prove whether fresh post-submit tile activation can expose
-  the full-quality download control before calling the full-quality path done.
+- Live dogfood must prove stable submitted-tab masonry/filmstrip readiness and
+  no post-submit re-navigation before calling the browser-first image path
+  done.
 
 ## Validation Plan
 
