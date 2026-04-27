@@ -1036,6 +1036,7 @@ describe('Grok Imagine materialization', () => {
       const evalExpressions = client.Runtime.evaluate.mock.calls.map(([arg]) => String(arg.expression ?? ''));
       expect(evalExpressions.some((expression) => expression.includes('isSubstantialRemotePreview'))).toBe(true);
       expect(evalExpressions.some((expression) => expression.includes('rect.width >= 120'))).toBe(true);
+      expect(evalExpressions.some((expression) => expression.includes('[id^="imagine-masonry-section"] img'))).toBe(true);
       expect(evalExpressions.some((expression) => expression.includes('const allowPrimaryTileActivation = false'))).toBe(true);
       await expect(fs.stat(files[0]!.localPath!)).resolves.toMatchObject({ size: files[0]!.size });
       await expect(fs.stat(files[1]!.localPath!)).resolves.toMatchObject({ size: files[1]!.size });

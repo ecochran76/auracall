@@ -1928,7 +1928,7 @@ async function captureGrokImagineVisibleImageTiles(
       const selectors = [
         'img[src*="imagine-public.x.ai/imagine-public/share-images/"]',
         'main img[src*="imagine-public.x.ai/imagine-public/share-images/"]',
-        '#imagine-masonry-section-0 img',
+        '[id^="imagine-masonry-section"] img',
         '[data-filmstrip-scroll="true"] img',
         'main img[src^="data:image/"]',
         'main img[src^="blob:"]',
@@ -1953,13 +1953,15 @@ async function captureGrokImagineVisibleImageTiles(
           const rect = img.getBoundingClientRect();
           const area = rect.width * rect.height;
           const templateShareImage = isTemplateRoute && /imagine-public\\.x\\.ai\\/imagine-public\\/share-images\\//.test(src) && area >= 100_000;
-          const generated = src.startsWith('data:image/') || src.startsWith('blob:') || isSubstantialRemotePreview(src, rect) || templateShareImage;
-          if (!generated) continue;
           const masonryGenerated = Boolean(img.closest('[id^="imagine-masonry-section"], [data-filmstrip-scroll="true"]'));
+          const generated = (masonryGenerated && src.startsWith('data:image/')) ||
+            (masonryGenerated && src.startsWith('blob:')) ||
+            isSubstantialRemotePreview(src, rect) ||
+            templateShareImage;
+          if (!generated) continue;
           const generatedScore =
             masonryGenerated && src.startsWith('data:image/') ? 3_000_000 :
-            src.startsWith('data:image/') ? 2_750_000 :
-            src.startsWith('blob:') ? 2_500_000 :
+            masonryGenerated && src.startsWith('blob:') ? 2_500_000 :
             isSubstantialRemotePreview(src, rect) ? 1_750_000 :
             templateShareImage ? 1_000_000 :
             0;
@@ -2238,12 +2240,15 @@ async function materializeGrokFullQualityDownload(
         rect.width >= 120 &&
         rect.height >= 120 &&
         rect.width * rect.height >= 40_000;
-      const tileCandidates = Array.from(document.querySelectorAll('img[src*="imagine-public.x.ai/imagine-public/share-images/"], #imagine-masonry-section-0 img, main img[src^="data:image/"], main img[src^="blob:"], img[src*="assets.grok.com/users/"], main img[src*="/generated/"]'))
+      const tileCandidates = Array.from(document.querySelectorAll('img[src*="imagine-public.x.ai/imagine-public/share-images/"], [id^="imagine-masonry-section"] img, [data-filmstrip-scroll="true"] img, main img[src^="data:image/"], main img[src^="blob:"], img[src*="assets.grok.com/users/"], main img[src*="/generated/"]'))
         .filter((node) => {
           if (!(node instanceof HTMLImageElement) || !visible(node)) return false;
           const src = node.currentSrc || node.src || '';
           const rect = node.getBoundingClientRect();
-          return src.startsWith('data:image/') || src.startsWith('blob:') || isSubstantialRemotePreview(src, rect);
+          const masonryGenerated = Boolean(node.closest('[id^="imagine-masonry-section"], [data-filmstrip-scroll="true"]'));
+          return (masonryGenerated && src.startsWith('data:image/')) ||
+            (masonryGenerated && src.startsWith('blob:')) ||
+            isSubstantialRemotePreview(src, rect);
         })
         .sort((a, b) => {
           const score = (node) => {

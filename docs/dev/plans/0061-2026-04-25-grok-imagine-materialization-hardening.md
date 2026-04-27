@@ -178,6 +178,11 @@ profile, queued dispatcher, and registry-first DevTools authority.
   image-like but are not generated media. Readiness should therefore require a
   stable generated masonry/filmstrip batch and should not require or attempt a
   post-submit tile click.
+- Capture correction: generated masonry output can appear in later sections
+  such as `imagine-masonry-section-2`, not only section `0`. Browser-first
+  visible capture and diagnostics must query the full
+  `[id^="imagine-masonry-section"]` family and ignore root Discover data
+  previews.
 - Tooling follow-up: `scripts/browser-tools.ts` now resolves managed browser
   profiles through the same browser-family-aware launch context as product
   paths. This prevents diagnostics for `auracall-grok-auto` from launching the
@@ -205,6 +210,9 @@ profile, queued dispatcher, and registry-first DevTools authority.
 - Treat generated masonry/filmstrip media as the passive readiness signal.
   Download buttons are optional post-readiness materialization evidence, not a
   prerequisite for deciding the image run has completed.
+- Capture generated `data:image` / `blob:` tiles only when they are rooted in a
+  generated masonry or filmstrip surface; root Discover previews are not
+  materialization candidates.
 - Record saved-gallery and files URLs in diagnostics when full-quality
   materialization cannot find a direct download surface.
 - Keep all CDP interactions behind browser-service dispatcher/control-plane

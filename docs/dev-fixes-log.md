@@ -14685,3 +14685,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `imagine-masonry-section-*`; download controls are not visible until a tile
   is selected/opened, so post-submit readback must remain no-navigation and
   wait for stable generated media before materialization.
+- 2026-04-26: Grok Imagine generated masonry output is not limited to
+  `imagine-masonry-section-0`. Visible-tile capture and full-quality
+  diagnostics should query all `[id^="imagine-masonry-section"]` containers and
+  only accept `data:image` / `blob:` media as generated when it belongs to a
+  generated masonry or filmstrip surface.

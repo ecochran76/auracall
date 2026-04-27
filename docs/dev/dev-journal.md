@@ -22405,3 +22405,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `AURACALL_ALLOW_RAW_CDP=1 pnpm tsx scripts/browser-service/grok-imagine-passive-smoke.ts --prompt "Generate an image of an asphalt secret agent" --duration-ms 90000 --interval-ms 3000 --screenshot-every 5`
   - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts --maxWorkers 1`
   - `pnpm exec tsc --noEmit`
+
+## 2026-04-26 - Grok masonry section capture broadening
+
+- Focus: align visible artifact capture with the passive smoke evidence that
+  generated Grok Imagine tiles may appear under later masonry sections such as
+  `imagine-masonry-section-2`.
+- Fix: visible-tile capture and full-quality diagnostics now search every
+  `[id^="imagine-masonry-section"]` plus filmstrip output, and they only treat
+  `data:image` / `blob:` media as generated when it belongs to those generated
+  surfaces. Root Discover data previews are ignored for generated capture.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
