@@ -277,7 +277,10 @@
       `pnpm tsx bin/auracall.ts media materialize <media_generation_id> --count 1 --json`;
       the retry must use the browser-service operation dispatcher, preserve the
       existing terminal run status, and merge any new artifacts into the same
-      media-generation artifact directory
+      media-generation artifact directory. Current live proof covers the
+      navigate-away path where the active tab is later on `https://grok.com/files`
+      and the materializer opens a `/files?file=...` detail row to use
+      `Download Image`.
   - create a browser-transport Grok video request:
     - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"grok","mediaType":"video","transport":"browser","prompt":"Generate a video of an asphalt secret agent"}'`
     - expected successful runs include `capability_discovered`,

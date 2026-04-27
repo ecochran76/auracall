@@ -22524,3 +22524,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run install:user-runtime`
   - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media materialize medgen_ada664ba3db24de4821cac245ec74714 --count 1 --json`
+
+## 2026-04-27 - Grok fresh-run plus resumed materialize lifecycle
+
+- Focus: dogfood a fresh Grok image generation followed by a navigate-away
+  resumed full-quality materialization through the installed user runtime.
+- Fixes: Grok auth preflight now gives normal Grok app routes a short identity
+  hydration window before reporting signed-out state, while Google account
+  challenges still fail immediately. Files-detail readiness now requires the
+  `Download Image` button, and the Files candidate scanner scores compact file
+  anchors/rows so nearby virtualized video rows do not filter out valid image
+  entries.
+- Live result: run `medgen_49c1a5b32878483bbc20cca7159b1fee` generated four
+  visible masonry artifacts on `https://grok.com/imagine`. After navigating the
+  browser to `https://grok.com/files`, `media materialize ... --count 1`
+  added `grok_imagine_full_quality_1` as `content.png` with
+  `fullQualityFileCount = 1`, `filesImageCandidateCount = 6`, and
+  `downloadButtonLabels = ["Download Image"]`.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media generate --provider grok --type image -p "Generate an image of a copper key on a foggy windowsill" --count 4 --json`
+  - `pnpm tsx scripts/browser-tools.ts --auracall-profile auracall-grok-auto --browser-target grok nav https://grok.com/files`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media materialize medgen_49c1a5b32878483bbc20cca7159b1fee --count 1 --json`

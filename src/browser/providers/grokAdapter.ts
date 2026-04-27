@@ -1076,11 +1076,11 @@ export async function checkGrokBrowserAuthPreflight(
   Runtime: ChromeClient['Runtime'],
   options: Pick<BrowserProviderListOptions, 'expectedUserIdentity' | 'expectedServiceAccountId'> = {},
 ): Promise<GrokBrowserAuthPreflightResult> {
-  const page = await readGrokAuthPageState(Runtime);
+  let page = await readGrokAuthPageState(Runtime);
   const expectedIdentity = normalizeExpectedProviderIdentity(options.expectedUserIdentity);
   const expectedServiceAccountId = normalizeStringOrNull(options.expectedServiceAccountId);
-  const authChallengeReason = classifyGrokAuthChallenge(page);
-  if (authChallengeReason) {
+  let authChallengeReason = classifyGrokAuthChallenge(page);
+  if (authChallengeReason && isHardGrokAuthChallenge(authChallengeReason)) {
     return {
       ok: false,
       reason: authChallengeReason,
@@ -1094,8 +1094,29 @@ export async function checkGrokBrowserAuthPreflight(
     };
   }
 
-  const detected = await detectGrokSignedInIdentity(Runtime);
-  const actualIdentity = detected.identity;
+  let detected = await detectGrokSignedInIdentity(Runtime);
+  let actualIdentity = detected.identity;
+  if (authChallengeReason === 'grok_sign_in_required' && !actualIdentity) {
+    const hydrated = await waitForGrokIdentityHydration(Runtime);
+    page = hydrated.page;
+    authChallengeReason = hydrated.authChallengeReason;
+    detected = hydrated.detected;
+    actualIdentity = hydrated.detected.identity;
+  }
+
+  if (authChallengeReason && !actualIdentity) {
+    return {
+      ok: false,
+      reason: authChallengeReason,
+      href: page.href,
+      title: page.title,
+      expectedServiceAccountId,
+      expectedIdentity,
+      actualIdentity,
+      guestAuthCta: detected.guestAuthCta || page.guestAuthCta,
+      bodyText: page.bodyText,
+    };
+  }
   if (!actualIdentity) {
     return {
       ok: false,
@@ -1149,6 +1170,32 @@ export async function checkGrokBrowserAuthPreflight(
     guestAuthCta: detected.guestAuthCta || page.guestAuthCta,
     bodyText: page.bodyText,
   };
+}
+
+async function waitForGrokIdentityHydration(Runtime: ChromeClient['Runtime']): Promise<{
+  page: Awaited<ReturnType<typeof readGrokAuthPageState>>;
+  authChallengeReason: string | null;
+  detected: Awaited<ReturnType<typeof detectGrokSignedInIdentity>>;
+}> {
+  const start = Date.now();
+  const timeoutMs = 5_000;
+  let page = await readGrokAuthPageState(Runtime);
+  let authChallengeReason = classifyGrokAuthChallenge(page);
+  let detected = await detectGrokSignedInIdentity(Runtime);
+  while (!detected.identity && authChallengeReason === 'grok_sign_in_required' && Date.now() - start < timeoutMs) {
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    page = await readGrokAuthPageState(Runtime);
+    authChallengeReason = classifyGrokAuthChallenge(page);
+    if (authChallengeReason && isHardGrokAuthChallenge(authChallengeReason)) {
+      break;
+    }
+    detected = await detectGrokSignedInIdentity(Runtime);
+  }
+  return { page, authChallengeReason, detected };
+}
+
+function isHardGrokAuthChallenge(reason: string): boolean {
+  return reason.startsWith('google_account_');
 }
 
 async function assertGrokBrowserAuthPreflight(
@@ -2706,9 +2753,25 @@ async function findGrokFilesImageDetailCandidate(
           return null;
         }
         if (url.pathname !== '/files' || !url.searchParams.get('file')) return null;
-        const row = anchor.closest('li, article, [role="row"], [data-testid]') || anchor;
-        const label = normalize(row.textContent || anchor.textContent || '');
-        const img = row.querySelector('img') || anchor.querySelector('img');
+        const anchorRect = anchor.getBoundingClientRect();
+        const rowCandidates = [
+          anchor.closest('li'),
+          anchor.closest('article'),
+          anchor.closest('[role="row"]'),
+          anchor.closest('[data-testid]'),
+        ].filter(Boolean);
+        const row = rowCandidates.find((candidate) => {
+          if (!(candidate instanceof HTMLElement)) return false;
+          const rect = candidate.getBoundingClientRect();
+          return (
+            rect.height > 0 &&
+            rect.width > 0 &&
+            rect.height <= Math.max(120, anchorRect.height * 3) &&
+            rect.width <= Math.max(900, anchorRect.width * 3)
+          );
+        }) || anchor;
+        const label = normalize(anchor.textContent || row.textContent || '');
+        const img = anchor.querySelector('img') || row.querySelector('img');
         const sourceUrl = img instanceof HTMLImageElement ? (img.currentSrc || img.src || '') : '';
         const lower = [label, sourceUrl].join(' ').toLowerCase();
         const imageToken = /(^|[^a-z0-9])(png|jpe?g|webp|gif)([^a-z0-9]|$)/.test(lower) || lower.includes('image');
@@ -7625,10 +7688,7 @@ function grokFilesImageDetailReadyExpression(): string {
     const downloadButton = document.querySelector(
       'button[aria-label*="Download" i], button[title*="Download" i], [role="button"][aria-label*="Download" i]',
     );
-    const image = document.querySelector(
-      'main img[src*="assets.grok.com/users/"], main img[src^="blob:"], main img[src^="data:image/"]',
-    );
-    return Boolean(downloadButton || image);
+    return Boolean(downloadButton);
   })()`;
 }
 

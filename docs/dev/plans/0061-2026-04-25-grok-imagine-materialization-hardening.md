@@ -237,6 +237,21 @@ profile, queued dispatcher, and registry-first DevTools authority.
   `https://grok.com/files?file=629283de-0b0c-4628-8b0a-67af6951f229`, found
   one `Download Image` control, and recorded six image candidates from the
   scrolled files list.
+- Fresh lifecycle proof: installed user-runtime run
+  `medgen_49c1a5b32878483bbc20cca7159b1fee` generated four visible masonry
+  artifacts on the submitted `https://grok.com/imagine` page. After an
+  intentional operator navigation to `https://grok.com/files`, resumed
+  `media materialize ... --count 1 --json` added
+  `grok_imagine_full_quality_1` / `content.png`, reported
+  `fullQualityFileCount = 1`, opened
+  `https://grok.com/files?file=7f618274-c6fb-4fcb-a80b-5d6a8c4c7146`, found
+  one `Download Image` control, and recorded six image candidates.
+- Source follow-up from that lifecycle: Grok auth preflight now waits briefly
+  for identity hydration on normal Grok app routes before treating the browser
+  as signed out, but still fails fast for Google account challenges. The
+  resumed Files scanner now scores compact file anchors/rows so nearby
+  virtualized video rows cannot hide valid image entries, and files-detail
+  readiness waits for the download button instead of any detail image.
 
 ## Scope
 
@@ -254,9 +269,9 @@ profile, queued dispatcher, and registry-first DevTools authority.
   opening immature per-post routes.
 - Provide an explicit operator retry path for saved-gallery/files
   full-quality discovery after a fresh no-navigation run completes.
-- Refine resumed saved-gallery/files discovery against the live action surface;
-  the operator command and dispatcher path are proven, but download controls
-  are still not being identified.
+- Resumed saved-gallery/files discovery is live-proven for the current Grok
+  Files detail surface; keep future work focused on drift detection and
+  diagnostics rather than another download-control discovery loop.
 - Do not primary-click generated tiles/cards on a fresh post-submit page.
   Trusted CDP can be used for hover/move diagnostics, but mouse press/release
   on the tile is treated as navigation-prone until a specific non-navigating

@@ -130,6 +130,53 @@ describe('checkGrokBrowserAuthPreflight', () => {
     });
   });
 
+  test('waits for Grok identity hydration before treating the app route as signed out', async () => {
+    const Runtime = createFakeAuthRuntime([
+      {
+        href: 'https://grok.com/imagine',
+        title: 'Imagine - Grok',
+        bodyText: 'Sign in Type to imagine',
+        guestAuthCta: true,
+      },
+      {
+        id: null,
+        name: null,
+        handle: null,
+        email: null,
+        source: null,
+        guestAuthCta: true,
+      },
+      {
+        href: 'https://grok.com/imagine',
+        title: 'Imagine - Grok',
+        bodyText: 'Sign in Type to imagine',
+        guestAuthCta: true,
+      },
+      {
+        id: 'c4d43034-7f30-462b-918b-59779bcba208',
+        name: 'Eric C',
+        handle: '@SwantonDoug',
+        email: 'ez86944@gmail.com',
+        source: 'next-flight',
+        guestAuthCta: true,
+      },
+    ]);
+
+    await expect(checkGrokBrowserAuthPreflight(Runtime, {
+      expectedUserIdentity: {
+        email: 'ez86944@gmail.com',
+        source: 'profile',
+      },
+      expectedServiceAccountId: 'service-account:grok:ez86944@gmail.com',
+    })).resolves.toMatchObject({
+      ok: true,
+      reason: null,
+      actualIdentity: {
+        email: 'ez86944@gmail.com',
+      },
+    });
+  });
+
   test('fails when no expected Grok identity is configured', async () => {
     const Runtime = createFakeAuthRuntime([
       {

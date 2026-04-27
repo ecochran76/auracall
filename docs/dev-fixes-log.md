@@ -14731,3 +14731,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   through the detail-page `Download Image` control. Installed dogfood on
   `medgen_ada664ba3db24de4821cac245ec74714` added `content.png` as
   `grok_imagine_full_quality_1`.
+- 2026-04-27: Grok's signed-in app route can briefly expose sign-in-looking
+  UI before serialized identity data hydrates. Auth preflight should wait
+  briefly for identity only on normal Grok app routes, but still hard-stop
+  Google account challenges immediately. Grok Files image scanning should
+  score the compact file anchor/row, not broad virtualized ancestors, because
+  nearby `generated_video.mp4` rows can otherwise mask valid `image.png`
+  entries.

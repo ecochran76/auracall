@@ -162,7 +162,8 @@ Terminology note:
   it persists the media-generation id, timeline, status, and artifact cache.
   For Grok image runs, `auracall media materialize <id> --count 1 --json`
   explicitly retries saved-gallery/files full-quality discovery without
-  submitting another prompt.
+  submitting another prompt, including after the operator has navigated away
+  from the original `/imagine` generation page.
   Gemini image requests can use explicit `--transport api` with
   `GEMINI_API_KEY`, but provider API media access is not the current primary
   dogfood lane; browser media paths remain the normal operator focus.
