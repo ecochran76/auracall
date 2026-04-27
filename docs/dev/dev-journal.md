@@ -13,6 +13,22 @@
   - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`
   - `pnpm exec tsc --noEmit`
   - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts --maxWorkers 1`
+- Installed-runtime readback: `pnpm run install:user-runtime` refreshed
+  `~/.auracall/user-runtime`; the installed
+  `dist/src/browser/providers/grokAdapter.js` contains marker
+  `auracall-grok-files-detail-surface-v1` and the `filesDetail*` diagnostic
+  assignments. A scan of existing persisted media records found no
+  `files-download-missing` records and no existing `filesDetail*` diagnostics,
+  so no live provider retry was run. Readback of successful run
+  `medgen_fde3e1e604f24a95a2162e6ed1a58c59` still returned `succeeded`,
+  `artifactCount = 5`, `activationContext = files`, and
+  `fullQualityDiffersFromPreview = true`; its `filesDetail*` fields remain
+  `null` because the successful materialization predates this diagnostic
+  capture.
+  - `pnpm run install:user-runtime`
+  - `rg -n "auracall-grok-files-detail-surface-v1|filesDetailDownloadButtonCount|filesDetailButtonLabels" ~/.auracall/user-runtime/node_modules/auracall/dist/src/browser/providers/grokAdapter.js`
+  - scan `~/.auracall/runtime/media-generations` for `files-download-missing`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto run status medgen_fde3e1e604f24a95a2162e6ed1a58c59 --json`
 
 ## 2026-04-27 - MCP media artifact status schema parity
 

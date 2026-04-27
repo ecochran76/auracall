@@ -286,6 +286,14 @@ profile, queued dispatcher, and registry-first DevTools authority.
   count/labels, and visible button labels. This keeps future provider drift
   debugging inside status/readback evidence instead of adding another
   navigation fallback.
+- Installed-runtime diagnostic availability proof: after refreshing
+  `~/.auracall/user-runtime`, the installed Grok adapter contains marker
+  `auracall-grok-files-detail-surface-v1` and the `filesDetail*` assignments.
+  Existing persisted media records currently contain no `files-download-missing`
+  case to read back, so no live retry was run. Existing successful run
+  `medgen_fde3e1e604f24a95a2162e6ed1a58c59` still reads back as succeeded with
+  `artifactCount = 5`; its `filesDetail*` fields are null because the
+  materialization predated this diagnostic capture.
 
 ## Scope
 
