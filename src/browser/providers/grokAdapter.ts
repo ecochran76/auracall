@@ -85,6 +85,7 @@ const GROK_PERSONAL_FILES_ROW_SELECTOR = `div${cssClassContains('hover:bg-surfac
 const GROK_PERSONAL_FILES_MODAL_MARKER = 'data-oracle-personal-files-modal';
 const GROK_HOME_URL = requireBundledServiceBaseUrl('grok');
 const GROK_FILES_URL = requireBundledServiceRouteTemplate('grok', 'files');
+const GROK_IMAGINE_SAVED_URL = 'https://grok.com/imagine/saved';
 const GROK_PROJECTS_INDEX_URL = requireBundledServiceRouteTemplate('grok', 'projectIndex');
 const GROK_PROJECT_URL_TEMPLATE = requireBundledServiceRouteTemplate('grok', 'project');
 const GROK_PROJECT_CONVERSATIONS_URL_TEMPLATE = requireBundledServiceRouteTemplate('grok', 'projectConversations');
@@ -1714,6 +1715,7 @@ type GrokFullQualityDownloadDiagnostic = {
   tileActionButtonCount?: number | null;
   tileActionButtonLabels?: string[] | null;
   savedGalleryUrl?: string | null;
+  filesUrl?: string | null;
   downloadName: string | null;
   remoteUrl: string | null;
   fileName: string | null;
@@ -2032,15 +2034,16 @@ async function materializeGrokFullQualityDownload(
   client: ChromeClient,
   destDir: string,
   previewFile: FileRef,
-  options: { allowPrimaryTileActivation?: boolean } = {},
+  options: { allowPrimaryTileActivation?: boolean; activationContext?: string } = {},
 ): Promise<{ file: FileRef | null; diagnostics: GrokFullQualityDownloadDiagnostic }> {
   const allowPrimaryTileActivation = options.allowPrimaryTileActivation === true;
+  const activationContext = options.activationContext ?? (allowPrimaryTileActivation ? 'post-submit' : 'resumed');
   const baseDiagnostics: GrokFullQualityDownloadDiagnostic = {
     attempted: true,
     ok: false,
     reason: null,
     clicked: null,
-    activationContext: allowPrimaryTileActivation ? 'post-submit' : 'resumed',
+    activationContext,
     primaryTileActivationAllowed: allowPrimaryTileActivation,
     tileCandidateCount: null,
     selectedTileSourceFingerprint: null,
@@ -2051,6 +2054,7 @@ async function materializeGrokFullQualityDownload(
     tileActionButtonCount: null,
     tileActionButtonLabels: null,
     savedGalleryUrl: null,
+    filesUrl: null,
     downloadName: null,
     remoteUrl: null,
     fileName: null,
@@ -2062,6 +2066,7 @@ async function materializeGrokFullQualityDownload(
   const clicked = await client.Runtime.evaluate({
     expression: `(async () => {
       const allowPrimaryTileActivation = ${JSON.stringify(allowPrimaryTileActivation)};
+      const activationContext = ${JSON.stringify(activationContext)};
       const visible = (node) => {
         if (!(node instanceof HTMLElement)) return false;
         const style = getComputedStyle(node);
@@ -2258,7 +2263,7 @@ async function materializeGrokFullQualityDownload(
           reason: tileActionButtonLabels.some((label) => /save/i.test(label))
             ? (allowPrimaryTileActivation ? 'saved-gallery-or-files-required' : 'saved-gallery-required')
             : 'download-button-missing',
-          activationContext: allowPrimaryTileActivation ? 'post-submit' : 'resumed',
+          activationContext,
           primaryTileActivationAllowed: allowPrimaryTileActivation,
           tileCandidateCount: tileCandidates.length,
           selectedTileSourceFingerprint,
@@ -2269,13 +2274,14 @@ async function materializeGrokFullQualityDownload(
           tileActionButtonCount: tileActionButtons.length,
           tileActionButtonLabels,
           savedGalleryUrl: new URL('/imagine/saved', location.origin).href,
+          filesUrl: new URL('/files', location.origin).href,
         };
       }
       firePointerSequence(button);
       button.click();
       return {
         ok: true,
-        activationContext: allowPrimaryTileActivation ? 'post-submit' : 'resumed',
+        activationContext,
         primaryTileActivationAllowed: allowPrimaryTileActivation,
         tileCandidateCount: tileCandidates.length,
         selectedTileSourceFingerprint,
@@ -2300,10 +2306,30 @@ async function materializeGrokFullQualityDownload(
     tileActionButtonCount?: number;
     tileActionButtonLabels?: string[];
     savedGalleryUrl?: string | null;
+    filesUrl?: string | null;
     activationContext?: string | null;
     primaryTileActivationAllowed?: boolean | null;
   } | undefined;
   if (clickedValue?.ok !== true) {
+    const shouldTrySavedGallery =
+      !allowPrimaryTileActivation &&
+      (clickedValue?.reason === 'saved-gallery-required' ||
+        clickedValue?.reason === 'download-button-missing');
+    if (shouldTrySavedGallery) {
+      const savedComparison = await materializeGrokFullQualityDownloadFromSavedGallery(client, destDir, previewFile);
+      if (savedComparison.diagnostics.ok || savedComparison.file) {
+        return savedComparison;
+      }
+      return {
+        ...savedComparison,
+        diagnostics: {
+          ...savedComparison.diagnostics,
+          reason: savedComparison.diagnostics.reason ?? clickedValue?.reason ?? 'saved-gallery-download-missing',
+          savedGalleryUrl: savedComparison.diagnostics.savedGalleryUrl ?? clickedValue?.savedGalleryUrl ?? GROK_IMAGINE_SAVED_URL,
+          filesUrl: savedComparison.diagnostics.filesUrl ?? clickedValue?.filesUrl ?? GROK_FILES_URL,
+        },
+      };
+    }
     return {
       file: null,
       diagnostics: {
@@ -2321,6 +2347,7 @@ async function materializeGrokFullQualityDownload(
         tileActionButtonCount: numberOrNull(clickedValue?.tileActionButtonCount),
         tileActionButtonLabels: Array.isArray(clickedValue?.tileActionButtonLabels) ? clickedValue.tileActionButtonLabels : null,
         savedGalleryUrl: typeof clickedValue?.savedGalleryUrl === 'string' ? clickedValue.savedGalleryUrl : null,
+        filesUrl: typeof clickedValue?.filesUrl === 'string' ? clickedValue.filesUrl : null,
       },
     };
   }
@@ -2360,6 +2387,7 @@ async function materializeGrokFullQualityDownload(
         tileActionButtonCount: numberOrNull(clickedValue.tileActionButtonCount),
         tileActionButtonLabels: Array.isArray(clickedValue.tileActionButtonLabels) ? clickedValue.tileActionButtonLabels : null,
         savedGalleryUrl: typeof clickedValue.savedGalleryUrl === 'string' ? clickedValue.savedGalleryUrl : null,
+        filesUrl: typeof clickedValue.filesUrl === 'string' ? clickedValue.filesUrl : null,
       },
     };
   }
@@ -2405,6 +2433,7 @@ async function materializeGrokFullQualityDownload(
       tileActionButtonCount: numberOrNull(clickedValue.tileActionButtonCount),
       tileActionButtonLabels: Array.isArray(clickedValue.tileActionButtonLabels) ? clickedValue.tileActionButtonLabels : null,
       savedGalleryUrl: typeof clickedValue.savedGalleryUrl === 'string' ? clickedValue.savedGalleryUrl : null,
+      filesUrl: typeof clickedValue.filesUrl === 'string' ? clickedValue.filesUrl : null,
       downloadName: capture.downloadName ?? path.basename(filePath),
       remoteUrl,
       fileName: path.basename(filePath),
@@ -2412,6 +2441,63 @@ async function materializeGrokFullQualityDownload(
       fullQualityDiffersFromPreview,
     },
   };
+}
+
+async function materializeGrokFullQualityDownloadFromSavedGallery(
+  client: ChromeClient,
+  destDir: string,
+  previewFile: FileRef,
+): Promise<{ file: FileRef | null; diagnostics: GrokFullQualityDownloadDiagnostic }> {
+  const settled = await navigateAndSettle(client, {
+    url: GROK_IMAGINE_SAVED_URL,
+    timeoutMs: 10_000,
+    fallbackTimeoutMs: 12_000,
+    pollMs: 200,
+    routeExpression: grokImagineSavedPathExpression(),
+    routeDescription: 'Grok Imagine saved path',
+    readyExpression: grokImagineSavedPageReadyExpression(),
+    readyDescription: 'Grok Imagine saved page ready',
+    fallbackToLocationAssign: true,
+    mutationAudit: resolveMutationAudit(client),
+    mutationSource: resolveMutationSource(client, 'provider:grok', 'navigate-imagine-saved'),
+  });
+  if (!settled.ok) {
+    return {
+      file: null,
+      diagnostics: {
+        attempted: true,
+        ok: false,
+        reason: 'saved-gallery-navigation-failed',
+        clicked: false,
+        activationContext: 'saved-gallery',
+        primaryTileActivationAllowed: true,
+        savedGalleryUrl: GROK_IMAGINE_SAVED_URL,
+        filesUrl: GROK_FILES_URL,
+        downloadName: null,
+        remoteUrl: null,
+        fileName: null,
+        size: null,
+        previewArtifactId: previewFile.id,
+        fullQualityDiffersFromPreview: null,
+      },
+    };
+  }
+  await ensureGrokTabVisible(client);
+  const comparison = await materializeGrokFullQualityDownload(client, destDir, previewFile, {
+    allowPrimaryTileActivation: true,
+    activationContext: 'saved-gallery',
+  });
+  comparison.diagnostics = {
+    ...comparison.diagnostics,
+    activationContext: 'saved-gallery',
+    primaryTileActivationAllowed: true,
+    savedGalleryUrl: comparison.diagnostics.savedGalleryUrl ?? GROK_IMAGINE_SAVED_URL,
+    filesUrl: comparison.diagnostics.filesUrl ?? GROK_FILES_URL,
+  };
+  if (!comparison.diagnostics.ok && !comparison.file && !comparison.diagnostics.reason) {
+    comparison.diagnostics.reason = 'saved-gallery-download-missing';
+  }
+  return comparison;
 }
 
 async function configureGrokDownloadBehaviorWithClient(client: ChromeClient, downloadPath: string): Promise<void> {
@@ -7149,6 +7235,33 @@ function grokFilesPathExpression(): string {
     } catch {
       return location.pathname === '/files';
     }
+  })()`;
+}
+
+function grokImagineSavedPathExpression(): string {
+  return `(() => {
+    try {
+      return new URL(location.href).pathname.replace(/\\/+$/, '') === '/imagine/saved';
+    } catch {
+      return location.pathname.replace(/\\/+$/, '') === '/imagine/saved';
+    }
+  })()`;
+}
+
+function grokImagineSavedPageReadyExpression(): string {
+  return `(() => {
+    const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+    if (location.pathname.replace(/\\/+$/, '') !== '/imagine/saved') {
+      return false;
+    }
+    const main = document.querySelector('main') || document.body;
+    const text = normalize(main?.textContent || '');
+    const hasGeneratedMedia = Boolean(
+      main?.querySelector(
+        '#imagine-masonry-section-0 img, img[src^="data:image/"], img[src^="blob:"], img[src*="assets.grok.com/users/"], img[src*="/generated/"]',
+      ),
+    );
+    return hasGeneratedMedia || text.includes('saved') || text.includes('imagine');
   })()`;
 }
 

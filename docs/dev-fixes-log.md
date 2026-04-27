@@ -13,6 +13,14 @@
   before allowing primary tile activation; resumed/direct materialization keeps
   the hover/focus-only path.
 
+- 2026-04-26: Resumed/direct Grok Imagine full-quality materialization now has
+  a saved-gallery fallback. When root-tile probing reports no download control
+  on the stale root surface, the provider adapter navigates once to
+  `https://grok.com/imagine/saved` through the normal browser-service mutation
+  audit path and retries full-quality download discovery there. Diagnostics
+  preserve both `savedGalleryUrl` and `filesUrl` so operators can see the
+  remaining stable fallback surfaces.
+
 - 2026-04-26: Browser-service dev tools must resolve the same managed browser
   profile namespace as product browser paths. `scripts/browser-tools.ts
   --auracall-profile auracall-grok-auto --browser-target grok` was still using

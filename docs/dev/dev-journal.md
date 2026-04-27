@@ -92,6 +92,13 @@
   image runs so full-quality discovery may primary-activate the newly generated
   tile. Direct/resumed materialization stays hover/focus-only and should route
   through `https://grok.com/imagine/saved` or Grok files for later downloads.
+- Grok Imagine saved-gallery fallback: direct/resumed full-quality
+  materialization now treats root-tile misses as a stable-surface handoff. If
+  stale root probing cannot find a download control, the adapter navigates once
+  to `https://grok.com/imagine/saved` through the browser-service mutation
+  audit path and retries download discovery with saved-gallery diagnostics.
+  Focused source tests cover the fallback without live provider churn; the
+  remaining proof is one installed-runtime Grok smoke after refresh.
 - Browser-tools follow-up: the dev wrapper path
   `scripts/browser-tools.ts --auracall-profile auracall-grok-auto
   --browser-target grok` still resolved `browser-profiles/auracall-grok-auto/grok`

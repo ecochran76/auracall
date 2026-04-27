@@ -132,6 +132,12 @@ profile, queued dispatcher, and registry-first DevTools authority.
   `fullQualityActivationContext: post-submit`, and only that context may
   primary-activate tiles while searching for the full-quality download surface.
   Later/resumed materialization must use the saved-gallery or files surfaces.
+- Source follow-up: resumed/direct full-quality materialization now routes a
+  stale root-tile miss through the saved-gallery surface. When root probing
+  reports no download control, the adapter navigates once to
+  `https://grok.com/imagine/saved` using browser-service mutation auditing and
+  retries download discovery there. Diagnostics also preserve
+  `filesUrl = https://grok.com/files` as the next explicit provider fallback.
 - Tooling follow-up: `scripts/browser-tools.ts` now resolves managed browser
   profiles through the same browser-family-aware launch context as product
   paths. This prevents diagnostics for `auracall-grok-auto` from launching the
@@ -155,6 +161,8 @@ profile, queued dispatcher, and registry-first DevTools authority.
 - Permit primary tile activation only for fresh post-submit image runs; once
   the page has been left, treat root tiles as stale and route through
   `https://grok.com/imagine/saved` or Grok files.
+- Record saved-gallery and files URLs in diagnostics when full-quality
+  materialization cannot find a direct download surface.
 - Keep all CDP interactions behind browser-service dispatcher/control-plane
   paths or explicit raw-debug escape hatches.
 - Ensure dispatcher queue keys, browser launch/attach paths, status metadata,
@@ -186,6 +194,8 @@ profile, queued dispatcher, and registry-first DevTools authority.
   selected AuraCall runtime profile has no expected Grok identity configured.
 - A focused regression test covers visible-tile multi-artifact materialization
   and full-quality download comparison metadata without live provider work.
+- A focused regression test covers the resumed/direct saved-gallery fallback
+  without live provider work.
 - A focused regression test covers browser-media dispatcher key derivation for
   runtime profiles that select a different browser profile family.
 - One narrow installed-runtime dogfood run proves the live path after focused
