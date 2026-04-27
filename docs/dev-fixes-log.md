@@ -1,3 +1,17 @@
+- 2026-04-26: Do not primary-click Grok Imagine root tiles while searching for
+  full-quality downloads. A normal tile click can open an immature post route,
+  toast "post not found, returning home", and leave the page on blurry root
+  tiles. Keep direct materialization on hover/focus-only probing; when the root
+  tile surface exposes `Save`/`Make video` but no download button, record the
+  saved-gallery workflow hint for `https://grok.com/imagine/saved`.
+
+- 2026-04-26: Browser-service dev tools must resolve the same managed browser
+  profile namespace as product browser paths. `scripts/browser-tools.ts
+  --auracall-profile auracall-grok-auto --browser-target grok` was still using
+  the AuraCall runtime profile name and could launch the unbound
+  `browser-profiles/auracall-grok-auto/grok` profile. The wrapper now derives
+  the managed browser profile through the shared launch-context resolver.
+
 - 2026-04-26: Browser-media operation queue keys must use the same managed
   browser profile namespace as browser-service launch/attach. A runtime profile
   like `auracall-grok-auto` can select browser family `default`; media

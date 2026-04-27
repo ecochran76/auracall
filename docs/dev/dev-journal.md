@@ -77,6 +77,22 @@
   and cached four current visible data-url image tiles. The remaining provider
   gap is still full-quality download discovery:
   `fullQualityDownload.reason = download-button-missing`.
+- Grok Imagine download follow-up: a CDP primary click on a generated root tile
+  was unsafe. The live page toasted "post not found, returning home" and landed
+  back on four blurry root Imagine tiles. Source now avoids pressing root
+  tiles during full-quality discovery and keeps that path to hover/focus-only
+  probing. Live inspection showed root tile actions are `Save` and `Make video`
+  rather than `Download`; saved generations are available at
+  `https://grok.com/imagine/saved`, so current diagnostics now preserve scoped
+  tile action labels and a saved-gallery workflow hint when direct download is
+  missing.
+- Browser-tools follow-up: the dev wrapper path
+  `scripts/browser-tools.ts --auracall-profile auracall-grok-auto
+  --browser-target grok` still resolved `browser-profiles/auracall-grok-auto/grok`
+  and briefly opened a non-logged-on profile. Source now uses the same
+  browser-family-aware launch-context resolver as product browser paths, and
+  `browser-tools ... tabs --json` attached to the existing `default/grok`
+  browser instead of launching the wrong profile.
 
 ## 2026-04-26 - Grok browser auth/account preflight
 

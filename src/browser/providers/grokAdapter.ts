@@ -1709,6 +1709,9 @@ type GrokFullQualityDownloadDiagnostic = {
   downloadButtonLabels?: string[] | null;
   actionSurfaceButtonCount?: number | null;
   actionSurfaceButtonLabels?: string[] | null;
+  tileActionButtonCount?: number | null;
+  tileActionButtonLabels?: string[] | null;
+  savedGalleryUrl?: string | null;
   downloadName: string | null;
   remoteUrl: string | null;
   fileName: string | null;
@@ -2035,6 +2038,9 @@ async function materializeGrokFullQualityDownload(
     downloadButtonLabels: null,
     actionSurfaceButtonCount: null,
     actionSurfaceButtonLabels: null,
+    tileActionButtonCount: null,
+    tileActionButtonLabels: null,
+    savedGalleryUrl: null,
     downloadName: null,
     remoteUrl: null,
     fileName: null,
@@ -2080,24 +2086,6 @@ async function materializeGrokFullQualityDownload(
           }
         }
       };
-      const dispatchPress = (node) => {
-        if (!(node instanceof HTMLElement)) return;
-        const rect = node.getBoundingClientRect();
-        const clientX = Math.max(1, Math.round(rect.left + rect.width / 2));
-        const clientY = Math.max(1, Math.round(rect.top + rect.height / 2));
-        const pointerInit = { bubbles: true, cancelable: true, composed: true, clientX, clientY, pointerId: 1, pointerType: 'mouse', isPrimary: true };
-        const mouseInit = { bubbles: true, cancelable: true, composed: true, clientX, clientY, button: 0, buttons: 1 };
-        for (const eventName of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
-          try {
-            const event = eventName.startsWith('pointer')
-              ? new PointerEvent(eventName, pointerInit)
-              : new MouseEvent(eventName, mouseInit);
-            node.dispatchEvent(event);
-          } catch {
-            node.dispatchEvent(new Event(eventName, { bubbles: true, cancelable: true }));
-          }
-        }
-      };
       const tileActivationTargets = (node) => {
         if (!(node instanceof HTMLElement)) return [];
         const targets = [];
@@ -2130,12 +2118,6 @@ async function materializeGrokFullQualityDownload(
           target.focus?.({ preventScroll: true });
           await sleep(100);
         }
-        for (const target of targets) {
-          firePointerSequence(target);
-          dispatchPress(target);
-          await sleep(450);
-          if (findDownloadButtons().length > 0) break;
-        }
         await sleep(700);
         for (const target of targets) firePointerSequence(target);
         await sleep(300);
@@ -2161,6 +2143,24 @@ async function materializeGrokFullQualityDownload(
       const readActionSurfaceButtons = () => Array.from(document.querySelectorAll('button,[role="button"],a'))
         .filter((node) => node instanceof HTMLElement && visible(node) && node.getAttribute('aria-disabled') !== 'true')
         .slice(0, 30);
+      const readTileActionButtons = (tile) => {
+        if (!(tile instanceof HTMLElement)) return [];
+        const roots = [
+          tile.closest('[class*="group/media-post-masonry-card"]'),
+          tile.closest('[role="listitem"]'),
+          tile.parentElement,
+        ].filter(Boolean);
+        const buttons = [];
+        for (const root of roots) {
+          if (!(root instanceof HTMLElement)) continue;
+          for (const node of Array.from(root.querySelectorAll('button,[role="button"],a'))) {
+            if (node instanceof HTMLElement && visible(node) && node.getAttribute('aria-disabled') !== 'true' && !buttons.includes(node)) {
+              buttons.push(node);
+            }
+          }
+        }
+        return buttons.slice(0, 12);
+      };
       const findDownloadButtons = () => Array.from(document.querySelectorAll(downloadButtonSelector))
         .filter((node) => node instanceof HTMLElement && visible(node) && !node.disabled && node.getAttribute('aria-disabled') !== 'true');
       const isRemoteGeneratedAsset = (src) => /assets\\.grok\\.com\\/users\\//.test(src) || /\\/generated\\//.test(src);
@@ -2193,12 +2193,15 @@ async function materializeGrokFullQualityDownload(
         });
       const firstTile = tileCandidates[0] || null;
       let selectedTileSourceFingerprint = null;
+      let buttons = findDownloadButtons();
       if (firstTile instanceof HTMLElement && visible(firstTile)) {
         const src = firstTile instanceof HTMLImageElement ? (firstTile.currentSrc || firstTile.src || '') : '';
         selectedTileSourceFingerprint = await sourceFingerprint(src);
-        await activate(firstTile);
+        if (buttons.length === 0) {
+          await activate(firstTile);
+          buttons = findDownloadButtons();
+        }
       }
-      let buttons = findDownloadButtons();
       if (buttons.length === 0 && firstTile instanceof HTMLElement) {
         const anchors = [firstTile, firstTile.parentElement, firstTile.closest('[class*="group"],[class*="relative"],[role="button"],button,a')].filter(Boolean);
         for (const anchor of anchors) {
@@ -2210,17 +2213,22 @@ async function materializeGrokFullQualityDownload(
         }
       }
       const actionSurfaceButtons = readActionSurfaceButtons();
+      const tileActionButtons = readTileActionButtons(firstTile);
+      const tileActionButtonLabels = readButtonLabels(tileActionButtons);
       const button = buttons[0] || null;
       if (!(button instanceof HTMLElement)) {
         return {
           ok: false,
-          reason: 'download-button-missing',
+          reason: tileActionButtonLabels.some((label) => /save/i.test(label)) ? 'saved-gallery-required' : 'download-button-missing',
           tileCandidateCount: tileCandidates.length,
           selectedTileSourceFingerprint,
           downloadButtonCandidateCount: buttons.length,
           downloadButtonLabels: readButtonLabels(buttons),
           actionSurfaceButtonCount: actionSurfaceButtons.length,
           actionSurfaceButtonLabels: readButtonLabels(actionSurfaceButtons),
+          tileActionButtonCount: tileActionButtons.length,
+          tileActionButtonLabels,
+          savedGalleryUrl: new URL('/imagine/saved', location.origin).href,
         };
       }
       firePointerSequence(button);
@@ -2247,6 +2255,9 @@ async function materializeGrokFullQualityDownload(
     downloadButtonLabels?: string[];
     actionSurfaceButtonCount?: number;
     actionSurfaceButtonLabels?: string[];
+    tileActionButtonCount?: number;
+    tileActionButtonLabels?: string[];
+    savedGalleryUrl?: string | null;
   } | undefined;
   if (clickedValue?.ok !== true) {
     return {
@@ -2261,6 +2272,9 @@ async function materializeGrokFullQualityDownload(
         downloadButtonLabels: Array.isArray(clickedValue?.downloadButtonLabels) ? clickedValue.downloadButtonLabels : null,
         actionSurfaceButtonCount: numberOrNull(clickedValue?.actionSurfaceButtonCount),
         actionSurfaceButtonLabels: Array.isArray(clickedValue?.actionSurfaceButtonLabels) ? clickedValue.actionSurfaceButtonLabels : null,
+        tileActionButtonCount: numberOrNull(clickedValue?.tileActionButtonCount),
+        tileActionButtonLabels: Array.isArray(clickedValue?.tileActionButtonLabels) ? clickedValue.tileActionButtonLabels : null,
+        savedGalleryUrl: typeof clickedValue?.savedGalleryUrl === 'string' ? clickedValue.savedGalleryUrl : null,
       },
     };
   }
@@ -2295,6 +2309,9 @@ async function materializeGrokFullQualityDownload(
         downloadButtonLabels: Array.isArray(clickedValue.downloadButtonLabels) ? clickedValue.downloadButtonLabels : null,
         actionSurfaceButtonCount: numberOrNull(clickedValue.actionSurfaceButtonCount),
         actionSurfaceButtonLabels: Array.isArray(clickedValue.actionSurfaceButtonLabels) ? clickedValue.actionSurfaceButtonLabels : null,
+        tileActionButtonCount: numberOrNull(clickedValue.tileActionButtonCount),
+        tileActionButtonLabels: Array.isArray(clickedValue.tileActionButtonLabels) ? clickedValue.tileActionButtonLabels : null,
+        savedGalleryUrl: typeof clickedValue.savedGalleryUrl === 'string' ? clickedValue.savedGalleryUrl : null,
       },
     };
   }
@@ -2335,6 +2352,9 @@ async function materializeGrokFullQualityDownload(
       downloadButtonLabels: Array.isArray(clickedValue.downloadButtonLabels) ? clickedValue.downloadButtonLabels : null,
       actionSurfaceButtonCount: numberOrNull(clickedValue.actionSurfaceButtonCount),
       actionSurfaceButtonLabels: Array.isArray(clickedValue.actionSurfaceButtonLabels) ? clickedValue.actionSurfaceButtonLabels : null,
+      tileActionButtonCount: numberOrNull(clickedValue.tileActionButtonCount),
+      tileActionButtonLabels: Array.isArray(clickedValue.tileActionButtonLabels) ? clickedValue.tileActionButtonLabels : null,
+      savedGalleryUrl: typeof clickedValue.savedGalleryUrl === 'string' ? clickedValue.savedGalleryUrl : null,
       downloadName: capture.downloadName ?? path.basename(filePath),
       remoteUrl,
       fileName: path.basename(filePath),

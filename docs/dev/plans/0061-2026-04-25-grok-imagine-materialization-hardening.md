@@ -118,6 +118,19 @@ profile, queued dispatcher, and registry-first DevTools authority.
   stayed on `https://grok.com/imagine` and cached four current visible
   data-url image tiles. Full-quality comparison remains open with
   `download-button-missing`.
+- Download-surface follow-up: a primary click on a root Imagine generated tile
+  is not a safe way to reveal downloads. Live dogfood toasted "post not found,
+  returning home" and returned to four blurry root Imagine tiles. Source now
+  limits direct download discovery to hover/focus-only tile probing and records
+  scoped tile action labels. The observed root tile controls are `Save` and
+  `Make video`, and saved generation sessions are available at
+  `https://grok.com/imagine/saved`, so the next materialization slice should
+  follow the saved-gallery workflow rather than retrying broken post routes.
+- Tooling follow-up: `scripts/browser-tools.ts` now resolves managed browser
+  profiles through the same browser-family-aware launch context as product
+  paths. This prevents diagnostics for `auracall-grok-auto` from launching the
+  unbound `browser-profiles/auracall-grok-auto/grok` profile when the selected
+  browser profile family is `default`.
 
 ## Scope
 
@@ -130,6 +143,9 @@ profile, queued dispatcher, and registry-first DevTools authority.
 - Compare preview-tile capture and full-quality provider download for at least
   one selected generated image, then record whether full-quality download is
   materially different from the visible preview artifact.
+- If direct root-tile download controls are absent, follow the provider's
+  saved-generation workflow via `https://grok.com/imagine/saved` rather than
+  opening immature per-post routes.
 - Keep all CDP interactions behind browser-service dispatcher/control-plane
   paths or explicit raw-debug escape hatches.
 - Ensure dispatcher queue keys, browser launch/attach paths, status metadata,

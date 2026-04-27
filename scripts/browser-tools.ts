@@ -8,8 +8,11 @@ import { runBrowserToolsCli, type BrowserToolsPortResolverOptions } from '../pac
 import { resolveConfig } from '../src/schema/resolver.js';
 import { resolveBrowserConfig } from '../src/browser/config.js';
 import { launchManualLoginSession } from '../src/browser/manualLogin.js';
-import { resolveBrowserProfileResolutionFromResolvedConfig } from '../src/browser/service/profileResolution.js';
-import { resolveManagedProfileDirForUserConfig } from '../src/browser/profileStore.js';
+import {
+  resolveBrowserProfileResolutionFromResolvedConfig,
+  resolveManagedBrowserLaunchContextFromResolvedConfig,
+  resolveUserBrowserLaunchContext,
+} from '../src/browser/service/profileResolution.js';
 import { resolveBrowserListTarget as resolveBrowserListTargetCore } from '../packages/browser-service/src/service/portResolution.js';
 import { getAuracallHomeDir } from '../src/auracallHome.js';
 import { isDevToolsResponsive } from '../packages/browser-service/src/processCheck.js';
@@ -33,24 +36,7 @@ async function resolvePortOrLaunch(options: BrowserToolsPortResolverOptions): Pr
   if (options.port) {
     return options.port;
   }
-  const resolvedConfig = await resolveConfig({
-    profile: options.auracallProfile,
-    browserTarget: options.browserTarget,
-  });
-  const browserTarget = resolvedConfig.browser.target ?? options.browserTarget ?? 'chatgpt';
-  const resolved = resolveBrowserConfig({
-    ...(resolvedConfig.browser ?? {}),
-    target: browserTarget,
-  }, { auracallProfileName: resolvedConfig.auracallProfile ?? null });
-  const launchProfile = resolveBrowserProfileResolutionFromResolvedConfig({
-    auracallProfile: resolvedConfig.auracallProfile ?? null,
-    browser: resolved,
-    target: browserTarget,
-  }).launchProfile;
-  const managedProfileDir = resolveManagedProfileDirForUserConfig(
-    resolvedConfig.browser ? { ...resolvedConfig, browser: { ...resolvedConfig.browser, target: browserTarget } } : { ...resolvedConfig, browser: { target: browserTarget } },
-    browserTarget,
-  );
+  const { resolved, browserTarget, launchProfile, managedProfileDir } = await resolveManagedBrowserToolsContext(options);
   const listTarget = await resolveBrowserListTargetCore({
     envPort: null,
     configuredPort: null,
@@ -101,16 +87,53 @@ async function resolveOperationProfile(options: BrowserToolsPortResolverOptions)
   if (options.port && !options.auracallProfile && !options.browserTarget) {
     return null;
   }
+  const { managedProfileDir, browserTarget } = await resolveManagedBrowserToolsContext(options);
+  return { managedProfileDir, browserTarget };
+}
+
+async function resolveManagedBrowserToolsContext(options: BrowserToolsPortResolverOptions): Promise<{
+  resolved: ReturnType<typeof resolveBrowserConfig>;
+  browserTarget: 'chatgpt' | 'gemini' | 'grok';
+  launchProfile: ReturnType<typeof resolveBrowserProfileResolutionFromResolvedConfig>['launchProfile'];
+  managedProfileDir: string;
+}> {
   const resolvedConfig = await resolveConfig({
     profile: options.auracallProfile,
     browserTarget: options.browserTarget,
   });
   const browserTarget = (resolvedConfig.browser.target ?? options.browserTarget ?? 'chatgpt') as 'chatgpt' | 'gemini' | 'grok';
-  const managedProfileDir = resolveManagedProfileDirForUserConfig(
-    resolvedConfig.browser ? { ...resolvedConfig, browser: { ...resolvedConfig.browser, target: browserTarget } } : { ...resolvedConfig, browser: { target: browserTarget } },
+  const launchContext = resolveUserBrowserLaunchContext({
+    ...resolvedConfig,
+    browser: {
+      ...(resolvedConfig.browser ?? {}),
+      target: browserTarget,
+    },
+  }, browserTarget);
+  const resolved = resolveBrowserConfig({
+    ...(resolvedConfig.browser ?? {}),
+    target: browserTarget,
+  }, {
+    auracallProfileName: resolvedConfig.auracallProfile ?? null,
+    browserProfileName: launchContext.resolution.profileFamily.browserProfileId ?? null,
+  });
+  const resolution = resolveBrowserProfileResolutionFromResolvedConfig({
+    auracallProfile: resolvedConfig.auracallProfile ?? null,
+    browserProfileName: launchContext.resolution.profileFamily.browserProfileId ?? null,
+    browser: resolved,
+    target: browserTarget,
+  });
+  const managedLaunchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
+    auracallProfile: resolvedConfig.auracallProfile ?? null,
+    browserProfileName: launchContext.resolution.profileFamily.browserProfileId ?? null,
+    browser: resolved,
+    target: browserTarget,
+  });
+  return {
+    resolved,
     browserTarget,
-  );
-  return { managedProfileDir, browserTarget };
+    launchProfile: resolution.launchProfile,
+    managedProfileDir: managedLaunchContext.managedProfileDir,
+  };
 }
 
 await runBrowserToolsCli({
