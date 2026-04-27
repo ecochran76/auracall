@@ -151,6 +151,12 @@ profile, queued dispatcher, and registry-first DevTools authority.
   discovery with `activationContext = post-submit-trusted-click` and
   saved-gallery fallback disabled, so stale/root navigation behavior remains
   fenced to the resumed/direct path.
+- Installed dogfood follow-up: run `medgen_fc28a22f501b4fbbad1ebc7bc2e8ef15`
+  proved the trusted click path executed on a fresh post-submit Grok Imagine
+  card, but full-quality discovery still returned `download-button-missing`
+  with zero tile/download candidates on the follow-up readback. The next source
+  slice should capture DOM/screenshot evidence immediately after the trusted
+  click and refine the card/action-surface selector from that live state.
 - Tooling follow-up: `scripts/browser-tools.ts` now resolves managed browser
   profiles through the same browser-family-aware launch context as product
   paths. This prevents diagnostics for `auracall-grok-auto` from launching the

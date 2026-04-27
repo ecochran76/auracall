@@ -14655,3 +14655,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   artifact file path. Compact media status now carries checksum,
   previewArtifactId, preview checksum/size, and
   fullQualityDiffersFromPreview for materialized artifacts.
+- 2026-04-26: Trusted CDP tile activation is necessary but not sufficient for
+  Grok Imagine full-quality discovery. Installed dogfood proved the trusted
+  click fired on the fresh post-submit masonry card, but the follow-up
+  discovery still saw no download button. The next provider fix should capture
+  DOM/screenshot evidence immediately after the trusted click and adjust the
+  card/action-surface target from live evidence, without re-navigating.

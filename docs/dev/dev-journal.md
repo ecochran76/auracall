@@ -22298,3 +22298,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm exec tsc --noEmit`
   - `pnpm run plans:audit -- --keep 61`
   - `git diff --check`
+
+## 2026-04-26 - Grok trusted tile activation dogfood
+
+- Focus: verify the installed runtime after adding a fresh post-submit trusted
+  CDP tile click before Grok full-quality download discovery.
+- Result: installed media run `medgen_fc28a22f501b4fbbad1ebc7bc2e8ef15`
+  succeeded and cached one visible generated image, but full-quality discovery
+  still returned `download-button-missing`.
+- Evidence: diagnostics showed `activationContext =
+  post-submit-trusted-click`, `trustedTileClickAttempted = true`,
+  `trustedTileClickOk = true`, and `trustedTileClickTarget =
+  relative group/media-post-masonry-card select-none cursor-pointer
+  pointer-events-auto`. The follow-up discovery saw zero tile/download
+  candidates and no download artifact.
+- Follow-up: keep the no-renavigation rule. The next useful slice is to capture
+  DOM and screenshot evidence immediately after the trusted click, then adjust
+  the selected tile/card target or action-surface selector from that evidence.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run plans:audit -- --keep 61`
+  - `git diff --check`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media generate --provider grok --type image -p "Generate an image of an asphalt secret agent" --count 1 --json`
