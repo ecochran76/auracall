@@ -1114,8 +1114,8 @@ describe('Grok Imagine materialization', () => {
     }
   });
 
-  test('uses trusted CDP tile click for fresh post-submit full-quality materialization', async () => {
-    const destDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-grok-adapter-trusted-click-'));
+  test('does not primary-click Grok Imagine tiles during fresh post-submit materialization', async () => {
+    const destDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-grok-adapter-no-primary-click-'));
     try {
       grokRunPromptMocks.cdpList.mockReset();
       grokRunPromptMocks.cdpClose.mockReset();
@@ -1128,7 +1128,7 @@ describe('Grok Imagine materialization', () => {
           url: 'https://grok.com/imagine',
         },
       ]);
-      const client = createFakeGrokImagineTrustedClickClient(destDir);
+      const client = createFakeGrokImagineNoPrimaryClickClient(destDir);
       grokRunPromptMocks.connectToChromeTarget.mockResolvedValue(client);
 
       const adapter = createGrokAdapter();
@@ -1152,25 +1152,19 @@ describe('Grok Imagine materialization', () => {
         },
       );
 
-      expect(client.Input.dispatchMouseEvent).toHaveBeenCalledWith(expect.objectContaining({ type: 'mousePressed' }));
-      expect(files).toHaveLength(2);
-      expect(files[1]).toMatchObject({
-        id: 'grok_imagine_full_quality_1',
-        name: 'grok-imagine-trusted-full-quality.jpg',
-        metadata: {
-          materialization: 'download-button',
-          previewArtifactId: 'grok_imagine_visible_1',
-        },
-      });
+      expect(client.Input.dispatchMouseEvent).not.toHaveBeenCalled();
+      expect(client.Page.navigate).not.toHaveBeenCalled();
+      expect(files).toHaveLength(1);
       expect(files[0]?.metadata?.grokMaterializationDiagnostics).toMatchObject({
         fullQualityDownload: expect.objectContaining({
-          ok: true,
-          clicked: true,
-          activationContext: 'post-submit-trusted-click',
-          primaryTileActivationAllowed: true,
-          trustedTileClickAttempted: true,
-          trustedTileClickOk: true,
-          trustedTileClickTarget: 'image',
+          ok: false,
+          clicked: false,
+          reason: 'download-button-missing',
+          activationContext: 'post-submit',
+          primaryTileActivationAllowed: false,
+          tileCandidateCount: 1,
+          savedGalleryUrl: 'https://grok.com/imagine/saved',
+          filesUrl: 'https://grok.com/files',
         }),
       });
     } finally {
@@ -1470,11 +1464,9 @@ function createFakeGrokImagineSavedFallbackClient(destDir: string) {
   };
 }
 
-function createFakeGrokImagineTrustedClickClient(destDir: string) {
+function createFakeGrokImagineNoPrimaryClickClient(_destDir: string) {
   let downloadName: string | null = null;
-  let fullQualityAttempts = 0;
   const visibleBytes = [Buffer.from('visible tile one jpeg bytes')];
-  const fullQualityBytes = Buffer.from('trusted click full quality jpeg bytes are different');
   const visibleDataUrl = `data:image/jpeg;base64,${visibleBytes[0]!.toString('base64')}`;
   const evaluate = vi.fn(async ({ expression }: { expression: string }) => {
     if (expression.includes('Browser.setDownloadBehavior') || expression.includes('Page.setDownloadBehavior')) {
@@ -1526,56 +1518,22 @@ function createFakeGrokImagineTrustedClickClient(destDir: string) {
       downloadName = null;
       return { result: { value: true } };
     }
-    if (expression.includes('image-fallback') && expression.includes('dispatchMouseEvent') === false) {
-      return {
-        result: {
-          value: {
-            ok: true,
-            target: 'image',
-            x: 125,
-            y: 150,
-          },
-        },
-      };
-    }
     if (expression.includes('allowPrimaryTileActivation') && expression.includes('firstTile') && expression.includes('Download')) {
-      fullQualityAttempts += 1;
-      if (fullQualityAttempts === 1) {
-        return {
-          result: {
-            value: {
-              ok: false,
-              reason: 'download-button-missing',
-              activationContext: 'post-submit',
-              primaryTileActivationAllowed: true,
-              tileCandidateCount: 1,
-              selectedTileSourceFingerprint: 'fake-root-tile',
-              downloadButtonCandidateCount: 0,
-              downloadButtonLabels: [],
-              actionSurfaceButtonCount: 2,
-              actionSurfaceButtonLabels: ['Save', 'Make video'],
-              tileActionButtonCount: 0,
-              tileActionButtonLabels: [],
-              savedGalleryUrl: 'https://grok.com/imagine/saved',
-              filesUrl: 'https://grok.com/files',
-            },
-          },
-        };
-      }
-      downloadName = 'grok-imagine-trusted-full-quality.jpg';
-      await fs.writeFile(path.join(destDir, downloadName), fullQualityBytes);
       return {
         result: {
           value: {
-            ok: true,
-            activationContext: 'post-submit-trusted-click',
+            ok: false,
+            reason: 'download-button-missing',
+            activationContext: 'post-submit',
             primaryTileActivationAllowed: false,
             tileCandidateCount: 1,
-            selectedTileSourceFingerprint: 'fake-clicked-tile',
-            downloadButtonCandidateCount: 1,
-            downloadButtonLabels: ['Download'],
+            selectedTileSourceFingerprint: 'fake-root-tile',
+            downloadButtonCandidateCount: 0,
+            downloadButtonLabels: [],
             actionSurfaceButtonCount: 2,
-            actionSurfaceButtonLabels: ['Download', 'Share'],
+            actionSurfaceButtonLabels: ['Save', 'Make video'],
+            tileActionButtonCount: 0,
+            tileActionButtonLabels: [],
             savedGalleryUrl: 'https://grok.com/imagine/saved',
             filesUrl: 'https://grok.com/files',
           },
@@ -1597,6 +1555,7 @@ function createFakeGrokImagineTrustedClickClient(destDir: string) {
   return {
     Page: {
       enable: vi.fn(async () => undefined),
+      navigate: vi.fn(async () => undefined),
       captureScreenshot: vi.fn(async () => ({ data: visibleBytes[0]!.toString('base64') })),
     },
     Runtime: {

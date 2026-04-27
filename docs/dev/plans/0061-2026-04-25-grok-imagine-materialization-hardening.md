@@ -161,6 +161,17 @@ profile, queued dispatcher, and registry-first DevTools authority.
   `tabTargetId` as authoritative. When present, Grok tab connection attaches to
   that exact target or fails closed instead of reselecting a stale same-origin
   `/imagine` tab through URL matching.
+- Installed smoke after the submitted-tab fence produced
+  `medgen_04d67db587ad417d8e556d5dadcc0680`: the generated visible tile was
+  cached and the status surface showed the same submitted target id with route
+  progression limited to `https://grok.com/imagine`. Full-quality discovery
+  still missed after the trusted click, so the next live slice should inspect
+  the post-click action surface on the still-submitted page.
+- User-observed correction: the browser still hit Grok `post not found` after
+  the trusted click. Treat the primary tile/card click as the navigation source
+  and remove it from fresh post-submit materialization. If no download control
+  is visible, keep the visible-tile artifact and return diagnostics instead of
+  pressing into a provider post route.
 - Tooling follow-up: `scripts/browser-tools.ts` now resolves managed browser
   profiles through the same browser-family-aware launch context as product
   paths. This prevents diagnostics for `auracall-grok-auto` from launching the
@@ -187,6 +198,10 @@ profile, queued dispatcher, and registry-first DevTools authority.
 - Use trusted CDP mouse activation only in the fresh post-submit path; synthetic
   in-page click events alone are not sufficient evidence that the provider
   action surface has been opened.
+- Do not primary-click generated tiles/cards on a fresh post-submit page.
+  Trusted CDP can be used for hover/move diagnostics, but mouse press/release
+  on the tile is treated as navigation-prone until a specific non-navigating
+  download control is identified.
 - Record saved-gallery and files URLs in diagnostics when full-quality
   materialization cannot find a direct download surface.
 - Keep all CDP interactions behind browser-service dispatcher/control-plane

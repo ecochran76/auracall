@@ -14667,3 +14667,14 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   through `openOrReuseChromeTarget`, which can focus that target by navigating
   to the requested URL. Treat explicit submitted targets as authoritative and
   fail closed if the target is unavailable.
+- 2026-04-26: After installing the submitted-tab fence, the Grok Imagine smoke
+  stayed on the submitted page: status reported the same submitted target id,
+  submitted URL `https://grok.com/imagine`, and route progression containing
+  only that URL. If full-quality discovery still misses, investigate the
+  post-click action surface instead of assuming navigation churn for that run.
+- 2026-04-26: Do not primary-click Grok Imagine generated tiles during
+  post-submit materialization. A real mouse press on the masonry card can open
+  a Grok post route and trigger `post not found`, even when submission and
+  initial materialization stayed on `/imagine`. Fresh post-submit full-quality
+  discovery should fail with diagnostics when no download control is visible;
+  only resumed/direct saved-gallery workflows may intentionally navigate.

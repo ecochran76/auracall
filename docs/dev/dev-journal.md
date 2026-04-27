@@ -22336,3 +22336,46 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
   - `git diff --check`
+
+## 2026-04-26 - Grok submitted-tab installed smoke
+
+- Focus: live-check the installed runtime after making submitted
+  `tabTargetId` authoritative for Grok media materialization.
+- Result: installed media run `medgen_04d67db587ad417d8e556d5dadcc0680`
+  succeeded and cached one visible generated image at
+  `~/.auracall/runtime/media-generations/medgen_04d67db587ad417d8e556d5dadcc0680/artifacts/grok-imagine-visible-1.png`.
+- Evidence: status readback kept `targetId =
+  D99E5F96A6AC38E07537FD835FF13B58`, `submittedUrl =
+  https://grok.com/imagine`, and route progression only
+  `https://grok.com/imagine`. This proves the refreshed installed path stayed
+  on the submitted Imagine page during the smoke.
+- Follow-up: full-quality discovery still returned `download-button-missing`
+  after `activationContext = post-submit-trusted-click`, so the remaining live
+  issue is action-surface discovery after the trusted click, not page churn in
+  this run.
+- Correction: user-observed browser state still hit Grok `post not found`
+  after this smoke. The likely cause is the trusted tile/card click itself:
+  pressing a generated masonry card can open a Grok post route. Fresh
+  post-submit materialization must not primary-click generated tiles while
+  trying to find full-quality controls.
+- Validation:
+  - `pnpm run install:user-runtime`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media generate --provider grok --type image -p "Generate an image of an asphalt secret agent" --count 1 --json`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto run status medgen_04d67db587ad417d8e556d5dadcc0680 --json`
+
+## 2026-04-26 - Grok no-primary-click correction
+
+- Focus: eliminate the remaining post-submit navigation vector in Grok Imagine
+  full-quality discovery.
+- Fix: fresh post-submit full-quality comparison now performs no-navigation
+  discovery only. It can hover/inspect for visible download controls, but it no
+  longer dispatches trusted mouse press/release events to the generated tile and
+  it disables saved-gallery fallback for the submitted page.
+- Result: when no download control is visible, the run keeps the visible-tile
+  artifact and records `download-button-missing` with `activationContext =
+  post-submit` instead of clicking into a post route.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run plans:audit -- --keep 61`
+  - `git diff --check`
