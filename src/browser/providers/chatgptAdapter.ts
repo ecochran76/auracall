@@ -760,12 +760,20 @@ async function readVisibleChatgptBlockingSurfaceMatchWithClient(
 async function recoverVisibleChatgptBlockingSurfaceWithClient(
   client: ChromeClient,
   match?: ChatgptBlockingSurfaceMatch | null,
+  options?: BrowserProviderListOptions,
 ): Promise<ChatgptRecoveryActionResult | null> {
   const resolved = match ?? (await readVisibleChatgptBlockingSurfaceMatchWithClient(client));
   if (!resolved) {
     return null;
   }
   if (resolved.kind !== 'rate-limit') {
+    if (!providerNavigationAllowed(options)) {
+      return {
+        action: 'reload-page',
+        outcome: 'skipped',
+        summary: `${resolved.summary}:navigation-forbidden`,
+      };
+    }
     try {
       await reloadAndSettle(client, {
         ignoreCache: true,
@@ -834,6 +842,7 @@ async function withChatgptBlockingSurfaceRecovery<T>(
     retries?: number;
     debugContext?: ChatgptRecoveryDebugContext;
     reopen?: () => Promise<ChatgptRecoveryActionResult | null>;
+    providerOptions?: BrowserProviderListOptions;
   },
 ): Promise<T> {
   const debugContext = options?.debugContext;
@@ -874,7 +883,7 @@ async function withChatgptBlockingSurfaceRecovery<T>(
   };
   const runRecoverySequence = async (match: ChatgptBlockingSurfaceMatch): Promise<void> => {
     lastRecoveryActions = [];
-    const primary = await recoverVisibleChatgptBlockingSurfaceWithClient(client, match);
+    const primary = await recoverVisibleChatgptBlockingSurfaceWithClient(client, match, options?.providerOptions);
     if (primary) {
       lastRecoveryActions.push(primary);
     }
@@ -2035,10 +2044,11 @@ function buildChatgptConversationPayloadExpression(conversationId: string): stri
   })()`;
 }
 
-async function readChatgptConversationPayloadWithClient(
+export async function readChatgptConversationPayloadWithClient(
   client: ChromeClient,
   conversationId: string,
   projectId?: string | null,
+  options?: BrowserProviderListOptions,
 ): Promise<ChatgptConversationPayload | null> {
   const parsePayloadBody = (body: string | null | undefined, base64Encoded = false): ChatgptConversationPayload | null => {
     if (typeof body !== 'string' || !body.trim()) {
@@ -2062,6 +2072,9 @@ async function readChatgptConversationPayloadWithClient(
   const directPayload = parsePayloadBody(value?.body);
   if (value?.ok && directPayload && isRecord(directPayload.mapping)) {
     return directPayload;
+  }
+  if (!providerNavigationAllowed(options)) {
+    return null;
   }
 
   const targetUrl = resolveChatgptConversationApiUrl(conversationId);
@@ -5478,7 +5491,7 @@ async function readChatgptConversationContextWithClient(
 ): Promise<ConversationContext> {
   return withChatgptBlockingSurfaceRecovery(client, `readChatgptConversationContext:${conversationId}`, async () => {
     await ensureChatgptConversationSurfaceReadyForRead(client, conversationId, projectId, options);
-    let payload = await readChatgptConversationPayloadWithClient(client, conversationId, projectId).catch(() => null);
+    let payload = await readChatgptConversationPayloadWithClient(client, conversationId, projectId, options).catch(() => null);
     await waitForPredicate(
       client.Runtime,
       buildConversationSurfaceReadyExpression(conversationId, projectId),
@@ -5551,14 +5564,14 @@ async function readChatgptConversationContextWithClient(
       }
     }
     if (messages.length === 0) {
-      await ensureChatgptConversationSurfaceReadyForRead(client, conversationId, projectId);
+      await ensureChatgptConversationSurfaceReadyForRead(client, conversationId, projectId, options);
       messages = await readMessages();
     }
     if (messages.length === 0) {
       throw new Error(`ChatGPT conversation ${conversationId} messages not found`);
     }
     if (!payload) {
-      payload = await readChatgptConversationPayloadWithClient(client, conversationId, projectId).catch(() => null);
+      payload = await readChatgptConversationPayloadWithClient(client, conversationId, projectId, options).catch(() => null);
     }
     const normalizedMessages = messages.map(({ role, text }) => ({ role, text }));
     const messageIndexById = new Map<string, number>();
@@ -5590,6 +5603,7 @@ async function readChatgptConversationContextWithClient(
   }, {
     debugContext,
     reopen: buildChatgptConversationReopen(client, conversationId, projectId, options),
+    providerOptions: options,
   });
 }
 
@@ -6647,6 +6661,7 @@ async function materializeChatgptConversationArtifactWithClient(
     {
       debugContext,
       reopen: buildChatgptConversationReopen(client, conversationId, normalizedProjectId, options),
+      providerOptions: options,
     },
   );
 }
@@ -6802,6 +6817,7 @@ export function createChatgptAdapter(): Pick<
           {
             debugContext,
             reopen: buildChatgptConversationReopen(client, conversationId, normalizedProjectId, options),
+            providerOptions: options,
           },
         );
       } finally {

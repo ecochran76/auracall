@@ -1,3 +1,11 @@
+- 2026-04-27: ChatGPT post-submit media readback must not use the mature
+  conversation payload reload fallback. Existing ChatGPT artifact extraction
+  can reload a mature conversation to capture `/backend-api/conversation/...`
+  when direct in-page fetch misses, but that same fallback is unsafe after a
+  freshly submitted image prompt. Thread `preserveActiveTab` into ChatGPT
+  payload reads and blocking-surface recovery so post-submit readback can use
+  direct fetch/DOM evidence without reloading or reopening the active tab.
+
 - 2026-04-27: Grok Files full-quality misses need detail-surface evidence, not
   another navigation fallback. When `/files?file=...` opens but no download
   control is found, record href/title, readiness, download-control

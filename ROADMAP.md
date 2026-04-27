@@ -59,6 +59,12 @@ Current State:
       default visible capture count `8`, preview-vs-full-quality download
       comparison evidence, and installed-runtime dogfood
     - non-goal: xAI API media execution and Grok edit/reference workflows
+  - [docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md)
+    is open as the ChatGPT image-generation follow-up
+    - focus: promote the proven ChatGPT generated-image artifact extraction
+      path into a first-class browser media-generation executor
+    - immediate guardrail: post-submit ChatGPT readback/materialization must
+      preserve the active tab and skip conversation reload/reopen recovery
   - [docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md)
     is closed for the more general discovery/reporting model for rapidly changing
     chat-workbench capabilities such as Deep Research, ChatGPT apps,

@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { normalizeProjectMemoryMode } from '../../src/browser/providers/domain.js';
 import {
   classifyChatgptBlockingSurfaceProbe,
@@ -26,6 +26,7 @@ import {
   normalizeChatgptConversationLinkProbes,
   normalizeChatgptProjectSourceProbes,
   normalizeChatgptProjectId,
+  readChatgptConversationPayloadWithClient,
   resolveChatgptCanvasArtifactContentText,
   isRetryableChatgptTransientMessage,
   resolveChatgptConversationUrl,
@@ -242,6 +243,48 @@ describe('isRetryableChatgptTransientMessage', () => {
 
   test('does not mark unrelated text as retryable', () => {
     expect(isRetryableChatgptTransientMessage('Project settings')).toBe(false);
+  });
+});
+
+describe('readChatgptConversationPayloadWithClient', () => {
+  test('does not reload the active ChatGPT tab when preserveActiveTab is set', async () => {
+    const client = {
+      Runtime: {
+        evaluate: vi.fn(async () => ({
+          result: {
+            value: {
+              ok: false,
+              status: 404,
+              body: '{}',
+            },
+          },
+        })),
+      },
+      Network: {
+        enable: vi.fn(),
+        responseReceived: vi.fn(),
+        loadingFinished: vi.fn(),
+        getResponseBody: vi.fn(),
+      },
+      Page: {
+        enable: vi.fn(),
+        reload: vi.fn(),
+      },
+    };
+
+    await expect(
+      readChatgptConversationPayloadWithClient(
+        client as never,
+        '69d04b50-3c88-8325-8240-0d838d47ee50',
+        null,
+        { preserveActiveTab: true },
+      ),
+    ).resolves.toBeNull();
+
+    expect(client.Runtime.evaluate).toHaveBeenCalledTimes(1);
+    expect(client.Network.enable).not.toHaveBeenCalled();
+    expect(client.Page.enable).not.toHaveBeenCalled();
+    expect(client.Page.reload).not.toHaveBeenCalled();
   });
 });
 

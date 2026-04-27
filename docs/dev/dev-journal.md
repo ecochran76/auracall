@@ -1,3 +1,25 @@
+## 2026-04-27 - ChatGPT image generation audit
+
+- Focus: start Plan 0062 for first-class ChatGPT image generation and audit
+  ChatGPT readback for the same impatient re-navigation pattern that affected
+  Gemini and Grok materialization.
+- Progress: confirmed ChatGPT generated-image artifact extraction is already
+  live for existing conversations, but `POST /v1/media-generations` does not
+  yet support `provider = chatgpt`. Added Plan 0062 and wired it into the
+  roadmap as a browser-first follow-up.
+- Audit result: `readChatgptConversationPayloadWithClient(...)` attempted a
+  direct backend conversation fetch, then forced a `reloadAndSettle(...)`
+  network-capture fallback when the direct fetch did not return a mature
+  payload. That reload is acceptable for mature read-only conversations but is
+  unsafe after a freshly submitted image prompt. The ChatGPT adapter now passes
+  `preserveActiveTab` into payload reads and skips the reload fallback in
+  no-navigation mode. Blocking-surface recovery also skips non-rate-limit page
+  reloads when the same option is set.
+- Validation so far:
+  - targeted regression in `tests/browser/chatgptAdapter.test.ts` confirms the
+    payload read does not enable network capture or reload the page when
+    `preserveActiveTab = true`
+
 ## 2026-04-27 - Grok Files detail drift diagnostics
 
 - Focus: make resumed Grok `/files` full-quality materialization misses

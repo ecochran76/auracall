@@ -1,5 +1,23 @@
 # RUNBOOK
 
+## Turn 69 | 2026-04-27
+
+- Active plan:
+  `docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md`
+- Goal: start the ChatGPT image-generation slice and audit ChatGPT readback for
+  impatient post-submit navigation.
+- Result:
+  - opened Plan 0062 and wired it into the roadmap
+  - confirmed ChatGPT generated-image artifact extraction is green for mature
+    conversations, while first-class media generation remains unimplemented
+  - changed ChatGPT payload readback and blocking-surface recovery so
+    `preserveActiveTab` skips conversation reload/reopen recovery
+  - added a targeted regression for the no-reload payload readback path
+- Verification target:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/navigationPolicy.test.ts --maxWorkers 1`
+  - `pnpm run plans:audit -- --keep 62`
+  - `git diff --check`
+
 ## Turn 68 | 2026-04-25
 
 - Active plan:
