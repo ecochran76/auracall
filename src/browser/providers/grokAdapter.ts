@@ -1780,6 +1780,14 @@ type GrokFullQualityDownloadDiagnostic = {
   savedGalleryUrl?: string | null;
   filesUrl?: string | null;
   filesDetailUrl?: string | null;
+  filesDetailHref?: string | null;
+  filesDetailTitle?: string | null;
+  filesDetailReady?: boolean | null;
+  filesDetailDownloadButtonCount?: number | null;
+  filesDetailDownloadButtonLabels?: string[] | null;
+  filesDetailImageCount?: number | null;
+  filesDetailImageLabels?: string[] | null;
+  filesDetailButtonLabels?: string[] | null;
   filesImageCandidateCount?: number | null;
   filesImageCandidateLabels?: string[] | null;
   downloadName: string | null;
@@ -2154,6 +2162,14 @@ async function materializeGrokFullQualityDownload(
     savedGalleryUrl: null,
     filesUrl: null,
     filesDetailUrl: null,
+    filesDetailHref: null,
+    filesDetailTitle: null,
+    filesDetailReady: null,
+    filesDetailDownloadButtonCount: null,
+    filesDetailDownloadButtonLabels: null,
+    filesDetailImageCount: null,
+    filesDetailImageLabels: null,
+    filesDetailButtonLabels: null,
     filesImageCandidateCount: null,
     filesImageCandidateLabels: null,
     downloadName: null,
@@ -2651,6 +2667,7 @@ async function materializeGrokFullQualityDownloadFromFiles(
   destDir: string,
   previewFile: FileRef,
 ): Promise<{ file: FileRef | null; diagnostics: GrokFullQualityDownloadDiagnostic }> {
+  let detailSurface: GrokFilesDetailSurfaceDiagnostic | null = null;
   try {
     await navigateToGrokFiles(client, GROK_FILES_URL);
   } catch {
@@ -2678,6 +2695,7 @@ async function materializeGrokFullQualityDownloadFromFiles(
   if (detail.url) {
     try {
       await navigateToGrokFilesImageDetail(client, detail.url);
+      detailSurface = await inspectGrokFilesDetailSurface(client);
     } catch {
       return {
         file: null,
@@ -2714,6 +2732,16 @@ async function materializeGrokFullQualityDownloadFromFiles(
     savedGalleryUrl: comparison.diagnostics.savedGalleryUrl ?? GROK_IMAGINE_SAVED_URL,
     filesUrl: comparison.diagnostics.filesUrl ?? GROK_FILES_URL,
     filesDetailUrl: comparison.diagnostics.filesDetailUrl ?? detail.url,
+    filesDetailHref: comparison.diagnostics.filesDetailHref ?? detailSurface?.href ?? null,
+    filesDetailTitle: comparison.diagnostics.filesDetailTitle ?? detailSurface?.title ?? null,
+    filesDetailReady: comparison.diagnostics.filesDetailReady ?? detailSurface?.ready ?? null,
+    filesDetailDownloadButtonCount: comparison.diagnostics.filesDetailDownloadButtonCount ??
+      detailSurface?.downloadButtonCount ?? null,
+    filesDetailDownloadButtonLabels: comparison.diagnostics.filesDetailDownloadButtonLabels ??
+      detailSurface?.downloadButtonLabels ?? null,
+    filesDetailImageCount: comparison.diagnostics.filesDetailImageCount ?? detailSurface?.imageCount ?? null,
+    filesDetailImageLabels: comparison.diagnostics.filesDetailImageLabels ?? detailSurface?.imageLabels ?? null,
+    filesDetailButtonLabels: comparison.diagnostics.filesDetailButtonLabels ?? detailSurface?.buttonLabels ?? null,
     filesImageCandidateCount: comparison.diagnostics.filesImageCandidateCount ?? detail.candidateCount,
     filesImageCandidateLabels: comparison.diagnostics.filesImageCandidateLabels ?? detail.labels,
     reason: comparison.diagnostics.ok
@@ -2725,6 +2753,94 @@ async function materializeGrokFullQualityDownloadFromFiles(
         : comparison.diagnostics.reason,
   };
   return comparison;
+}
+
+type GrokFilesDetailSurfaceDiagnostic = {
+  href: string | null;
+  title: string | null;
+  ready: boolean | null;
+  downloadButtonCount: number;
+  downloadButtonLabels: string[];
+  imageCount: number;
+  imageLabels: string[];
+  buttonLabels: string[];
+};
+
+async function inspectGrokFilesDetailSurface(client: ChromeClient): Promise<GrokFilesDetailSurfaceDiagnostic | null> {
+  const result = await client.Runtime.evaluate({
+    expression: `(() => {
+      const marker = 'auracall-grok-files-detail-surface-v1';
+      void marker;
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const visible = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const style = getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden') return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const labelFor = (node) => {
+        if (!(node instanceof HTMLElement)) return '';
+        return normalize(
+          node.getAttribute('aria-label') ||
+          node.getAttribute('title') ||
+          node.getAttribute('mattooltip') ||
+          node.textContent ||
+          node.querySelector('mat-icon')?.getAttribute('fonticon') ||
+          ''
+        );
+      };
+      const downloadSelector = [
+        'button[aria-label*="Download" i]',
+        'button[title*="Download" i]',
+        'button[mattooltip*="Download" i]',
+        '[role="button"][aria-label*="Download" i]',
+        'a[download]',
+        'a[aria-label*="Download" i]',
+      ].join(',');
+      const downloadButtons = Array.from(document.querySelectorAll(downloadSelector))
+        .filter((node) => node instanceof HTMLElement && visible(node) && node.getAttribute('aria-disabled') !== 'true');
+      const images = Array.from(document.querySelectorAll('main img, img[src*="assets.grok.com"], img[src^="blob:"], img[src^="data:image/"]'))
+        .filter((node) => node instanceof HTMLImageElement && visible(node));
+      const buttons = Array.from(document.querySelectorAll('button,[role="button"],a'))
+        .filter((node) => node instanceof HTMLElement && visible(node) && node.getAttribute('aria-disabled') !== 'true');
+      const url = new URL(location.href);
+      return {
+        href: location.href,
+        title: document.title || null,
+        ready: url.pathname === '/files' && Boolean(url.searchParams.get('file')),
+        downloadButtonCount: downloadButtons.length,
+        downloadButtonLabels: downloadButtons.slice(0, 8).map(labelFor).filter(Boolean),
+        imageCount: images.length,
+        imageLabels: images.slice(0, 8).map((img) => {
+          if (!(img instanceof HTMLImageElement)) return '';
+          return normalize(img.alt || img.getAttribute('aria-label') || img.currentSrc || img.src);
+        }).filter(Boolean),
+        buttonLabels: buttons.slice(0, 12).map(labelFor).filter(Boolean),
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const value = result.result?.value as Partial<GrokFilesDetailSurfaceDiagnostic> | undefined;
+  if (!value || typeof value !== 'object') return null;
+  return {
+    href: typeof value.href === 'string' && value.href ? value.href : null,
+    title: typeof value.title === 'string' && value.title ? value.title : null,
+    ready: typeof value.ready === 'boolean' ? value.ready : null,
+    downloadButtonCount: Number.isFinite(Number(value.downloadButtonCount))
+      ? Math.max(0, Number(value.downloadButtonCount))
+      : 0,
+    downloadButtonLabels: Array.isArray(value.downloadButtonLabels)
+      ? value.downloadButtonLabels.map((label) => String(label || '').trim()).filter(Boolean).slice(0, 8)
+      : [],
+    imageCount: Number.isFinite(Number(value.imageCount)) ? Math.max(0, Number(value.imageCount)) : 0,
+    imageLabels: Array.isArray(value.imageLabels)
+      ? value.imageLabels.map((label) => String(label || '').trim()).filter(Boolean).slice(0, 8)
+      : [],
+    buttonLabels: Array.isArray(value.buttonLabels)
+      ? value.buttonLabels.map((label) => String(label || '').trim()).filter(Boolean).slice(0, 12)
+      : [],
+  };
 }
 
 async function findGrokFilesImageDetailCandidate(

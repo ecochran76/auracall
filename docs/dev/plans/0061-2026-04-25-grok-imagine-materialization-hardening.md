@@ -280,6 +280,12 @@ profile, queued dispatcher, and registry-first DevTools authority.
   preview artifact id, preview size/checksum, and
   `fullQualityDiffersFromPreview = true`; installed MCP tool schemas also
   advertised those fields.
+- Drift-diagnostics follow-up: Grok Files detail materialization now records a
+  bounded detail-surface snapshot after opening `/files?file=...`: current
+  href/title, readiness, download-control count/labels, visible image
+  count/labels, and visible button labels. This keeps future provider drift
+  debugging inside status/readback evidence instead of adding another
+  navigation fallback.
 
 ## Scope
 
@@ -312,6 +318,8 @@ profile, queued dispatcher, and registry-first DevTools authority.
   materialization candidates.
 - Record saved-gallery and files URLs in diagnostics when full-quality
   materialization cannot find a direct download surface.
+- Record detail-surface evidence after opening Grok Files detail pages so
+  download-control drift can be diagnosed from persisted status.
 - Keep all CDP interactions behind browser-service dispatcher/control-plane
   paths or explicit raw-debug escape hatches.
 - Ensure dispatcher queue keys, browser launch/attach paths, status metadata,
@@ -353,6 +361,8 @@ profile, queued dispatcher, and registry-first DevTools authority.
   saved-gallery materialization has no download surface.
 - A focused regression test covers resumed/direct files fallback when no active
   generated tile is visible on the current `/imagine` page.
+- A focused regression test covers `/files?file=...` detail-page drift when the
+  detail page loads but no download control is visible.
 - A focused regression test covers root Discover data previews so they do not
   masquerade as generated Grok Imagine media.
 - A focused regression test covers browser-media dispatcher key derivation for

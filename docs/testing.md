@@ -286,6 +286,10 @@
       navigate-away path where the active tab is later on `https://grok.com/files`
       and the materializer opens a `/files?file=...` detail row to use
       `Download Image`.
+      If that detail page loads but the download control is missing, status
+      diagnostics should include bounded `filesDetail*` evidence: href/title,
+      readiness, download-control count/labels, visible image labels, and
+      visible button labels.
   - create a browser-transport Grok video request:
     - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"grok","mediaType":"video","transport":"browser","prompt":"Generate a video of an asphalt secret agent"}'`
     - expected successful runs include `capability_discovered`,

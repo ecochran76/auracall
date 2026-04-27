@@ -1,3 +1,10 @@
+- 2026-04-27: Grok Files full-quality misses need detail-surface evidence, not
+  another navigation fallback. When `/files?file=...` opens but no download
+  control is found, record href/title, readiness, download-control
+  count/labels, visible image labels, and visible button labels in
+  `grokMaterializationDiagnostics.fullQualityDownload` so the next provider
+  selector drift can be corrected from status/readback evidence.
+
 - 2026-04-27: MCP status schemas must stay in parity with compact media
   artifact summaries, not just the handler payloads. `media_generation_status`
   and generic `run_status` already returned checksum and preview/full-quality

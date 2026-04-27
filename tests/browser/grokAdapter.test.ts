@@ -1288,6 +1288,71 @@ describe('Grok Imagine materialization', () => {
     }
   });
 
+  test('records Grok files detail surface diagnostics when the detail download control drifts', async () => {
+    const destDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-grok-adapter-files-drift-'));
+    try {
+      grokRunPromptMocks.cdpList.mockReset();
+      grokRunPromptMocks.cdpClose.mockReset();
+      grokRunPromptMocks.connectToChromeTarget.mockReset();
+      grokRunPromptMocks.openOrReuseChromeTarget.mockReset();
+      grokRunPromptMocks.cdpList.mockResolvedValue([
+        {
+          id: 'grok-tab-1',
+          type: 'page',
+          url: 'https://grok.com/imagine',
+        },
+      ]);
+      const client = createFakeGrokImagineFilesFallbackClient(destDir, { noFilesDownload: true });
+      grokRunPromptMocks.connectToChromeTarget.mockResolvedValue(client);
+
+      const adapter = createGrokAdapter();
+      const files = await adapter.materializeActiveMediaArtifacts!(
+        {
+          capabilityId: 'grok.media.imagine_image',
+          maxItems: 1,
+          compareFullQuality: true,
+        },
+        destDir,
+        {
+          host: '127.0.0.1',
+          port: 9222,
+          configuredUrl: 'https://grok.com/imagine',
+          expectedUserIdentity: {
+            email: 'ez86944@gmail.com',
+            source: 'profile',
+          },
+          expectedServiceAccountId: 'service-account:grok:ez86944@gmail.com',
+        },
+      );
+
+      expect(client.Page.navigate).toHaveBeenCalledWith({
+        url: 'https://grok.com/files?file=7f618274-c6fb-4fcb-a80b-5d6a8c4c7146',
+      });
+      expect(files).toHaveLength(1);
+      expect(files[0]?.metadata?.grokMaterializationDiagnostics).toMatchObject({
+        fullQualityDownload: expect.objectContaining({
+          ok: false,
+          clicked: false,
+          reason: 'files-download-missing',
+          activationContext: 'files',
+          filesDetailUrl: 'https://grok.com/files?file=7f618274-c6fb-4fcb-a80b-5d6a8c4c7146',
+          filesDetailHref: 'https://grok.com/files?file=7f618274-c6fb-4fcb-a80b-5d6a8c4c7146',
+          filesDetailTitle: 'Grok Files',
+          filesDetailReady: true,
+          filesDetailDownloadButtonCount: 0,
+          filesDetailDownloadButtonLabels: [],
+          filesDetailImageCount: 1,
+          filesDetailImageLabels: ['content.png'],
+          filesDetailButtonLabels: ['Delete file', 'Open menu'],
+          filesImageCandidateCount: 1,
+          filesImageCandidateLabels: ['image.pngpngImagineDelete file'],
+        }),
+      });
+    } finally {
+      await fs.rm(destDir, { recursive: true, force: true });
+    }
+  });
+
   test('falls back to Grok files during resumed materialization when no active tile is visible', async () => {
     const destDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-grok-adapter-files-no-active-tile-'));
     try {
@@ -1703,7 +1768,10 @@ function createFakeGrokImagineSavedFallbackClient(destDir: string) {
   };
 }
 
-function createFakeGrokImagineFilesFallbackClient(destDir: string, options: { noVisibleTiles?: boolean } = {}) {
+function createFakeGrokImagineFilesFallbackClient(
+  destDir: string,
+  options: { noVisibleTiles?: boolean; noFilesDownload?: boolean } = {},
+) {
   let currentUrl = 'https://grok.com/imagine';
   let downloadName: string | null = null;
   let fullQualityAttempts = 0;
@@ -1732,6 +1800,24 @@ function createFakeGrokImagineFilesFallbackClient(destDir: string, options: { no
             url: 'https://grok.com/files?file=7f618274-c6fb-4fcb-a80b-5d6a8c4c7146',
             candidateCount: 1,
             labels: ['image.pngpngImagineDelete file'],
+          },
+        },
+      };
+    }
+    if (expression.includes('auracall-grok-files-detail-surface-v1')) {
+      return {
+        result: {
+          value: {
+            href: currentUrl,
+            title: 'Grok Files',
+            ready: currentUrl === 'https://grok.com/files?file=7f618274-c6fb-4fcb-a80b-5d6a8c4c7146',
+            downloadButtonCount: options.noFilesDownload ? 0 : 1,
+            downloadButtonLabels: options.noFilesDownload ? [] : ['Download Image'],
+            imageCount: 1,
+            imageLabels: ['content.png'],
+            buttonLabels: options.noFilesDownload
+              ? ['Delete file', 'Open menu']
+              : ['Download Image', 'Delete file', 'Open menu'],
           },
         },
       };
@@ -1832,6 +1918,26 @@ function createFakeGrokImagineFilesFallbackClient(destDir: string, options: { no
               actionSurfaceButtonLabels: ['Save', 'Make video'],
               tileActionButtonCount: 2,
               tileActionButtonLabels: ['Save', 'Make video'],
+              savedGalleryUrl: 'https://grok.com/imagine/saved',
+              filesUrl: 'https://grok.com/files',
+            },
+          },
+        };
+      }
+      if (filesActivationContext && options.noFilesDownload) {
+        return {
+          result: {
+            value: {
+              ok: false,
+              reason: 'download-button-missing',
+              activationContext: 'files',
+              primaryTileActivationAllowed: true,
+              tileCandidateCount: 1,
+              selectedTileSourceFingerprint: 'fake-files-tile',
+              downloadButtonCandidateCount: 0,
+              downloadButtonLabels: [],
+              actionSurfaceButtonCount: 2,
+              actionSurfaceButtonLabels: ['Delete file', 'Open menu'],
               savedGalleryUrl: 'https://grok.com/imagine/saved',
               filesUrl: 'https://grok.com/files',
             },

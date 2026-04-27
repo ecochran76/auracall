@@ -1,3 +1,19 @@
+## 2026-04-27 - Grok Files detail drift diagnostics
+
+- Focus: make resumed Grok `/files` full-quality materialization misses
+  actionable when the provider detail page changes.
+- Progress: after opening `/files?file=...`, the Grok adapter now records a
+  bounded files-detail surface snapshot in `grokMaterializationDiagnostics`:
+  current href/title, detail readiness, download-control count/labels, visible
+  image count/labels, and visible button labels. The existing
+  `files-download-missing` failure now distinguishes "detail page loaded but
+  no download affordance was visible" from earlier file-list candidate
+  failures.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm vitest run tests/mediaGenerationGrokBrowserExecutor.test.ts tests/mediaStatusSummary.test.ts --maxWorkers 1`
+
 ## 2026-04-27 - MCP media artifact status schema parity
 
 - Focus: close the contract gap between compact media status data and the MCP
