@@ -21,6 +21,14 @@
   preserve both `savedGalleryUrl` and `filesUrl` so operators can see the
   remaining stable fallback surfaces.
 
+- 2026-04-26: Installed-runtime Grok smoke
+  `medgen_730a0a5ce1b24a34bf000cd35fe65d35` proved the source-installed path
+  still caches a generated visible tile, but full-quality discovery can still
+  miss after fresh post-submit activation. When diagnostics show
+  `activationContext = post-submit`, `primaryTileActivationAllowed = true`,
+  and `download-button-missing`, investigate the exact fresh tile/card action
+  target before adding more saved-gallery retries.
+
 - 2026-04-26: Browser-service dev tools must resolve the same managed browser
   profile namespace as product browser paths. `scripts/browser-tools.ts
   --auracall-profile auracall-grok-auto --browser-target grok` was still using

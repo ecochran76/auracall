@@ -138,6 +138,13 @@ profile, queued dispatcher, and registry-first DevTools authority.
   `https://grok.com/imagine/saved` using browser-service mutation auditing and
   retries download discovery there. Diagnostics also preserve
   `filesUrl = https://grok.com/files` as the next explicit provider fallback.
+- Installed-runtime dogfood after refreshing the user runtime created
+  `medgen_730a0a5ce1b24a34bf000cd35fe65d35`. The run succeeded and cached one
+  visible generated tile, but full-quality discovery still reported
+  `download-button-missing` even with `activationContext = post-submit` and
+  primary tile activation allowed. The next live target is the exact
+  post-submit tile/card activation surface; saved-gallery fallback remains
+  source-covered but not live-proven.
 - Tooling follow-up: `scripts/browser-tools.ts` now resolves managed browser
   profiles through the same browser-family-aware launch context as product
   paths. This prevents diagnostics for `auracall-grok-auto` from launching the
@@ -200,6 +207,8 @@ profile, queued dispatcher, and registry-first DevTools authority.
   runtime profiles that select a different browser profile family.
 - One narrow installed-runtime dogfood run proves the live path after focused
   tests pass.
+- Live dogfood must prove whether fresh post-submit tile activation can expose
+  the full-quality download control before calling the full-quality path done.
 
 ## Validation Plan
 

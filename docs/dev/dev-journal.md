@@ -99,6 +99,14 @@
   audit path and retries download discovery with saved-gallery diagnostics.
   Focused source tests cover the fallback without live provider churn; the
   remaining proof is one installed-runtime Grok smoke after refresh.
+- Installed-runtime Grok image smoke after refreshing the user runtime created
+  `medgen_730a0a5ce1b24a34bf000cd35fe65d35`. The run succeeded, stayed on
+  `https://grok.com/imagine`, reached `terminal_image`, and cached one visible
+  generated tile. Full-quality discovery still reported
+  `download-button-missing` with `activationContext = post-submit` and
+  `primaryTileActivationAllowed = true`; therefore the next live fix should
+  target the exact fresh-tile activation surface before retesting saved-gallery
+  fallback. The browser root was closed after status inspection.
 - Browser-tools follow-up: the dev wrapper path
   `scripts/browser-tools.ts --auracall-profile auracall-grok-auto
   --browser-target grok` still resolved `browser-profiles/auracall-grok-auto/grok`
