@@ -107,6 +107,12 @@
   `primaryTileActivationAllowed = true`; therefore the next live fix should
   target the exact fresh-tile activation surface before retesting saved-gallery
   fallback. The browser root was closed after status inspection.
+- Source follow-up: fresh post-submit full-quality discovery now performs one
+  trusted CDP mouse click on the best generated tile/card candidate when hover
+  and synthetic DOM events do not reveal Download. The recursive readback after
+  that click uses `activationContext = post-submit-trusted-click` and disables
+  saved-gallery fallback, keeping stale/root navigation fenced. Focused tests
+  cover the trusted-click path and diagnostics.
 - Browser-tools follow-up: the dev wrapper path
   `scripts/browser-tools.ts --auracall-profile auracall-grok-auto
   --browser-target grok` still resolved `browser-profiles/auracall-grok-auto/grok`

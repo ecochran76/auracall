@@ -145,6 +145,12 @@ profile, queued dispatcher, and registry-first DevTools authority.
   primary tile activation allowed. The next live target is the exact
   post-submit tile/card activation surface; saved-gallery fallback remains
   source-covered but not live-proven.
+- Source follow-up: fresh post-submit full-quality discovery now escalates from
+  hover/synthetic events to one trusted CDP mouse click on the selected
+  generated tile/card candidate. After that click, the adapter reruns download
+  discovery with `activationContext = post-submit-trusted-click` and
+  saved-gallery fallback disabled, so stale/root navigation behavior remains
+  fenced to the resumed/direct path.
 - Tooling follow-up: `scripts/browser-tools.ts` now resolves managed browser
   profiles through the same browser-family-aware launch context as product
   paths. This prevents diagnostics for `auracall-grok-auto` from launching the
@@ -168,6 +174,9 @@ profile, queued dispatcher, and registry-first DevTools authority.
 - Permit primary tile activation only for fresh post-submit image runs; once
   the page has been left, treat root tiles as stale and route through
   `https://grok.com/imagine/saved` or Grok files.
+- Use trusted CDP mouse activation only in the fresh post-submit path; synthetic
+  in-page click events alone are not sufficient evidence that the provider
+  action surface has been opened.
 - Record saved-gallery and files URLs in diagnostics when full-quality
   materialization cannot find a direct download surface.
 - Keep all CDP interactions behind browser-service dispatcher/control-plane
@@ -203,6 +212,8 @@ profile, queued dispatcher, and registry-first DevTools authority.
   and full-quality download comparison metadata without live provider work.
 - A focused regression test covers the resumed/direct saved-gallery fallback
   without live provider work.
+- A focused regression test covers trusted CDP tile activation for fresh
+  post-submit full-quality discovery without live provider work.
 - A focused regression test covers browser-media dispatcher key derivation for
   runtime profiles that select a different browser profile family.
 - One narrow installed-runtime dogfood run proves the live path after focused

@@ -29,6 +29,13 @@
   and `download-button-missing`, investigate the exact fresh tile/card action
   target before adding more saved-gallery retries.
 
+- 2026-04-26: Fresh Grok Imagine tile activation must use a trusted CDP mouse
+  click, not synthetic in-page click events. Human clicks expose provider
+  action surfaces after generation; React/provider handlers can ignore
+  untrusted dispatched events. Keep the trusted click limited to
+  `post-submit`, then rerun download discovery with saved-gallery fallback
+  disabled so stale/root pages are still fenced.
+
 - 2026-04-26: Browser-service dev tools must resolve the same managed browser
   profile namespace as product browser paths. `scripts/browser-tools.ts
   --auracall-profile auracall-grok-auto --browser-target grok` was still using
