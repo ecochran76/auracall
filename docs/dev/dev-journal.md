@@ -86,6 +86,12 @@
   `https://grok.com/imagine/saved`, so current diagnostics now preserve scoped
   tile action labels and a saved-gallery workflow hint when direct download is
   missing.
+- Grok Imagine context correction: user dogfood clarified that clicking tiles
+  is valid right after a generation, but not after the page has been left. The
+  executor now sends `fullQualityActivationContext: post-submit` for fresh
+  image runs so full-quality discovery may primary-activate the newly generated
+  tile. Direct/resumed materialization stays hover/focus-only and should route
+  through `https://grok.com/imagine/saved` or Grok files for later downloads.
 - Browser-tools follow-up: the dev wrapper path
   `scripts/browser-tools.ts --auracall-profile auracall-grok-auto
   --browser-target grok` still resolved `browser-profiles/auracall-grok-auto/grok`

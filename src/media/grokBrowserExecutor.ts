@@ -198,6 +198,7 @@ async function executeGrokBrowserMediaGeneration(
     mediaType: 'image',
     maxItems: requestedVisibleTileCount,
     compareFullQuality: true,
+    fullQualityActivationContext: 'post-submit',
   }, input.artifactDir, {
     configuredUrl: tabUrl,
     tabUrl,

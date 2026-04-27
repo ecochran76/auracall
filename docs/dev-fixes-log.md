@@ -5,6 +5,14 @@
   tile surface exposes `Save`/`Make video` but no download button, record the
   saved-gallery workflow hint for `https://grok.com/imagine/saved`.
 
+- 2026-04-26: Grok Imagine tile activation is safe only in the immediate
+  post-submit context. After leaving the fresh generation page, root tiles no
+  longer expose the same download affordance; materialization should use
+  `https://grok.com/imagine/saved` or Grok files instead of clicking stale root
+  tiles. The browser media executor now marks fresh image runs as `post-submit`
+  before allowing primary tile activation; resumed/direct materialization keeps
+  the hover/focus-only path.
+
 - 2026-04-26: Browser-service dev tools must resolve the same managed browser
   profile namespace as product browser paths. `scripts/browser-tools.ts
   --auracall-profile auracall-grok-auto --browser-target grok` was still using

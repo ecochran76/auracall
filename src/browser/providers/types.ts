@@ -83,6 +83,7 @@ export interface BrowserProviderActiveMediaMaterializationInput {
   mediaType?: string | null;
   maxItems?: number | null;
   compareFullQuality?: boolean | null;
+  fullQualityActivationContext?: 'post-submit' | 'resumed' | null;
 }
 
 export type BrowserProviderPromptProgressPhase =

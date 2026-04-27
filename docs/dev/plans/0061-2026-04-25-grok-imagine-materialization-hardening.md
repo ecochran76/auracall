@@ -126,6 +126,12 @@ profile, queued dispatcher, and registry-first DevTools authority.
   `Make video`, and saved generation sessions are available at
   `https://grok.com/imagine/saved`, so the next materialization slice should
   follow the saved-gallery workflow rather than retrying broken post routes.
+- Context refinement: tile clicking is valid immediately after a fresh image
+  generation, before the page has been left. The browser media executor now
+  marks that fresh readback/materialization path with
+  `fullQualityActivationContext: post-submit`, and only that context may
+  primary-activate tiles while searching for the full-quality download surface.
+  Later/resumed materialization must use the saved-gallery or files surfaces.
 - Tooling follow-up: `scripts/browser-tools.ts` now resolves managed browser
   profiles through the same browser-family-aware launch context as product
   paths. This prevents diagnostics for `auracall-grok-auto` from launching the
@@ -146,6 +152,9 @@ profile, queued dispatcher, and registry-first DevTools authority.
 - If direct root-tile download controls are absent, follow the provider's
   saved-generation workflow via `https://grok.com/imagine/saved` rather than
   opening immature per-post routes.
+- Permit primary tile activation only for fresh post-submit image runs; once
+  the page has been left, treat root tiles as stale and route through
+  `https://grok.com/imagine/saved` or Grok files.
 - Keep all CDP interactions behind browser-service dispatcher/control-plane
   paths or explicit raw-debug escape hatches.
 - Ensure dispatcher queue keys, browser launch/attach paths, status metadata,

@@ -1703,6 +1703,8 @@ type GrokFullQualityDownloadDiagnostic = {
   ok: boolean;
   reason: string | null;
   clicked: boolean | null;
+  activationContext?: string | null;
+  primaryTileActivationAllowed?: boolean | null;
   tileCandidateCount?: number | null;
   selectedTileSourceFingerprint?: string | null;
   downloadButtonCandidateCount?: number | null;
@@ -1732,7 +1734,7 @@ type GrokImageMaterializationDiagnostics = {
 async function materializeGrokImagineVisibleImagesWithClient(
   client: ChromeClient,
   destDir: string,
-  options: { maxItems?: number | null; compareFullQuality?: boolean },
+  options: { maxItems?: number | null; compareFullQuality?: boolean; allowFullQualityPrimaryTileActivation?: boolean },
 ): Promise<FileRef[]> {
   const maxItems = Math.max(1, Math.min(Math.trunc(Number(options.maxItems ?? 8) || 8), 8));
   await fs.mkdir(destDir, { recursive: true });
@@ -1801,6 +1803,8 @@ async function materializeGrokImagineVisibleImagesWithClient(
       ? (options.compareFullQuality === false ? 'compare-disabled' : 'not-attempted')
       : 'no-visible-artifact',
     clicked: null,
+    activationContext: options.allowFullQualityPrimaryTileActivation ? 'post-submit' : 'resumed',
+    primaryTileActivationAllowed: Boolean(options.allowFullQualityPrimaryTileActivation),
     downloadName: null,
     remoteUrl: null,
     fileName: null,
@@ -1809,7 +1813,9 @@ async function materializeGrokImagineVisibleImagesWithClient(
     fullQualityDiffersFromPreview: null,
   };
   if (options.compareFullQuality !== false && files.length > 0) {
-    const comparison = await materializeGrokFullQualityDownload(client, destDir, files[0]);
+    const comparison = await materializeGrokFullQualityDownload(client, destDir, files[0], {
+      allowPrimaryTileActivation: Boolean(options.allowFullQualityPrimaryTileActivation),
+    });
     fullQualityDownload = comparison.diagnostics;
     if (comparison.file) {
       files.push(comparison.file);
@@ -2026,12 +2032,16 @@ async function materializeGrokFullQualityDownload(
   client: ChromeClient,
   destDir: string,
   previewFile: FileRef,
+  options: { allowPrimaryTileActivation?: boolean } = {},
 ): Promise<{ file: FileRef | null; diagnostics: GrokFullQualityDownloadDiagnostic }> {
+  const allowPrimaryTileActivation = options.allowPrimaryTileActivation === true;
   const baseDiagnostics: GrokFullQualityDownloadDiagnostic = {
     attempted: true,
     ok: false,
     reason: null,
     clicked: null,
+    activationContext: allowPrimaryTileActivation ? 'post-submit' : 'resumed',
+    primaryTileActivationAllowed: allowPrimaryTileActivation,
     tileCandidateCount: null,
     selectedTileSourceFingerprint: null,
     downloadButtonCandidateCount: null,
@@ -2051,6 +2061,7 @@ async function materializeGrokFullQualityDownload(
   await armDownloadCapture(client.Runtime, { stateKey: '__auracallGrokImagineDownloadCapture' });
   const clicked = await client.Runtime.evaluate({
     expression: `(async () => {
+      const allowPrimaryTileActivation = ${JSON.stringify(allowPrimaryTileActivation)};
       const visible = (node) => {
         if (!(node instanceof HTMLElement)) return false;
         const style = getComputedStyle(node);
@@ -2080,6 +2091,24 @@ async function materializeGrokFullQualityDownload(
             const event = eventName.startsWith('pointer')
               ? new PointerEvent(eventName, init)
               : new MouseEvent(eventName, init);
+            node.dispatchEvent(event);
+          } catch {
+            node.dispatchEvent(new Event(eventName, { bubbles: true, cancelable: true }));
+          }
+        }
+      };
+      const dispatchPress = (node) => {
+        if (!allowPrimaryTileActivation || !(node instanceof HTMLElement)) return;
+        const rect = node.getBoundingClientRect();
+        const clientX = Math.max(1, Math.round(rect.left + rect.width / 2));
+        const clientY = Math.max(1, Math.round(rect.top + rect.height / 2));
+        const pointerInit = { bubbles: true, cancelable: true, composed: true, clientX, clientY, pointerId: 1, pointerType: 'mouse', isPrimary: true };
+        const mouseInit = { bubbles: true, cancelable: true, composed: true, clientX, clientY, button: 0, buttons: 1 };
+        for (const eventName of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+          try {
+            const event = eventName.startsWith('pointer')
+              ? new PointerEvent(eventName, pointerInit)
+              : new MouseEvent(eventName, mouseInit);
             node.dispatchEvent(event);
           } catch {
             node.dispatchEvent(new Event(eventName, { bubbles: true, cancelable: true }));
@@ -2119,6 +2148,13 @@ async function materializeGrokFullQualityDownload(
           await sleep(100);
         }
         await sleep(700);
+        if (allowPrimaryTileActivation && findDownloadButtons().length === 0) {
+          for (const target of targets) {
+            dispatchPress(target);
+            await sleep(450);
+            if (findDownloadButtons().length > 0) break;
+          }
+        }
         for (const target of targets) firePointerSequence(target);
         await sleep(300);
         return true;
@@ -2219,7 +2255,11 @@ async function materializeGrokFullQualityDownload(
       if (!(button instanceof HTMLElement)) {
         return {
           ok: false,
-          reason: tileActionButtonLabels.some((label) => /save/i.test(label)) ? 'saved-gallery-required' : 'download-button-missing',
+          reason: tileActionButtonLabels.some((label) => /save/i.test(label))
+            ? (allowPrimaryTileActivation ? 'saved-gallery-or-files-required' : 'saved-gallery-required')
+            : 'download-button-missing',
+          activationContext: allowPrimaryTileActivation ? 'post-submit' : 'resumed',
+          primaryTileActivationAllowed: allowPrimaryTileActivation,
           tileCandidateCount: tileCandidates.length,
           selectedTileSourceFingerprint,
           downloadButtonCandidateCount: buttons.length,
@@ -2235,6 +2275,8 @@ async function materializeGrokFullQualityDownload(
       button.click();
       return {
         ok: true,
+        activationContext: allowPrimaryTileActivation ? 'post-submit' : 'resumed',
+        primaryTileActivationAllowed: allowPrimaryTileActivation,
         tileCandidateCount: tileCandidates.length,
         selectedTileSourceFingerprint,
         downloadButtonCandidateCount: buttons.length,
@@ -2258,6 +2300,8 @@ async function materializeGrokFullQualityDownload(
     tileActionButtonCount?: number;
     tileActionButtonLabels?: string[];
     savedGalleryUrl?: string | null;
+    activationContext?: string | null;
+    primaryTileActivationAllowed?: boolean | null;
   } | undefined;
   if (clickedValue?.ok !== true) {
     return {
@@ -2266,6 +2310,8 @@ async function materializeGrokFullQualityDownload(
         ...baseDiagnostics,
         clicked: false,
         reason: clickedValue?.reason ?? 'download-click-failed',
+        activationContext: typeof clickedValue?.activationContext === 'string' ? clickedValue.activationContext : baseDiagnostics.activationContext,
+        primaryTileActivationAllowed: typeof clickedValue?.primaryTileActivationAllowed === 'boolean' ? clickedValue.primaryTileActivationAllowed : baseDiagnostics.primaryTileActivationAllowed,
         tileCandidateCount: numberOrNull(clickedValue?.tileCandidateCount),
         selectedTileSourceFingerprint: clickedValue?.selectedTileSourceFingerprint ?? null,
         downloadButtonCandidateCount: numberOrNull(clickedValue?.downloadButtonCandidateCount),
@@ -2301,6 +2347,8 @@ async function materializeGrokFullQualityDownload(
         ...baseDiagnostics,
         clicked: true,
         reason: 'download-file-missing',
+        activationContext: typeof clickedValue.activationContext === 'string' ? clickedValue.activationContext : baseDiagnostics.activationContext,
+        primaryTileActivationAllowed: typeof clickedValue.primaryTileActivationAllowed === 'boolean' ? clickedValue.primaryTileActivationAllowed : baseDiagnostics.primaryTileActivationAllowed,
         downloadName: capture.downloadName ?? null,
         remoteUrl,
         tileCandidateCount: numberOrNull(clickedValue.tileCandidateCount),
@@ -2346,6 +2394,8 @@ async function materializeGrokFullQualityDownload(
       ok: true,
       reason: null,
       clicked: true,
+      activationContext: typeof clickedValue.activationContext === 'string' ? clickedValue.activationContext : baseDiagnostics.activationContext,
+      primaryTileActivationAllowed: typeof clickedValue.primaryTileActivationAllowed === 'boolean' ? clickedValue.primaryTileActivationAllowed : baseDiagnostics.primaryTileActivationAllowed,
       tileCandidateCount: numberOrNull(clickedValue.tileCandidateCount),
       selectedTileSourceFingerprint: clickedValue.selectedTileSourceFingerprint ?? null,
       downloadButtonCandidateCount: numberOrNull(clickedValue.downloadButtonCandidateCount),
@@ -3055,6 +3105,7 @@ export function createGrokAdapter(): Pick<
         return await materializeGrokImagineVisibleImagesWithClient(client, destDir, {
           maxItems: input.maxItems,
           compareFullQuality: input.compareFullQuality !== false,
+          allowFullQualityPrimaryTileActivation: input.fullQualityActivationContext === 'post-submit',
         });
       } finally {
         await client.close().catch(() => undefined);

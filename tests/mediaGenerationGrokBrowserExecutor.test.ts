@@ -538,6 +538,7 @@ describe('Grok browser media generation executor', () => {
         mediaType: 'image',
         maxItems: 8,
         compareFullQuality: true,
+        fullQualityActivationContext: 'post-submit',
       },
       artifactDir,
       expect.objectContaining({
@@ -1237,6 +1238,7 @@ describe('Grok browser media generation executor', () => {
       expect.objectContaining({
         maxItems: 5,
         compareFullQuality: true,
+        fullQualityActivationContext: 'post-submit',
       }),
       artifactDir,
       expect.objectContaining({
