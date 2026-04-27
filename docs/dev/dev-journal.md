@@ -22129,6 +22129,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   different from the preview.
 - Validation:
   - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
 
 ## 2026-04-25 - Browser operation queue diagnostics
 
@@ -22438,3 +22440,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run install:user-runtime`
   - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media generate --provider grok --type image -p "Generate an image of an asphalt secret agent" --count 4 --json`
   - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto run status medgen_531a648c8cb247cdadeb6ada2531bd48 --json`
+
+## 2026-04-26 - Grok files full-quality fallback
+
+- Focus: finish the resumed/direct full-quality follow-up without changing the
+  fresh post-submit no-navigation path.
+- Fix: when root probing says full-quality requires saved provider surfaces,
+  the adapter now tries `/imagine/saved` first and falls through to `/files` if
+  saved generations do not expose a download control. Saved-gallery readiness
+  also checks all `[id^="imagine-masonry-section"]` containers instead of only
+  section `0`.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`

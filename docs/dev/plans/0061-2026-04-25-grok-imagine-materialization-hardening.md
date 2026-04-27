@@ -194,6 +194,11 @@ profile, queued dispatcher, and registry-first DevTools authority.
   paths. This prevents diagnostics for `auracall-grok-auto` from launching the
   unbound `browser-profiles/auracall-grok-auto/grok` profile when the selected
   browser profile family is `default`.
+- Source follow-up: the resumed/direct full-quality path now uses a provider
+  surface ladder: root probe, `/imagine/saved`, then `/files`. The fresh
+  post-submit path remains no-navigation and returns diagnostics if no direct
+  download control is visible. The saved-gallery readiness probe now covers all
+  `[id^="imagine-masonry-section"]` sections.
 
 ## Scope
 
@@ -256,6 +261,8 @@ profile, queued dispatcher, and registry-first DevTools authority.
   and full-quality download comparison metadata without live provider work.
 - A focused regression test covers the resumed/direct saved-gallery fallback
   without live provider work.
+- A focused regression test covers the resumed/direct files fallback when
+  saved-gallery materialization has no download surface.
 - A focused regression test covers root Discover data previews so they do not
   masquerade as generated Grok Imagine media.
 - A focused regression test covers browser-media dispatcher key derivation for

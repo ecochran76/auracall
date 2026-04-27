@@ -13,6 +13,11 @@ Owner: Aura-Call CLI
 - Grok Imagine image/video generation is a separate API surface. Aura-Call has
   browser-backed Grok Imagine image generation and controlled browser-backed
   Grok Imagine video generation with status polling and MP4 artifact caching.
+  Fresh image submissions stay on the submitted `/imagine` tab until generated
+  masonry/filmstrip media is stable and visible tiles are cached. Resumed or
+  direct full-quality materialization may then use the provider's saved
+  generations (`/imagine/saved`) and files (`/files`) surfaces to find a
+  download control.
   Use `docs/grok-imagine-video-readback-runbook.md` only for the diagnostic
   existing-tab video readback probe.
 

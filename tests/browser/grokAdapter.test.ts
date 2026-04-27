@@ -1165,6 +1165,71 @@ describe('Grok Imagine materialization', () => {
     }
   });
 
+  test('falls back to Grok files when saved gallery has no download surface', async () => {
+    const destDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-grok-adapter-files-fallback-'));
+    try {
+      grokRunPromptMocks.cdpList.mockReset();
+      grokRunPromptMocks.cdpClose.mockReset();
+      grokRunPromptMocks.connectToChromeTarget.mockReset();
+      grokRunPromptMocks.openOrReuseChromeTarget.mockReset();
+      grokRunPromptMocks.cdpList.mockResolvedValue([
+        {
+          id: 'grok-tab-1',
+          type: 'page',
+          url: 'https://grok.com/imagine',
+        },
+      ]);
+      const client = createFakeGrokImagineFilesFallbackClient(destDir);
+      grokRunPromptMocks.connectToChromeTarget.mockResolvedValue(client);
+
+      const adapter = createGrokAdapter();
+      const files = await adapter.materializeActiveMediaArtifacts!(
+        {
+          capabilityId: 'grok.media.imagine_image',
+          maxItems: 1,
+          compareFullQuality: true,
+        },
+        destDir,
+        {
+          host: '127.0.0.1',
+          port: 9222,
+          configuredUrl: 'https://grok.com/imagine',
+          expectedUserIdentity: {
+            email: 'ez86944@gmail.com',
+            source: 'profile',
+          },
+          expectedServiceAccountId: 'service-account:grok:ez86944@gmail.com',
+        },
+      );
+
+      expect(client.Page.navigate).toHaveBeenCalledWith({ url: 'https://grok.com/imagine/saved' });
+      expect(client.Page.navigate).toHaveBeenCalledWith({ url: 'https://grok.com/files' });
+      expect(files).toHaveLength(2);
+      expect(files[1]).toMatchObject({
+        id: 'grok_imagine_full_quality_1',
+        name: 'grok-imagine-files-full-quality.jpg',
+        metadata: {
+          materialization: 'download-button',
+          previewArtifactId: 'grok_imagine_visible_1',
+          fullQualityDiffersFromPreview: true,
+        },
+      });
+      expect(files[0]?.metadata?.grokMaterializationDiagnostics).toMatchObject({
+        fullQualityDownload: expect.objectContaining({
+          ok: true,
+          clicked: true,
+          activationContext: 'files',
+          primaryTileActivationAllowed: true,
+          savedGalleryUrl: 'https://grok.com/imagine/saved',
+          filesUrl: 'https://grok.com/files',
+          fileName: 'grok-imagine-files-full-quality.jpg',
+        }),
+      });
+    } finally {
+      await fs.rm(destDir, { recursive: true, force: true });
+    }
+  });
+
   test('does not primary-click Grok Imagine tiles during fresh post-submit materialization', async () => {
     const destDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-grok-adapter-no-primary-click-'));
     try {
@@ -1503,6 +1568,170 @@ function createFakeGrokImagineSavedFallbackClient(destDir: string) {
     Page: {
       enable: vi.fn(async () => undefined),
       navigate: vi.fn(async () => undefined),
+      bringToFront: vi.fn(async () => undefined),
+      captureScreenshot: vi.fn(async () => ({ data: visibleBytes[0]!.toString('base64') })),
+    },
+    Runtime: {
+      enable: vi.fn(async () => undefined),
+      evaluate,
+    },
+    send: vi.fn(async () => undefined),
+    close: vi.fn(async () => undefined),
+  };
+}
+
+function createFakeGrokImagineFilesFallbackClient(destDir: string) {
+  let currentUrl = 'https://grok.com/imagine';
+  let downloadName: string | null = null;
+  let fullQualityAttempts = 0;
+  const visibleBytes = [Buffer.from('visible tile one jpeg bytes')];
+  const fullQualityBytes = Buffer.from('files page full quality jpeg bytes are different');
+  const visibleDataUrl = `data:image/jpeg;base64,${visibleBytes[0]!.toString('base64')}`;
+  const evaluate = vi.fn(async ({ expression }: { expression: string }) => {
+    if (expression.includes('Browser.setDownloadBehavior') || expression.includes('Page.setDownloadBehavior')) {
+      return { result: { value: true } };
+    }
+    if (expression.includes('document.readyState')) {
+      return { result: { value: { readyState: 'complete' } } };
+    }
+    if (expression.includes('location.href !== target') && expression.includes('location.assign(target)')) {
+      const match = expression.match(/const target = "([^"]+)"/);
+      if (match?.[1]) currentUrl = match[1];
+      return { result: { value: 'assigned' } };
+    }
+    if (expression.includes("pathname.replace") && expression.includes("'/imagine/saved'")) {
+      return { result: { value: new URL(currentUrl).pathname.replace(/\/+$/, '') === '/imagine/saved' } };
+    }
+    if (expression.includes("location.pathname !== '/files'")) {
+      return { result: { value: new URL(currentUrl).pathname === '/files' } };
+    }
+    if (expression.includes('new URL(location.href)')) {
+      return { result: { value: { href: currentUrl, title: 'Grok' } } };
+    }
+    if (expression.includes('const identity = { id: null, name: null, handle: null, email: null, source: null }')) {
+      return {
+        result: {
+          value: {
+            id: 'c4d43034-7f30-462b-918b-59779bcba208',
+            name: 'Eric C',
+            handle: '@SwantonDoug',
+            email: 'ez86944@gmail.com',
+            source: 'next-data',
+            guestAuthCta: false,
+          },
+        },
+      };
+    }
+    if (expression.includes('const maxItems =') && expression.includes('const selectors =')) {
+      return {
+        result: {
+          value: {
+            tiles: [{
+              ordinal: 1,
+              src: visibleDataUrl,
+              srcKind: 'data-url',
+              x: 10,
+              y: 20,
+              width: 256,
+              height: 256,
+              naturalWidth: 512,
+              naturalHeight: 512,
+              selected: true,
+              dataUrl: visibleDataUrl,
+              error: null,
+            }],
+          },
+        },
+      };
+    }
+    if (expression.includes('__auracallGrokImagineDownloadCapture') && expression.includes('originalAnchorClick')) {
+      downloadName = null;
+      return { result: { value: true } };
+    }
+    if (expression.includes('allowPrimaryTileActivation') && expression.includes('firstTile') && expression.includes('Download')) {
+      fullQualityAttempts += 1;
+      if (fullQualityAttempts === 1) {
+        return {
+          result: {
+            value: {
+              ok: false,
+              reason: 'saved-gallery-required',
+              activationContext: 'resumed',
+              primaryTileActivationAllowed: false,
+              tileCandidateCount: 1,
+              selectedTileSourceFingerprint: 'fake-root-tile',
+              downloadButtonCandidateCount: 0,
+              downloadButtonLabels: [],
+              actionSurfaceButtonCount: 2,
+              actionSurfaceButtonLabels: ['Save', 'Make video'],
+              tileActionButtonCount: 2,
+              tileActionButtonLabels: ['Save', 'Make video'],
+              savedGalleryUrl: 'https://grok.com/imagine/saved',
+              filesUrl: 'https://grok.com/files',
+            },
+          },
+        };
+      }
+      if (fullQualityAttempts === 2) {
+        return {
+          result: {
+            value: {
+              ok: false,
+              reason: 'download-button-missing',
+              activationContext: 'saved-gallery',
+              primaryTileActivationAllowed: true,
+              tileCandidateCount: 1,
+              selectedTileSourceFingerprint: 'fake-saved-tile',
+              downloadButtonCandidateCount: 0,
+              downloadButtonLabels: [],
+              actionSurfaceButtonCount: 2,
+              actionSurfaceButtonLabels: ['Save', 'Make video'],
+              tileActionButtonCount: 2,
+              tileActionButtonLabels: ['Save', 'Make video'],
+              savedGalleryUrl: 'https://grok.com/imagine/saved',
+              filesUrl: 'https://grok.com/files',
+            },
+          },
+        };
+      }
+      downloadName = 'grok-imagine-files-full-quality.jpg';
+      await fs.writeFile(path.join(destDir, downloadName), fullQualityBytes);
+      return {
+        result: {
+          value: {
+            ok: true,
+            activationContext: 'files',
+            primaryTileActivationAllowed: true,
+            tileCandidateCount: 1,
+            selectedTileSourceFingerprint: 'fake-files-tile',
+            downloadButtonCandidateCount: 1,
+            downloadButtonLabels: ['Download'],
+            actionSurfaceButtonCount: 2,
+            actionSurfaceButtonLabels: ['Download', 'Open'],
+            savedGalleryUrl: 'https://grok.com/imagine/saved',
+            filesUrl: 'https://grok.com/files',
+          },
+        },
+      };
+    }
+    if (expression.includes('downloadName')) {
+      return {
+        result: {
+          value: {
+            href: null,
+            downloadName,
+          },
+        },
+      };
+    }
+    return { result: { value: true } };
+  });
+  return {
+    Page: {
+      enable: vi.fn(async () => undefined),
+      navigate: vi.fn(async ({ url }: { url: string }) => {
+        currentUrl = url;
+      }),
       bringToFront: vi.fn(async () => undefined),
       captureScreenshot: vi.fn(async () => ({ data: visibleBytes[0]!.toString('base64') })),
     },

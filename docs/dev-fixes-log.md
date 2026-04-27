@@ -14696,3 +14696,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `grok-imagine-visible-*.png` artifacts, kept route progression to
   `https://grok.com/imagine`, and left full-quality download as
   `saved-gallery-required` with primary tile activation disabled.
+- 2026-04-26: Grok Imagine full-quality fallback should be explicit about the
+  provider surfaces it uses. Fresh post-submit materialization still stays on
+  the submitted `/imagine` tab, but resumed/direct full-quality materialization
+  now tries `/imagine/saved` first and then `/files` when saved generations do
+  not expose a download control. Saved-gallery readiness also searches every
+  `[id^="imagine-masonry-section"]` container instead of only section `0`.

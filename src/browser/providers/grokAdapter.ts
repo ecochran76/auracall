@@ -2530,6 +2530,38 @@ async function materializeGrokFullQualityDownloadFromSavedGallery(
     allowPrimaryTileActivation: true,
     activationContext: 'saved-gallery',
   });
+  if (!comparison.diagnostics.ok && !comparison.file) {
+    const filesComparison = await materializeGrokFullQualityDownloadFromFiles(client, destDir, previewFile)
+      .catch((error) => ({
+        file: null,
+        diagnostics: {
+          attempted: true,
+          ok: false,
+          reason: 'files-download-failed',
+          clicked: false,
+          activationContext: 'files',
+          primaryTileActivationAllowed: true,
+          savedGalleryUrl: GROK_IMAGINE_SAVED_URL,
+          filesUrl: GROK_FILES_URL,
+          downloadName: null,
+          remoteUrl: null,
+          fileName: null,
+          size: null,
+          previewArtifactId: previewFile.id,
+          fullQualityDiffersFromPreview: null,
+          error: error instanceof Error ? error.message : String(error),
+        } as GrokFullQualityDownloadDiagnostic & { error?: string },
+      }));
+    if (filesComparison.diagnostics.ok || filesComparison.file) {
+      return filesComparison;
+    }
+    comparison.diagnostics = {
+      ...comparison.diagnostics,
+      reason: filesComparison.diagnostics.reason ?? comparison.diagnostics.reason ?? 'saved-gallery-download-missing',
+      savedGalleryUrl: comparison.diagnostics.savedGalleryUrl ?? GROK_IMAGINE_SAVED_URL,
+      filesUrl: comparison.diagnostics.filesUrl ?? GROK_FILES_URL,
+    };
+  }
   comparison.diagnostics = {
     ...comparison.diagnostics,
     activationContext: 'saved-gallery',
@@ -2540,6 +2572,55 @@ async function materializeGrokFullQualityDownloadFromSavedGallery(
   if (!comparison.diagnostics.ok && !comparison.file && !comparison.diagnostics.reason) {
     comparison.diagnostics.reason = 'saved-gallery-download-missing';
   }
+  return comparison;
+}
+
+async function materializeGrokFullQualityDownloadFromFiles(
+  client: ChromeClient,
+  destDir: string,
+  previewFile: FileRef,
+): Promise<{ file: FileRef | null; diagnostics: GrokFullQualityDownloadDiagnostic }> {
+  try {
+    await navigateToGrokFiles(client, GROK_FILES_URL);
+  } catch {
+    return {
+      file: null,
+      diagnostics: {
+        attempted: true,
+        ok: false,
+        reason: 'files-navigation-failed',
+        clicked: false,
+        activationContext: 'files',
+        primaryTileActivationAllowed: true,
+        savedGalleryUrl: GROK_IMAGINE_SAVED_URL,
+        filesUrl: GROK_FILES_URL,
+        downloadName: null,
+        remoteUrl: null,
+        fileName: null,
+        size: null,
+        previewArtifactId: previewFile.id,
+        fullQualityDiffersFromPreview: null,
+      },
+    };
+  }
+  const comparison = await materializeGrokFullQualityDownload(client, destDir, previewFile, {
+    allowPrimaryTileActivation: true,
+    activationContext: 'files',
+  });
+  comparison.diagnostics = {
+    ...comparison.diagnostics,
+    activationContext: 'files',
+    primaryTileActivationAllowed: true,
+    savedGalleryUrl: comparison.diagnostics.savedGalleryUrl ?? GROK_IMAGINE_SAVED_URL,
+    filesUrl: comparison.diagnostics.filesUrl ?? GROK_FILES_URL,
+    reason: comparison.diagnostics.ok
+      ? null
+      : (comparison.diagnostics.reason === 'saved-gallery-or-files-required' ||
+          comparison.diagnostics.reason === 'saved-gallery-required' ||
+          comparison.diagnostics.reason === 'download-button-missing')
+        ? 'files-download-missing'
+        : comparison.diagnostics.reason,
+  };
   return comparison;
 }
 
@@ -7320,7 +7401,7 @@ function grokImagineSavedPageReadyExpression(): string {
     const text = normalize(main?.textContent || '');
     const hasGeneratedMedia = Boolean(
       main?.querySelector(
-        '#imagine-masonry-section-0 img, img[src^="data:image/"], img[src^="blob:"], img[src*="assets.grok.com/users/"], img[src*="/generated/"]',
+        '[id^="imagine-masonry-section"] img, img[src^="data:image/"], img[src^="blob:"], img[src*="assets.grok.com/users/"], img[src*="/generated/"]',
       ),
     );
     return hasGeneratedMedia || text.includes('saved') || text.includes('imagine');
