@@ -259,6 +259,11 @@
       `media_generation_status`, MCP `run_status`, and CLI `run status --json`
       should surface provider labels as compact artifact `downloadLabel`,
       `downloadVariant`, and `downloadOptions`
+    - the MCP status schemas should also advertise compact artifact checksum
+      and preview/full-quality comparison fields so callers can rely on
+      `checksumSha256`, `previewArtifactId`, `previewSize`,
+      `previewChecksumSha256`, and `fullQualityDiffersFromPreview` when a
+      provider adapter records them
   - create a browser-transport Grok image request only after capability
     discovery reports `grok.media.imagine_image` as `available`; the local API
     first checks the explicit `/imagine` entrypoint and fails before prompt

@@ -58,9 +58,10 @@
   `diagnostics: "browser-state"`.
 - Behavior: returns `object = "media_generation_status"` with current status,
   latest timeline event, full timeline, artifact count, artifact cache path,
-  materialization method, failure details when present, and derived
-  `diagnostics` from the persisted timeline. The diagnostics block summarizes
-  capability preflight, submitted tab, provider route progression, artifact
+  materialization method, checksum, preview/full-quality comparison fields
+  when available, failure details when present, and derived `diagnostics` from
+  the persisted timeline. The diagnostics block summarizes capability
+  preflight, submitted tab, provider route progression, artifact
   polling/progress counts, terminal run-state counts, and materialization
   source without re-invoking the provider.
 - `diagnostics = "browser-state"` adds bounded live browser evidence for a

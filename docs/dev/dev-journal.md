@@ -1,3 +1,15 @@
+## 2026-04-27 - MCP media artifact status schema parity
+
+- Focus: close the contract gap between compact media status data and the MCP
+  output schemas that callers inspect for typed status polling.
+- Progress: `media_generation_status` and generic `run_status` MCP artifact
+  schemas now advertise `checksumSha256`, `previewArtifactId`, `previewSize`,
+  `previewChecksumSha256`, and `fullQualityDiffersFromPreview`, matching the
+  existing TypeScript summaries, HTTP status payloads, CLI JSON status, and
+  persisted Grok/Gemini artifact metadata.
+- Validation:
+  - `pnpm vitest run tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+
 ## 2026-04-26 - profile identity smoke command
 
 - Focus: turn the ChatGPT account-binding smoke into a repeatable no-prompt

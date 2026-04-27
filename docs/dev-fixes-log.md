@@ -1,3 +1,10 @@
+- 2026-04-27: MCP status schemas must stay in parity with compact media
+  artifact summaries, not just the handler payloads. `media_generation_status`
+  and generic `run_status` already returned checksum and preview/full-quality
+  comparison fields, but their advertised output schemas only listed the older
+  download-label fields. Add schema entries and focused MCP tests whenever
+  compact status grows operator-facing artifact metadata.
+
 - 2026-04-27: Grok Imagine full-quality retry now has an explicit operator
   command. `auracall media materialize <media_generation_id> --count 1 --json`
   resumes artifact materialization for an existing durable Grok image run,

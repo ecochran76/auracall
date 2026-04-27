@@ -265,6 +265,11 @@ profile, queued dispatcher, and registry-first DevTools authority.
   tiles are still visible. The older active-page/saved-gallery-first route
   could recapture a visible tile and require a second materialize call from
   `/files`.
+- Contract follow-up: MCP `media_generation_status` and generic `run_status`
+  schemas now advertise the same checksum and preview/full-quality comparison
+  artifact fields already returned by compact status payloads. This keeps
+  service callers from treating Grok full-quality comparison metadata as
+  undeclared extra JSON.
 
 ## Scope
 
@@ -319,6 +324,8 @@ profile, queued dispatcher, and registry-first DevTools authority.
 - Status/readback surfaces report requested count, materialized artifact count,
   materialization method, cache paths, and any preview-vs-download comparison
   evidence.
+- MCP status schemas advertise the same artifact evidence fields returned by
+  the compact media/generic run status payloads.
 - The provider adapter never re-navigates after prompt submission while waiting
   for generated media or materializing artifacts.
 - Submitted-run materialization attaches to the submitted tab target id and
@@ -350,6 +357,8 @@ profile, queued dispatcher, and registry-first DevTools authority.
 
 - Focused Grok adapter/media executor tests for multi-tile materialization and
   preview/download comparison metadata.
+- MCP media/generic run status schema and payload regression tests for
+  checksum and preview/full-quality comparison metadata.
 - `pnpm exec tsc --noEmit`
 - Installed-runtime `auracall run status <id> --json` check for checksum and
   preview-vs-full-quality fields after `pnpm run install:user-runtime`.
