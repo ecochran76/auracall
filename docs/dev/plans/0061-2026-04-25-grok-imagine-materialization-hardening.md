@@ -214,6 +214,16 @@ profile, queued dispatcher, and registry-first DevTools authority.
   merges newly materialized artifacts into the existing artifact directory, and
   routes the browser work through the same managed-profile operation
   dispatcher used by normal browser media generation.
+- Installed proof after adding the resumed materialize command: rerunning
+  `media materialize medgen_ada664ba3db24de4821cac245ec74714 --count 1
+  --json` preserved `status = succeeded`, kept the original `completedAt`,
+  acquired dispatcher key
+  `managed-profile:~/.auracall/browser-profiles/default/grok::service:grok`,
+  and recaptured one visible tile in the existing artifact directory without
+  submitting a new prompt. The saved/files full-quality ladder still found no
+  download surface: `fullQualityFileCount = 0`, `reason =
+  files-download-missing`, `activationContext = saved-gallery`,
+  `downloadButtonCandidateCount = 0`, and no action-surface labels.
 
 ## Scope
 
@@ -231,6 +241,9 @@ profile, queued dispatcher, and registry-first DevTools authority.
   opening immature per-post routes.
 - Provide an explicit operator retry path for saved-gallery/files
   full-quality discovery after a fresh no-navigation run completes.
+- Refine resumed saved-gallery/files discovery against the live action surface;
+  the operator command and dispatcher path are proven, but download controls
+  are still not being identified.
 - Do not primary-click generated tiles/cards on a fresh post-submit page.
   Trusted CDP can be used for hover/move diagnostics, but mouse press/release
   on the tile is treated as navigation-prone until a specific non-navigating

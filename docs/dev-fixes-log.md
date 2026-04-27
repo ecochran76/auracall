@@ -5,6 +5,14 @@
   preserves the run's terminal status, and merges new artifacts into the
   existing media-generation cache instead of submitting another prompt.
 
+- 2026-04-27: Installed Grok resumed-materialization smoke proved the new
+  command/control path but not the provider download selector. Run
+  `medgen_ada664ba3db24de4821cac245ec74714` stayed succeeded and acquired the
+  expected `browser-profiles/default/grok` dispatcher key, but full-quality
+  discovery ended at `files-download-missing` with zero download/action button
+  candidates. The next fix should inspect the saved/files DOM directly and
+  refine those action-surface selectors, not change prompt submission.
+
 - 2026-04-26: Do not primary-click Grok Imagine root tiles while searching for
   full-quality downloads. A normal tile click can open an immature post route,
   toast "post not found, returning home", and leave the page on blurry root

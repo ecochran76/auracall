@@ -22121,6 +22121,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/mediaGeneration.test.ts tests/cli.mediaGenerationCommand.test.ts tests/mediaBrowserExecutor.test.ts --maxWorkers 1`
   - `pnpm exec tsc --noEmit`
 
+## 2026-04-27 - Grok resumed materialization installed smoke
+
+- Focus: prove the installed user runtime can run the new resumed
+  materialization command against an existing Grok image run without
+  submitting another prompt.
+- Result: `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto
+  media materialize medgen_ada664ba3db24de4821cac245ec74714 --count 1 --json`
+  kept the run `succeeded`, preserved the original `completedAt`, acquired
+  `managed-profile:~/.auracall/browser-profiles/default/grok::service:grok`,
+  and recaptured one visible tile into the existing artifact directory. The
+  full-quality ladder still missed the provider download surface with
+  `files-download-missing`, `fullQualityFileCount = 0`, and zero download or
+  action-surface button candidates.
+- Validation:
+  - `pnpm run install:user-runtime`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media materialize medgen_ada664ba3db24de4821cac245ec74714 --count 1 --json`
+
 ## 2026-04-27 - Grok installed post-submit smoke after files fallback
 
 - Focus: prove the updated installed runtime still preserves the fresh
