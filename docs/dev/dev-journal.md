@@ -22502,3 +22502,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   section `0`.
 - Validation:
   - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`
+
+## 2026-04-27 - Grok files detail materialization
+
+- Focus: make `auracall media materialize <media_generation_id>` recover a
+  full-quality Grok image from provider-owned saved/files surfaces after the
+  submitted `/imagine` page no longer has active generated tiles.
+- Fix: resumed Grok materialization now uses a placeholder preview reference
+  when no active tile is visible, goes directly to the files fallback in that
+  state, scrolls Grok's virtualized files list until it finds image candidates,
+  opens the selected `/files?file=...` detail page, and uses the existing
+  `Download Image` path.
+- Live result: installed run
+  `media materialize medgen_ada664ba3db24de4821cac245ec74714 --count 1
+  --json` added `grok_imagine_full_quality_1` as `content.png`, with
+  `fullQualityFileCount = 1`, `filesImageCandidateCount = 6`, and
+  `downloadButtonLabels = ["Download Image"]`.
+- Validation:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media materialize medgen_ada664ba3db24de4821cac245ec74714 --count 1 --json`

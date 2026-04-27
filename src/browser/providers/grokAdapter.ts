@@ -1732,6 +1732,9 @@ type GrokFullQualityDownloadDiagnostic = {
   trustedTileClickTarget?: string | null;
   savedGalleryUrl?: string | null;
   filesUrl?: string | null;
+  filesDetailUrl?: string | null;
+  filesImageCandidateCount?: number | null;
+  filesImageCandidateLabels?: string[] | null;
   downloadName: string | null;
   remoteUrl: string | null;
   fileName: string | null;
@@ -1819,29 +1822,47 @@ async function materializeGrokImagineVisibleImagesWithClient(
       },
     });
   }
+  const fullQualityActivationContext =
+    options.fullQualityActivationContext ?? (options.allowFullQualityPrimaryTileActivation ? 'post-submit' : 'resumed');
+  const fallbackPreviewFile: FileRef | null =
+    files[0] ??
+    (fullQualityActivationContext === 'resumed'
+      ? {
+          id: 'grok_imagine_visible_unavailable',
+          name: 'grok-imagine-visible-unavailable',
+          provider: 'grok',
+          source: 'conversation',
+          metadata: {
+            materialization: 'resumed-preview-unavailable',
+            artifactKind: 'image',
+          },
+        }
+      : null);
   let fullQualityDownload: GrokFullQualityDownloadDiagnostic = {
-    attempted: options.compareFullQuality !== false && files.length > 0,
+    attempted: options.compareFullQuality !== false && Boolean(fallbackPreviewFile),
     ok: false,
-    reason: files.length > 0
+    reason: fallbackPreviewFile
       ? (options.compareFullQuality === false ? 'compare-disabled' : 'not-attempted')
       : 'no-visible-artifact',
     clicked: null,
-    activationContext: options.fullQualityActivationContext ?? (options.allowFullQualityPrimaryTileActivation ? 'post-submit' : 'resumed'),
+    activationContext: fullQualityActivationContext,
     primaryTileActivationAllowed: Boolean(options.allowFullQualityPrimaryTileActivation),
     downloadName: null,
     remoteUrl: null,
     fileName: null,
     size: null,
-    previewArtifactId: files[0]?.id ?? null,
+    previewArtifactId: fallbackPreviewFile?.id ?? null,
     fullQualityDiffersFromPreview: null,
   };
-  if (options.compareFullQuality !== false && files.length > 0) {
-    const activationContext = options.fullQualityActivationContext ?? (options.allowFullQualityPrimaryTileActivation ? 'post-submit' : 'resumed');
-    const comparison = await materializeGrokFullQualityDownload(client, destDir, files[0], {
-      allowPrimaryTileActivation: Boolean(options.allowFullQualityPrimaryTileActivation),
-      activationContext,
-      skipSavedGalleryFallback: activationContext === 'post-submit',
-    });
+  if (options.compareFullQuality !== false && fallbackPreviewFile) {
+    const comparison =
+      fullQualityActivationContext === 'resumed' && files.length === 0
+        ? await materializeGrokFullQualityDownloadFromFiles(client, destDir, fallbackPreviewFile)
+        : await materializeGrokFullQualityDownload(client, destDir, fallbackPreviewFile, {
+            allowPrimaryTileActivation: Boolean(options.allowFullQualityPrimaryTileActivation),
+            activationContext: fullQualityActivationContext,
+            skipSavedGalleryFallback: fullQualityActivationContext === 'post-submit',
+          });
     fullQualityDownload = comparison.diagnostics;
     if (comparison.file) {
       files.push(comparison.file);
@@ -2085,6 +2106,9 @@ async function materializeGrokFullQualityDownload(
     trustedTileClickTarget: null,
     savedGalleryUrl: null,
     filesUrl: null,
+    filesDetailUrl: null,
+    filesImageCandidateCount: null,
+    filesImageCandidateLabels: null,
     downloadName: null,
     remoteUrl: null,
     fileName: null,
@@ -2603,6 +2627,35 @@ async function materializeGrokFullQualityDownloadFromFiles(
       },
     };
   }
+  const detail = await findGrokFilesImageDetailCandidate(client);
+  if (detail.url) {
+    try {
+      await navigateToGrokFilesImageDetail(client, detail.url);
+    } catch {
+      return {
+        file: null,
+        diagnostics: {
+          attempted: true,
+          ok: false,
+          reason: 'files-detail-navigation-failed',
+          clicked: false,
+          activationContext: 'files',
+          primaryTileActivationAllowed: true,
+          savedGalleryUrl: GROK_IMAGINE_SAVED_URL,
+          filesUrl: GROK_FILES_URL,
+          filesDetailUrl: detail.url,
+          filesImageCandidateCount: detail.candidateCount,
+          filesImageCandidateLabels: detail.labels,
+          downloadName: null,
+          remoteUrl: null,
+          fileName: null,
+          size: null,
+          previewArtifactId: previewFile.id,
+          fullQualityDiffersFromPreview: null,
+        },
+      };
+    }
+  }
   const comparison = await materializeGrokFullQualityDownload(client, destDir, previewFile, {
     allowPrimaryTileActivation: true,
     activationContext: 'files',
@@ -2613,6 +2666,9 @@ async function materializeGrokFullQualityDownloadFromFiles(
     primaryTileActivationAllowed: true,
     savedGalleryUrl: comparison.diagnostics.savedGalleryUrl ?? GROK_IMAGINE_SAVED_URL,
     filesUrl: comparison.diagnostics.filesUrl ?? GROK_FILES_URL,
+    filesDetailUrl: comparison.diagnostics.filesDetailUrl ?? detail.url,
+    filesImageCandidateCount: comparison.diagnostics.filesImageCandidateCount ?? detail.candidateCount,
+    filesImageCandidateLabels: comparison.diagnostics.filesImageCandidateLabels ?? detail.labels,
     reason: comparison.diagnostics.ok
       ? null
       : (comparison.diagnostics.reason === 'saved-gallery-or-files-required' ||
@@ -2622,6 +2678,103 @@ async function materializeGrokFullQualityDownloadFromFiles(
         : comparison.diagnostics.reason,
   };
   return comparison;
+}
+
+async function findGrokFilesImageDetailCandidate(
+  client: ChromeClient,
+): Promise<{ url: string | null; candidateCount: number; labels: string[] }> {
+  const result = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const marker = 'auracall-grok-files-image-detail-candidate-v1';
+      void marker;
+      const selector = ${JSON.stringify(GROK_ACCOUNT_FILE_LINK_SELECTOR)};
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const visible = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const style = getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden') return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const scoreCandidate = (anchor) => {
+        const href = anchor instanceof HTMLAnchorElement ? anchor.href : String(anchor.getAttribute('href') || '');
+        let url = null;
+        try {
+          url = new URL(href, location.origin);
+        } catch {
+          return null;
+        }
+        if (url.pathname !== '/files' || !url.searchParams.get('file')) return null;
+        const row = anchor.closest('li, article, [role="row"], [data-testid]') || anchor;
+        const label = normalize(row.textContent || anchor.textContent || '');
+        const img = row.querySelector('img') || anchor.querySelector('img');
+        const sourceUrl = img instanceof HTMLImageElement ? (img.currentSrc || img.src || '') : '';
+        const lower = [label, sourceUrl].join(' ').toLowerCase();
+        const imageToken = /(^|[^a-z0-9])(png|jpe?g|webp|gif)([^a-z0-9]|$)/.test(lower) || lower.includes('image');
+        const videoToken = /(^|[^a-z0-9])(mp4|mov|webm|video)([^a-z0-9]|$)/.test(lower);
+        const contentAsset = sourceUrl.includes('/content') && !sourceUrl.includes('/preview');
+        const generatedAsset = sourceUrl.includes('/generated/') && !sourceUrl.includes('preview');
+        const previewAsset = sourceUrl.includes('preview');
+        const naturalWidth = img instanceof HTMLImageElement ? (img.naturalWidth || 0) : 0;
+        const naturalHeight = img instanceof HTMLImageElement ? (img.naturalHeight || 0) : 0;
+        const looksImage = imageToken || contentAsset || generatedAsset || (img instanceof HTMLImageElement && !videoToken);
+        if (!looksImage || videoToken) return null;
+        let score = 0;
+        if (contentAsset) score += 1000;
+        if (generatedAsset) score += 600;
+        if (imageToken) score += 250;
+        if (previewAsset) score -= 250;
+        score += Math.min(500, Math.round((naturalWidth * naturalHeight) / 10_000));
+        if (visible(anchor)) score += 25;
+        return { url: url.href, label, sourceUrl, score };
+      };
+      const pickScroller = () => {
+        const main = document.querySelector('main');
+        const candidates = Array.from((main || document).querySelectorAll('*')).filter((node) => {
+          if (!(node instanceof HTMLElement)) return false;
+          const style = getComputedStyle(node);
+          return /(auto|scroll)/.test(style.overflowY || '') && node.scrollHeight - node.clientHeight > 40;
+        });
+        candidates.sort((left, right) => right.scrollHeight - left.scrollHeight);
+        return candidates[0] || document.scrollingElement || document.documentElement;
+      };
+      const collectCandidates = () =>
+        Array.from(document.querySelectorAll(selector))
+          .map((node) => scoreCandidate(node))
+          .filter(Boolean)
+          .sort((left, right) => right.score - left.score);
+      const scroller = pickScroller();
+      const startingTop = scroller && 'scrollTop' in scroller ? scroller.scrollTop : 0;
+      let candidates = collectCandidates();
+      for (let attempt = 0; candidates.length === 0 && attempt < 12; attempt += 1) {
+        if (!scroller || !('scrollTop' in scroller)) break;
+        const before = scroller.scrollTop;
+        scroller.scrollTop = Math.min(scroller.scrollHeight, before + Math.max(250, scroller.clientHeight * 0.8));
+        await sleep(180);
+        candidates = collectCandidates();
+        if (scroller.scrollTop === before) break;
+      }
+      try {
+        if (scroller && 'scrollTop' in scroller) scroller.scrollTop = startingTop;
+      } catch {}
+      return {
+        url: candidates[0]?.url || null,
+        candidateCount: candidates.length,
+        labels: candidates.slice(0, 6).map((candidate) => candidate.label || candidate.sourceUrl || candidate.url),
+      };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+  const value = result.result?.value as { url?: unknown; candidateCount?: unknown; labels?: unknown } | undefined;
+  return {
+    url: typeof value?.url === 'string' && value.url ? value.url : null,
+    candidateCount: Number.isFinite(Number(value?.candidateCount)) ? Math.max(0, Number(value?.candidateCount)) : 0,
+    labels: Array.isArray(value?.labels)
+      ? value.labels.map((label) => String(label || '').trim()).filter(Boolean).slice(0, 6)
+      : [],
+  };
 }
 
 async function configureGrokDownloadBehaviorWithClient(client: ChromeClient, downloadPath: string): Promise<void> {
@@ -6163,6 +6316,29 @@ async function navigateToGrokFiles(client: ChromeClient, url: string): Promise<v
   await ensureGrokTabVisible(client);
 }
 
+async function navigateToGrokFilesImageDetail(client: ChromeClient, url: string): Promise<void> {
+  const settled = await navigateAndSettle(client, {
+    url,
+    timeoutMs: 10_000,
+    fallbackTimeoutMs: 15_000,
+    pollMs: 200,
+    routeExpression: grokFilesPathExpression(),
+    routeDescription: 'Grok files image detail path',
+    readyExpression: grokFilesImageDetailReadyExpression(),
+    readyDescription: 'Grok files image detail ready',
+    fallbackToLocationAssign: true,
+    mutationAudit: resolveMutationAudit(client),
+    mutationSource: resolveMutationSource(client, 'provider:grok', 'navigate-files-detail'),
+  });
+  if (!settled.ok) {
+    if (settled.phase === 'route') {
+      throw new Error('Grok files image detail did not navigate');
+    }
+    throw new Error('Grok files image detail did not load');
+  }
+  await ensureGrokTabVisible(client);
+}
+
 async function readVisibleAccountFilesWithClient(client: ChromeClient): Promise<GrokAccountFileProbe[]> {
   await waitForGrokFilesPageReady(client);
   const result = await client.Runtime.evaluate({
@@ -7429,6 +7605,30 @@ function grokFilesPageReadyExpression(): string {
     const mainText = normalize(document.querySelector('main')?.textContent || '');
     const emptyState = mainText.includes('files') && (mainText.includes('private') || mainText.includes('upload'));
     return (heading && uploadInput) || (searchInput && uploadInput) || fileLinks > 0 || emptyState;
+  })()`;
+}
+
+function grokFilesImageDetailReadyExpression(): string {
+  return `(() => {
+    if (location.pathname !== '/files') {
+      return false;
+    }
+    let hasFileParam = false;
+    try {
+      hasFileParam = Boolean(new URL(location.href).searchParams.get('file'));
+    } catch {
+      hasFileParam = false;
+    }
+    if (!hasFileParam) {
+      return false;
+    }
+    const downloadButton = document.querySelector(
+      'button[aria-label*="Download" i], button[title*="Download" i], [role="button"][aria-label*="Download" i]',
+    );
+    const image = document.querySelector(
+      'main img[src*="assets.grok.com/users/"], main img[src^="blob:"], main img[src^="data:image/"]',
+    );
+    return Boolean(downloadButton || image);
   })()`;
 }
 

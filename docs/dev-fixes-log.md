@@ -14723,3 +14723,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   kept route progression to `https://grok.com/imagine`, and returned
   `saved-gallery-required` with `savedGalleryUrl` and `filesUrl` diagnostics
   while `primaryTileActivationAllowed = false` and `clicked = false`.
+- 2026-04-27: Grok resumed materialization cannot assume the current
+  `/imagine` page still has visible generated tiles, and Grok Files can
+  virtualize video rows above image rows. The resumed files fallback now uses a
+  placeholder preview reference when no active tile is visible, scrolls
+  `/files` to find image candidates, opens `/files?file=...`, and downloads
+  through the detail-page `Download Image` control. Installed dogfood on
+  `medgen_ada664ba3db24de4821cac245ec74714` added `content.png` as
+  `grok_imagine_full_quality_1`.

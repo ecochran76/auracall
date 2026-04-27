@@ -224,6 +224,19 @@ profile, queued dispatcher, and registry-first DevTools authority.
   download surface: `fullQualityFileCount = 0`, `reason =
   files-download-missing`, `activationContext = saved-gallery`,
   `downloadButtonCandidateCount = 0`, and no action-surface labels.
+- Source/live follow-up: resumed materialization now handles two real Grok
+  Files behaviors. First, a resumed run can try the files ladder even when the
+  current `/imagine` page no longer has visible generated tiles. Second, the
+  `/files` list may virtualize video rows above image rows, so candidate
+  discovery scrolls the file list until it finds image file detail links before
+  looking for `Download Image`.
+- Installed proof after the files-detail fix: rerunning
+  `media materialize medgen_ada664ba3db24de4821cac245ec74714 --count 1
+  --json` added `grok_imagine_full_quality_1` / `content.png`, reported
+  `activeFileCount = 1`, `fullQualityFileCount = 1`, opened
+  `https://grok.com/files?file=629283de-0b0c-4628-8b0a-67af6951f229`, found
+  one `Download Image` control, and recorded six image candidates from the
+  scrolled files list.
 
 ## Scope
 
@@ -293,6 +306,8 @@ profile, queued dispatcher, and registry-first DevTools authority.
   without live provider work.
 - A focused regression test covers the resumed/direct files fallback when
   saved-gallery materialization has no download surface.
+- A focused regression test covers resumed/direct files fallback when no active
+  generated tile is visible on the current `/imagine` page.
 - A focused regression test covers root Discover data previews so they do not
   masquerade as generated Grok Imagine media.
 - A focused regression test covers browser-media dispatcher key derivation for
