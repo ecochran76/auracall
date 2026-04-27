@@ -14690,3 +14690,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   diagnostics should query all `[id^="imagine-masonry-section"]` containers and
   only accept `data:image` / `blob:` media as generated when it belongs to a
   generated masonry or filmstrip surface.
+- 2026-04-26: Installed Grok browser media dogfood proved the normal
+  no-re-navigation path can capture multiple masonry tiles. Run
+  `medgen_531a648c8cb247cdadeb6ada2531bd48` captured four visible
+  `grok-imagine-visible-*.png` artifacts, kept route progression to
+  `https://grok.com/imagine`, and left full-quality download as
+  `saved-gallery-required` with primary tile activation disabled.

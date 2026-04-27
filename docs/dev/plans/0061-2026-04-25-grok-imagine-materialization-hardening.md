@@ -183,6 +183,12 @@ profile, queued dispatcher, and registry-first DevTools authority.
   visible capture and diagnostics must query the full
   `[id^="imagine-masonry-section"]` family and ignore root Discover data
   previews.
+- Installed proof: run `medgen_531a648c8cb247cdadeb6ada2531bd48` captured
+  four requested visible masonry artifacts through the installed
+  `auracall-grok-auto` browser path. Status reported `generatedArtifactCount =
+  4`, `materializedVisibleTileCount = 4`, and route progression limited to
+  `https://grok.com/imagine`. Full-quality remains a saved-gallery/files
+  follow-up because fresh post-submit primary tile activation is disabled.
 - Tooling follow-up: `scripts/browser-tools.ts` now resolves managed browser
   profiles through the same browser-family-aware launch context as product
   paths. This prevents diagnostics for `auracall-grok-auto` from launching the

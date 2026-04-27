@@ -22418,3 +22418,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/mediaGenerationGrokBrowserExecutor.test.ts --maxWorkers 1`
   - `pnpm exec tsc --noEmit`
+
+## 2026-04-26 - Grok installed multi-tile smoke
+
+- Focus: prove the installed runtime captures multiple Grok Imagine masonry
+  tiles through the normal media-generation path after broadening masonry
+  section capture.
+- Result: installed run `medgen_531a648c8cb247cdadeb6ada2531bd48`
+  succeeded with four visible artifacts:
+  `grok-imagine-visible-1.png` through `grok-imagine-visible-4.png`.
+- Evidence: `run status` reported `generatedArtifactCount = 4`,
+  `requestedVisibleTileCount = 4`, `materializedVisibleTileCount = 4`,
+  every tile selection had `tileSurface = masonry`, and provider
+  route progression stayed limited to `https://grok.com/imagine`.
+  Full-quality comparison remained diagnostic-only with
+  `saved-gallery-required`, `primaryTileActivationAllowed = false`, and no
+  tile click.
+- Validation:
+  - `pnpm run install:user-runtime`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media generate --provider grok --type image -p "Generate an image of an asphalt secret agent" --count 4 --json`
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto run status medgen_531a648c8cb247cdadeb6ada2531bd48 --json`
