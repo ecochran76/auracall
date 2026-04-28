@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+  isNonPersistentComposerToolForTest,
   resolveComposerToolCandidatesForTest,
   resolveComposerToolLocationForTest,
   resolveCurrentComposerToolSelectionForTest,
@@ -24,6 +25,13 @@ describe('chatgpt composer tool selection', () => {
     expect(
       resolveCurrentComposerToolSelectionForTest(null, [], [{ label: 'canvas', selected: true }]),
     ).toEqual({ label: 'canvas', source: 'more-menu' });
+  });
+
+  test('classifies Deep Research as a non-persistent staged tool', () => {
+    expect(isNonPersistentComposerToolForTest('deep-research')).toBe(true);
+    expect(isNonPersistentComposerToolForTest('research')).toBe(true);
+    expect(isNonPersistentComposerToolForTest('web-search')).toBe(false);
+    expect(isNonPersistentComposerToolForTest('canvas')).toBe(false);
   });
 
   test('classifies tools as top-level or More submenu choices', () => {

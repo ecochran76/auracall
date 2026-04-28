@@ -134,6 +134,10 @@ export function resolveCurrentComposerToolSelectionForTest(
   return resolveCurrentComposerToolSelection(chipLabel, topItems, moreItems);
 }
 
+export function isNonPersistentComposerToolForTest(requestedTool: string): boolean {
+  return isNonPersistentComposerTool(resolveComposerToolCandidates(requestedTool));
+}
+
 function normalizeComposerToolLabel(value: string): string {
   return value
     .toLowerCase()
@@ -153,6 +157,10 @@ function resolveComposerToolCandidates(requestedTool: string): string[] {
 function isComposerFileRequest(requestedTool: string): boolean {
   const normalized = normalizeComposerToolLabel(requestedTool);
   return COMPOSER_FILE_REQUEST_LABELS.includes(normalized);
+}
+
+function isNonPersistentComposerTool(toolCandidates: readonly string[]): boolean {
+  return toolCandidates.includes('deep research');
 }
 
 function scoreComposerToolLabel(label: string, toolCandidates: readonly string[]): number {
@@ -495,6 +503,7 @@ async function selectComposerTool(
   requestedTool: string,
 ): Promise<ComposerToolOutcome> {
   const toolCandidates = resolveComposerToolCandidates(requestedTool);
+  const nonPersistentTool = isNonPersistentComposerTool(toolCandidates);
   const currentSelection = await readCurrentChatgptComposerTool(Runtime);
   if (currentSelection.label && scoreComposerToolLabel(currentSelection.label, toolCandidates) > 0) {
     return { status: 'already-selected', label: currentSelection.label };
@@ -517,6 +526,19 @@ async function selectComposerTool(
       previousLabel: currentSelection.label,
     };
   }
+  if (nonPersistentTool && topLevelSelection.phase === 'verify') {
+    const activated = findBestComposerToolItem(
+      (topLevelSelection.availableLabels ?? []).map((label) => ({ label, selected: false })),
+      toolCandidates,
+    );
+    if (activated?.label) {
+      return {
+        status: 'switched',
+        label: activated.label,
+        previousLabel: currentSelection.label,
+      };
+    }
+  }
 
   const moreSelection = await selectAndVerifyNestedMenuPathOption(Runtime, {
     trigger: buildComposerTriggerOptions(),
@@ -535,6 +557,19 @@ async function selectComposerTool(
       label: moreSelection.label ?? requestedTool,
       previousLabel: currentSelection.label,
     };
+  }
+  if (nonPersistentTool && moreSelection.phase === 'verify') {
+    const activated = findBestComposerToolItem(
+      (moreSelection.availableLabels ?? []).map((label) => ({ label, selected: false })),
+      toolCandidates,
+    );
+    if (activated?.label) {
+      return {
+        status: 'switched',
+        label: activated.label,
+        previousLabel: currentSelection.label,
+      };
+    }
   }
 
   const availability = await collectComposerAvailability(Runtime, toolCandidates);

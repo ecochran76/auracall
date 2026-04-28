@@ -29,6 +29,13 @@ type ChatgptDeepResearchPlanProbe =
       modifyPlanVisible: boolean;
     }
   | {
+      status: 'iframe-edit-target';
+      modifyPlanLabel: string | null;
+      modifyPlanVisible: boolean;
+      clickX: number;
+      clickY: number;
+    }
+  | {
       status: 'plan-edit-opened';
       modifyPlanLabel: string | null;
       modifyPlanVisible: boolean;
@@ -68,6 +75,7 @@ export async function startChatgptDeepResearchPlan(
   logger: BrowserLogger,
   action: ChatgptDeepResearchPlanAction = 'start',
   timeoutMs = 45_000,
+  Input?: ChromeClient['Input'],
 ): Promise<ChatgptDeepResearchStartResult> {
   const probe = await Runtime.evaluate({
     expression: buildDeepResearchPlanStartExpression(timeoutMs, action),
@@ -87,6 +95,22 @@ export async function startChatgptDeepResearchPlan(
       };
     case 'plan-edit-opened':
       logger(`Deep Research plan edit opened${result.modifyPlanLabel ? ` (${result.modifyPlanLabel})` : ''}`);
+      return {
+        stage: 'plan-edit-opened',
+        startMethod: null,
+        startLabel: null,
+        modifyPlanLabel: result.modifyPlanLabel,
+        modifyPlanVisible: result.modifyPlanVisible,
+      };
+    case 'iframe-edit-target':
+      if (!Input) {
+        await logDomFailure(Runtime, logger, 'chatgpt-deep-research-plan-iframe-no-input');
+        throw new Error('ChatGPT Deep Research plan edit target is inside an iframe, but CDP Input is unavailable.');
+      }
+      await Input.dispatchMouseEvent({ type: 'mouseMoved', x: result.clickX, y: result.clickY });
+      await Input.dispatchMouseEvent({ type: 'mousePressed', x: result.clickX, y: result.clickY, button: 'left', clickCount: 1 });
+      await Input.dispatchMouseEvent({ type: 'mouseReleased', x: result.clickX, y: result.clickY, button: 'left', clickCount: 1 });
+      logger(`Deep Research iframe plan edit opened${result.modifyPlanLabel ? ` (${result.modifyPlanLabel})` : ''}`);
       return {
         stage: 'plan-edit-opened',
         startMethod: null,
@@ -169,52 +193,96 @@ function buildDeepResearchPlanStartExpression(timeoutMs: number, action: Chatgpt
       ) {
         return true;
       }
-      return Boolean(planVisible) && (label === 'edit' || label === 'modify' || label === 'refine');
+      return Boolean(planVisible) && (label === 'edit' || label === 'modify' || label === 'refine' || label === 'update');
     };
     const researchStartedVisible = (bodyText, labels) => {
       if (labels.some((label) => label.includes('stop') && (label.includes('research') || label.includes('responding')))) {
         return true;
       }
       if (bodyText.includes('researching') || bodyText.includes('research in progress')) return true;
+      if (bodyText.includes('preparing analytical research') || bodyText.includes('report for user')) return true;
       if (bodyText.includes('searching') && bodyText.includes('sources')) return true;
       if (bodyText.includes('deep research') && (bodyText.includes('running') || bodyText.includes('started'))) return true;
       return false;
+    };
+    const conversationAssistantText = () => {
+      const turns = Array.from(document.querySelectorAll('[data-testid^="conversation-turn"]'));
+      const assistantTurns = turns.filter((turn) => {
+        const text = normalize(turn.innerText || turn.textContent || '');
+        return text.startsWith('chatgpt said') || text.startsWith('chatgpt');
+      });
+      return normalize(assistantTurns.map((turn) => turn.innerText || turn.textContent || '').join('\\n'));
+    };
+    const readDeepResearchIframeEditTarget = () => {
+      const frames = Array.from(document.querySelectorAll('iframe')).filter(isVisible);
+      const frame = frames.find((candidate) => {
+        const title = normalize(candidate.getAttribute('title') || '');
+        const src = normalize(candidate.getAttribute('src') || '');
+        return title.includes('deep research') || src.includes('deep research') || src.includes('deep research');
+      });
+      if (!frame) return null;
+      const rect = frame.getBoundingClientRect();
+      if (rect.width < 120 || rect.height < 80) return null;
+      return {
+        clickX: Math.round(rect.left + rect.width * 0.68),
+        clickY: Math.round(rect.top + Math.min(36, rect.height * 0.12)),
+      };
     };
     const readState = () => {
       const buttons = Array.from(document.querySelectorAll('button, [role="button"]')).filter(isVisible);
       const labeled = buttons.map((button) => ({ button, label: buttonLabel(button), displayLabel: buttonDisplayLabel(button) }));
       const startEntry = labeled.find((entry) => isStartLabel(entry.label));
       const bodyText = normalize(document.body?.innerText || document.body?.textContent || '');
-      const planVisible =
+      const assistantText = conversationAssistantText();
+      const iframeEditTarget = readDeepResearchIframeEditTarget();
+      const hasUpdateButton = labeled.some((entry) => entry.label === 'update');
+      const assistantPlanVisible =
+        assistantText.includes('research plan') ||
+        assistantText.includes('preparing analytical research') ||
+        assistantText.includes('report for user') ||
+        (assistantText.includes('deep research') && (assistantText.includes('start') || assistantText.includes('edit') || assistantText.includes('update')));
+      const preliminaryPlanVisible =
         Boolean(startEntry) ||
-        (bodyText.includes('research plan') && (bodyText.includes('start') || bodyText.includes('modify plan') || bodyText.includes('edit')));
+        hasUpdateButton ||
+        Boolean(iframeEditTarget) ||
+        assistantPlanVisible;
       const labels = labeled.map((entry) => entry.label);
-      const modifyEntry = labeled.find((entry) => isModifyPlanLabel(entry.label, planVisible));
+      const modifyEntry = labeled.find((entry) => isModifyPlanLabel(entry.label, preliminaryPlanVisible));
       const modifyPlanVisible = Boolean(modifyEntry);
       return {
         startEntry,
         modifyEntry,
+        iframeEditTarget,
         modifyPlanVisible,
-        planVisible: planVisible || modifyPlanVisible,
+        planVisible: preliminaryPlanVisible || modifyPlanVisible,
         researchStarted: researchStartedVisible(bodyText, labels),
       };
     };
 
     while (Date.now() - start < TIMEOUT_MS) {
       const state = readState();
-      if (state.researchStarted && !state.startEntry?.button) {
-        return {
-          status: 'auto-started',
-          modifyPlanLabel: state.modifyEntry?.displayLabel ?? null,
-          modifyPlanVisible: state.modifyPlanVisible,
-        };
-      }
       if (PLAN_ACTION === 'edit' && state.modifyEntry?.button) {
         dispatchClickSequence(state.modifyEntry.button);
         await new Promise((resolve) => setTimeout(resolve, 650));
         return {
           status: 'plan-edit-opened',
           modifyPlanLabel: state.modifyEntry.displayLabel,
+          modifyPlanVisible: state.modifyPlanVisible,
+        };
+      }
+      if (PLAN_ACTION === 'edit' && state.iframeEditTarget) {
+        return {
+          status: 'iframe-edit-target',
+          modifyPlanLabel: 'Update',
+          modifyPlanVisible: true,
+          clickX: state.iframeEditTarget.clickX,
+          clickY: state.iframeEditTarget.clickY,
+        };
+      }
+      if (state.researchStarted && !state.startEntry?.button) {
+        return {
+          status: 'auto-started',
+          modifyPlanLabel: state.modifyEntry?.displayLabel ?? null,
           modifyPlanVisible: state.modifyPlanVisible,
         };
       }

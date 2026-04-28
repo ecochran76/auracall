@@ -22797,6 +22797,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `--browser-deep-research-plan-action edit` opens the provider plan editor
     before timed auto-start, records `stage = plan-edit-opened`, and keeps the
     managed browser open for human or later automation follow-up
+  - live edit-path smoke found that Deep Research does not expose a persistent
+    selected composer-tool chip after activation, so the composer-tool selector
+    now treats Deep Research as a one-shot staged tool and lets the dedicated
+    plan handler own readiness
+  - the same smoke showed that page-wide text can mistake a conversation title
+    for plan evidence; plan detection now scopes textual evidence to assistant
+    conversation turns plus visible Start/Edit controls
+  - plan waiting now uses the browser run timeout budget capped at 120s, since
+    the live staged dialog can take longer than the old fixed 45s wait
+  - live plan cards can expose `Update` instead of `Edit`; that label is now
+    treated as the plan-edit affordance, and `Preparing analytical research and
+    report for user...` is classified as auto-start/in-progress evidence
+  - live Deep Research plans render inside a cross-origin
+    `internal://deep-research` iframe, so the edit path now has a bounded CDP
+    coordinate fallback for the visible iframe's top-right `Update` control
   - Deep Research requests verify the active ChatGPT auth-session exposes an
     account tier before consuming the tool path
   - runtime/run metadata now carries Deep Research stage, Start label, modify

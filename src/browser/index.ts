@@ -1515,7 +1515,8 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         }),
       );
       const composerSelection = await raceWithDisconnect(readCurrentChatgptComposerTool(Runtime));
-      selectedComposerTool = composerSelection.label;
+      selectedComposerTool =
+        composerSelection.label ?? (isChatgptDeepResearchTool(config.composerTool) ? config.composerTool : null);
       if (isChatgptDeepResearchTool(selectedComposerTool ?? config.composerTool)) {
         const identity = await raceWithDisconnect(readVerifiedChatgptAccountIdentity(Runtime, 'Deep Research'));
         selectedChatgptAccountLevel = identity.accountLevel ?? null;
@@ -1658,8 +1659,15 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       });
       chatgptDeepResearchStage = 'plan-ready';
       await emitRuntimeHint();
+      const deepResearchPlanTimeoutMs = Math.min(config.timeoutMs ?? 120_000, 120_000);
       const startResult = await raceWithDisconnect(
-        startChatgptDeepResearchPlan(Runtime, logger, chatgptDeepResearchPlanAction ?? 'start'),
+        startChatgptDeepResearchPlan(
+          Runtime,
+          logger,
+          chatgptDeepResearchPlanAction ?? 'start',
+          deepResearchPlanTimeoutMs,
+          Input,
+        ),
       );
       chatgptDeepResearchStage =
         startResult.stage === 'auto-started'
@@ -2409,7 +2417,8 @@ async function runRemoteBrowserMode(
         },
       });
       const composerSelection = await readCurrentChatgptComposerTool(Runtime);
-      selectedComposerTool = composerSelection.label;
+      selectedComposerTool =
+        composerSelection.label ?? (isChatgptDeepResearchTool(config.composerTool) ? config.composerTool : null);
       if (isChatgptDeepResearchTool(selectedComposerTool ?? config.composerTool)) {
         const identity = await readVerifiedChatgptAccountIdentity(Runtime, 'Deep Research');
         selectedChatgptAccountLevel = identity.accountLevel ?? null;
@@ -2511,10 +2520,13 @@ async function runRemoteBrowserMode(
       });
       chatgptDeepResearchStage = 'plan-ready';
       await emitRuntimeHint();
+      const deepResearchPlanTimeoutMs = Math.min(config.timeoutMs ?? 120_000, 120_000);
       const startResult = await startChatgptDeepResearchPlan(
         Runtime,
         logger,
         chatgptDeepResearchPlanAction ?? 'start',
+        deepResearchPlanTimeoutMs,
+        Input,
       );
       chatgptDeepResearchStage =
         startResult.stage === 'auto-started'

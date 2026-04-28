@@ -14824,3 +14824,26 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   click the visible plan-edit affordance, record `plan-edit-opened`, avoid the
   normal assistant-response wait, and keep the managed browser open; if no edit
   affordance is visible, fail closed instead of clicking Start.
+- 2026-04-28: ChatGPT Deep Research does not behave like a persistent composer
+  tool chip after menu activation. Treat Deep Research as a staged one-shot
+  composer tool: successful activation can proceed even if reopen-and-verify
+  cannot find a selected menu row, then the dedicated Deep Research plan handler
+  owns plan/start/edit state.
+- 2026-04-28: ChatGPT Deep Research plan detection must scope textual evidence
+  to assistant conversation turns, not the whole page. Sidebar titles such as
+  `Deep Research Plan Request` can otherwise produce a false `plan-ready`
+  state when the assistant turn is still blank and no Start/Edit CTA exists.
+- 2026-04-28: ChatGPT Deep Research plan materialization can take longer than
+  a normal composer-action confirmation. The plan handler should use the
+  browser run timeout budget, bounded to 120s, instead of a fixed 45s wait that
+  can fail just before the provider exposes the Start/Edit plan surface.
+- 2026-04-28: ChatGPT's live Deep Research plan card can expose the modifier as
+  `Update`, not `Edit`, while showing `Preparing analytical research and report
+  for user...` once timed auto-start has begun. Treat `Update` as the plan-edit
+  affordance and classify that preparation text as an in-progress auto-start
+  signal.
+- 2026-04-28: ChatGPT renders the live Deep Research plan card in a visible
+  cross-origin `internal://deep-research` iframe. Main-page DOM scans cannot see
+  its `Update` control or task text, so the edit-path handler needs a bounded
+  CDP `Input` coordinate fallback against the visible iframe instead of relying
+  only on `Runtime.evaluate` selectors.
