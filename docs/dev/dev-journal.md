@@ -22971,3 +22971,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run install:user-runtime`
   - `rg -n "response_create|responseCreate" ~/.auracall/user-runtime -g '*.js'`
+
+## 2026-04-28 - Installed MCP response-create visibility smoke
+
+- Focus: verify real installed MCP clients can see the new durable response
+  creation tool before spending another live Deep Research request.
+- Progress:
+  - started `/home/ecochran76/.local/bin/auracall-mcp` through the MCP SDK
+    stdio client
+  - `listTools` returned 9 tools including `response_create`
+  - `response_create` advertised required inputs `model` and `input`, plus
+    optional `composerTool` and `deepResearchPlanAction`
+- Validation:
+  - installed-runtime MCP SDK stdio `listTools` smoke
