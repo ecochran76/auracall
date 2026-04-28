@@ -29,6 +29,9 @@ export interface BrowserRuntimeMetadata {
   chatgptAccountLevel?: string;
   chatgptAccountPlanType?: string;
   chatgptAccountStructure?: string;
+  chatgptDeepResearchStage?: string;
+  chatgptDeepResearchStartLabel?: string | null;
+  chatgptDeepResearchModifyPlanVisible?: boolean;
   /** PID of the controller process that launched this browser run. Helps detect orphaned sessions. */
   controllerPid?: number;
 }
@@ -139,6 +142,9 @@ export interface BrowserRunResult {
   chatgptAccountLevel?: string;
   chatgptAccountPlanType?: string;
   chatgptAccountStructure?: string;
+  chatgptDeepResearchStage?: string;
+  chatgptDeepResearchStartLabel?: string | null;
+  chatgptDeepResearchModifyPlanVisible?: boolean;
   controllerPid?: number;
 }
 

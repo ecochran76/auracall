@@ -22780,3 +22780,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run install:user-runtime`
   - `/home/ecochran76/.local/bin/auracall --profile wsl-chrome-3 --chatgpt --model gpt-5.2-thinking --browser-model-strategy ignore --browser-thinking-time standard --browser-timeout 120s --prompt 'Reply exactly: AURACALL PRO MODE STRICT SMOKE'`
   - `jq '{id,status,hasErrorMessage: has("errorMessage"), errorMessage, runtime: .browser.runtime, promptPreview}' /home/ecochran76/.auracall/sessions/reply-exactly-auracall-pro-mode-3/meta.json`
+
+## 2026-04-28 - ChatGPT Deep Research staged start
+
+- Focus: make ChatGPT Deep Research explicit and status-visible instead of
+  treating it like a normal one-stage composer-tool chat.
+- Progress:
+  - added a ChatGPT Deep Research staged handler that recognizes
+    `deep-research` / `research` requests
+  - after prompt submission, AuraCall waits for the provider research plan,
+    records plan-stage status, and clicks only the Start CTA
+  - the Modify/Edit/Refine plan affordance is detected but not clicked; it is
+    preserved as metadata for later interactive or multi-agent refinement flows
+  - Deep Research requests verify the active ChatGPT auth-session exposes an
+    account tier before consuming the tool path
+  - runtime/run metadata now carries Deep Research stage, Start label, modify
+    plan visibility, and account-tier evidence
+- Validation:
+  - `pnpm vitest run tests/browser/chatgptDeepResearch.test.ts tests/browser/chatgptComposerTool.test.ts tests/cli/sessionRunner.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `git diff --check`
+  - live Deep Research smoke intentionally skipped in this slice to avoid
+    spending a quota-bearing research request

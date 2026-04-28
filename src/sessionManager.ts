@@ -86,6 +86,14 @@ export interface BrowserRuntimeMetadata {
   tabUrl?: string;
   conversationId?: string;
   composerTool?: string | null;
+  thinkingTime?: string;
+  chatgptProMode?: string;
+  chatgptAccountLevel?: string;
+  chatgptAccountPlanType?: string;
+  chatgptAccountStructure?: string;
+  chatgptDeepResearchStage?: string;
+  chatgptDeepResearchStartLabel?: string | null;
+  chatgptDeepResearchModifyPlanVisible?: boolean;
   /** PID of the controller process that launched this browser run. Helps detect orphaned sessions. */
   controllerPid?: number;
   reattachDiagnostics?: BrowserReattachDiagnosticsMetadata;

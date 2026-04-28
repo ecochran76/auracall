@@ -14,6 +14,8 @@ export type BrowserPassiveObservationState =
   | 'thinking'
   | 'response-incoming'
   | 'response-complete'
+  | 'plan-ready'
+  | 'research-started'
   | 'provider-error'
   | 'login-required'
   | 'captcha-or-human-verification'
@@ -46,11 +48,14 @@ export type BrowserRuntimeMetadata = BaseTypes.BrowserRuntimeMetadata & {
   selectedAgentId?: string | null;
   conversationId?: string;
   composerTool?: string | null;
-  thinkingTime?: ThinkingTimeLevel;
-  chatgptProMode?: 'standard' | 'extended';
+  thinkingTime?: string;
+  chatgptProMode?: string;
   chatgptAccountLevel?: string;
   chatgptAccountPlanType?: string;
   chatgptAccountStructure?: string;
+  chatgptDeepResearchStage?: string;
+  chatgptDeepResearchStartLabel?: string | null;
+  chatgptDeepResearchModifyPlanVisible?: boolean;
 };
 
 type BrowserBlockingProfileAction =
@@ -75,11 +80,14 @@ export type BrowserRunOptions = Omit<BaseTypes.BrowserRunOptions, 'config' | 'ru
 export type BrowserRunResult = BaseTypes.BrowserRunResult & {
   conversationId?: string;
   composerTool?: string | null;
-  thinkingTime?: ThinkingTimeLevel;
-  chatgptProMode?: 'standard' | 'extended';
+  thinkingTime?: string;
+  chatgptProMode?: string;
   chatgptAccountLevel?: string;
   chatgptAccountPlanType?: string;
   chatgptAccountStructure?: string;
+  chatgptDeepResearchStage?: string;
+  chatgptDeepResearchStartLabel?: string | null;
+  chatgptDeepResearchModifyPlanVisible?: boolean;
   passiveObservations?: BrowserPassiveObservation[];
 };
 

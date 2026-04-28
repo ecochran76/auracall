@@ -14809,3 +14809,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   a run to succeed without selected-mode metadata, which is too ambiguous for
   quota-sensitive Standard/Extended Pro mode; AuraCall now fails before prompt
   submission if the selector cannot be confirmed.
+- 2026-04-28: ChatGPT Deep Research is a staged tool flow, not a normal
+  one-stage composer-tool chat. After the prompt is submitted, the provider
+  presents a research plan; AuraCall should wait for that plan, click only the
+  Start CTA, and preserve Modify/Edit/Refine-plan visibility as metadata for
+  later interactive or multi-agent refinement flows.

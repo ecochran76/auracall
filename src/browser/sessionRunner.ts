@@ -82,6 +82,11 @@ export async function runBrowserSessionExecution(
         chatgptAccountLevel: (result as { chatgptAccountLevel?: string }).chatgptAccountLevel,
         chatgptAccountPlanType: (result as { chatgptAccountPlanType?: string }).chatgptAccountPlanType,
         chatgptAccountStructure: (result as { chatgptAccountStructure?: string }).chatgptAccountStructure,
+        chatgptDeepResearchStage: (result as { chatgptDeepResearchStage?: string }).chatgptDeepResearchStage,
+        chatgptDeepResearchStartLabel:
+          (result as { chatgptDeepResearchStartLabel?: string | null }).chatgptDeepResearchStartLabel,
+        chatgptDeepResearchModifyPlanVisible:
+          (result as { chatgptDeepResearchModifyPlanVisible?: boolean }).chatgptDeepResearchModifyPlanVisible,
       }),
       persistRuntimeHint,
       errorWrapper: (message, cause) => new BrowserAutomationError(message, { stage: 'execute-browser' }, cause),

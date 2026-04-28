@@ -59,6 +59,11 @@ import {
   selectGrokMode,
 } from './actions/grok.js';
 import {
+  isChatgptDeepResearchTool,
+  startChatgptDeepResearchPlan,
+  type ChatgptDeepResearchStage,
+} from './actions/chatgptDeepResearch.js';
+import {
   ensureThinkingTime,
   evaluateChatgptProModeGate,
   formatChatgptProModeGateError,
@@ -232,6 +237,19 @@ async function assertChatgptProModeAllowed(
     logger(`ChatGPT Pro mode "${gate.proMode}" allowed${summary ? ` (${summary})` : ''}.`);
   }
   return gate;
+}
+
+async function readVerifiedChatgptAccountIdentity(
+  Runtime: ChromeClient['Runtime'],
+  action: string,
+): Promise<ProviderUserIdentity> {
+  const identity = await readChatgptIdentityForProMode(Runtime);
+  if (!identity?.accountLevel) {
+    throw new Error(
+      `ChatGPT ${action} requires a verified account tier, but AuraCall could not verify the current browser profile account level. Run the ChatGPT identity smoke for this AuraCall runtime profile first.`,
+    );
+  }
+  return identity;
 }
 
 async function prepareManagedBrowserProfileLaunch(options: {
@@ -1080,6 +1098,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   let selectedChatgptAccountLevel: string | null = null;
   let selectedChatgptAccountPlanType: string | null = null;
   let selectedChatgptAccountStructure: string | null = null;
+  let chatgptDeepResearchStage: ChatgptDeepResearchStage | null = null;
+  let chatgptDeepResearchStartLabel: string | null = null;
+  let chatgptDeepResearchModifyPlanVisible: boolean | null = null;
   const emitRuntimeHint = async (): Promise<void> => {
     if (!runtimeHintCb || !chrome?.port) {
       return;
@@ -1100,6 +1121,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       chatgptAccountLevel: selectedChatgptAccountLevel ?? undefined,
       chatgptAccountPlanType: selectedChatgptAccountPlanType ?? undefined,
       chatgptAccountStructure: selectedChatgptAccountStructure ?? undefined,
+      chatgptDeepResearchStage: chatgptDeepResearchStage ?? undefined,
+      chatgptDeepResearchStartLabel: chatgptDeepResearchStartLabel ?? undefined,
+      chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
     };
     try {
       await runtimeHintCb(hint);
@@ -1486,6 +1510,14 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       );
       const composerSelection = await raceWithDisconnect(readCurrentChatgptComposerTool(Runtime));
       selectedComposerTool = composerSelection.label;
+      if (isChatgptDeepResearchTool(selectedComposerTool ?? config.composerTool)) {
+        const identity = await raceWithDisconnect(readVerifiedChatgptAccountIdentity(Runtime, 'Deep Research'));
+        selectedChatgptAccountLevel = identity.accountLevel ?? null;
+        selectedChatgptAccountPlanType = identity.accountPlanType ?? null;
+        selectedChatgptAccountStructure = identity.accountStructure ?? null;
+        chatgptDeepResearchStage = 'tool-selected';
+        await emitRuntimeHint();
+      }
       await raceWithDisconnect(ensurePromptReady(Runtime, config.inputTimeoutMs, logger));
       logger(`Prompt textarea ready (after composer tool, ${promptText.length.toLocaleString()} chars queued)`);
     }
@@ -1610,6 +1642,27 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         throw error;
       }
     }
+    if (chatgptDeepResearchStage === 'tool-selected') {
+      recordBrowserPassiveObservation(passiveObservations, {
+        state: 'plan-ready',
+        source: 'browser-service',
+        evidenceRef: 'chatgpt-deep-research-plan',
+        confidence: 'medium',
+      });
+      chatgptDeepResearchStage = 'plan-ready';
+      await emitRuntimeHint();
+      const startResult = await raceWithDisconnect(startChatgptDeepResearchPlan(Runtime, logger));
+      chatgptDeepResearchStage = 'research-started';
+      chatgptDeepResearchStartLabel = startResult.startLabel;
+      chatgptDeepResearchModifyPlanVisible = startResult.modifyPlanVisible;
+      recordBrowserPassiveObservation(passiveObservations, {
+        state: 'research-started',
+        source: 'browser-service',
+        evidenceRef: startResult.startLabel ?? 'chatgpt-deep-research-start',
+        confidence: 'high',
+      });
+      await emitRuntimeHint();
+    }
     if (options.completionMode === 'prompt_submitted') {
       await updateConversationHint('post-submit', Math.min(config.timeoutMs ?? 120_000, 120_000));
       await captureRuntimeSnapshot();
@@ -1641,6 +1694,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         chatgptAccountLevel: selectedChatgptAccountLevel ?? undefined,
         chatgptAccountPlanType: selectedChatgptAccountPlanType ?? undefined,
         chatgptAccountStructure: selectedChatgptAccountStructure ?? undefined,
+        chatgptDeepResearchStage: chatgptDeepResearchStage ?? undefined,
+        chatgptDeepResearchStartLabel: chatgptDeepResearchStartLabel ?? undefined,
+        chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
         passiveObservations,
         controllerPid: process.pid,
       };
@@ -1928,6 +1984,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       chatgptAccountLevel: selectedChatgptAccountLevel ?? undefined,
       chatgptAccountPlanType: selectedChatgptAccountPlanType ?? undefined,
       chatgptAccountStructure: selectedChatgptAccountStructure ?? undefined,
+      chatgptDeepResearchStage: chatgptDeepResearchStage ?? undefined,
+      chatgptDeepResearchStartLabel: chatgptDeepResearchStartLabel ?? undefined,
+      chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
       passiveObservations,
       controllerPid: process.pid,
     };
@@ -2178,6 +2237,9 @@ async function runRemoteBrowserMode(
   let selectedChatgptAccountLevel: string | null = null;
   let selectedChatgptAccountPlanType: string | null = null;
   let selectedChatgptAccountStructure: string | null = null;
+  let chatgptDeepResearchStage: ChatgptDeepResearchStage | null = null;
+  let chatgptDeepResearchStartLabel: string | null = null;
+  let chatgptDeepResearchModifyPlanVisible: boolean | null = null;
   const emitRuntimeHint = async () => {
     if (!runtimeHintCb) return;
     try {
@@ -2193,6 +2255,9 @@ async function runRemoteBrowserMode(
         chatgptAccountLevel: selectedChatgptAccountLevel ?? undefined,
         chatgptAccountPlanType: selectedChatgptAccountPlanType ?? undefined,
         chatgptAccountStructure: selectedChatgptAccountStructure ?? undefined,
+        chatgptDeepResearchStage: chatgptDeepResearchStage ?? undefined,
+        chatgptDeepResearchStartLabel: chatgptDeepResearchStartLabel ?? undefined,
+        chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -2315,6 +2380,14 @@ async function runRemoteBrowserMode(
       });
       const composerSelection = await readCurrentChatgptComposerTool(Runtime);
       selectedComposerTool = composerSelection.label;
+      if (isChatgptDeepResearchTool(selectedComposerTool ?? config.composerTool)) {
+        const identity = await readVerifiedChatgptAccountIdentity(Runtime, 'Deep Research');
+        selectedChatgptAccountLevel = identity.accountLevel ?? null;
+        selectedChatgptAccountPlanType = identity.accountPlanType ?? null;
+        selectedChatgptAccountStructure = identity.accountStructure ?? null;
+        chatgptDeepResearchStage = 'tool-selected';
+        await emitRuntimeHint();
+      }
       await ensurePromptReady(Runtime, config.inputTimeoutMs, logger);
       logger(`Prompt textarea ready (after composer tool, ${promptText.length.toLocaleString()} chars queued)`);
     }
@@ -2397,6 +2470,27 @@ async function runRemoteBrowserMode(
       } else {
         throw error;
       }
+    }
+    if (chatgptDeepResearchStage === 'tool-selected') {
+      recordBrowserPassiveObservation(passiveObservations, {
+        state: 'plan-ready',
+        source: 'browser-service',
+        evidenceRef: 'chatgpt-deep-research-plan',
+        confidence: 'medium',
+      });
+      chatgptDeepResearchStage = 'plan-ready';
+      await emitRuntimeHint();
+      const startResult = await startChatgptDeepResearchPlan(Runtime, logger);
+      chatgptDeepResearchStage = 'research-started';
+      chatgptDeepResearchStartLabel = startResult.startLabel;
+      chatgptDeepResearchModifyPlanVisible = startResult.modifyPlanVisible;
+      recordBrowserPassiveObservation(passiveObservations, {
+        state: 'research-started',
+        source: 'browser-service',
+        evidenceRef: startResult.startLabel ?? 'chatgpt-deep-research-start',
+        confidence: 'high',
+      });
+      await emitRuntimeHint();
     }
     stopThinkingMonitor = startThinkingStatusMonitor(
       Runtime,
@@ -2643,6 +2737,9 @@ async function runRemoteBrowserMode(
       chatgptAccountLevel: selectedChatgptAccountLevel ?? undefined,
       chatgptAccountPlanType: selectedChatgptAccountPlanType ?? undefined,
       chatgptAccountStructure: selectedChatgptAccountStructure ?? undefined,
+      chatgptDeepResearchStage: chatgptDeepResearchStage ?? undefined,
+      chatgptDeepResearchStartLabel: chatgptDeepResearchStartLabel ?? undefined,
+      chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
       passiveObservations,
       controllerPid: process.pid,
     };

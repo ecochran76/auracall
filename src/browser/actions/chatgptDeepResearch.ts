@@ -1,0 +1,158 @@
+import type { BrowserLogger, ChromeClient } from '../types.js';
+import { logDomFailure } from '../domDebug.js';
+import { buildClickDispatcher } from './domEvents.js';
+
+export type ChatgptDeepResearchStage =
+  | 'not-requested'
+  | 'tool-selected'
+  | 'plan-ready'
+  | 'start-clicked'
+  | 'research-started';
+
+export type ChatgptDeepResearchStartResult = {
+  stage: Extract<ChatgptDeepResearchStage, 'start-clicked'>;
+  startLabel: string | null;
+  modifyPlanVisible: boolean;
+};
+
+type ChatgptDeepResearchPlanProbe =
+  | {
+      status: 'start-clicked';
+      startLabel: string | null;
+      modifyPlanVisible: boolean;
+    }
+  | {
+      status: 'plan-ready-no-start';
+      modifyPlanVisible: boolean;
+    }
+  | {
+      status: 'plan-not-found';
+      modifyPlanVisible: boolean;
+    };
+
+export function isChatgptDeepResearchTool(tool: string | null | undefined): boolean {
+  const normalized = normalizeDeepResearchToolLabel(tool);
+  if (!normalized) return false;
+  return normalized === 'research' || normalized === 'deep research' || (normalized.includes('deep') && normalized.includes('research'));
+}
+
+export function buildDeepResearchPlanStartExpressionForTest(timeoutMs = 45_000): string {
+  return buildDeepResearchPlanStartExpression(timeoutMs);
+}
+
+export async function startChatgptDeepResearchPlan(
+  Runtime: ChromeClient['Runtime'],
+  logger: BrowserLogger,
+  timeoutMs = 45_000,
+): Promise<ChatgptDeepResearchStartResult> {
+  const probe = await Runtime.evaluate({
+    expression: buildDeepResearchPlanStartExpression(timeoutMs),
+    awaitPromise: true,
+    returnByValue: true,
+  });
+  const result = probe.result?.value as ChatgptDeepResearchPlanProbe | null | undefined;
+  switch (result?.status) {
+    case 'start-clicked':
+      logger(`Deep Research plan accepted${result.startLabel ? ` (${result.startLabel})` : ''}`);
+      return {
+        stage: 'start-clicked',
+        startLabel: result.startLabel,
+        modifyPlanVisible: result.modifyPlanVisible,
+      };
+    case 'plan-ready-no-start':
+      await logDomFailure(Runtime, logger, 'chatgpt-deep-research-plan-no-start');
+      throw new Error(
+        'ChatGPT Deep Research plan appeared, but AuraCall could not find the Start CTA. The plan may need human review or provider selectors may have changed.',
+      );
+    case 'plan-not-found':
+    default:
+      await logDomFailure(Runtime, logger, 'chatgpt-deep-research-plan-not-found');
+      throw new Error('ChatGPT Deep Research did not present a startable research plan before timeout.');
+  }
+}
+
+function normalizeDeepResearchToolLabel(value: string | null | undefined): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildDeepResearchPlanStartExpression(timeoutMs: number): string {
+  const timeoutLiteral = JSON.stringify(Math.max(5_000, timeoutMs));
+  return `(async () => {
+    ${buildClickDispatcher()}
+
+    const TIMEOUT_MS = ${timeoutLiteral};
+    const POLL_MS = 350;
+    const start = Date.now();
+    const normalize = (value) => String(value || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\\s+/g, ' ')
+      .trim();
+    const isVisible = (node) => {
+      if (!(node instanceof HTMLElement)) return false;
+      const rect = node.getBoundingClientRect();
+      const style = window.getComputedStyle(node);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+    };
+    const buttonLabel = (node) => {
+      const aria = node.getAttribute?.('aria-label') || '';
+      const text = node.textContent || '';
+      return normalize(aria || text);
+    };
+    const buttonDisplayLabel = (node) => {
+      const aria = node.getAttribute?.('aria-label') || '';
+      const text = node.textContent || '';
+      return String(text || aria || '').replace(/\\s+/g, ' ').trim() || null;
+    };
+    const isStartLabel = (label) => {
+      if (!label) return false;
+      if (label === 'start') return true;
+      if (label === 'start research' || label === 'start deep research') return true;
+      if (label.includes('start') && label.includes('research')) return true;
+      return false;
+    };
+    const isModifyPlanLabel = (label) => (
+      Boolean(label) &&
+      label.includes('plan') &&
+      (label.includes('modify') || label.includes('edit') || label.includes('refine') || label.includes('change'))
+    );
+    const readState = () => {
+      const buttons = Array.from(document.querySelectorAll('button, [role="button"]')).filter(isVisible);
+      const labeled = buttons.map((button) => ({ button, label: buttonLabel(button), displayLabel: buttonDisplayLabel(button) }));
+      const startEntry = labeled.find((entry) => isStartLabel(entry.label));
+      const modifyPlanVisible = labeled.some((entry) => isModifyPlanLabel(entry.label));
+      const bodyText = normalize(document.body?.innerText || document.body?.textContent || '');
+      const planVisible =
+        Boolean(startEntry) ||
+        modifyPlanVisible ||
+        (bodyText.includes('research plan') && (bodyText.includes('start') || bodyText.includes('modify plan')));
+      return { startEntry, modifyPlanVisible, planVisible };
+    };
+
+    while (Date.now() - start < TIMEOUT_MS) {
+      const state = readState();
+      if (state.startEntry?.button) {
+        dispatchClickSequence(state.startEntry.button);
+        await new Promise((resolve) => setTimeout(resolve, 650));
+        return {
+          status: 'start-clicked',
+          startLabel: state.startEntry.displayLabel,
+          modifyPlanVisible: state.modifyPlanVisible,
+        };
+      }
+      if (state.planVisible && Date.now() - start > Math.min(10_000, TIMEOUT_MS / 2)) {
+        return { status: 'plan-ready-no-start', modifyPlanVisible: state.modifyPlanVisible };
+      }
+      await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+    }
+    const state = readState();
+    if (state.planVisible) {
+      return { status: 'plan-ready-no-start', modifyPlanVisible: state.modifyPlanVisible };
+    }
+    return { status: 'plan-not-found', modifyPlanVisible: state.modifyPlanVisible };
+  })()`;
+}
