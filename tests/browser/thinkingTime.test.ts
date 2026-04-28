@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildThinkingTimeExpressionForTest } from '../../src/browser/actions/thinkingTime.js';
+import {
+  buildThinkingTimeExpressionForTest,
+  evaluateChatgptProModeGate,
+  formatChatgptProModeGateError,
+  resolveChatgptProModeFromThinkingTime,
+} from '../../src/browser/actions/thinkingTime.js';
 
 describe('browser thinking-time selection expression', () => {
   it('uses centralized menu selectors and normalized matching', () => {
@@ -28,5 +33,64 @@ describe('browser thinking-time selection expression', () => {
         expect(expression).toContain(`"${level}"`);
       }
     }
+  });
+});
+
+describe('ChatGPT Pro mode account gate', () => {
+  it('maps thinking-time aliases to ChatGPT Pro modes', () => {
+    expect(resolveChatgptProModeFromThinkingTime('light')).toBe('standard');
+    expect(resolveChatgptProModeFromThinkingTime('standard')).toBe('standard');
+    expect(resolveChatgptProModeFromThinkingTime('extended')).toBe('extended');
+    expect(resolveChatgptProModeFromThinkingTime('heavy')).toBe('extended');
+  });
+
+  it('allows Pro accounts to use standard and extended Pro modes', () => {
+    expect(
+      evaluateChatgptProModeGate('standard', {
+        accountLevel: 'Pro',
+        accountPlanType: 'pro',
+        accountStructure: 'personal',
+      }),
+    ).toMatchObject({
+      allowed: true,
+      proMode: 'standard',
+      accountLevel: 'Pro',
+    });
+    expect(
+      evaluateChatgptProModeGate('extended', {
+        accountLevel: 'Pro',
+        accountPlanType: 'pro',
+        accountStructure: 'personal',
+      }),
+    ).toMatchObject({
+      allowed: true,
+      proMode: 'extended',
+      accountPlanType: 'pro',
+    });
+  });
+
+  it('blocks Business accounts before selecting a Pro mode', () => {
+    const gate = evaluateChatgptProModeGate('heavy', {
+      accountLevel: 'Business',
+      accountPlanType: 'team',
+      accountStructure: 'workspace',
+    });
+    expect(gate).toMatchObject({
+      allowed: false,
+      proMode: 'extended',
+      reason: 'requires-pro-account',
+    });
+    expect(formatChatgptProModeGateError(gate)).toContain('requires a Pro account');
+    expect(formatChatgptProModeGateError(gate)).toContain('level=Business');
+  });
+
+  it('blocks unverified accounts instead of guessing the quota lane', () => {
+    const gate = evaluateChatgptProModeGate('standard', null);
+    expect(gate).toMatchObject({
+      allowed: false,
+      proMode: 'standard',
+      reason: 'account-unverified',
+    });
+    expect(formatChatgptProModeGateError(gate)).toContain('could not verify');
   });
 });

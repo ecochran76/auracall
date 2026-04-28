@@ -77,6 +77,11 @@ export async function runBrowserSessionExecution(
       runtimeExtras: (result) => ({
         conversationId: (result as { conversationId?: string }).conversationId,
         composerTool: (result as { composerTool?: string | null }).composerTool ?? undefined,
+        thinkingTime: (result as { thinkingTime?: string }).thinkingTime,
+        chatgptProMode: (result as { chatgptProMode?: string }).chatgptProMode,
+        chatgptAccountLevel: (result as { chatgptAccountLevel?: string }).chatgptAccountLevel,
+        chatgptAccountPlanType: (result as { chatgptAccountPlanType?: string }).chatgptAccountPlanType,
+        chatgptAccountStructure: (result as { chatgptAccountStructure?: string }).chatgptAccountStructure,
       }),
       persistRuntimeHint,
       errorWrapper: (message, cause) => new BrowserAutomationError(message, { stage: 'execute-browser' }, cause),

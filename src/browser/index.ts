@@ -58,11 +58,21 @@ import {
   uploadGrokAttachments,
   selectGrokMode,
 } from './actions/grok.js';
-import { ensureThinkingTimeIfAvailable } from './actions/thinkingTime.js';
+import {
+  ensureThinkingTimeIfAvailable,
+  evaluateChatgptProModeGate,
+  formatChatgptProModeGateError,
+  type ChatgptProMode,
+  type ChatgptProModeGate,
+} from './actions/thinkingTime.js';
 import { estimateTokenCount, withRetries, delay } from './utils.js';
 import { formatElapsed } from '../oracle/format.js';
 import { CHATGPT_URL, CONVERSATION_TURN_SELECTOR, DEFAULT_MODEL_STRATEGY } from './constants.js';
-import { classifyChatgptBlockingSurfaceProbe } from './providers/chatgptAdapter.js';
+import {
+  buildChatgptAuthSessionIdentityExpression,
+  classifyChatgptBlockingSurfaceProbe,
+  normalizeChatgptAuthSessionIdentity,
+} from './providers/chatgptAdapter.js';
 import {
   buildChatgptThinkingStatusExpression,
   sanitizeChatgptThinkingText,
@@ -71,6 +81,8 @@ import { resolveGrokConversationUrl, resolveGrokProjectUrl } from './providers/g
 import { resolveCompatibleHostsForUrl } from './urlFamilies.js';
 import type { LaunchedChrome } from 'chrome-launcher';
 import { BrowserAutomationError } from '../oracle/errors.js';
+import type { ThinkingTimeLevel } from '../oracle/types.js';
+import type { ProviderUserIdentity } from './providers/types.js';
 import { alignPromptEchoPair, buildPromptEchoMatcher } from './reattachHelpers.js';
 import {
   cleanupStaleProfileState,
@@ -180,6 +192,46 @@ export async function resolveBrowserRuntimeEntryContextForTest(options: {
   pickDebugPort?: typeof pickAvailableDebugPort;
 }) {
   return resolveBrowserRuntimeEntryContext(options);
+}
+
+async function readChatgptIdentityForProMode(
+  Runtime: ChromeClient['Runtime'],
+): Promise<ProviderUserIdentity | null> {
+  const { result } = await Runtime.evaluate({
+    expression: buildChatgptAuthSessionIdentityExpression(),
+    awaitPromise: true,
+    returnByValue: true,
+  });
+  return normalizeChatgptAuthSessionIdentity(result?.value as Parameters<typeof normalizeChatgptAuthSessionIdentity>[0]);
+}
+
+async function assertChatgptProModeAllowed(
+  Runtime: ChromeClient['Runtime'],
+  level: ThinkingTimeLevel,
+  logger: BrowserLogger,
+): Promise<ChatgptProModeGate> {
+  let identity: ProviderUserIdentity | null = null;
+  try {
+    identity = await readChatgptIdentityForProMode(Runtime);
+  } catch (error) {
+    if (logger.verbose) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger(`ChatGPT Pro mode account verification failed: ${message}`);
+    }
+  }
+  const gate = evaluateChatgptProModeGate(level, identity);
+  if (!gate.allowed) {
+    throw new Error(formatChatgptProModeGateError(gate));
+  }
+  if (logger.verbose) {
+    const summary = [
+      gate.accountLevel ? `level=${gate.accountLevel}` : null,
+      gate.accountPlanType ? `plan=${gate.accountPlanType}` : null,
+      gate.accountStructure ? `structure=${gate.accountStructure}` : null,
+    ].filter(Boolean).join(', ');
+    logger(`ChatGPT Pro mode "${gate.proMode}" allowed${summary ? ` (${summary})` : ''}.`);
+  }
+  return gate;
 }
 
 async function prepareManagedBrowserProfileLaunch(options: {
@@ -1023,6 +1075,11 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 
   let lastTargetId: string | undefined;
   let lastUrl: string | undefined;
+  let selectedThinkingTime: ThinkingTimeLevel | null = null;
+  let selectedChatgptProMode: ChatgptProMode | null = null;
+  let selectedChatgptAccountLevel: string | null = null;
+  let selectedChatgptAccountPlanType: string | null = null;
+  let selectedChatgptAccountStructure: string | null = null;
   const emitRuntimeHint = async (): Promise<void> => {
     if (!runtimeHintCb || !chrome?.port) {
       return;
@@ -1038,6 +1095,11 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       conversationId,
       userDataDir,
       controllerPid: process.pid,
+      thinkingTime: selectedThinkingTime ?? undefined,
+      chatgptProMode: selectedChatgptProMode ?? undefined,
+      chatgptAccountLevel: selectedChatgptAccountLevel ?? undefined,
+      chatgptAccountPlanType: selectedChatgptAccountPlanType ?? undefined,
+      chatgptAccountStructure: selectedChatgptAccountStructure ?? undefined,
     };
     try {
       await runtimeHintCb(hint);
@@ -1387,8 +1449,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     // Handle thinking time selection if specified
     const thinkingTime = config.thinkingTime;
     if (thinkingTime && shouldApplyThinkingTime(config.desiredModel)) {
+      const proModeGate = await raceWithDisconnect(assertChatgptProModeAllowed(Runtime, thinkingTime, logger));
       await raceWithDisconnect(dismissOpenMenus(Runtime).catch(() => false));
-      await raceWithDisconnect(
+      const thinkingTimeSelected = await raceWithDisconnect(
         withRetries(() => ensureThinkingTimeIfAvailable(Runtime, thinkingTime, logger), {
           retries: 2,
           delayMs: 300,
@@ -1399,6 +1462,14 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
           },
         }),
       );
+      if (thinkingTimeSelected) {
+        selectedThinkingTime = thinkingTime;
+        selectedChatgptProMode = proModeGate.proMode;
+        selectedChatgptAccountLevel = proModeGate.accountLevel ?? null;
+        selectedChatgptAccountPlanType = proModeGate.accountPlanType ?? null;
+        selectedChatgptAccountStructure = proModeGate.accountStructure ?? null;
+        await emitRuntimeHint();
+      }
     }
     if (config.composerTool) {
       await raceWithDisconnect(dismissOpenMenus(Runtime).catch(() => false));
@@ -1567,6 +1638,11 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         tabUrl: lastUrl,
         conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
         composerTool: selectedComposerTool,
+        thinkingTime: selectedThinkingTime ?? undefined,
+        chatgptProMode: selectedChatgptProMode ?? undefined,
+        chatgptAccountLevel: selectedChatgptAccountLevel ?? undefined,
+        chatgptAccountPlanType: selectedChatgptAccountPlanType ?? undefined,
+        chatgptAccountStructure: selectedChatgptAccountStructure ?? undefined,
         passiveObservations,
         controllerPid: process.pid,
       };
@@ -1849,6 +1925,11 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       tabUrl: lastUrl,
       conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
       composerTool: selectedComposerTool,
+      thinkingTime: selectedThinkingTime ?? undefined,
+      chatgptProMode: selectedChatgptProMode ?? undefined,
+      chatgptAccountLevel: selectedChatgptAccountLevel ?? undefined,
+      chatgptAccountPlanType: selectedChatgptAccountPlanType ?? undefined,
+      chatgptAccountStructure: selectedChatgptAccountStructure ?? undefined,
       passiveObservations,
       controllerPid: process.pid,
     };
@@ -2094,6 +2175,11 @@ async function runRemoteBrowserMode(
   let connectedPort = port;
   let disposeRemoteTransport: (() => Promise<void>) | null = null;
   const runtimeHintCb = options.runtimeHintCb;
+  let selectedThinkingTime: ThinkingTimeLevel | null = null;
+  let selectedChatgptProMode: ChatgptProMode | null = null;
+  let selectedChatgptAccountLevel: string | null = null;
+  let selectedChatgptAccountPlanType: string | null = null;
+  let selectedChatgptAccountStructure: string | null = null;
   const emitRuntimeHint = async () => {
     if (!runtimeHintCb) return;
     try {
@@ -2104,6 +2190,11 @@ async function runRemoteBrowserMode(
         chromeTargetId: remoteTargetId ?? undefined,
         tabUrl: lastUrl,
         controllerPid: process.pid,
+        thinkingTime: selectedThinkingTime ?? undefined,
+        chatgptProMode: selectedChatgptProMode ?? undefined,
+        chatgptAccountLevel: selectedChatgptAccountLevel ?? undefined,
+        chatgptAccountPlanType: selectedChatgptAccountPlanType ?? undefined,
+        chatgptAccountStructure: selectedChatgptAccountStructure ?? undefined,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -2193,8 +2284,9 @@ async function runRemoteBrowserMode(
     // Handle thinking time selection if specified
     const thinkingTime = config.thinkingTime;
     if (thinkingTime && shouldApplyThinkingTime(config.desiredModel)) {
+      const proModeGate = await assertChatgptProModeAllowed(Runtime, thinkingTime, logger);
       await dismissOpenMenus(Runtime).catch(() => false);
-      await withRetries(() => ensureThinkingTimeIfAvailable(Runtime, thinkingTime, logger), {
+      const thinkingTimeSelected = await withRetries(() => ensureThinkingTimeIfAvailable(Runtime, thinkingTime, logger), {
         retries: 2,
         delayMs: 300,
         onRetry: (attempt, error) => {
@@ -2203,6 +2295,14 @@ async function runRemoteBrowserMode(
           }
         },
       });
+      if (thinkingTimeSelected) {
+        selectedThinkingTime = thinkingTime;
+        selectedChatgptProMode = proModeGate.proMode;
+        selectedChatgptAccountLevel = proModeGate.accountLevel ?? null;
+        selectedChatgptAccountPlanType = proModeGate.accountPlanType ?? null;
+        selectedChatgptAccountStructure = proModeGate.accountStructure ?? null;
+        await emitRuntimeHint();
+      }
     }
     if (config.composerTool) {
       await dismissOpenMenus(Runtime).catch(() => false);
@@ -2542,6 +2642,11 @@ async function runRemoteBrowserMode(
       tabUrl: lastUrl,
       conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
       composerTool: selectedComposerTool,
+      thinkingTime: selectedThinkingTime ?? undefined,
+      chatgptProMode: selectedChatgptProMode ?? undefined,
+      chatgptAccountLevel: selectedChatgptAccountLevel ?? undefined,
+      chatgptAccountPlanType: selectedChatgptAccountPlanType ?? undefined,
+      chatgptAccountStructure: selectedChatgptAccountStructure ?? undefined,
       passiveObservations,
       controllerPid: process.pid,
     };

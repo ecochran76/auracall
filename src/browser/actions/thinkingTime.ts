@@ -1,8 +1,20 @@
 import type { ChromeClient, BrowserLogger } from '../types.js';
 import type { ThinkingTimeLevel } from '../../oracle/types.js';
+import type { ProviderUserIdentity } from '../providers/types.js';
 import { MENU_CONTAINER_SELECTOR, MENU_ITEM_SELECTOR } from '../constants.js';
 import { logDomFailure } from '../domDebug.js';
 import { buildClickDispatcher } from './domEvents.js';
+
+export type ChatgptProMode = 'standard' | 'extended';
+
+export type ChatgptProModeGate = {
+  allowed: boolean;
+  proMode: ChatgptProMode;
+  accountLevel?: string | null;
+  accountPlanType?: string | null;
+  accountStructure?: string | null;
+  reason?: 'account-unverified' | 'requires-pro-account';
+};
 
 type ThinkingTimeOutcome =
   | { status: 'already-selected'; label?: string | null }
@@ -241,6 +253,48 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
 
 export function buildThinkingTimeExpressionForTest(level: ThinkingTimeLevel = 'extended'): string {
   return buildThinkingTimeExpression(level);
+}
+
+export function resolveChatgptProModeFromThinkingTime(level: ThinkingTimeLevel): ChatgptProMode {
+  return level === 'extended' || level === 'heavy' ? 'extended' : 'standard';
+}
+
+export function evaluateChatgptProModeGate(
+  level: ThinkingTimeLevel,
+  identity: ProviderUserIdentity | null | undefined,
+): ChatgptProModeGate {
+  const proMode = resolveChatgptProModeFromThinkingTime(level);
+  const accountLevel = identity?.accountLevel ?? null;
+  const accountPlanType = identity?.accountPlanType ?? null;
+  const accountStructure = identity?.accountStructure ?? null;
+  const normalizedLevel = accountLevel?.trim().toLowerCase();
+  const normalizedPlan = accountPlanType?.trim().toLowerCase();
+  const isPro = normalizedLevel === 'pro' || normalizedPlan === 'pro';
+
+  if (isPro) {
+    return { allowed: true, proMode, accountLevel, accountPlanType, accountStructure };
+  }
+  return {
+    allowed: false,
+    proMode,
+    accountLevel,
+    accountPlanType,
+    accountStructure,
+    reason: accountLevel || accountPlanType || accountStructure ? 'requires-pro-account' : 'account-unverified',
+  };
+}
+
+export function formatChatgptProModeGateError(gate: ChatgptProModeGate): string {
+  if (gate.reason === 'account-unverified') {
+    return `ChatGPT Pro mode "${gate.proMode}" requires a verified Pro account, but AuraCall could not verify the current browser profile account level. Run the ChatGPT identity smoke for this AuraCall runtime profile before using --browser-thinking-time.`;
+  }
+  const accountSummary = [
+    gate.accountLevel ? `level=${gate.accountLevel}` : null,
+    gate.accountPlanType ? `plan=${gate.accountPlanType}` : null,
+    gate.accountStructure ? `structure=${gate.accountStructure}` : null,
+  ].filter(Boolean).join(', ');
+  const suffix = accountSummary ? ` Current account: ${accountSummary}.` : '';
+  return `ChatGPT Pro mode "${gate.proMode}" requires a Pro account.${suffix} Use a Pro-bound AuraCall runtime profile or omit --browser-thinking-time.`;
 }
 
 function resolveThinkingTimeCandidates(level: ThinkingTimeLevel): string[] {

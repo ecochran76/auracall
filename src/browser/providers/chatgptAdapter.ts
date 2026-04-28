@@ -2785,7 +2785,7 @@ function buildProjectSourceRemovedExpression(fileName: string): string {
   })()`;
 }
 
-function buildChatgptAuthSessionIdentityExpression(): string {
+export function buildChatgptAuthSessionIdentityExpression(): string {
   return `(async () => {
     try {
       const response = await fetch('/api/auth/session', {

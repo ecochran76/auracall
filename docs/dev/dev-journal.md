@@ -22732,3 +22732,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `/home/ecochran76/.local/bin/auracall --profile wsl-chrome-3 profile identity-smoke --target chatgpt --include-negative --prune-browser-state --json`
     - passed with `eric.cochran@soylei.com`, `accountLevel = Pro`,
       `accountPlanType = pro`
+
+## 2026-04-27 - ChatGPT Pro mode account gate
+
+- Focus: prevent browser runs from selecting ChatGPT Standard/Extended Pro
+  modes on the wrong account tier.
+- Progress:
+  - added a pure ChatGPT Pro-mode gate that maps legacy thinking-time aliases
+    (`light`, `heavy`) to current Pro modes (`standard`, `extended`)
+  - made ChatGPT browser runs verify the active auth-session account tier
+    before selecting a Pro mode
+  - fail fast when account tier is unverified or non-Pro instead of guessing
+    the quota lane
+  - persist selected thinking time, Pro mode, and ChatGPT account tier into
+    runtime/run metadata for API/MCP status surfaces
+- Validation:
+  - `pnpm vitest run tests/browser/thinkingTime.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/providerIdentityPreflight.test.ts tests/cli/profileIdentitySmokeCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - `/home/ecochran76/.local/bin/auracall --profile default --chatgpt --model gpt-5.2-thinking --browser-model-strategy ignore --browser-thinking-time standard --browser-timeout 60s --prompt 'Reply exactly: SHOULD NOT SEND'`
+    - failed before prompt submission with `ChatGPT Pro mode "standard"
+      requires a Pro account. Current account: level=Business, plan=team,
+      structure=workspace.`

@@ -14794,3 +14794,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `pro/personal` to Pro, then compares configured account-level expectations
   during identity preflight so restricted Business lanes cannot be mistaken for
   Pro-capable managed browser profiles.
+- 2026-04-27: ChatGPT Standard/Extended Pro-mode selection must be account-tier
+  gated at browser runtime, not only documented as a profile convention.
+  `--browser-thinking-time` now verifies the active auth-session account is Pro
+  before selecting current Pro modes and records the selected thinking time,
+  Pro mode, and account tier into run metadata for later status inspection.

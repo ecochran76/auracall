@@ -46,6 +46,11 @@ export type BrowserRuntimeMetadata = BaseTypes.BrowserRuntimeMetadata & {
   selectedAgentId?: string | null;
   conversationId?: string;
   composerTool?: string | null;
+  thinkingTime?: ThinkingTimeLevel;
+  chatgptProMode?: 'standard' | 'extended';
+  chatgptAccountLevel?: string;
+  chatgptAccountPlanType?: string;
+  chatgptAccountStructure?: string;
 };
 
 type BrowserBlockingProfileAction =
@@ -70,6 +75,11 @@ export type BrowserRunOptions = Omit<BaseTypes.BrowserRunOptions, 'config' | 'ru
 export type BrowserRunResult = BaseTypes.BrowserRunResult & {
   conversationId?: string;
   composerTool?: string | null;
+  thinkingTime?: ThinkingTimeLevel;
+  chatgptProMode?: 'standard' | 'extended';
+  chatgptAccountLevel?: string;
+  chatgptAccountPlanType?: string;
+  chatgptAccountStructure?: string;
   passiveObservations?: BrowserPassiveObservation[];
 };
 

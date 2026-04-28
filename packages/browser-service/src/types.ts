@@ -24,6 +24,11 @@ export interface BrowserRuntimeMetadata {
   chromeTargetId?: string;
   tabUrl?: string;
   composerTool?: string | null;
+  thinkingTime?: string;
+  chatgptProMode?: string;
+  chatgptAccountLevel?: string;
+  chatgptAccountPlanType?: string;
+  chatgptAccountStructure?: string;
   /** PID of the controller process that launched this browser run. Helps detect orphaned sessions. */
   controllerPid?: number;
 }
@@ -129,6 +134,11 @@ export interface BrowserRunResult {
   chromeTargetId?: string;
   tabUrl?: string;
   composerTool?: string | null;
+  thinkingTime?: string;
+  chatgptProMode?: string;
+  chatgptAccountLevel?: string;
+  chatgptAccountPlanType?: string;
+  chatgptAccountStructure?: string;
   controllerPid?: number;
 }
 
