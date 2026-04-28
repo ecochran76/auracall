@@ -8,7 +8,7 @@ import type {
   MediaGenerationTimelineEvent,
 } from './types.js';
 
-export const MediaGenerationProviderSchema = z.enum(['gemini', 'grok']);
+export const MediaGenerationProviderSchema = z.enum(['chatgpt', 'gemini', 'grok']);
 
 export const MediaGenerationTypeSchema = z.enum(['image', 'music', 'video']);
 

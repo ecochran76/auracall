@@ -49,13 +49,13 @@ rules learned from Gemini and Grok.
 
 ## Acceptance Criteria
 
-- [ ] Schema and capability mapping allow `provider = chatgpt`, `mediaType =
+- [x] Schema and capability mapping allow `provider = chatgpt`, `mediaType =
   image`, `transport = browser` without enabling unsupported media types.
-- [ ] ChatGPT browser media executor submits one image prompt and records
+- [x] ChatGPT browser media executor submits one image prompt and records
   `prompt_submitted` with `conversationId`, `tabTargetId`, and URL.
-- [ ] Active-tab polling can detect generated image artifacts without
+- [x] Active-tab polling can detect generated image artifacts without
   navigation/reload after submission.
-- [ ] Materialization caches at least one generated image artifact under the
+- [x] Materialization caches at least one generated image artifact under the
   media-generation artifact directory.
 - [x] Unit coverage proves `preserveActiveTab` forbids ChatGPT payload reload
   during readback.

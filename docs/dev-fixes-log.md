@@ -14766,3 +14766,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   duplicate visible-tile recapture and require a second operator retry from
   `/files`; direct Files detail selection made the first retry succeed on
   `medgen_fde3e1e604f24a95a2162e6ed1a58c59`.
+- 2026-04-27: ChatGPT image generation needs a prompt-submitted browser
+  completion mode instead of reusing the assistant-response wait path. The
+  media executor now submits with the `Create image` composer tool, keeps the
+  browser open, captures the submitted tab target id, and uses
+  `preserveActiveTab` for image artifact polling/materialization so post-submit
+  readback does not reopen or reload the maturing conversation.

@@ -203,6 +203,7 @@
     - CLI parity for the same durable status envelope:
       `pnpm tsx bin/auracall.ts run status <response_id> --json`
   - create a shared-contract CLI media request:
+    - `pnpm tsx bin/auracall.ts media generate --provider chatgpt --type image -p "Generate an image of an asphalt secret agent" --json`
     - `pnpm tsx bin/auracall.ts media generate --provider gemini --type image -p "Generate an image of an asphalt secret agent" --json`
     - Gemini API image generation uses the same durable contract when
       `GEMINI_API_KEY` is set, but provider API media access is parked for
@@ -219,6 +220,12 @@
     then selects `Create image`, records media-generation `timeline[]`
     milestones, and materializes generated image artifacts:
     - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"gemini","mediaType":"image","transport":"browser","prompt":"Generate an image of an asphalt secret agent"}'`
+  - create a browser-transport ChatGPT image request only when the managed
+    ChatGPT browser profile is already authenticated; the local API selects the
+    ChatGPT `Create image` composer tool, records the submitted tab target id,
+    and performs post-submit image readback/materialization on that same tab
+    without re-opening or reloading the conversation:
+    - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"chatgpt","mediaType":"image","transport":"browser","prompt":"Generate an image of an asphalt secret agent"}'`
   - create a browser-transport Gemini video request only when intentionally
     spending one of the small daily Gemini video-generation quota slots:
     - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"gemini","mediaType":"video","transport":"browser","prompt":"Generate a video of an asphalt secret agent"}'`

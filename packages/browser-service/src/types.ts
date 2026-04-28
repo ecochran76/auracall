@@ -100,6 +100,7 @@ export interface BrowserRunOptions {
   prompt: string;
   attachments?: BrowserAttachment[];
   attachmentMode?: 'inline' | 'upload' | 'bundle';
+  completionMode?: 'assistant_response' | 'prompt_submitted';
   /** 
    * Optional secondary submission to try if the initial prompt is rejected.
    * Intended for inline->upload fallback.

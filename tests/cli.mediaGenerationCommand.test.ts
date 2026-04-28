@@ -181,6 +181,34 @@ describe('media generation CLI helpers', () => {
     });
   });
 
+  it('accepts ChatGPT image media-generation requests through the shared CLI contract', async () => {
+    const createGeneration = vi.fn(async () => mediaResponse({ status: 'succeeded' }));
+
+    await createMediaGenerationFromCli(
+      {
+        provider: 'chatgpt',
+        mediaType: 'image',
+        prompt: 'Generate an image of an asphalt secret agent',
+        transport: 'browser',
+        wait: true,
+      },
+      userConfig,
+      {
+        service: {
+          createGeneration,
+        },
+      },
+    );
+
+    expect(createGeneration).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'chatgpt',
+      mediaType: 'image',
+      prompt: 'Generate an image of an asphalt secret agent',
+      transport: 'browser',
+      source: 'cli',
+    }));
+  });
+
   it('uses async creation when --no-wait is requested', async () => {
     const createGeneration = vi.fn(async () => mediaResponse({ status: 'succeeded' }));
     const createGenerationAsync = vi.fn(async () => mediaResponse({ status: 'running' }));

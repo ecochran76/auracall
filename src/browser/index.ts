@@ -1537,6 +1537,36 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         throw error;
       }
     }
+    if (options.completionMode === 'prompt_submitted') {
+      await updateConversationHint('post-submit', Math.min(config.timeoutMs ?? 120_000, 120_000));
+      await captureRuntimeSnapshot();
+      runStatus = 'complete';
+      recordBrowserPassiveObservation(passiveObservations, {
+        state: 'response-incoming',
+        source: 'browser-service',
+        evidenceRef: 'chatgpt-prompt-submitted',
+        confidence: 'high',
+      });
+      const durationMs = Date.now() - startedAt;
+      await noteChatgptBrowserMutationSuccess(config, userDataDir).catch(() => undefined);
+      return {
+        answerText: '',
+        answerMarkdown: '',
+        tookMs: durationMs,
+        answerTokens: 0,
+        answerChars: 0,
+        chromePid: chrome.pid,
+        chromePort: chrome.port,
+        chromeHost,
+        userDataDir,
+        chromeTargetId: lastTargetId,
+        tabUrl: lastUrl,
+        conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
+        composerTool: selectedComposerTool,
+        passiveObservations,
+        controllerPid: process.pid,
+      };
+    }
     stopThinkingMonitor = startThinkingStatusMonitor(
       Runtime,
       logger,

@@ -69,6 +69,7 @@ auracall capabilities --target grok --entrypoint grok-imagine --diagnostics brow
 auracall capabilities --target grok --entrypoint grok-imagine --discovery-action grok-imagine-video-mode --json
 
 # Shared durable media-generation contract from the CLI
+auracall media generate --provider chatgpt --type image -p "Generate an image of an asphalt secret agent" --json
 auracall media generate --provider gemini --type image -p "Generate an image of an asphalt secret agent" --json
 auracall media generate --provider grok --type image -p "Generate an image of an asphalt secret agent" --count 1 --no-wait
 auracall run status <media_generation_id> --json
@@ -155,12 +156,14 @@ Terminology note:
   the same `auracall_run_status` envelope as API `GET /v1/runs/{run_id}/status`
   and MCP `run_status`.
 - CLI media creation uses the same durable media-generation contract as local
-  API and MCP through `auracall media generate --provider gemini|grok --type
-  image|music|video -p <prompt>`. Use `--no-wait` to return a running media id
+  API and MCP through `auracall media generate --provider
+  chatgpt|gemini|grok --type image|music|video -p <prompt>`. Use `--no-wait` to return a running media id
   immediately, then poll it with `auracall run status <id> --json`.
 - Prefer `auracall media generate` for new image/music/video automation because
   it persists the media-generation id, timeline, status, and artifact cache.
-  For Grok image runs, `auracall media materialize <id> --count 1 --json`
+  ChatGPT image runs use the browser Create image composer tool and keep
+  readback/materialization scoped to the submitted tab target. For Grok image
+  runs, `auracall media materialize <id> --count 1 --json`
   explicitly retries saved-gallery/files full-quality discovery without
   submitting another prompt, including after the operator has navigated away
   from the original `/imagine` generation page.
@@ -197,7 +200,7 @@ Terminology note:
     - direct browser-backed runs now use the same configured stored-step
       executor path as normal Aura-Call runtime execution
   - `POST /v1/media-generations` accepts the shared media-generation contract
-    for `provider = gemini|grok`, `mediaType = image|music|video`, prompt,
+    for `provider = chatgpt|gemini|grok`, `mediaType = image|music|video`, prompt,
     optional `model`, `transport`, `count`, `size`, `aspectRatio`, and
     metadata. Gemini API image generation is supported with
     `transport = api`, `GEMINI_API_KEY`, and the Imagen
@@ -220,7 +223,7 @@ Terminology note:
     direct-connects to that tab without submitting, navigating, reloading, or
     opening/reusing the Imagine entrypoint. Use
     `docs/grok-imagine-video-readback-runbook.md` for the bounded manual live
-    probe. Browser-backed Gemini/Grok media jobs wait through the
+    probe. Browser-backed ChatGPT/Gemini/Grok media jobs wait through the
     browser-service operation dispatcher before provider adapters touch CDP;
     timelines can include `browser_operation_queued` and
     `browser_operation_acquired` when another operation already owns the same

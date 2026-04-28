@@ -6686,6 +6686,7 @@ export function createChatgptAdapter(): Pick<
   | 'pushProjectRemoveConfirmation'
   | 'listConversations'
   | 'readConversationContext'
+  | 'readActiveConversationArtifacts'
   | 'listConversationFiles'
   | 'materializeConversationArtifact'
   | 'renameConversation'
@@ -6788,6 +6789,46 @@ export function createChatgptAdapter(): Pick<
           debugContext,
           options,
         );
+      } finally {
+        await client.close().catch(() => undefined);
+      }
+    },
+    async readActiveConversationArtifacts(
+      conversationId: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<ConversationArtifact[]> {
+      const normalizedConversationId = normalizeChatgptConversationId(conversationId);
+      if (!normalizedConversationId) {
+        throw new Error('ChatGPT active artifact read requires a conversation id.');
+      }
+      if (!options?.tabTargetId) {
+        throw new Error('ChatGPT active artifact read requires the submitted tab target id.');
+      }
+      const normalizedProjectId = normalizeChatgptProjectId(options.projectId);
+      const debugContext = resolveChatgptRecoveryDebugContext(options, 'chatgpt-read-active-artifacts', {
+        conversationId: normalizedConversationId,
+        projectId: normalizedProjectId ?? null,
+        tabTargetId: options.tabTargetId,
+      });
+      const { client, targetId } = await connectToChatgptTab(
+        options,
+        options.tabUrl ?? resolveChatgptConversationUrl(normalizedConversationId, normalizedProjectId),
+      );
+      try {
+        await assertChatgptExpectedIdentity(client, options);
+        if (targetId && targetId !== options.tabTargetId) {
+          throw new Error(
+            `ChatGPT active artifact read attached to ${targetId}, expected submitted tab ${options.tabTargetId}.`,
+          );
+        }
+        const context = await readChatgptConversationContextWithClient(
+          client,
+          normalizedConversationId,
+          normalizedProjectId,
+          debugContext,
+          { ...options, preserveActiveTab: true },
+        );
+        return context.artifacts ?? [];
       } finally {
         await client.close().catch(() => undefined);
       }

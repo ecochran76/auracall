@@ -1,5 +1,24 @@
 # RUNBOOK
 
+## Turn 70 | 2026-04-27
+
+- Active plan:
+  `docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md`
+- Goal: add the first ChatGPT browser image generation path without repeating
+  the Gemini/Grok post-submit re-navigation failure mode.
+- Result:
+  - added ChatGPT `completionMode = prompt_submitted` support to the existing
+    browser runner so media runs return after trusted submit and retain the
+    submitted tab target
+  - added the ChatGPT browser media executor for image generation, active-tab
+    artifact polling, and generated-image materialization through the existing
+    artifact fetch path
+  - expanded the CLI/API schema to accept `provider = chatgpt` for durable
+    media-generation image requests
+- Verification target:
+  - `pnpm vitest run tests/mediaGenerationChatgptBrowserExecutor.test.ts tests/mediaBrowserExecutor.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+
 ## Turn 69 | 2026-04-27
 
 - Active plan:

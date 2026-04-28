@@ -168,6 +168,46 @@ describe('media generation service', () => {
     expect(readBack).toEqual(created);
   });
 
+  it('accepts ChatGPT browser image requests through the shared schema', async () => {
+    const service = createMediaGenerationService({
+      now: () => new Date('2026-04-27T12:00:00.000Z'),
+      generateId: () => 'medgen_chatgpt_schema_1',
+      executor: async ({ request }) => ({
+        artifacts: [
+          {
+            id: 'chatgpt_image_1',
+            type: 'image',
+            mimeType: 'image/png',
+          },
+        ],
+        metadata: {
+          executor: 'chatgpt-browser-test',
+          requestProvider: request.provider,
+        },
+      }),
+    });
+
+    const created = await service.createGeneration({
+      provider: 'chatgpt',
+      mediaType: 'image',
+      prompt: 'Generate an image of an asphalt secret agent',
+      transport: 'browser',
+      source: 'api',
+    });
+
+    expect(created).toMatchObject({
+      id: 'medgen_chatgpt_schema_1',
+      status: 'succeeded',
+      provider: 'chatgpt',
+      mediaType: 'image',
+      artifacts: [{ id: 'chatgpt_image_1', type: 'image' }],
+      metadata: {
+        executor: 'chatgpt-browser-test',
+        requestProvider: 'chatgpt',
+      },
+    });
+  });
+
   it('records provider execution failures without throwing away the request', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-media-generation-failure-'));
     cleanup.push(homeDir);

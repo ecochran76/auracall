@@ -5,15 +5,16 @@ import { BrowserService } from '../../service/browserService.js';
 import { LlmService } from '../llmService.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../../providers/types.js';
 import type { Conversation, Project } from '../../providers/domain.js';
+import { runBrowserMode } from '../../index.js';
 
 export class ChatgptService extends LlmService {
   private constructor(
-    userConfig: ResolvedUserConfig,
+    private readonly serviceUserConfig: ResolvedUserConfig,
     provider: LlmServiceAdapter,
     browserService: BrowserService,
     options?: { identityPrompt?: IdentityPrompt },
   ) {
-    super(userConfig, provider, browserService, options);
+    super(serviceUserConfig, provider, browserService, options);
   }
 
   static create(
@@ -53,8 +54,57 @@ export class ChatgptService extends LlmService {
     )) as Conversation[];
   }
 
-  async runPrompt(_input: PromptInput, _options?: BrowserProviderListOptions): Promise<PromptResult> {
-    throw new Error('Prompt execution is not supported for chatgpt in llmService yet.');
+  async runPrompt(input: PromptInput, options?: BrowserProviderListOptions): Promise<PromptResult> {
+    if (input.completionMode !== 'prompt_submitted') {
+      throw new Error('ChatGPT llmService prompt execution currently supports completionMode=prompt_submitted only.');
+    }
+    const configuredUrl =
+      input.configuredUrl ??
+      input.listOptions?.configuredUrl ??
+      options?.configuredUrl ??
+      this.getConfiguredUrl();
+    const browserConfig = this.serviceUserConfig.browser ?? {};
+    const result = await runBrowserMode({
+      prompt: input.prompt,
+      completionMode: 'prompt_submitted',
+      config: {
+        ...browserConfig,
+        target: 'chatgpt',
+        url: configuredUrl ?? browserConfig.chatgptUrl ?? browserConfig.url,
+        chatgptUrl: configuredUrl ?? browserConfig.chatgptUrl ?? browserConfig.url ?? null,
+        projectId: input.projectId ?? options?.projectId ?? null,
+        conversationId: input.conversationId ?? null,
+        timeoutMs: input.timeoutMs ?? browserConfig.timeoutMs,
+        keepBrowser: true,
+        auracallProfileName: this.serviceUserConfig.auracallProfile ?? null,
+        composerTool: input.capabilityId === 'chatgpt.media.create_image'
+          ? 'create image'
+          : (browserConfig.composerTool ?? null),
+      },
+      log: this.createProgressLogger(input.onProgress),
+    });
+    return {
+      text: result.answerMarkdown || result.answerText || '',
+      conversationId: result.conversationId ?? null,
+      url: result.tabUrl ?? null,
+      tabTargetId: result.chromeTargetId ?? null,
+      devtoolsHost: result.chromeHost ?? null,
+      devtoolsPort: result.chromePort ?? null,
+    };
+  }
+
+  private createProgressLogger(
+    onProgress?: PromptInput['onProgress'],
+  ): ((message: string) => void) | undefined {
+    if (!onProgress) {
+      return undefined;
+    }
+    return (message: string): void => {
+      void onProgress({
+        phase: 'submit_path_observed',
+        details: { provider: 'chatgpt', message },
+      });
+    };
   }
 
   async renameConversation(

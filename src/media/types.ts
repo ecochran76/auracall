@@ -1,4 +1,4 @@
-export type MediaGenerationProvider = 'gemini' | 'grok';
+export type MediaGenerationProvider = 'chatgpt' | 'gemini' | 'grok';
 
 export type MediaGenerationType = 'image' | 'music' | 'video';
 

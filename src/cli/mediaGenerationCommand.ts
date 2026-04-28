@@ -52,9 +52,9 @@ export function registerMediaGenerationCliCommand(
 
   mediaCommand
     .command('generate')
-    .description('Create one durable media generation through the shared Gemini/Grok contract.')
+    .description('Create one durable media generation through the shared ChatGPT/Gemini/Grok contract.')
     .argument('[prompt]', 'Prompt to send to the provider media tool.')
-    .requiredOption('--provider <gemini|grok>', 'Provider to use.')
+    .requiredOption('--provider <chatgpt|gemini|grok>', 'Provider to use.')
     .requiredOption('--type <image|music|video>', 'Media type to generate.')
     .option('-p, --prompt <prompt>', 'Prompt to send to the provider media tool.')
     .option('--model <model>', 'Provider model override.')
@@ -230,10 +230,10 @@ export function formatMediaGenerationCli(response: MediaGenerationResponse): str
 
 function parseProvider(value: string): MediaGenerationProvider {
   const normalized = value.trim().toLowerCase();
-  if (normalized === 'gemini' || normalized === 'grok') {
+  if (normalized === 'chatgpt' || normalized === 'gemini' || normalized === 'grok') {
     return normalized;
   }
-  throw new Error(`Invalid media provider "${value}". Use "gemini" or "grok".`);
+  throw new Error(`Invalid media provider "${value}". Use "chatgpt", "gemini", or "grok".`);
 }
 
 function parseMediaType(value: string): MediaGenerationType {

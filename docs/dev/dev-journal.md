@@ -22657,3 +22657,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media generate --provider grok --type image -p "Generate an image of a red umbrella under northern lights" --count 4 --json`
   - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto run status medgen_fde3e1e604f24a95a2162e6ed1a58c59 --json`
   - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media materialize medgen_fde3e1e604f24a95a2162e6ed1a58c59 --count 1 --json`
+
+## 2026-04-27 - ChatGPT image media executor
+
+- Focus: make ChatGPT image generation use the durable media-generation
+  contract while preserving the submitted-tab no-navigation rule.
+- Progress:
+  - added `completionMode = prompt_submitted` to the ChatGPT browser runner
+  - added a ChatGPT browser media executor for Create image, active-tab image
+    artifact polling, and generated-image materialization
+  - expanded media provider schema and CLI parsing to accept `chatgpt`
+  - added targeted executor and browser-operation queue tests
+- Current blocker:
+  - no live ChatGPT image smoke has been run in this slice yet; do that only
+    after full local checks stay green.

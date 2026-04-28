@@ -11,10 +11,12 @@ const mediaExecutorMocks = vi.hoisted(() => {
   const geminiBrowserExecutor = vi.fn<MediaGenerationExecutor>();
   const geminiApiExecutor = vi.fn<MediaGenerationExecutor>();
   const grokBrowserExecutor = vi.fn<MediaGenerationExecutor>();
+  const chatgptBrowserExecutor = vi.fn<MediaGenerationExecutor>();
   return {
     geminiBrowserExecutor,
     geminiApiExecutor,
     grokBrowserExecutor,
+    chatgptBrowserExecutor,
   };
 });
 
@@ -28,6 +30,10 @@ vi.mock('../src/media/geminiApiExecutor.js', () => ({
 
 vi.mock('../src/media/grokBrowserExecutor.js', () => ({
   createGrokBrowserMediaGenerationExecutor: vi.fn(() => mediaExecutorMocks.grokBrowserExecutor),
+}));
+
+vi.mock('../src/media/chatgptBrowserExecutor.js', () => ({
+  createChatgptBrowserMediaGenerationExecutor: vi.fn(() => mediaExecutorMocks.chatgptBrowserExecutor),
 }));
 
 describe('browser media generation executor queueing', () => {
@@ -310,5 +316,29 @@ describe('browser media generation executor queueing', () => {
     });
 
     expect(key).toBe('managed-profile:/tmp/auracall-browser-profiles/default/grok::service:grok');
+  });
+
+  it('keys ChatGPT media browser operations by the ChatGPT managed browser profile', async () => {
+    const { resolveBrowserMediaOperationKeyForTest } = await import('../src/media/browserExecutor.js');
+    const userConfig = {
+      auracallProfile: 'default',
+      browser: {
+        managedProfileRoot: '/tmp/auracall-browser-profiles',
+      },
+    } as never;
+
+    const key = resolveBrowserMediaOperationKeyForTest(userConfig, {
+      id: 'medgen_chatgpt_key',
+      createdAt: '2026-04-27T12:00:00.000Z',
+      artifactDir: '/tmp/artifacts',
+      request: {
+        provider: 'chatgpt',
+        mediaType: 'image',
+        prompt: 'Generate an image of an asphalt secret agent',
+        transport: 'browser',
+      },
+    });
+
+    expect(key).toBe('managed-profile:/tmp/auracall-browser-profiles/default/chatgpt::service:chatgpt');
   });
 });

@@ -15,6 +15,7 @@ import {
   GROK_IMAGE_CAPABILITY_ID,
   mapGrokFileToMediaArtifact,
 } from './grokBrowserExecutor.js';
+import { createChatgptBrowserMediaGenerationExecutor } from './chatgptBrowserExecutor.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
 import {
   resolveManagedBrowserLaunchContextFromResolvedConfig,
@@ -36,6 +37,7 @@ export function createBrowserMediaGenerationExecutor(userConfig: ResolvedUserCon
   const gemini = createGeminiBrowserMediaGenerationExecutor(userConfig);
   const geminiApi = createGeminiApiMediaGenerationExecutor({ env: process.env });
   const grok = createGrokBrowserMediaGenerationExecutor(userConfig);
+  const chatgpt = createChatgptBrowserMediaGenerationExecutor(userConfig);
   return async (input) => {
     if (input.request.provider === 'gemini' && input.request.transport === 'api') {
       return geminiApi(input);
@@ -45,6 +47,9 @@ export function createBrowserMediaGenerationExecutor(userConfig: ResolvedUserCon
     }
     if (input.request.provider === 'grok') {
       return withQueuedBrowserMediaOperation(userConfig, input, () => grok(input));
+    }
+    if (input.request.provider === 'chatgpt') {
+      return withQueuedBrowserMediaOperation(userConfig, input, () => chatgpt(input));
     }
     throw new MediaGenerationExecutionError(
       'media_provider_not_implemented',
@@ -204,7 +209,11 @@ function resolveBrowserMediaOperationInput(
   userConfig: ResolvedUserConfig,
   input: Parameters<MediaGenerationExecutor>[0],
 ) {
-  const provider = input.request.provider === 'grok' ? 'grok' : 'gemini';
+  const provider = input.request.provider === 'grok'
+    ? 'grok'
+    : input.request.provider === 'chatgpt'
+      ? 'chatgpt'
+      : 'gemini';
   const readbackProbeDevtoolsPort = input.request.provider === 'grok'
     && input.request.mediaType === 'video'
     && input.request.metadata?.grokVideoReadbackProbe === true
