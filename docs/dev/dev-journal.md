@@ -22668,6 +22668,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     artifact polling, and generated-image materialization
   - expanded media provider schema and CLI parsing to accept `chatgpt`
   - added targeted executor and browser-operation queue tests
+  - installed-runtime smoke exposed and fixed collision-prone media record temp
+    filenames during burst timeline writes
+  - installed-runtime smoke exposed and fixed a self-deadlock where ChatGPT
+    media generation held the media browser-operation lock and then nested
+    `runBrowserMode` tried to acquire `browser-execution` on the same key
 - Current blocker:
-  - no live ChatGPT image smoke has been run in this slice yet; do that only
-    after full local checks stay green.
+  - live ChatGPT image generation is blocked at managed browser profile auth:
+    run `medgen_97cfdcce88c2426991485eb7045d86d3` stayed `running` with last
+    event `submit_path_observed` and message `Manual login mode: please sign
+    into chatgpt.com in the opened Chrome window; waiting for session to
+    appear...`; the waiting process was terminated to avoid leaving an active
+    command session.

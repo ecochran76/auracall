@@ -64,6 +64,19 @@ rules learned from Gemini and Grok.
 - [ ] One supervised live smoke proves the end-to-end path only after the
   no-navigation unit path is green.
 
+## Live Smoke Notes
+
+- 2026-04-27 installed-runtime smoke reached the durable run-status surface
+  but stopped before ChatGPT prompt submission because the default managed
+  ChatGPT browser profile was not authenticated. Evidence:
+  `medgen_97cfdcce88c2426991485eb7045d86d3` stayed `running` with last event
+  `submit_path_observed` and provider message `Manual login mode: please sign
+  into chatgpt.com in the opened Chrome window; waiting for session to
+  appear...`.
+- The same smoke exposed two local defects before provider submission:
+  collision-prone media record temp files and nested browser-operation
+  self-deadlock. Both are fixed and covered by unit tests.
+
 ## Validation Plan
 
 - Targeted unit tests:

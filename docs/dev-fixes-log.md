@@ -14772,3 +14772,12 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   browser open, captures the submitted tab target id, and uses
   `preserveActiveTab` for image artifact polling/materialization so post-submit
   readback does not reopen or reload the maturing conversation.
+- 2026-04-27: Async media generation can emit several progress events in the
+  same millisecond. Media record temp filenames must include a true unique
+  component, not only `pid + Date.now()`, or concurrent timeline writes can
+  race a temp-file rename and crash the CLI before provider validation.
+- 2026-04-27: Browser media executors already own the browser-service
+  media-generation operation lock. A provider implementation that calls the
+  legacy `runBrowserMode` path must skip the nested `browser-execution`
+  acquire, otherwise it can queue behind its own lock and deadlock before
+  prompt submission.

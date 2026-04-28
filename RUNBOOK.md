@@ -19,6 +19,27 @@
   - `pnpm vitest run tests/mediaGenerationChatgptBrowserExecutor.test.ts tests/mediaBrowserExecutor.test.ts --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
 
+## Turn 71 | 2026-04-27
+
+- Active plan:
+  `docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md`
+- Goal: run the installed-runtime ChatGPT image smoke.
+- Result:
+  - fixed media record temp-file collisions exposed by async ChatGPT progress
+    writes
+  - fixed nested browser dispatch self-deadlock when ChatGPT media generation
+    calls `runBrowserMode` while the media executor already owns the
+    browser-operation lock
+  - installed-runtime retry reached ChatGPT managed-profile auth wait but did
+    not submit the image prompt because the default managed ChatGPT browser
+    profile was not signed in
+- Verification target:
+  - `pnpm vitest run tests/mediaGeneration.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/mediaGenerationChatgptBrowserExecutor.test.ts tests/mediaGeneration.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `git diff --check`
+
 ## Turn 69 | 2026-04-27
 
 - Active plan:
