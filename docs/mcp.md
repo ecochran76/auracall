@@ -18,6 +18,17 @@
 - Behavior: creates and executes one bounded team run through the existing `TaskRunSpec -> TeamRun -> runtimeRun` path. The structured result is `object = "team_run"` with `taskRunSpec` and deterministic execution ids/status.
 - Provenance: compact MCP-created runs are stamped with `trigger = "mcp"` and `requestedBy.kind = "mcp"`; prebuilt `taskRunSpec` inputs preserve their validated provenance.
 
+### `response_create`
+- Inputs: `model`, `input`, optional `instructions`, `runtimeProfile`,
+  `agent`, `service`, `transport`, `outputContract`, `composerTool`,
+  `deepResearchPlanAction`, and `metadata`.
+- Behavior: creates one durable response run through the same stored-step
+  response service used by local API `/v1/responses`. Browser-backed ChatGPT
+  calls can request volatile workbench tools per call, for example
+  `composerTool = "deep-research"` with `deepResearchPlanAction = "edit"`.
+  The structured result is `object = "response"` and its `id` can be polled
+  through `run_status`.
+
 ### `run_status`
 - Inputs: `id` for a response/runtime run or media generation; optional
   `diagnostics: "browser-state"`.

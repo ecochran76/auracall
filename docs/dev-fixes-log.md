@@ -14868,3 +14868,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   tool hints, not only runtime-profile defaults. `auracall.composerTool` and
   `auracall.deepResearchPlanAction` now flow through stored-step execution so
   API callers can request ChatGPT Deep Research `edit` and poll the same run.
+- 2026-04-28: MCP response creation should use the configured stored-step
+  response service instead of a bare response service. Otherwise a browser
+  response request can appear to complete through the no-op local runner
+  without actually touching the browser.

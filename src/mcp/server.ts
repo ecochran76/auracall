@@ -8,6 +8,7 @@ import { registerConsultTool } from './tools/consult.js';
 import { registerSessionsTool } from './tools/sessions.js';
 import { registerSessionResources } from './tools/sessionResources.js';
 import { registerTeamRunTool } from './tools/teamRun.js';
+import { registerResponseCreateTool } from './tools/responseCreate.js';
 import { registerMediaGenerationTool } from './tools/mediaGeneration.js';
 import { registerWorkbenchCapabilitiesTool } from './tools/workbenchCapabilities.js';
 import { registerRunStatusTool } from './tools/runStatus.js';
@@ -15,18 +16,23 @@ import { registerRuntimeInspectTool } from './tools/runtimeInspect.js';
 import { resolveConfig } from '../schema/resolver.js';
 import type { ResolvedUserConfig } from '../config.js';
 import { createMediaGenerationService } from '../media/service.js';
+import { createExecutionResponsesService } from '../runtime/responsesService.js';
+import { createConfiguredStoredStepExecutor } from '../runtime/configuredExecutor.js';
+import { resolveHostLocalActionExecutionPolicy } from '../config/model.js';
 import { createBrowserMediaGenerationExecutor } from '../media/browserExecutor.js';
 import { createWorkbenchCapabilityService } from '../workbench/service.js';
 import { createBrowserWorkbenchCapabilityDiscovery } from '../workbench/browserDiscovery.js';
 import { createBrowserWorkbenchCapabilityDiagnostics } from '../workbench/browserDiagnostics.js';
 
 export interface McpServiceBundle {
+  responsesService: ReturnType<typeof createExecutionResponsesService>;
   mediaGenerationService: ReturnType<typeof createMediaGenerationService>;
   workbenchCapabilityReporter: ReturnType<typeof createWorkbenchCapabilityService>;
 }
 
 export interface CreateMcpServicesDeps {
   createMediaGenerationService?: typeof createMediaGenerationService;
+  createExecutionResponsesService?: typeof createExecutionResponsesService;
   createBrowserMediaGenerationExecutor?: typeof createBrowserMediaGenerationExecutor;
   createWorkbenchCapabilityService?: typeof createWorkbenchCapabilityService;
   createBrowserWorkbenchCapabilityDiscovery?: typeof createBrowserWorkbenchCapabilityDiscovery;
@@ -48,8 +54,12 @@ export async function startMcpServer(): Promise<void> {
   );
 
   registerConsultTool(server);
+  registerResponseCreateTool(server, {
+    responsesService: services.responsesService,
+  });
   registerTeamRunTool(server);
   registerRunStatusTool(server, {
+    responsesService: services.responsesService,
     mediaGenerationService: services.mediaGenerationService,
   });
   registerRuntimeInspectTool(server);
@@ -93,8 +103,15 @@ export function createMcpServicesFromConfig(
   const createDiagnostics =
     deps.createBrowserWorkbenchCapabilityDiagnostics ?? createBrowserWorkbenchCapabilityDiagnostics;
   const createMediaService = deps.createMediaGenerationService ?? createMediaGenerationService;
+  const createResponsesService = deps.createExecutionResponsesService ?? createExecutionResponsesService;
   const createMediaExecutor =
     deps.createBrowserMediaGenerationExecutor ?? createBrowserMediaGenerationExecutor;
+  const configuredStoredStepExecutor = createConfiguredStoredStepExecutor(
+    resolvedUserConfig as Record<string, unknown>,
+  );
+  if (!configuredStoredStepExecutor) {
+    throw new Error('Configured stored-step executor was not created for MCP response service.');
+  }
 
   const workbenchCapabilityReporter = createWorkbenchService({
     discoverCapabilities: createDiscovery(resolvedUserConfig),
@@ -108,7 +125,14 @@ export function createMcpServicesFromConfig(
         ? resolvedUserConfig.auracallProfile
         : null,
   });
+  const responsesService = createResponsesService({
+    localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(
+      resolvedUserConfig as Record<string, unknown>,
+    ),
+    executeStoredRunStep: async (_request, context) => configuredStoredStepExecutor(context),
+  });
   return {
+    responsesService,
     mediaGenerationService,
     workbenchCapabilityReporter,
   };

@@ -18,11 +18,16 @@ describe('mcp server service wiring', () => {
       createGenerationAsync: vi.fn(),
       readGeneration: vi.fn(),
     };
+    const responsesService = {
+      createResponse: vi.fn(),
+      readResponse: vi.fn(),
+    };
     const createBrowserMediaGenerationExecutor = vi.fn(() => executor);
     const createBrowserWorkbenchCapabilityDiscovery = vi.fn(() => discoverCapabilities);
     const createBrowserWorkbenchCapabilityDiagnostics = vi.fn(() => diagnoseCapabilities);
     const createWorkbenchCapabilityService = vi.fn(() => workbenchReporter);
     const createMediaGenerationService = vi.fn(() => mediaGenerationService);
+    const createExecutionResponsesService = vi.fn(() => responsesService);
 
     const services = createMcpServicesFromConfig(config, {
       createBrowserMediaGenerationExecutor,
@@ -30,6 +35,7 @@ describe('mcp server service wiring', () => {
       createBrowserWorkbenchCapabilityDiagnostics,
       createWorkbenchCapabilityService,
       createMediaGenerationService,
+      createExecutionResponsesService,
     });
 
     expect(createBrowserWorkbenchCapabilityDiscovery).toHaveBeenCalledWith(config);
@@ -44,7 +50,13 @@ describe('mcp server service wiring', () => {
       capabilityReporter: workbenchReporter,
       runtimeProfile: 'default',
     });
+    expect(createExecutionResponsesService).toHaveBeenCalledWith(
+      expect.objectContaining({
+        executeStoredRunStep: expect.any(Function),
+      }),
+    );
     expect(services).toEqual({
+      responsesService,
       mediaGenerationService,
       workbenchCapabilityReporter: workbenchReporter,
     });

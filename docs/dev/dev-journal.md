@@ -22953,3 +22953,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `chatgptDeepResearchPlanAction = edit`, label `Update`,
     `editTargetKind = iframe-coordinate`, and screenshot path
     `~/.auracall/diagnostics/chatgpt-deep-research/2026-04-28T15-01-32-573Z-plan-edit-opened.png`
+
+## 2026-04-28 - MCP response-create workbench hints
+
+- Focus: bring MCP onto the same durable response/run-status path as the local
+  API for volatile ChatGPT workbench tools.
+- Progress:
+  - added MCP `response_create`, a durable response-run creation tool whose id
+    can be polled with MCP `run_status`
+  - MCP service wiring now shares a configured `ExecutionResponsesService` with
+    the configured stored-step executor instead of using the no-op default
+  - `response_create` accepts `composerTool` and `deepResearchPlanAction` so
+    MCP callers can request ChatGPT Deep Research `edit` per call
+- Validation:
+  - `pnpm vitest run tests/mcp.responseCreate.test.ts tests/mcp.server.test.ts tests/mcp.runStatus.test.ts tests/runtime.api.test.ts tests/runtime.configuredExecutor.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - `rg -n "response_create|responseCreate" ~/.auracall/user-runtime -g '*.js'`
