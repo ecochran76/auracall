@@ -1099,6 +1099,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   let selectedChatgptAccountPlanType: string | null = null;
   let selectedChatgptAccountStructure: string | null = null;
   let chatgptDeepResearchStage: ChatgptDeepResearchStage | null = null;
+  let chatgptDeepResearchStartMethod: 'manual' | 'auto' | null = null;
   let chatgptDeepResearchStartLabel: string | null = null;
   let chatgptDeepResearchModifyPlanVisible: boolean | null = null;
   const emitRuntimeHint = async (): Promise<void> => {
@@ -1122,6 +1123,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       chatgptAccountPlanType: selectedChatgptAccountPlanType ?? undefined,
       chatgptAccountStructure: selectedChatgptAccountStructure ?? undefined,
       chatgptDeepResearchStage: chatgptDeepResearchStage ?? undefined,
+      chatgptDeepResearchStartMethod: chatgptDeepResearchStartMethod ?? undefined,
       chatgptDeepResearchStartLabel: chatgptDeepResearchStartLabel ?? undefined,
       chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
     };
@@ -1652,7 +1654,8 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       chatgptDeepResearchStage = 'plan-ready';
       await emitRuntimeHint();
       const startResult = await raceWithDisconnect(startChatgptDeepResearchPlan(Runtime, logger));
-      chatgptDeepResearchStage = 'research-started';
+      chatgptDeepResearchStage = startResult.stage === 'auto-started' ? 'auto-started' : 'research-started';
+      chatgptDeepResearchStartMethod = startResult.startMethod;
       chatgptDeepResearchStartLabel = startResult.startLabel;
       chatgptDeepResearchModifyPlanVisible = startResult.modifyPlanVisible;
       recordBrowserPassiveObservation(passiveObservations, {
@@ -1695,6 +1698,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         chatgptAccountPlanType: selectedChatgptAccountPlanType ?? undefined,
         chatgptAccountStructure: selectedChatgptAccountStructure ?? undefined,
         chatgptDeepResearchStage: chatgptDeepResearchStage ?? undefined,
+        chatgptDeepResearchStartMethod: chatgptDeepResearchStartMethod ?? undefined,
         chatgptDeepResearchStartLabel: chatgptDeepResearchStartLabel ?? undefined,
         chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
         passiveObservations,
@@ -1985,6 +1989,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       chatgptAccountPlanType: selectedChatgptAccountPlanType ?? undefined,
       chatgptAccountStructure: selectedChatgptAccountStructure ?? undefined,
       chatgptDeepResearchStage: chatgptDeepResearchStage ?? undefined,
+      chatgptDeepResearchStartMethod: chatgptDeepResearchStartMethod ?? undefined,
       chatgptDeepResearchStartLabel: chatgptDeepResearchStartLabel ?? undefined,
       chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
       passiveObservations,
@@ -2238,6 +2243,7 @@ async function runRemoteBrowserMode(
   let selectedChatgptAccountPlanType: string | null = null;
   let selectedChatgptAccountStructure: string | null = null;
   let chatgptDeepResearchStage: ChatgptDeepResearchStage | null = null;
+  let chatgptDeepResearchStartMethod: 'manual' | 'auto' | null = null;
   let chatgptDeepResearchStartLabel: string | null = null;
   let chatgptDeepResearchModifyPlanVisible: boolean | null = null;
   const emitRuntimeHint = async () => {
@@ -2256,6 +2262,7 @@ async function runRemoteBrowserMode(
         chatgptAccountPlanType: selectedChatgptAccountPlanType ?? undefined,
         chatgptAccountStructure: selectedChatgptAccountStructure ?? undefined,
         chatgptDeepResearchStage: chatgptDeepResearchStage ?? undefined,
+        chatgptDeepResearchStartMethod: chatgptDeepResearchStartMethod ?? undefined,
         chatgptDeepResearchStartLabel: chatgptDeepResearchStartLabel ?? undefined,
         chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
       });
@@ -2481,7 +2488,8 @@ async function runRemoteBrowserMode(
       chatgptDeepResearchStage = 'plan-ready';
       await emitRuntimeHint();
       const startResult = await startChatgptDeepResearchPlan(Runtime, logger);
-      chatgptDeepResearchStage = 'research-started';
+      chatgptDeepResearchStage = startResult.stage === 'auto-started' ? 'auto-started' : 'research-started';
+      chatgptDeepResearchStartMethod = startResult.startMethod;
       chatgptDeepResearchStartLabel = startResult.startLabel;
       chatgptDeepResearchModifyPlanVisible = startResult.modifyPlanVisible;
       recordBrowserPassiveObservation(passiveObservations, {
@@ -2738,6 +2746,7 @@ async function runRemoteBrowserMode(
       chatgptAccountPlanType: selectedChatgptAccountPlanType ?? undefined,
       chatgptAccountStructure: selectedChatgptAccountStructure ?? undefined,
       chatgptDeepResearchStage: chatgptDeepResearchStage ?? undefined,
+      chatgptDeepResearchStartMethod: chatgptDeepResearchStartMethod ?? undefined,
       chatgptDeepResearchStartLabel: chatgptDeepResearchStartLabel ?? undefined,
       chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
       passiveObservations,

@@ -92,6 +92,7 @@ export interface BrowserRuntimeMetadata {
   chatgptAccountPlanType?: string;
   chatgptAccountStructure?: string;
   chatgptDeepResearchStage?: string;
+  chatgptDeepResearchStartMethod?: string;
   chatgptDeepResearchStartLabel?: string | null;
   chatgptDeepResearchModifyPlanVisible?: boolean;
   /** PID of the controller process that launched this browser run. Helps detect orphaned sessions. */

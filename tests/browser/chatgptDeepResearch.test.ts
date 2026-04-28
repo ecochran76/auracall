@@ -18,9 +18,18 @@ describe('ChatGPT Deep Research staged flow', () => {
     expect(expression).toContain('dispatchClickSequence');
     expect(expression).toContain('start research');
     expect(expression).toContain('start deep research');
+    expect(expression).toContain("label === 'edit'");
     expect(expression).toContain('modify');
     expect(expression).toContain('refine');
     expect(expression).toContain('plan-ready-no-start');
     expect(expression).toContain('start-clicked');
+  });
+
+  test('treats timed provider auto-start as a terminal staged outcome', () => {
+    const expression = buildDeepResearchPlanStartExpressionForTest(15_000);
+    expect(expression).toContain('auto-started');
+    expect(expression).toContain('researchStarted');
+    expect(expression).toContain('researching');
+    expect(expression).toContain('research in progress');
   });
 });

@@ -54,6 +54,7 @@ export type BrowserRuntimeMetadata = BaseTypes.BrowserRuntimeMetadata & {
   chatgptAccountPlanType?: string;
   chatgptAccountStructure?: string;
   chatgptDeepResearchStage?: string;
+  chatgptDeepResearchStartMethod?: string;
   chatgptDeepResearchStartLabel?: string | null;
   chatgptDeepResearchModifyPlanVisible?: boolean;
 };
@@ -86,6 +87,7 @@ export type BrowserRunResult = BaseTypes.BrowserRunResult & {
   chatgptAccountPlanType?: string;
   chatgptAccountStructure?: string;
   chatgptDeepResearchStage?: string;
+  chatgptDeepResearchStartMethod?: string;
   chatgptDeepResearchStartLabel?: string | null;
   chatgptDeepResearchModifyPlanVisible?: boolean;
   passiveObservations?: BrowserPassiveObservation[];

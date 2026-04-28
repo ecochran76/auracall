@@ -83,6 +83,8 @@ export async function runBrowserSessionExecution(
         chatgptAccountPlanType: (result as { chatgptAccountPlanType?: string }).chatgptAccountPlanType,
         chatgptAccountStructure: (result as { chatgptAccountStructure?: string }).chatgptAccountStructure,
         chatgptDeepResearchStage: (result as { chatgptDeepResearchStage?: string }).chatgptDeepResearchStage,
+        chatgptDeepResearchStartMethod:
+          (result as { chatgptDeepResearchStartMethod?: string }).chatgptDeepResearchStartMethod,
         chatgptDeepResearchStartLabel:
           (result as { chatgptDeepResearchStartLabel?: string | null }).chatgptDeepResearchStartLabel,
         chatgptDeepResearchModifyPlanVisible:

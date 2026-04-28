@@ -7,10 +7,12 @@ export type ChatgptDeepResearchStage =
   | 'tool-selected'
   | 'plan-ready'
   | 'start-clicked'
+  | 'auto-started'
   | 'research-started';
 
 export type ChatgptDeepResearchStartResult = {
-  stage: Extract<ChatgptDeepResearchStage, 'start-clicked'>;
+  stage: Extract<ChatgptDeepResearchStage, 'start-clicked' | 'auto-started'>;
+  startMethod: 'manual' | 'auto';
   startLabel: string | null;
   modifyPlanVisible: boolean;
 };
@@ -19,6 +21,10 @@ type ChatgptDeepResearchPlanProbe =
   | {
       status: 'start-clicked';
       startLabel: string | null;
+      modifyPlanVisible: boolean;
+    }
+  | {
+      status: 'auto-started';
       modifyPlanVisible: boolean;
     }
   | {
@@ -56,7 +62,16 @@ export async function startChatgptDeepResearchPlan(
       logger(`Deep Research plan accepted${result.startLabel ? ` (${result.startLabel})` : ''}`);
       return {
         stage: 'start-clicked',
+        startMethod: 'manual',
         startLabel: result.startLabel,
+        modifyPlanVisible: result.modifyPlanVisible,
+      };
+    case 'auto-started':
+      logger('Deep Research plan auto-started by ChatGPT');
+      return {
+        stage: 'auto-started',
+        startMethod: 'auto',
+        startLabel: null,
         modifyPlanVisible: result.modifyPlanVisible,
       };
     case 'plan-ready-no-start':
@@ -115,26 +130,48 @@ function buildDeepResearchPlanStartExpression(timeoutMs: number): string {
       if (label.includes('start') && label.includes('research')) return true;
       return false;
     };
-    const isModifyPlanLabel = (label) => (
-      Boolean(label) &&
-      label.includes('plan') &&
-      (label.includes('modify') || label.includes('edit') || label.includes('refine') || label.includes('change'))
-    );
+    const isModifyPlanLabel = (label, planVisible) => {
+      if (!label) return false;
+      if (
+        label.includes('plan') &&
+        (label.includes('modify') || label.includes('edit') || label.includes('refine') || label.includes('change'))
+      ) {
+        return true;
+      }
+      return Boolean(planVisible) && (label === 'edit' || label === 'modify' || label === 'refine');
+    };
+    const researchStartedVisible = (bodyText, labels) => {
+      if (labels.some((label) => label.includes('stop') && (label.includes('research') || label.includes('responding')))) {
+        return true;
+      }
+      if (bodyText.includes('researching') || bodyText.includes('research in progress')) return true;
+      if (bodyText.includes('searching') && bodyText.includes('sources')) return true;
+      if (bodyText.includes('deep research') && (bodyText.includes('running') || bodyText.includes('started'))) return true;
+      return false;
+    };
     const readState = () => {
       const buttons = Array.from(document.querySelectorAll('button, [role="button"]')).filter(isVisible);
       const labeled = buttons.map((button) => ({ button, label: buttonLabel(button), displayLabel: buttonDisplayLabel(button) }));
       const startEntry = labeled.find((entry) => isStartLabel(entry.label));
-      const modifyPlanVisible = labeled.some((entry) => isModifyPlanLabel(entry.label));
       const bodyText = normalize(document.body?.innerText || document.body?.textContent || '');
       const planVisible =
         Boolean(startEntry) ||
-        modifyPlanVisible ||
-        (bodyText.includes('research plan') && (bodyText.includes('start') || bodyText.includes('modify plan')));
-      return { startEntry, modifyPlanVisible, planVisible };
+        (bodyText.includes('research plan') && (bodyText.includes('start') || bodyText.includes('modify plan') || bodyText.includes('edit')));
+      const labels = labeled.map((entry) => entry.label);
+      const modifyPlanVisible = labeled.some((entry) => isModifyPlanLabel(entry.label, planVisible));
+      return {
+        startEntry,
+        modifyPlanVisible,
+        planVisible: planVisible || modifyPlanVisible,
+        researchStarted: researchStartedVisible(bodyText, labels),
+      };
     };
 
     while (Date.now() - start < TIMEOUT_MS) {
       const state = readState();
+      if (state.researchStarted && !state.startEntry?.button) {
+        return { status: 'auto-started', modifyPlanVisible: state.modifyPlanVisible };
+      }
       if (state.startEntry?.button) {
         dispatchClickSequence(state.startEntry.button);
         await new Promise((resolve) => setTimeout(resolve, 650));
@@ -144,12 +181,12 @@ function buildDeepResearchPlanStartExpression(timeoutMs: number): string {
           modifyPlanVisible: state.modifyPlanVisible,
         };
       }
-      if (state.planVisible && Date.now() - start > Math.min(10_000, TIMEOUT_MS / 2)) {
-        return { status: 'plan-ready-no-start', modifyPlanVisible: state.modifyPlanVisible };
-      }
       await new Promise((resolve) => setTimeout(resolve, POLL_MS));
     }
     const state = readState();
+    if (state.researchStarted) {
+      return { status: 'auto-started', modifyPlanVisible: state.modifyPlanVisible };
+    }
     if (state.planVisible) {
       return { status: 'plan-ready-no-start', modifyPlanVisible: state.modifyPlanVisible };
     }

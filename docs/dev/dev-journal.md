@@ -22792,6 +22792,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     records plan-stage status, and clicks only the Start CTA
   - the Modify/Edit/Refine plan affordance is detected but not clicked; it is
     preserved as metadata for later interactive or multi-agent refinement flows
+  - Deep Research plan detection handles the current `Edit` CTA label and a
+    timed provider auto-start path, preserving `startMethod = manual|auto`
   - Deep Research requests verify the active ChatGPT auth-session exposes an
     account tier before consuming the tool path
   - runtime/run metadata now carries Deep Research stage, Start label, modify

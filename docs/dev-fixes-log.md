@@ -14814,3 +14814,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   presents a research plan; AuraCall should wait for that plan, click only the
   Start CTA, and preserve Modify/Edit/Refine-plan visibility as metadata for
   later interactive or multi-agent refinement flows.
+- 2026-04-28: ChatGPT Deep Research plan dialogs can expose the plan-modify
+  affordance as a bare `Edit` button and can auto-start after a short timed
+  window. The staged handler should treat exact `Edit` as modify-plan evidence
+  only in a visible plan context, and it should record provider auto-start as
+  `startMethod = auto` rather than failing the run as missing a Start CTA.

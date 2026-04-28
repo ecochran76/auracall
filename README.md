@@ -878,7 +878,7 @@ npx -y auracall auracall-mcp
 | `--browser-model-strategy <select\|current\|ignore>` | Control ChatGPT model selection in browser mode (current keeps the active model; ignore skips the picker). |
 | `--browser-manual-login` | Skip cookie copy; reuse a persistent automation profile and wait for manual ChatGPT login. |
 | `--browser-thinking-time <light\|standard\|extended\|heavy>` | Set ChatGPT thinking-time intensity (browser; Thinking/Pro models only). AuraCall verifies the active ChatGPT browser profile is a Pro account before selecting Standard/Extended Pro modes. |
-| `--browser-composer-tool <tool>` | Select a ChatGPT composer tool/add-on such as `web-search`, `canvas`, or `deep-research`. Deep Research is staged: AuraCall verifies the account tier, submits the prompt, waits for the provider plan, clicks only the Start CTA, and records the stage in run metadata. |
+| `--browser-composer-tool <tool>` | Select a ChatGPT composer tool/add-on such as `web-search`, `canvas`, or `deep-research`. Deep Research is staged: AuraCall verifies the account tier, submits the prompt, waits for the provider plan, clicks only the Start CTA when available, records timed auto-starts, and preserves Edit/modify-plan visibility in run metadata. |
 | `--browser-port <port>` | Force a fixed Chrome DevTools port (advanced/debugging). Normal WSL -> Windows launches default to auto-discovery instead. |
 | `--browser-inline-cookies[(-file)] <payload|path>` | Supply cookies without Chrome/Keychain (browser). |
 | `--browser-timeout`, `--browser-input-timeout` | Control overall/browser input timeouts (supports h/m/s/ms). |
