@@ -23166,3 +23166,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts --profile wsl-chrome-3 --chatgpt --model gpt-5.2-pro --browser-thinking-time standard --browser-timeout 180s --prompt 'Reply exactly: AURACALL PRO MODEL PICKER SMOKE' --browser-keep-browser --verbose`
   - `rg -n "AURACALL PRO MODEL PICKER SMOKE|chatgptProMode|thinkingTime|chatgptAccountLevel" ~/.auracall/sessions -g '*.json'`
+
+## 2026-04-28 - ChatGPT Deep Research report retrieval
+
+- Focus: make completed ChatGPT Deep Research output retrievable through the
+  normal conversation context/artifact surfaces.
+- Progress:
+  - added ChatGPT Deep Research iframe-target inspection to conversation
+    context reads
+  - projects the completed visible report as an assistant message plus a
+    `document` artifact with inline report text
+  - materializes that document artifact as Markdown through
+    `conversations artifacts fetch`
+  - documented that hidden iframe `textContent` is unsafe for report scraping
+- Validation:
+  - `pnpm tsx bin/auracall.ts --profile wsl-chrome-3 conversations context get 69f0deaf-7e44-83ea-a5e8-af1a0a27cf3e --target chatgpt --json-only`
+  - `pnpm tsx bin/auracall.ts --profile wsl-chrome-3 conversations artifacts fetch 69f0deaf-7e44-83ea-a5e8-af1a0a27cf3e --target chatgpt`
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts`
+  - `pnpm run typecheck`

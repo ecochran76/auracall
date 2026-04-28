@@ -5536,12 +5536,147 @@ async function ensureChatgptConversationSurfaceReadyForRead(
   throw new Error(`ChatGPT conversation ${conversationId} content not found`);
 }
 
+type ChatgptDeepResearchFrameProbe = {
+  title?: string | null;
+  contentText?: string | null;
+  completed?: boolean;
+  statusLabel?: string | null;
+  exportLabels?: string[];
+  targetId?: string | null;
+  frameUrl?: string | null;
+};
+
+function normalizeChatgptDeepResearchReportText(value: string | null | undefined): string {
+  return normalizeInstructionComparisonText(value)
+    .replace(/\n(?:[0-9]\n){10,}/g, '\n')
+    .replace(/\n\s*citations · searches\s*\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+async function readVisibleChatgptDeepResearchArtifactsFromTargets(
+  conversationId: string,
+  targetContext?: { host: string; port: number; targetId?: string | null },
+  messageIndex?: number,
+): Promise<ConversationArtifact[]> {
+  if (!targetContext?.port) {
+    return [];
+  }
+  const deadline = Date.now() + 15_000;
+  const probes: ChatgptDeepResearchFrameProbe[] = [];
+  while (Date.now() < deadline && probes.length === 0) {
+    const targets = await CDP.List({ host: targetContext.host, port: targetContext.port }).catch(() => []);
+    const candidates = targets.filter((target) => {
+      if (target.type !== 'iframe') return false;
+      const corpus = normalizeUiText(`${target.title ?? ''} ${target.url ?? ''}`).toLowerCase();
+      return corpus.includes('deep_research') || corpus.includes('deep-research') || corpus.includes('deep research');
+    });
+    for (const target of candidates) {
+      const targetId = resolveChatgptTargetId(target);
+      if (!targetId) continue;
+      const frameClient = await connectToChromeTarget({ host: targetContext.host, port: targetContext.port, target: targetId }).catch(() => null);
+      if (!frameClient) continue;
+      try {
+        await frameClient.Runtime.enable();
+        const { result } = await frameClient.Runtime.evaluate({
+          expression: `(() => {
+          const normalize = (value) => String(value || '')
+            .replace(/\\r\\n/g, '\\n')
+            .replace(/\\r/g, '\\n')
+            .replace(/[\\t ]+/g, ' ')
+            .replace(/\\n{3,}/g, '\\n\\n')
+            .trim();
+          const isVisible = (node) => {
+            if (!(node instanceof Element)) return false;
+            const rect = node.getBoundingClientRect();
+            if (rect.width <= 0 || rect.height <= 0) return false;
+            const style = node.ownerDocument.defaultView.getComputedStyle(node);
+            return style.display !== 'none' && style.visibility !== 'hidden';
+          };
+          const readableDocuments = [document];
+          for (const frame of Array.from(document.querySelectorAll('iframe'))) {
+            try {
+              const child = frame.contentDocument || frame.contentWindow?.document || null;
+              if (child) readableDocuments.push(child);
+            } catch {
+              // Cross-origin child frames stay opaque here; Chrome exposes OOPIFs as targets separately.
+            }
+          }
+          const probes = readableDocuments.map((doc) => {
+            const text = normalize(doc.body?.innerText || '');
+            const headings = Array.from(doc.querySelectorAll('h1, h2, [role="heading"]'))
+              .map((node) => normalize(node.textContent || node.getAttribute('aria-label') || ''))
+              .filter(Boolean);
+            const controls = Array.from(doc.querySelectorAll('button, [role="button"], a'))
+              .filter(isVisible)
+              .map((node) => normalize(node.getAttribute('aria-label') || node.textContent || node.getAttribute('title') || ''))
+              .filter(Boolean);
+            const statusMatch = text.match(/Research completed[^\\n.]*/i) || text.match(/Research in progress[^\\n.]*/i);
+            return {
+              title: headings[0] || null,
+              contentText: text,
+              completed: /research completed/i.test(text),
+              statusLabel: statusMatch ? statusMatch[0] : null,
+              exportLabels: controls.filter((label) => /export|pdf|docx|download/i.test(label)).slice(0, 20),
+            };
+          })
+            .filter((probe) => probe.contentText && probe.contentText.length > 200 && /\\b(deep research|research completed|research in progress)\\b/i.test(probe.contentText))
+            .sort((left, right) => right.contentText.length - left.contentText.length);
+          return probes[0] || null;
+        })()`,
+        returnByValue: true,
+        });
+        const probe = result?.value as ChatgptDeepResearchFrameProbe | null | undefined;
+        if (probe?.contentText && normalizeUiText(probe.contentText).length > 0) {
+          probes.push({
+            ...probe,
+            targetId,
+            frameUrl: target.url ?? null,
+          });
+        }
+      } finally {
+        await frameClient.close().catch(() => undefined);
+      }
+    }
+    if (probes.length === 0) {
+      await sleep(500);
+    }
+  }
+  const seen = new Set<string>();
+  return probes
+    .map((probe, index): ConversationArtifact | null => {
+      const contentText = normalizeChatgptDeepResearchReportText(probe.contentText ?? '');
+      if (!contentText || seen.has(contentText)) return null;
+      seen.add(contentText);
+      const rawTitle = normalizeUiText(probe.title ?? undefined) || 'ChatGPT Deep Research report';
+      return {
+        id: `deep-research:${conversationId}:${index}`,
+        title: rawTitle,
+        kind: 'document',
+        uri: `chatgpt://conversation/${conversationId}/deep-research/${index}`,
+        messageIndex,
+        metadata: {
+          artifactKind: 'deep-research-report',
+          contentText,
+          textLength: contentText.length,
+          completed: Boolean(probe.completed),
+          statusLabel: probe.statusLabel ?? null,
+          exportLabels: probe.exportLabels ?? [],
+          iframeTargetId: probe.targetId ?? null,
+          iframeUrl: probe.frameUrl ?? null,
+        },
+      };
+    })
+    .filter((artifact): artifact is ConversationArtifact => artifact !== null);
+}
+
 async function readChatgptConversationContextWithClient(
   client: ChromeClient,
   conversationId: string,
   projectId?: string | null,
   debugContext?: ChatgptRecoveryDebugContext,
   options?: BrowserProviderListOptions,
+  targetContext?: { host: string; port: number; targetId?: string | null },
 ): Promise<ConversationContext> {
   return withChatgptBlockingSurfaceRecovery(client, `readChatgptConversationContext:${conversationId}`, async () => {
     await ensureChatgptConversationSurfaceReadyForRead(client, conversationId, projectId, options);
@@ -5627,7 +5762,20 @@ async function readChatgptConversationContextWithClient(
     if (!payload) {
       payload = await readChatgptConversationPayloadWithClient(client, conversationId, projectId, options).catch(() => null);
     }
+    const deepResearchArtifacts = await readVisibleChatgptDeepResearchArtifactsFromTargets(
+      conversationId,
+      targetContext,
+      messages.length,
+    );
     const normalizedMessages = messages.map(({ role, text }) => ({ role, text }));
+    for (const artifact of deepResearchArtifacts) {
+      const contentText = typeof artifact.metadata?.contentText === 'string' ? artifact.metadata.contentText.trim() : '';
+      if (!contentText) continue;
+      const alreadyPresent = normalizedMessages.some((message) => message.role === 'assistant' && message.text.includes(contentText.slice(0, 120)));
+      if (!alreadyPresent) {
+        normalizedMessages.push({ role: 'assistant', text: contentText });
+      }
+    }
     const messageIndexById = new Map<string, number>();
     messages.forEach((message, index) => {
       const id = normalizeUiText(message.messageId);
@@ -5643,7 +5791,10 @@ async function readChatgptConversationContextWithClient(
     );
     const canvasProbes = await readVisibleChatgptCanvasProbesWithClient(client);
     const artifacts = mergeChatgptCanvasArtifactContent(
-      mergeChatgptConversationArtifacts(payloadArtifacts, domDownloadArtifacts),
+      mergeChatgptConversationArtifacts(
+        mergeChatgptConversationArtifacts(payloadArtifacts, domDownloadArtifacts),
+        deepResearchArtifacts,
+      ),
       canvasProbes,
     );
     return {
@@ -6543,6 +6694,33 @@ async function materializeChatgptConversationArtifactWithClient(
           },
         };
       }
+      if (artifact.kind === 'document' && typeof artifact.metadata?.contentText === 'string') {
+        const contentText = normalizeInstructionComparisonText(artifact.metadata.contentText);
+        if (!contentText) {
+          return null;
+        }
+        const fileName = ensureChatgptArtifactExtension(artifact.title, '.md');
+        const destPath = path.join(destDir, fileName);
+        await fs.writeFile(destPath, contentText.endsWith('\n') ? contentText : `${contentText}\n`, 'utf8');
+        const stat = await fs.stat(destPath);
+        return {
+          id: artifact.id,
+          name: fileName,
+          provider: 'chatgpt',
+          source: 'conversation',
+          size: stat.size,
+          mimeType: 'text/markdown',
+          remoteUrl: artifact.uri,
+          localPath: destPath,
+          metadata: {
+            artifactKind: artifact.kind,
+            artifactTitle: artifact.title,
+            materialization: 'document-content-text',
+            ...(artifact.metadata ?? {}),
+            contentText: undefined,
+          },
+        };
+      }
       if (
         artifact.kind === 'download' ||
         (artifact.kind === 'spreadsheet' &&
@@ -6830,7 +7008,7 @@ export function createChatgptAdapter(): Pick<
         conversationId,
         projectId: normalizedProjectId ?? null,
       });
-      const { client } = await connectToChatgptTab(
+      const { client, targetId, host, port } = await connectToChatgptTab(
         options,
         resolveChatgptConversationUrl(conversationId, normalizedProjectId),
       );
@@ -6842,6 +7020,7 @@ export function createChatgptAdapter(): Pick<
           normalizedProjectId,
           debugContext,
           options,
+          { host, port, targetId: targetId ?? null },
         );
       } finally {
         await client.close().catch(() => undefined);
@@ -6864,7 +7043,7 @@ export function createChatgptAdapter(): Pick<
         projectId: normalizedProjectId ?? null,
         tabTargetId: options.tabTargetId,
       });
-      const { client, targetId } = await connectToChatgptTab(
+      const { client, targetId, host, port } = await connectToChatgptTab(
         options,
         options.tabUrl ?? resolveChatgptConversationUrl(normalizedConversationId, normalizedProjectId),
       );
@@ -6881,6 +7060,7 @@ export function createChatgptAdapter(): Pick<
           normalizedProjectId,
           debugContext,
           { ...options, preserveActiveTab: true },
+          { host, port, targetId: targetId ?? null },
         );
         return context.artifacts ?? [];
       } finally {

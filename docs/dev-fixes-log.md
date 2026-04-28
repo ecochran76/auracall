@@ -14878,3 +14878,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   actually Pro, and Pro+depth runs must use model-picker selection instead of
   `--browser-model-strategy ignore`; otherwise a smoke can silently run
   Thinking Standard/Extended while claiming Pro.
+- 2026-04-28: Completed ChatGPT Deep Research reports are not exposed through
+  normal assistant-turn DOM or the conversation payload. The visible report
+  lives in the `connector_openai_deep_research.web-sandbox.oaiusercontent.com`
+  iframe, sometimes with a same-origin nested document, so context/artifact
+  reads must inspect the iframe target and scrape visible `innerText` only.
+  Avoid falling back to hidden `textContent`; it can capture provider template
+  strings and inflate the materialized Markdown artifact.

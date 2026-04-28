@@ -207,6 +207,10 @@
       including the review stage and screenshot path when capture succeeds.
     - CLI parity for the same durable status envelope:
       `pnpm tsx bin/auracall.ts run status <response_id> --json`
+    - completed ChatGPT Deep Research report retrieval:
+      `pnpm tsx bin/auracall.ts --profile wsl-chrome-3 conversations artifacts fetch <conversation_id> --target chatgpt`
+      should return a `document` artifact materialized from the Deep Research
+      iframe's visible report text.
   - create a shared-contract CLI media request:
     - `pnpm tsx bin/auracall.ts media generate --provider chatgpt --type image -p "Generate an image of an asphalt secret agent" --json`
     - `pnpm tsx bin/auracall.ts media generate --provider gemini --type image -p "Generate an image of an asphalt secret agent" --json`
