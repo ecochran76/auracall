@@ -23099,3 +23099,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     coverage for response and media status readback
 - Validation:
   - `git diff --check`
+
+## 2026-04-28 - Installed MCP polling-contract smoke
+
+- Focus: dogfood the installed MCP polling contract after documenting it,
+  without creating new provider/browser work.
+- Progress:
+  - started `/home/ecochran76/.local/bin/auracall-mcp` through a fresh MCP SDK
+    stdio client
+  - `listTools` returned 9 tools and confirmed the documented polling surfaces:
+    `response_create`, `run_status`, `media_generation`, and
+    `media_generation_status`
+  - called only status tools: MCP `run_status` for
+    `resp_646a95d812a345f5a24e11a7318d93d0`,
+    `resp_dd3e4048248e4090a5354655be8ac36f`, and
+    `medgen_fde3e1e604f24a95a2162e6ed1a58c59`; MCP
+    `media_generation_status` for
+    `medgen_fde3e1e604f24a95a2162e6ed1a58c59`
+- Validation:
+  - both response ids read back as `completed`; the Deep Research response
+    retained `chatgptDeepResearchStage = plan-edit-opened`, and the ordinary
+    ChatGPT response retained no Deep Research stage
+  - media-specific and generic media status both read
+    `medgen_fde3e1e604f24a95a2162e6ed1a58c59` as `succeeded` with
+    `artifactCount = 5`, `lastEvent = artifact_materialized`, and full-quality
+    artifact `grok_imagine_full_quality_1`
+  - no MCP create tool was called in the smoke
