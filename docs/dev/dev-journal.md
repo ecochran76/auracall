@@ -23339,3 +23339,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `~/.local/bin/auracall "Smoke from user runtime" --dry-run` passed
   - `pnpm run docs:list` passed with the existing missing-front-matter
     inventory
+
+## 2026-04-28 - GitHub release cut
+
+- Focus: cut AuraCall `v0.1.0` through the active GitHub/tarball release path.
+- Progress:
+  - confirmed GitHub CLI auth is active for `ecochran76`
+  - marked `CHANGELOG.md` `0.1.0` as released on `2026-04-28` before tagging

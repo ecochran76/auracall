@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 — Unreleased
+## 0.1.0 — 2026-04-28
 
 AuraCall starts a new package/version line at `0.1.0`. Older entries below are
 retained as upstream Oracle history and fork provenance, not as AuraCall release
