@@ -804,6 +804,12 @@ describe('configured stored-step executor', () => {
         bundle: {
           run: {
             id: 'teamrun_chatgpt_obs_1',
+            initialInputs: {
+              auracall: {
+                composerTool: 'deep-research',
+                deepResearchPlanAction: 'edit',
+              },
+            },
           },
         },
       } as never,
@@ -827,6 +833,8 @@ describe('configured stored-step executor', () => {
         config: expect.objectContaining({
           manualLogin: true,
           manualLoginWaitForSession: false,
+          composerTool: 'deep-research',
+          deepResearchPlanAction: 'edit',
         }),
       }),
     );

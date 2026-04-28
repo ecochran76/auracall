@@ -38,6 +38,8 @@ export const ExecutionRequestExtensionHintsSchema: z.ZodType<ExecutionRequestExt
   service: z.string().nullable().optional(),
   transport: ExecutionTransportSchema.nullable().optional(),
   outputContract: z.string().nullable().optional(),
+  composerTool: z.string().nullable().optional(),
+  deepResearchPlanAction: z.enum(['start', 'edit']).nullable().optional(),
 });
 
 export const ExecutionRequestInputMessageSchema: z.ZodType<ExecutionRequestInputMessage> = z.object({

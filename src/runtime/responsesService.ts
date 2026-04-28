@@ -354,12 +354,22 @@ function normalizeAuracallFromRecord(input: unknown): NonNullable<ExecutionReque
   const outputContract = normalizeNullableString(input.outputContract);
   if (outputContract !== null) next.outputContract = outputContract;
 
+  const composerTool = normalizeNullableString(input.composerTool);
+  if (composerTool !== null) next.composerTool = composerTool;
+
+  const deepResearchPlanAction = normalizeDeepResearchPlanAction(input.deepResearchPlanAction);
+  if (deepResearchPlanAction !== null) next.deepResearchPlanAction = deepResearchPlanAction;
+
   return next;
 }
 
 function normalizeExecutionTransport(value: unknown): ExecutionTransport | null {
   if (value === 'api' || value === 'browser' || value === 'auto') return value;
   return null;
+}
+
+function normalizeDeepResearchPlanAction(value: unknown): 'start' | 'edit' | null {
+  return value === 'start' || value === 'edit' ? value : null;
 }
 
 function normalizeNullableString(value: unknown): string | null {

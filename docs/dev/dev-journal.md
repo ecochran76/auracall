@@ -22923,3 +22923,33 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/runtime.api.test.ts tests/http.responsesServer.test.ts tests/mcp.runStatus.test.ts tests/cli.runStatusCommand.test.ts --maxWorkers 1`
   - `pnpm run check`
   - `git diff --check`
+
+## 2026-04-28 - Direct response Deep Research tool hints
+
+- Focus: make the live Deep Research status dogfood possible through the
+  response/run-status surface, not a session-only CLI path.
+- Progress:
+  - extended `/v1/responses` AuraCall hints with `composerTool` and
+    `deepResearchPlanAction`
+  - configured stored-step execution now forwards those hints into browser mode
+    ahead of runtime-profile defaults
+  - documented the browser-backed ChatGPT Deep Research `edit` response smoke
+- Validation:
+  - `pnpm vitest run tests/runtime.api.test.ts tests/runtime.configuredExecutor.test.ts tests/http.responsesServer.test.ts tests/mcp.runStatus.test.ts tests/cli.runStatusCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed-runtime local API live dogfood:
+    `/home/ecochran76/.local/bin/auracall --profile wsl-chrome-3 api serve --host 127.0.0.1 --port 0 --no-recover-runs-on-start`
+  - submitted one `POST /v1/responses` request with
+    `auracall.composerTool = deep-research` and
+    `auracall.deepResearchPlanAction = edit`; response id
+    `resp_d8c83f501d0d45409266434c709d3e56`
+  - `GET /v1/runs/resp_d8c83f501d0d45409266434c709d3e56/status`,
+    `GET /v1/responses/resp_d8c83f501d0d45409266434c709d3e56`, and
+    `/home/ecochran76/.local/bin/auracall run status resp_d8c83f501d0d45409266434c709d3e56 --json`
+    all reported `status = completed`,
+    `chatgptDeepResearchStage = plan-edit-opened`,
+    `chatgptDeepResearchPlanAction = edit`, label `Update`,
+    `editTargetKind = iframe-coordinate`, and screenshot path
+    `~/.auracall/diagnostics/chatgpt-deep-research/2026-04-28T15-01-32-573Z-plan-edit-opened.png`

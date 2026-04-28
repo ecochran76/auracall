@@ -19,6 +19,8 @@ describe('runtime api model', () => {
         runtimeProfile: 'default',
         agent: 'analyst',
         transport: 'browser',
+        composerTool: 'deep-research',
+        deepResearchPlanAction: 'edit',
       },
     });
 
@@ -30,6 +32,8 @@ describe('runtime api model', () => {
         runtimeProfile: 'default',
         agent: 'analyst',
         transport: 'browser',
+        composerTool: 'deep-research',
+        deepResearchPlanAction: 'edit',
       },
     });
   });

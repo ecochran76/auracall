@@ -41,6 +41,10 @@ function asBoolean(value: unknown): boolean | null {
   return typeof value === 'boolean' ? value : null;
 }
 
+function asDeepResearchPlanAction(value: unknown): 'start' | 'edit' | null {
+  return value === 'start' || value === 'edit' ? value : null;
+}
+
 function readRuntimeServiceConfig(
   runtimeProfile: MutableRecord | null,
   service: 'chatgpt' | 'gemini' | 'grok',
@@ -252,10 +256,32 @@ export function createConfiguredStoredStepExecutor(
     const browserConfigRecord = isRecord(configRecord.browser) ? configRecord.browser : null;
     const runtimeBrowserConfig = runtimeProfile && isRecord(runtimeProfile.browser) ? runtimeProfile.browser : null;
     const browserProfileConfig = readBrowserProfileConfig(runtimeSelection.browserProfile);
+    const runInitialInputs = isRecord(context.record.bundle.run.initialInputs)
+      ? context.record.bundle.run.initialInputs
+      : null;
+    const requestAuracall = isRecord(runInitialInputs?.auracall)
+      ? runInitialInputs.auracall
+      : null;
 
     const desiredModel =
       asNonEmptyString(runtimeServiceConfig?.model) ??
       asNonEmptyString(globalServiceConfig?.model) ??
+      null;
+    const composerTool =
+      asNonEmptyString(requestAuracall?.composerTool) ??
+      asNonEmptyString(runtimeServiceConfig?.composerTool) ??
+      asNonEmptyString(globalServiceConfig?.composerTool) ??
+      asNonEmptyString(runtimeBrowserConfig?.composerTool) ??
+      asNonEmptyString(browserProfileConfig?.composerTool) ??
+      asNonEmptyString(browserConfigRecord?.composerTool) ??
+      null;
+    const deepResearchPlanAction =
+      asDeepResearchPlanAction(requestAuracall?.deepResearchPlanAction) ??
+      asDeepResearchPlanAction(runtimeServiceConfig?.deepResearchPlanAction) ??
+      asDeepResearchPlanAction(globalServiceConfig?.deepResearchPlanAction) ??
+      asDeepResearchPlanAction(runtimeBrowserConfig?.deepResearchPlanAction) ??
+      asDeepResearchPlanAction(browserProfileConfig?.deepResearchPlanAction) ??
+      asDeepResearchPlanAction(browserConfigRecord?.deepResearchPlanAction) ??
       null;
     const targetUrl =
       asNonEmptyString(runtimeServiceConfig?.url) ??
@@ -345,6 +371,8 @@ export function createConfiguredStoredStepExecutor(
           asNonEmptyString(browserConfigRecord?.managedProfileRoot),
         allowCookieErrors: true,
         manualLoginWaitForSession: false,
+        composerTool,
+        deepResearchPlanAction: deepResearchPlanAction ?? undefined,
       },
       log: (() => undefined) as typeof console.log,
       verbose: false,

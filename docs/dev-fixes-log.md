@@ -14864,3 +14864,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   regression coverage should seed the stored browser step output and read it
   through the real CLI/API/MCP status services. Mocking the final status
   envelope only proves formatting, not the durable projection path.
+- 2026-04-28: Direct `/v1/responses` browser runs need per-request workbench
+  tool hints, not only runtime-profile defaults. `auracall.composerTool` and
+  `auracall.deepResearchPlanAction` now flow through stored-step execution so
+  API callers can request ChatGPT Deep Research `edit` and poll the same run.

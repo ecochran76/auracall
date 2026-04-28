@@ -196,6 +196,8 @@
         - `resumedStepId`
   - create bounded response:
     - `curl -s http://127.0.0.1:8080/v1/responses -H 'Content-Type: application/json' -d '{"model":"gpt-5.2","input":"Reply exactly with: local api smoke"}'`
+    - browser-backed ChatGPT tool smoke:
+      `curl -s http://127.0.0.1:8080/v1/responses -H 'Content-Type: application/json' -d '{"model":"gpt-5.2-thinking","input":"Use Deep Research to prepare a tiny smoke-test plan.","auracall":{"runtimeProfile":"wsl-chrome-3","service":"chatgpt","transport":"browser","composerTool":"deep-research","deepResearchPlanAction":"edit"}}'`
   - read it back:
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/responses/<response_id>`
     - for compact operator status, run

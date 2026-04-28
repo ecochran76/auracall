@@ -202,6 +202,10 @@ Terminology note:
     - poll `GET /v1/responses/{response_id}` for terminal readback
     - direct browser-backed runs now use the same configured stored-step
       executor path as normal Aura-Call runtime execution
+    - direct browser-backed ChatGPT runs can request volatile workbench tools
+      per call with `auracall.composerTool` and
+      `auracall.deepResearchPlanAction`, for example Deep Research `edit`
+      review-state runs that can then be polled through generic run status
   - `POST /v1/media-generations` accepts the shared media-generation contract
     for `provider = chatgpt|gemini|grok`, `mediaType = image|music|video`, prompt,
     optional `model`, `transport`, `count`, `size`, `aspectRatio`, and

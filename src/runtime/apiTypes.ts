@@ -24,6 +24,8 @@ export interface ExecutionRequestExtensionHints {
   service?: string | null;
   transport?: ExecutionTransport | null;
   outputContract?: string | null;
+  composerTool?: string | null;
+  deepResearchPlanAction?: 'start' | 'edit' | null;
 }
 
 export interface ExecutionRequestInputMessage {
