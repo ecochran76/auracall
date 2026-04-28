@@ -70,6 +70,30 @@ function normalizeProviderIdentity(identity: unknown, source: 'profile' | 'confi
   if (typeof identity.handle === 'string' && identity.handle.trim()) normalized.handle = identity.handle.trim();
   if (typeof identity.email === 'string' && identity.email.trim()) normalized.email = identity.email.trim();
   if (typeof identity.id === 'string' && identity.id.trim()) normalized.id = identity.id.trim();
+  if (typeof identity.accountId === 'string' && identity.accountId.trim()) {
+    normalized.accountId = identity.accountId.trim();
+  }
+  if (typeof identity.accountLevel === 'string' && identity.accountLevel.trim()) {
+    normalized.accountLevel = identity.accountLevel.trim();
+  }
+  if (typeof identity.accountPlanType === 'string' && identity.accountPlanType.trim()) {
+    normalized.accountPlanType = identity.accountPlanType.trim();
+  }
+  if (typeof identity.accountStructure === 'string' && identity.accountStructure.trim()) {
+    normalized.accountStructure = identity.accountStructure.trim();
+  }
+  if (typeof identity.organizationId === 'string' && identity.organizationId.trim()) {
+    normalized.organizationId = identity.organizationId.trim();
+  }
+  if (typeof identity.capabilityProfile === 'string' && identity.capabilityProfile.trim()) {
+    normalized.capabilityProfile = identity.capabilityProfile.trim();
+  }
+  if (typeof identity.proAccess === 'string' && identity.proAccess.trim()) {
+    normalized.proAccess = identity.proAccess.trim();
+  }
+  if (typeof identity.deepResearchAccess === 'string' && identity.deepResearchAccess.trim()) {
+    normalized.deepResearchAccess = identity.deepResearchAccess.trim();
+  }
   return Object.keys(normalized).some((key) => key !== 'source') ? normalized : null;
 }
 
@@ -242,6 +266,8 @@ export function formatProfileIdentitySmokeReport(report: ProfileIdentitySmokeRep
     report.expected.serviceAccountId ??
     '(missing expected identity)';
   const actual = describeProviderIdentity(report.actualIdentity) ?? '(identity not detected)';
+  const expectedAccountLevel = report.expected.identity?.accountLevel ?? null;
+  const actualAccountLevel = report.actualIdentity?.accountLevel ?? null;
   const status = report.preflight.ok ? 'PASS' : `FAIL ${report.preflight.reason ?? 'unknown'}`;
   const negative =
     report.negative.requested
@@ -253,6 +279,9 @@ export function formatProfileIdentitySmokeReport(report: ProfileIdentitySmokeRep
     `Target: ${report.target}`,
     `Expected: ${expected}`,
     `Actual: ${actual}`,
+    expectedAccountLevel || actualAccountLevel
+      ? `Account level: expected ${expectedAccountLevel ?? '(not configured)'}; actual ${actualAccountLevel ?? '(not detected)'}`
+      : '',
     `Browser launched: ${report.launchedBrowser ? 'yes' : 'no'}`,
     negative.trim(),
   ]
@@ -271,8 +300,14 @@ export function formatProfileIdentitySmokeBatchReport(report: ProfileIdentitySmo
         single.expected.serviceAccountId ??
         '(missing expected identity)';
       const actual = describeProviderIdentity(single.actualIdentity) ?? '(identity not detected)';
+      const expectedAccountLevel = single.expected.identity?.accountLevel ?? null;
+      const actualAccountLevel = single.actualIdentity?.accountLevel ?? null;
+      const accountLevel =
+        expectedAccountLevel || actualAccountLevel
+          ? `; account level expected ${expectedAccountLevel ?? '(not configured)'}, actual ${actualAccountLevel ?? '(not detected)'}`
+          : '';
       const status = single.preflight.ok && single.negative.ok ? 'PASS' : `FAIL ${single.preflight.reason ?? 'unknown'}`;
-      return `- ${single.target}: ${status}; expected ${expected}; actual ${actual}; launched ${
+      return `- ${single.target}: ${status}; expected ${expected}; actual ${actual}${accountLevel}; launched ${
         single.launchedBrowser ? 'yes' : 'no'
       }`;
     })

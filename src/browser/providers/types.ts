@@ -55,6 +55,14 @@ export interface ProviderUserIdentity {
   name?: string;
   handle?: string;
   email?: string;
+  accountId?: string;
+  accountLevel?: string;
+  accountPlanType?: string;
+  accountStructure?: string;
+  organizationId?: string;
+  capabilityProfile?: string;
+  proAccess?: string;
+  deepResearchAccess?: string;
   source?: string;
 }
 

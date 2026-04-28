@@ -44,6 +44,14 @@ export const ServiceIdentitySchema = z.object({
   name: z.string().optional(),
   handle: z.string().optional(),
   email: z.string().optional(),
+  accountId: z.string().optional(),
+  accountLevel: z.string().optional(),
+  accountPlanType: z.string().optional(),
+  accountStructure: z.string().optional(),
+  organizationId: z.string().optional(),
+  capabilityProfile: z.string().optional(),
+  proAccess: z.string().optional(),
+  deepResearchAccess: z.string().optional(),
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.

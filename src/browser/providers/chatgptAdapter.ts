@@ -357,6 +357,10 @@ type ChatgptAuthSessionProbe = {
     id?: string | null;
     name?: string | null;
     email?: string | null;
+    planType?: string | null;
+    structure?: string | null;
+    organizationId?: string | null;
+    isDelinquent?: boolean | null;
   } | null;
 };
 
@@ -1330,15 +1334,61 @@ export function normalizeChatgptAuthSessionIdentity(
   const id = normalize(user?.id) ?? normalize(account?.id);
   const email = normalize(user?.email) ?? normalize(account?.email);
   const name = normalize(user?.name) ?? normalize(account?.name);
-  if (!id && !email && !name) {
+  const accountId = normalize(account?.id);
+  const accountPlanType = normalize(account?.planType);
+  const accountStructure = normalize(account?.structure);
+  const organizationId = normalize(account?.organizationId);
+  const accountLevel = resolveChatgptAccountLevel(accountPlanType, accountStructure);
+  const capabilityProfile = resolveChatgptCapabilityProfile(accountLevel);
+  if (!id && !email && !name && !accountId && !accountLevel && !accountPlanType && !accountStructure) {
     return null;
   }
   return {
     id,
     email,
     name,
+    accountId,
+    accountLevel,
+    accountPlanType,
+    accountStructure,
+    organizationId,
+    capabilityProfile,
+    proAccess:
+      capabilityProfile === 'chatgpt-pro-unlimited'
+        ? 'unlimited-standard-extended'
+        : capabilityProfile === 'chatgpt-business-restricted'
+          ? 'restricted'
+          : undefined,
+    deepResearchAccess:
+      capabilityProfile === 'chatgpt-pro-unlimited'
+        ? 'unlimited'
+        : capabilityProfile === 'chatgpt-business-restricted'
+          ? 'restricted'
+          : undefined,
     source: 'auth-session',
   };
+}
+
+function resolveChatgptAccountLevel(planType: string | undefined, structure: string | undefined): string | undefined {
+  const plan = planType?.trim().toLowerCase();
+  const accountStructure = structure?.trim().toLowerCase();
+  if (plan === 'pro') return 'Pro';
+  if (plan === 'team' || accountStructure === 'workspace') return 'Business';
+  if (plan === 'plus') return 'Plus';
+  if (plan === 'free') return 'Free';
+  if (!plan) return undefined;
+  return plan
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function resolveChatgptCapabilityProfile(accountLevel: string | undefined): string | undefined {
+  const normalized = accountLevel?.trim().toLowerCase();
+  if (normalized === 'pro') return 'chatgpt-pro-unlimited';
+  if (normalized === 'business') return 'chatgpt-business-restricted';
+  return undefined;
 }
 
 export function extractChatgptProjectSourceName(
@@ -2759,6 +2809,10 @@ function buildChatgptAuthSessionIdentityExpression(): string {
               id: typeof data.account.id === 'string' ? data.account.id : null,
               name: typeof data.account.name === 'string' ? data.account.name : null,
               email: typeof data.account.email === 'string' ? data.account.email : null,
+              planType: typeof data.account.planType === 'string' ? data.account.planType : null,
+              structure: typeof data.account.structure === 'string' ? data.account.structure : null,
+              organizationId: typeof data.account.organizationId === 'string' ? data.account.organizationId : null,
+              isDelinquent: typeof data.account.isDelinquent === 'boolean' ? data.account.isDelinquent : null,
             }
           : null,
       };

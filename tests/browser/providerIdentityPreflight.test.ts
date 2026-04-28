@@ -41,5 +41,23 @@ describe('provider identity preflight', () => {
       expectedServiceAccountId: 'service-account:chatgpt:consult@polymerconsultinggroup.com',
     })).toThrow(/chatgpt_identity_mismatch/);
   });
-});
 
+  test('checks configured account level when provided', () => {
+    expect(checkProviderIdentityPreflight({
+      providerId: 'chatgpt',
+      actualIdentity: { email: 'operator@example.com', accountLevel: 'Pro', source: 'auth-session' },
+      expectedIdentity: { email: 'operator@example.com', accountLevel: 'Pro', source: 'profile' },
+      expectedServiceAccountId: 'service-account:chatgpt:operator@example.com',
+    })).toMatchObject({ ok: true, reason: null });
+
+    expect(checkProviderIdentityPreflight({
+      providerId: 'chatgpt',
+      actualIdentity: { email: 'operator@example.com', accountLevel: 'Business', source: 'auth-session' },
+      expectedIdentity: { email: 'operator@example.com', accountLevel: 'Pro', source: 'profile' },
+      expectedServiceAccountId: 'service-account:chatgpt:operator@example.com',
+    })).toMatchObject({
+      ok: false,
+      reason: 'chatgpt_identity_mismatch',
+    });
+  });
+});

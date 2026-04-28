@@ -14788,3 +14788,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   profile and pointing the new browser profile's cookie/bootstrap paths at its
   own managed cookie store produced a clean first-run profile for
   `eric.cochran@soylei.com`.
+- 2026-04-27: ChatGPT account identity should include account tier, not only
+  user email. The live auth-session surface exposes `account.planType` and
+  `account.structure`; AuraCall maps `team/workspace` to Business and
+  `pro/personal` to Pro, then compares configured account-level expectations
+  during identity preflight so restricted Business lanes cannot be mistaken for
+  Pro-capable managed browser profiles.

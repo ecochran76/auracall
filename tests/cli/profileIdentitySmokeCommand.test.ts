@@ -55,6 +55,69 @@ describe('profile identity smoke CLI helpers', () => {
     });
   });
 
+  it('preserves configured account-level identity details', () => {
+    const config = {
+      activeProfile: 'default',
+      profiles: {
+        default: {
+          services: {
+            chatgpt: {
+              identity: {
+                email: 'profile@example.com',
+                accountLevel: 'Pro',
+                accountPlanType: 'pro',
+                accountStructure: 'personal',
+                capabilityProfile: 'chatgpt-pro-unlimited',
+                proAccess: 'unlimited-standard-extended',
+                deepResearchAccess: 'unlimited',
+              },
+            },
+          },
+        },
+      },
+    };
+
+    expect(
+      resolveConfiguredProviderIdentity(config, {
+        providerId: 'chatgpt',
+        runtimeProfileId: 'default',
+      }).identity,
+    ).toMatchObject({
+      email: 'profile@example.com',
+      accountLevel: 'Pro',
+      accountPlanType: 'pro',
+      accountStructure: 'personal',
+      capabilityProfile: 'chatgpt-pro-unlimited',
+      proAccess: 'unlimited-standard-extended',
+      deepResearchAccess: 'unlimited',
+      source: 'profile',
+    });
+  });
+
+  it('formats account-level identity details when available', () => {
+    const report = buildProfileIdentitySmokeReport({
+      config: {
+        activeProfile: 'default',
+        profiles: {
+          default: {
+            services: {
+              chatgpt: {
+                identity: { email: 'operator@example.com', accountLevel: 'Pro' },
+              },
+            },
+          },
+        },
+      },
+      target: 'chatgpt',
+      runtimeProfileId: 'default',
+      actualIdentity: { email: 'operator@example.com', accountLevel: 'Pro', source: 'auth-session' },
+      identityStatus: { attempted: true },
+      localReport: {},
+    });
+
+    expect(formatProfileIdentitySmokeReport(report)).toContain('Account level: expected Pro; actual Pro');
+  });
+
   it('resolves all-bound targets from configured provider identities', () => {
     const config = {
       activeProfile: 'work',

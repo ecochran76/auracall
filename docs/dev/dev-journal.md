@@ -22700,3 +22700,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `/home/ecochran76/.local/bin/auracall --profile wsl-chrome-2 profile identity-smoke --target chatgpt --include-negative --json`
   - `/home/ecochran76/.local/bin/auracall --profile wsl-chrome-3 config show --json`
   - `/home/ecochran76/.local/bin/auracall --profile wsl-chrome-3 profile identity-smoke --target chatgpt --include-negative --prune-browser-state --no-launch-if-needed --json`
+
+## 2026-04-27 - ChatGPT account-level identity detection
+
+- Focus: include ChatGPT account tier in provider identity checks so default
+  Business and Pro managed browser profiles cannot be silently interchanged.
+- Progress:
+  - extended provider identity metadata with account id, account level,
+    plan type, account structure, organization id, and compact capability
+    profile hints
+  - mapped ChatGPT auth-session `account.planType=team` /
+    `structure=workspace` to `Business` with restricted Pro/Deep Research
+    hints
+  - mapped ChatGPT auth-session `account.planType=pro` /
+    `structure=personal` to `Pro` with unlimited standard/extended Pro and
+    Deep Research hints
+  - taught identity preflight to compare configured account level/plan/structure
+    when those expectations are present
+  - bound local ChatGPT runtime profiles to expected account levels:
+    `default=Business`, `wsl-chrome-2=Pro`, `wsl-chrome-3=Pro`
+- Validation:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/providerIdentityPreflight.test.ts tests/cli/profileIdentitySmokeCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run install:user-runtime`
+  - `/home/ecochran76/.local/bin/auracall --profile default profile identity-smoke --target chatgpt --include-negative --prune-browser-state --json`
+    - passed with `ecochran76@gmail.com`, `accountLevel = Business`,
+      `accountPlanType = team`
+  - `/home/ecochran76/.local/bin/auracall --profile wsl-chrome-2 profile identity-smoke --target chatgpt --include-negative --prune-browser-state --json`
+    - passed with `consult@polymerconsultinggroup.com`,
+      `accountLevel = Pro`, `accountPlanType = pro`
+  - `/home/ecochran76/.local/bin/auracall --profile wsl-chrome-3 profile identity-smoke --target chatgpt --include-negative --prune-browser-state --json`
+    - passed with `eric.cochran@soylei.com`, `accountLevel = Pro`,
+      `accountPlanType = pro`

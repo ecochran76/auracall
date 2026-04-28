@@ -30,6 +30,30 @@ export function normalizeExpectedProviderIdentity(
   if (normalizeStringOrNull(identity.email)) normalized.email = normalizeStringOrNull(identity.email) ?? undefined;
   if (normalizeIdentityComparable(identity.handle)) normalized.handle = identity.handle?.trim();
   if (normalizeStringOrNull(identity.name)) normalized.name = normalizeStringOrNull(identity.name) ?? undefined;
+  if (normalizeStringOrNull(identity.accountId)) {
+    normalized.accountId = normalizeStringOrNull(identity.accountId) ?? undefined;
+  }
+  if (normalizeStringOrNull(identity.accountLevel)) {
+    normalized.accountLevel = normalizeStringOrNull(identity.accountLevel) ?? undefined;
+  }
+  if (normalizeStringOrNull(identity.accountPlanType)) {
+    normalized.accountPlanType = normalizeStringOrNull(identity.accountPlanType) ?? undefined;
+  }
+  if (normalizeStringOrNull(identity.accountStructure)) {
+    normalized.accountStructure = normalizeStringOrNull(identity.accountStructure) ?? undefined;
+  }
+  if (normalizeStringOrNull(identity.organizationId)) {
+    normalized.organizationId = normalizeStringOrNull(identity.organizationId) ?? undefined;
+  }
+  if (normalizeStringOrNull(identity.capabilityProfile)) {
+    normalized.capabilityProfile = normalizeStringOrNull(identity.capabilityProfile) ?? undefined;
+  }
+  if (normalizeStringOrNull(identity.proAccess)) {
+    normalized.proAccess = normalizeStringOrNull(identity.proAccess) ?? undefined;
+  }
+  if (normalizeStringOrNull(identity.deepResearchAccess)) {
+    normalized.deepResearchAccess = normalizeStringOrNull(identity.deepResearchAccess) ?? undefined;
+  }
   if (normalizeStringOrNull(identity.source)) normalized.source = normalizeStringOrNull(identity.source) ?? undefined;
   return Object.keys(normalized).length > 0 ? normalized : null;
 }
@@ -48,14 +72,24 @@ function normalizeIdentityComparable(value: unknown): string | null {
 
 function identitiesMatch(expected: ProviderUserIdentity, actual: ProviderUserIdentity): boolean {
   const expectedEmail = normalizeIdentityComparable(expected.email);
-  if (expectedEmail && expectedEmail === normalizeIdentityComparable(actual.email)) return true;
+  if (expectedEmail && expectedEmail !== normalizeIdentityComparable(actual.email)) return false;
   const expectedHandle = normalizeIdentityComparable(expected.handle);
-  if (expectedHandle && expectedHandle === normalizeIdentityComparable(actual.handle)) return true;
+  if (expectedHandle && expectedHandle !== normalizeIdentityComparable(actual.handle)) return false;
   const expectedId = normalizeIdentityComparable(expected.id);
-  if (expectedId && expectedId === normalizeIdentityComparable(actual.id)) return true;
+  if (expectedId && expectedId !== normalizeIdentityComparable(actual.id)) return false;
   const expectedName = normalizeIdentityComparable(expected.name);
-  if (expectedName && expectedName === normalizeIdentityComparable(actual.name)) return true;
-  return false;
+  if (expectedName && expectedName !== normalizeIdentityComparable(actual.name)) return false;
+  const expectedAccountLevel = normalizeIdentityComparable(expected.accountLevel);
+  if (expectedAccountLevel && expectedAccountLevel !== normalizeIdentityComparable(actual.accountLevel)) return false;
+  const expectedAccountPlanType = normalizeIdentityComparable(expected.accountPlanType);
+  if (expectedAccountPlanType && expectedAccountPlanType !== normalizeIdentityComparable(actual.accountPlanType)) {
+    return false;
+  }
+  const expectedAccountStructure = normalizeIdentityComparable(expected.accountStructure);
+  if (expectedAccountStructure && expectedAccountStructure !== normalizeIdentityComparable(actual.accountStructure)) {
+    return false;
+  }
+  return Boolean(expectedEmail || expectedHandle || expectedId || expectedName || expectedAccountLevel || expectedAccountPlanType || expectedAccountStructure);
 }
 
 export function describeProviderIdentity(identity: ProviderUserIdentity | null | undefined): string | null {
@@ -143,4 +177,3 @@ export function assertProviderIdentityPreflight(input: {
     `${providerLabel} browser auth preflight failed (${preflight.reason}); expected ${expected}, found ${actual}.`,
   );
 }
-

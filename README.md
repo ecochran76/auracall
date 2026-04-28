@@ -55,6 +55,9 @@ auracall doctor --target grok --json
 # No-prompt account binding smoke for the selected AuraCall runtime profile
 auracall profile identity-smoke --target chatgpt --include-negative --json
 auracall profile identity-smoke --all-bound --include-negative --json
+# ChatGPT identity smoke also reports accountLevel/accountPlanType when the
+# signed-in session exposes them, so Business-vs-Pro profile bindings can fail
+# fast before automation uses the wrong model/tool quota lane.
 
 # Machine-readable live browser feature discovery
 auracall features --target gemini --json
