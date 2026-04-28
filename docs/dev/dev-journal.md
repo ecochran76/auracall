@@ -23176,9 +23176,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     context reads
   - projects the completed visible report as an assistant message plus a
     `document` artifact with inline report text
-  - materializes that document artifact as Markdown through
+  - materializes the report as Markdown, Word, and PDF through
     `conversations artifacts fetch`
   - documented that hidden iframe `textContent` is unsafe for report scraping
+  - added iframe export-menu handling for `Export to Word` and `Export to PDF`
 - Validation:
   - `pnpm tsx bin/auracall.ts --profile wsl-chrome-3 conversations context get 69f0deaf-7e44-83ea-a5e8-af1a0a27cf3e --target chatgpt --json-only`
   - `pnpm tsx bin/auracall.ts --profile wsl-chrome-3 conversations artifacts fetch 69f0deaf-7e44-83ea-a5e8-af1a0a27cf3e --target chatgpt`

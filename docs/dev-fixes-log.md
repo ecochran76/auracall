@@ -14885,3 +14885,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   reads must inspect the iframe target and scrape visible `innerText` only.
   Avoid falling back to hidden `textContent`; it can capture provider template
   strings and inflate the materialized Markdown artifact.
+- 2026-04-28: ChatGPT Deep Research report exports are iframe-local native
+  downloads. The export menu exposes `Export to Word` and `Export to PDF`
+  after clicking the iframe's `Export` control, and those buttons may live in a
+  nested document whose element realm is not the parent target's `HTMLElement`.
+  Use callable `.click()` checks rather than parent-realm `instanceof`, wait
+  for the iframe/nested document to hydrate, and configure download behavior
+  before clicking the export option.

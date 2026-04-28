@@ -280,6 +280,7 @@ const CHATGPT_ARTIFACT_CONTENT_TYPE_EXTENSIONS = resolveBundledServiceArtifactCo
   'image/gif': '.gif',
   'application/zip': '.zip',
   'application/json': '.json',
+  'application/pdf': '.pdf',
   'text/markdown': '.md',
   'text/csv': '.csv',
   'text/tab-separated-values': '.tsv',
@@ -291,6 +292,7 @@ const CHATGPT_ARTIFACT_CONTENT_TYPE_EXTENSIONS = resolveBundledServiceArtifactCo
 const CHATGPT_ARTIFACT_NAME_MIME_TYPES = resolveBundledServiceArtifactNameMimeTypes('chatgpt', {
   '.zip': 'application/zip',
   '.json': 'application/json',
+  '.pdf': 'application/pdf',
   '.md': 'text/markdown',
   '.txt': 'text/plain',
   '.csv': 'text/csv',
@@ -5644,30 +5646,56 @@ async function readVisibleChatgptDeepResearchArtifactsFromTargets(
   }
   const seen = new Set<string>();
   return probes
-    .map((probe, index): ConversationArtifact | null => {
+    .flatMap((probe, index): ConversationArtifact[] => {
       const contentText = normalizeChatgptDeepResearchReportText(probe.contentText ?? '');
-      if (!contentText || seen.has(contentText)) return null;
+      if (!contentText || seen.has(contentText)) return [];
       seen.add(contentText);
       const rawTitle = normalizeUiText(probe.title ?? undefined) || 'ChatGPT Deep Research report';
-      return {
-        id: `deep-research:${conversationId}:${index}`,
+      const baseMetadata = {
+        artifactKind: 'deep-research-report',
+        textLength: contentText.length,
+        completed: Boolean(probe.completed),
+        statusLabel: probe.statusLabel ?? null,
+        exportLabels: probe.exportLabels ?? [],
+        iframeTargetId: probe.targetId ?? null,
+        iframeUrl: probe.frameUrl ?? null,
+      };
+      const baseUri = `chatgpt://conversation/${conversationId}/deep-research/${index}`;
+      return [{
+        id: `deep-research:${conversationId}:${index}:markdown`,
         title: rawTitle,
         kind: 'document',
-        uri: `chatgpt://conversation/${conversationId}/deep-research/${index}`,
+        uri: `${baseUri}/markdown`,
         messageIndex,
         metadata: {
-          artifactKind: 'deep-research-report',
+          ...baseMetadata,
+          exportVariant: 'markdown',
           contentText,
-          textLength: contentText.length,
-          completed: Boolean(probe.completed),
-          statusLabel: probe.statusLabel ?? null,
-          exportLabels: probe.exportLabels ?? [],
-          iframeTargetId: probe.targetId ?? null,
-          iframeUrl: probe.frameUrl ?? null,
         },
-      };
+      }, {
+        id: `deep-research:${conversationId}:${index}:docx`,
+        title: `${rawTitle} (Word)`,
+        kind: 'document',
+        uri: `${baseUri}/docx`,
+        messageIndex,
+        metadata: {
+          ...baseMetadata,
+          exportVariant: 'docx',
+          exportLabel: 'Export to Word',
+        },
+      }, {
+        id: `deep-research:${conversationId}:${index}:pdf`,
+        title: `${rawTitle} (PDF)`,
+        kind: 'document',
+        uri: `${baseUri}/pdf`,
+        messageIndex,
+        metadata: {
+          ...baseMetadata,
+          exportVariant: 'pdf',
+          exportLabel: 'Export to PDF',
+        },
+      }];
     })
-    .filter((artifact): artifact is ConversationArtifact => artifact !== null);
 }
 
 async function readChatgptConversationContextWithClient(
@@ -6646,6 +6674,118 @@ async function waitForChatgptDownloadedFile(
   return null;
 }
 
+async function materializeChatgptDeepResearchExportWithClient(
+  artifact: ConversationArtifact,
+  destDir: string,
+  targetContext?: { host: string; port: number; targetId?: string | null },
+): Promise<FileRef | null> {
+  const exportVariant = typeof artifact.metadata?.exportVariant === 'string' ? artifact.metadata.exportVariant : null;
+  const exportLabel = typeof artifact.metadata?.exportLabel === 'string' ? artifact.metadata.exportLabel : null;
+  if ((exportVariant !== 'docx' && exportVariant !== 'pdf') || !exportLabel || !targetContext?.port) {
+    return null;
+  }
+  const deadline = Date.now() + 15_000;
+  let lastClickFailureLabels = '';
+  while (Date.now() < deadline) {
+    const targets = await CDP.List({ host: targetContext.host, port: targetContext.port }).catch(() => []);
+    const candidates = targets.filter((target) => {
+      if (target.type !== 'iframe') return false;
+      const corpus = normalizeUiText(`${target.title ?? ''} ${target.url ?? ''}`).toLowerCase();
+      return corpus.includes('deep_research') || corpus.includes('deep-research') || corpus.includes('deep research');
+    });
+    if (candidates.length === 0) {
+      await sleep(500);
+      continue;
+    }
+    for (const target of candidates) {
+    const targetId = resolveChatgptTargetId(target);
+    if (!targetId) continue;
+    const frameClient = await connectToChromeTarget({ host: targetContext.host, port: targetContext.port, target: targetId }).catch(() => null);
+    if (!frameClient) continue;
+    try {
+      await frameClient.Runtime.enable();
+      const clicked = await frameClient.Runtime.evaluate({
+        expression: `(async () => {
+          const exportLabel = ${JSON.stringify(exportLabel)};
+          const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+          const isVisible = (node) => {
+            if (!(node instanceof Element)) return false;
+            const rect = node.getBoundingClientRect();
+            if (rect.width <= 0 || rect.height <= 0) return false;
+            const style = node.ownerDocument.defaultView.getComputedStyle(node);
+            return style.display !== 'none' && style.visibility !== 'hidden';
+          };
+          const readableDocuments = () => {
+            const docs = [document];
+            for (const frame of Array.from(document.querySelectorAll('iframe'))) {
+              try {
+                const child = frame.contentDocument || frame.contentWindow?.document || null;
+                if (child) docs.push(child);
+              } catch {
+                // Cross-origin child frames stay opaque here.
+              }
+            }
+            return docs;
+          };
+          const controls = () => readableDocuments()
+            .flatMap((doc) => Array.from(doc.querySelectorAll('button, [role="button"], [role="menuitem"], a')))
+            .filter((node) => readableDocuments().length > 1 || isVisible(node));
+          const labels = () => controls().map((node) => normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('title') || ''));
+          if (!labels().some((label) => label.toLowerCase() === exportLabel.toLowerCase())) {
+            const exportButton = controls().find((node) => /^export$/i.test(normalize(node.textContent || node.getAttribute('aria-label') || '')));
+            if (exportButton && typeof exportButton.click === 'function') {
+              exportButton.click();
+              await new Promise((resolve) => setTimeout(resolve, 500));
+            }
+          }
+          const option = controls().find((node) => normalize(node.textContent || node.getAttribute('aria-label') || '').toLowerCase() === exportLabel.toLowerCase());
+          if (!option || typeof option.click !== 'function') {
+            return { ok: false, labels: labels().slice(0, 20) };
+          }
+          option.click();
+          return { ok: true };
+        })()`,
+        awaitPromise: true,
+        returnByValue: true,
+      });
+      const value = clicked.result?.value;
+      if (isRecord(value) && value.ok === true) {
+        const downloadedPath = await waitForChatgptDownloadedFile(destDir, 30_000);
+        if (!downloadedPath) {
+          throw new Error(`ChatGPT Deep Research ${exportVariant} export did not produce a downloaded file.`);
+        }
+        const stat = await fs.stat(downloadedPath);
+        const name = path.basename(downloadedPath);
+        return {
+          id: artifact.id,
+          name,
+          provider: 'chatgpt',
+          source: 'conversation',
+          size: stat.size,
+          mimeType: inferMimeTypeFromArtifactName(name),
+          remoteUrl: artifact.uri,
+          localPath: downloadedPath,
+          metadata: {
+            artifactKind: artifact.kind,
+            artifactTitle: artifact.title,
+            materialization: `deep-research-export-${exportVariant}`,
+            ...(artifact.metadata ?? {}),
+          },
+        };
+      }
+      lastClickFailureLabels = isRecord(value) && Array.isArray(value.labels) ? value.labels.slice(0, 10).join(', ') : 'n/a';
+    } finally {
+      await frameClient.close().catch(() => undefined);
+    }
+    }
+    await sleep(500);
+  }
+  if (lastClickFailureLabels) {
+    throw new Error(`ChatGPT Deep Research ${exportVariant} export option was not clickable (labels: ${lastClickFailureLabels}).`);
+  }
+  throw new Error(`ChatGPT Deep Research ${exportVariant} export iframe target was not found.`);
+}
+
 async function materializeChatgptConversationArtifactWithClient(
   client: ChromeClient,
   conversationId: string,
@@ -6654,6 +6794,7 @@ async function materializeChatgptConversationArtifactWithClient(
   projectId?: string | null,
   debugContext?: ChatgptRecoveryDebugContext,
   options?: BrowserProviderListOptions,
+  targetContext?: { host: string; port: number; targetId?: string | null },
 ): Promise<FileRef | null> {
   const normalizedProjectId = normalizeChatgptProjectId(projectId);
   return withChatgptBlockingSurfaceRecovery(
@@ -6693,6 +6834,10 @@ async function materializeChatgptConversationArtifactWithClient(
             ...(artifact.metadata ?? {}),
           },
         };
+      }
+      if (artifact.kind === 'document' && (artifact.metadata?.exportVariant === 'docx' || artifact.metadata?.exportVariant === 'pdf')) {
+        await configureChatgptDownloadBehaviorWithClient(client, destDir);
+        return await materializeChatgptDeepResearchExportWithClient(artifact, destDir, targetContext);
       }
       if (artifact.kind === 'document' && typeof artifact.metadata?.contentText === 'string') {
         const contentText = normalizeInstructionComparisonText(artifact.metadata.contentText);
@@ -7113,7 +7258,7 @@ export function createChatgptAdapter(): Pick<
         artifactId: artifact.id,
         artifactKind: artifact.kind,
       });
-      const { client } = await connectToChatgptTab(
+      const { client, targetId, host, port } = await connectToChatgptTab(
         options,
         resolveChatgptConversationUrl(conversationId, normalizedProjectId),
       );
@@ -7127,6 +7272,7 @@ export function createChatgptAdapter(): Pick<
           normalizedProjectId,
           debugContext,
           options,
+          { host, port, targetId: targetId ?? null },
         );
       } finally {
         await client.close().catch(() => undefined);

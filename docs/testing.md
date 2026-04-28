@@ -209,8 +209,9 @@
       `pnpm tsx bin/auracall.ts run status <response_id> --json`
     - completed ChatGPT Deep Research report retrieval:
       `pnpm tsx bin/auracall.ts --profile wsl-chrome-3 conversations artifacts fetch <conversation_id> --target chatgpt`
-      should return a `document` artifact materialized from the Deep Research
-      iframe's visible report text.
+      should return `document` artifacts materialized from the Deep Research
+      iframe: inline Markdown plus provider-exported Word and PDF files when
+      the finished report exposes those export options.
   - create a shared-contract CLI media request:
     - `pnpm tsx bin/auracall.ts media generate --provider chatgpt --type image -p "Generate an image of an asphalt secret agent" --json`
     - `pnpm tsx bin/auracall.ts media generate --provider gemini --type image -p "Generate an image of an asphalt secret agent" --json`
