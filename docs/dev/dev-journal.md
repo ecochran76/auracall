@@ -23030,3 +23030,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Deep Research metadata stayed null on the ordinary run, confirming the
     status envelope carries provider-specific staged-tool fields only when that
     flow is active
+
+## 2026-04-28 - Installed MCP fresh-process status-only readback
+
+- Focus: prove MCP `run_status` reads durable persisted response records after
+  a fresh MCP process start, independent of the client session that created the
+  runs.
+- Progress:
+  - started a new `/home/ecochran76/.local/bin/auracall-mcp` stdio process
+  - called only MCP `run_status` for
+    `resp_646a95d812a345f5a24e11a7318d93d0` and
+    `resp_dd3e4048248e4090a5354655be8ac36f`
+  - did not call `response_create` or trigger browser navigation
+- Validation:
+  - Deep Research response read back as `completed`, `model =
+    gpt-5.2-thinking`, `chatgptDeepResearchStage = plan-edit-opened`, label
+    `Update`, and conversation
+    `https://chatgpt.com/c/69f0deaf-7e44-83ea-a5e8-af1a0a27cf3e`
+  - ordinary ChatGPT response read back as `completed`, `model = gpt-5.2`,
+    no Deep Research metadata, and conversation
+    `https://chatgpt.com/c/69f0e314-5744-83ea-824b-a297b7fb76f9`
+  - Deep Research review screenshot still existed at
+    `~/.auracall/diagnostics/chatgpt-deep-research/2026-04-28T16-22-12-063Z-plan-edit-opened.png`
