@@ -22755,3 +22755,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - failed before prompt submission with `ChatGPT Pro mode "standard"
       requires a Pro account. Current account: level=Business, plan=team,
       structure=workspace.`
+
+## 2026-04-28 - ChatGPT Pro mode positive smoke
+
+- Focus: verify the Pro-bound ChatGPT path records selected Pro-mode metadata
+  for status/API/MCP readers.
+- Progress:
+  - installed-runtime smoke on `wsl-chrome-3` completed with exact response
+    `AURACALL PRO MODE STANDARD SMOKE`
+  - session runtime metadata recorded `thinkingTime=standard`,
+    `chatgptProMode=standard`, `chatgptAccountLevel=Pro`,
+    `chatgptAccountPlanType=pro`, and `chatgptAccountStructure=personal`
+  - fixed a status hygiene issue where a completed browser run could inherit a
+    stale `errorMessage` from runtime-dead browser detection after Chrome closed
+  - tightened explicit ChatGPT Pro-mode requests to require confirmed UI
+    selection after account gating instead of silently continuing when the
+    selector cannot be found
+- Validation:
+  - `/home/ecochran76/.local/bin/auracall --profile wsl-chrome-3 --chatgpt --model gpt-5.2-thinking --browser-model-strategy ignore --browser-thinking-time standard --browser-timeout 120s --prompt 'Reply exactly: AURACALL PRO MODE STANDARD SMOKE'`
+  - `sed -n '1,150p' /home/ecochran76/.auracall/sessions/reply-exactly-auracall-pro-mode/meta.json`
+  - `pnpm vitest run tests/cli/sessionRunner.test.ts tests/browser/thinkingTime.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - `/home/ecochran76/.local/bin/auracall --profile wsl-chrome-3 --chatgpt --model gpt-5.2-thinking --browser-model-strategy ignore --browser-thinking-time standard --browser-timeout 120s --prompt 'Reply exactly: AURACALL PRO MODE STRICT SMOKE'`
+  - `jq '{id,status,hasErrorMessage: has("errorMessage"), errorMessage, runtime: .browser.runtime, promptPreview}' /home/ecochran76/.auracall/sessions/reply-exactly-auracall-pro-mode-3/meta.json`

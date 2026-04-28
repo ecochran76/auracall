@@ -113,6 +113,7 @@ export async function performSessionRun({
       await sessionStore.updateSession(sessionMeta.id, {
         status: 'completed',
         completedAt: new Date().toISOString(),
+        errorMessage: undefined,
         usage: result.usage,
         elapsedMs: result.elapsedMs,
         browser: {
@@ -301,6 +302,7 @@ export async function performSessionRun({
       await sessionStore.updateSession(sessionMeta.id, {
         status: hasFailure ? 'error' : 'completed',
         completedAt: new Date().toISOString(),
+        ...(hasFailure ? {} : { errorMessage: undefined }),
         usage: aggregateUsage,
         elapsedMs: summary.elapsedMs,
         response: undefined,
@@ -363,6 +365,7 @@ export async function performSessionRun({
     await sessionStore.updateSession(sessionMeta.id, {
       status: 'completed',
       completedAt: new Date().toISOString(),
+      errorMessage: undefined,
       usage: result.usage,
       elapsedMs: result.elapsedMs,
       response: extractResponseMetadata(result.response),

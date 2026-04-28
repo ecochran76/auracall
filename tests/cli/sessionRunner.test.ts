@@ -135,6 +135,7 @@ describe('performSessionRun', () => {
       usage: { totalTokens: 30 },
       response: expect.objectContaining({ responseId: expect.any(String) }),
     });
+    expect(finalUpdate).toHaveProperty('errorMessage', undefined);
     expect(sessionStoreMock.updateModelRun).toHaveBeenCalledWith(
       baseSessionMeta.id,
       'gpt-5.2-pro',
@@ -657,6 +658,7 @@ describe('performSessionRun', () => {
       status: 'completed',
       browser: expect.objectContaining({ runtime: expect.objectContaining({ chromePid: 123 }) }),
     });
+    expect(finalUpdate).toHaveProperty('errorMessage', undefined);
 	    expect(sessionStoreMock.updateModelRun).toHaveBeenCalledWith(
 	      baseSessionMeta.id,
 	      'gpt-5.2-pro',

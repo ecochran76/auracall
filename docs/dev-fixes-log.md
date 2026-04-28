@@ -14799,3 +14799,13 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `--browser-thinking-time` now verifies the active auth-session account is Pro
   before selecting current Pro modes and records the selected thinking time,
   Pro mode, and account tier into run metadata for later status inspection.
+- 2026-04-28: Completed browser sessions must clear stale `errorMessage`
+  values when finalizing status. Runtime-dead browser detection can mark a
+  running session as errored while reading metadata after Chrome closes; a later
+  successful completion merge must remove that transient error text so API/MCP
+  status does not report `completed` with a stale browser-disconnected message.
+- 2026-04-28: Explicit ChatGPT Pro-mode requests should use strict UI
+  selection after account gating. Best-effort thinking-time selection can allow
+  a run to succeed without selected-mode metadata, which is too ambiguous for
+  quota-sensitive Standard/Extended Pro mode; AuraCall now fails before prompt
+  submission if the selector cannot be confirmed.
