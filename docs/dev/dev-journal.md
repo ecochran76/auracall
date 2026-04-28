@@ -23052,3 +23052,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `https://chatgpt.com/c/69f0e314-5744-83ea-824b-a297b7fb76f9`
   - Deep Research review screenshot still existed at
     `~/.auracall/diagnostics/chatgpt-deep-research/2026-04-28T16-22-12-063Z-plan-edit-opened.png`
+
+## 2026-04-28 - MCP status persistence regression
+
+- Focus: cover the installed MCP status-only readback proof with non-live
+  regression coverage.
+- Progress:
+  - added a seeded persistence test to `tests/mcp.runStatus.test.ts`
+  - the test writes one ChatGPT Deep Research browser response bundle and one
+    ordinary ChatGPT browser response bundle to a temp AuraCall home
+  - a fresh `createExecutionResponsesService()` instance then reads both ids
+    through the MCP `run_status` handler
+- Validation:
+  - `pnpm vitest run tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mcp.runStatus.test.ts tests/mcp.responseCreate.test.ts tests/mcp.server.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `git diff --check`

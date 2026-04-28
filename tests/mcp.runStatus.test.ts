@@ -7,6 +7,7 @@ import { createRunStatusToolHandler } from '../src/mcp/tools/runStatus.js';
 import { createExecutionRuntimeControl } from '../src/runtime/control.js';
 import {
   createExecutionRun,
+  createExecutionRunEvent,
   createExecutionRunRecordBundle,
   createExecutionRunSharedState,
   createExecutionRunStep,
@@ -145,6 +146,174 @@ describe('mcp run_status tool', () => {
               editTargetKind: 'iframe-coordinate',
               screenshotPath: fixture.screenshotPath,
             },
+          },
+        },
+      },
+    });
+  });
+
+  it('reads seeded persisted response records through a fresh MCP run_status service', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-mcp-status-persistence-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const deepResearchFixture = createChatgptDeepResearchStatusFixture({
+      runId: 'resp_mcp_persisted_deep_research_1',
+      screenshotPath: path.join(homeDir, 'diagnostics', 'chatgpt-deep-research', 'review.png'),
+    });
+    await createExecutionRuntimeControl().createRun(deepResearchFixture.bundle);
+
+    const ordinaryRunId = 'resp_mcp_persisted_chatgpt_1';
+    const ordinaryStepId = `${ordinaryRunId}:step:1`;
+    const ordinaryCompletedAt = '2026-04-28T16:41:11.000Z';
+    await createExecutionRuntimeControl().createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: ordinaryRunId,
+          sourceKind: 'direct',
+          sourceId: null,
+          status: 'succeeded',
+          createdAt: '2026-04-28T16:40:32.000Z',
+          updatedAt: ordinaryCompletedAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Reply exactly with: ordinary chat mcp smoke complete',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'wsl-chrome-3',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${ordinaryRunId}:state`,
+          stepIds: [ordinaryStepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: ordinaryStepId,
+            runId: ordinaryRunId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'wsl-chrome-3',
+            browserProfileId: 'wsl-chrome-3',
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Reply exactly with: ordinary chat mcp smoke complete',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'ordinary chat mcp smoke complete',
+              artifacts: [],
+              structuredData: {
+                browserRun: {
+                  provider: 'chatgpt',
+                  service: 'chatgpt',
+                  conversationId: '69f0e314-5744-83ea-824b-a297b7fb76f9',
+                  tabUrl: 'https://chatgpt.com/c/69f0e314-5744-83ea-824b-a297b7fb76f9',
+                  runtimeProfileId: 'wsl-chrome-3',
+                  browserProfileId: 'wsl-chrome-3',
+                  chatgptDeepResearchStage: null,
+                  chatgptDeepResearchPlanAction: null,
+                  chatgptDeepResearchStartMethod: null,
+                  chatgptDeepResearchModifyPlanLabel: null,
+                  chatgptDeepResearchModifyPlanVisible: null,
+                  chatgptDeepResearchReviewEvidence: null,
+                },
+              },
+              notes: [],
+            },
+            startedAt: '2026-04-28T16:40:32.000Z',
+            completedAt: ordinaryCompletedAt,
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${ordinaryRunId}:state`,
+          runId: ordinaryRunId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: ordinaryCompletedAt,
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${ordinaryRunId}:event:started`,
+            runId: ordinaryRunId,
+            stepId: ordinaryStepId,
+            type: 'step-started',
+            createdAt: '2026-04-28T16:40:32.000Z',
+            note: 'step started by local runner',
+          }),
+          createExecutionRunEvent({
+            id: `${ordinaryRunId}:event:succeeded`,
+            runId: ordinaryRunId,
+            stepId: ordinaryStepId,
+            type: 'step-succeeded',
+            createdAt: ordinaryCompletedAt,
+            note: 'step completed by local runner',
+          }),
+        ],
+      }),
+    );
+
+    const handler = createRunStatusToolHandler({
+      responsesService: createExecutionResponsesService(),
+      mediaGenerationService: {
+        readGeneration: async () => null,
+      },
+    });
+
+    const deepResearchStatus = await handler({ id: deepResearchFixture.runId });
+    const ordinaryStatus = await handler({ id: 'resp_mcp_persisted_chatgpt_1' });
+
+    expect(deepResearchStatus).toMatchObject({
+      isError: false,
+      structuredContent: {
+        id: deepResearchFixture.runId,
+        object: 'auracall_run_status',
+        kind: 'response',
+        status: 'completed',
+        metadata: {
+          runtimeProfile: 'wsl-chrome-3',
+          service: 'chatgpt',
+          model: 'gpt-5.2-thinking',
+          browserRunSummary: {
+            ownerStepId: deepResearchFixture.stepId,
+            tabUrl: deepResearchFixture.conversationUrl,
+            chatgptDeepResearchStage: 'plan-edit-opened',
+            chatgptDeepResearchPlanAction: 'edit',
+            chatgptDeepResearchModifyPlanLabel: 'Update',
+            chatgptDeepResearchReviewEvidence: {
+              editTargetKind: 'iframe-coordinate',
+              screenshotPath: deepResearchFixture.screenshotPath,
+            },
+          },
+        },
+      },
+    });
+    expect(ordinaryStatus).toMatchObject({
+      isError: false,
+      structuredContent: {
+        id: 'resp_mcp_persisted_chatgpt_1',
+        object: 'auracall_run_status',
+        kind: 'response',
+        status: 'completed',
+        metadata: {
+          runtimeProfile: 'wsl-chrome-3',
+          service: 'chatgpt',
+          model: 'gpt-5.2',
+          browserRunSummary: {
+            ownerStepId: ordinaryStepId,
+            tabUrl: 'https://chatgpt.com/c/69f0e314-5744-83ea-824b-a297b7fb76f9',
+            chatgptDeepResearchStage: null,
+            chatgptDeepResearchPlanAction: null,
+            chatgptDeepResearchReviewEvidence: null,
           },
         },
       },
