@@ -23068,3 +23068,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/mcp.runStatus.test.ts tests/mcp.responseCreate.test.ts tests/mcp.server.test.ts --maxWorkers 1`
   - `pnpm run check`
   - `git diff --check`
+
+## 2026-04-28 - MCP media status persistence regression
+
+- Focus: cover persisted media-generation status readback through both MCP
+  media-specific status and generic run status without live browser/provider
+  work.
+- Progress:
+  - added a seeded persistence test to `tests/mcp.mediaGeneration.test.ts`
+  - the test writes a Gemini browser image generation through the real
+    file-backed media service in a temp AuraCall home
+  - fresh media service instances then read the same persisted id through MCP
+    `media_generation_status` and generic MCP `run_status`
+- Validation:
+  - `pnpm vitest run tests/mcp.mediaGeneration.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `git diff --check`

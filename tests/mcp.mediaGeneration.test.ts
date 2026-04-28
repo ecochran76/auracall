@@ -1,12 +1,25 @@
-import { describe, expect, it } from 'vitest';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
+import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
+import { createMediaGenerationService } from '../src/media/service.js';
 import {
   createMediaGenerationStatusToolHandler,
   createMediaGenerationToolHandler,
 } from '../src/mcp/tools/mediaGeneration.js';
+import { createRunStatusToolHandler } from '../src/mcp/tools/runStatus.js';
 import { createGeminiMusicVariantResponse } from './fixtures/geminiMusicStatusFixture.js';
 import { createGrokImagineVideoResponse } from './fixtures/grokImagineStatusFixture.js';
 
 describe('mcp media_generation tool', () => {
+  const cleanup: string[] = [];
+
+  afterEach(async () => {
+    setAuracallHomeDirOverrideForTest(null);
+    await Promise.all(cleanup.splice(0).map((entry) => fs.rm(entry, { recursive: true, force: true })));
+  });
+
   it('routes requests through the shared media generation service contract', async () => {
     const handler = createMediaGenerationToolHandler({
       createGeneration: async (request) => ({
@@ -296,6 +309,146 @@ describe('mcp media_generation tool', () => {
         browserDiagnostics: {
           probeStatus: 'unavailable',
           reason: 'media generation medgen_status_1 is not actively running',
+        },
+      },
+    });
+  });
+
+  it('reads a seeded persisted media generation through fresh MCP status services', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-mcp-media-status-persistence-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const mediaId = 'medgen_mcp_persisted_status_1';
+    const artifactPath = path.join(homeDir, 'runtime', 'media-generations', mediaId, 'artifacts', 'generated-image-1.png');
+    const seedingService = createMediaGenerationService({
+      now: () => new Date('2026-04-28T17:05:00.000Z'),
+      generateId: () => mediaId,
+      runtimeProfile: 'wsl-chrome-3',
+      executor: async () => ({
+        artifacts: [
+          {
+            id: 'artifact_mcp_persisted_status_1',
+            type: 'image',
+            mimeType: 'image/png',
+            fileName: 'generated-image-1.png',
+            path: artifactPath,
+            metadata: {
+              materialization: 'visible-image-screenshot',
+              remoteUrl: 'blob:https://gemini.google.com/persisted-status',
+              checksumSha256: 'persisted-preview-sha',
+              previewArtifactId: 'persisted-preview-artifact',
+              previewSize: 456,
+              previewChecksumSha256: 'persisted-source-sha',
+              fullQualityDiffersFromPreview: true,
+              downloadLabel: 'Download image',
+              downloadVariant: 'image',
+              downloadOptions: ['Download image'],
+            },
+          },
+        ],
+        metadata: {
+          conversationId: 'gemini-persisted-conversation',
+          tabTargetId: 'target-persisted-media',
+          generatedArtifactCount: 1,
+        },
+      }),
+    });
+    await seedingService.createGeneration({
+      provider: 'gemini',
+      mediaType: 'image',
+      prompt: 'Generate an image of an asphalt secret agent',
+      transport: 'browser',
+      source: 'mcp',
+      count: 1,
+    });
+
+    const freshMediaService = createMediaGenerationService();
+    const mediaStatusHandler = createMediaGenerationStatusToolHandler(freshMediaService);
+    const runStatusHandler = createRunStatusToolHandler({
+      responsesService: {
+        readResponse: async () => null,
+      },
+      mediaGenerationService: createMediaGenerationService(),
+    });
+
+    const mediaStatus = await mediaStatusHandler({ id: mediaId });
+    const genericStatus = await runStatusHandler({ id: mediaId });
+
+    expect(mediaStatus).toMatchObject({
+      isError: false,
+      structuredContent: {
+        id: mediaId,
+        object: 'media_generation_status',
+        status: 'succeeded',
+        provider: 'gemini',
+        mediaType: 'image',
+        artifactCount: 1,
+        artifacts: [
+          {
+            id: 'artifact_mcp_persisted_status_1',
+            fileName: 'generated-image-1.png',
+            path: artifactPath,
+            materialization: 'visible-image-screenshot',
+            remoteUrl: 'blob:https://gemini.google.com/persisted-status',
+            checksumSha256: 'persisted-preview-sha',
+            previewArtifactId: 'persisted-preview-artifact',
+            previewSize: 456,
+            previewChecksumSha256: 'persisted-source-sha',
+            fullQualityDiffersFromPreview: true,
+            downloadLabel: 'Download image',
+            downloadVariant: 'image',
+            downloadOptions: ['Download image'],
+          },
+        ],
+        metadata: {
+          source: 'mcp',
+          transport: 'browser',
+          runtimeProfile: 'wsl-chrome-3',
+          conversationId: 'gemini-persisted-conversation',
+          tabTargetId: 'target-persisted-media',
+          generatedArtifactCount: 1,
+        },
+        lastEvent: {
+          event: 'completed',
+        },
+      },
+    });
+    expect(genericStatus).toMatchObject({
+      isError: false,
+      structuredContent: {
+        id: mediaId,
+        object: 'auracall_run_status',
+        kind: 'media_generation',
+        status: 'succeeded',
+        artifactCount: 1,
+        artifacts: [
+          {
+            id: 'artifact_mcp_persisted_status_1',
+            fileName: 'generated-image-1.png',
+            path: artifactPath,
+            materialization: 'visible-image-screenshot',
+            remoteUrl: 'blob:https://gemini.google.com/persisted-status',
+            checksumSha256: 'persisted-preview-sha',
+            previewArtifactId: 'persisted-preview-artifact',
+            previewSize: 456,
+            previewChecksumSha256: 'persisted-source-sha',
+            fullQualityDiffersFromPreview: true,
+            downloadLabel: 'Download image',
+            downloadVariant: 'image',
+            downloadOptions: ['Download image'],
+          },
+        ],
+        metadata: {
+          source: 'mcp',
+          transport: 'browser',
+          runtimeProfile: 'wsl-chrome-3',
+          conversationId: 'gemini-persisted-conversation',
+          tabTargetId: 'target-persisted-media',
+          generatedArtifactCount: 1,
+        },
+        lastEvent: {
+          event: 'completed',
         },
       },
     });
