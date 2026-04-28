@@ -3,10 +3,24 @@ set -euo pipefail
 
 # AuraCall release helper (npm)
 # Phases: gates | artifacts | publish | smoke | tag | all
-# Defaults to using the guardrail runner (MCP_RUNNER or ./runner).
+# Defaults to using the guardrail runner when available; falls back to env when
+# the local wrapper's runtime is unavailable.
 
-RUNNER="${MCP_RUNNER:-./runner}"
+resolve_runner() {
+  if [[ -n "${MCP_RUNNER:-}" ]]; then
+    printf '%s\n' "$MCP_RUNNER"
+    return
+  fi
+  if [[ -x ./runner ]] && command -v bun >/dev/null 2>&1; then
+    printf '%s\n' "./runner"
+    return
+  fi
+  printf '%s\n' "/usr/bin/env"
+}
+
+RUNNER="$(resolve_runner)"
 VERSION="${VERSION:-$(node -p "require('./package.json').version")}" 
+RELEASE_TEST_COMMAND="${RELEASE_TEST_COMMAND:-pnpm vitest run --maxWorkers 1 --testTimeout 15000}"
 
 if [[ "${CODEX_MANAGED_BY_NPM:-}" == "1" ]]; then
   export NPM_CONFIG_PROGRESS=false
@@ -20,7 +34,10 @@ phase_gates() {
   banner "Gates (check/lint/test/build)"
   run "$RUNNER" pnpm run check
   run "$RUNNER" pnpm run lint
-  run "$RUNNER" pnpm run test
+  # The default Vitest worker pool and 5s per-test timeout can trip otherwise
+  # healthy browser/runtime unit tests under release-load scheduling; release
+  # gates prefer deterministic serial workers with modest timeout headroom.
+  run "$RUNNER" sh -lc "$RELEASE_TEST_COMMAND"
   run "$RUNNER" pnpm run build
 }
 
@@ -79,6 +96,7 @@ Phases (run individually or all):
 
 Environment:
   MCP_RUNNER (default ./runner) - guardrail wrapper
+  RELEASE_TEST_COMMAND (default "pnpm vitest run --maxWorkers 1 --testTimeout 15000")
   VERSION    (default from package.json)
 EOF
 }

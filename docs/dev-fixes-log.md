@@ -14907,3 +14907,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `pnpm run lint` exiting 0; remaining warning diagnostics need their own
   policy/config cleanup slice if the release checklist is interpreted as
   literal zero warnings.
+- 2026-04-28: The release helper must be deterministic on the actual release
+  host. Do not require a Bun-backed `./runner` when Bun is absent; fall back to
+  `/usr/bin/env`, and run release Vitest gates with serial workers plus modest
+  timeout headroom because the default parallel pool and 5s per-test timeout
+  can time out otherwise healthy browser/runtime unit tests under load.

@@ -1,6 +1,6 @@
 # Release Checklist (npm)
 
-> For a guarded, phased flow, run `./scripts/release.sh <phase>` (gates | artifacts | publish | smoke | tag | all); it stops on the first error so you can resume after fixing issues.
+> For a guarded, phased flow, run `./scripts/release.sh <phase>` (gates | artifacts | publish | smoke | tag | all); it stops on the first error so you can resume after fixing issues. The helper uses `./runner` only when its runtime is available and otherwise falls back to `/usr/bin/env`.
 
 1. **Version & metadata**
    - [ ] Update `package.json` version. AuraCall is a new package line and starts at `0.1.0`; do not inherit upstream Oracle numbering.
@@ -28,7 +28,7 @@
   - [ ] **Release notes must exactly match the version’s changelog section** (full Added/Changed/Fixed/Tests bullets, no omissions). After creating the GitHub release, compare the body to `CHANGELOG.md` and fix any mismatch.
 4. **Validation**
    - [ ] `pnpm run check` (zero warnings allowed; fail on any lint/type warnings).
-   - [ ] `pnpm vitest`
+   - [ ] `pnpm vitest run --maxWorkers 1 --testTimeout 15000` (the release helper uses this serial form by default; the normal parallel `pnpm test` can trip short unit-test timeouts under load)
    - [ ] `pnpm run lint`
    - [ ] Optional live smoke (with real `OPENAI_API_KEY`): `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/openai-live.test.ts`
    - [ ] MCP sanity check: with `config/mcporter.json` pointed at the local stdio server (`auracall-local`), run `mcporter list auracall-local --schema --config config/mcporter.json` after building (`pnpm build`) to ensure tools/resources are discoverable.

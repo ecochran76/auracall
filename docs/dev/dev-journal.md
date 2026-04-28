@@ -23243,3 +23243,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     default parallel run; the touched focused suite and the two still-failing
     timeout files passed when rerun serially
   - `git diff --check`
+
+## 2026-04-28 - Release preflight helper hardening
+
+- Focus: make the AuraCall `0.1.0` release preflight runnable from the clean
+  repo without operator-only environment overrides.
+- Progress:
+  - confirmed `auracall` is not yet published on npm (`npm view auracall`
+    returns registry 404), so first publish can use `auracall@0.1.0`
+  - updated `scripts/release.sh` to fall back to `/usr/bin/env` when `./runner`
+    exists but Bun is not available
+  - changed the release gate test command to the deterministic serial Vitest
+    form (`pnpm vitest run --maxWorkers 1 --testTimeout 15000`) because the
+    default parallel worker pool and 5s per-test timeout can trip otherwise
+    healthy browser/runtime unit tests under release-load scheduling
+  - tightened two browser wait-helper tests so their CDP mocks keep returning
+    stable assistant snapshots instead of exhausting one-shot mock responses
+- Validation:
+  - `npm view auracall version time --json` returned 404/not found
+  - `MCP_RUNNER=/usr/bin/env ./scripts/release.sh gates` reached test phase;
+    default parallel `pnpm test` and the first serial pass with Vitest's 5s
+    timeout showed timeout-only failures
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/browser/login.test.ts tests/browser/reattach.test.ts --maxWorkers 1`
+    passed, confirming the failed full-gate cases were release-load timeout
+    sensitivity rather than assertion failures
+  - `./scripts/release.sh gates` passed with fallback `/usr/bin/env`, lint
+    exit 0 with the existing 577 warning diagnostics, 220 Vitest files passed
+    and 21 live/TTY files skipped, then build passed
+  - `pnpm run docs:list` passed and reported the existing missing front matter
+    inventory
+  - `git diff --check` passed
+  - `npm pack --dry-run` built `auracall-0.1.0.tgz` with 387 files, 2.2 MB

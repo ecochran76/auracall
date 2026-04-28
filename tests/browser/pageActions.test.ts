@@ -209,11 +209,28 @@ describe('ensureLoggedIn', () => {
 describe('waitForAssistantResponse', () => {
   test('returns captured assistant payload', async () => {
     const runtime = {
-      evaluate: vi.fn().mockResolvedValue({
-        result: {
-          type: 'object',
-          value: { text: 'Answer', html: '<p>Answer</p>', messageId: 'mid', turnId: 'tid' },
-        },
+      evaluate: vi.fn().mockImplementation(async (params: { awaitPromise?: boolean; expression?: string }) => {
+        if (params?.awaitPromise) {
+          return {
+            result: {
+              type: 'object',
+              value: { text: 'Answer', html: '<p>Answer</p>', messageId: 'mid', turnId: 'tid' },
+            },
+          };
+        }
+        const expression = String(params?.expression ?? '');
+        if (expression.startsWith('Boolean(document.querySelector')) {
+          return { result: { value: false } };
+        }
+        if (expression.includes('lastAssistantTurn')) {
+          return { result: { value: true } };
+        }
+        return {
+          result: {
+            type: 'object',
+            value: { text: 'Answer', html: '<p>Answer</p>', messageId: 'mid', turnId: 'tid' },
+          },
+        };
       }),
     } as unknown as ChromeClient['Runtime'];
     const result = await waitForAssistantResponse(runtime, 1000, logger);

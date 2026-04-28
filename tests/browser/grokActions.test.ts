@@ -236,7 +236,7 @@ describe('grok actions', () => {
           },
         },
       })
-      .mockResolvedValueOnce({
+      .mockResolvedValue({
         result: {
           value: {
             count: 1,
