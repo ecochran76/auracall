@@ -13,6 +13,7 @@ import {
 } from '../src/runtime/model.js';
 import { createExecutionResponsesService } from '../src/runtime/responsesService.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../src/teams/types.js';
+import { createChatgptDeepResearchStatusFixture } from './fixtures/chatgptDeepResearchStatusFixture.js';
 import { createGeminiMusicVariantResponse } from './fixtures/geminiMusicStatusFixture.js';
 import { createGrokImagineVideoResponse } from './fixtures/grokImagineStatusFixture.js';
 
@@ -103,6 +104,48 @@ describe('mcp run_status tool', () => {
         },
         lastEvent: {
           type: 'step-succeeded',
+        },
+      },
+    });
+  });
+
+  it('reads stored ChatGPT Deep Research review evidence through generic MCP run status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-mcp-deep-research-status-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const control = createExecutionRuntimeControl();
+    const fixture = createChatgptDeepResearchStatusFixture({
+      screenshotPath: path.join(homeDir, 'diagnostics', 'chatgpt-deep-research', 'review.png'),
+    });
+    await control.createRun(fixture.bundle);
+    const handler = createRunStatusToolHandler({
+      responsesService: createExecutionResponsesService({ control, drainAfterCreate: false }),
+      mediaGenerationService: {
+        readGeneration: async () => null,
+      },
+    });
+
+    const result = await handler({ id: fixture.runId });
+
+    expect(result).toMatchObject({
+      isError: false,
+      structuredContent: {
+        id: fixture.runId,
+        object: 'auracall_run_status',
+        kind: 'response',
+        status: 'completed',
+        metadata: {
+          browserRunSummary: {
+            ownerStepId: fixture.stepId,
+            tabUrl: fixture.conversationUrl,
+            chatgptDeepResearchStage: 'plan-edit-opened',
+            chatgptDeepResearchPlanAction: 'edit',
+            chatgptDeepResearchModifyPlanLabel: 'Update',
+            chatgptDeepResearchReviewEvidence: {
+              editTargetKind: 'iframe-coordinate',
+              screenshotPath: fixture.screenshotPath,
+            },
+          },
         },
       },
     });

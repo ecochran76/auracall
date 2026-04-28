@@ -14860,3 +14860,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   visible in browser-tools output. Edit-path runs now store the iframe/DOM edit
   target evidence plus a passive review screenshot path in browser runtime
   metadata, and browser-backed response status projects the same summary.
+- 2026-04-28: When browser-run evidence becomes part of operator status,
+  regression coverage should seed the stored browser step output and read it
+  through the real CLI/API/MCP status services. Mocking the final status
+  envelope only proves formatting, not the durable projection path.

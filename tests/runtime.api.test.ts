@@ -7,6 +7,7 @@ import {
 } from '../src/runtime/apiModel.js';
 import { createExecutionRunRecordBundleFromTeamRun } from '../src/runtime/model.js';
 import { createTeamRunBundle } from '../src/teams/model.js';
+import { createChatgptDeepResearchStatusFixture } from './fixtures/chatgptDeepResearchStatusFixture.js';
 
 describe('runtime api model', () => {
   it('creates a compatibility-first execution request with optional AuraCall hints', () => {
@@ -142,6 +143,38 @@ describe('runtime api model', () => {
         operatorControlSummary: null,
         orchestrationTimelineSummary: null,
         failureSummary: null,
+      },
+    });
+  });
+
+  it('projects ChatGPT Deep Research review evidence from stored browser-run output', () => {
+    const fixture = createChatgptDeepResearchStatusFixture();
+
+    const response = createExecutionResponseFromRunRecord({
+      responseId: fixture.runId,
+      runRecord: fixture.bundle,
+      model: 'gpt-5.2-thinking',
+      runtimeProfile: 'wsl-chrome-3',
+      service: 'chatgpt',
+      output: [],
+    });
+
+    expect(response.metadata?.executionSummary?.browserRunSummary).toMatchObject({
+      ownerStepId: fixture.stepId,
+      provider: 'chatgpt',
+      service: 'chatgpt',
+      conversationId: '69f0bbc4-62c4-83ea-bb10-2c83b7f83b38',
+      tabUrl: fixture.conversationUrl,
+      runtimeProfileId: 'wsl-chrome-3',
+      browserProfileId: 'wsl-chrome-3',
+      chatgptDeepResearchStage: 'plan-edit-opened',
+      chatgptDeepResearchPlanAction: 'edit',
+      chatgptDeepResearchModifyPlanLabel: 'Update',
+      chatgptDeepResearchModifyPlanVisible: true,
+      chatgptDeepResearchReviewEvidence: {
+        stage: 'plan-edit-opened',
+        editTargetKind: 'iframe-coordinate',
+        screenshotPath: fixture.screenshotPath,
       },
     });
   });

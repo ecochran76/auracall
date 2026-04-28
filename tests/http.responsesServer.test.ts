@@ -26,6 +26,7 @@ import {
 } from '../src/runtime/model.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../src/teams/types.js';
 import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from '../src/runtime/stepOutputContract.js';
+import { createChatgptDeepResearchStatusFixture } from './fixtures/chatgptDeepResearchStatusFixture.js';
 
 vi.setConfig({ testTimeout: 10000 });
 
@@ -12950,5 +12951,48 @@ describe('http responses adapter', () => {
     expect(() => assertResponsesHostAllowed('0.0.0.0', false)).toThrow(/--listen-public/);
     expect(() => assertResponsesHostAllowed('127.0.0.1', false)).not.toThrow();
     expect(() => assertResponsesHostAllowed('0.0.0.0', true)).not.toThrow();
+  });
+
+  it('preserves ChatGPT Deep Research review evidence through generic HTTP run status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-deep-research-status-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const control = createExecutionRuntimeControl();
+    const fixture = createChatgptDeepResearchStatusFixture({
+      screenshotPath: path.join(homeDir, 'diagnostics', 'chatgpt-deep-research', 'review.png'),
+    });
+    await control.createRun(fixture.bundle);
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+      },
+    );
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/runs/${fixture.runId}/status`);
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        id: fixture.runId,
+        object: 'auracall_run_status',
+        kind: 'response',
+        status: 'completed',
+        metadata: {
+          browserRunSummary: {
+            ownerStepId: fixture.stepId,
+            tabUrl: fixture.conversationUrl,
+            chatgptDeepResearchStage: 'plan-edit-opened',
+            chatgptDeepResearchPlanAction: 'edit',
+            chatgptDeepResearchModifyPlanLabel: 'Update',
+            chatgptDeepResearchReviewEvidence: {
+              editTargetKind: 'iframe-coordinate',
+              screenshotPath: fixture.screenshotPath,
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
   });
 });

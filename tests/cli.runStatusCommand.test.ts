@@ -1,11 +1,15 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import { formatRunStatusCli, readRunStatusForCli } from '../src/cli/runStatusCommand.js';
 import { createMediaGenerationService } from '../src/media/service.js';
+import { createExecutionRuntimeControl } from '../src/runtime/control.js';
 import { createExecutionResponsesService } from '../src/runtime/responsesService.js';
+import { createChatgptDeepResearchStatusFixture } from './fixtures/chatgptDeepResearchStatusFixture.js';
+
+vi.setConfig({ testTimeout: 10000 });
 
 describe('run status CLI helpers', () => {
   const cleanup: string[] = [];
@@ -107,5 +111,36 @@ describe('run status CLI helpers', () => {
       ],
     });
     expect(formatRunStatusCli(status!)).toContain('Artifacts: 1');
+  });
+
+  it('reads ChatGPT Deep Research review evidence through generic CLI status wiring', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-cli-deep-research-status-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const fixture = createChatgptDeepResearchStatusFixture({
+      screenshotPath: path.join(homeDir, 'diagnostics', 'chatgpt-deep-research', 'review.png'),
+    });
+    await createExecutionRuntimeControl().createRun(fixture.bundle);
+
+    const status = await readRunStatusForCli(fixture.runId);
+
+    expect(status).toMatchObject({
+      id: fixture.runId,
+      object: 'auracall_run_status',
+      kind: 'response',
+      status: 'completed',
+      metadata: {
+        browserRunSummary: {
+          ownerStepId: fixture.stepId,
+          tabUrl: fixture.conversationUrl,
+          chatgptDeepResearchStage: 'plan-edit-opened',
+          chatgptDeepResearchReviewEvidence: {
+            editTargetKind: 'iframe-coordinate',
+            screenshotPath: fixture.screenshotPath,
+          },
+        },
+      },
+    });
+    expect(formatRunStatusCli(status!)).toContain(`Run ${fixture.runId} (response) is completed`);
   });
 });

@@ -200,6 +200,9 @@
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/responses/<response_id>`
     - for compact operator status, run
       `curl http://127.0.0.1:8080/v1/runs/<response_id>/status`
+      Browser-backed ChatGPT Deep Research `edit` runs should expose
+      `metadata.browserRunSummary.chatgptDeepResearchReviewEvidence` here,
+      including the review stage and screenshot path when capture succeeds.
     - CLI parity for the same durable status envelope:
       `pnpm tsx bin/auracall.ts run status <response_id> --json`
   - create a shared-contract CLI media request:

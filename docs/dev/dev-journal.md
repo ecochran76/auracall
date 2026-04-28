@@ -22906,3 +22906,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `iframe-coordinate`, label `Update`, the conversation URL, and screenshot
     path
     `~/.auracall/diagnostics/chatgpt-deep-research/2026-04-28T13-53-11-568Z-plan-edit-opened.png`
+
+## 2026-04-28 - Deep Research status surface proof
+
+- Focus: prove ChatGPT Deep Research review evidence reaches supported
+  operator status surfaces through stored run records, not only session files.
+- Progress:
+  - added a shared test fixture for a browser-backed ChatGPT Deep Research
+    `edit` run with `output.structuredData.browserRun` evidence
+  - added coverage for response API-model projection, HTTP
+    `/v1/runs/{id}/status`, MCP `run_status`, and CLI `run status` service
+    wiring
+  - documented that generic run status can carry
+    `metadata.browserRunSummary.chatgptDeepResearchReviewEvidence`
+- Validation:
+  - `pnpm vitest run tests/runtime.api.test.ts tests/http.responsesServer.test.ts tests/mcp.runStatus.test.ts tests/cli.runStatusCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `git diff --check`

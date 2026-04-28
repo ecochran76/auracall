@@ -26,6 +26,10 @@
   generations. It includes current status, latest event, step summaries when
   available, artifact count, artifact cache path/URI, materialization method,
   provider/runtime metadata, and failure details.
+- Browser-backed response runs can also expose a bounded
+  `metadata.browserRunSummary`. For ChatGPT Deep Research `edit` runs, this
+  includes the review stage/action, conversation URL, modify-plan label,
+  iframe/DOM edit target evidence, and passive screenshot path when captured.
 - `diagnostics = "browser-state"` adds bounded live browser evidence when the
   run is active and browser-backed, including recent browser mutation records
   when Aura-Call has recorded navigation/reload/open-reuse activity for the
