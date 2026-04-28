@@ -1282,7 +1282,7 @@ describe('runtime runner', () => {
     });
     await control.releaseLease({
       runId: 'run_cancelled_externally',
-      leaseId: cancelledRecord.bundle.leases[0]!.id,
+      leaseId: cancelledRecord.bundle.leases[0]?.id,
       releasedAt: '2026-04-08T13:04:00.000Z',
       releaseReason: 'cancelled',
     });
@@ -1307,7 +1307,7 @@ describe('runtime runner', () => {
     bundle.steps[0] = {
       ...bundle.steps[0]!,
       input: {
-        ...bundle.steps[0]!.input,
+        ...bundle.steps[0]?.input,
         structuredData: {
           localActionPolicy: {
             mode: 'allowed',
@@ -1402,7 +1402,7 @@ describe('runtime runner', () => {
     bundle.steps[0] = {
       ...bundle.steps[0]!,
       input: {
-        ...bundle.steps[0]!.input,
+        ...bundle.steps[0]?.input,
         structuredData: {
           localActionPolicy: {
             mode: 'allowed',
@@ -1472,7 +1472,7 @@ describe('runtime runner', () => {
     bundle.steps[0] = {
       ...bundle.steps[0]!,
       input: {
-        ...bundle.steps[0]!.input,
+        ...bundle.steps[0]?.input,
         structuredData: {
           localActionPolicy: {
             mode: 'allowed',
@@ -1618,7 +1618,7 @@ describe('runtime runner', () => {
     bundle.steps[0] = {
       ...bundle.steps[0]!,
       input: {
-        ...bundle.steps[0]!.input,
+        ...bundle.steps[0]?.input,
         structuredData: {
           localActionPolicy: {
             mode: 'forbidden',

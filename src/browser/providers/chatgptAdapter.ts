@@ -29,7 +29,7 @@ import {
   dismissOverlayRoot,
   hoverElement,
   openAndSelectRevealedRowMenuItem,
-  PressButtonOptions,
+  type PressButtonOptions,
   navigateAndSettle,
   openAndSelectMenuItem,
   openAndSelectMenuItemFromTriggers,
@@ -37,7 +37,6 @@ import {
   openSurface,
   pressButton,
   reloadAndSettle,
-  selectMenuItem,
   setInputValue,
   submitInlineRename,
   waitForDownloadCapture,
@@ -132,7 +131,7 @@ const CHATGPT_PROJECT_SOURCES_TAB_ID_SELECTOR = resolveBundledServiceDomSelector
   'project_sources_tab_id',
   '[role="tab"][id$="-sources"]',
 );
-const CHATGPT_PROJECT_UPLOAD_BUTTON_LABEL = normalizeUiText(
+const _CHATGPT_PROJECT_UPLOAD_BUTTON_LABEL = normalizeUiText(
   resolveBundledServiceUiLabel('chatgpt', 'project_upload_button', 'upload'),
 ).toLowerCase();
 const CHATGPT_PROJECT_DELETE_BUTTON_LABEL = normalizeUiText(
@@ -197,7 +196,7 @@ const CHATGPT_CONVERSATION_ACTION_DELETE_LABEL = normalizeUiText(
 const CHATGPT_PROJECT_SOURCE_ACTION_REMOVE_LABEL = normalizeUiText(
   resolveBundledServiceUiLabel('chatgpt', 'project_source_action_remove', 'remove'),
 ).toLowerCase();
-const CHATGPT_DIALOG_CANCEL_LABEL = normalizeUiText(
+const _CHATGPT_DIALOG_CANCEL_LABEL = normalizeUiText(
   resolveBundledServiceUiLabel('chatgpt', 'dialog_cancel', 'cancel'),
 ).toLowerCase();
 const CHATGPT_CONVERSATION_DELETE_DIALOG_LABEL = normalizeUiText(
@@ -220,7 +219,7 @@ const CHATGPT_DELETE_CONFIRMATION_BUTTON_LABELS = resolveBundledServiceUiLabelSe
   'delete_confirmation_buttons',
   ['delete', 'cancel'],
 ).map((label) => normalizeUiText(label).toLowerCase()).filter(Boolean);
-const CHATGPT_PROJECT_SOURCE_ADD_BUTTON_LABELS = resolveBundledServiceUiLabelSet(
+const _CHATGPT_PROJECT_SOURCE_ADD_BUTTON_LABELS = resolveBundledServiceUiLabelSet(
   'chatgpt',
   'project_source_add_buttons',
   ['add sources', 'add'],
@@ -1620,9 +1619,17 @@ function inferChatgptDownloadArtifactKind(
   return 'download';
 }
 
+function stripAsciiControlCharacters(value: string): string {
+  return Array.from(value)
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code >= 0x20 && code !== 0x7f;
+    })
+    .join('');
+}
+
 function sanitizeChatgptArtifactFileName(value: string | null | undefined): string {
-  const normalized = String(value ?? '')
-    .replace(/[\u0000-\u001f\u007f]/g, '')
+  const normalized = stripAsciiControlCharacters(String(value ?? ''))
     .replace(/[\\/:"*?<>|]+/g, '-')
     .replace(/\s+/g, ' ')
     .trim();
@@ -1948,7 +1955,7 @@ export function extractChatgptConversationArtifactsFromPayload(
     if (!message) continue;
     const messageId = readStringField(message, 'id') ?? undefined;
     const messageIndex = messageId ? messageIndexById.get(messageId) : undefined;
-    const role = readStringField(message.author ?? {}, 'role');
+    const _role = readStringField(message.author ?? {}, 'role');
     for (const part of extractChatgptPayloadMessageTextParts(message)) {
       const matches = part.matchAll(/\[([^\]]+)\]\((sandbox:[^)]+)\)/g);
       for (const match of matches) {
@@ -2099,7 +2106,7 @@ function buildChatgptConversationPayloadExpression(conversationId: string): stri
 export async function readChatgptConversationPayloadWithClient(
   client: ChromeClient,
   conversationId: string,
-  projectId?: string | null,
+  _projectId?: string | null,
   options?: BrowserProviderListOptions,
 ): Promise<ChatgptConversationPayload | null> {
   const parsePayloadBody = (body: string | null | undefined, base64Encoded = false): ChatgptConversationPayload | null => {
@@ -2275,11 +2282,11 @@ function buildConversationSurfaceReadyExpression(conversationId: string, project
   })()`;
 }
 
-function buildConversationTitleAppliedExpression(
+function _buildConversationTitleAppliedExpression(
   conversationId: string,
   expectedTitle: string,
   projectId?: string | null,
-  options?: {
+  _options?: {
     requireTopInRootList?: boolean;
   },
 ): string {
@@ -4646,7 +4653,7 @@ async function scrapeChatgptConversations(
   });
 }
 
-async function tagChatgptConversationRow(
+async function _tagChatgptConversationRow(
   client: ChromeClient,
   conversationId: string,
   projectId?: string | null,
@@ -5068,7 +5075,7 @@ async function tagChatgptConversationRowExact(
   throw new Error(`Exact ChatGPT conversation row not found for ${conversationId}`);
 }
 
-async function openChatgptTaggedConversationSidebarMenu(
+async function _openChatgptTaggedConversationSidebarMenu(
   client: ChromeClient,
   tagged: { rowSelector: string; actionSelector: string },
   itemLabel: string,
@@ -6357,7 +6364,7 @@ async function readChatgptTableArtifactRowsWithClient(
   }
   return value
     .filter(Array.isArray)
-    .map((row) => row.map((cell) => normalizeUiText(cell)).filter((cell, index, arr) => index < arr.length))
+    .map((row) => row.map((cell) => normalizeUiText(cell)).filter((_cell, index, arr) => index < arr.length))
     .filter((row) => row.length > 0);
 }
 

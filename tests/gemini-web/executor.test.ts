@@ -175,7 +175,7 @@ describe('gemini-web executor', () => {
   it('throws when Gemini returns control-only output with no text or images', async () => {
     const { createGeminiWebExecutor } = await import('../../src/gemini-web/executor.js');
     runGeminiWebWithFallback.mockResolvedValueOnce({
-      rawResponseText: `)]}'\n\n[[\"wrb.fr\",null,null,null,null,[13]],[\"di\",138],[\"af.httprm\",137,\"-5781323477802010651\",16]]`,
+      rawResponseText: `)]}'\n\n[["wrb.fr",null,null,null,null,[13]],["di",138],["af.httprm",137,"-5781323477802010651",16]]`,
       text: '',
       thoughts: null,
       metadata: null,

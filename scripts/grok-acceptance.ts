@@ -1,6 +1,7 @@
 #!/usr/bin/env tsx
 import { randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import type { Dirent } from 'node:fs';
 import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -255,7 +256,7 @@ async function findRecentBrowserConversationIdByPrompt(prompt: string): Promise<
     return null;
   }
   const sessionsDir = path.join(homeDir, '.auracall', 'sessions');
-  let entries;
+  let entries: Dirent[];
   try {
     entries = await readdir(sessionsDir, { withFileTypes: true });
   } catch {
@@ -410,10 +411,7 @@ async function main() {
     logStep(`Starting acceptance run with suffix ${suffix}`);
 
     runAuracall(args, ['projects', 'create', projectName, '--target', 'grok']);
-    let {
-      project: createdProject,
-      projects,
-    } = await waitForProjectByName(args, projectName, 'projects refresh after create');
+    const { project: createdProject } = await waitForProjectByName(args, projectName, 'projects refresh after create');
     summary.projectId = createdProject.id;
 
     runAuracall(args, ['projects', 'rename', createdProject.id, renamedProjectName, '--target', 'grok']);

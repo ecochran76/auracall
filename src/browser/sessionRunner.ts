@@ -11,7 +11,7 @@ import {
   type BrowserExecutionResult,
   type BrowserSessionRunnerDeps as CoreBrowserSessionRunnerDeps,
 } from '../../packages/browser-service/src/sessionRunner.js';
-import type { BrowserRunOptions, BrowserRunResult } from './types.js';
+import type { BrowserRunResult } from './types.js';
 
 interface RunBrowserSessionArgs {
   runOptions: RunOracleOptions;

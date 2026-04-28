@@ -347,7 +347,7 @@ export function resolveBrowserProfileResolution(input: {
   const mergedBrowser = isRecord(merged.browser) ? merged.browser : {};
   const browserProfileId = getRuntimeProfileBrowserProfileId(profile);
   const selectedBrowserProfile = getRuntimeProfileBrowserProfile(merged, profile) ?? {};
-  const effectiveProfileBrowser = {
+  const _effectiveProfileBrowser = {
     ...selectedBrowserProfile,
     ...profileBrowser,
   };

@@ -397,7 +397,7 @@ export function createConfiguredStoredStepExecutor(
       });
     }
 
-    let browserResult;
+    let browserResult: Awaited<ReturnType<typeof runBrowserMode>>;
     try {
       browserResult = service === 'gemini'
         ? await runGeminiBrowserModeImpl(browserRunOptions)

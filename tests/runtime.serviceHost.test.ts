@@ -313,14 +313,14 @@ function createRequestedLocalActionBundle(
   bundle.events = [
     ...bundle.events,
     createExecutionRunEvent({
-      id: `${runId}:event:${bundle.localActionRequests[0]!.id}:requested`,
+      id: `${runId}:event:${bundle.localActionRequests[0]?.id}:requested`,
       runId,
       stepId,
       type: 'note-added',
       createdAt,
       note: 'local action requested: shell',
       payload: {
-        requestId: bundle.localActionRequests[0]!.id,
+        requestId: bundle.localActionRequests[0]?.id,
         requestStatus: 'requested',
       },
     }),
@@ -973,7 +973,7 @@ describe('runtime service host', () => {
     bundle.steps[0] = {
       ...bundle.steps[0]!,
       input: {
-        ...bundle.steps[0]!.input,
+        ...bundle.steps[0]?.input,
         structuredData: {
           localActionPolicy: {
             mode: 'allowed',
@@ -1033,7 +1033,7 @@ describe('runtime service host', () => {
     bundle.steps[0] = {
       ...bundle.steps[0]!,
       input: {
-        ...bundle.steps[0]!.input,
+        ...bundle.steps[0]?.input,
         structuredData: {
           localActionPolicy: {
             mode: 'allowed',
@@ -1096,7 +1096,7 @@ describe('runtime service host', () => {
     bundle.steps[0] = {
       ...bundle.steps[0]!,
       input: {
-        ...bundle.steps[0]!.input,
+        ...bundle.steps[0]?.input,
         structuredData: {
           localActionPolicy: {
             mode: 'approval-required',
@@ -1186,7 +1186,7 @@ describe('runtime service host', () => {
     bundle.steps[0] = {
       ...bundle.steps[0]!,
       input: {
-        ...bundle.steps[0]!.input,
+        ...bundle.steps[0]?.input,
         structuredData: {
           localActionPolicy: {
             mode: 'allowed',

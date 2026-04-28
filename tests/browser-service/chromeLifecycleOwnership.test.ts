@@ -17,7 +17,7 @@ afterEach(() => {
 });
 
 function createExecFileMock() {
-  return vi.fn((file: string, args: string[], options: unknown, callback?: (...cbArgs: unknown[]) => void) => {
+  return vi.fn((_file: string, _args: string[], options: unknown, callback?: (...cbArgs: unknown[]) => void) => {
     const cb = typeof options === 'function' ? options : callback;
     cb?.(null, { stdout: '', stderr: '' });
     return {} as never;

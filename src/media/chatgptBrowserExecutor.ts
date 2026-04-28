@@ -2,12 +2,12 @@ import { BrowserAutomationClient } from '../browser/client.js';
 import type { ConversationArtifact, FileRef } from '../browser/providers/domain.js';
 import type { BrowserProviderPromptProgressEvent } from '../browser/providers/types.js';
 import type { ResolvedUserConfig } from '../config.js';
-import {
-  type MediaGenerationArtifact,
-  type MediaGenerationExecutor,
-  type MediaGenerationExecutorInput,
-  type MediaGenerationTimelineEmitter,
-  type MediaGenerationTimelineEvent,
+import type {
+  MediaGenerationArtifact,
+  MediaGenerationExecutor,
+  MediaGenerationExecutorInput,
+  MediaGenerationTimelineEmitter,
+  MediaGenerationTimelineEvent,
 } from './types.js';
 import { MediaGenerationExecutionError } from './service.js';
 

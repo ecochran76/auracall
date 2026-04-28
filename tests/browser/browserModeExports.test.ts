@@ -321,7 +321,7 @@ describe('browserMode exports', () => {
     setAuracallHomeDirOverrideForTest(tempRoot);
     try {
       const logger = Object.assign(() => {}, { verbose: true, sessionLog: () => {} });
-      const Runtime = {
+      const RUNTIME = {
         evaluate: async () => ({
           result: {
             value: {
@@ -337,7 +337,7 @@ describe('browserMode exports', () => {
         }),
       } as any;
       await logChatgptUnexpectedStateForTest({
-        Runtime,
+        Runtime: RUNTIME,
         logger,
         context: 'chatgpt-stale-send-blocked',
         surface: { kind: 'retry-affordance', summary: 'retry', details: { source: 'button' } },

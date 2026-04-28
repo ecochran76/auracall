@@ -885,7 +885,6 @@ async function loadContextDocuments(
         updatedAt: typeof parsed.fetchedAt === 'string' ? parsed.fetchedAt : null,
       });
     } catch {
-      continue;
     }
   }
   return docs;

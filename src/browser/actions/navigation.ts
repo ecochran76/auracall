@@ -375,7 +375,7 @@ export async function ensurePromptReady(Runtime: ChromeClient['Runtime'], timeou
   }
 }
 
-async function waitForDocumentReady(Runtime: ChromeClient['Runtime'], timeoutMs: number) {
+async function _waitForDocumentReady(Runtime: ChromeClient['Runtime'], timeoutMs: number) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     const { result } = await Runtime.evaluate({

@@ -497,7 +497,7 @@ export async function createResponsesHttpServer(
 
       if (req.method === 'POST' && url.pathname === '/status') {
         const body = await readRequestBody(req);
-        const payload = StatusControlRequestSchema.parse(JSON.parse(body || '{}'));
+        const payload = STATUS_CONTROL_REQUEST_SCHEMA.parse(JSON.parse(body || '{}'));
         let controlResult: HttpStatusResponse['controlResult'];
         if ('backgroundDrain' in payload) {
           const action = payload.backgroundDrain.action;
@@ -576,7 +576,7 @@ export async function createResponsesHttpServer(
 
       if (req.method === 'POST' && url.pathname === '/v1/team-runs') {
         const body = await readRequestBody(req);
-        const payload = TeamRunCreateRequestSchema.parse(JSON.parse(body || '{}'));
+        const payload = TEAM_RUN_CREATE_REQUEST_SCHEMA.parse(JSON.parse(body || '{}'));
         const prebuiltTaskRunSpec = payload.taskRunSpec ?? null;
         const teamId = (prebuiltTaskRunSpec?.teamId ?? payload.teamId ?? '').trim();
         const nowIso = now().toISOString();
@@ -1325,7 +1325,7 @@ function createStartupRecoveryLog(
   return parts.join(' ');
 }
 
-const CompactTeamRunCreateRequestSchema = z.object({
+const COMPACT_TEAM_RUN_CREATE_REQUEST_SCHEMA = z.object({
   teamId: z.string().min(1).optional(),
   objective: z.string().min(1).optional(),
   title: z.string().min(1).nullable().optional(),
@@ -1344,7 +1344,7 @@ const CompactTeamRunCreateRequestSchema = z.object({
     .optional(),
 });
 
-const TeamRunCreateRequestSchema = CompactTeamRunCreateRequestSchema.extend({
+const TEAM_RUN_CREATE_REQUEST_SCHEMA = COMPACT_TEAM_RUN_CREATE_REQUEST_SCHEMA.extend({
   taskRunSpec: TaskRunSpecSchema.optional(),
 }).superRefine((value, ctx) => {
   if (!value.taskRunSpec) {
@@ -1393,7 +1393,7 @@ const TeamRunCreateRequestSchema = CompactTeamRunCreateRequestSchema.extend({
   }
 });
 
-const StatusControlRequestSchema = z.union([
+const STATUS_CONTROL_REQUEST_SCHEMA = z.union([
   z.object({
     backgroundDrain: z.object({
       action: z.enum(['pause', 'resume']),
@@ -1449,7 +1449,7 @@ const StatusControlRequestSchema = z.union([
   }),
 ]);
 
-type StatusControlRequest = z.infer<typeof StatusControlRequestSchema>;
+type StatusControlRequest = z.infer<typeof STATUS_CONTROL_REQUEST_SCHEMA>;
 
 function createServiceHostOperatorControlInput(payload: Exclude<StatusControlRequest, { backgroundDrain: unknown }>): ExecutionServiceHostOperatorControlInput {
   if ('leaseRepair' in payload) {

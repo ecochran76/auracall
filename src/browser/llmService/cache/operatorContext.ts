@@ -4,7 +4,7 @@ import { getAuracallHomeDir } from '../../../auracallHome.js';
 import type { ResolvedUserConfig } from '../../../config.js';
 import type { ProviderId } from '../../providers/domain.js';
 import type { BrowserProviderListOptions } from '../../providers/types.js';
-import { LlmService } from '../llmService.js';
+import type { LlmService } from '../llmService.js';
 import { createLlmService } from '../providers/index.js';
 import type { CacheContext, IdentityPrompt } from '../types.js';
 

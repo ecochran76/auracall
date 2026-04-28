@@ -119,7 +119,7 @@ const GEMINI_GEM_KNOWLEDGE_UPLOAD_TRIGGER_SELECTOR =
   'button[aria-label*="upload file menu for gem knowledge" i]';
 const GEMINI_GEM_KNOWLEDGE_UPLOAD_ITEM_SELECTOR =
   'button[role="menuitem"][data-test-id="local-images-files-uploader-button"][aria-label*="Upload files" i]';
-const GEMINI_GEM_KNOWLEDGE_HIDDEN_UPLOAD_SELECTORS = [
+const _GEMINI_GEM_KNOWLEDGE_HIDDEN_UPLOAD_SELECTORS = [
   'button[data-test-id="hidden-local-image-upload-button"]',
   'button[data-test-id="hidden-local-file-upload-button"]',
 ];
@@ -281,7 +281,7 @@ export function deriveGeminiFeatureProbeFromUiList(
   return {
     detector: GEMINI_FEATURE_DETECTOR,
     deep_research: modes.includes('deep research'),
-    personal_intelligence: Object.prototype.hasOwnProperty.call(toggles, 'personal intelligence')
+    personal_intelligence: Object.hasOwn(toggles, 'personal intelligence')
       ? Boolean(toggles['personal intelligence'])
       : undefined,
     modes,
@@ -322,7 +322,7 @@ export function mergeGeminiFeatureProbes(
         ? uiListProbe.deep_research
         : providerProbe?.deep_research ?? modes.includes('deep research'),
     personal_intelligence:
-      Object.prototype.hasOwnProperty.call(toggles, 'personal intelligence')
+      Object.hasOwn(toggles, 'personal intelligence')
         ? Boolean(toggles['personal intelligence'])
         : providerProbe?.personal_intelligence ?? uiListProbe?.personal_intelligence,
     modes,
@@ -587,7 +587,7 @@ async function selectGeminiWorkbenchCapability(client: ChromeClient, capabilityI
     })()`,
     returnByValue: true,
   }).catch(() => ({ result: { value: false } }));
-  if (Boolean(selectedFromZeroState.result?.value)) {
+  if (selectedFromZeroState.result?.value) {
     const zeroStateSelectionVerified = await waitForPredicate(
       client.Runtime,
       `(() => {
@@ -701,7 +701,7 @@ async function selectGeminiWorkbenchCapability(client: ChromeClient, capabilityI
   }).catch(() => undefined);
 }
 
-function guessMimeType(filePath: string): string {
+function _guessMimeType(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase();
   switch (ext) {
     case '.txt':
@@ -1263,7 +1263,7 @@ async function readGeminiToolsDrawerProbe(Runtime: ChromeClient['Runtime']): Pro
   return {
     detector: GEMINI_FEATURE_DETECTOR,
     deep_research: modes.includes('deep research'),
-    personal_intelligence: Object.prototype.hasOwnProperty.call(toggles, 'personal intelligence')
+    personal_intelligence: Object.hasOwn(toggles, 'personal intelligence')
       ? Boolean(toggles['personal intelligence'])
       : undefined,
     modes,
@@ -2598,9 +2598,17 @@ export function normalizeGeminiConversationFiles(
   return normalized;
 }
 
+function stripAsciiControlCharacters(value: string): string {
+  return Array.from(value)
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code >= 0x20 && code !== 0x7f;
+    })
+    .join('');
+}
+
 function sanitizeGeminiArtifactFileName(value: string | null | undefined): string {
-  const normalized = String(value ?? '')
-    .replace(/[\u0000-\u001f\u007f]/g, '')
+  const normalized = stripAsciiControlCharacters(String(value ?? ''))
     .replace(/[\\/:"*?<>|]+/g, '-')
     .replace(/\s+/g, ' ')
     .trim();
@@ -3243,7 +3251,7 @@ async function copyGeminiDeepResearchContentsWithClient(
 async function clickGeminiConversationFileChip(
   client: ChromeClient,
   fileName: string,
-  targetOrdinal?: number,
+  _targetOrdinal?: number,
 ): Promise<boolean> {
   const normalizedName = normalizeWhitespace(fileName).toLowerCase();
   const located = await client.Runtime.evaluate({
@@ -3669,7 +3677,7 @@ async function materializeGeminiConversationArtifactWithClient(
     try {
       const copied = await copyGeminiDeepResearchContentsWithClient(client);
       const contentText =
-        (copied?.text && copied.text.trim()) ||
+        (copied?.text?.trim()) ||
         (resolvedArtifact.metadata && typeof resolvedArtifact.metadata.contentText === 'string'
           ? resolvedArtifact.metadata.contentText.trim()
           : '');
@@ -4672,7 +4680,7 @@ async function readGeminiConversationContextWithClient(
   return payload;
 }
 
-async function openGeminiConversationMenu(
+async function _openGeminiConversationMenu(
   client: ChromeClient,
   conversationId: string,
   trace?: GeminiDeleteTrace,
@@ -5458,7 +5466,7 @@ async function openGeminiConversationActionsMenuOnConversationPage(
   });
 }
 
-async function openGeminiProjectMenu(
+async function _openGeminiProjectMenu(
   client: ChromeClient,
   projectId: string,
 ): Promise<{ projectName: string; menuLabel: string }> {
@@ -5705,12 +5713,10 @@ async function pressGeminiGemSaveButton(
   });
   const point = located.result?.value as { x?: number; y?: number } | undefined;
   if (typeof point?.x === 'number' && typeof point?.y === 'number') {
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y, button: 'none' });
-      await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-      await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
-      return { ok: true };
-    }
+    await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y, button: 'none' });
+    await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+    await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+    return { ok: true };
   }
   const fallback = await pressButton(client.Runtime, {
     selector: GEMINI_GEM_CREATE_BUTTON_SELECTOR,

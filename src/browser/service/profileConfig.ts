@@ -1,6 +1,5 @@
 import { resolveSelectedBrowserProfileResolution } from './profileResolution.js';
 
-type ServiceId = 'chatgpt' | 'gemini' | 'grok';
 type MutableBrowserConfig = Record<string, unknown>;
 type MutableConfig = Record<string, unknown>;
 
@@ -21,7 +20,7 @@ export function applyBrowserProfileOverrides(
   options: { overrideExisting?: boolean } = {},
 ): void {
   const overrideExisting = options.overrideExisting ?? false;
-  const profileBrowser = (profile.browser ?? {}) as Record<string, unknown>;
+  const _profileBrowser = (profile.browser ?? {}) as Record<string, unknown>;
   const { resolution } = resolveSelectedBrowserProfileResolution({
     merged,
     explicitProfileName: asNonEmptyString(merged.auracallProfile) ?? null,

@@ -1,4 +1,4 @@
-import { type Command, type OptionValues } from 'commander';
+import type { Command, OptionValues } from 'commander';
 import type { ResolvedUserConfig } from '../config.js';
 import {
   createBrowserMediaGenerationExecutor,

@@ -50,7 +50,7 @@ export interface ExecutionResponsesServiceDeps {
       record: ExecutionRunStoredRecord;
       step: ExecutionRunStep;
     },
-  ) => Promise<ExecuteStoredRunStepResult | void>;
+  ) => Promise<ExecuteStoredRunStepResult | undefined>;
 }
 
 export interface ExecutionResponsesService {

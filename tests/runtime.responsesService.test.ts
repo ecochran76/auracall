@@ -157,6 +157,7 @@ describe('runtime responses service', () => {
         capturedRequest = request;
         capturedStepId = context.step.id;
         capturedStepStructuredData = context.step.input.structuredData;
+        return undefined;
       },
     });
 

@@ -348,7 +348,6 @@ async function loadContextDocumentsFromJson(
         context: parsed.items,
       });
     } catch {
-      continue;
     }
   }
   docs.sort((a, b) => compareTimestampDesc(a.updatedAt, b.updatedAt));
@@ -478,7 +477,6 @@ function readSemanticEmbeddings(
           );
         }
       } catch {
-        continue;
       }
     }
   }

@@ -266,7 +266,7 @@ function applyTransitionalCliServiceAliases(merged: MutableConfig, cliOptions: O
   }
 }
 
-function resolveActiveProfileName(
+function _resolveActiveProfileName(
   merged: MutableConfig,
   options: { explicitProfileName?: string | null; explicitAgentId?: string | null } = {},
 ): string | null {

@@ -473,12 +473,12 @@ export interface ExecutionServiceHostDeps {
   ownerId?: string;
   runnerId?: string | null;
   localActionExecutionPolicy?: Partial<LocalActionExecutionPolicy>;
-  executeStoredRunStep?: (context: ExecuteStoredRunStepContext) => Promise<ExecuteStoredRunStepResult | void>;
+  executeStoredRunStep?: (context: ExecuteStoredRunStepContext) => Promise<ExecuteStoredRunStepResult | undefined>;
   leaseHeartbeatIntervalMs?: number;
   leaseHeartbeatTtlMs?: number;
   executeLocalActionRequest?: (
     context: ExecuteLocalActionRequestContext,
-  ) => Promise<ExecuteLocalActionRequestResult | void>;
+  ) => Promise<ExecuteLocalActionRequestResult | undefined>;
   createRunAffinity?: (inspection: ExecutionRunInspection) => ExecutionRunAffinityRecord | null;
 }
 
@@ -2300,7 +2300,7 @@ function classifyActiveLeaseHealth(input: {
   if (lease.expiresAt <= input.now) {
     return {
       status: 'stale-heartbeat',
-      reason: 'lease heartbeat expired at ' + lease.expiresAt,
+      reason: `lease heartbeat expired at ${lease.expiresAt}`,
       leaseHeartbeatAt: lease.heartbeatAt,
       leaseExpiresAt: lease.expiresAt,
       runnerLastHeartbeatAt: runner?.lastHeartbeatAt ?? null,
@@ -2632,7 +2632,7 @@ function createActionableExecutionPlan(candidates: HostDrainCandidateInspection[
     for (const candidate of runnable.slice(0, runnableBudget)) {
       planned.add(candidate.runId);
     }
-    planned.add(recoverableStranded[0]!.runId);
+    planned.add(recoverableStranded[0]?.runId);
     return planned;
   }
 

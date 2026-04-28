@@ -3,14 +3,12 @@ import { createTeamRunBundleFromConfig } from '../teams/model.js';
 import {
   analyzeConfigModelBridgeHealth,
   inspectConfigModel,
-  getPreferredRuntimeProfileName,
   resolveAgentSelection,
   resolveRuntimeSelectionPolicy,
   resolveTeamSelection,
   resolveTeamRuntimeSelections,
   resolveRuntimeSelection,
   type ConfigModelBridgeKeys,
-  type ConfigModelInspection,
   type ConfigModelDoctorIssue,
   type ConfigModelDoctorReport,
   type ProjectedConfigModel,
@@ -212,7 +210,7 @@ export function resolveConfigDoctorExitCode(
   return options.strict && !report.ok ? 1 : 0;
 }
 
-function asRecord(value: unknown): MutableRecord | null {
+function _asRecord(value: unknown): MutableRecord | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as MutableRecord) : null;
 }
 

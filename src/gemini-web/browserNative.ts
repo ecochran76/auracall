@@ -678,7 +678,7 @@ async function waitForAttachmentPreview(
         return ariaDisabled !== 'true' && !send.hasAttribute('disabled');
       })();
       const previewNames = scopedPreviews.map((el) => {
-        const previewText = String(el.textContent ?? '').replace(/\s+/g, ' ').trim();
+        const previewText = String(el.textContent ?? '').replace(/s+/g, ' ').trim();
         const previewTitle =
           String(el.getAttribute('title') ?? '') ||
           String(el.querySelector('[data-test-id="file-name"]')?.getAttribute?.('title') ?? '');
@@ -690,7 +690,7 @@ async function waitForAttachmentPreview(
           scopedButtons.some((el) => String(el.getAttribute('aria-label') ?? '').includes(removeLabel)) ||
           buttons.some((el) => String(el.getAttribute('aria-label') ?? '').includes(removeLabel));
         const hasPreview = scopedPreviews.some((el) => {
-          const previewText = String(el.textContent ?? '').replace(/\s+/g, ' ').trim();
+          const previewText = String(el.textContent ?? '').replace(/s+/g, ' ').trim();
           const previewTitle =
             String(el.getAttribute('title') ?? '') ||
             String(el.querySelector('[data-test-id="file-name"]')?.getAttribute?.('title') ?? '');

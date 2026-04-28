@@ -322,7 +322,7 @@ async function writeProviderCache<T>(
   fileName: string,
   items: T,
 ): Promise<void> {
-  const { cacheDir, cacheFile, configuredUrl } = resolveProviderCachePath(context, fileName);
+  const { cacheFile, configuredUrl } = resolveProviderCachePath(context, fileName);
   await fs.mkdir(path.dirname(cacheFile), { recursive: true });
   const identity = sanitizeUserIdentity(context.userIdentity ?? null);
   const payload: ProviderCache<T> = {

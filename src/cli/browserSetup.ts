@@ -129,7 +129,6 @@ function defaultVerificationModelForTarget(target: BrowserSetupTarget): ModelNam
       return 'gemini-3-pro';
     case 'grok':
       return 'grok-4.20';
-    case 'chatgpt':
     default:
       return 'gpt-5.2';
   }

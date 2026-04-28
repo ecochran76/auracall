@@ -9,8 +9,8 @@ import {
 import { scanRegisteredInstance } from '../../packages/browser-service/src/service/instanceScanner.js';
 
 vi.mock('chrome-remote-interface', () => {
-  const List = vi.fn();
-  const mock = Object.assign(() => ({}), { List });
+  const LIST = vi.fn();
+  const mock = Object.assign(() => ({}), { List: LIST });
   return { default: mock };
 });
 

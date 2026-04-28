@@ -147,7 +147,6 @@ export async function startChatgptDeepResearchPlan(
       throw new Error(
         'ChatGPT Deep Research plan appeared, but AuraCall could not find the Start CTA. The plan may need human review or provider selectors may have changed.',
       );
-    case 'plan-not-found':
     default:
       await logDomFailure(Runtime, logger, 'chatgpt-deep-research-plan-not-found');
       throw new Error('ChatGPT Deep Research did not present a startable research plan before timeout.');

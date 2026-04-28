@@ -334,7 +334,7 @@ function isWindowsHostedChromePath(chromePath?: string | null): boolean {
   return isWindowsPath(chromePath ?? null);
 }
 
-function isLinuxHostedChromePath(chromePath?: string | null): boolean {
+function _isLinuxHostedChromePath(chromePath?: string | null): boolean {
   const trimmed = chromePath?.trim();
   return Boolean(trimmed) && !isWindowsHostedChromePath(trimmed);
 }

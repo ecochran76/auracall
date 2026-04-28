@@ -8,11 +8,11 @@ import type { ChromeClient } from '../browser/types.js';
 import { armDownloadCapture, waitForDownloadCapture } from '../browser/service/ui.js';
 import { connectToChromeTarget } from '../../packages/browser-service/src/chromeLifecycle.js';
 import type { ResolvedUserConfig } from '../config.js';
-import {
-  type MediaGenerationArtifact,
-  type MediaGenerationExecutor,
-  type MediaGenerationExecutorInput,
-  type MediaGenerationTimelineEvent,
+import type {
+  MediaGenerationArtifact,
+  MediaGenerationExecutor,
+  MediaGenerationExecutorInput,
+  MediaGenerationTimelineEvent,
 } from './types.js';
 import { MediaGenerationExecutionError } from './service.js';
 
@@ -838,9 +838,9 @@ export function evaluateGrokImagineVideoPostSubmitAcceptance(
   const materializationCandidateCount = generatedVideos.filter(hasGrokVideoMaterializationCandidate).length +
     selectedGeneratedVideoTiles.filter(hasGrokVideoMaterializationCandidate).length +
     materializationControls.filter(isGrokDownloadOrOpenControl).length;
-  const publicTemplateWithoutGeneratedVideo = !Boolean(imagine.pending) &&
-    !Boolean(imagine.account_gated) &&
-    !Boolean(imagine.blocked) &&
+  const publicTemplateWithoutGeneratedVideo = !imagine.pending &&
+    !imagine.account_gated &&
+    !imagine.blocked &&
     Boolean(imagine.terminal_video) &&
     generatedVideos.length === 0 &&
     (isGrokImagineTemplateRoute(normalizeNonEmpty(imagine.href)) ||
@@ -852,9 +852,9 @@ export function evaluateGrokImagineVideoPostSubmitAcceptance(
   const terminalVideo = Boolean(imagine.terminal_video);
   const hasGeneratedSelection = generatedVideos.length > 0 || selectedGeneratedVideoTiles.length > 0;
   const ready = terminalVideo && hasGeneratedSelection && materializationCandidateCount > 0 && !publicTemplateWithoutGeneratedVideo;
-  const failureReason = Boolean(imagine.account_gated)
+  const failureReason = imagine.account_gated
     ? 'account_gated'
-    : Boolean(imagine.blocked)
+    : imagine.blocked
       ? 'blocked'
       : publicTemplateWithoutGeneratedVideo
         ? 'terminal_public_template_without_generated_video'

@@ -118,8 +118,8 @@ function diffToggleMaps(
   const changed: Array<{ key: string; before: boolean; after: boolean }> = [];
   const keys = Array.from(new Set([...Object.keys(before), ...Object.keys(after)])).sort();
   for (const key of keys) {
-    const hasBefore = Object.prototype.hasOwnProperty.call(before, key);
-    const hasAfter = Object.prototype.hasOwnProperty.call(after, key);
+    const hasBefore = Object.hasOwn(before, key);
+    const hasAfter = Object.hasOwn(after, key);
     if (!hasBefore && hasAfter) {
       added[key] = after[key]!;
       continue;

@@ -303,7 +303,7 @@ describe('selectBrowserToolsPageIndex', () => {
           matched: true,
           matchedAny: ['__NEXT_DATA__'],
           missingAll: [],
-          preview: 'window.__NEXT_DATA__={\"user\":{\"name\":\"Eric\"}}',
+          preview: 'window.__NEXT_DATA__={"user":{"name":"Eric"}}',
         },
       }),
     };

@@ -1078,11 +1078,11 @@ describe('browser-service ui wait helpers', () => {
       { readyState: 'interactive', visibilityState: 'visible' },
       { loaded: true },
     ]);
-    const Page = {
+    const PAGE = {
       navigate: vi.fn(async () => undefined),
     };
 
-    const result = await navigateAndSettle({ Page: Page as never, Runtime: runtime as never }, {
+    const result = await navigateAndSettle({ Page: PAGE as never, Runtime: runtime as never }, {
       url: 'https://grok.com/files',
       routeExpression: 'location.pathname === "/files"',
       readyExpression: 'window.__filesReady',
@@ -1092,7 +1092,7 @@ describe('browser-service ui wait helpers', () => {
 
     expect(result.ok).toBe(true);
     expect(result.fallbackUsed).toBe(false);
-    expect(Page.navigate).toHaveBeenCalledWith({ url: 'https://grok.com/files' });
+    expect(PAGE.navigate).toHaveBeenCalledWith({ url: 'https://grok.com/files' });
     expect(runtime.evaluate).toHaveBeenCalledTimes(3);
   });
 
@@ -1116,11 +1116,11 @@ describe('browser-service ui wait helpers', () => {
         return { result: { value: null } };
       }),
     };
-    const Page = {
+    const PAGE = {
       navigate: vi.fn(async () => undefined),
     };
 
-    const result = await navigateAndSettle({ Page: Page as never, Runtime: runtime as never }, {
+    const result = await navigateAndSettle({ Page: PAGE as never, Runtime: runtime as never }, {
       url: 'https://grok.com/files',
       routeExpression: 'location.pathname === "/files"',
       readyExpression: 'window.__filesReady',
@@ -1157,11 +1157,11 @@ describe('browser-service ui wait helpers', () => {
         return { result: { value: null } };
       }),
     };
-    const Page = {
+    const PAGE = {
       navigate: vi.fn(async () => undefined),
     };
 
-    const result = await navigateAndSettle({ Page: Page as never, Runtime: runtime as never }, {
+    const result = await navigateAndSettle({ Page: PAGE as never, Runtime: runtime as never }, {
       url: 'https://grok.com/files',
       routeExpression: 'location.pathname === "/files"',
       readyExpression: 'window.__filesReady',
@@ -1205,11 +1205,11 @@ describe('browser-service ui wait helpers', () => {
         return { result: { value: null } };
       }),
     };
-    const Page = {
+    const PAGE = {
       reload: vi.fn(async () => undefined),
     };
 
-    const result = await reloadAndSettle({ Page: Page as never, Runtime: runtime as never }, {
+    const result = await reloadAndSettle({ Page: PAGE as never, Runtime: runtime as never }, {
       ignoreCache: true,
       timeoutMs: 50,
       pollMs: 1,
@@ -1218,7 +1218,7 @@ describe('browser-service ui wait helpers', () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(Page.reload).toHaveBeenCalledWith({ ignoreCache: true });
+    expect(PAGE.reload).toHaveBeenCalledWith({ ignoreCache: true });
     expect(mutationLog.list()).toEqual([
       expect.objectContaining({
         phase: 'start',

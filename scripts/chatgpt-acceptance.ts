@@ -1,8 +1,8 @@
 #!/usr/bin/env tsx
 import { randomBytes } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
+import { readFileSync, type Dirent } from 'node:fs';
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -528,7 +528,7 @@ async function findRecentBrowserSessionByPrompt(prompt: string): Promise<RecentB
     return null;
   }
   const sessionsDir = path.join(homeDir, '.auracall', 'sessions');
-  let entries;
+  let entries: Dirent[];
   try {
     entries = await readdir(sessionsDir, { withFileTypes: true });
   } catch {

@@ -14902,3 +14902,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   changelog to `0.1.0`, keep older changelog entries only as fork provenance,
   and make release helpers publish/smoke `auracall` artifacts rather than
   `@steipete/oracle`.
+- 2026-04-28: Release preflight lint should distinguish blocking error-level
+  diagnostics from legacy warning-level cleanup. The immediate gate is
+  `pnpm run lint` exiting 0; remaining warning diagnostics need their own
+  policy/config cleanup slice if the release checklist is interpreted as
+  literal zero warnings.

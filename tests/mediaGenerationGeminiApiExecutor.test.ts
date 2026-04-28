@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createGeminiApiMediaGenerationExecutor } from '../src/media/geminiApiExecutor.js';
-import { MediaGenerationExecutionError } from '../src/media/service.js';
+import type { MediaGenerationExecutionError } from '../src/media/service.js';
 import type { MediaGenerationTimelineEvent } from '../src/media/types.js';
 
 describe('Gemini API media generation executor', () => {

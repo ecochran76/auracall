@@ -18,7 +18,6 @@ import {
   type TabResolutionExplanation,
 } from '../../../packages/browser-service/src/service/instanceScanner.js';
 import {
-  listInstances,
   listInstancesWithLiveness,
   registerInstance,
 } from '../../../packages/browser-service/src/service/stateRegistry.js';

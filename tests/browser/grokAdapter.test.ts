@@ -79,7 +79,7 @@ describe('extractGrokIdentityFromSerializedScripts', () => {
 
 describe('checkGrokBrowserAuthPreflight', () => {
   test('fails on Google account password challenge before Grok automation', async () => {
-    const Runtime = createFakeAuthRuntime([
+    const RUNTIME = createFakeAuthRuntime([
       {
         href: 'https://accounts.google.com/v3/signin/challenge/pwd',
         title: 'Welcome',
@@ -88,7 +88,7 @@ describe('checkGrokBrowserAuthPreflight', () => {
       },
     ]);
 
-    await expect(checkGrokBrowserAuthPreflight(Runtime)).resolves.toMatchObject({
+    await expect(checkGrokBrowserAuthPreflight(RUNTIME)).resolves.toMatchObject({
       ok: false,
       reason: 'google_account_too_many_failed_attempts',
       href: 'https://accounts.google.com/v3/signin/challenge/pwd',
@@ -97,7 +97,7 @@ describe('checkGrokBrowserAuthPreflight', () => {
   });
 
   test('fails when configured Grok identity differs from detected identity', async () => {
-    const Runtime = createFakeAuthRuntime([
+    const RUNTIME = createFakeAuthRuntime([
       {
         href: 'https://grok.com/imagine',
         title: 'Imagine - Grok',
@@ -114,7 +114,7 @@ describe('checkGrokBrowserAuthPreflight', () => {
       },
     ]);
 
-    await expect(checkGrokBrowserAuthPreflight(Runtime, {
+    await expect(checkGrokBrowserAuthPreflight(RUNTIME, {
       expectedUserIdentity: {
         email: 'operator@example.com',
         source: 'profile',
@@ -131,7 +131,7 @@ describe('checkGrokBrowserAuthPreflight', () => {
   });
 
   test('waits for Grok identity hydration before treating the app route as signed out', async () => {
-    const Runtime = createFakeAuthRuntime([
+    const RUNTIME = createFakeAuthRuntime([
       {
         href: 'https://grok.com/imagine',
         title: 'Imagine - Grok',
@@ -162,7 +162,7 @@ describe('checkGrokBrowserAuthPreflight', () => {
       },
     ]);
 
-    await expect(checkGrokBrowserAuthPreflight(Runtime, {
+    await expect(checkGrokBrowserAuthPreflight(RUNTIME, {
       expectedUserIdentity: {
         email: 'ez86944@gmail.com',
         source: 'profile',
@@ -178,7 +178,7 @@ describe('checkGrokBrowserAuthPreflight', () => {
   });
 
   test('fails when no expected Grok identity is configured', async () => {
-    const Runtime = createFakeAuthRuntime([
+    const RUNTIME = createFakeAuthRuntime([
       {
         href: 'https://grok.com/imagine',
         title: 'Imagine - Grok',
@@ -195,7 +195,7 @@ describe('checkGrokBrowserAuthPreflight', () => {
       },
     ]);
 
-    await expect(checkGrokBrowserAuthPreflight(Runtime)).resolves.toMatchObject({
+    await expect(checkGrokBrowserAuthPreflight(RUNTIME)).resolves.toMatchObject({
       ok: false,
       reason: 'grok_expected_identity_missing',
       expectedIdentity: null,
@@ -984,8 +984,7 @@ describe('Grok Imagine materialization', () => {
 
       const adapter = createGrokAdapter();
       expect(adapter.materializeActiveMediaArtifacts).toBeDefined();
-      const files = await adapter.materializeActiveMediaArtifacts!(
-        {
+      const files = await adapter.materializeActiveMediaArtifacts!({
           capabilityId: 'grok.media.imagine_image',
           maxItems: 3,
           compareFullQuality: true,
@@ -1086,10 +1085,13 @@ describe('Grok Imagine materialization', () => {
       expect(evalExpressions.some((expression) => expression.includes('rect.width >= 120'))).toBe(true);
       expect(evalExpressions.some((expression) => expression.includes('[id^="imagine-masonry-section"] img'))).toBe(true);
       expect(evalExpressions.some((expression) => expression.includes('const allowPrimaryTileActivation = false'))).toBe(true);
-      await expect(fs.stat(files[0]!.localPath!)).resolves.toMatchObject({ size: files[0]!.size });
-      await expect(fs.stat(files[1]!.localPath!)).resolves.toMatchObject({ size: files[1]!.size });
-      await expect(fs.stat(files[2]!.localPath!)).resolves.toMatchObject({ size: files[2]!.size });
-      await expect(fs.stat(files[3]!.localPath!)).resolves.toMatchObject({ size: files[3]!.size });
+      for (const file of files.slice(0, 4)) {
+        expect(file.localPath).toBeDefined();
+        if (!file.localPath) {
+          throw new Error(`Expected local path for ${file.id}`);
+        }
+        await expect(fs.stat(file.localPath)).resolves.toMatchObject({ size: file.size });
+      }
     } finally {
       await fs.rm(destDir, { recursive: true, force: true });
     }
@@ -1118,8 +1120,7 @@ describe('Grok Imagine materialization', () => {
       grokRunPromptMocks.connectToChromeTarget.mockResolvedValue(client);
 
       const adapter = createGrokAdapter();
-      await adapter.materializeActiveMediaArtifacts!(
-        {
+      await adapter.materializeActiveMediaArtifacts!({
           capabilityId: 'grok.media.imagine_image',
           maxItems: 1,
           compareFullQuality: false,
@@ -1169,8 +1170,7 @@ describe('Grok Imagine materialization', () => {
       grokRunPromptMocks.connectToChromeTarget.mockResolvedValue(client);
 
       const adapter = createGrokAdapter();
-      const files = await adapter.materializeActiveMediaArtifacts!(
-        {
+      const files = await adapter.materializeActiveMediaArtifacts!({
           capabilityId: 'grok.media.imagine_image',
           maxItems: 1,
           compareFullQuality: true,
@@ -1236,8 +1236,7 @@ describe('Grok Imagine materialization', () => {
       grokRunPromptMocks.connectToChromeTarget.mockResolvedValue(client);
 
       const adapter = createGrokAdapter();
-      const files = await adapter.materializeActiveMediaArtifacts!(
-        {
+      const files = await adapter.materializeActiveMediaArtifacts!({
           capabilityId: 'grok.media.imagine_image',
           maxItems: 1,
           compareFullQuality: true,
@@ -1306,8 +1305,7 @@ describe('Grok Imagine materialization', () => {
       grokRunPromptMocks.connectToChromeTarget.mockResolvedValue(client);
 
       const adapter = createGrokAdapter();
-      const files = await adapter.materializeActiveMediaArtifacts!(
-        {
+      const files = await adapter.materializeActiveMediaArtifacts!({
           capabilityId: 'grok.media.imagine_image',
           maxItems: 1,
           compareFullQuality: true,
@@ -1371,8 +1369,7 @@ describe('Grok Imagine materialization', () => {
       grokRunPromptMocks.connectToChromeTarget.mockResolvedValue(client);
 
       const adapter = createGrokAdapter();
-      const files = await adapter.materializeActiveMediaArtifacts!(
-        {
+      const files = await adapter.materializeActiveMediaArtifacts!({
           capabilityId: 'grok.media.imagine_image',
           maxItems: 1,
           compareFullQuality: true,
@@ -1435,8 +1432,7 @@ describe('Grok Imagine materialization', () => {
       grokRunPromptMocks.connectToChromeTarget.mockResolvedValue(client);
 
       const adapter = createGrokAdapter();
-      const files = await adapter.materializeActiveMediaArtifacts!(
-        {
+      const files = await adapter.materializeActiveMediaArtifacts!({
           capabilityId: 'grok.media.imagine_image',
           maxItems: 1,
           compareFullQuality: true,
@@ -1501,7 +1497,7 @@ async function runGrokImaginePromptModeSelectionTest(input: {
 
   const adapter = createGrokAdapter();
   expect(adapter.runPrompt).toBeDefined();
-  await adapter.runPrompt!(
+  await adapter.runPrompt?.(
     {
       prompt: 'Generate an asphalt secret agent',
       capabilityId: input.capabilityId,
@@ -1628,7 +1624,7 @@ function createFakeGrokImagineMaterializationClient(destDir: string) {
   return {
     Page: {
       enable: vi.fn(async () => undefined),
-      captureScreenshot: vi.fn(async () => ({ data: visibleBytes[0]!.toString('base64') })),
+      captureScreenshot: vi.fn(async () => ({ data: visibleBytes[0]?.toString('base64') })),
     },
     Runtime: {
       enable: vi.fn(async () => undefined),
@@ -1639,12 +1635,12 @@ function createFakeGrokImagineMaterializationClient(destDir: string) {
   };
 }
 
-function createFakeGrokImagineSavedFallbackClient(destDir: string) {
+function _createFakeGrokImagineSavedFallbackClient(destDir: string) {
   let downloadName: string | null = null;
   let fullQualityAttempts = 0;
   const visibleBytes = [Buffer.from('visible tile one jpeg bytes')];
   const fullQualityBytes = Buffer.from('saved gallery full quality jpeg bytes are different');
-  const visibleDataUrl = `data:image/jpeg;base64,${visibleBytes[0]!.toString('base64')}`;
+  const visibleDataUrl = `data:image/jpeg;base64,${visibleBytes[0]?.toString('base64')}`;
   const evaluate = vi.fn(async ({ expression }: { expression: string }) => {
     if (expression.includes('Browser.setDownloadBehavior') || expression.includes('Page.setDownloadBehavior')) {
       return { result: { value: true } };
@@ -1757,7 +1753,7 @@ function createFakeGrokImagineSavedFallbackClient(destDir: string) {
       enable: vi.fn(async () => undefined),
       navigate: vi.fn(async () => undefined),
       bringToFront: vi.fn(async () => undefined),
-      captureScreenshot: vi.fn(async () => ({ data: visibleBytes[0]!.toString('base64') })),
+      captureScreenshot: vi.fn(async () => ({ data: visibleBytes[0]?.toString('base64') })),
     },
     Runtime: {
       enable: vi.fn(async () => undefined),
@@ -1777,7 +1773,7 @@ function createFakeGrokImagineFilesFallbackClient(
   let fullQualityAttempts = 0;
   const visibleBytes = [Buffer.from('visible tile one jpeg bytes')];
   const fullQualityBytes = Buffer.from('files page full quality jpeg bytes are different');
-  const visibleDataUrl = `data:image/jpeg;base64,${visibleBytes[0]!.toString('base64')}`;
+  const visibleDataUrl = `data:image/jpeg;base64,${visibleBytes[0]?.toString('base64')}`;
   const evaluate = vi.fn(async ({ expression }: { expression: string }) => {
     if (expression.includes('Browser.setDownloadBehavior') || expression.includes('Page.setDownloadBehavior')) {
       return { result: { value: true } };
@@ -1983,7 +1979,7 @@ function createFakeGrokImagineFilesFallbackClient(
         currentUrl = url;
       }),
       bringToFront: vi.fn(async () => undefined),
-      captureScreenshot: vi.fn(async () => ({ data: visibleBytes[0]!.toString('base64') })),
+      captureScreenshot: vi.fn(async () => ({ data: visibleBytes[0]?.toString('base64') })),
     },
     Runtime: {
       enable: vi.fn(async () => undefined),
@@ -1997,7 +1993,7 @@ function createFakeGrokImagineFilesFallbackClient(
 function createFakeGrokImagineNoPrimaryClickClient(_destDir: string) {
   let downloadName: string | null = null;
   const visibleBytes = [Buffer.from('visible tile one jpeg bytes')];
-  const visibleDataUrl = `data:image/jpeg;base64,${visibleBytes[0]!.toString('base64')}`;
+  const visibleDataUrl = `data:image/jpeg;base64,${visibleBytes[0]?.toString('base64')}`;
   const evaluate = vi.fn(async ({ expression }: { expression: string }) => {
     if (expression.includes('Browser.setDownloadBehavior') || expression.includes('Page.setDownloadBehavior')) {
       return { result: { value: true } };
@@ -2086,7 +2082,7 @@ function createFakeGrokImagineNoPrimaryClickClient(_destDir: string) {
     Page: {
       enable: vi.fn(async () => undefined),
       navigate: vi.fn(async () => undefined),
-      captureScreenshot: vi.fn(async () => ({ data: visibleBytes[0]!.toString('base64') })),
+      captureScreenshot: vi.fn(async () => ({ data: visibleBytes[0]?.toString('base64') })),
     },
     Runtime: {
       enable: vi.fn(async () => undefined),

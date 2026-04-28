@@ -261,8 +261,8 @@ export async function ensureServicesRegistry(): Promise<ServicesRegistry> {
   }
 
   return {
-    version: registry!.version,
-    services: registry!.services,
+    version: registry?.version,
+    services: registry?.services,
   };
 }
 

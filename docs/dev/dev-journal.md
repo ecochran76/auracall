@@ -23218,3 +23218,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run check`
   - `pnpm vitest run tests/cli/version.test.ts`
   - `npm pack --dry-run`
+
+## 2026-04-28 - Release lint gate cleanup
+
+- Focus: clear the error-level lint/typecheck blockers found during the
+  AuraCall `0.1.0` release preflight.
+- Progress:
+  - removed stale unused imports/helpers left behind by browser-service,
+    provider, runtime, and status-surface refactors
+  - replaced control-character filename sanitizer regexes with explicit
+    character-code filtering to satisfy Biome without relaxing the safety rule
+  - tightened tests that used unsafe optional-chain assertions after the lint
+    cleanup
+  - kept the current warning-level Biome diagnostics unchanged as a separate
+    release-hardening decision
+- Validation:
+  - `pnpm run lint` exits 0 with warning-level diagnostics only
+  - `pnpm run check`
+  - `pnpm vitest run tests/browser/featureDiscovery.test.ts tests/browser/grokAdapter.test.ts tests/http.responsesServer.test.ts tests/runtime.configuredExecutor.test.ts tests/runtime.responsesService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/pageActions.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser-service/chromeLifecycleOwnership.test.ts --maxWorkers 1`
+  - `pnpm run build`
+  - `pnpm test` reached 1796 passing tests, but 7 tests timed out under the
+    default parallel run; the touched focused suite and the two still-failing
+    timeout files passed when rerun serially
+  - `git diff --check`

@@ -54,10 +54,10 @@ export interface ExecuteStoredRunOnceOptions {
   leaseHeartbeatTtlMs?: number;
   control?: ExecutionRuntimeControlContract;
   store?: ExecutionRunRecordStore;
-  executeStep?: (context: ExecuteStoredRunStepContext) => Promise<ExecuteStoredRunStepResult | void>;
+  executeStep?: (context: ExecuteStoredRunStepContext) => Promise<ExecuteStoredRunStepResult | undefined>;
   executeLocalActionRequest?: (
     context: ExecuteLocalActionRequestContext,
-  ) => Promise<ExecuteLocalActionRequestResult | void>;
+  ) => Promise<ExecuteLocalActionRequestResult | undefined>;
 }
 
 export interface RecoveredExecutionRun {
@@ -1910,7 +1910,7 @@ async function resolveLocalActionRequests(input: {
   output: ExecutionRunStep['output'];
   executeLocalActionRequest?: (
     context: ExecuteLocalActionRequestContext,
-  ) => Promise<ExecuteLocalActionRequestResult | void>;
+  ) => Promise<ExecuteLocalActionRequestResult | undefined>;
 }): Promise<{
   requests: TeamRunLocalActionRequest[];
   resolvedRequests: TeamRunLocalActionRequest[];

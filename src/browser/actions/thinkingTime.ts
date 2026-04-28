@@ -311,7 +311,6 @@ function resolveThinkingTimeCandidates(level: ThinkingTimeLevel): string[] {
       return ['heavy', 'extended'];
     case 'standard':
       return ['standard'];
-    case 'extended':
     default:
       return ['extended'];
   }

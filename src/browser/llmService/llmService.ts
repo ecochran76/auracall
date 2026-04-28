@@ -165,9 +165,17 @@ function normalizeProjectInstructionsForPrefix(value: string): string {
   return value.replace(/\r\n/g, '\n').trim();
 }
 
+function stripAsciiControlCharacters(value: string): string {
+  return Array.from(value)
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code >= 0x20 && code !== 0x7f;
+    })
+    .join('');
+}
+
 function sanitizeArtifactPathSegment(value: string): string {
-  const normalized = String(value ?? '')
-    .replace(/[\u0000-\u001f\u007f]/g, '')
+  const normalized = stripAsciiControlCharacters(String(value ?? ''))
     .replace(/[\\/:"*?<>|]+/g, '-')
     .replace(/\s+/g, ' ')
     .trim();
@@ -182,8 +190,7 @@ function normalizeArtifactFetchError(error: unknown): string {
 }
 
 function sanitizeConversationFileName(value: string, fallback: string = 'conversation-file'): string {
-  const normalized = String(value ?? '')
-    .replace(/[\u0000-\u001f\u007f]/g, '')
+  const normalized = stripAsciiControlCharacters(String(value ?? ''))
     .replace(/[\\/:"*?<>|]+/g, '-')
     .replace(/\s+/g, ' ')
     .trim();
@@ -386,7 +393,6 @@ export abstract class LlmService {
     const configuredUrl = Object.hasOwn(overrides, 'configuredUrl')
       ? overrides.configuredUrl ?? null
       : this.getConfiguredUrl();
-    const launchUrl = configuredUrl ?? this.getDefaultLaunchUrl();
     const hasExplicitEndpoint = overrides.port !== undefined || overrides.host !== undefined;
     const target = overrides.tabTargetId || hasExplicitEndpoint
       ? null
@@ -1346,7 +1352,7 @@ export abstract class LlmService {
       throw new Error(`Conversation context retrieval is not supported for ${this.providerId}.`);
     }
     const listOptions = await this.buildListOptions(options?.listOptions, {
-      ensurePort: options?.cacheOnly ? false : true,
+      ensurePort: !options?.cacheOnly,
     });
     const cacheContext = await this.resolveCacheContext(listOptions);
     const refresh = options?.refresh !== false;

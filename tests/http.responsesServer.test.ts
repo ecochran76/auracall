@@ -2862,7 +2862,7 @@ describe('http responses adapter', () => {
     );
 
     try {
-      const response = await fetch('http://127.0.0.1:' + server.port + '/status?recovery=true');
+      const response = await fetch(`http://127.0.0.1:${server.port}/status?recovery=true`);
       expect(response.status).toBe(200);
       const payload = (await response.json()) as Record<string, unknown>;
       expect(payload).toMatchObject({
@@ -10115,7 +10115,7 @@ describe('http responses adapter', () => {
           expect.objectContaining({
             type: 'note-added',
             note: 'human approved retry',
-            stepId: stepId,
+            stepId,
           }),
           expect.objectContaining({
             type: 'note-added',

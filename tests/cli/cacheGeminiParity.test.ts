@@ -12,7 +12,7 @@ const INTEGRATION_TIMEOUT = process.platform === 'win32' ? 60000 : 30000;
 
 function parseJsonPayload(stdout: string): unknown {
   const trimmed = stdout.trim();
-  const firstJsonIndex = trimmed.search(/[\[{]/);
+  const firstJsonIndex = trimmed.search(/[[{]/);
   if (firstJsonIndex < 0) {
     throw new Error(`Could not locate JSON payload in stdout: ${trimmed}`);
   }

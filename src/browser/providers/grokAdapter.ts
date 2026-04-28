@@ -18,9 +18,7 @@ import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../package
 import {
   detectGrokSignedInIdentity,
   extractGrokIdentityFromSerializedScripts,
-  normalizeGrokIdentityProbe,
   readGrokSerializedIdentityScriptsWithRetry,
-  type GrokIdentityProbeResult,
 } from './grokIdentity.js';
 import {
   ensureServicesRegistry,
@@ -35,7 +33,6 @@ import {
   clickRevealedRowAction,
   closeDialog,
   DEFAULT_DIALOG_SELECTORS,
-  ensureCollapsibleExpanded,
   findAndClickByLabel,
   hoverElement,
   isDialogOpen,
@@ -47,7 +44,6 @@ import {
   openRadixMenu,
   pressMenuButtonByAriaLabel,
   pressDialogButton,
-  pressRowAction,
   pressButton,
   hoverRowAndClickAction,
   hoverAndReveal,
@@ -79,7 +75,7 @@ const GROK_SOURCES_CONTENT_SELECTOR = 'div[id*="content-sources"]';
 const GROK_SOURCES_ROOT_SELECTOR = `${GROK_SOURCES_CONTENT_SELECTOR}, main`;
 const GROK_ASSET_ROW_SELECTOR = `div${cssClassContains('group/asset-row')}`;
 const GROK_SOURCES_FILES_ROW_SELECTOR = `div${cssClassContains('group/collapsible-row')}`;
-const GROK_PROJECT_SOURCES_ATTACH_SELECTOR = `button[aria-label="Attach"]${cssClassContains('ms-[1px]')}`;
+const _GROK_PROJECT_SOURCES_ATTACH_SELECTOR = `button[aria-label="Attach"]${cssClassContains('ms-[1px]')}`;
 const GROK_PERSONAL_FILES_SEARCH_SELECTOR = 'input[placeholder*="Search"][placeholder*="files"], input[placeholder*="Search files"]';
 const GROK_PERSONAL_FILES_ROW_SELECTOR = `div${cssClassContains('hover:bg-surface-l1')}${cssClassContains('group')}`;
 const GROK_PERSONAL_FILES_MODAL_MARKER = 'data-oracle-personal-files-modal';
@@ -2481,7 +2477,7 @@ async function materializeGrokFullQualityDownload(
     pollMs: 100,
   });
   let filePath = await waitForGrokDownloadedFile(destDir, 10_000);
-  let remoteUrl = capture.href || null;
+  const remoteUrl = capture.href || null;
   if (!filePath && remoteUrl) {
     const response = await fetch(remoteUrl);
     if (response.ok) {
@@ -3035,7 +3031,7 @@ function inferMimeTypeFromName(filePath: string): string {
 }
 
 function ensureExtension(fileName: string, extension: string): string {
-  const clean = String(fileName || 'grok-imagine-full-quality').replace(/[\/\0]/g, '-').trim() || 'grok-imagine-full-quality';
+  const clean = String(fileName || 'grok-imagine-full-quality').replace(/[/\0]/g, '-').trim() || 'grok-imagine-full-quality';
   return /\.[a-z0-9]{2,5}$/i.test(clean) ? clean : `${clean}.${extension}`;
 }
 
@@ -4483,7 +4479,7 @@ export function createGrokAdapter(): Pick<
       projectId: string,
       options?: BrowserProviderListOptions,
     ): Promise<void> {
-      const targetUrl = resolveGrokProjectUrl(projectId);
+      const _targetUrl = resolveGrokProjectUrl(projectId);
       const connection = await connectToGrokTab(options);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
@@ -8560,7 +8556,7 @@ export async function clickProjectRemoveConfirmation(
 
 export async function ensureProjectSidebarOpen(
   client: ChromeClient,
-  options?: { logPrefix?: string },
+  _options?: { logPrefix?: string },
 ): Promise<void> {
   await ensureGrokTabVisible(client);
   const onProjectPage = await client.Runtime.evaluate({
@@ -8675,7 +8671,7 @@ async function waitForProjectRemoveDialog(
 
 export async function clickMainSidebarToggle(
   client: ChromeClient,
-  options?: { logPrefix?: string },
+  _options?: { logPrefix?: string },
 ): Promise<void> {
   const pressed = await pressButton(client.Runtime, {
     selector: 'button[data-sidebar="trigger"]',
@@ -8787,7 +8783,7 @@ export async function closeHistoryHoverMenu(
         console.log('[' + ${JSON.stringify(logPrefix)} + '] ' + msg);
       };
 
-      const dialog = document.querySelector('div[role=\"dialog\"][data-side]');
+      const dialog = document.querySelector('div[role="dialog"][data-side]');
       if (!dialog) {
         return { success: true, logs };
       }
@@ -10562,7 +10558,7 @@ export async function resolveProjectInstructionsModal(
 ): Promise<{ text: string; model?: string | null }> {
   const registry = await ensureServicesRegistry();
   const expected = registry.services[options.serviceId]?.models?.map((model) => model.label) ?? [];
-  let preopenedListId: string | null = null;
+  const preopenedListId: string | null = null;
   const desiredModelLabels = options.modelLabel
     ? resolveServiceModelLabels(registry, options.serviceId, options.modelLabel)
     : [];
@@ -10768,7 +10764,7 @@ export async function resolveProjectInstructionsModal(
       return { success: true, text, model, availableModels, logs };
     })()`;
   if (process.env.AURACALL_DEBUG_GROK === '1') {
-    console.log('[oracle] project instructions modal expression:\\n' + expression);
+    console.log(`[oracle] project instructions modal expression:\\n${expression}`);
   }
 
   const evalResult = await client.Runtime.evaluate({

@@ -37,7 +37,7 @@ describe('gemini-web upload metadata', () => {
         const inner = JSON.parse(outer[1]) as unknown[];
         const promptPayload = inner[0] as unknown[];
         expect(promptPayload[3]).toEqual([[['upload-id', 1, null, 'image/png'], 'input.png']]);
-        return new Response('[[null,null,"[null,[null],null,null,[[\"ok\"]]]"]]', { status: 200 });
+        return new Response('[[null,null,"[null,[null],null,null,[["ok"]]]"]]', { status: 200 });
       }
       throw new Error(`Unexpected fetch target: ${target}`);
     });

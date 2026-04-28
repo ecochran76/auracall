@@ -40,7 +40,6 @@ function parseArgs(argv: string[]): Args {
     if (token === '--history-since' && argv[i + 1]) {
       historySince = argv[i + 1].trim();
       i += 1;
-      continue;
     }
   }
   return { provider, projectId, historyLimit, historySince };

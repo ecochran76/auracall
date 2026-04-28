@@ -13,7 +13,7 @@ describe('configured stored-step executor', () => {
   });
 
   it('executes a Grok browser-backed step from runtime-profile config and returns response output', async () => {
-    const runBrowserModeImpl = vi.fn(async (options) => ({
+    const runBrowserModeImpl = vi.fn(async (_options) => ({
       answerText: 'AURACALL_TEAM_SMOKE_OK',
       answerMarkdown: 'AURACALL_TEAM_SMOKE_OK',
       tookMs: 1200,
@@ -410,7 +410,7 @@ describe('configured stored-step executor', () => {
     const runBrowserModeImpl = vi.fn(async () => {
       throw new Error('chatgpt/grok executor should not be used for Gemini');
     });
-    const runGeminiBrowserModeImpl = vi.fn(async (options) => ({
+    const runGeminiBrowserModeImpl = vi.fn(async (_options) => ({
       answerText: 'AURACALL_GEMINI_TEAM_SMOKE_OK',
       answerMarkdown: 'AURACALL_GEMINI_TEAM_SMOKE_OK',
       tookMs: 900,
@@ -596,8 +596,19 @@ describe('configured stored-step executor', () => {
       });
     });
 
-    expect(resolveGeminiRun).not.toBeNull();
-    resolveGeminiRun!({
+    const settleGeminiRun = resolveGeminiRun as
+      | ((value: {
+          answerText: string;
+          answerMarkdown: string;
+          tookMs: number;
+          answerTokens: number;
+          answerChars: number;
+        }) => void)
+      | null;
+    if (!settleGeminiRun) {
+      throw new Error('Gemini browser run resolver was not captured');
+    }
+    settleGeminiRun({
       answerText: 'AURACALL_GEMINI_LIVE_STATE_OK',
       answerMarkdown: 'AURACALL_GEMINI_LIVE_STATE_OK',
       tookMs: 250,
@@ -696,8 +707,19 @@ describe('configured stored-step executor', () => {
       });
     });
 
-    expect(resolveGrokRun).not.toBeNull();
-    resolveGrokRun!({
+    const settleGrokRun = resolveGrokRun as
+      | ((value: {
+          answerText: string;
+          answerMarkdown: string;
+          tookMs: number;
+          answerTokens: number;
+          answerChars: number;
+        }) => void)
+      | null;
+    if (!settleGrokRun) {
+      throw new Error('Grok browser run resolver was not captured');
+    }
+    settleGrokRun({
       answerText: 'AURACALL_GROK_LIVE_STATE_OK',
       answerMarkdown: 'AURACALL_GROK_LIVE_STATE_OK',
       tookMs: 250,

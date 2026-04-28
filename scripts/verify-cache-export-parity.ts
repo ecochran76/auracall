@@ -61,7 +61,6 @@ function parseArgs(argv: string[]): Args {
     }
     if (!token.startsWith('--') && !conversationId) {
       conversationId = token.trim();
-      continue;
     }
   }
 

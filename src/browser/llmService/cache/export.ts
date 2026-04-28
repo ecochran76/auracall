@@ -220,7 +220,7 @@ async function exportCsv(context: ProviderCacheContext, plan: CacheExportPlan): 
         item.url ?? '',
       ]),
     ];
-    await fs.writeFile(path.join(output, 'projects.csv'), rows.map(csvRow).join('\n') + '\n', 'utf8');
+    await fs.writeFile(path.join(output, 'projects.csv'), `${rows.map(csvRow).join('\n')}\n`, 'utf8');
     return;
   }
   if (plan.scope === 'contexts' || plan.scope === 'conversation') {
@@ -240,7 +240,7 @@ async function exportCsv(context: ProviderCacheContext, plan: CacheExportPlan): 
         String(item.artifactCount),
       ]);
     }
-    await fs.writeFile(path.join(output, 'contexts.csv'), rows.map(csvRow).join('\n') + '\n', 'utf8');
+    await fs.writeFile(path.join(output, 'contexts.csv'), `${rows.map(csvRow).join('\n')}\n`, 'utf8');
     return;
   }
   const rows = [
@@ -268,7 +268,7 @@ async function exportCsv(context: ProviderCacheContext, plan: CacheExportPlan): 
       ];
     }),
   );
-  await fs.writeFile(path.join(output, 'conversations.csv'), rows.map(csvRow).join('\n') + '\n', 'utf8');
+  await fs.writeFile(path.join(output, 'conversations.csv'), `${rows.map(csvRow).join('\n')}\n`, 'utf8');
 }
 
 async function exportMarkdown(context: ProviderCacheContext, plan: CacheExportPlan): Promise<void> {
@@ -771,7 +771,7 @@ function renderConversationMarkdown(
     }
     lines.push('');
   }
-  return lines.join('\n').trimEnd() + '\n';
+  return `${lines.join('\n').trimEnd()}\n`;
 }
 
 function renderConversationHtml(

@@ -130,7 +130,7 @@ async function readPageDiagnostics(
   };
 }
 
-function buildPageDiagnosticsExpression(service: BrowserDiagnosticsService): string {
+function buildPageDiagnosticsExpression(_service: BrowserDiagnosticsService): string {
   return `(() => {
     const visible = (node) => {
       if (!(node instanceof HTMLElement)) return false;

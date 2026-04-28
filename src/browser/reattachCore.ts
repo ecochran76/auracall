@@ -378,7 +378,7 @@ async function resumeBrowserSessionViaNewChrome(
     logger(`Fresh DevTools connection failed (${message}); retrying attach once after probe.`);
     client = await runtimeDeps.connectToChrome(chrome.port, logger, chromeHost);
   }
-  const { Network, Page, Runtime, DOM } = client;
+  const { Page, Runtime, DOM } = client;
 
   if (Runtime?.enable) {
     await Runtime.enable();

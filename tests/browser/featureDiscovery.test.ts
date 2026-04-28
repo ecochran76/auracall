@@ -163,6 +163,11 @@ describe('featureDiscovery', () => {
       },
     };
 
+    const baselineBrowserTools = baseline.runtime.browserTools!;
+    const baselineUiList = baselineBrowserTools.report.uiList;
+    if (!baselineUiList) {
+      throw new Error('baseline browser tools UI list is required for this test');
+    }
     const current: AuracallBrowserFeaturesContract = {
       ...baseline,
       generatedAt: '2026-04-07T02:05:00.000Z',
@@ -181,20 +186,20 @@ describe('featureDiscovery', () => {
       },
       runtime: {
         browserTools: {
-          ...baseline.runtime.browserTools!,
+          ...baselineBrowserTools,
           report: {
-            ...baseline.runtime.browserTools!.report,
+            ...baselineBrowserTools.report,
             uiList: {
-              ...baseline.runtime.browserTools!.report.uiList!,
+              ...baselineUiList,
               summary: {
-                ...baseline.runtime.browserTools!.report.uiList!.summary,
+                ...baselineUiList.summary,
                 menuItems: 2,
                 uploadCandidates: 2,
               },
               sections: {
-                ...baseline.runtime.browserTools!.report.uiList!.sections,
+                ...baselineUiList.sections,
                 menuItems: [
-                  ...baseline.runtime.browserTools!.report.uiList!.sections.menuItems,
+                  ...baselineUiList.sections.menuItems,
                   {
                     tag: 'button',
                     role: 'menuitemcheckbox',
@@ -215,7 +220,7 @@ describe('featureDiscovery', () => {
                   },
                 ],
                 uploadCandidates: [
-                  ...baseline.runtime.browserTools!.report.uiList!.sections.uploadCandidates,
+                  ...baselineUiList.sections.uploadCandidates,
                   {
                     tag: 'button',
                     role: null,

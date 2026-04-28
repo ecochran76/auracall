@@ -10,7 +10,7 @@ import { createExecutionResponseArtifact, createExecutionResponseMessage } from 
 
 export const AURACALL_STEP_OUTPUT_CONTRACT_VERSION = 'auracall.step-output.v1';
 
-const StepOutputArtifactRefSchema = z.object({
+const STEP_OUTPUT_ARTIFACT_REF_SCHEMA = z.object({
   id: z.string().min(1),
   kind: z.string().min(1),
   title: z.string().nullable().optional(),
@@ -18,7 +18,7 @@ const StepOutputArtifactRefSchema = z.object({
   uri: z.string().nullable().optional(),
 });
 
-const StepOutputLocalActionRequestSchema = z.object({
+const STEP_OUTPUT_LOCAL_ACTION_REQUEST_SCHEMA = z.object({
   kind: z.literal('shell'),
   summary: z.string().min(1),
   command: z.string().min(1),
@@ -27,20 +27,20 @@ const StepOutputLocalActionRequestSchema = z.object({
   notes: z.array(z.string()).optional(),
 });
 
-const StepOutputHandoffSchema = z.object({
+const STEP_OUTPUT_HANDOFF_SCHEMA = z.object({
   toRoleId: z.string().nullable().optional(),
   summary: z.string().nullable().optional(),
-  artifacts: z.array(StepOutputArtifactRefSchema).optional(),
+  artifacts: z.array(STEP_OUTPUT_ARTIFACT_REF_SCHEMA).optional(),
   structuredData: z.record(z.string(), z.unknown()).optional(),
   notes: z.array(z.string()).optional(),
 });
 
-const StepOutputMessageSchema = z.object({
+const STEP_OUTPUT_MESSAGE_SCHEMA = z.object({
   text: z.string().nullable().optional(),
   markdown: z.string().nullable().optional(),
 });
 
-const StepOutputErrorSchema = z.object({
+const STEP_OUTPUT_ERROR_SCHEMA = z.object({
   code: z.string().min(1),
   message: z.string().min(1),
   recoverable: z.boolean().optional(),
@@ -51,7 +51,7 @@ export const AuraCallStepOutputEnvelopeSchema = z
   .object({
     version: z.literal(AURACALL_STEP_OUTPUT_CONTRACT_VERSION),
     status: z.enum(['succeeded', 'needs_local_action', 'handoff', 'failed']),
-    message: StepOutputMessageSchema.nullable().optional(),
+    message: STEP_OUTPUT_MESSAGE_SCHEMA.nullable().optional(),
     routing: z
       .object({
         action: z.enum(['complete', 'local_action', 'handoff', 'error']),
@@ -59,10 +59,10 @@ export const AuraCallStepOutputEnvelopeSchema = z
       })
       .nullable()
       .optional(),
-    artifacts: z.array(StepOutputArtifactRefSchema).optional(),
-    localActionRequests: z.array(StepOutputLocalActionRequestSchema).optional(),
-    handoffs: z.array(StepOutputHandoffSchema).optional(),
-    error: StepOutputErrorSchema.nullable().optional(),
+    artifacts: z.array(STEP_OUTPUT_ARTIFACT_REF_SCHEMA).optional(),
+    localActionRequests: z.array(STEP_OUTPUT_LOCAL_ACTION_REQUEST_SCHEMA).optional(),
+    handoffs: z.array(STEP_OUTPUT_HANDOFF_SCHEMA).optional(),
+    error: STEP_OUTPUT_ERROR_SCHEMA.nullable().optional(),
     metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   })
   .superRefine((value, ctx) => {
