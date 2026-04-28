@@ -2060,6 +2060,10 @@
   - proves MCP media generation, media status, generic run status, and
     workbench capability tools share the configured browser-backed service
     bundle instead of default no-executor services
+  - persistence-safe polling coverage now seeds response and media records,
+    creates fresh service instances, and verifies MCP `run_status` plus
+    `media_generation_status` read the stored ids without provider/browser
+    re-invocation
 - MCP team-run parity:
   - `pnpm vitest run tests/mcp/teamRun.test.ts tests/mcp.schema.test.ts --maxWorkers 1`
   - proves the `team_run` tool registration, bounded input/output schemas, and

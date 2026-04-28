@@ -23085,3 +23085,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
   - `pnpm run check`
   - `git diff --check`
+
+## 2026-04-28 - MCP persistence-safe polling docs
+
+- Focus: make the now-tested MCP polling discipline explicit for operators and
+  maintainers.
+- Progress:
+  - updated `docs/mcp.md` so `response_create`, `run_status`,
+    `media_generation`, and `media_generation_status` describe create-once,
+    poll-by-id behavior
+  - updated README MCP guidance with the short persistence-safe polling rule
+  - updated `docs/testing.md` to point maintainers at the seeded persistence
+    coverage for response and media status readback
+- Validation:
+  - `git diff --check`

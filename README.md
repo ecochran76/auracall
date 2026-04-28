@@ -843,6 +843,10 @@ Terminology note:
   `workbench_capabilities`. When launched from a resolved AuraCall runtime
   profile, the MCP response, media, and workbench tools use the same configured
   browser-backed service bundle as the local API server.
+- Persistence-safe MCP polling pattern: create once, keep the returned
+  `response.id` or `media_generation.id`, then poll with `run_status` or
+  `media_generation_status`. Status tools read durable local records and should
+  not be replaced with a second create call just to check progress.
 ```bash
 npx -y auracall auracall-mcp
 ```
