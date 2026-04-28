@@ -5,7 +5,6 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/auracall"><img src="https://img.shields.io/npm/v/auracall?style=for-the-badge&logo=npm&logoColor=white" alt="npm version"></a>
   <a href="https://github.com/ecochran76/oracle/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/ecochran76/oracle/ci.yml?branch=main&style=for-the-badge&label=tests" alt="CI Status"></a>
   <a href="https://github.com/ecochran76/oracle"><img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-blue?style=for-the-badge" alt="Platforms"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License"></a>
@@ -15,13 +14,13 @@ Aura-Call bundles your prompt and files so another AI can answer with real conte
 
 ## Quick start
 
-Install globally: `npm install -g auracall`
-Homebrew: rename pending; use `npm install -g auracall` for now.
-Repo dogfood install: `pnpm run install:user-runtime` builds the current
+Primary local install: `pnpm run install:user-runtime` builds the current
 checkout into `~/.auracall/user-runtime` and writes user-owned wrappers under
 `~/.local/bin`; see `docs/user-scoped-runtime.md`.
+Public npm distribution is intentionally deferred; `auracall` is not currently
+offered through npm or Homebrew.
 
-Requires Node 22+. Or use `npx -y auracall …` (or pnpx).
+Requires Node 22+.
 
 ```bash
 # Copy the bundle and paste into ChatGPT

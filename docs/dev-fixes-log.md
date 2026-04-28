@@ -14916,3 +14916,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   checksum files. Generate release checksum files with plain `shasum` calls and
   log the command separately, otherwise `.sha1`/`.sha256` artifacts include an
   extra `>> ...` line and are not clean checksum manifests.
+- 2026-04-28: Do not let a deferred distribution channel remain wired as the
+  default release path. While AuraCall is not offered through npm, README and
+  release docs should point to user-scoped runtime and GitHub/tarball
+  distribution, and `scripts/release.sh publish` must require an explicit
+  `AURACALL_ENABLE_NPM_PUBLISH=1` guard.

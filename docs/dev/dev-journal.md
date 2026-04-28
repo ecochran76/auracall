@@ -23306,3 +23306,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     so the documented token path is not currently loaded
 - Blocker: install/load npm auth for this shell, preferably the documented
   granular write token with 2FA bypass, then rerun `npm whoami` before publish.
+
+## 2026-04-28 - Release channel pivot away from npm
+
+- Focus: align release docs and helper behavior with the decision not to offer
+  AuraCall through npm for now.
+- Progress:
+  - changed README quick start to make `pnpm run install:user-runtime` the
+    primary local install path and removed the npm badge/install guidance
+  - updated `docs/RELEASING.md` to treat GitHub/package tarball plus
+    user-scoped runtime as the active release path
+  - guarded `scripts/release.sh publish` behind
+    `AURACALL_ENABLE_NPM_PUBLISH=1` and removed publish from the default `all`
+    phase
+  - changed release smoke to execute the local tarball from an empty directory
+    instead of using registry-backed `npx auracall@<version>`
+- Note: the earlier npm-auth preflight is now historical context, not the
+  current release blocker.
+- Validation:
+  - `bash -n scripts/release.sh`
+  - `./scripts/release.sh publish` exits 2 with the deferred-npm guard unless
+    `AURACALL_ENABLE_NPM_PUBLISH=1` is set
+  - `./scripts/release.sh artifacts && ./scripts/release.sh smoke` passed; the
+    smoke executed the local tarball from `/tmp/auracall-empty`
+  - regenerated tarball checksums:
+    `19ac539a280df8c1dad85b88bbf2d74bf139df99` SHA-1 and
+    `ddbb80a66ae95fae0178423945f14aee9108164b4f7f7c90701dd3d1a97b4129`
+    SHA-256
+  - `pnpm run install:user-runtime` refreshed
+    `~/.auracall/user-runtime`
+  - `~/.local/bin/auracall --version` returned `0.1.0`
+  - `~/.local/bin/auracall "Smoke from user runtime" --dry-run` passed
+  - `pnpm run docs:list` passed with the existing missing-front-matter
+    inventory

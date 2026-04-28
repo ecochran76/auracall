@@ -2,6 +2,8 @@
 
 Use this when you want the day-to-day `auracall` command to run from an
 installed user-owned package copy instead of from the live repo checkout.
+This is the primary dogfood/install path while public npm distribution is
+deferred.
 
 ## Install From The Current Checkout
 

@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# AuraCall release helper (npm)
-# Phases: gates | artifacts | publish | smoke | tag | all
+# AuraCall release helper
+# Phases: gates | artifacts | smoke | tag | publish | all
+# npm publish is intentionally opt-in; current releases are repo/GitHub
+# tarball and user-scoped runtime oriented.
 # Defaults to using the guardrail runner when available; falls back to env when
 # the local wrapper's runtime is unavailable.
 
@@ -66,16 +68,28 @@ phase_artifacts() {
 
 phase_publish() {
   banner "Publish to npm"
+  if [[ "${AURACALL_ENABLE_NPM_PUBLISH:-}" != "1" ]]; then
+    cat >&2 <<'EOF'
+npm publish is deferred for this repo.
+Set AURACALL_ENABLE_NPM_PUBLISH=1 only after npm distribution is intentionally enabled.
+EOF
+    exit 2
+  fi
   run "$RUNNER" pnpm publish --tag latest --access public
   run "$RUNNER" npm view auracall version
   run "$RUNNER" npm view auracall time
 }
 
 phase_smoke() {
-  banner "Smoke test in empty dir"
+  banner "Smoke test local tarball in empty dir"
   local tmp=/tmp/auracall-empty
+  local tgz="$PWD/auracall-${VERSION}.tgz"
+  if [[ ! -f "$tgz" ]]; then
+    echo "Missing $tgz; run scripts/release.sh artifacts first." >&2
+    exit 1
+  fi
   rm -rf "$tmp" && mkdir -p "$tmp"
-  ( cd "$tmp" && npx -y auracall@"$VERSION" "Smoke from empty dir" --dry-run )
+  ( cd "$tmp" && npm exec --yes --package "$tgz" -- auracall "Smoke from empty dir" --dry-run )
 }
 
 phase_tag() {
@@ -91,14 +105,15 @@ Usage: scripts/release.sh [phase]
 Phases (run individually or all):
   gates      pnpm check, lint, test, build
   artifacts  npm pack + sha1/sha256
-  publish    pnpm publish --tag latest --access public, verify npm view
-  smoke      empty-dir npx auracall@<version> --dry-run
+  smoke      empty-dir smoke from local auracall-<version>.tgz
   tag        git tag v<version> && push tags
-  all        run everything in order
+  publish    deferred npm publish; requires AURACALL_ENABLE_NPM_PUBLISH=1
+  all        run gates, artifacts, smoke, and tag
 
 Environment:
   MCP_RUNNER (default ./runner) - guardrail wrapper
   RELEASE_TEST_COMMAND (default "pnpm vitest run --maxWorkers 1 --testTimeout 15000")
+  AURACALL_ENABLE_NPM_PUBLISH=1 - explicitly enable npm publish phase
   VERSION    (default from package.json)
 EOF
 }
@@ -111,7 +126,7 @@ main() {
     publish) phase_publish ;;
     smoke) phase_smoke ;;
     tag) phase_tag ;;
-    all) phase_gates; phase_artifacts; phase_publish; phase_smoke; phase_tag ;;
+    all) phase_gates; phase_artifacts; phase_smoke; phase_tag ;;
     *) usage; exit 1 ;;
   esac
 }
