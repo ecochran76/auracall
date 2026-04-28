@@ -50,5 +50,6 @@ describe('ChatGPT Deep Research staged flow', () => {
     expect(expression).toContain('iframe-edit-target');
     expect(expression).toContain('modifyPlanLabel');
     expect(expression).toContain("PLAN_ACTION === 'edit' && state.startEntry?.button");
+    expect(expression).toContain("PLAN_ACTION !== 'edit' && state.researchStarted");
   });
 });

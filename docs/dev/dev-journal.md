@@ -22845,3 +22845,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     the active conversation URL, a visible `internal://deep-research` iframe,
     the outer `Deep research, click to remove` composer chip, and a passive
     screenshot path for visual inspection
+
+## 2026-04-28 - ChatGPT Deep Research edit auto-start handling
+
+- Focus: use the Pro-bound ChatGPT profile for one real edit-action smoke, then
+  keep the repair bounded to the observed failure.
+- Progress:
+  - live smoke on `wsl-chrome-3` submitted one Deep Research prompt and showed
+    the `edit` path still returned `auto-started`, then waited for the full
+    report
+  - stopped the AuraCall wait process and left Chrome running for passive
+    inspection
+  - passive watch confirmed the provider had already auto-started but still
+    displayed the cross-origin plan card with an `Update` control
+  - patched the staged handler so `edit` does not treat early
+    `Researching...` evidence as terminal before continuing to look for the
+    iframe edit target
+  - patched browser-mode return handling so an `edit` request that still
+    auto-starts returns status/control to the operator instead of waiting for a
+    full Deep Research report
+- Validation:
+  - `pnpm vitest run tests/browser/chatgptDeepResearch.test.ts tests/browser/browserTools.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run install:user-runtime`
+  - installed-runtime live retest:
+    `/home/ecochran76/.local/bin/auracall --profile wsl-chrome-3 --engine browser --browser-target chatgpt --model gpt-5.2-thinking --browser-model-strategy ignore --browser-composer-tool deep-research --browser-deep-research-plan-action edit --browser-keep-browser --browser-timeout 180s --browser-input-timeout 60s --verbose -p "..."`
+  - retest submitted one prompt, detected the iframe plan target, logged
+    `Deep Research iframe plan edit opened (Update)`, returned in 6.7s with no
+    text output, and left Chrome running on the same conversation URL
+  - passive follow-up watch captured the same conversation URL and screenshot
+    evidence showing the provider plan review card with `Edit`, `Cancel`,
+    `Start`, and the countdown still visible

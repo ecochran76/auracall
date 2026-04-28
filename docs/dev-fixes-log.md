@@ -14852,3 +14852,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `browser-tools watch-chatgpt-deep-research` command to sample the active
   ChatGPT page, Deep-Research-like iframe geometry, outer controls, assistant
   turn previews, and optional screenshots before changing click behavior.
+- 2026-04-28: ChatGPT Deep Research `edit` requests must keep looking for the
+  iframe `Update` target after early `Researching...` evidence appears. If the
+  provider still auto-starts before edit can be opened, return control with
+  `auto-started` metadata instead of waiting for the full research report.

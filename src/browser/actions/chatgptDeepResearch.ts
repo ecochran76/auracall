@@ -279,7 +279,7 @@ function buildDeepResearchPlanStartExpression(timeoutMs: number, action: Chatgpt
           clickY: state.iframeEditTarget.clickY,
         };
       }
-      if (state.researchStarted && !state.startEntry?.button) {
+      if (PLAN_ACTION !== 'edit' && state.researchStarted && !state.startEntry?.button) {
         return {
           status: 'auto-started',
           modifyPlanLabel: state.modifyEntry?.displayLabel ?? null,

@@ -1687,11 +1687,15 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       });
       await emitRuntimeHint();
     }
-    if (options.completionMode === 'prompt_submitted' || chatgptDeepResearchStage === 'plan-edit-opened') {
+    if (
+      options.completionMode === 'prompt_submitted' ||
+      chatgptDeepResearchStage === 'plan-edit-opened' ||
+      (chatgptDeepResearchPlanAction === 'edit' && chatgptDeepResearchStage === 'auto-started')
+    ) {
       await updateConversationHint('post-submit', Math.min(config.timeoutMs ?? 120_000, 120_000));
       await captureRuntimeSnapshot();
       runStatus = 'complete';
-      if (chatgptDeepResearchStage !== 'plan-edit-opened') {
+      if (chatgptDeepResearchStage !== 'plan-edit-opened' && chatgptDeepResearchStage !== 'auto-started') {
         recordBrowserPassiveObservation(passiveObservations, {
           state: 'response-incoming',
           source: 'browser-service',
@@ -2546,7 +2550,10 @@ async function runRemoteBrowserMode(
       });
       await emitRuntimeHint();
     }
-    if (chatgptDeepResearchStage === 'plan-edit-opened') {
+    if (
+      chatgptDeepResearchStage === 'plan-edit-opened' ||
+      (chatgptDeepResearchPlanAction === 'edit' && chatgptDeepResearchStage === 'auto-started')
+    ) {
       const durationMs = Date.now() - startedAt;
       await noteChatgptBrowserMutationSuccess(config, config.manualLoginProfileDir ?? null).catch(() => undefined);
       return {
