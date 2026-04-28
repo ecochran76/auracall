@@ -23202,3 +23202,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/browser-tools.ts --auracall-profile wsl-chrome-3 --browser-target chatgpt iframe-artifacts --url-contains 69f0deaf --frame-url-contains deep_research --open-label Export --json`
   - `pnpm vitest run tests/browser/browserTools.test.ts --maxWorkers 1`
   - `pnpm run typecheck`
+
+## 2026-04-28 - AuraCall version-line reset
+
+- Focus: reset the new `auracall` npm package line instead of inheriting
+  upstream Oracle release numbers.
+- Progress:
+  - set `package.json` to `auracall@0.1.0`
+  - retitled the unreleased changelog section to `0.1.0` and marked older
+    entries as upstream Oracle provenance
+  - updated release checklist/helper references from `@steipete/oracle` and
+    `oracle-<version>.tgz` to `auracall` and `auracall-<version>.tgz`
+  - pointed package metadata and README badges at the AuraCall fork remote
+- Validation:
+  - `pnpm run check`
+  - `pnpm vitest run tests/cli/version.test.ts`
+  - `npm pack --dry-run`

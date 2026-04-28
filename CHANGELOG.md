@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.8.5 — Unreleased
+## 0.1.0 — Unreleased
+
+AuraCall starts a new package/version line at `0.1.0`. Older entries below are
+retained as upstream Oracle history and fork provenance, not as AuraCall release
+numbers.
 
 ### Added
 - Browser onboarding: add `auracall wizard`, an interactive first-run flow that detects candidate local/WSL/Windows Chromium profiles, writes a profile-scoped Aura-Call config entry, and then hands off to the managed-profile setup/login/verification path.

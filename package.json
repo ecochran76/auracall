@@ -1,6 +1,6 @@
 {
   "name": "auracall",
-  "version": "0.8.4",
+  "version": "0.1.0",
   "description": "Aura-Call CLI for browser and API automation across ChatGPT, Grok, Gemini, and other supported models.",
   "type": "module",
   "main": "dist/bin/auracall.js",
@@ -46,7 +46,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/steipete/oracle.git"
+    "url": "git+https://github.com/ecochran76/oracle.git"
   },
   "engines": {
     "node": ">=22"
@@ -63,9 +63,9 @@
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/steipete/oracle/issues"
+    "url": "https://github.com/ecochran76/oracle/issues"
   },
-  "homepage": "https://github.com/steipete/oracle#readme",
+  "homepage": "https://github.com/ecochran76/oracle#readme",
   "dependencies": {
     "@anthropic-ai/tokenizer": "^0.0.4",
     "@google/genai": "^1.34.0",

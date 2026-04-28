@@ -14897,3 +14897,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   inspect accessible frame controls and pass `--open-label Export` only when an
   operator intentionally wants to reveal menu options such as ChatGPT Deep
   Research `Export to Markdown`, `Export to Word`, and `Export to PDF`.
+- 2026-04-28: AuraCall is a new npm package line, not a continuation of
+  upstream Oracle's semver sequence. Reset `package.json` and the unreleased
+  changelog to `0.1.0`, keep older changelog entries only as fork provenance,
+  and make release helpers publish/smoke `auracall` artifacts rather than
+  `@steipete/oracle`.

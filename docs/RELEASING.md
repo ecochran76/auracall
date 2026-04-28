@@ -1,9 +1,9 @@
-# Release Checklist (npm + Homebrew)
+# Release Checklist (npm)
 
 > For a guarded, phased flow, run `./scripts/release.sh <phase>` (gates | artifacts | publish | smoke | tag | all); it stops on the first error so you can resume after fixing issues.
 
 1. **Version & metadata**
-   - [ ] Update `package.json` version (e.g., `1.0.0`).
+   - [ ] Update `package.json` version. AuraCall is a new package line and starts at `0.1.0`; do not inherit upstream Oracle numbering.
    - [ ] Update any mirrored version strings (CLI banner/help, docs metadata) to match.
    - [ ] Confirm package metadata (name, description, repository, keywords, license, `files`/`.npmignore`).
    - [ ] If dependencies changed, run `pnpm install` so `pnpm-lock.yaml` is current.
@@ -13,7 +13,7 @@
    - [ ] Verify `bin` mapping in `package.json` points to `dist/bin/auracall.js`.
  - [ ] Produce npm tarball and checksums:
     - `npm pack --pack-destination /tmp` (after build)
-    - Move the tarball into repo root (e.g., `oracle-<version>.tgz`) and generate `*.sha1` / `*.sha256`.
+    - Move the tarball into repo root (e.g., `auracall-<version>.tgz`) and generate `*.sha1` / `*.sha256`.
     - Keep these files handy for the GitHub release; do **not** commit them.
  - [ ] Rebuild macOS notifier helper with signing + notarization:
     - `cd vendor/oracle-notifier && ./build-notifier.sh` (requires `CODESIGN_ID` and `APP_STORE_CONNECT_*`).
@@ -38,35 +38,26 @@
    - [ ] Use the `NPM_TOKEN` from `~/.profile` (our “NPM out token”). If `npm publish` opens browser auth, the token wasn’t loaded—rerun with `source ~/.profile`.
    - [ ] Confirm auth: `npm whoami`.
    - [ ] Decide tag before publish:
-      - If npm `latest` is ahead (e.g., `npm view @steipete/oracle version` shows a higher major), publish with `--tag legacy`.
-      - If this should become latest, publish with `--tag latest` (or publish then `npm dist-tag add @steipete/oracle@X.Y.Z latest`).
-   - [ ] `npm publish --access public --tag <legacy|latest>` (2FA OTP required even with token).
-   - [ ] If promoting later: `npm dist-tag add @steipete/oracle@X.Y.Z latest --otp <code>` (OTP required).
-   - [ ] `npm view @steipete/oracle version` (and optionally `npm view @steipete/oracle time`) to confirm the registry shows the new version.
-   - [ ] Verify positional prompt still works: `npx -y @steipete/oracle "Test prompt" --dry-run`.
-6. **Homebrew (tap)**
-   - [ ] Update formula in `~/Projects/homebrew-tap/Formula/oracle.rb` (or create it if missing).
-   - [ ] Bump version, URL, and SHA256 to match the GitHub release asset you want Homebrew to install.
-   - [ ] Commit + push the tap update only after assets are live.
-   - [ ] Verify install:
-      - `brew uninstall oracle || true`
-      - `brew tap steipete/tap || true`
-      - `brew install steipete/tap/oracle`
-      - `oracle --version`
-      - `brew uninstall oracle`
-7. **Post-publish**
+      - First AuraCall publish should normally use `--tag latest` for `auracall@0.1.0`.
+      - If npm `latest` is ahead for `auracall`, publish with a non-latest tag and record why.
+      - If this should become latest, publish with `--tag latest` (or publish then `npm dist-tag add auracall@X.Y.Z latest`).
+   - [ ] `npm publish --access public --tag latest` (2FA OTP required even with token).
+   - [ ] If promoting later: `npm dist-tag add auracall@X.Y.Z latest --otp <code>` (OTP required).
+   - [ ] `npm view auracall version` (and optionally `npm view auracall time`) to confirm the registry shows the new version.
+   - [ ] Verify positional prompt still works: `npx -y auracall "Test prompt" --dry-run`.
+6. **Post-publish**
   - [ ] Verify GitHub release exists for `vX.Y.Z` and has the intended assets (tarball + checksums if produced). Add missing assets before announcing.
   - [ ] Confirm the GitHub release body exactly matches the `CHANGELOG.md` section for `X.Y.Z` (full bullet list). If not, update with `gh release edit vX.Y.Z --notes-file <file>`.
-  - [ ] Confirm npm shows the new version: `npm view @steipete/oracle version` and `npx -y @steipete/oracle@X.Y.Z --version`.
-  - [ ] Promote desired dist-tag (e.g., `npm dist-tag add @steipete/oracle@X.Y.Z latest`).
+  - [ ] Confirm npm shows the new version: `npm view auracall version` and `npx -y auracall@X.Y.Z --version`.
+  - [ ] Promote desired dist-tag if needed (e.g., `npm dist-tag add auracall@X.Y.Z latest`).
   - [ ] `git tag vX.Y.Z && git push origin vX.Y.Z` (always tag each release).
   - [ ] `git tag vX.Y.Z && git push --tags`
    - [ ] Create GitHub release for tag `vX.Y.Z`:
       - Title = `X.Y.Z` (just the version, no “Oracle”, no date).
    - Body = product-facing bullet list for that version (copy from changelog bullets only; omit the heading and the word “changelog”). Always paste the full Added/Changed/Fixed bullets (no trimming) to keep npm/GitHub notes in sync.
-      - Upload assets: `oracle-<version>.tgz`, `oracle-<version>.tgz.sha1`, `oracle-<version>.tgz.sha256`.
+      - Upload assets: `auracall-<version>.tgz`, `auracall-<version>.tgz.sha1`, `auracall-<version>.tgz.sha256`.
       - Confirm the auto `Source code (zip|tar.gz)` assets are present.
-   - [ ] From a clean temp directory (no package.json/node_modules), run `npx @steipete/oracle@X.Y.Z "Smoke from empty dir" --dry-run` to confirm the package installs/executes via npx.
+   - [ ] From a clean temp directory (no package.json/node_modules), run `npx auracall@X.Y.Z "Smoke from empty dir" --dry-run` to confirm the package installs/executes via npx.
    - [ ] After uploading assets, verify they are reachable (e.g., `curl -I <GitHub-asset-URL>` or download and re-check SHA).
-   - [ ] After verification, remove the untracked tarball/checksum assets from the repo root (`trash oracle-<version>.tgz*`).
+   - [ ] After verification, remove the untracked tarball/checksum assets from the repo root (`trash auracall-<version>.tgz*`).
    - [ ] Announce / share release notes.
