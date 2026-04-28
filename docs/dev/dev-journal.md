@@ -22984,3 +22984,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     optional `composerTool` and `deepResearchPlanAction`
 - Validation:
   - installed-runtime MCP SDK stdio `listTools` smoke
+
+## 2026-04-28 - Installed MCP Deep Research response-create live smoke
+
+- Focus: prove an installed MCP client can create a browser-backed ChatGPT Deep
+  Research review run and immediately poll the same id through MCP
+  `run_status`.
+- Progress:
+  - started `/home/ecochran76/.local/bin/auracall-mcp` through the MCP SDK
+    stdio client
+  - called `response_create` with `runtimeProfile = wsl-chrome-3`,
+    `service = chatgpt`, `transport = browser`,
+    `composerTool = deep-research`, and `deepResearchPlanAction = edit`
+  - polled returned response id `resp_646a95d812a345f5a24e11a7318d93d0` with
+    MCP `run_status`
+- Validation:
+  - installed MCP `response_create` returned `status = completed` for
+    `resp_646a95d812a345f5a24e11a7318d93d0`
+  - MCP `run_status` returned `status = completed`,
+    `chatgptDeepResearchStage = plan-edit-opened`,
+    `chatgptDeepResearchPlanAction = edit`, label `Update`,
+    `editTargetKind = iframe-coordinate`, and conversation
+    `https://chatgpt.com/c/69f0deaf-7e44-83ea-a5e8-af1a0a27cf3e`
+  - review evidence screenshot was written and verified at
+    `~/.auracall/diagnostics/chatgpt-deep-research/2026-04-28T16-22-12-063Z-plan-edit-opened.png`
