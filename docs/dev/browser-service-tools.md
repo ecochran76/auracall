@@ -25,6 +25,22 @@ that same contract. Use `browser-tools search` / `browser-tools ls` when you
 need lower-level DOM evidence or are diagnosing why the higher-level feature
 contract missed a live surface.
 
+Use `browser-tools iframe-artifacts` when an artifact, export menu, or report
+viewer appears inside a provider iframe. The command is read-only by default and
+reports accessible frame URLs, visible controls, artifact-like labels, and body
+text previews. Pass `--open-label <label>` only when the operator intentionally
+wants to reveal a menu surface, for example:
+
+```bash
+pnpm tsx scripts/browser-tools.ts --auracall-profile wsl-chrome-3 --browser-target chatgpt \
+  iframe-artifacts --url-contains 69f0deaf --frame-url-contains deep_research \
+  --open-label Export --json
+```
+
+That ChatGPT Deep Research diagnostic should reveal the iframe-local `Export to
+Markdown`, `Export to Word`, and `Export to PDF` controls without downloading
+the artifact.
+
 Current upgrade backlog:
 - generic browser-service work: [browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md)
 - lessons review: [browser-service-lessons-review-2026-03-30.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-lessons-review-2026-03-30.md)

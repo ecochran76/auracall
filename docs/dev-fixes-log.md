@@ -14892,3 +14892,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   Use callable `.click()` checks rather than parent-realm `instanceof`, wait
   for the iframe/nested document to hydrate, and configure download behavior
   before clicking the export option.
+- 2026-04-28: Iframe-hosted artifact menus need a reusable browser-service
+  diagnostic, not one-off CDP snippets. Use `browser-tools iframe-artifacts` to
+  inspect accessible frame controls and pass `--open-label Export` only when an
+  operator intentionally wants to reveal menu options such as ChatGPT Deep
+  Research `Export to Markdown`, `Export to Word`, and `Export to PDF`.

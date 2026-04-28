@@ -23185,3 +23185,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm tsx bin/auracall.ts --profile wsl-chrome-3 conversations artifacts fetch 69f0deaf-7e44-83ea-a5e8-af1a0a27cf3e --target chatgpt`
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts`
   - `pnpm run typecheck`
+
+## 2026-04-28 - Browser-service iframe artifact diagnostics
+
+- Focus: add a reusable browser-service diagnostic for iframe-hosted artifact
+  and export-menu discovery after ChatGPT Deep Research proved normal page DOM
+  scans were insufficient.
+- Progress:
+  - added `browser-tools iframe-artifacts` with dispatcher-backed managed
+    browser-profile routing
+  - default behavior only inspects accessible frames; explicit
+    `--open-label Export` reveals menu controls without downloading artifacts
+  - live ChatGPT Deep Research diagnostic found the nested report frame and
+    surfaced `Export to Markdown`, `Export to Word`, and `Export to PDF`
+- Validation:
+  - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/browser-tools.ts --auracall-profile wsl-chrome-3 --browser-target chatgpt iframe-artifacts --url-contains 69f0deaf --frame-url-contains deep_research --open-label Export --json`
+  - `pnpm vitest run tests/browser/browserTools.test.ts --maxWorkers 1`
+  - `pnpm run typecheck`

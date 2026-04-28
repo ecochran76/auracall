@@ -8,6 +8,7 @@ import {
   classifyBrowserToolsBlockingState,
   collectBrowserToolsChatgptDeepResearchSnapshot,
   collectBrowserToolsDomSearch,
+  collectBrowserToolsIframeArtifactMenus,
   collectBrowserToolsUiList,
   collectBrowserToolsPageProbe,
   createBrowserToolsProgram,
@@ -684,6 +685,137 @@ describe('selectBrowserToolsPageIndex', () => {
       },
       iframes: [expect.objectContaining({ deepResearchLike: true, visible: true })],
       controls: [expect.objectContaining({ label: 'Update' })],
+    });
+    expect(result.hash).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  test('collectBrowserToolsIframeArtifactMenus reveals iframe export controls on explicit label request', async () => {
+    let exportClicked = false;
+    const iframeEvaluate = vi.fn(async (script: unknown, arg: unknown) => {
+      if (arg === 'Export' || (typeof script === 'string' && script.includes('const targetLabel = "Export"'))) {
+        exportClicked = true;
+        return true;
+      }
+      return {
+        title: 'Deep Research Report',
+        artifactLike: true,
+        bodyTextLength: 2048,
+        bodyTextPreview: 'Research report preview',
+        controls: exportClicked
+          ? [
+              {
+                label: 'Export',
+                role: null,
+                tag: 'button',
+                type: 'button',
+                ariaLabel: null,
+                title: null,
+                dataTestId: null,
+                href: null,
+                download: null,
+                disabled: false,
+                visible: true,
+                rect: { x: 10, y: 20, width: 80, height: 32 },
+                interactionHints: ['button', 'export'],
+              },
+              {
+                label: 'Export to Word',
+                role: 'menuitem',
+                tag: 'button',
+                type: 'button',
+                ariaLabel: null,
+                title: null,
+                dataTestId: null,
+                href: null,
+                download: null,
+                disabled: false,
+                visible: true,
+                rect: { x: 10, y: 60, width: 140, height: 32 },
+                interactionHints: ['button', 'menuitem', 'export'],
+              },
+              {
+                label: 'Export to PDF',
+                role: 'menuitem',
+                tag: 'button',
+                type: 'button',
+                ariaLabel: null,
+                title: null,
+                dataTestId: null,
+                href: null,
+                download: null,
+                disabled: false,
+                visible: true,
+                rect: { x: 10, y: 96, width: 140, height: 32 },
+                interactionHints: ['button', 'menuitem', 'export'],
+              },
+            ]
+          : [
+              {
+                label: 'Export',
+                role: null,
+                tag: 'button',
+                type: 'button',
+                ariaLabel: null,
+                title: null,
+                dataTestId: null,
+                href: null,
+                download: null,
+                disabled: false,
+                visible: true,
+                rect: { x: 10, y: 20, width: 80, height: 32 },
+                interactionHints: ['button', 'export'],
+              },
+            ],
+      };
+    });
+    const fakePage = {
+      url: () => 'https://chatgpt.com/c/69f0deaf',
+      title: async () => 'ChatGPT',
+      frames: () => [
+        {
+          url: () => 'https://chatgpt.com/c/69f0deaf',
+          name: () => '',
+          evaluate: vi.fn(async () => ({
+            title: 'ChatGPT',
+            artifactLike: false,
+            bodyTextLength: 100,
+            bodyTextPreview: 'Outer page',
+            controls: [],
+          })),
+        },
+        {
+          url: () => 'https://connector_openai_deep_research.web-sandbox.oaiusercontent.com/report',
+          name: () => 'root',
+          evaluate: iframeEvaluate,
+        },
+      ],
+    };
+
+    const result = await collectBrowserToolsIframeArtifactMenus(fakePage as never, {
+      frameUrlContains: 'deep_research',
+      openLabels: ['Export'],
+    });
+
+    expect(result).toMatchObject({
+      contract: 'browser-tools.iframe-artifact-menu-snapshot',
+      version: BROWSER_TOOLS_CONTRACT_VERSION,
+      signals: {
+        frameCount: 1,
+        accessibleFrameCount: 1,
+        artifactLikeFrameCount: 1,
+        visibleArtifactMenuLabels: ['Export to Word', 'Export to PDF'],
+      },
+      frames: [
+        expect.objectContaining({
+          name: 'root',
+          artifactLike: true,
+          openedLabels: ['Export'],
+          controls: expect.arrayContaining([
+            expect.objectContaining({ label: 'Export to Word' }),
+            expect.objectContaining({ label: 'Export to PDF' }),
+          ]),
+        }),
+      ],
     });
     expect(result.hash).toMatch(/^[a-f0-9]{64}$/);
   });

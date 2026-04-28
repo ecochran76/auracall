@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
-import puppeteer, { type Browser, type Page } from 'puppeteer-core';
+import puppeteer, { type Browser, type Frame, type Page } from 'puppeteer-core';
 import {
   buildBrowserDomSearchExpression,
   type BrowserDomSearchMatch,
@@ -289,6 +289,60 @@ export interface BrowserToolsChatgptDeepResearchSnapshot {
   };
   hash: string;
   screenshotPath?: string | null;
+}
+
+export interface BrowserToolsIframeArtifactControlSnapshot {
+  label: string;
+  role: string | null;
+  tag: string;
+  type: string | null;
+  ariaLabel: string | null;
+  title: string | null;
+  dataTestId: string | null;
+  href: string | null;
+  download: string | null;
+  disabled: boolean;
+  visible: boolean;
+  rect: BrowserToolsElementRect | null;
+  interactionHints: string[];
+}
+
+export interface BrowserToolsIframeArtifactFrameSnapshot {
+  index: number;
+  name: string | null;
+  url: string;
+  title: string | null;
+  accessible: boolean;
+  error: string | null;
+  artifactLike: boolean;
+  bodyTextLength: number;
+  bodyTextPreview: string | null;
+  controls: BrowserToolsIframeArtifactControlSnapshot[];
+  openedLabels: string[];
+  skippedOpenLabels: string[];
+}
+
+export interface BrowserToolsIframeArtifactMenuSnapshot {
+  contract: 'browser-tools.iframe-artifact-menu-snapshot';
+  version: typeof BROWSER_TOOLS_CONTRACT_VERSION;
+  capturedAt: string;
+  url: string;
+  title: string | null;
+  frames: BrowserToolsIframeArtifactFrameSnapshot[];
+  signals: {
+    frameCount: number;
+    accessibleFrameCount: number;
+    artifactLikeFrameCount: number;
+    visibleArtifactMenuLabels: string[];
+  };
+  hash: string;
+}
+
+export interface BrowserToolsIframeArtifactMenuOptions {
+  frameUrlContains?: string | null;
+  openLabels?: string[];
+  maxControls?: number;
+  textPreviewLength?: number;
 }
 
 export const BROWSER_TOOLS_CONTRACT_VERSION = 1 as const;
@@ -1462,6 +1516,261 @@ function summarizeChatgptDeepResearchSnapshot(snapshot: BrowserToolsChatgptDeepR
   ].filter(Boolean).join(' ');
 }
 
+function normalizeBrowserToolsLabel(value: string | null | undefined): string {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function isArtifactMenuLabel(label: string): boolean {
+  const normalized = normalizeBrowserToolsLabel(label).toLowerCase();
+  return (
+    normalized.includes('export to') ||
+    normalized.includes('download') ||
+    normalized.includes('copy contents') ||
+    normalized.includes('markdown') ||
+    normalized.includes('pdf') ||
+    normalized.includes('word') ||
+    normalized.includes('docx')
+  );
+}
+
+async function collectBrowserToolsIframeArtifactFrame(
+  frame: Frame,
+  options: Required<Pick<BrowserToolsIframeArtifactMenuOptions, 'maxControls' | 'textPreviewLength'>> & {
+    openLabels: string[];
+  },
+  index: number,
+): Promise<BrowserToolsIframeArtifactFrameSnapshot> {
+  const frameUrl = frame.url();
+  const frameName = normalizeBrowserToolsLabel(frame.name()) || null;
+  const serialize = async () => frame.evaluate(`
+    (() => {
+      const maxControls = ${JSON.stringify(options.maxControls)};
+      const textPreviewLength = ${JSON.stringify(options.textPreviewLength)};
+      const normalize = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+      const normalizeLower = (value) => normalize(value).toLowerCase();
+      const rectOf = (node) => {
+        const rect = node.getBoundingClientRect();
+        return {
+          x: Math.round(rect.x),
+          y: Math.round(rect.y),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        };
+      };
+      const isVisible = (node) => {
+        const rect = node.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return false;
+        const style = window.getComputedStyle(node);
+        return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+      };
+      const controlLabel = (node) =>
+        normalize(node.getAttribute('aria-label') || node.textContent || node.getAttribute('title') || '');
+      const controls = Array.from(
+        document.querySelectorAll('button, [role="button"], [role="menuitem"], [role="menuitemcheckbox"], a[href]'),
+      )
+        .map((node) => {
+          const tag = node.tagName.toLowerCase();
+          const role = node.getAttribute('role');
+          const href = node instanceof HTMLAnchorElement ? node.href || node.getAttribute('href') : node.getAttribute('href');
+          const inputType = node instanceof HTMLButtonElement || node instanceof HTMLInputElement ? node.type || node.getAttribute('type') : node.getAttribute('type');
+          const label = controlLabel(node);
+          const hints = [];
+          if (tag === 'a' || role === 'link' || href) hints.push('link');
+          if (tag === 'button' || role === 'button') hints.push('button');
+          if (role && role.startsWith('menuitem')) hints.push('menuitem');
+          if (node.getAttribute('download') || normalizeLower(label).includes('download')) hints.push('download');
+          if (normalizeLower(label).includes('export')) hints.push('export');
+          if (normalizeLower(label).includes('copy')) hints.push('copy');
+          return {
+            label,
+            role,
+            tag,
+            type: inputType || null,
+            ariaLabel: node.getAttribute('aria-label'),
+            title: node.getAttribute('title'),
+            dataTestId: node.getAttribute('data-test-id'),
+            href: href || null,
+            download: node.getAttribute('download') || null,
+            disabled: Boolean(
+              node.disabled ||
+              node.getAttribute('aria-disabled') === 'true',
+            ),
+            visible: isVisible(node),
+            rect: isVisible(node) ? rectOf(node) : null,
+            interactionHints: Array.from(new Set(hints)),
+          };
+        })
+        .filter((entry) => entry.visible && entry.label.length > 0)
+        .slice(0, maxControls);
+      const bodyText = normalize(document.body?.innerText || document.body?.textContent || '');
+      const title = normalize(document.title || '') || null;
+      const corpus = normalizeLower([
+        title,
+        location.href,
+        bodyText.slice(0, 4000),
+        controls.map((entry) => entry.label).join(' '),
+      ].join(' '));
+      const artifactLike =
+        corpus.includes('deep research') ||
+        corpus.includes('artifact') ||
+        corpus.includes('export') ||
+        corpus.includes('download') ||
+        corpus.includes('markdown') ||
+        corpus.includes('pdf') ||
+        corpus.includes('docx') ||
+        corpus.includes('word');
+      return {
+        title,
+        artifactLike,
+        bodyTextLength: bodyText.length,
+        bodyTextPreview: bodyText.slice(0, textPreviewLength) || null,
+        controls,
+      };
+    })()
+  `) as Promise<Omit<BrowserToolsIframeArtifactFrameSnapshot, 'index' | 'name' | 'url' | 'accessible' | 'error' | 'openedLabels' | 'skippedOpenLabels'>>;
+
+  try {
+    let result = await serialize();
+    const openedLabels: string[] = [];
+    const skippedOpenLabels: string[] = [];
+    for (const label of options.openLabels) {
+      const trimmed = normalizeBrowserToolsLabel(label);
+      if (!trimmed) continue;
+      if (result.controls.some((entry) => entry.label !== trimmed && isArtifactMenuLabel(entry.label))) {
+        skippedOpenLabels.push(trimmed);
+        continue;
+      }
+      const clicked = await frame.evaluate(`
+        (() => {
+        const targetLabel = ${JSON.stringify(trimmed)};
+        const normalize = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+        const normalizeLower = (value) => normalize(value).toLowerCase();
+        const isVisible = (node) => {
+          const rect = node.getBoundingClientRect();
+          if (rect.width <= 0 || rect.height <= 0) return false;
+          const style = window.getComputedStyle(node);
+          return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+        };
+        const wanted = normalizeLower(targetLabel);
+        const candidates = Array.from(
+          document.querySelectorAll('button, [role="button"], [role="menuitem"], [role="menuitemcheckbox"], a[href]'),
+        );
+        const exact = candidates.find((node) => isVisible(node) && normalizeLower(node.getAttribute('aria-label') || node.textContent || node.getAttribute('title') || '') === wanted);
+        const partial = candidates.find((node) => isVisible(node) && normalizeLower(node.getAttribute('aria-label') || node.textContent || node.getAttribute('title') || '').includes(wanted));
+        const target = exact || partial;
+        if (!target || typeof target.click !== 'function') return false;
+        target.click();
+        return true;
+        })()
+      `);
+      if (clicked) {
+        openedLabels.push(trimmed);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        result = await serialize();
+      }
+    }
+    return {
+      index,
+      name: frameName,
+      url: frameUrl,
+      accessible: true,
+      error: null,
+      openedLabels,
+      skippedOpenLabels,
+      ...result,
+    };
+  } catch (error) {
+    return {
+      index,
+      name: frameName,
+      url: frameUrl,
+      title: null,
+      accessible: false,
+      error: error instanceof Error ? error.message : String(error),
+      artifactLike: false,
+      bodyTextLength: 0,
+      bodyTextPreview: null,
+      controls: [],
+      openedLabels: [],
+      skippedOpenLabels: [],
+    };
+  }
+}
+
+export async function collectBrowserToolsIframeArtifactMenus(
+  page: Page,
+  options: BrowserToolsIframeArtifactMenuOptions = {},
+): Promise<BrowserToolsIframeArtifactMenuSnapshot> {
+  const pageUrl = page.url();
+  const pageTitle = await page.title().catch(() => null);
+  const openLabels = (options.openLabels ?? []).map(normalizeBrowserToolsLabel).filter(Boolean);
+  const maxControls = Math.max(1, Math.min(options.maxControls ?? 80, 300));
+  const textPreviewLength = Math.max(0, Math.min(options.textPreviewLength ?? 500, 4000));
+  const frameUrlContains = normalizeBrowserToolsLabel(options.frameUrlContains).toLowerCase();
+  const frames = page.frames()
+    .map((frame, index) => ({ frame, index }))
+    .filter(({ frame }) => !frameUrlContains || frame.url().toLowerCase().includes(frameUrlContains));
+  const snapshots: BrowserToolsIframeArtifactFrameSnapshot[] = [];
+  for (const { frame, index } of frames) {
+    snapshots.push(await collectBrowserToolsIframeArtifactFrame(frame, { openLabels, maxControls, textPreviewLength }, index));
+  }
+  const visibleArtifactMenuLabels = Array.from(new Set(
+    snapshots
+      .flatMap((frame) => frame.controls)
+      .filter((control) => control.visible && isArtifactMenuLabel(control.label))
+      .map((control) => control.label),
+  ));
+  const snapshotWithoutHash = {
+    contract: 'browser-tools.iframe-artifact-menu-snapshot' as const,
+    version: BROWSER_TOOLS_CONTRACT_VERSION,
+    capturedAt: new Date().toISOString(),
+    url: pageUrl,
+    title: pageTitle,
+    frames: snapshots,
+    signals: {
+      frameCount: snapshots.length,
+      accessibleFrameCount: snapshots.filter((frame) => frame.accessible).length,
+      artifactLikeFrameCount: snapshots.filter((frame) => frame.accessible && frame.artifactLike).length,
+      visibleArtifactMenuLabels,
+    },
+  };
+  return {
+    ...snapshotWithoutHash,
+    hash: hashBrowserToolsSnapshot(snapshotWithoutHash),
+  };
+}
+
+function summarizeIframeArtifactMenusSnapshot(snapshot: BrowserToolsIframeArtifactMenuSnapshot): string {
+  const lines = [
+    `${snapshot.capturedAt} iframe-artifacts frames=${snapshot.signals.frameCount} accessible=${snapshot.signals.accessibleFrameCount} artifactLike=${snapshot.signals.artifactLikeFrameCount} hash=${snapshot.hash.slice(0, 12)}`,
+    `page=${snapshot.title || '(untitled)'} ${snapshot.url}`,
+  ];
+  const frames = snapshot.frames.filter((frame) => frame.artifactLike || frame.controls.some((control) => isArtifactMenuLabel(control.label)));
+  const visibleFrames = frames.length > 0 ? frames : snapshot.frames.slice(0, 5);
+  for (const frame of visibleFrames) {
+    lines.push(`frame[${frame.index}] accessible=${frame.accessible} artifactLike=${frame.artifactLike} name=${frame.name || '-'} title=${frame.title || '-'} url=${frame.url}`);
+    if (frame.error) {
+      lines.push(`  error=${frame.error}`);
+      continue;
+    }
+    const actionSuffix = [
+      frame.openedLabels.length ? `opened=${frame.openedLabels.join('|')}` : null,
+      frame.skippedOpenLabels.length ? `skipped-open=${frame.skippedOpenLabels.join('|')}` : null,
+    ].filter(Boolean).join(' ');
+    lines.push(`  textLength=${frame.bodyTextLength}${actionSuffix ? ` ${actionSuffix}` : ''}`);
+    frame.controls.slice(0, 20).forEach((control) => {
+      const label = control.label || control.ariaLabel || control.title || '(unlabeled)';
+      const hints = control.interactionHints.length ? ` hints=${control.interactionHints.join('|')}` : '';
+      const href = control.href ? ` href=${control.href}` : '';
+      lines.push(`  - ${control.tag}${control.role ? `[role=${control.role}]` : ''} "${label}"${hints}${href}`);
+    });
+  }
+  if (snapshot.signals.visibleArtifactMenuLabels.length > 0) {
+    lines.push(`artifact-menu-labels=${snapshot.signals.visibleArtifactMenuLabels.join(' | ')}`);
+  }
+  return lines.join('\n');
+}
+
 export async function collectBrowserToolsDoctorReport(
   port: number,
   options: {
@@ -2144,6 +2453,39 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
             if (remainingMs <= 0) break;
             await new Promise((resolve) => setTimeout(resolve, Math.min(intervalMs, remainingMs)));
           }
+        } finally {
+          await browser.disconnect();
+        }
+      });
+    });
+
+  program
+    .command('iframe-artifacts')
+    .description('Inspect accessible iframe-hosted artifact/export controls without downloading artifacts.')
+    .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
+    .option('--url-contains <value>', 'Prefer a tab whose URL contains this value.')
+    .option('--frame-url-contains <value>', 'Only inspect frames whose URL contains this value.')
+    .option('--open-label <label>', 'Click a visible control label before collecting final controls (repeatable).', collectStringArg, [])
+    .option('--max-controls <count>', 'Maximum visible controls to report per frame.', (value) => Number.parseInt(value, 10), 80)
+    .option('--text-preview-length <count>', 'Maximum body text preview characters per frame.', (value) => Number.parseInt(value, 10), 500)
+    .option('--json', 'Emit machine-readable JSON output.', false)
+    .action(async (commandOptions) => {
+      const resolverOptions = withResolverOptions(commandOptions as Record<string, unknown>);
+      await withManagedBrowserToolsOperation(resolverOptions, async () => {
+        const port = await options.resolvePortOrLaunch(resolverOptions);
+        const { browser, page } = await getActivePage(port, { urlContains: commandOptions.urlContains as string | undefined });
+        try {
+          const snapshot = await collectBrowserToolsIframeArtifactMenus(page, {
+            frameUrlContains: commandOptions.frameUrlContains as string | undefined,
+            openLabels: commandOptions.openLabel as string[],
+            maxControls: commandOptions.maxControls as number,
+            textPreviewLength: commandOptions.textPreviewLength as number,
+          });
+          if (commandOptions.json) {
+            console.log(JSON.stringify(snapshot, null, 2));
+            return;
+          }
+          console.log(summarizeIframeArtifactMenusSnapshot(snapshot));
         } finally {
           await browser.disconnect();
         }
