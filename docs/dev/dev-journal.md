@@ -23008,3 +23008,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `https://chatgpt.com/c/69f0deaf-7e44-83ea-a5e8-af1a0a27cf3e`
   - review evidence screenshot was written and verified at
     `~/.auracall/diagnostics/chatgpt-deep-research/2026-04-28T16-22-12-063Z-plan-edit-opened.png`
+
+## 2026-04-28 - Installed MCP ordinary ChatGPT response-create live smoke
+
+- Focus: prove the installed MCP `response_create` / `run_status` path works
+  for ordinary ChatGPT browser conversations, not only staged Deep Research
+  runs.
+- Progress:
+  - started `/home/ecochran76/.local/bin/auracall-mcp` through the MCP SDK
+    stdio client
+  - called `response_create` with `runtimeProfile = wsl-chrome-3`,
+    `service = chatgpt`, `transport = browser`, and no composer-tool hints
+  - polled returned response id `resp_dd3e4048248e4090a5354655be8ac36f` with
+    MCP `run_status`
+- Validation:
+  - installed MCP `response_create` returned `status = completed` and assistant
+    output `ordinary chat mcp smoke complete`
+  - MCP `run_status` returned `status = completed`, `service = chatgpt`,
+    `model = gpt-5.2`, and conversation
+    `https://chatgpt.com/c/69f0e314-5744-83ea-824b-a297b7fb76f9`
+  - Deep Research metadata stayed null on the ordinary run, confirming the
+    status envelope carries provider-specific staged-tool fields only when that
+    flow is active
