@@ -14781,3 +14781,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   legacy `runBrowserMode` path must skip the nested `browser-execution`
   acquire, otherwise it can queue behind its own lock and deadlock before
   prompt submission.
+- 2026-04-27: When initializing a new managed browser profile for a different
+  expected account, do not blindly source-cookie bootstrap from the default
+  source browser profile. The first `wsl-chrome-3` ChatGPT init inherited
+  `ecochran76@gmail.com` Google browser state; quarantining that managed
+  profile and pointing the new browser profile's cookie/bootstrap paths at its
+  own managed cookie store produced a clean first-run profile for
+  `eric.cochran@soylei.com`.

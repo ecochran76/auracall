@@ -22680,3 +22680,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     into chatgpt.com in the opened Chrome window; waiting for session to
     appear...`; the waiting process was terminated to avoid leaving an active
     command session.
+
+## 2026-04-27 - ChatGPT managed profile identity bindings
+
+- Focus: verify current ChatGPT account bindings and initialize a clean third
+  WSL Chrome browser profile for Soylei authentication.
+- Progress:
+  - `default` ChatGPT identity smoke passed for `ecochran76@gmail.com`
+  - `wsl-chrome-2` ChatGPT identity smoke passed for
+    `consult@polymerconsultinggroup.com`
+  - added `wsl-chrome-3` as an AuraCall runtime profile and browser profile
+    bound to expected ChatGPT identity `eric.cochran@soylei.com`
+  - quarantined the first `wsl-chrome-3/chatgpt` managed browser profile after
+    bootstrap copied the default Google browser identity
+  - relaunched `wsl-chrome-3` with source-cookie bootstrap disabled so the
+    Soylei login starts from a clean managed browser profile
+- Validation:
+  - `/home/ecochran76/.local/bin/auracall --profile default profile identity-smoke --target chatgpt --include-negative --json`
+  - `/home/ecochran76/.local/bin/auracall --profile wsl-chrome-2 profile identity-smoke --target chatgpt --include-negative --json`
+  - `/home/ecochran76/.local/bin/auracall --profile wsl-chrome-3 config show --json`
+  - `/home/ecochran76/.local/bin/auracall --profile wsl-chrome-3 profile identity-smoke --target chatgpt --include-negative --prune-browser-state --no-launch-if-needed --json`
