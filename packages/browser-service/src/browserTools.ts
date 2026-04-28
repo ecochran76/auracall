@@ -1,4 +1,6 @@
 import { Command } from 'commander';
+import crypto from 'node:crypto';
+import fs from 'node:fs/promises';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
@@ -232,6 +234,61 @@ export interface BrowserToolsUiListOptions {
   caseSensitive?: boolean;
   limitPerKind?: number;
   maxScan?: number;
+}
+
+export interface BrowserToolsElementRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface BrowserToolsDeepResearchIframeSnapshot {
+  index: number;
+  title: string | null;
+  src: string | null;
+  visible: boolean;
+  rect: BrowserToolsElementRect | null;
+  deepResearchLike: boolean;
+}
+
+export interface BrowserToolsDeepResearchControlSnapshot {
+  label: string;
+  role: string | null;
+  tag: string;
+  disabled: boolean;
+  rect: BrowserToolsElementRect | null;
+}
+
+export interface BrowserToolsDeepResearchAssistantTurnSnapshot {
+  index: number;
+  textLength: number;
+  textPreview: string;
+}
+
+export interface BrowserToolsChatgptDeepResearchSnapshot {
+  contract: 'browser-tools.chatgpt-deep-research-snapshot';
+  version: typeof BROWSER_TOOLS_CONTRACT_VERSION;
+  capturedAt: string;
+  url: string;
+  title: string | null;
+  readyState: string | null;
+  visibilityState: string | null;
+  focused: boolean;
+  bodyTextLength: number;
+  iframes: BrowserToolsDeepResearchIframeSnapshot[];
+  controls: BrowserToolsDeepResearchControlSnapshot[];
+  assistantTurns: BrowserToolsDeepResearchAssistantTurnSnapshot[];
+  signals: {
+    hasDeepResearchIframe: boolean;
+    visibleStartLabels: string[];
+    visibleModifyLabels: string[];
+    visibleStopLabels: string[];
+    possibleResearchInProgress: boolean;
+    possiblePlanVisibleInOuterDom: boolean;
+  };
+  hash: string;
+  screenshotPath?: string | null;
 }
 
 export const BROWSER_TOOLS_CONTRACT_VERSION = 1 as const;
@@ -1234,6 +1291,177 @@ export async function collectBrowserToolsUiList(
   };
 }
 
+function hashBrowserToolsSnapshot(value: unknown): string {
+  return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex');
+}
+
+export async function collectBrowserToolsChatgptDeepResearchSnapshot(
+  page: Page,
+  options: { screenshotPath?: string | null } = {},
+): Promise<BrowserToolsChatgptDeepResearchSnapshot> {
+  const pageUrl = page.url();
+  const pageTitle = await page.title().catch(() => null);
+  const result = await page.evaluate(`
+    (() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const normalizeLabel = (value) => normalize(value).toLowerCase();
+      const rectOf = (node) => {
+        if (!(node instanceof Element)) return null;
+        const rect = node.getBoundingClientRect();
+        return {
+          x: Math.round(rect.x),
+          y: Math.round(rect.y),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        };
+      };
+      const isVisible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return false;
+        const style = window.getComputedStyle(node);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+      };
+      const controlLabel = (node) => normalize(node.getAttribute('aria-label') || node.textContent || '');
+      const controlNodes = Array.from(document.querySelectorAll('button, [role="button"], [role="menuitem"], [role="menuitemcheckbox"]'))
+        .filter(isVisible);
+      const controls = controlNodes
+        .map((node) => ({
+          label: controlLabel(node),
+          role: node.getAttribute('role'),
+          tag: node.tagName.toLowerCase(),
+          disabled: Boolean(node.disabled || node.getAttribute('aria-disabled') === 'true'),
+          rect: rectOf(node),
+        }))
+        .filter((entry) => entry.label.length > 0)
+        .slice(0, 80);
+      const iframes = Array.from(document.querySelectorAll('iframe')).map((node, index) => {
+        const title = normalize(node.getAttribute('title') || '') || null;
+        const src = normalize(node.getAttribute('src') || '') || null;
+        const corpus = normalizeLabel([title, src].filter(Boolean).join(' '));
+        return {
+          index,
+          title,
+          src,
+          visible: isVisible(node),
+          rect: rectOf(node),
+          deepResearchLike: corpus.includes('deep research') || corpus.includes('deep-research') || corpus.includes('deep_research'),
+        };
+      });
+      const turns = Array.from(document.querySelectorAll('[data-testid^="conversation-turn"]'));
+      const assistantTurns = turns
+        .map((turn, index) => ({ turn, index, text: normalize(turn.innerText || turn.textContent || '') }))
+        .filter((entry) => {
+          const lower = entry.text.toLowerCase();
+          return lower.startsWith('chatgpt said') || lower.startsWith('chatgpt');
+        })
+        .slice(-8)
+        .map((entry) => ({
+          index: entry.index,
+          textLength: entry.text.length,
+          textPreview: entry.text.slice(0, 500),
+        }));
+      const bodyText = normalize(document.body?.innerText || document.body?.textContent || '');
+      const labels = controls.map((entry) => normalizeLabel(entry.label));
+      const visibleStartLabels = controls
+        .filter((entry) => {
+          const label = normalizeLabel(entry.label);
+          return label === 'start' || label === 'start research' || label === 'start deep research' || (label.includes('start') && label.includes('research'));
+        })
+        .map((entry) => entry.label);
+      const visibleModifyLabels = controls
+        .filter((entry) => {
+          const label = normalizeLabel(entry.label);
+          return label === 'edit' || label === 'modify' || label === 'refine' || label === 'update' || (label.includes('plan') && (label.includes('edit') || label.includes('modify') || label.includes('refine') || label.includes('change')));
+        })
+        .map((entry) => entry.label);
+      const visibleStopLabels = controls
+        .filter((entry) => {
+          const label = normalizeLabel(entry.label);
+          return label.includes('stop') || label.includes('cancel');
+        })
+        .map((entry) => entry.label);
+      const lowerBody = bodyText.toLowerCase();
+      const assistantCorpus = assistantTurns.map((entry) => entry.textPreview.toLowerCase()).join('\\n');
+      return {
+        readyState: document.readyState ?? null,
+        visibilityState: document.visibilityState ?? null,
+        focused: document.hasFocus(),
+        bodyTextLength: bodyText.length,
+        iframes,
+        controls,
+        assistantTurns,
+        signals: {
+          hasDeepResearchIframe: iframes.some((entry) => entry.visible && entry.deepResearchLike),
+          visibleStartLabels,
+          visibleModifyLabels,
+          visibleStopLabels,
+          possibleResearchInProgress:
+            labels.some((label) => label.includes('stop') && (label.includes('research') || label.includes('responding'))) ||
+            lowerBody.includes('researching') ||
+            lowerBody.includes('research in progress') ||
+            lowerBody.includes('preparing analytical research') ||
+            lowerBody.includes('report for user') ||
+            (lowerBody.includes('searching') && lowerBody.includes('sources')),
+          possiblePlanVisibleInOuterDom:
+            assistantCorpus.includes('research plan') ||
+            assistantCorpus.includes('deep research') ||
+            visibleStartLabels.length > 0 ||
+            visibleModifyLabels.length > 0,
+        },
+      };
+    })()
+  `) as Omit<BrowserToolsChatgptDeepResearchSnapshot, 'contract' | 'version' | 'capturedAt' | 'url' | 'title' | 'hash' | 'screenshotPath'>;
+  const snapshotWithoutHash = {
+    contract: 'browser-tools.chatgpt-deep-research-snapshot' as const,
+    version: BROWSER_TOOLS_CONTRACT_VERSION,
+    capturedAt: new Date().toISOString(),
+    url: pageUrl,
+    title: pageTitle,
+    ...result,
+    screenshotPath: options.screenshotPath ?? null,
+  };
+  return {
+    ...snapshotWithoutHash,
+    hash: hashBrowserToolsSnapshot({
+      url: snapshotWithoutHash.url,
+      title: snapshotWithoutHash.title,
+      readyState: snapshotWithoutHash.readyState,
+      visibilityState: snapshotWithoutHash.visibilityState,
+      bodyTextLength: snapshotWithoutHash.bodyTextLength,
+      iframes: snapshotWithoutHash.iframes,
+      controls: snapshotWithoutHash.controls,
+      assistantTurns: snapshotWithoutHash.assistantTurns,
+      signals: snapshotWithoutHash.signals,
+    }),
+  };
+}
+
+function summarizeChatgptDeepResearchSnapshot(snapshot: BrowserToolsChatgptDeepResearchSnapshot): string {
+  const iframeCount = snapshot.iframes.filter((entry) => entry.deepResearchLike && entry.visible).length;
+  const start = snapshot.signals.visibleStartLabels.join('|') || '-';
+  const modify = snapshot.signals.visibleModifyLabels.join('|') || '-';
+  const stop = snapshot.signals.visibleStopLabels.join('|') || '-';
+  const state = snapshot.signals.possibleResearchInProgress
+    ? 'in-progress'
+    : snapshot.signals.hasDeepResearchIframe
+      ? 'deep-research-iframe'
+      : snapshot.signals.possiblePlanVisibleInOuterDom
+        ? 'outer-plan-evidence'
+        : 'no-plan-evidence';
+  return [
+    snapshot.capturedAt,
+    state,
+    `iframes=${iframeCount}`,
+    `start=${start}`,
+    `modify=${modify}`,
+    `stop=${stop}`,
+    `turns=${snapshot.assistantTurns.length}`,
+    `hash=${snapshot.hash.slice(0, 12)}`,
+    snapshot.screenshotPath ? `screenshot=${snapshot.screenshotPath}` : null,
+  ].filter(Boolean).join(' ');
+}
+
 export async function collectBrowserToolsDoctorReport(
   port: number,
   options: {
@@ -1858,6 +2086,63 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
             });
           } else {
             console.log(result);
+          }
+        } finally {
+          await browser.disconnect();
+        }
+      });
+    });
+
+  program
+    .command('watch-chatgpt-deep-research')
+    .description('Passively watch the selected ChatGPT page for Deep Research plan/run state without clicking or navigating.')
+    .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
+    .option('--url-contains <value>', 'Prefer a tab whose URL contains this value.', 'chatgpt.com')
+    .option('--duration <ms>', 'Total watch duration in milliseconds.', (value) => Number.parseInt(value, 10), 60_000)
+    .option('--interval <ms>', 'Polling interval in milliseconds.', (value) => Number.parseInt(value, 10), 1_000)
+    .option('--emit-unchanged', 'Emit every sample even if the observed state hash has not changed.', false)
+    .option('--json', 'Emit newline-delimited JSON snapshots.', false)
+    .option('--screenshot-dir <path>', 'Optionally save passive viewport screenshots into this directory.')
+    .option('--screenshot-every <ms>', 'Screenshot cadence in milliseconds when --screenshot-dir is set.', (value) => Number.parseInt(value, 10), 5_000)
+    .action(async (commandOptions) => {
+      const resolverOptions = withResolverOptions(commandOptions as Record<string, unknown>);
+      await withManagedBrowserToolsOperation(resolverOptions, async () => {
+        const port = await options.resolvePortOrLaunch(resolverOptions);
+        const { browser, page } = await getActivePage(port, { urlContains: commandOptions.urlContains as string | undefined });
+        try {
+          const durationMs = Math.max(1_000, Math.min(commandOptions.duration as number, 10 * 60_000));
+          const intervalMs = Math.max(250, Math.min(commandOptions.interval as number, 30_000));
+          const screenshotDir = typeof commandOptions.screenshotDir === 'string' && commandOptions.screenshotDir.trim()
+            ? commandOptions.screenshotDir.trim()
+            : null;
+          const screenshotEveryMs = Math.max(1_000, Math.min(commandOptions.screenshotEvery as number, 60_000));
+          if (screenshotDir) {
+            await fs.mkdir(screenshotDir, { recursive: true });
+          }
+          const startedAt = Date.now();
+          let lastHash: string | null = null;
+          let nextScreenshotAt = startedAt;
+          while (Date.now() - startedAt <= durationMs) {
+            let screenshotPath: string | null = null;
+            if (screenshotDir && Date.now() >= nextScreenshotAt) {
+              const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+              screenshotPath = path.join(screenshotDir, `chatgpt-deep-research-${timestamp}.png`);
+              await page.screenshot({ path: screenshotPath as `${string}.png` });
+              nextScreenshotAt = Date.now() + screenshotEveryMs;
+            }
+            const snapshot = await collectBrowserToolsChatgptDeepResearchSnapshot(page, { screenshotPath });
+            const changed = snapshot.hash !== lastHash;
+            if (changed || commandOptions.emitUnchanged) {
+              if (commandOptions.json) {
+                console.log(JSON.stringify(snapshot));
+              } else {
+                console.log(summarizeChatgptDeepResearchSnapshot(snapshot));
+              }
+              lastHash = snapshot.hash;
+            }
+            const remainingMs = durationMs - (Date.now() - startedAt);
+            if (remainingMs <= 0) break;
+            await new Promise((resolve) => setTimeout(resolve, Math.min(intervalMs, remainingMs)));
           }
         } finally {
           await browser.disconnect();

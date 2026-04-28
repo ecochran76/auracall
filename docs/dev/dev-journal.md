@@ -22822,3 +22822,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - live Deep Research smoke intentionally skipped in this slice to avoid
     spending a quota-bearing research request
+
+## 2026-04-28 - ChatGPT Deep Research passive instrumentation
+
+- Focus: stop burning Deep Research runs while selector/tool behavior is still
+  uncertain; observe an existing staged/run card passively through
+  browser-service tooling first.
+- Progress:
+  - added `browser-tools watch-chatgpt-deep-research`, a read-only watcher for
+    the selected ChatGPT page
+  - the watcher samples the outer document, visible controls, assistant turns,
+    Deep-Research-like iframes, and optional passive screenshots without
+    clicking, navigating, refreshing, or submitting prompts
+  - snapshots carry a stable hash so unchanged samples can be suppressed while
+    still preserving state changes as newline-delimited JSON when requested
+- Validation:
+  - `pnpm vitest run tests/browser/browserTools.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - passive live observation:
+    `pnpm tsx scripts/browser-service/browser-tools.ts --auracall-profile wsl-chrome-3 --browser-target chatgpt watch-chatgpt-deep-research --duration 3500 --interval 1000 --json --screenshot-dir /tmp/auracall-chatgpt-deep-research-watch-2`
+  - live observation did not submit, click, refresh, or navigate; it captured
+    the active conversation URL, a visible `internal://deep-research` iframe,
+    the outer `Deep research, click to remove` composer chip, and a passive
+    screenshot path for visual inspection

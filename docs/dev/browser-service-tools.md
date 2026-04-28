@@ -522,6 +522,22 @@ Current active extraction plan:
       prompt composer as an `input`, and any upload affordances under
       `uploadCandidates` / `fileInputs`
 
+- `pnpm tsx scripts/browser-service/browser-tools.ts --auracall-profile wsl-chrome-3 --browser-target chatgpt watch-chatgpt-deep-research --duration 60000 --interval 1000 --json`
+  - Passively samples the selected ChatGPT page for Deep Research state without
+    clicking, navigating, refreshing, or submitting a prompt.
+  - Captures outer-page evidence that remains available around the provider's
+    cross-origin Deep Research iframe:
+    - visible iframe title/src/geometry and whether it is Deep-Research-like
+    - visible outer-page Start/Edit/Update/Stop-style controls
+    - recent assistant conversation-turn previews
+    - compact state signals and a stable hash so unchanged samples can be
+      suppressed
+  - Add `--screenshot-dir <dir>` when visual evidence is needed; screenshots
+    are passive viewport captures and do not interact with the page.
+  - Use this before changing Deep Research selectors or CTA behavior. The live
+    plan/run card can be inside `internal://deep-research`, so ordinary outer
+    DOM scans may not see the real tool labels.
+
 - `pnpm tsx scripts/verify-grok-project-sources-steps.ts <step|all> <projectId|current> [file... ] [--delete <fileName>]`
   - Steps 1–6 are independent; use `all` to run the full flow.
   - `current` resolves the project id from the active grok tab.

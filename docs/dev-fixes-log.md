@@ -14847,3 +14847,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   its `Update` control or task text, so the edit-path handler needs a bounded
   CDP `Input` coordinate fallback against the visible iframe instead of relying
   only on `Runtime.evaluate` selectors.
+- 2026-04-28: Deep Research selector repair should not start more live
+  research runs when the composer/tool state is uncertain. Use the passive
+  `browser-tools watch-chatgpt-deep-research` command to sample the active
+  ChatGPT page, Deep-Research-like iframe geometry, outer controls, assistant
+  turn previews, and optional screenshots before changing click behavior.

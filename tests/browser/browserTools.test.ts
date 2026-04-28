@@ -6,6 +6,7 @@ import {
   BROWSER_TOOLS_CONTRACT_VERSION,
   browserToolsReportRequiresManualClear,
   classifyBrowserToolsBlockingState,
+  collectBrowserToolsChatgptDeepResearchSnapshot,
   collectBrowserToolsDomSearch,
   collectBrowserToolsUiList,
   collectBrowserToolsPageProbe,
@@ -620,6 +621,73 @@ describe('selectBrowserToolsPageIndex', () => {
     });
   });
 
+  test('collectBrowserToolsChatgptDeepResearchSnapshot preserves passive iframe and control evidence', async () => {
+    const fakePage = {
+      url: () => 'https://chatgpt.com/c/research-run',
+      title: async () => 'ChatGPT',
+      evaluate: async () => ({
+        readyState: 'complete',
+        visibilityState: 'visible',
+        focused: true,
+        bodyTextLength: 1200,
+        iframes: [
+          {
+            index: 0,
+            title: 'internal://deep-research',
+            src: 'https://connector_openai_deep_research.web-sandbox.oaiusercontent.com/?app=chatgpt',
+            visible: true,
+            rect: { x: 700, y: 180, width: 460, height: 240 },
+            deepResearchLike: true,
+          },
+        ],
+        controls: [
+          {
+            label: 'Update',
+            role: null,
+            tag: 'button',
+            disabled: false,
+            rect: { x: 950, y: 210, width: 84, height: 36 },
+          },
+        ],
+        assistantTurns: [
+          {
+            index: 3,
+            textLength: 80,
+            textPreview: 'ChatGPT said Preparing analytical research and report for user...',
+          },
+        ],
+        signals: {
+          hasDeepResearchIframe: true,
+          visibleStartLabels: [],
+          visibleModifyLabels: ['Update'],
+          visibleStopLabels: [],
+          possibleResearchInProgress: true,
+          possiblePlanVisibleInOuterDom: true,
+        },
+      }),
+    };
+
+    const result = await collectBrowserToolsChatgptDeepResearchSnapshot(fakePage as never, {
+      screenshotPath: '/tmp/deep-research.png',
+    });
+
+    expect(result).toMatchObject({
+      contract: 'browser-tools.chatgpt-deep-research-snapshot',
+      version: BROWSER_TOOLS_CONTRACT_VERSION,
+      url: 'https://chatgpt.com/c/research-run',
+      title: 'ChatGPT',
+      screenshotPath: '/tmp/deep-research.png',
+      signals: {
+        hasDeepResearchIframe: true,
+        visibleModifyLabels: ['Update'],
+        possibleResearchInProgress: true,
+      },
+      iframes: [expect.objectContaining({ deepResearchLike: true, visible: true })],
+      controls: [expect.objectContaining({ label: 'Update' })],
+    });
+    expect(result.hash).toMatch(/^[a-f0-9]{64}$/);
+  });
+
   test('createBrowserToolsProbeContract wraps probe output in a versioned envelope', () => {
     const contract = createBrowserToolsProbeContract(
       {
@@ -959,7 +1027,9 @@ describe('selectBrowserToolsPageIndex', () => {
   });
 
   test('browser-tools search forwards AuraCall runtime profile and browser target to the resolver', async () => {
-    const resolvePortOrLaunch = vi.fn(async () => 45013);
+    const resolvePortOrLaunch = vi.fn(async () => {
+      throw new Error('stop after resolver');
+    });
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     const program = createBrowserToolsProgram({
       resolvePortOrLaunch,
@@ -985,7 +1055,9 @@ describe('selectBrowserToolsPageIndex', () => {
   });
 
   test('browser-tools ls forwards AuraCall runtime profile and browser target to the resolver', async () => {
-    const resolvePortOrLaunch = vi.fn(async () => 45013);
+    const resolvePortOrLaunch = vi.fn(async () => {
+      throw new Error('stop after resolver');
+    });
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     const program = createBrowserToolsProgram({
       resolvePortOrLaunch,
