@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import { createMediaGenerationService, MediaGenerationExecutionError } from '../src/media/service.js';
+import { createMediaGenerationRecordStore } from '../src/media/store.js';
 import type { WorkbenchCapabilityReporter } from '../src/workbench/types.js';
 
 describe('media generation service', () => {
@@ -206,6 +207,47 @@ describe('media generation service', () => {
         requestProvider: 'chatgpt',
       },
     });
+  });
+
+  it('uses collision-safe temp files for burst media record writes', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-media-generation-burst-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const store = createMediaGenerationRecordStore();
+    const baseResponse = {
+      id: 'medgen_burst_1',
+      object: 'media_generation' as const,
+      status: 'running' as const,
+      provider: 'chatgpt' as const,
+      mediaType: 'image' as const,
+      prompt: 'Generate an image of an asphalt secret agent',
+      createdAt: '2026-04-27T12:00:00.000Z',
+      updatedAt: '2026-04-27T12:00:00.000Z',
+      completedAt: null,
+      artifacts: [],
+      timeline: [],
+      metadata: {},
+    };
+    await store.ensureStorage();
+
+    await expect(Promise.all(
+      Array.from({ length: 20 }, (_, index) =>
+        store.writeResponse({
+          ...baseResponse,
+          updatedAt: `2026-04-27T12:00:00.${String(index).padStart(3, '0')}Z`,
+          timeline: [
+            {
+              event: 'artifact_poll',
+              at: `2026-04-27T12:00:00.${String(index).padStart(3, '0')}Z`,
+              details: { index },
+            },
+          ],
+        }),
+      ),
+    )).resolves.toHaveLength(20);
+
+    const readBack = await store.readRecord('medgen_burst_1');
+    expect(readBack?.response.id).toBe('medgen_burst_1');
   });
 
   it('records provider execution failures without throwing away the request', async () => {

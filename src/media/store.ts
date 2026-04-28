@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { getRuntimeDir } from '../runtime/store.js';
 import { MediaGenerationStoredRecordSchema } from './schema.js';
 import type { MediaGenerationResponse, MediaGenerationStoredRecord } from './types.js';
@@ -61,7 +62,7 @@ export async function writeMediaGenerationResponse(
   const generationDir = getMediaGenerationDir(response.id);
   await fs.mkdir(generationDir, { recursive: true });
   const recordPath = getMediaGenerationRecordPath(response.id);
-  const tempPath = `${recordPath}.${process.pid}.${Date.now()}.tmp`;
+  const tempPath = `${recordPath}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`;
   await fs.writeFile(tempPath, `${JSON.stringify(parsedRecord, null, 2)}\n`, 'utf8');
   await fs.rename(tempPath, recordPath);
   return parsedRecord;
