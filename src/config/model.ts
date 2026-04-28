@@ -213,7 +213,12 @@ const RUNTIME_BROWSER_OWNED_OVERRIDE_KEYS = new Set([
   'hideWindow',
   'remoteChrome',
 ]);
-const RUNTIME_SERVICE_SCOPED_RELOCATABLE_KEYS = new Set(['modelStrategy', 'thinkingTime', 'composerTool']);
+const RUNTIME_SERVICE_SCOPED_RELOCATABLE_KEYS = new Set([
+  'modelStrategy',
+  'thinkingTime',
+  'composerTool',
+  'deepResearchPlanAction',
+]);
 const RUNTIME_SERVICE_SCOPED_ESCAPE_HATCH_KEYS = new Set(['manualLogin', 'manualLoginProfileDir']);
 const AGENT_BROWSER_OWNED_OVERRIDE_KEYS = new Set([
   'chromePath',

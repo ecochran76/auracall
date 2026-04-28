@@ -63,6 +63,7 @@ export const CLI_MAPPING: Record<string, string> = {
   'browserModelStrategy': 'browser.modelStrategy',
   'browserThinkingTime': 'browser.thinkingTime',
   'browserComposerTool': 'browser.composerTool',
+  'browserDeepResearchPlanAction': 'browser.deepResearchPlanAction',
   'browserAttachments': 'browser.attachments',
   'browserInlineFiles': 'browser.inlineFiles',
   'browserBundleFiles': 'browser.bundleFiles',

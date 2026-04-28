@@ -44,6 +44,7 @@ export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
   desiredModel: DEFAULT_MODEL_TARGET,
   modelStrategy: DEFAULT_MODEL_STRATEGY,
   composerTool: null,
+  deepResearchPlanAction: 'start',
   debug: false,
   allowCookieErrors: false,
   remoteChrome: null,
@@ -82,6 +83,9 @@ export function resolveBrowserConfig(
         : normalizeChatgptUrl(rawUrl ?? DEFAULT_BROWSER_CONFIG.url, DEFAULT_BROWSER_CONFIG.url);
   const desiredModel = config?.desiredModel ?? DEFAULT_BROWSER_CONFIG.desiredModel ?? DEFAULT_MODEL_TARGET;
   const composerTool = normalizeComposerTool(config?.composerTool ?? DEFAULT_BROWSER_CONFIG.composerTool);
+  const deepResearchPlanAction = normalizeDeepResearchPlanAction(
+    config?.deepResearchPlanAction ?? DEFAULT_BROWSER_CONFIG.deepResearchPlanAction,
+  );
   const modelStrategy =
     normalizeBrowserModelStrategy(config?.modelStrategy) ??
     DEFAULT_BROWSER_CONFIG.modelStrategy ??
@@ -239,6 +243,7 @@ export function resolveBrowserConfig(
     desiredModel,
     modelStrategy,
     composerTool,
+    deepResearchPlanAction,
     chromeProfile: launchProfile.chromeProfile ?? resolvedChromeProfile,
     chromePath: launchProfile.chromePath ?? resolvedChromePath,
     chromeCookiePath: launchProfile.chromeCookiePath ?? resolvedCookiePath,
@@ -424,6 +429,10 @@ function normalizeCookieNames(value: string[] | string | null | undefined): stri
 function normalizeComposerTool(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
   return trimmed && trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeDeepResearchPlanAction(value: string | null | undefined): 'start' | 'edit' {
+  return value === 'edit' ? 'edit' : 'start';
 }
 
 function normalizeInlineCookies(

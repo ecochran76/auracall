@@ -71,6 +71,7 @@ export interface ResolvedServiceBinding {
   modelStrategy?: string;
   thinkingTime?: string;
   composerTool?: string;
+  deepResearchPlanAction?: string;
   manualLogin?: boolean;
   manualLoginProfileDir?: string;
 }
@@ -491,6 +492,8 @@ export function resolveBrowserProfileResolution(input: {
     modelStrategy: asNonEmptyString(serviceConfig.modelStrategy) ?? asNonEmptyString(browser.modelStrategy),
     thinkingTime: asNonEmptyString(serviceConfig.thinkingTime) ?? asNonEmptyString(browser.thinkingTime),
     composerTool: asNonEmptyString(serviceConfig.composerTool) ?? asNonEmptyString(browser.composerTool),
+    deepResearchPlanAction:
+      asNonEmptyString(serviceConfig.deepResearchPlanAction) ?? asNonEmptyString(browser.deepResearchPlanAction),
     manualLogin: serviceBindingManualLogin,
     manualLoginProfileDir: serviceBindingManualLoginProfileDir,
   };

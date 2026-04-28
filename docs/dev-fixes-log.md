@@ -14819,3 +14819,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   window. The staged handler should treat exact `Edit` as modify-plan evidence
   only in a visible plan context, and it should record provider auto-start as
   `startMethod = auto` rather than failing the run as missing a Start CTA.
+- 2026-04-28: ChatGPT Deep Research plan review needs an explicit operator
+  branch because the provider dialog can auto-start quickly. `edit` should
+  click the visible plan-edit affordance, record `plan-edit-opened`, avoid the
+  normal assistant-response wait, and keep the managed browser open; if no edit
+  affordance is visible, fail closed instead of clicking Start.

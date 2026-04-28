@@ -22794,10 +22794,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     preserved as metadata for later interactive or multi-agent refinement flows
   - Deep Research plan detection handles the current `Edit` CTA label and a
     timed provider auto-start path, preserving `startMethod = manual|auto`
+  - `--browser-deep-research-plan-action edit` opens the provider plan editor
+    before timed auto-start, records `stage = plan-edit-opened`, and keeps the
+    managed browser open for human or later automation follow-up
   - Deep Research requests verify the active ChatGPT auth-session exposes an
     account tier before consuming the tool path
   - runtime/run metadata now carries Deep Research stage, Start label, modify
-    plan visibility, and account-tier evidence
+    plan label/visibility, requested plan action, and account-tier evidence
 - Validation:
   - `pnpm vitest run tests/browser/chatgptDeepResearch.test.ts tests/browser/chatgptComposerTool.test.ts tests/cli/sessionRunner.test.ts --maxWorkers 1`
   - `pnpm run check`

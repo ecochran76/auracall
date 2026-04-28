@@ -50,6 +50,7 @@ export interface BrowserFlagOptions {
   /** Thinking time intensity: 'light', 'standard', 'extended', 'heavy' */
   browserThinkingTime?: ThinkingTimeLevel;
   browserComposerTool?: string;
+  browserDeepResearchPlanAction?: 'start' | 'edit';
   browserModelLabel?: string;
   browserModelStrategy?: BrowserModelStrategy;
   browserAllowCookieErrors?: boolean;
@@ -192,12 +193,17 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
     remoteChrome,
     thinkingTime: options.browserThinkingTime,
     composerTool: normalizeComposerTool(options.browserComposerTool),
+    deepResearchPlanAction: normalizeDeepResearchPlanAction(options.browserDeepResearchPlanAction),
   };
 }
 
 function normalizeComposerTool(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
   return trimmed && trimmed.length > 0 ? trimmed : undefined;
+}
+
+function normalizeDeepResearchPlanAction(value: 'start' | 'edit' | undefined): 'start' | 'edit' | undefined {
+  return value;
 }
 
 function selectBrowserPort(options: BrowserFlagOptions): number | null {

@@ -284,6 +284,7 @@ interface CliOptions extends OptionValues {
   browserTarget?: 'chatgpt' | 'gemini' | 'grok';
   browserThinkingTime?: 'light' | 'standard' | 'extended' | 'heavy';
   browserComposerTool?: string;
+  browserDeepResearchPlanAction?: 'start' | 'edit';
   browserAllowCookieErrors?: boolean;
   browserAttachments?: string;
   browserInlineFiles?: boolean;
@@ -741,6 +742,14 @@ program
       '--browser-composer-tool <tool>',
       'Select a ChatGPT composer add-on/tool (for example web-search, deep-research, canvas, google-drive, or gmail).',
     ).hideHelp(),
+  )
+  .addOption(
+    new Option(
+      '--browser-deep-research-plan-action <action>',
+      'ChatGPT Deep Research plan action: start accepts the provider plan; edit opens the plan editor before timed auto-start.',
+    )
+      .choices(['start', 'edit'])
+      .hideHelp(),
   )
   .addOption(
     new Option('--browser-allow-cookie-errors', 'Continue even if Chrome cookies cannot be copied.').hideHelp(),

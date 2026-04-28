@@ -212,6 +212,7 @@ Transitional authoring note:
   - `--browser-model-strategy`
   - `--browser-thinking-time`
   - `--browser-composer-tool`
+  - `--browser-deep-research-plan-action`
 - those CLI flags are still intentionally classified as supported transitional
   root-browser inputs under the current resolver contract
 - narrowing checkpoint:
@@ -221,8 +222,9 @@ Transitional authoring note:
   - `--conversation-id` and `--conversation-name` now also mirror into the
     selected `runtimeProfiles.<name>.services.<defaultService>` slot when one
     concrete default service exists
-  - `--browser-model-strategy`, `--browser-thinking-time`, and
-    `--browser-composer-tool` now also mirror into the selected
+  - `--browser-model-strategy`, `--browser-thinking-time`,
+    `--browser-composer-tool`, and
+    `--browser-deep-research-plan-action` now also mirror into the selected
     `runtimeProfiles.<name>.services.<defaultService>` slot when one concrete
     default service exists
   - when no concrete default service exists, they remain root-browser-only
@@ -530,6 +532,7 @@ Within each file, later CLI flags still override config, and environment variabl
     - `browser.modelStrategy`
     - `browser.thinkingTime`
     - `browser.composerTool`
+    - `browser.deepResearchPlanAction`
     into `runtimeProfiles.<name>.services.<defaultService>`
 - `interactiveLogin` is the preferred name; legacy `manualLogin` keys keep working with deprecation warnings.
 - `services.<service>.features` holds provider-specific feature flags. Typical keys:

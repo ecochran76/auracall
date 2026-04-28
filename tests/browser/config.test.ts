@@ -49,6 +49,7 @@ describe('resolveBrowserConfig', () => {
       headless: true,
       desiredModel: 'Custom',
       composerTool: 'canvas',
+      deepResearchPlanAction: 'edit',
       chromeProfile: 'Profile 1',
       chromePath: '/Applications/Chrome',
       debug: true,
@@ -64,6 +65,7 @@ describe('resolveBrowserConfig', () => {
     expect(resolved.headless).toBe(true);
     expect(resolved.desiredModel).toBe('Custom');
     expect(resolved.composerTool).toBe('canvas');
+    expect(resolved.deepResearchPlanAction).toBe('edit');
     expect(resolved.chromeProfile).toBe('Profile 1');
     expect(resolved.chromePath).toBe('/Applications/Chrome');
     expect(resolved.debug).toBe(true);

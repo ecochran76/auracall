@@ -142,6 +142,12 @@ function applyBrowserProfileDefaults(
   if ((overrideExisting || browser.composerTool === undefined) && profileBrowser.composerTool !== undefined) {
     browser.composerTool = profileBrowser.composerTool;
   }
+  if (
+    (overrideExisting || browser.deepResearchPlanAction === undefined) &&
+    profileBrowser.deepResearchPlanAction !== undefined
+  ) {
+    browser.deepResearchPlanAction = profileBrowser.deepResearchPlanAction;
+  }
   if ((overrideExisting || browser.modelStrategy === undefined) && profileBrowser.modelStrategy !== undefined) {
     browser.modelStrategy = profileBrowser.modelStrategy;
   }
@@ -225,6 +231,7 @@ function applyServiceDefaults(
   const modelStrategy = asNonEmptyString(serviceConfig.modelStrategy);
   const thinkingTime = asNonEmptyString(serviceConfig.thinkingTime);
   const composerTool = asNonEmptyString(serviceConfig.composerTool);
+  const deepResearchPlanAction = asNonEmptyString(serviceConfig.deepResearchPlanAction);
   const manualLogin = typeof serviceConfig.manualLogin === 'boolean' ? serviceConfig.manualLogin : undefined;
   const manualLoginProfileDir = asNonEmptyString(serviceConfig.manualLoginProfileDir);
 
@@ -251,6 +258,9 @@ function applyServiceDefaults(
   }
   if ((overrideExisting || browser.composerTool === undefined) && composerTool) {
     browser.composerTool = composerTool;
+  }
+  if ((overrideExisting || browser.deepResearchPlanAction === undefined) && deepResearchPlanAction) {
+    browser.deepResearchPlanAction = deepResearchPlanAction;
   }
   if ((overrideExisting || browser.manualLogin === undefined) && manualLogin !== undefined) {
     browser.manualLogin = manualLogin;

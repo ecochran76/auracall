@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+  buildDeepResearchPlanEditExpressionForTest,
   buildDeepResearchPlanStartExpressionForTest,
   isChatgptDeepResearchTool,
 } from '../../src/browser/actions/chatgptDeepResearch.js';
@@ -31,5 +32,13 @@ describe('ChatGPT Deep Research staged flow', () => {
     expect(expression).toContain('researchStarted');
     expect(expression).toContain('researching');
     expect(expression).toContain('research in progress');
+  });
+
+  test('supports opening the plan editor before timed auto-start', () => {
+    const expression = buildDeepResearchPlanEditExpressionForTest(15_000);
+    expect(expression).toContain("PLAN_ACTION === 'edit'");
+    expect(expression).toContain('plan-edit-opened');
+    expect(expression).toContain('modifyPlanLabel');
+    expect(expression).toContain("PLAN_ACTION === 'edit' && state.startEntry?.button");
   });
 });

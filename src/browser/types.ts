@@ -10,6 +10,7 @@ export type {
 
 export type BrowserModelStrategy = 'select' | 'current' | 'ignore';
 export type ThinkingTimeLevel = 'light' | 'standard' | 'extended' | 'heavy';
+export type ChatgptDeepResearchPlanAction = 'start' | 'edit';
 export type BrowserPassiveObservationState =
   | 'thinking'
   | 'response-incoming'
@@ -42,6 +43,7 @@ type LlmBrowserFields = {
   modelStrategy?: BrowserModelStrategy;
   thinkingTime?: ThinkingTimeLevel;
   composerTool?: string | null;
+  deepResearchPlanAction?: ChatgptDeepResearchPlanAction;
 };
 
 export type BrowserRuntimeMetadata = BaseTypes.BrowserRuntimeMetadata & {
@@ -54,8 +56,10 @@ export type BrowserRuntimeMetadata = BaseTypes.BrowserRuntimeMetadata & {
   chatgptAccountPlanType?: string;
   chatgptAccountStructure?: string;
   chatgptDeepResearchStage?: string;
+  chatgptDeepResearchPlanAction?: string;
   chatgptDeepResearchStartMethod?: string;
   chatgptDeepResearchStartLabel?: string | null;
+  chatgptDeepResearchModifyPlanLabel?: string | null;
   chatgptDeepResearchModifyPlanVisible?: boolean;
 };
 
@@ -87,8 +91,10 @@ export type BrowserRunResult = BaseTypes.BrowserRunResult & {
   chatgptAccountPlanType?: string;
   chatgptAccountStructure?: string;
   chatgptDeepResearchStage?: string;
+  chatgptDeepResearchPlanAction?: string;
   chatgptDeepResearchStartMethod?: string;
   chatgptDeepResearchStartLabel?: string | null;
+  chatgptDeepResearchModifyPlanLabel?: string | null;
   chatgptDeepResearchModifyPlanVisible?: boolean;
   passiveObservations?: BrowserPassiveObservation[];
 };

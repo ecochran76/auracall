@@ -44,6 +44,7 @@ const RUNTIME_SERVICE_SCOPED_OVERRIDE_KEYS = new Set([
   'modelStrategy',
   'thinkingTime',
   'composerTool',
+  'deepResearchPlanAction',
 ]);
 const RUNTIME_SERVICE_SCOPED_ESCAPE_HATCH_KEYS = new Set([
   'manualLogin',

@@ -70,6 +70,7 @@ describe('buildBrowserConfig', () => {
       browserHideWindow: true,
       browserKeepBrowser: true,
       browserComposerTool: 'web-search',
+      browserDeepResearchPlanAction: 'edit',
       browserAllowCookieErrors: true,
       verbose: true,
     });
@@ -87,6 +88,7 @@ describe('buildBrowserConfig', () => {
       hideWindow: true,
       keepBrowser: true,
       composerTool: 'web-search',
+      deepResearchPlanAction: 'edit',
       desiredModel: 'Instant',
       debug: true,
       allowCookieErrors: true,

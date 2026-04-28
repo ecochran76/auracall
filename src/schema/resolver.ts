@@ -198,6 +198,7 @@ function applyTransitionalCliServiceAliases(merged: MutableConfig, cliOptions: O
   const modelStrategy = asNonEmptyString((cliOptions as MutableConfig).browserModelStrategy);
   const thinkingTime = asNonEmptyString((cliOptions as MutableConfig).browserThinkingTime);
   const composerTool = asNonEmptyString((cliOptions as MutableConfig).browserComposerTool);
+  const deepResearchPlanAction = asNonEmptyString((cliOptions as MutableConfig).browserDeepResearchPlanAction);
   if (
     !projectId &&
     !projectName &&
@@ -205,7 +206,8 @@ function applyTransitionalCliServiceAliases(merged: MutableConfig, cliOptions: O
     !conversationName &&
     !modelStrategy &&
     !thinkingTime &&
-    !composerTool
+    !composerTool &&
+    !deepResearchPlanAction
   ) return;
 
   const selection = resolveRuntimeSelection(merged, {
@@ -258,6 +260,9 @@ function applyTransitionalCliServiceAliases(merged: MutableConfig, cliOptions: O
   }
   if (composerTool) {
     serviceConfig.composerTool = composerTool;
+  }
+  if (deepResearchPlanAction) {
+    serviceConfig.deepResearchPlanAction = deepResearchPlanAction;
   }
 }
 

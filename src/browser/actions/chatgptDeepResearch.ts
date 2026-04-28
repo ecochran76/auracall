@@ -6,14 +6,18 @@ export type ChatgptDeepResearchStage =
   | 'not-requested'
   | 'tool-selected'
   | 'plan-ready'
+  | 'plan-edit-opened'
   | 'start-clicked'
   | 'auto-started'
   | 'research-started';
 
+export type ChatgptDeepResearchPlanAction = 'start' | 'edit';
+
 export type ChatgptDeepResearchStartResult = {
-  stage: Extract<ChatgptDeepResearchStage, 'start-clicked' | 'auto-started'>;
-  startMethod: 'manual' | 'auto';
+  stage: Extract<ChatgptDeepResearchStage, 'start-clicked' | 'auto-started' | 'plan-edit-opened'>;
+  startMethod: 'manual' | 'auto' | null;
   startLabel: string | null;
+  modifyPlanLabel: string | null;
   modifyPlanVisible: boolean;
 };
 
@@ -21,18 +25,27 @@ type ChatgptDeepResearchPlanProbe =
   | {
       status: 'start-clicked';
       startLabel: string | null;
+      modifyPlanLabel: string | null;
+      modifyPlanVisible: boolean;
+    }
+  | {
+      status: 'plan-edit-opened';
+      modifyPlanLabel: string | null;
       modifyPlanVisible: boolean;
     }
   | {
       status: 'auto-started';
+      modifyPlanLabel: string | null;
       modifyPlanVisible: boolean;
     }
   | {
       status: 'plan-ready-no-start';
+      modifyPlanLabel: string | null;
       modifyPlanVisible: boolean;
     }
   | {
       status: 'plan-not-found';
+      modifyPlanLabel: string | null;
       modifyPlanVisible: boolean;
     };
 
@@ -43,16 +56,21 @@ export function isChatgptDeepResearchTool(tool: string | null | undefined): bool
 }
 
 export function buildDeepResearchPlanStartExpressionForTest(timeoutMs = 45_000): string {
-  return buildDeepResearchPlanStartExpression(timeoutMs);
+  return buildDeepResearchPlanStartExpression(timeoutMs, 'start');
+}
+
+export function buildDeepResearchPlanEditExpressionForTest(timeoutMs = 45_000): string {
+  return buildDeepResearchPlanStartExpression(timeoutMs, 'edit');
 }
 
 export async function startChatgptDeepResearchPlan(
   Runtime: ChromeClient['Runtime'],
   logger: BrowserLogger,
+  action: ChatgptDeepResearchPlanAction = 'start',
   timeoutMs = 45_000,
 ): Promise<ChatgptDeepResearchStartResult> {
   const probe = await Runtime.evaluate({
-    expression: buildDeepResearchPlanStartExpression(timeoutMs),
+    expression: buildDeepResearchPlanStartExpression(timeoutMs, action),
     awaitPromise: true,
     returnByValue: true,
   });
@@ -64,6 +82,16 @@ export async function startChatgptDeepResearchPlan(
         stage: 'start-clicked',
         startMethod: 'manual',
         startLabel: result.startLabel,
+        modifyPlanLabel: result.modifyPlanLabel,
+        modifyPlanVisible: result.modifyPlanVisible,
+      };
+    case 'plan-edit-opened':
+      logger(`Deep Research plan edit opened${result.modifyPlanLabel ? ` (${result.modifyPlanLabel})` : ''}`);
+      return {
+        stage: 'plan-edit-opened',
+        startMethod: null,
+        startLabel: null,
+        modifyPlanLabel: result.modifyPlanLabel,
         modifyPlanVisible: result.modifyPlanVisible,
       };
     case 'auto-started':
@@ -72,6 +100,7 @@ export async function startChatgptDeepResearchPlan(
         stage: 'auto-started',
         startMethod: 'auto',
         startLabel: null,
+        modifyPlanLabel: result.modifyPlanLabel,
         modifyPlanVisible: result.modifyPlanVisible,
       };
     case 'plan-ready-no-start':
@@ -94,12 +123,14 @@ function normalizeDeepResearchToolLabel(value: string | null | undefined): strin
     .trim();
 }
 
-function buildDeepResearchPlanStartExpression(timeoutMs: number): string {
+function buildDeepResearchPlanStartExpression(timeoutMs: number, action: ChatgptDeepResearchPlanAction): string {
   const timeoutLiteral = JSON.stringify(Math.max(5_000, timeoutMs));
+  const actionLiteral = JSON.stringify(action);
   return `(async () => {
     ${buildClickDispatcher()}
 
     const TIMEOUT_MS = ${timeoutLiteral};
+    const PLAN_ACTION = ${actionLiteral};
     const POLL_MS = 350;
     const start = Date.now();
     const normalize = (value) => String(value || '')
@@ -158,9 +189,11 @@ function buildDeepResearchPlanStartExpression(timeoutMs: number): string {
         Boolean(startEntry) ||
         (bodyText.includes('research plan') && (bodyText.includes('start') || bodyText.includes('modify plan') || bodyText.includes('edit')));
       const labels = labeled.map((entry) => entry.label);
-      const modifyPlanVisible = labeled.some((entry) => isModifyPlanLabel(entry.label, planVisible));
+      const modifyEntry = labeled.find((entry) => isModifyPlanLabel(entry.label, planVisible));
+      const modifyPlanVisible = Boolean(modifyEntry);
       return {
         startEntry,
+        modifyEntry,
         modifyPlanVisible,
         planVisible: planVisible || modifyPlanVisible,
         researchStarted: researchStartedVisible(bodyText, labels),
@@ -170,7 +203,27 @@ function buildDeepResearchPlanStartExpression(timeoutMs: number): string {
     while (Date.now() - start < TIMEOUT_MS) {
       const state = readState();
       if (state.researchStarted && !state.startEntry?.button) {
-        return { status: 'auto-started', modifyPlanVisible: state.modifyPlanVisible };
+        return {
+          status: 'auto-started',
+          modifyPlanLabel: state.modifyEntry?.displayLabel ?? null,
+          modifyPlanVisible: state.modifyPlanVisible,
+        };
+      }
+      if (PLAN_ACTION === 'edit' && state.modifyEntry?.button) {
+        dispatchClickSequence(state.modifyEntry.button);
+        await new Promise((resolve) => setTimeout(resolve, 650));
+        return {
+          status: 'plan-edit-opened',
+          modifyPlanLabel: state.modifyEntry.displayLabel,
+          modifyPlanVisible: state.modifyPlanVisible,
+        };
+      }
+      if (PLAN_ACTION === 'edit' && state.startEntry?.button) {
+        return {
+          status: 'plan-ready-no-start',
+          modifyPlanLabel: state.modifyEntry?.displayLabel ?? null,
+          modifyPlanVisible: state.modifyPlanVisible,
+        };
       }
       if (state.startEntry?.button) {
         dispatchClickSequence(state.startEntry.button);
@@ -178,6 +231,7 @@ function buildDeepResearchPlanStartExpression(timeoutMs: number): string {
         return {
           status: 'start-clicked',
           startLabel: state.startEntry.displayLabel,
+          modifyPlanLabel: state.modifyEntry?.displayLabel ?? null,
           modifyPlanVisible: state.modifyPlanVisible,
         };
       }
@@ -185,11 +239,23 @@ function buildDeepResearchPlanStartExpression(timeoutMs: number): string {
     }
     const state = readState();
     if (state.researchStarted) {
-      return { status: 'auto-started', modifyPlanVisible: state.modifyPlanVisible };
+      return {
+        status: 'auto-started',
+        modifyPlanLabel: state.modifyEntry?.displayLabel ?? null,
+        modifyPlanVisible: state.modifyPlanVisible,
+      };
     }
     if (state.planVisible) {
-      return { status: 'plan-ready-no-start', modifyPlanVisible: state.modifyPlanVisible };
+      return {
+        status: 'plan-ready-no-start',
+        modifyPlanLabel: state.modifyEntry?.displayLabel ?? null,
+        modifyPlanVisible: state.modifyPlanVisible,
+      };
     }
-    return { status: 'plan-not-found', modifyPlanVisible: state.modifyPlanVisible };
+    return {
+      status: 'plan-not-found',
+      modifyPlanLabel: state.modifyEntry?.displayLabel ?? null,
+      modifyPlanVisible: state.modifyPlanVisible,
+    };
   })()`;
 }

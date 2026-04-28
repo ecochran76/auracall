@@ -83,10 +83,14 @@ export async function runBrowserSessionExecution(
         chatgptAccountPlanType: (result as { chatgptAccountPlanType?: string }).chatgptAccountPlanType,
         chatgptAccountStructure: (result as { chatgptAccountStructure?: string }).chatgptAccountStructure,
         chatgptDeepResearchStage: (result as { chatgptDeepResearchStage?: string }).chatgptDeepResearchStage,
+        chatgptDeepResearchPlanAction:
+          (result as { chatgptDeepResearchPlanAction?: string }).chatgptDeepResearchPlanAction,
         chatgptDeepResearchStartMethod:
           (result as { chatgptDeepResearchStartMethod?: string }).chatgptDeepResearchStartMethod,
         chatgptDeepResearchStartLabel:
           (result as { chatgptDeepResearchStartLabel?: string | null }).chatgptDeepResearchStartLabel,
+        chatgptDeepResearchModifyPlanLabel:
+          (result as { chatgptDeepResearchModifyPlanLabel?: string | null }).chatgptDeepResearchModifyPlanLabel,
         chatgptDeepResearchModifyPlanVisible:
           (result as { chatgptDeepResearchModifyPlanVisible?: boolean }).chatgptDeepResearchModifyPlanVisible,
       }),

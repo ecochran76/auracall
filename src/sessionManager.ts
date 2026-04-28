@@ -56,6 +56,8 @@ export interface BrowserSessionConfig {
   thinkingTime?: ThinkingTimeLevel;
   /** ChatGPT composer tool/add-on label (for example "Web search" or "Canvas"). */
   composerTool?: string | null;
+  /** ChatGPT Deep Research plan action: start immediately or open the plan editor. */
+  deepResearchPlanAction?: 'start' | 'edit';
 }
 
 export interface BrowserDiscardedRegistryCandidateMetadata {
@@ -92,8 +94,10 @@ export interface BrowserRuntimeMetadata {
   chatgptAccountPlanType?: string;
   chatgptAccountStructure?: string;
   chatgptDeepResearchStage?: string;
+  chatgptDeepResearchPlanAction?: string;
   chatgptDeepResearchStartMethod?: string;
   chatgptDeepResearchStartLabel?: string | null;
+  chatgptDeepResearchModifyPlanLabel?: string | null;
   chatgptDeepResearchModifyPlanVisible?: boolean;
   /** PID of the controller process that launched this browser run. Helps detect orphaned sessions. */
   controllerPid?: number;
