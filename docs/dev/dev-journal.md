@@ -23274,3 +23274,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     inventory
   - `git diff --check` passed
   - `npm pack --dry-run` built `auracall-0.1.0.tgz` with 387 files, 2.2 MB
+
+## 2026-04-28 - Release artifact checksum repair
+
+- Focus: run the AuraCall `0.1.0` artifact phase and verify the generated
+  tarball/checksums before publish.
+- Progress:
+  - `./scripts/release.sh artifacts` built `auracall-0.1.0.tgz`, but exposed
+    that checksum files captured the helper's `>> shasum ...` log line because
+    the logging wrapper output was redirected
+  - updated the artifact phase to log checksum commands separately and write
+    `.sha1`/`.sha256` with plain `shasum` output only
+- Validation:
+  - reran `./scripts/release.sh artifacts`; build and `npm pack` passed
+  - regenerated `auracall-0.1.0.tgz` at 2.2 MB with 387 files
+  - verified both checksum manifests are one line each:
+    `e98fd62f7d0314ed981df4880b5f59fe224714b5` SHA-1 and
+    `ec70d757071316ce3ffe89d86b43a1925450523b49d179c00081c90c16bced98`
+    SHA-256

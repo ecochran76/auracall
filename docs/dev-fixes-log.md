@@ -14912,3 +14912,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `/usr/bin/env`, and run release Vitest gates with serial workers plus modest
   timeout headroom because the default parallel pool and 5s per-test timeout
   can time out otherwise healthy browser/runtime unit tests under load.
+- 2026-04-28: Do not redirect the release helper's logging wrapper into
+  checksum files. Generate release checksum files with plain `shasum` calls and
+  log the command separately, otherwise `.sha1`/`.sha256` artifacts include an
+  extra `>> ...` line and are not clean checksum manifests.

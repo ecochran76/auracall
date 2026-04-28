@@ -58,8 +58,10 @@ phase_artifacts() {
 
   local tgz="auracall-${VERSION}.tgz"
   mv "$packed" "$tgz"
-  run shasum "$tgz" > "${tgz}.sha1"
-  run shasum -a 256 "$tgz" > "${tgz}.sha256"
+  echo ">> shasum $tgz > ${tgz}.sha1"
+  shasum "$tgz" > "${tgz}.sha1"
+  echo ">> shasum -a 256 $tgz > ${tgz}.sha256"
+  shasum -a 256 "$tgz" > "${tgz}.sha256"
 }
 
 phase_publish() {
