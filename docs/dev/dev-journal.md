@@ -23143,3 +23143,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/browser/thinkingTime.test.ts tests/browser/modelSelection.test.ts tests/browser/pageActions.test.ts --maxWorkers 1`
   - `pnpm run check`
   - `git diff --check`
+
+## 2026-04-28 - ChatGPT Pro model-picker live smoke
+
+- Focus: prove the corrected ChatGPT Pro path selects the Pro model-picker row
+  before applying Standard depth.
+- Progress:
+  - ran a single live browser smoke on AuraCall runtime profile `wsl-chrome-3`
+    with `--model gpt-5.2-pro`, `--browser-thinking-time standard`, and the
+    default model strategy
+  - verbose log showed `Model picker: ProResearch-grade intelligence`, then
+    `ChatGPT Pro mode "standard" allowed (level=Pro, plan=pro,
+    structure=personal).`, then `Thinking time: Standard`
+  - response completed with exact answer
+    `AURACALL PRO MODEL PICKER SMOKE`
+  - persisted session metadata at
+    `~/.auracall/sessions/reply-exactly-auracall-pro-model/meta.json` recorded
+    `desiredModel = Pro`, `modelStrategy = select`,
+    `thinkingTime = standard`, `chatgptProMode = standard`,
+    `chatgptAccountLevel = Pro`, `chatgptAccountPlanType = pro`, and
+    `chatgptAccountStructure = personal`
+- Validation:
+  - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts --profile wsl-chrome-3 --chatgpt --model gpt-5.2-pro --browser-thinking-time standard --browser-timeout 180s --prompt 'Reply exactly: AURACALL PRO MODEL PICKER SMOKE' --browser-keep-browser --verbose`
+  - `rg -n "AURACALL PRO MODEL PICKER SMOKE|chatgptProMode|thinkingTime|chatgptAccountLevel" ~/.auracall/sessions -g '*.json'`
