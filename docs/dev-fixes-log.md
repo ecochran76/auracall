@@ -14872,3 +14872,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   response service instead of a bare response service. Otherwise a browser
   response request can appear to complete through the no-op local runner
   without actually touching the browser.
+- 2026-04-28: ChatGPT Pro mode is a model-picker lane, not the
+  Standard/Extended workbench depth selector. AuraCall should only record
+  `chatgptProMode` and require Pro account gating when the requested model is
+  actually Pro, and Pro+depth runs must use model-picker selection instead of
+  `--browser-model-strategy ignore`; otherwise a smoke can silently run
+  Thinking Standard/Extended while claiming Pro.

@@ -541,7 +541,7 @@ Within each file, later CLI flags still override config, and environment variabl
   - `gemini`: `search`, `grounding`, `apps`
 - Headless/headful settings belong to the browser layer; keep using `browser.headless` and `browser.hideWindow` until the rename lands.
 - `browser.hideWindow: true` is now the recommended default for headful browser automation. Aura-Call launches Chrome with `--start-minimized`, suppresses `Page.bringToFront()` on reuse paths, and only auto-hides windows it just launched itself. On WSL/X11, treat this as a no-focus-steal guarantee first and a literal minimized-state guarantee second, because Chrome's DevTools window-bounds API can still report `windowState: normal` while `_NET_ACTIVE_WINDOW` stays unchanged.
-- `services.<service>.thinkingTime` can set a per-service default for ChatGPT Thinking/Pro models (overrides `profiles.<name>.browser.thinkingTime` when set).
+- `services.<service>.thinkingTime` can set a per-service default for ChatGPT Thinking/Pro depth selection (overrides `profiles.<name>.browser.thinkingTime` when set). It does not select Pro by itself; Pro still has to be requested through the ChatGPT model picker via the service model, for example `model: "gpt-5.2-pro"`.
 - `runtimeProfiles.<name>.services.<service>.identity` sets the username/email used for cache identity; auto-scraping is disabled unless `runtimeProfiles.<name>.cache.useDetectedIdentity` is set.
 - `runtimeProfiles.<name>.browser.profilePath` + `profileName` define the source browser profile; `cookiePath` overrides the derived Cookies DB location. `profileName` accepts either the on-disk Chromium directory (for example `Profile 1`) or the friendly UI label.
 - when both exist, active resolution now prefers the referenced browser profile

@@ -259,6 +259,11 @@ export function resolveChatgptProModeFromThinkingTime(level: ThinkingTimeLevel):
   return level === 'extended' || level === 'heavy' ? 'extended' : 'standard';
 }
 
+export function isChatgptProModelTarget(desiredModel: string | null | undefined): boolean {
+  if (!desiredModel) return false;
+  return /\bpro\b/i.test(desiredModel);
+}
+
 export function evaluateChatgptProModeGate(
   level: ThinkingTimeLevel,
   identity: ProviderUserIdentity | null | undefined,

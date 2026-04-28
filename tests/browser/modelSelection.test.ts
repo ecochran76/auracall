@@ -1,11 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { buildModelMatchersLiteralForTest } from '../../src/browser/actions/modelSelection.js';
+import {
+  buildModelMatchersLiteralForTest,
+  buildModelSelectionExpressionForTest,
+} from '../../src/browser/actions/modelSelection.js';
 
 const expectContains = (arr: string[], value: string) => {
   expect(arr).toContain(value);
 };
 
 describe('browser model selection matchers', () => {
+  it('targets the current ChatGPT model picker button', () => {
+    const expression = buildModelSelectionExpressionForTest('gpt-5.2-pro');
+    expect(expression).toContain('[data-testid=\\"model-switcher-dropdown-button\\"]');
+    expect(expression).toContain('button[aria-label*=\\"Model\\"]');
+  });
+
   it('includes rich tokens for gpt-5.1 base selection', () => {
     const { labelTokens, testIdTokens, semanticTarget } = buildModelMatchersLiteralForTest('gpt-5.1');
     expect(semanticTarget).toBe('instant');

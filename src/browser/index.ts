@@ -13,6 +13,7 @@ import type {
   BrowserRunOptions,
   BrowserRunResult,
   ChromeClient,
+  BrowserModelStrategy,
 } from './types.js';
 import {
   launchChrome,
@@ -67,6 +68,8 @@ import {
   ensureThinkingTime,
   evaluateChatgptProModeGate,
   formatChatgptProModeGateError,
+  isChatgptProModelTarget,
+  resolveChatgptProModeFromThinkingTime,
   type ChatgptProMode,
   type ChatgptProModeGate,
 } from './actions/thinkingTime.js';
@@ -289,6 +292,20 @@ async function assertChatgptProModeAllowed(
     logger(`ChatGPT Pro mode "${gate.proMode}" allowed${summary ? ` (${summary})` : ''}.`);
   }
   return gate;
+}
+
+async function assertChatgptProModeSelectable(
+  Runtime: ChromeClient['Runtime'],
+  level: ThinkingTimeLevel,
+  logger: BrowserLogger,
+  modelStrategy: BrowserModelStrategy,
+): Promise<ChatgptProModeGate> {
+  if (modelStrategy !== 'select') {
+    throw new Error(
+      `ChatGPT Pro mode "${resolveChatgptProModeFromThinkingTime(level)}" requires selecting Pro through the ChatGPT model picker. Use --model gpt-5.2-pro with --browser-model-strategy select before using --browser-thinking-time for Pro mode.`,
+    );
+  }
+  return assertChatgptProModeAllowed(Runtime, level, logger);
 }
 
 async function readVerifiedChatgptAccountIdentity(
@@ -1533,7 +1550,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     // Handle thinking time selection if specified
     const thinkingTime = config.thinkingTime;
     if (thinkingTime && shouldApplyThinkingTime(config.desiredModel)) {
-      const proModeGate = await raceWithDisconnect(assertChatgptProModeAllowed(Runtime, thinkingTime, logger));
+      const proModeGate = isChatgptProModelTarget(config.desiredModel)
+        ? await raceWithDisconnect(assertChatgptProModeSelectable(Runtime, thinkingTime, logger, modelStrategy))
+        : null;
       await raceWithDisconnect(dismissOpenMenus(Runtime).catch(() => false));
       await raceWithDisconnect(
         withRetries(() => ensureThinkingTime(Runtime, thinkingTime, logger), {
@@ -1547,10 +1566,10 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         }),
       );
       selectedThinkingTime = thinkingTime;
-      selectedChatgptProMode = proModeGate.proMode;
-      selectedChatgptAccountLevel = proModeGate.accountLevel ?? null;
-      selectedChatgptAccountPlanType = proModeGate.accountPlanType ?? null;
-      selectedChatgptAccountStructure = proModeGate.accountStructure ?? null;
+      selectedChatgptProMode = proModeGate?.proMode ?? null;
+      selectedChatgptAccountLevel = proModeGate?.accountLevel ?? null;
+      selectedChatgptAccountPlanType = proModeGate?.accountPlanType ?? null;
+      selectedChatgptAccountStructure = proModeGate?.accountStructure ?? null;
       await emitRuntimeHint();
     }
     if (config.composerTool) {
@@ -2460,7 +2479,9 @@ async function runRemoteBrowserMode(
     // Handle thinking time selection if specified
     const thinkingTime = config.thinkingTime;
     if (thinkingTime && shouldApplyThinkingTime(config.desiredModel)) {
-      const proModeGate = await assertChatgptProModeAllowed(Runtime, thinkingTime, logger);
+      const proModeGate = isChatgptProModelTarget(config.desiredModel)
+        ? await assertChatgptProModeSelectable(Runtime, thinkingTime, logger, modelStrategy)
+        : null;
       await dismissOpenMenus(Runtime).catch(() => false);
       await withRetries(() => ensureThinkingTime(Runtime, thinkingTime, logger), {
         retries: 2,
@@ -2472,10 +2493,10 @@ async function runRemoteBrowserMode(
         },
       });
       selectedThinkingTime = thinkingTime;
-      selectedChatgptProMode = proModeGate.proMode;
-      selectedChatgptAccountLevel = proModeGate.accountLevel ?? null;
-      selectedChatgptAccountPlanType = proModeGate.accountPlanType ?? null;
-      selectedChatgptAccountStructure = proModeGate.accountStructure ?? null;
+      selectedChatgptProMode = proModeGate?.proMode ?? null;
+      selectedChatgptAccountLevel = proModeGate?.accountLevel ?? null;
+      selectedChatgptAccountPlanType = proModeGate?.accountPlanType ?? null;
+      selectedChatgptAccountStructure = proModeGate?.accountStructure ?? null;
       await emitRuntimeHint();
     }
     if (config.composerTool) {

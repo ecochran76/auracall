@@ -23125,3 +23125,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `artifactCount = 5`, `lastEvent = artifact_materialized`, and full-quality
     artifact `grok_imagine_full_quality_1`
   - no MCP create tool was called in the smoke
+
+## 2026-04-28 - ChatGPT Pro model-picker correction
+
+- Focus: correct Pro-mode smoke semantics after live evidence showed the
+  previous run selected ChatGPT `Thinking` plus `Standard`, not `Pro`.
+- Progress:
+  - treated `--browser-thinking-time` as the ChatGPT workbench depth selector
+    for Thinking/Pro, not as proof of Pro model selection
+  - limited ChatGPT Pro account gating and `chatgptProMode` metadata to runs
+    whose requested model target is actually `Pro`
+  - made Pro+depth fail before prompt submission when the model picker is
+    skipped with `--browser-model-strategy ignore`
+  - documented that Pro Standard/Extended requires `--model gpt-5.2-pro` with
+    model-picker selection, then depth selection
+- Validation:
+  - `pnpm vitest run tests/browser/thinkingTime.test.ts tests/browser/modelSelection.test.ts tests/browser/pageActions.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `git diff --check`

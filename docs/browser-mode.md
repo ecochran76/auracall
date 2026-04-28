@@ -83,7 +83,7 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 - `--chatgpt-url`: override the ChatGPT base URL. Works with the root homepage (`https://chatgpt.com/`) **or** a specific workspace/folder link such as `https://chatgpt.com/g/.../project`. `--browser-url` stays as a hidden alias.
 - `--browser-timeout`, `--browser-input-timeout`: `1200s (20m)`/`30s` defaults. Durations accept `ms`, `s`, `m`, or `h` and can be chained (`1h2m10s`).
 - `--browser-model-strategy <select|current|ignore>`: control ChatGPT model selection. `select` (default) switches to the requested model; `current` keeps the active model and logs its label; `ignore` skips the picker entirely. (Ignored for Gemini web runs.)
-- `--browser-thinking-time <light|standard|extended|heavy>`: set the ChatGPT thinking-time intensity (Thinking/Pro models only). You can also set a default in `~/.auracall/config.json` via `profiles.<name>.browser.thinkingTime` (legacy `browser.thinkingTime` still works).
+- `--browser-thinking-time <light|standard|extended|heavy>`: set the ChatGPT thinking-time intensity (Thinking/Pro models only). This is the workbench depth selector, not the model selector. To run Pro Standard/Extended, request a Pro model such as `--model gpt-5.2-pro` and keep the default `--browser-model-strategy select` so AuraCall selects and verifies Pro through ChatGPT's model picker before selecting the depth. You can also set a default in `~/.auracall/config.json` via `profiles.<name>.browser.thinkingTime` (legacy `browser.thinkingTime` still works).
   - preferred long-term config surface:
     - `runtimeProfiles.<name>.services.<service>.thinkingTime`
   - legacy root `browser.thinkingTime` remains supported as transitional input

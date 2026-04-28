@@ -3,6 +3,7 @@ import {
   buildThinkingTimeExpressionForTest,
   evaluateChatgptProModeGate,
   formatChatgptProModeGateError,
+  isChatgptProModelTarget,
   resolveChatgptProModeFromThinkingTime,
 } from '../../src/browser/actions/thinkingTime.js';
 
@@ -42,6 +43,14 @@ describe('ChatGPT Pro mode account gate', () => {
     expect(resolveChatgptProModeFromThinkingTime('standard')).toBe('standard');
     expect(resolveChatgptProModeFromThinkingTime('extended')).toBe('extended');
     expect(resolveChatgptProModeFromThinkingTime('heavy')).toBe('extended');
+  });
+
+  it('treats Pro as a model-picker lane, not a Standard/Extended depth selector', () => {
+    expect(isChatgptProModelTarget('Pro')).toBe(true);
+    expect(isChatgptProModelTarget('gpt-5.2-pro')).toBe(true);
+    expect(isChatgptProModelTarget('Thinking')).toBe(false);
+    expect(isChatgptProModelTarget('gpt-5.2-thinking')).toBe(false);
+    expect(isChatgptProModelTarget(null)).toBe(false);
   });
 
   it('allows Pro accounts to use standard and extended Pro modes', () => {
