@@ -23292,3 +23292,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `e98fd62f7d0314ed981df4880b5f59fe224714b5` SHA-1 and
     `ec70d757071316ce3ffe89d86b43a1925450523b49d179c00081c90c16bced98`
     SHA-256
+
+## 2026-04-28 - Publish auth preflight
+
+- Focus: start the npm publish phase for AuraCall `0.1.0` without risking a
+  half-authenticated publish attempt.
+- Progress:
+  - confirmed `auracall` is still unclaimed on npm (`npm view auracall version
+    --json` returns 404/not found)
+  - stopped before `./scripts/release.sh publish` because `npm whoami` returns
+    `ENEEDAUTH`
+  - sourced `~/.profile` in a clean shell and confirmed `NPM_TOKEN` is missing,
+    so the documented token path is not currently loaded
+- Blocker: install/load npm auth for this shell, preferably the documented
+  granular write token with 2FA bypass, then rerun `npm whoami` before publish.
