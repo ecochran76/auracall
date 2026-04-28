@@ -93,6 +93,8 @@ export async function runBrowserSessionExecution(
           (result as { chatgptDeepResearchModifyPlanLabel?: string | null }).chatgptDeepResearchModifyPlanLabel,
         chatgptDeepResearchModifyPlanVisible:
           (result as { chatgptDeepResearchModifyPlanVisible?: boolean }).chatgptDeepResearchModifyPlanVisible,
+        chatgptDeepResearchReviewEvidence:
+          (result as { chatgptDeepResearchReviewEvidence?: Record<string, unknown> | null }).chatgptDeepResearchReviewEvidence,
       }),
       persistRuntimeHint,
       errorWrapper: (message, cause) => new BrowserAutomationError(message, { stage: 'execute-browser' }, cause),

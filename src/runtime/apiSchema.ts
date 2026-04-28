@@ -241,6 +241,7 @@ export const ExecutionResponseSchema: z.ZodType<ExecutionResponse> = z.object({
             })
             .nullable()
             .optional(),
+          browserRunSummary: z.record(z.string(), z.unknown()).nullable().optional(),
           cancellationSummary: z
             .object({
               cancelledAt: z.string().nullable().optional(),

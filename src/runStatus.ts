@@ -88,6 +88,17 @@ export function summarizeResponseRunStatus(response: ExecutionResponse): AuraCal
       mimeType: artifact.mime_type ?? null,
       materialization: stringOrNull(artifact.metadata?.materialization),
     }));
+  const metadata: Record<string, unknown> = {
+    runId: response.metadata?.runId ?? response.id,
+    taskRunSpecId: response.metadata?.taskRunSpecId ?? null,
+    runtimeProfile: response.metadata?.runtimeProfile ?? null,
+    service: response.metadata?.service ?? null,
+    model: response.model ?? null,
+  };
+  if (executionSummary?.browserRunSummary) {
+    metadata.browserRunSummary = executionSummary.browserRunSummary;
+  }
+
   return {
     id: response.id,
     object: 'auracall_run_status',
@@ -100,13 +111,7 @@ export function summarizeResponseRunStatus(response: ExecutionResponse): AuraCal
     steps,
     artifactCount: artifacts.length,
     artifacts,
-    metadata: {
-      runId: response.metadata?.runId ?? response.id,
-      taskRunSpecId: response.metadata?.taskRunSpecId ?? null,
-      runtimeProfile: response.metadata?.runtimeProfile ?? null,
-      service: response.metadata?.service ?? null,
-      model: response.model ?? null,
-    },
+    metadata,
     failure: executionSummary?.failureSummary ?? null,
   };
 }

@@ -748,6 +748,15 @@ describe('configured stored-step executor', () => {
       answerChars: 24,
       tabUrl: 'https://chatgpt.com/c/mock-chatgpt-observation',
       conversationId: 'mock-chatgpt-observation',
+      chatgptDeepResearchStage: 'plan-edit-opened',
+      chatgptDeepResearchPlanAction: 'edit',
+      chatgptDeepResearchStartMethod: null,
+      chatgptDeepResearchModifyPlanLabel: 'Update',
+      chatgptDeepResearchModifyPlanVisible: true,
+      chatgptDeepResearchReviewEvidence: {
+        stage: 'plan-edit-opened',
+        screenshotPath: '/tmp/deep-research-review.png',
+      },
       passiveObservations,
     }));
 
@@ -832,6 +841,14 @@ describe('configured stored-step executor', () => {
       projectId: 'g-p-observations',
       configuredUrl: 'https://chatgpt.com/g/g-p-observations',
       desiredModel: 'GPT-5.2',
+      chatgptDeepResearchStage: 'plan-edit-opened',
+      chatgptDeepResearchPlanAction: 'edit',
+      chatgptDeepResearchModifyPlanLabel: 'Update',
+      chatgptDeepResearchModifyPlanVisible: true,
+      chatgptDeepResearchReviewEvidence: {
+        stage: 'plan-edit-opened',
+        screenshotPath: '/tmp/deep-research-review.png',
+      },
       passiveObservations: [
         {
           state: 'thinking',

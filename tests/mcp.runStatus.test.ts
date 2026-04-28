@@ -62,6 +62,12 @@ describe('mcp run_status tool', () => {
                   },
                 ],
               },
+              browserRunSummary: {
+                chatgptDeepResearchStage: 'plan-edit-opened',
+                chatgptDeepResearchReviewEvidence: {
+                  screenshotPath: '/tmp/deep-research-review.png',
+                },
+              },
               failureSummary: null,
             },
           },
@@ -88,6 +94,12 @@ describe('mcp run_status tool', () => {
           runtimeProfile: 'default',
           service: 'gemini',
           model: 'gemini-3-pro',
+          browserRunSummary: {
+            chatgptDeepResearchStage: 'plan-edit-opened',
+            chatgptDeepResearchReviewEvidence: {
+              screenshotPath: '/tmp/deep-research-review.png',
+            },
+          },
         },
         lastEvent: {
           type: 'step-succeeded',

@@ -22876,3 +22876,33 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - passive follow-up watch captured the same conversation URL and screenshot
     evidence showing the provider plan review card with `Edit`, `Cancel`,
     `Start`, and the countdown still visible
+
+## 2026-04-28 - ChatGPT Deep Research review evidence status
+
+- Focus: make the staged Deep Research review state visible through the normal
+  run metadata/status path instead of requiring manual browser-tools inspection.
+- Progress:
+  - Deep Research edit/start results now preserve whether the edit path used a
+    DOM control or an iframe coordinate target
+  - `edit` runs capture a passive review screenshot under
+    `~/.auracall/diagnostics/chatgpt-deep-research/` when the review/editor
+    state opens or when the provider auto-starts before edit opens
+  - browser runtime metadata now carries
+    `chatgptDeepResearchReviewEvidence`, including stage, action, tab URL,
+    target coordinates, modify label/visibility, and screenshot path/bytes
+  - browser-backed stored-step output and response `executionSummary` now
+    project the same Deep Research summary so API/generic run status readers
+    can inspect it without reattaching to Chrome
+- Validation:
+  - `pnpm vitest run tests/browser/chatgptDeepResearch.test.ts tests/browser/browserTools.test.ts tests/runtime.configuredExecutor.test.ts tests/runtime.api.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run install:user-runtime`
+  - installed-runtime live retest on `wsl-chrome-3`:
+    `/home/ecochran76/.local/bin/auracall --profile wsl-chrome-3 --engine browser --browser-target chatgpt --model gpt-5.2-thinking --browser-model-strategy ignore --browser-composer-tool deep-research --browser-deep-research-plan-action edit --browser-keep-browser --browser-timeout 180s --browser-input-timeout 60s --verbose -p "..."`
+  - retest submitted one prompt, returned from the edit/review state in 7.5s,
+    and persisted `chatgptDeepResearchReviewEvidence` in
+    `~/.auracall/sessions/use-deep-research-to-prepare-3/meta.json`
+  - persisted evidence recorded stage `plan-edit-opened`, target
+    `iframe-coordinate`, label `Update`, the conversation URL, and screenshot
+    path
+    `~/.auracall/diagnostics/chatgpt-deep-research/2026-04-28T13-53-11-568Z-plan-edit-opened.png`

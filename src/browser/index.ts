@@ -1,4 +1,4 @@
-import { rm, mkdir } from 'node:fs/promises';
+import { rm, mkdir, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { resolveBrowserConfig } from './config.js';
@@ -153,6 +153,58 @@ export function resolveManagedBrowserLaunchContextForTest(
     browser: config,
     target,
   });
+}
+
+async function captureChatgptDeepResearchReviewEvidence(input: {
+  Page: ChromeClient['Page'];
+  stage: ChatgptDeepResearchStage | null;
+  planAction: 'start' | 'edit' | null;
+  tabUrl: string | null;
+  modifyPlanLabel: string | null;
+  modifyPlanVisible: boolean | null;
+  editTargetKind: string | null;
+  editTargetX: number | null;
+  editTargetY: number | null;
+}): Promise<Record<string, unknown> | null> {
+  if (
+    input.planAction !== 'edit' ||
+    (input.stage !== 'plan-edit-opened' && input.stage !== 'auto-started')
+  ) {
+    return null;
+  }
+  const capturedAt = new Date().toISOString();
+  let screenshotPath: string | null = null;
+  let screenshotBytes: number | null = null;
+  const screenshot = await input.Page.captureScreenshot({ format: 'png' }).catch(() => null);
+  if (screenshot && typeof screenshot.data === 'string' && screenshot.data.length > 0) {
+    await (async () => {
+      const bytes = Buffer.from(screenshot.data, 'base64');
+      const dir = path.join(getAuracallHomeDir(), 'diagnostics', 'chatgpt-deep-research');
+      await mkdir(dir, { recursive: true });
+      const filePath = path.join(dir, `${capturedAt.replace(/[:.]/g, '-')}-${sanitizeDiagnosticsToken(input.stage ?? 'unknown')}.png`);
+      await writeFile(filePath, bytes);
+      screenshotPath = filePath;
+      screenshotBytes = bytes.length;
+    })().catch(() => undefined);
+  }
+  return {
+    capturedAt,
+    stage: input.stage,
+    planAction: input.planAction,
+    tabUrl: input.tabUrl,
+    modifyPlanLabel: input.modifyPlanLabel,
+    modifyPlanVisible: input.modifyPlanVisible,
+    editTargetKind: input.editTargetKind,
+    editTargetX: input.editTargetX,
+    editTargetY: input.editTargetY,
+    screenshotPath,
+    screenshotMimeType: screenshotPath ? 'image/png' : null,
+    screenshotBytes,
+  };
+}
+
+function sanitizeDiagnosticsToken(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_.-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'unknown';
 }
 
 async function resolveBrowserRuntimeEntryContext(options: {
@@ -1104,6 +1156,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   let chatgptDeepResearchStartLabel: string | null = null;
   let chatgptDeepResearchModifyPlanLabel: string | null = null;
   let chatgptDeepResearchModifyPlanVisible: boolean | null = null;
+  let chatgptDeepResearchReviewEvidence: Record<string, unknown> | null = null;
   const emitRuntimeHint = async (): Promise<void> => {
     if (!runtimeHintCb || !chrome?.port) {
       return;
@@ -1130,6 +1183,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       chatgptDeepResearchStartLabel: chatgptDeepResearchStartLabel ?? undefined,
       chatgptDeepResearchModifyPlanLabel: chatgptDeepResearchModifyPlanLabel ?? undefined,
       chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
+      chatgptDeepResearchReviewEvidence: chatgptDeepResearchReviewEvidence ?? undefined,
     };
     try {
       await runtimeHintCb(hint);
@@ -1679,10 +1733,23 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       chatgptDeepResearchStartLabel = startResult.startLabel;
       chatgptDeepResearchModifyPlanLabel = startResult.modifyPlanLabel;
       chatgptDeepResearchModifyPlanVisible = startResult.modifyPlanVisible;
+      chatgptDeepResearchReviewEvidence = await captureChatgptDeepResearchReviewEvidence({
+        Page,
+        stage: chatgptDeepResearchStage,
+        planAction: chatgptDeepResearchPlanAction,
+        tabUrl: lastUrl ?? null,
+        modifyPlanLabel: chatgptDeepResearchModifyPlanLabel,
+        modifyPlanVisible: chatgptDeepResearchModifyPlanVisible,
+        editTargetKind: startResult.editTargetKind ?? null,
+        editTargetX: startResult.editTargetX ?? null,
+        editTargetY: startResult.editTargetY ?? null,
+      });
       recordBrowserPassiveObservation(passiveObservations, {
         state: startResult.stage === 'plan-edit-opened' ? 'awaiting-human' : 'research-started',
         source: 'browser-service',
-        evidenceRef: startResult.startLabel ?? startResult.modifyPlanLabel ?? 'chatgpt-deep-research-start',
+        evidenceRef: typeof chatgptDeepResearchReviewEvidence?.screenshotPath === 'string'
+          ? chatgptDeepResearchReviewEvidence.screenshotPath
+          : startResult.startLabel ?? startResult.modifyPlanLabel ?? 'chatgpt-deep-research-start',
         confidence: 'high',
       });
       await emitRuntimeHint();
@@ -1730,6 +1797,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         chatgptDeepResearchStartLabel: chatgptDeepResearchStartLabel ?? undefined,
         chatgptDeepResearchModifyPlanLabel: chatgptDeepResearchModifyPlanLabel ?? undefined,
         chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
+        chatgptDeepResearchReviewEvidence: chatgptDeepResearchReviewEvidence ?? undefined,
         passiveObservations,
         controllerPid: process.pid,
       };
@@ -2023,6 +2091,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       chatgptDeepResearchStartLabel: chatgptDeepResearchStartLabel ?? undefined,
       chatgptDeepResearchModifyPlanLabel: chatgptDeepResearchModifyPlanLabel ?? undefined,
       chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
+      chatgptDeepResearchReviewEvidence: chatgptDeepResearchReviewEvidence ?? undefined,
       passiveObservations,
       controllerPid: process.pid,
     };
@@ -2279,6 +2348,7 @@ async function runRemoteBrowserMode(
   let chatgptDeepResearchStartLabel: string | null = null;
   let chatgptDeepResearchModifyPlanLabel: string | null = null;
   let chatgptDeepResearchModifyPlanVisible: boolean | null = null;
+  let chatgptDeepResearchReviewEvidence: Record<string, unknown> | null = null;
   const emitRuntimeHint = async () => {
     if (!runtimeHintCb) return;
     try {
@@ -2300,6 +2370,7 @@ async function runRemoteBrowserMode(
         chatgptDeepResearchStartLabel: chatgptDeepResearchStartLabel ?? undefined,
         chatgptDeepResearchModifyPlanLabel: chatgptDeepResearchModifyPlanLabel ?? undefined,
         chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
+        chatgptDeepResearchReviewEvidence: chatgptDeepResearchReviewEvidence ?? undefined,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -2542,10 +2613,23 @@ async function runRemoteBrowserMode(
       chatgptDeepResearchStartLabel = startResult.startLabel;
       chatgptDeepResearchModifyPlanLabel = startResult.modifyPlanLabel;
       chatgptDeepResearchModifyPlanVisible = startResult.modifyPlanVisible;
+      chatgptDeepResearchReviewEvidence = await captureChatgptDeepResearchReviewEvidence({
+        Page,
+        stage: chatgptDeepResearchStage,
+        planAction: chatgptDeepResearchPlanAction,
+        tabUrl: lastUrl ?? null,
+        modifyPlanLabel: chatgptDeepResearchModifyPlanLabel,
+        modifyPlanVisible: chatgptDeepResearchModifyPlanVisible,
+        editTargetKind: startResult.editTargetKind ?? null,
+        editTargetX: startResult.editTargetX ?? null,
+        editTargetY: startResult.editTargetY ?? null,
+      });
       recordBrowserPassiveObservation(passiveObservations, {
         state: startResult.stage === 'plan-edit-opened' ? 'awaiting-human' : 'research-started',
         source: 'browser-service',
-        evidenceRef: startResult.startLabel ?? startResult.modifyPlanLabel ?? 'chatgpt-deep-research-start',
+        evidenceRef: typeof chatgptDeepResearchReviewEvidence?.screenshotPath === 'string'
+          ? chatgptDeepResearchReviewEvidence.screenshotPath
+          : startResult.startLabel ?? startResult.modifyPlanLabel ?? 'chatgpt-deep-research-start',
         confidence: 'high',
       });
       await emitRuntimeHint();
@@ -2581,6 +2665,7 @@ async function runRemoteBrowserMode(
         chatgptDeepResearchStartLabel: chatgptDeepResearchStartLabel ?? undefined,
         chatgptDeepResearchModifyPlanLabel: chatgptDeepResearchModifyPlanLabel ?? undefined,
         chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
+        chatgptDeepResearchReviewEvidence: chatgptDeepResearchReviewEvidence ?? undefined,
         passiveObservations,
         controllerPid: process.pid,
       };
@@ -2836,6 +2921,7 @@ async function runRemoteBrowserMode(
       chatgptDeepResearchStartLabel: chatgptDeepResearchStartLabel ?? undefined,
       chatgptDeepResearchModifyPlanLabel: chatgptDeepResearchModifyPlanLabel ?? undefined,
       chatgptDeepResearchModifyPlanVisible: chatgptDeepResearchModifyPlanVisible ?? undefined,
+      chatgptDeepResearchReviewEvidence: chatgptDeepResearchReviewEvidence ?? undefined,
       passiveObservations,
       controllerPid: process.pid,
     };

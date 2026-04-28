@@ -57,10 +57,11 @@ export type BrowserRuntimeMetadata = BaseTypes.BrowserRuntimeMetadata & {
   chatgptAccountStructure?: string;
   chatgptDeepResearchStage?: string;
   chatgptDeepResearchPlanAction?: string;
-  chatgptDeepResearchStartMethod?: string;
+  chatgptDeepResearchStartMethod?: string | null;
   chatgptDeepResearchStartLabel?: string | null;
   chatgptDeepResearchModifyPlanLabel?: string | null;
   chatgptDeepResearchModifyPlanVisible?: boolean;
+  chatgptDeepResearchReviewEvidence?: Record<string, unknown> | null;
 };
 
 type BrowserBlockingProfileAction =
@@ -92,10 +93,11 @@ export type BrowserRunResult = BaseTypes.BrowserRunResult & {
   chatgptAccountStructure?: string;
   chatgptDeepResearchStage?: string;
   chatgptDeepResearchPlanAction?: string;
-  chatgptDeepResearchStartMethod?: string;
+  chatgptDeepResearchStartMethod?: string | null;
   chatgptDeepResearchStartLabel?: string | null;
   chatgptDeepResearchModifyPlanLabel?: string | null;
   chatgptDeepResearchModifyPlanVisible?: boolean;
+  chatgptDeepResearchReviewEvidence?: Record<string, unknown> | null;
   passiveObservations?: BrowserPassiveObservation[];
 };
 

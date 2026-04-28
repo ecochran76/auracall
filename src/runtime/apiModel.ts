@@ -91,6 +91,7 @@ export function createExecutionResponseFromRunRecord(
       .find((step) => step.status === 'succeeded' || step.status === 'cancelled');
   const requestedOutputSummary = readExecutionRunRequestedOutputSummary(parsed.runRecord, parsed.output, terminalStep);
   const requestedOutputPolicy = readExecutionRunRequestedOutputPolicySummary(requestedOutputSummary);
+  const browserRunSummary = readExecutionRunBrowserRunSummary(parsed.runRecord, terminalStep?.id ?? null);
   return createExecutionResponse({
     id: parsed.responseId,
     object: 'response',
@@ -117,6 +118,7 @@ export function createExecutionResponseFromRunRecord(
         inputArtifactSummary: readExecutionRunInputArtifactSummary(parsed.runRecord, terminalStep?.id ?? null),
         handoffTransferSummary: readExecutionRunHandoffTransferSummary(parsed.runRecord, terminalStep?.id ?? null),
         providerUsageSummary: readExecutionRunProviderUsageSummary(parsed.runRecord, terminalStep?.id ?? null),
+        ...(browserRunSummary ? { browserRunSummary } : {}),
         cancellationSummary: readExecutionRunCancellationSummary(parsed.runRecord),
         operatorControlSummary: readExecutionRunOperatorControlSummary(parsed.runRecord),
         orchestrationTimelineSummary: readExecutionRunOrchestrationTimelineSummary(parsed.runRecord),
@@ -136,6 +138,46 @@ export function createExecutionResponseFromRunRecord(
       },
     },
   });
+}
+
+function readExecutionRunBrowserRunSummary(
+  runRecord: ExecutionResponseFromRunRecordInput['runRecord'],
+  terminalStepId: string | null,
+): Record<string, unknown> | null {
+  const preferred = terminalStepId
+    ? runRecord.steps.find((step) => step.id === terminalStepId)
+    : null;
+  const step = preferred ??
+    runRecord.steps
+      .slice()
+      .reverse()
+      .find((entry) => isRecord(entry.output?.structuredData?.browserRun));
+  const browserRun = isRecord(step?.output?.structuredData?.browserRun)
+    ? step?.output?.structuredData?.browserRun
+    : null;
+  if (!browserRun) {
+    return null;
+  }
+  return {
+    ownerStepId: step?.id ?? null,
+    provider: readString(browserRun.provider) ?? readString(browserRun.service),
+    service: readString(browserRun.service) ?? readString(browserRun.provider),
+    conversationId: readString(browserRun.conversationId),
+    tabUrl: readString(browserRun.tabUrl),
+    runtimeProfileId: readString(browserRun.runtimeProfileId),
+    browserProfileId: readString(browserRun.browserProfileId),
+    chatgptDeepResearchStage: readString(browserRun.chatgptDeepResearchStage),
+    chatgptDeepResearchPlanAction: readString(browserRun.chatgptDeepResearchPlanAction),
+    chatgptDeepResearchStartMethod: readString(browserRun.chatgptDeepResearchStartMethod),
+    chatgptDeepResearchModifyPlanLabel: readString(browserRun.chatgptDeepResearchModifyPlanLabel),
+    chatgptDeepResearchModifyPlanVisible:
+      typeof browserRun.chatgptDeepResearchModifyPlanVisible === 'boolean'
+        ? browserRun.chatgptDeepResearchModifyPlanVisible
+        : null,
+    chatgptDeepResearchReviewEvidence: isRecord(browserRun.chatgptDeepResearchReviewEvidence)
+      ? browserRun.chatgptDeepResearchReviewEvidence
+      : null,
+  };
 }
 
 function readExecutionRunStepSummaries(
@@ -482,6 +524,10 @@ function readNonNegativeInt(value: unknown): number {
     return 0;
   }
   return Math.max(0, Math.trunc(value));
+}
+
+function readString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim().length > 0 ? value : null;
 }
 
 function readExecutionRunCancellationSummary(runRecord: ExecutionResponseFromRunRecordInput['runRecord']): {

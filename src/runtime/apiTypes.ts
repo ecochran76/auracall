@@ -179,6 +179,7 @@ export interface ExecutionResponse {
         reasoningTokens?: number;
         totalTokens?: number;
       } | null;
+      browserRunSummary?: Record<string, unknown> | null;
       cancellationSummary?: {
         cancelledAt?: string | null;
         source?: 'operator' | 'service-host' | null;

@@ -19,6 +19,9 @@ export type ChatgptDeepResearchStartResult = {
   startLabel: string | null;
   modifyPlanLabel: string | null;
   modifyPlanVisible: boolean;
+  editTargetKind?: 'dom-control' | 'iframe-coordinate' | null;
+  editTargetX?: number | null;
+  editTargetY?: number | null;
 };
 
 type ChatgptDeepResearchPlanProbe =
@@ -92,6 +95,9 @@ export async function startChatgptDeepResearchPlan(
         startLabel: result.startLabel,
         modifyPlanLabel: result.modifyPlanLabel,
         modifyPlanVisible: result.modifyPlanVisible,
+        editTargetKind: null,
+        editTargetX: null,
+        editTargetY: null,
       };
     case 'plan-edit-opened':
       logger(`Deep Research plan edit opened${result.modifyPlanLabel ? ` (${result.modifyPlanLabel})` : ''}`);
@@ -101,6 +107,9 @@ export async function startChatgptDeepResearchPlan(
         startLabel: null,
         modifyPlanLabel: result.modifyPlanLabel,
         modifyPlanVisible: result.modifyPlanVisible,
+        editTargetKind: 'dom-control',
+        editTargetX: null,
+        editTargetY: null,
       };
     case 'iframe-edit-target':
       if (!Input) {
@@ -117,6 +126,9 @@ export async function startChatgptDeepResearchPlan(
         startLabel: null,
         modifyPlanLabel: result.modifyPlanLabel,
         modifyPlanVisible: result.modifyPlanVisible,
+        editTargetKind: 'iframe-coordinate',
+        editTargetX: result.clickX,
+        editTargetY: result.clickY,
       };
     case 'auto-started':
       logger('Deep Research plan auto-started by ChatGPT');
@@ -126,6 +138,9 @@ export async function startChatgptDeepResearchPlan(
         startLabel: null,
         modifyPlanLabel: result.modifyPlanLabel,
         modifyPlanVisible: result.modifyPlanVisible,
+        editTargetKind: null,
+        editTargetX: null,
+        editTargetY: null,
       };
     case 'plan-ready-no-start':
       await logDomFailure(Runtime, logger, 'chatgpt-deep-research-plan-no-start');
