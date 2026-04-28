@@ -67,6 +67,7 @@ export class ChatgptService extends LlmService {
     const result = await runBrowserMode({
       prompt: input.prompt,
       completionMode: 'prompt_submitted',
+      skipBrowserExecutionOperation: true,
       config: {
         ...browserConfig,
         target: 'chatgpt',

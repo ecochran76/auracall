@@ -197,6 +197,45 @@ describe('browserMode exports', () => {
     }
   });
 
+  test('browser execution operation can be skipped when caller already owns dispatch', async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-browser-operation-owned-'));
+    setAuracallHomeDirOverrideForTest(tempRoot);
+    const managedProfileDir = path.join(tempRoot, 'browser-profiles', 'default', 'chatgpt');
+    const dispatcher = createFileBackedBrowserOperationDispatcher({
+      lockRoot: path.join(tempRoot, 'browser-operations'),
+      isOwnerAlive: () => true,
+    });
+    const active = await dispatcher.acquire({
+      managedProfileDir,
+      serviceTarget: 'chatgpt',
+      kind: 'media-generation',
+      operationClass: 'exclusive-mutating',
+      ownerPid: process.pid,
+      ownerCommand: 'test-owned-media-operation',
+    });
+    const loggerMessages: string[] = [];
+
+    try {
+      if (!active.acquired) return;
+      const acquired = await acquireBrowserExecutionOperationForTest({
+        managedProfileDir,
+        target: 'chatgpt',
+        logger: (message) => loggerMessages.push(message),
+        queueTimeoutMs: 1,
+        queuePollMs: 1,
+      }, true);
+
+      expect(acquired).toBeNull();
+      expect(loggerMessages.some((message) => message.includes('already owned by caller'))).toBe(true);
+    } finally {
+      if (active.acquired) {
+        await active.release();
+      }
+      setAuracallHomeDirOverrideForTest(null);
+      await fs.rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   test('browser execution operation reports busy after queued acquisition timeout', async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-browser-operation-timeout-'));
     setAuracallHomeDirOverrideForTest(tempRoot);

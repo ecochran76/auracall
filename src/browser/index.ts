@@ -236,7 +236,11 @@ async function acquireBrowserExecutionOperation(options: {
   logger: BrowserLogger;
   queueTimeoutMs?: number;
   queuePollMs?: number;
-}): Promise<BrowserOperationAcquiredResult | null> {
+}, skipOperation = false): Promise<BrowserOperationAcquiredResult | null> {
+  if (skipOperation) {
+    options.logger('[browser] operation dispatcher already owned by caller; nested browser-execution acquire skipped.');
+    return null;
+  }
   if (!options.managedProfileDir) {
     return null;
   }
@@ -1059,7 +1063,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     managedProfileDir: userDataDir,
     target,
     logger,
-  });
+  }, options.skipBrowserExecutionOperation);
   await enforceChatgptBrowserRateLimitGuard(config, logger, userDataDir);
   const onWindowsRetry = createWindowsManagedProfileRetryReset({
     config,
