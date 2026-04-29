@@ -157,6 +157,12 @@ Current implementation-facing politeness contract:
   `pause`, `resume`, and `run-once`. Manual `run-once` remains dry-run unless
   the server was started with `--account-mirror-scheduler-execute` and the
   request explicitly sets `"dryRun": false`.
+- Installed-runtime dry-run dogfood refreshed the user-scoped runtime and ran
+  `api serve` with `--account-mirror-scheduler-interval-ms 750`. `/status`
+  reported nine configured mirror targets, seven eligible, two blocked, one
+  eligible default-ChatGPT routine target, dry-run last passes only, and
+  `refresh: null`; pause, run-once, and resume controls all returned the
+  expected `account-mirror-scheduler` control result.
 - default routine intervals:
   - ChatGPT: 6 hours plus up to 20 minutes jitter
   - Gemini: 12 hours plus up to 45 minutes jitter
@@ -249,6 +255,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Dogfood the dry-run scheduler from the installed runtime, inspect the `/status`
-cadence over a quiet service window, and only then consider enabling a bounded
-routine refresh pass.
+Add a small persisted scheduler-pass ledger or status history before routine
+execute-mode dogfood, so operators can inspect cadence and failures after a
+service restart instead of only seeing the in-memory `lastPass`.

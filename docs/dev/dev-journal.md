@@ -38,6 +38,13 @@
   scheduler pause/resume/run-once. Manual run-once remains dry-run unless the
   server was started in scheduler execute mode and the request explicitly sets
   `dryRun: false`.
+- Installed dry-run dogfood: refreshed `~/.auracall/user-runtime`, started
+  installed `auracall api serve` on loopback with
+  `--account-mirror-scheduler-interval-ms 750`, and verified `/status`
+  cadence plus pause/run-once/resume controls. The service reported nine
+  configured mirror targets, seven eligible, two blocked, one default-ChatGPT
+  eligible target, dry-run last passes only, and `refresh: null` even when the
+  manual request set `"dryRun": false` without execute mode.
 - Key boundary: default ChatGPT is the first mirror source because it has the
   richest account history, but account identity remains bound to the referenced
   AuraCall runtime profile and provider service identity.

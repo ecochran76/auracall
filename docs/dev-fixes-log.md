@@ -30,6 +30,11 @@
   run-once there; default manual runs to dry-run unless the server was started
   with the execute flag and the operator explicitly requests `"dryRun": false`.
 
+- 2026-04-29: Installed dry-run scheduler dogfood is a useful pre-execute gate.
+  A short loopback `api serve` run can prove target selection, cadence,
+  pause/resume, and run-once behavior without opening browsers; the remaining
+  observability gap is that scheduler pass history is still in-memory only.
+
 - 2026-04-29: Bot-sensitive lazy mirroring needs a politeness policy before it
   needs a background loop. Mirror schedulers should enforce provider-specific
   minimum intervals, deterministic jitter, explicit-refresh rate limits,
