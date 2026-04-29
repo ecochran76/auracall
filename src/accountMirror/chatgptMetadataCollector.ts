@@ -1,6 +1,11 @@
 import type { ResolvedUserConfig } from '../config.js';
 import { BrowserAutomationClient } from '../browser/client.js';
-import type { Conversation, Project } from '../browser/providers/domain.js';
+import type {
+  Conversation,
+  ConversationArtifact,
+  Project,
+} from '../browser/providers/domain.js';
+import type { AccountMirrorMediaManifestEntry } from '../browser/llmService/cache/store.js';
 import type { ProviderUserIdentity } from '../browser/providers/types.js';
 import type { AccountMirrorProvider } from './politePolicy.js';
 import type { AccountMirrorMetadataCounts } from './statusRegistry.js';
@@ -20,6 +25,12 @@ export interface AccountMirrorMetadataCollectorResult {
   detectedIdentityKey: string | null;
   detectedAccountLevel: string | null;
   metadataCounts: AccountMirrorMetadataCounts;
+  manifests: {
+    projects: Project[];
+    conversations: Conversation[];
+    artifacts: ConversationArtifact[];
+    media: AccountMirrorMediaManifestEntry[];
+  };
   evidence: {
     identitySource: string | null;
     projectSampleIds: string[];
@@ -87,6 +98,12 @@ export function createChatgptAccountMirrorMetadataCollector(
           conversations: conversations.length,
           artifacts: 0,
           media: 0,
+        },
+        manifests: {
+          projects: projects.items,
+          conversations,
+          artifacts: [],
+          media: [],
         },
         evidence: {
           identitySource: identity?.source ?? null,

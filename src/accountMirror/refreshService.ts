@@ -249,6 +249,7 @@ export function createAccountMirrorRefreshService(input: {
           dispatcherOperationId: acquired.operation.id,
           metadataCounts: collection.metadataCounts,
           metadataEvidence: collection.evidence,
+          manifests: collection.manifests,
         });
         return {
           object: 'account_mirror_refresh',
@@ -315,6 +316,28 @@ function createConfigBackedAccountMirrorMetadataCollector(
         detectedIdentityKey: input.expectedIdentityKey,
         detectedAccountLevel: null,
         metadataCounts,
+        manifests: {
+          projects: readConfiguredArray(config, {
+            provider: input.provider,
+            runtimeProfileId: input.runtimeProfileId,
+            key: 'projects',
+          }),
+          conversations: readConfiguredArray(config, {
+            provider: input.provider,
+            runtimeProfileId: input.runtimeProfileId,
+            key: 'conversations',
+          }),
+          artifacts: readConfiguredArray(config, {
+            provider: input.provider,
+            runtimeProfileId: input.runtimeProfileId,
+            key: 'artifacts',
+          }),
+          media: readConfiguredArray(config, {
+            provider: input.provider,
+            runtimeProfileId: input.runtimeProfileId,
+            key: 'media',
+          }),
+        },
         evidence: {
           identitySource: 'configured',
           projectSampleIds: [],
@@ -328,6 +351,32 @@ function createConfigBackedAccountMirrorMetadataCollector(
       };
     },
   };
+}
+
+function readConfiguredArray<T = never>(
+  config: Record<string, unknown> | null | undefined,
+  input: {
+    provider: AccountMirrorProvider;
+    runtimeProfileId: string;
+    key: 'projects' | 'conversations' | 'artifacts' | 'media';
+  },
+): T[] {
+  const service = readServiceConfig(config, input);
+  const rawItems = service?.[input.key];
+  return Array.isArray(rawItems) ? rawItems as T[] : [];
+}
+
+function readServiceConfig(
+  config: Record<string, unknown> | null | undefined,
+  target: {
+    provider: AccountMirrorProvider;
+    runtimeProfileId: string;
+  },
+): Record<string, unknown> | null {
+  const runtimeProfile = readRuntimeProfile(config, target.runtimeProfileId);
+  return isRecord(runtimeProfile?.services) && isRecord(runtimeProfile.services[target.provider])
+    ? runtimeProfile.services[target.provider] as Record<string, unknown>
+    : null;
 }
 
 function readSingleMirrorTarget(input: {
@@ -370,11 +419,7 @@ function estimateMetadataCountsFromConfig(
     runtimeProfileId: string;
   },
 ): AccountMirrorMetadataCounts {
-  const runtimeProfile = readRuntimeProfile(config, target.runtimeProfileId);
-  const service: Record<string, unknown> =
-    isRecord(runtimeProfile?.services) && isRecord(runtimeProfile.services[target.provider])
-      ? (runtimeProfile.services[target.provider] as Record<string, unknown>)
-      : {};
+  const service = readServiceConfig(config, target) ?? {};
   return {
     projects: countArrayLike(service.projects) + countOptionalString(service.projectId),
     conversations: countArrayLike(service.conversations) + countOptionalString(service.conversationId),

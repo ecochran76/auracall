@@ -4,6 +4,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { afterEach, describe, expect, test } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 import { createAccountMirrorPersistence } from '../../src/accountMirror/cachePersistence.js';
+import type { ProviderCacheContext } from '../../src/browser/providers/cache.js';
+import { createCacheStore } from '../../src/browser/llmService/cache/store.js';
 
 const baseRecord = {
   provider: 'chatgpt' as const,
@@ -33,6 +35,38 @@ const baseRecord = {
       artifacts: false,
     },
   },
+  manifests: {
+    projects: [
+      {
+        id: 'project_1',
+        name: 'Default Project',
+        provider: 'chatgpt' as const,
+      },
+    ],
+    conversations: [
+      {
+        id: 'conv_1',
+        title: 'Mirror conversation',
+        provider: 'chatgpt' as const,
+        projectId: 'project_1',
+      },
+    ],
+    artifacts: [
+      {
+        id: 'artifact_1',
+        title: 'Generated report',
+        kind: 'document' as const,
+      },
+    ],
+    media: [
+      {
+        id: 'media_1',
+        title: 'Generated image',
+        mediaType: 'image' as const,
+        provider: 'chatgpt',
+      },
+    ],
+  },
 };
 
 describe('account mirror cache persistence', () => {
@@ -43,6 +77,7 @@ describe('account mirror cache persistence', () => {
   test('stores canonical mirror data by provider and bound identity in the existing cache store', async () => {
     const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-mirror-cache-'));
     setAuracallHomeDirOverrideForTest(homeDir);
+    const cacheStore = createCacheStore('dual');
     const persistence = createAccountMirrorPersistence({
       config: {
         browser: {
@@ -51,7 +86,14 @@ describe('account mirror cache persistence', () => {
           },
         },
       },
+      cacheStore,
     });
+    const context: ProviderCacheContext = {
+      provider: 'chatgpt',
+      userConfig: {} as ProviderCacheContext['userConfig'],
+      listOptions: {},
+      identityKey: 'ecochran76@gmail.com',
+    };
     try {
       await persistence.writeSnapshot(baseRecord);
 
@@ -91,6 +133,19 @@ describe('account mirror cache persistence', () => {
         },
       });
       expect(alternateProfileState?.lastRefreshRequestId).toBeUndefined();
+
+      await expect(cacheStore.readProjects(context)).resolves.toMatchObject({
+        items: [{ id: 'project_1', name: 'Default Project', provider: 'chatgpt' }],
+      });
+      await expect(cacheStore.readConversations(context)).resolves.toMatchObject({
+        items: [{ id: 'conv_1', title: 'Mirror conversation', provider: 'chatgpt' }],
+      });
+      await expect(cacheStore.readAccountMirrorArtifacts(context)).resolves.toMatchObject({
+        items: [{ id: 'artifact_1', title: 'Generated report', kind: 'document' }],
+      });
+      await expect(cacheStore.readAccountMirrorMedia(context)).resolves.toMatchObject({
+        items: [{ id: 'media_1', title: 'Generated image', mediaType: 'image' }],
+      });
     } finally {
       await rm(homeDir, { recursive: true, force: true });
     }

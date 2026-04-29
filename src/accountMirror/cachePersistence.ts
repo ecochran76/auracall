@@ -1,8 +1,14 @@
 import type { ResolvedUserConfig } from '../config.js';
 import type { ProviderCacheContext } from '../browser/providers/cache.js';
+import type {
+  Conversation,
+  ConversationArtifact,
+  Project,
+} from '../browser/providers/domain.js';
 import {
   createCacheStore,
   type AccountMirrorCacheSnapshot,
+  type AccountMirrorMediaManifestEntry,
   type CacheStore,
   type CacheStoreKind,
 } from '../browser/llmService/cache/store.js';
@@ -27,6 +33,12 @@ export interface AccountMirrorPersistenceRecord {
   dispatcherOperationId: string | null;
   metadataCounts: AccountMirrorMetadataCounts;
   metadataEvidence: AccountMirrorMetadataEvidence | null;
+  manifests: {
+    projects: Project[];
+    conversations: Conversation[];
+    artifacts: ConversationArtifact[];
+    media: AccountMirrorMediaManifestEntry[];
+  };
 }
 
 export interface AccountMirrorPersistence {
@@ -73,6 +85,10 @@ export function createAccountMirrorPersistence(input: {
         },
       };
       await cacheStore.writeAccountMirrorSnapshot(context, snapshot);
+      await cacheStore.writeProjects(context, record.manifests.projects);
+      await cacheStore.writeConversations(context, record.manifests.conversations);
+      await cacheStore.writeAccountMirrorArtifacts(context, record.manifests.artifacts);
+      await cacheStore.writeAccountMirrorMedia(context, record.manifests.media);
     },
     async readState(request) {
       if (!request.boundIdentityKey) {

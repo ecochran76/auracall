@@ -154,6 +154,10 @@
         cache key for `provider + boundIdentity`; AuraCall runtime profile and
         browser profile are stored as refresh provenance, not as duplicate
         mirror data ownership
+      - the same success path persists bounded project and conversation
+        manifests into the existing identity-scoped provider cache datasets,
+        plus lightweight account-mirror artifact/media manifests; this does
+        not fetch full conversation bodies or binary artifacts
       - it must not submit prompts, fetch full conversation bodies, or load
         immature conversation ids
     - MCP parity:

@@ -10,6 +10,11 @@
   bound identity, and keep AuraCall runtime profile/browser profile as binding
   and refresh provenance fields only.
 
+- 2026-04-29: Mirror snapshots and mirror manifests should stay separate.
+  Snapshot records are status evidence; project, conversation, artifact, and
+  media manifests are reusable account indexes in identity-scoped cache
+  datasets. Full content and binary artifacts stay lazy.
+
 - 2026-04-29: Bot-sensitive lazy mirroring needs a politeness policy before it
   needs a background loop. Mirror schedulers should enforce provider-specific
   minimum intervals, deterministic jitter, explicit-refresh rate limits,

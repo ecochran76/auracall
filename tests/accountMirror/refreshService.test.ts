@@ -49,6 +49,15 @@ describe('account mirror refresh service', () => {
           artifacts: 1,
           media: 0,
         },
+        manifests: {
+          projects: [{ id: 'project_1', name: 'Project 1', provider: 'chatgpt' as const }],
+          conversations: [
+            { id: 'conv_1', title: 'One', provider: 'chatgpt' as const },
+            { id: 'conv_2', title: 'Two', provider: 'chatgpt' as const },
+          ],
+          artifacts: [{ id: 'artifact_1', title: 'Artifact 1' }],
+          media: [],
+        },
         evidence: {
           identitySource: 'profile-menu',
           projectSampleIds: ['project_1'],
@@ -146,6 +155,15 @@ describe('account mirror refresh service', () => {
       metadataEvidence: expect.objectContaining({
         identitySource: 'profile-menu',
       }),
+      manifests: {
+        projects: [{ id: 'project_1', name: 'Project 1', provider: 'chatgpt' }],
+        conversations: [
+          { id: 'conv_1', title: 'One', provider: 'chatgpt' },
+          { id: 'conv_2', title: 'Two', provider: 'chatgpt' },
+        ],
+        artifacts: [{ id: 'artifact_1', title: 'Artifact 1' }],
+        media: [],
+      },
     });
     expect(result.mirrorStatus.entries[0]).toMatchObject({
       detectedIdentityKey: 'ecochran76@gmail.com',

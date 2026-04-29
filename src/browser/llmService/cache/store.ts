@@ -3,6 +3,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import type {
   Conversation,
+  ConversationArtifact,
   ConversationContext,
   FileRef,
   Project,
@@ -10,6 +11,8 @@ import type {
 import type { CacheReadResult, ProviderCacheContext } from '../../providers/cache.js';
 import {
   PROVIDER_CACHE_TTL_MS,
+  readProviderAccountMirrorArtifacts,
+  readProviderAccountMirrorMedia,
   readProviderAccountMirrorSnapshot,
   readProjectCache,
   readConversationCache,
@@ -27,6 +30,8 @@ import {
   writeConversationAttachmentsCache,
   writeProjectKnowledgeCache,
   writeProjectInstructionsCache,
+  writeProviderAccountMirrorArtifacts,
+  writeProviderAccountMirrorMedia,
   writeProviderAccountMirrorSnapshot,
   resolveProviderCachePath,
   resolveConversationCacheFileName,
@@ -50,6 +55,8 @@ export interface CachedConversationContextEntry {
 
 const ACCOUNT_FILES_ENTITY_ID = '__account__';
 const ACCOUNT_MIRROR_ENTITY_ID = '__mirror__';
+const ACCOUNT_MIRROR_ARTIFACTS_ENTITY_ID = '__mirror_artifacts__';
+const ACCOUNT_MIRROR_MEDIA_ENTITY_ID = '__mirror_media__';
 
 export interface AccountMirrorCacheSnapshot {
   object: 'account_mirror_snapshot';
@@ -84,6 +91,18 @@ export interface AccountMirrorCacheSnapshot {
     dispatcherKey: string | null;
     dispatcherOperationId: string | null;
   };
+}
+
+export interface AccountMirrorMediaManifestEntry {
+  id: string;
+  title: string | null;
+  mediaType: 'image' | 'video' | 'music' | 'audio' | 'unknown';
+  uri?: string;
+  conversationId?: string;
+  projectId?: string;
+  updatedAt?: string;
+  provider: string;
+  metadata?: Record<string, unknown>;
 }
 
 function resolveConversationScopeEntityId(context: ProviderCacheContext): string {
@@ -238,6 +257,20 @@ export interface CacheStore {
     context: ProviderCacheContext,
     snapshot: AccountMirrorCacheSnapshot,
   ): Promise<void>;
+  readAccountMirrorArtifacts(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<ConversationArtifact[]>>;
+  writeAccountMirrorArtifacts(
+    context: ProviderCacheContext,
+    artifacts: ConversationArtifact[],
+  ): Promise<void>;
+  readAccountMirrorMedia(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<AccountMirrorMediaManifestEntry[]>>;
+  writeAccountMirrorMedia(
+    context: ProviderCacheContext,
+    media: AccountMirrorMediaManifestEntry[],
+  ): Promise<void>;
   readProjects(context: ProviderCacheContext): Promise<CacheReadResult<Project[]>>;
   writeProjects(context: ProviderCacheContext, items: Project[]): Promise<void>;
   readConversations(context: ProviderCacheContext): Promise<CacheReadResult<Conversation[]>>;
@@ -314,6 +347,42 @@ export class JsonCacheStore implements CacheStore {
     await upsertCacheIndexEntry(context, {
       kind: 'account-mirror',
       path: resolveCacheEntryPath(context, 'account-mirror/snapshot.json'),
+      sourceUrl: context.listOptions.configuredUrl ?? null,
+    });
+  }
+
+  async readAccountMirrorArtifacts(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<ConversationArtifact[]>> {
+    return readProviderAccountMirrorArtifacts<ConversationArtifact>(context);
+  }
+
+  async writeAccountMirrorArtifacts(
+    context: ProviderCacheContext,
+    artifacts: ConversationArtifact[],
+  ): Promise<void> {
+    await writeProviderAccountMirrorArtifacts(context, artifacts);
+    await upsertCacheIndexEntry(context, {
+      kind: 'account-mirror-artifacts',
+      path: resolveCacheEntryPath(context, 'account-mirror/artifacts.json'),
+      sourceUrl: context.listOptions.configuredUrl ?? null,
+    });
+  }
+
+  async readAccountMirrorMedia(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<AccountMirrorMediaManifestEntry[]>> {
+    return readProviderAccountMirrorMedia<AccountMirrorMediaManifestEntry>(context);
+  }
+
+  async writeAccountMirrorMedia(
+    context: ProviderCacheContext,
+    media: AccountMirrorMediaManifestEntry[],
+  ): Promise<void> {
+    await writeProviderAccountMirrorMedia(context, media);
+    await upsertCacheIndexEntry(context, {
+      kind: 'account-mirror-media',
+      path: resolveCacheEntryPath(context, 'account-mirror/media.json'),
       sourceUrl: context.listOptions.configuredUrl ?? null,
     });
   }
@@ -557,6 +626,8 @@ async function loadSqliteModule(): Promise<SqliteModule> {
 
 type SqlDataset =
   | 'account-mirror'
+  | 'account-mirror-artifacts'
+  | 'account-mirror-media'
   | 'projects'
   | 'conversations'
   | 'conversation-context'
@@ -593,6 +664,62 @@ export class SqliteCacheStore implements CacheStore {
     await upsertCacheIndexEntry(context, {
       kind: 'account-mirror',
       path: resolveCacheEntryPath(context, 'account-mirror/snapshot.json'),
+      sourceUrl: context.listOptions.configuredUrl ?? null,
+    });
+  }
+
+  async readAccountMirrorArtifacts(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<ConversationArtifact[]>> {
+    return this.readDataset<ConversationArtifact[]>(
+      context,
+      'account-mirror-artifacts',
+      ACCOUNT_MIRROR_ARTIFACTS_ENTITY_ID,
+      [],
+    );
+  }
+
+  async writeAccountMirrorArtifacts(
+    context: ProviderCacheContext,
+    artifacts: ConversationArtifact[],
+  ): Promise<void> {
+    await this.writeDataset(
+      context,
+      'account-mirror-artifacts',
+      ACCOUNT_MIRROR_ARTIFACTS_ENTITY_ID,
+      artifacts,
+    );
+    await upsertCacheIndexEntry(context, {
+      kind: 'account-mirror-artifacts',
+      path: resolveCacheEntryPath(context, 'account-mirror/artifacts.json'),
+      sourceUrl: context.listOptions.configuredUrl ?? null,
+    });
+  }
+
+  async readAccountMirrorMedia(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<AccountMirrorMediaManifestEntry[]>> {
+    return this.readDataset<AccountMirrorMediaManifestEntry[]>(
+      context,
+      'account-mirror-media',
+      ACCOUNT_MIRROR_MEDIA_ENTITY_ID,
+      [],
+    );
+  }
+
+  async writeAccountMirrorMedia(
+    context: ProviderCacheContext,
+    media: AccountMirrorMediaManifestEntry[],
+  ): Promise<void> {
+    await this.writeDataset(
+      context,
+      'account-mirror-media',
+      ACCOUNT_MIRROR_MEDIA_ENTITY_ID,
+      media,
+    );
+    await upsertCacheIndexEntry(context, {
+      kind: 'account-mirror-media',
+      path: resolveCacheEntryPath(context, 'account-mirror/media.json'),
       sourceUrl: context.listOptions.configuredUrl ?? null,
     });
   }
@@ -1550,6 +1677,50 @@ class DualCacheStore implements CacheStore {
       () => this.primary.writeAccountMirrorSnapshot(context, snapshot),
       () => this.secondary.writeAccountMirrorSnapshot(context, snapshot),
       'writeAccountMirrorSnapshot',
+    );
+  }
+
+  async readAccountMirrorArtifacts(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<ConversationArtifact[]>> {
+    return this.readThrough(
+      context,
+      () => this.primary.readAccountMirrorArtifacts(context),
+      () => this.secondary.readAccountMirrorArtifacts(context),
+      (items) => this.primary.writeAccountMirrorArtifacts(context, items),
+    );
+  }
+
+  async writeAccountMirrorArtifacts(
+    context: ProviderCacheContext,
+    artifacts: ConversationArtifact[],
+  ): Promise<void> {
+    await this.writeBoth(
+      () => this.primary.writeAccountMirrorArtifacts(context, artifacts),
+      () => this.secondary.writeAccountMirrorArtifacts(context, artifacts),
+      'writeAccountMirrorArtifacts',
+    );
+  }
+
+  async readAccountMirrorMedia(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<AccountMirrorMediaManifestEntry[]>> {
+    return this.readThrough(
+      context,
+      () => this.primary.readAccountMirrorMedia(context),
+      () => this.secondary.readAccountMirrorMedia(context),
+      (items) => this.primary.writeAccountMirrorMedia(context, items),
+    );
+  }
+
+  async writeAccountMirrorMedia(
+    context: ProviderCacheContext,
+    media: AccountMirrorMediaManifestEntry[],
+  ): Promise<void> {
+    await this.writeBoth(
+      () => this.primary.writeAccountMirrorMedia(context, media),
+      () => this.secondary.writeAccountMirrorMedia(context, media),
+      'writeAccountMirrorMedia',
     );
   }
 

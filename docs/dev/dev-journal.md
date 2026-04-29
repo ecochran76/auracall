@@ -19,6 +19,11 @@
   snapshots under the existing provider cache key for provider plus bound
   identity. Runtime profile and browser profile are retained as binding and
   refresh provenance, not as duplicate mirror owners.
+- Manifest persistence: extended the same persistence seam so refreshes store
+  bounded project/conversation rows in the existing identity-scoped cache
+  datasets and lightweight account-mirror artifact/media manifest datasets.
+  This remains metadata-only and does not fetch full conversation bodies or
+  binary artifacts.
 - Key boundary: default ChatGPT is the first mirror source because it has the
   richest account history, but account identity remains bound to the referenced
   AuraCall runtime profile and provider service identity.

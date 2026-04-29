@@ -198,7 +198,9 @@ Terminology note:
 - Account mirror refreshes are metadata-first and identity-gated. Successful
   refreshes persist the mirror snapshot in the existing provider cache under
   `provider + boundIdentity`; runtime/browser profile ids are retained as
-  binding and refresh provenance, not as duplicate mirror cache owners.
+  binding and refresh provenance, not as duplicate mirror cache owners. The
+  same refresh stores bounded project/conversation manifests and lightweight
+  artifact/media indexes without fetching full content.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

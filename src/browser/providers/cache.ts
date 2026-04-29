@@ -80,6 +80,32 @@ export async function writeProviderAccountMirrorSnapshot<T>(
   await writeProviderCache(context, 'account-mirror/snapshot.json', snapshot);
 }
 
+export async function readProviderAccountMirrorArtifacts<T>(
+  context: ProviderCacheContext,
+): Promise<CacheReadResult<T[]>> {
+  return readProviderCache<T[]>(context, 'account-mirror/artifacts.json', []);
+}
+
+export async function writeProviderAccountMirrorArtifacts<T>(
+  context: ProviderCacheContext,
+  artifacts: T[],
+): Promise<void> {
+  await writeProviderCache(context, 'account-mirror/artifacts.json', artifacts);
+}
+
+export async function readProviderAccountMirrorMedia<T>(
+  context: ProviderCacheContext,
+): Promise<CacheReadResult<T[]>> {
+  return readProviderCache<T[]>(context, 'account-mirror/media.json', []);
+}
+
+export async function writeProviderAccountMirrorMedia<T>(
+  context: ProviderCacheContext,
+  media: T[],
+): Promise<void> {
+  await writeProviderCache(context, 'account-mirror/media.json', media);
+}
+
 export async function writeConversationCache(
   context: ProviderCacheContext,
   items: Conversation[],

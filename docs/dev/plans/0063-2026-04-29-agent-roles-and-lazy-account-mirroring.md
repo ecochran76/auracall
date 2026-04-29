@@ -136,6 +136,11 @@ Current implementation-facing politeness contract:
 - `/status`, `GET /v1/account-mirrors/status`, and MCP `account_mirror_status`
   hydrate persisted mirror counts/evidence before readback without enqueueing
   browser work.
+- Successful default-ChatGPT refreshes now persist the bounded project and
+  conversation manifests into the existing identity-scoped provider cache
+  datasets, plus lightweight `account-mirror-artifacts` and
+  `account-mirror-media` manifest datasets. These are index rows only; full
+  content and binary artifacts remain lazy.
 - default routine intervals:
   - ChatGPT: 6 hours plus up to 20 minutes jitter
   - Gemini: 12 hours plus up to 45 minutes jitter
@@ -200,6 +205,10 @@ Each status payload should include:
 - Mirror status can read the latest persisted metadata counts/evidence from
   the cache store after process restart without keeping all mirror state in
   memory.
+- Bounded mirror manifests are persisted separately from the status snapshot:
+  projects, conversations, artifacts, and media indexes can be read from the
+  identity-scoped provider cache without submitting prompts or materializing
+  full content.
 - Tests cover config projection, mirror scheduling state, identity hard stops,
   and dispatcher queue evidence before live provider dogfood.
 - The first scheduling tests prove self-imposed jitter, minimum intervals,
@@ -215,7 +224,7 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Next persist richer provider manifests into the same identity-scoped provider
-cache: project rows, conversation rows, artifact manifests, and media indexes
-as separate cache datasets. Keep full content and binary artifact fetches lazy
-behind explicit requests or bounded recent-window policy.
+Next expose a read-only manifest catalog surface for operators and agents so
+they can inspect mirrored project/conversation/artifact/media indexes without
+knowing provider cache file paths. Keep refresh explicit and browser-dispatcher
+owned until the idle scheduler is added.
