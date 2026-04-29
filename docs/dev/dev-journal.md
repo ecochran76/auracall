@@ -23398,3 +23398,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - targeted account mirror/API/MCP Vitest suite passed
   - `pnpm exec tsc --noEmit` passed
+
+## 2026-04-29 - ChatGPT passive account mirror collector
+
+- Focus: make explicit default ChatGPT mirror refresh collect bounded metadata
+  after dispatcher acquisition.
+- Progress:
+  - added `src/accountMirror/chatgptMetadataCollector.ts`
+  - collector verifies the detected ChatGPT identity against the bound service
+    identity before reading history surfaces
+  - collection uses existing ChatGPT adapter methods for projects and
+    conversations, bounded by the politeness page/row budgets
+  - refresh status now carries metadata evidence samples and truncation flags
+- Validation:
+  - targeted account mirror/API/MCP Vitest suite passed
+  - `pnpm exec tsc --noEmit` passed

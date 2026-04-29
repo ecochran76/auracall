@@ -114,9 +114,13 @@ Current implementation-facing politeness contract:
   mirror is currently `eligible`, `delayed`, or `blocked` before any browser
   work is enqueued.
 - `src/accountMirror/refreshService.ts` owns the first explicit refresh request
-  path. It is intentionally narrow: default ChatGPT only, metadata/count
-  readback only, and browser operation dispatcher acquisition/release without
-  launching a browser or scraping provider pages.
+  path. It is intentionally narrow: default ChatGPT only, browser operation
+  dispatcher acquisition/release first, identity verification before history
+  reads, and bounded metadata collection only.
+- `src/accountMirror/chatgptMetadataCollector.ts` owns the first passive
+  ChatGPT collector. It reads identity, project rows, and conversation rows
+  through the existing ChatGPT adapter, bounded by the politeness page/row
+  budgets. It does not submit prompts or fetch full conversation bodies.
 - `POST /v1/account-mirrors/refresh` and MCP `account_mirror_refresh` request
   that one explicit refresh and return dispatcher evidence plus updated mirror
   status.
@@ -173,6 +177,8 @@ Each status payload should include:
 - Read-only mirror-status reporting exists before any background mirror loop.
 - Explicit default ChatGPT refresh can be requested through API/MCP and records
   queued/running/completed dispatcher evidence without background looping.
+- Explicit default ChatGPT refresh verifies the bound identity before reading
+  bounded project/conversation metadata.
 - The first implementation slice targets default ChatGPT metadata-first
   mirroring only.
 - API and MCP mirror-status readback exist before any long-running background
@@ -194,8 +200,8 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Next add the first passive ChatGPT metadata collector behind the explicit
-refresh service. It should run only after the dispatcher is acquired, reuse the
-existing managed browser profile, verify the bound identity before reading any
-history surface, and collect only bounded project/conversation/artifact
-metadata. Do not add a background loop or full conversation-body scraping yet.
+Next persist the collected mirror metadata under an identity-scoped mirror
+store. The store should be keyed by provider service plus bound identity, keep
+project/conversation/artifact manifests separate from full content, and expose
+the latest collection evidence through status without requiring the running API
+process to keep all mirror state in memory.

@@ -14950,3 +14950,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   operation dispatcher, record queued/running/completed evidence, and update
   metadata counts without launching browsers, submitting prompts, or scraping
   provider pages.
+- 2026-04-29: Passive account mirroring must verify the bound provider identity
+  before reading any history surface. A detected identity mismatch should fail
+  the explicit refresh and mark the mirror blocked instead of recording
+  cross-account metadata.

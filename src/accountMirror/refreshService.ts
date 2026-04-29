@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { getAuracallHomeDir } from '../auracallHome.js';
+import type { ResolvedUserConfig } from '../config.js';
 import { resolveManagedBrowserLaunchContextFromResolvedConfig } from '../browser/service/profileResolution.js';
 import {
   createFileBackedBrowserOperationDispatcher,
@@ -10,12 +11,19 @@ import {
 } from '../../packages/browser-service/src/service/operationDispatcher.js';
 import type { AccountMirrorProvider } from './politePolicy.js';
 import type {
+  AccountMirrorMetadataEvidence,
   AccountMirrorMetadataCounts,
   AccountMirrorStatusEntry,
   AccountMirrorStatusRegistry,
   AccountMirrorStatusSummary,
 } from './statusRegistry.js';
 import { createAccountMirrorStatusRegistry } from './statusRegistry.js';
+import {
+  AccountMirrorIdentityMismatchError,
+  createChatgptAccountMirrorMetadataCollector,
+  type AccountMirrorMetadataCollector,
+  type AccountMirrorMetadataCollectorResult,
+} from './chatgptMetadataCollector.js';
 
 export interface AccountMirrorRefreshRequest {
   provider?: AccountMirrorProvider | null;
@@ -40,6 +48,9 @@ export interface AccountMirrorRefreshResult {
     blockedBy: Record<string, unknown> | null;
   };
   metadataCounts: AccountMirrorMetadataCounts;
+  metadataEvidence: AccountMirrorMetadataEvidence | null;
+  detectedIdentityKey: string | null;
+  detectedAccountLevel: string | null;
   mirrorStatus: AccountMirrorStatusSummary;
 }
 
@@ -63,6 +74,7 @@ export function createAccountMirrorRefreshService(input: {
   config: Record<string, unknown> | null | undefined;
   registry?: AccountMirrorStatusRegistry;
   dispatcher?: BrowserOperationDispatcher;
+  metadataCollector?: AccountMirrorMetadataCollector;
   now?: () => Date;
   generateRequestId?: () => string;
 }): AccountMirrorRefreshService {
@@ -74,6 +86,11 @@ export function createAccountMirrorRefreshService(input: {
   const dispatcher = input.dispatcher ?? createFileBackedBrowserOperationDispatcher({
     lockRoot: path.join(getAuracallHomeDir(), 'browser-operations'),
   });
+  const metadataCollector =
+    input.metadataCollector ??
+    (isResolvedUserConfig(input.config)
+      ? createChatgptAccountMirrorMetadataCollector(input.config)
+      : createConfigBackedAccountMirrorMetadataCollector(input.config));
   const generateRequestId = input.generateRequestId ?? (() => `acctmirror_${randomUUID()}`);
 
   return {
@@ -187,17 +204,28 @@ export function createAccountMirrorRefreshService(input: {
         lastDispatcherBlockedBy: null,
       });
 
-      const metadataCounts = estimateMetadataCountsFromConfig(input.config, target);
+      let collection: AccountMirrorMetadataCollectorResult;
       try {
+        collection = await metadataCollector.collect({
+          provider,
+          runtimeProfileId,
+          expectedIdentityKey: target.expectedIdentityKey ?? '',
+          limits: {
+            maxPageReadsPerCycle: target.limits.maxPageReadsPerCycle,
+            maxConversationRowsPerCycle: target.limits.maxConversationRowsPerCycle,
+            maxArtifactRowsPerCycle: target.limits.maxArtifactRowsPerCycle,
+          },
+        });
         const completedAt = now();
         registry.mergeState({ provider, runtimeProfileId }, {
           queued: false,
           running: false,
-          detectedIdentityKey: target.expectedIdentityKey,
+          detectedIdentityKey: collection.detectedIdentityKey,
           lastSuccessAtMs: completedAt.getTime(),
           lastCompletedAtMs: completedAt.getTime(),
           consecutiveFailureCount: 0,
-          metadataCounts,
+          metadataCounts: collection.metadataCounts,
+          metadataEvidence: collection.evidence,
         });
         return {
           object: 'account_mirror_refresh',
@@ -213,12 +241,68 @@ export function createAccountMirrorRefreshService(input: {
             operationId: acquired.operation.id,
             blockedBy: null,
           },
-          metadataCounts,
+          metadataCounts: collection.metadataCounts,
+          metadataEvidence: collection.evidence,
+          detectedIdentityKey: collection.detectedIdentityKey,
+          detectedAccountLevel: collection.detectedAccountLevel,
           mirrorStatus: registry.readStatus({ provider, runtimeProfileId, explicitRefresh: true }),
         };
+      } catch (error) {
+        const completedAt = now();
+        const isIdentityMismatch = error instanceof AccountMirrorIdentityMismatchError;
+        registry.mergeState({ provider, runtimeProfileId }, {
+          queued: false,
+          running: false,
+          detectedIdentityKey: isIdentityMismatch ? error.detectedIdentityKey : undefined,
+          lastFailureAtMs: completedAt.getTime(),
+          lastCompletedAtMs: completedAt.getTime(),
+          consecutiveFailureCount: 1,
+        });
+        if (isIdentityMismatch) {
+          throw new AccountMirrorRefreshError(
+            409,
+            'account_mirror_identity_mismatch',
+            error.message,
+            {
+              provider,
+              runtimeProfileId,
+              expectedIdentityKey: error.expectedIdentityKey,
+              detectedIdentityKey: error.detectedIdentityKey,
+            },
+          );
+        }
+        throw error;
       } finally {
         await acquired.release();
       }
+    },
+  };
+}
+
+function createConfigBackedAccountMirrorMetadataCollector(
+  config: Record<string, unknown> | null | undefined,
+): AccountMirrorMetadataCollector {
+  return {
+    async collect(input) {
+      const metadataCounts = estimateMetadataCountsFromConfig(config, {
+        provider: input.provider,
+        runtimeProfileId: input.runtimeProfileId,
+      });
+      return {
+        detectedIdentityKey: input.expectedIdentityKey,
+        detectedAccountLevel: null,
+        metadataCounts,
+        evidence: {
+          identitySource: 'configured',
+          projectSampleIds: [],
+          conversationSampleIds: [],
+          truncated: {
+            projects: false,
+            conversations: false,
+            artifacts: false,
+          },
+        },
+      };
     },
   };
 }
@@ -258,7 +342,10 @@ function resolveMirrorManagedProfileDir(input: {
 
 function estimateMetadataCountsFromConfig(
   config: Record<string, unknown> | null | undefined,
-  target: AccountMirrorStatusEntry,
+  target: {
+    provider: AccountMirrorProvider;
+    runtimeProfileId: string;
+  },
 ): AccountMirrorMetadataCounts {
   const runtimeProfile = readRuntimeProfile(config, target.runtimeProfileId);
   const service: Record<string, unknown> =
@@ -319,6 +406,15 @@ function normalizePositiveInteger(value: number | null | undefined, fallback: nu
 
 function normalizeNonNegativeInteger(value: number | null | undefined, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.trunc(value) : fallback;
+}
+
+function isResolvedUserConfig(value: Record<string, unknown> | null | undefined): value is ResolvedUserConfig {
+  return Boolean(
+    value &&
+    typeof value.auracallProfile === 'string' &&
+    typeof value.model === 'string' &&
+    isRecord(value.browser),
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

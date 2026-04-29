@@ -1,9 +1,10 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { createBrowserOperationDispatcher } from '../../packages/browser-service/src/service/operationDispatcher.js';
 import {
   type AccountMirrorRefreshError,
   createAccountMirrorRefreshService,
 } from '../../src/accountMirror/refreshService.js';
+import { AccountMirrorIdentityMismatchError } from '../../src/accountMirror/chatgptMetadataCollector.js';
 import { createAccountMirrorStatusRegistry } from '../../src/accountMirror/statusRegistry.js';
 
 const config = {
@@ -30,6 +31,28 @@ const config = {
 
 describe('account mirror refresh service', () => {
   test('runs an explicit default ChatGPT refresh through the browser operation dispatcher', async () => {
+    const metadataCollector = {
+      collect: vi.fn(async () => ({
+        detectedIdentityKey: 'ecochran76@gmail.com',
+        detectedAccountLevel: 'Business',
+        metadataCounts: {
+          projects: 1,
+          conversations: 2,
+          artifacts: 1,
+          media: 0,
+        },
+        evidence: {
+          identitySource: 'profile-menu',
+          projectSampleIds: ['project_1'],
+          conversationSampleIds: ['conv_1', 'conv_2'],
+          truncated: {
+            projects: false,
+            conversations: false,
+            artifacts: false,
+          },
+        },
+      })),
+    };
     const registry = createAccountMirrorStatusRegistry({
       config,
       now: () => new Date('2026-04-29T12:00:00.000Z'),
@@ -40,6 +63,7 @@ describe('account mirror refresh service', () => {
       dispatcher: createBrowserOperationDispatcher({
         now: () => new Date('2026-04-29T12:00:00.000Z'),
       }),
+      metadataCollector,
       now: () => new Date('2026-04-29T12:00:00.000Z'),
       generateRequestId: () => 'acctmirror_test',
     });
@@ -63,15 +87,41 @@ describe('account mirror refresh service', () => {
         artifacts: 1,
         media: 0,
       },
+      metadataEvidence: {
+        identitySource: 'profile-menu',
+        projectSampleIds: ['project_1'],
+        conversationSampleIds: ['conv_1', 'conv_2'],
+        truncated: {
+          projects: false,
+          conversations: false,
+          artifacts: false,
+        },
+      },
+      detectedIdentityKey: 'ecochran76@gmail.com',
+      detectedAccountLevel: 'Business',
       dispatcher: {
         key: expect.stringContaining('service:chatgpt'),
         operationId: expect.any(String),
         blockedBy: null,
       },
     });
+    expect(metadataCollector.collect).toHaveBeenCalledWith({
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      expectedIdentityKey: 'ecochran76@gmail.com',
+      limits: {
+        maxPageReadsPerCycle: 12,
+        maxConversationRowsPerCycle: 250,
+        maxArtifactRowsPerCycle: 80,
+      },
+    });
     expect(result.mirrorStatus.entries[0]).toMatchObject({
       detectedIdentityKey: 'ecochran76@gmail.com',
       lastSuccessAt: '2026-04-29T12:00:00.000Z',
+      metadataEvidence: expect.objectContaining({
+        identitySource: 'profile-menu',
+        projectSampleIds: ['project_1'],
+      }),
       mirrorState: {
         queued: false,
         running: false,
@@ -155,5 +205,48 @@ describe('account mirror refresh service', () => {
     });
 
     await active.release();
+  });
+
+  test('fails fast when the collector detects the wrong ChatGPT identity', async () => {
+    const registry = createAccountMirrorStatusRegistry({
+      config,
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+    });
+    const service = createAccountMirrorRefreshService({
+      config,
+      registry,
+      dispatcher: createBrowserOperationDispatcher({
+        now: () => new Date('2026-04-29T12:00:00.000Z'),
+      }),
+      metadataCollector: {
+        collect: vi.fn(async () => {
+          throw new AccountMirrorIdentityMismatchError(
+            'ecochran76@gmail.com',
+            'wrong@example.com',
+          );
+        }),
+      },
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+    });
+
+    await expect(
+      service.requestRefresh({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        explicitRefresh: true,
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 409,
+      code: 'account_mirror_identity_mismatch',
+    } satisfies Partial<AccountMirrorRefreshError>);
+    expect(registry.readStatus({
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      explicitRefresh: true,
+    }).entries[0]).toMatchObject({
+      detectedIdentityKey: 'wrong@example.com',
+      status: 'blocked',
+      reason: 'identity-mismatch',
+    });
   });
 });

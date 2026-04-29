@@ -132,6 +132,7 @@
       - `accountMirrorStatus.entries[].mirrorState.running`
       - `accountMirrorStatus.entries[].mirrorState.lastDispatcherKey`
       - `accountMirrorStatus.entries[].metadataCounts`
+      - `accountMirrorStatus.entries[].metadataEvidence`
       - this readback must not enqueue browser work or scrape provider pages
     - dedicated mirror posture route:
       - `GET /v1/account-mirrors/status`
@@ -144,13 +145,16 @@
       - body: `{"provider":"chatgpt","runtimeProfile":"default","explicitRefresh":true}`
       - current implementation is default-ChatGPT only
       - it acquires the browser operation dispatcher and records
-        queued/running/completed evidence, but does not launch a browser,
-        submit prompts, or scrape provider pages yet
+        queued/running/completed evidence
+      - after dispatcher acquisition it verifies the bound ChatGPT identity,
+        then collects bounded project/conversation metadata only
+      - it must not submit prompts, fetch full conversation bodies, or load
+        immature conversation ids
     - MCP parity:
       - `account_mirror_status`
       - `account_mirror_refresh`
       - optional inputs: `provider`, `runtimeProfile`, `explicitRefresh`
-      - status is read-only; refresh is explicit and dispatcher-owned but still
+      - status is read-only; refresh is explicit, dispatcher-owned, and
         metadata-only in this slice
     - plain `/status` also includes a compact direct-run local claim snapshot:
       - `localClaimSummary.sourceKind = direct`

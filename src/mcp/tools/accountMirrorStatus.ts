@@ -43,6 +43,16 @@ const accountMirrorStatusEntryShape = z.object({
     artifacts: z.number(),
     media: z.number(),
   }),
+  metadataEvidence: z.object({
+    identitySource: z.string().nullable(),
+    projectSampleIds: z.array(z.string()),
+    conversationSampleIds: z.array(z.string()),
+    truncated: z.object({
+      projects: z.boolean(),
+      conversations: z.boolean(),
+      artifacts: z.boolean(),
+    }),
+  }).nullable(),
   limits: z.object({
     minIntervalMs: z.number(),
     explicitRefreshMinIntervalMs: z.number(),

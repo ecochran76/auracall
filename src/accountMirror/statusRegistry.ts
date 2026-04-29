@@ -28,6 +28,7 @@ export type AccountMirrorStatusState = {
   lastDispatcherOperationId?: string | null;
   lastDispatcherBlockedBy?: Record<string, unknown> | null;
   metadataCounts?: AccountMirrorMetadataCounts | null;
+  metadataEvidence?: AccountMirrorMetadataEvidence | null;
 };
 
 export type AccountMirrorMetadataCounts = {
@@ -35,6 +36,17 @@ export type AccountMirrorMetadataCounts = {
   conversations: number;
   artifacts: number;
   media: number;
+};
+
+export type AccountMirrorMetadataEvidence = {
+  identitySource: string | null;
+  projectSampleIds: string[];
+  conversationSampleIds: string[];
+  truncated: {
+    projects: boolean;
+    conversations: boolean;
+    artifacts: boolean;
+  };
 };
 
 export type AccountMirrorStatusEntry = {
@@ -64,6 +76,7 @@ export type AccountMirrorStatusEntry = {
     lastDispatcherBlockedBy: Record<string, unknown> | null;
   };
   metadataCounts: AccountMirrorMetadataCounts;
+  metadataEvidence: AccountMirrorMetadataEvidence | null;
   limits: AccountMirrorPolitenessDecision['limits'];
 };
 
@@ -258,6 +271,7 @@ function createStatusEntry(
       lastDispatcherBlockedBy: isRecord(state.lastDispatcherBlockedBy) ? state.lastDispatcherBlockedBy : null,
     },
     metadataCounts: normalizeMetadataCounts(state.metadataCounts),
+    metadataEvidence: normalizeMetadataEvidence(state.metadataEvidence),
     limits: decision.limits,
   };
 }
@@ -296,6 +310,28 @@ function normalizeMetadataCounts(value: AccountMirrorMetadataCounts | null | und
     artifacts: normalizeCount(value?.artifacts),
     media: normalizeCount(value?.media),
   };
+}
+
+function normalizeMetadataEvidence(
+  value: AccountMirrorMetadataEvidence | null | undefined,
+): AccountMirrorMetadataEvidence | null {
+  if (!value) return null;
+  return {
+    identitySource: readString(value.identitySource),
+    projectSampleIds: normalizeStringArray(value.projectSampleIds),
+    conversationSampleIds: normalizeStringArray(value.conversationSampleIds),
+    truncated: {
+      projects: value.truncated?.projects === true,
+      conversations: value.truncated?.conversations === true,
+      artifacts: value.truncated?.artifacts === true,
+    },
+  };
+}
+
+function normalizeStringArray(value: string[] | null | undefined): string[] {
+  return Array.isArray(value)
+    ? value.map((entry) => readString(entry)).filter((entry): entry is string => entry !== null)
+    : [];
 }
 
 function normalizeCount(value: number | null | undefined): number {

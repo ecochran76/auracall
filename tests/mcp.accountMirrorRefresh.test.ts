@@ -24,6 +24,18 @@ describe('mcp account_mirror_refresh tool', () => {
         artifacts: 0,
         media: 0,
       },
+      metadataEvidence: {
+        identitySource: 'profile-menu',
+        projectSampleIds: ['project_1'],
+        conversationSampleIds: ['conv_1', 'conv_2'],
+        truncated: {
+          projects: false,
+          conversations: false,
+          artifacts: false,
+        },
+      },
+      detectedIdentityKey: 'ecochran76@gmail.com',
+      detectedAccountLevel: 'Business',
       mirrorStatus: {
         object: 'account_mirror_status' as const,
         generatedAt: '2026-04-29T12:00:01.000Z',

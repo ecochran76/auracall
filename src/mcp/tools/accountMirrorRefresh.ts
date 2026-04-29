@@ -22,6 +22,17 @@ const metadataCountsShape = z.object({
   media: z.number(),
 });
 
+const metadataEvidenceShape = z.object({
+  identitySource: z.string().nullable(),
+  projectSampleIds: z.array(z.string()),
+  conversationSampleIds: z.array(z.string()),
+  truncated: z.object({
+    projects: z.boolean(),
+    conversations: z.boolean(),
+    artifacts: z.boolean(),
+  }),
+}).nullable();
+
 const accountMirrorRefreshOutputShape = {
   object: z.literal('account_mirror_refresh'),
   requestId: z.string(),
@@ -37,6 +48,9 @@ const accountMirrorRefreshOutputShape = {
     blockedBy: z.record(z.string(), z.unknown()).nullable(),
   }),
   metadataCounts: metadataCountsShape,
+  metadataEvidence: metadataEvidenceShape,
+  detectedIdentityKey: z.string().nullable(),
+  detectedAccountLevel: z.string().nullable(),
   mirrorStatus: z.unknown(),
 } satisfies z.ZodRawShape;
 
