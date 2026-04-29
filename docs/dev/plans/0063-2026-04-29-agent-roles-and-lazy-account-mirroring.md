@@ -220,6 +220,9 @@ Current implementation-facing politeness contract:
 - Scheduler passes expose `backpressure.reason` so operators can distinguish
   routine politeness delay, dispatcher contention, cooperative yield, and no
   backpressure without parsing refresh errors or attachment cursors.
+- `auracall api status --port <port>` prints that backpressure reason from the
+  installed runtime and can assert it with
+  `--expect-account-mirror-backpressure <reason>`.
 - Routine scheduler-triggered refreshes call the dispatcher with
   `queueTimeoutMs: 0`. Lazy mirror work therefore only starts when the browser
   lane is immediately available; if a real API response/media request or other

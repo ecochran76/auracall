@@ -174,6 +174,8 @@
         - pause: `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"pause"}}'`
         - resume: `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"resume"}}'`
         - dry-run one pass: `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"run-once"}}'`
+      - installed-runtime smoke readback can assert the compact operator field:
+        `auracall api status --port 8080 --expect-account-mirror-backpressure routine-delayed`
       - execute one pass only when the server was started with
         `--account-mirror-scheduler-execute`:
         `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"run-once","dryRun":false}}'`

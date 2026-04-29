@@ -96,6 +96,12 @@ import {
   formatRuntimeRunInspectionPayload,
   inspectConfiguredRuntimeRun,
 } from '../src/cli/runtimeInspectionCommand.js';
+import {
+  assertApiStatusBackpressure,
+  formatApiStatusCliSummary,
+  parseApiStatusBackpressureReason,
+  readApiStatusForCli,
+} from '../src/cli/apiStatusCommand.js';
 import { formatRunStatusCli, readRunStatusForCli } from '../src/cli/runStatusCommand.js';
 import {
   buildWorkbenchCapabilityReportForCli,
@@ -978,6 +984,34 @@ apiCommand
       accountMirrorSchedulerIntervalMs: commandOptions.accountMirrorSchedulerIntervalMs,
       accountMirrorSchedulerDryRun: !commandOptions.accountMirrorSchedulerExecute,
     });
+  });
+
+apiCommand
+  .command('status')
+  .description('Read the local AuraCall API /status summary.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .requiredOption('--port <number>', 'Local API port to query.', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option(
+    '--expect-account-mirror-backpressure <reason>',
+    'Fail unless accountMirrorScheduler.lastPass.backpressure.reason matches.',
+    parseApiStatusBackpressureReason,
+  )
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const summary = await readApiStatusForCli({
+      host: commandOptions.host,
+      port: commandOptions.port,
+      timeoutMs: commandOptions.timeoutMs,
+    });
+    assertApiStatusBackpressure(summary, {
+      expectedReason: commandOptions.expectAccountMirrorBackpressure,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(summary, null, 2));
+      return;
+    }
+    console.log(formatApiStatusCliSummary(summary));
   });
 
 apiCommand

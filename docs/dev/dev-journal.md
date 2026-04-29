@@ -23582,3 +23582,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm exec tsc --noEmit` passed
   - focused scheduler/ledger/collector/status/HTTP Vitest suite passed
+
+## 2026-04-29 - API status CLI backpressure smoke
+
+- Focus: make the lazy mirror backpressure field easy to verify from the
+  installed runtime without hand-parsing `/status` JSON.
+- Progress:
+  - added `auracall api status --port <port>`
+  - plain output prints the latest lazy mirror backpressure reason
+  - `--expect-account-mirror-backpressure <reason>` fails the smoke when the
+    latest reason differs
+- Validation:
+  - `pnpm exec tsc --noEmit` passed
+  - focused API status CLI, HTTP status, and scheduler Vitest suite passed
+  - installed-runtime smoke on port `18102` printed
+    `Latest lazy mirror backpressure: routine-delayed - minimum-interval`
+  - installed-runtime expectation smoke passed:
+    `auracall api status --port 18102 --expect-account-mirror-backpressure routine-delayed`

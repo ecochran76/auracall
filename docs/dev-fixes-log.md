@@ -85,6 +85,11 @@
   operators can tell routine politeness delay from dispatcher contention and
   cooperative yield without parsing errors or attachment cursors.
 
+- 2026-04-29: Add a CLI smoke for new `/status` operator fields when the raw
+  JSON path is too easy to skip. `auracall api status --port <port>` should
+  print the latest lazy mirror backpressure reason and support an expectation
+  flag for installed-runtime checks.
+
 - 2026-04-29: Bot-sensitive lazy mirroring needs a politeness policy before it
   needs a background loop. Mirror schedulers should enforce provider-specific
   minimum intervals, deterministic jitter, explicit-refresh rate limits,

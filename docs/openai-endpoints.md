@@ -453,6 +453,8 @@ auracall api serve --port 8080
 # terminal 2
 curl http://127.0.0.1:8080/status
 
+auracall api status --port 8080
+
 curl -s http://127.0.0.1:8080/v1/responses \
   -H 'Content-Type: application/json' \
   -d '{"model":"gpt-5.2","input":"Reply exactly with: local api smoke"}'
