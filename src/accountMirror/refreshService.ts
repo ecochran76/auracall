@@ -10,9 +10,11 @@ import { resolveManagedBrowserLaunchContextFromResolvedConfig } from '../browser
 import {
   createFileBackedBrowserOperationDispatcher,
   formatBrowserOperationBusyResult,
+  type BrowserOperationAcquiredResult,
   type BrowserOperationDispatcher,
   type BrowserOperationRecord,
 } from '../../packages/browser-service/src/service/operationDispatcher.js';
+import { summarizeBrowserOperationQueueObservationsByKey } from '../browser/operationQueueObservations.js';
 import type { AccountMirrorProvider } from './politePolicy.js';
 import type {
   AccountMirrorMetadataEvidence,
@@ -230,6 +232,7 @@ export function createAccountMirrorRefreshService(input: {
             maxArtifactRowsPerCycle: target.limits.maxArtifactRowsPerCycle,
           },
           previousEvidence: target.metadataEvidence,
+          shouldYield: () => shouldYieldAccountMirrorRefresh(acquired),
         });
         const collectionWithPriorManifests = await mergeCollectionWithPersistedCatalog({
           persistence,
@@ -326,6 +329,25 @@ export function createAccountMirrorRefreshService(input: {
       }
     },
   };
+}
+
+function shouldYieldAccountMirrorRefresh(acquired: BrowserOperationAcquiredResult): boolean {
+  const observations = summarizeBrowserOperationQueueObservationsByKey(acquired.operation.key, 10);
+  return observations.items.some((observation) =>
+    observation.event === 'queued' &&
+    observation.blockedBy?.id === acquired.operation.id &&
+    observation.operation === null &&
+    observation.blockedBy.ownerCommand === acquired.operation.ownerCommand &&
+    isHigherPriorityQueuedOperation(observation.at, acquired.operation.startedAt)
+  );
+}
+
+function isHigherPriorityQueuedOperation(observationAt: string, operationStartedAt: string): boolean {
+  const observationMs = Date.parse(observationAt);
+  const operationStartedMs = Date.parse(operationStartedAt);
+  return Number.isFinite(observationMs) &&
+    Number.isFinite(operationStartedMs) &&
+    observationMs >= operationStartedMs;
 }
 
 async function mergeCollectionWithPersistedCatalog(input: {

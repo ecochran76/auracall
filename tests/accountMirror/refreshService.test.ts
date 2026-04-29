@@ -1,12 +1,19 @@
-import { describe, expect, test, vi } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { createBrowserOperationDispatcher } from '../../packages/browser-service/src/service/operationDispatcher.js';
 import {
   type AccountMirrorRefreshError,
   createAccountMirrorRefreshService,
 } from '../../src/accountMirror/refreshService.js';
-import { AccountMirrorIdentityMismatchError } from '../../src/accountMirror/chatgptMetadataCollector.js';
+import {
+  AccountMirrorIdentityMismatchError,
+  type AccountMirrorMetadataCollectorInput,
+} from '../../src/accountMirror/chatgptMetadataCollector.js';
 import { createAccountMirrorStatusRegistry } from '../../src/accountMirror/statusRegistry.js';
 import type { AccountMirrorPersistence } from '../../src/accountMirror/cachePersistence.js';
+import {
+  clearBrowserOperationQueueObservationsForTest,
+  recordBrowserOperationQueueObservation,
+} from '../../src/browser/operationQueueObservations.js';
 
 const config = {
   model: 'gpt-5.2',
@@ -39,6 +46,10 @@ function createNoopPersistence(): AccountMirrorPersistence {
 }
 
 describe('account mirror refresh service', () => {
+  beforeEach(() => {
+    clearBrowserOperationQueueObservationsForTest();
+  });
+
   test('runs an explicit default ChatGPT refresh through the browser operation dispatcher', async () => {
     const metadataCollector = {
       collect: vi.fn(async () => ({
@@ -140,6 +151,7 @@ describe('account mirror refresh service', () => {
       provider: 'chatgpt',
       runtimeProfileId: 'default',
       expectedIdentityKey: 'ecochran76@gmail.com',
+      shouldYield: expect.any(Function),
       limits: {
         maxPageReadsPerCycle: 12,
         maxConversationRowsPerCycle: 250,
@@ -147,6 +159,29 @@ describe('account mirror refresh service', () => {
       },
       previousEvidence: null,
     });
+    const collectCalls = metadataCollector.collect.mock.calls as unknown as [AccountMirrorMetadataCollectorInput][];
+    const collectInput = collectCalls[0]?.[0];
+    expect(await Promise.resolve(collectInput?.shouldYield?.())).toBe(false);
+    const dispatcherKey = result.dispatcher.key ?? 'missing-dispatcher-key';
+    const dispatcherOperationId = result.dispatcher.operationId ?? 'missing-operation-id';
+    recordBrowserOperationQueueObservation({
+      event: 'queued',
+      key: dispatcherKey,
+      blockedBy: {
+        id: dispatcherOperationId,
+        key: dispatcherKey,
+        managedProfileDir: '/tmp/auracall-default-chatgpt',
+        serviceTarget: 'chatgpt',
+        kind: 'browser-execution',
+        operationClass: 'exclusive-mutating',
+        ownerPid: process.pid,
+        ownerCommand: 'account-mirror-refresh:chatgpt:default',
+        startedAt: '2026-04-29T12:00:00.000Z',
+        updatedAt: '2026-04-29T12:00:00.001Z',
+      },
+      at: '2026-04-29T12:00:00.001Z',
+    });
+    expect(await Promise.resolve(collectInput?.shouldYield?.())).toBe(true);
     expect(persistence.writeSnapshot).toHaveBeenCalledWith({
       provider: 'chatgpt',
       runtimeProfileId: 'default',

@@ -74,6 +74,12 @@
   response/media/API browser work keeps priority; cooperative cancellation is
   the later fix for mirrors that already acquired the lane.
 
+- 2026-04-29: Lazy mirror cooperative yield should happen between provider
+  detail surfaces, not mid-scrape. If queued browser work appears behind an
+  active routine mirror, mark attachment inventory truncated, preserve the
+  continuation cursor, release the dispatcher, and let the scheduler resume
+  later.
+
 - 2026-04-29: Bot-sensitive lazy mirroring needs a politeness policy before it
   needs a background loop. Mirror schedulers should enforce provider-specific
   minimum intervals, deterministic jitter, explicit-refresh rate limits,

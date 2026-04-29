@@ -19,6 +19,7 @@ export interface AccountMirrorMetadataCollectorInput {
   runtimeProfileId: string;
   expectedIdentityKey: string;
   previousEvidence?: AccountMirrorMetadataEvidence | null;
+  shouldYield?: () => Promise<boolean> | boolean;
   limits: {
     maxPageReadsPerCycle: number;
     maxConversationRowsPerCycle: number;
@@ -112,6 +113,7 @@ export function createChatgptAccountMirrorMetadataCollector(
         {
           maxDetailReads: input.limits.maxPageReadsPerCycle,
           cursor: input.previousEvidence?.attachmentInventory ?? null,
+          shouldYield: input.shouldYield,
         },
       );
       return {
@@ -190,6 +192,7 @@ export async function readBoundedAttachmentInventory(
   options: number | {
     maxDetailReads?: number;
     cursor?: AttachmentInventoryCursor | null;
+    shouldYield?: () => Promise<boolean> | boolean;
   } = 6,
 ): Promise<{
   artifacts: ConversationArtifact[];
@@ -202,6 +205,7 @@ export async function readBoundedAttachmentInventory(
     ? options
     : options.maxDetailReads ?? 6;
   const previousCursor = typeof options === 'number' ? null : options.cursor ?? null;
+  const shouldYield = typeof options === 'number' ? undefined : options.shouldYield;
   const detailReadLimit = Math.max(1, Math.min(6, Math.floor(maxDetailReads)));
   if (limit <= 0) {
     return {
@@ -222,6 +226,7 @@ export async function readBoundedAttachmentInventory(
   let remaining = limit;
   let remainingDetailReads = detailReadLimit;
   let truncated = false;
+  let yielded = false;
   let projectIndex = normalizeCursorIndex(previousCursor?.nextProjectIndex, projects.length);
   let conversationIndex = normalizeCursorIndex(previousCursor?.nextConversationIndex, conversations.length);
   let scannedProjects = 0;
@@ -230,6 +235,11 @@ export async function readBoundedAttachmentInventory(
   for (; projectIndex < projects.length; projectIndex += 1) {
     if (remaining <= 0 || remainingDetailReads <= 0) {
       truncated = true;
+      break;
+    }
+    if (await shouldYield?.()) {
+      truncated = true;
+      yielded = true;
       break;
     }
     const project = projects[projectIndex];
@@ -247,9 +257,14 @@ export async function readBoundedAttachmentInventory(
     }
   }
 
-  for (; conversationIndex < conversations.length; conversationIndex += 1) {
+  for (; !yielded && conversationIndex < conversations.length; conversationIndex += 1) {
     if (remaining <= 0 || remainingDetailReads <= 0) {
       truncated = true;
+      break;
+    }
+    if (await shouldYield?.()) {
+      truncated = true;
+      yielded = true;
       break;
     }
     const conversation = conversations[conversationIndex];

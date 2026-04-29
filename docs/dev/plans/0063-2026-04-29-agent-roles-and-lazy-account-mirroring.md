@@ -239,12 +239,13 @@ Lazy mirroring must remain lower priority than API-requested work:
 - If real work has already acquired the browser dispatcher, the routine mirror
   pass exits as blocked and the scheduler tries again on its normal cadence.
 - If a routine mirror has already acquired the dispatcher before a real work
-  request arrives, the request must respect the single browser control plane
-  and wait/fail according to its own queue policy. The current mitigation is
-  the small per-cycle mirror budget.
-- Next control-plane upgrade: add cooperative cancellation/yield support so a
-  running lazy mirror can release the browser lane between detail surfaces when
-  higher-priority API work is queued.
+  request arrives, the collector checks for queued operations between
+  project/conversation detail reads. When a queued operation is observed behind
+  the current mirror operation, the collector marks the inventory truncated,
+  preserves the continuation cursor, releases the dispatcher, and lets the
+  scheduler try again later.
+- This first cooperative-yield contract is intentionally boundary-scoped: it
+  yields between detail surfaces, not in the middle of a provider DOM read.
 - default routine intervals:
   - ChatGPT: 6 hours plus up to 20 minutes jitter
   - Gemini: 12 hours plus up to 45 minutes jitter

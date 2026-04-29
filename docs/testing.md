@@ -155,6 +155,10 @@
       - `accountMirrorScheduler.lastPass.metrics.inProgressEligibleTargets`
       - routine scheduler refreshes use zero dispatcher queue wait and should
         block/yield when real browser work already owns the control plane
+      - after a routine mirror acquires the dispatcher, bounded attachment
+        inventory should check for queued browser work between
+        project/conversation detail reads; a yield marks the inventory
+        truncated and preserves the cursor for the next pass
       - the scheduler is disabled unless
         `--account-mirror-scheduler-interval-ms <ms>` is set
       - without `--account-mirror-scheduler-execute`, scheduler passes are

@@ -216,4 +216,53 @@ describe('ChatGPT account mirror metadata collector', () => {
     expect(client.listProjectFiles).toHaveBeenCalledWith('project_2');
     expect(client.listConversationFiles).toHaveBeenCalledWith('conv_1', { projectId: undefined });
   });
+
+  test('yields between detail reads when higher-priority work is waiting', async () => {
+    const shouldYield = vi.fn()
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true);
+    const client = {
+      listProjectFiles: vi.fn(async (projectId: string) => [
+        {
+          id: `project-file-${projectId}`,
+          name: 'Project source.pdf',
+          provider: 'chatgpt' as const,
+          source: 'project' as const,
+        },
+      ]),
+      listConversationFiles: vi.fn(async () => []),
+      getConversationContext: vi.fn(async () => ({
+        provider: 'chatgpt' as const,
+        conversationId: 'conv_1',
+        messages: [],
+        artifacts: [],
+      })),
+    };
+
+    const inventory = await readBoundedAttachmentInventory(
+      client,
+      [
+        { id: 'project_1', name: 'Project 1', provider: 'chatgpt' },
+        { id: 'project_2', name: 'Project 2', provider: 'chatgpt' },
+      ],
+      [{ id: 'conv_1', title: 'Conversation 1', provider: 'chatgpt' }],
+      80,
+      {
+        maxDetailReads: 6,
+        shouldYield,
+      },
+    );
+
+    expect(inventory.truncated).toBe(true);
+    expect(inventory.files.map((file) => file.id)).toEqual(['project-file-project_1']);
+    expect(inventory.cursor).toMatchObject({
+      nextProjectIndex: 1,
+      nextConversationIndex: 0,
+      scannedProjects: 1,
+      scannedConversations: 0,
+    });
+    expect(client.listProjectFiles).toHaveBeenCalledTimes(1);
+    expect(client.listConversationFiles).not.toHaveBeenCalled();
+    expect(client.getConversationContext).not.toHaveBeenCalled();
+  });
 });

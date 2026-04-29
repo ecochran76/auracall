@@ -23547,3 +23547,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed-runtime dry-run `POST /status` returned scheduler metrics with
     `inProgressEligibleTargets`; it correctly skipped because default ChatGPT
     was routine-delayed, so no provider/browser refresh ran
+
+## 2026-04-29 - Lazy mirror cooperative yield
+
+- Focus: let an already-running lazy mirror release the browser lane between
+  bounded detail reads when higher-priority browser work queues behind it.
+- Progress:
+  - account mirror refresh now passes a `shouldYield` hook into metadata
+    collection after acquiring the browser dispatcher
+  - the hook watches browser operation queue observations for queued work
+    blocked by the current mirror operation
+  - attachment inventory checks the hook before each project/conversation
+    detail surface, marks the inventory truncated, and preserves the cursor
+    when it yields
+  - the yield point stays between provider detail reads; it does not interrupt
+    an in-flight DOM scrape
+- Validation:
+  - `pnpm exec tsc --noEmit` passed
+  - focused account-mirror collector/refresh/scheduler/HTTP Vitest suite
+    passed
