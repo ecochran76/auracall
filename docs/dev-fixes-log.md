@@ -15050,3 +15050,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   before reading any history surface. A detected identity mismatch should fail
   the explicit refresh and mark the mirror blocked instead of recording
   cross-account metadata.
+- 2026-04-29: Grok visible-tile captures can expose generated media as
+  `data:image` URLs. Do not persist or echo full data URLs in media-generation
+  artifact metadata; store the cached file plus compact source evidence such
+  as source kind, length, and fingerprint.

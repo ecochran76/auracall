@@ -23647,3 +23647,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `estuary-image-fetch`
   - installed status assertion passed:
     `auracall run status medgen_6eae1df15d5f406ea3fc25bdc7ce739f --expect-status succeeded --expect-min-artifacts 1 --expect-media-run-state terminal_image`
+
+## 2026-04-29 - Grok/Gemini browser media baseline follow-up
+
+- Focus: apply the ChatGPT media baseline back to Gemini and Grok: preflight
+  identity/capability, submit once, stay on the submitted tab, poll visible
+  artifacts, and materialize only after provider media is stable.
+- Findings:
+  - Gemini media capability discovery failed before provider work because
+    identity preflight expected `ecochran76@gmail.com` but Gemini web identity
+    was unknown.
+  - Grok Imagine image capability discovery reported `available` and idle.
+  - fresh installed Grok browser image run
+    `medgen_354076d481ac48cb80dd2f26406ab69e` succeeded and materialized four
+    visible PNG tile artifacts from the submitted `/imagine` tab.
+  - compact status assertion passed:
+    `auracall run status medgen_354076d481ac48cb80dd2f26406ab69e --expect-status succeeded --expect-min-artifacts 4 --expect-media-run-state terminal_image`
+  - the raw JSON response exposed a bloat bug: Grok visible-tile artifact
+    metadata included full `data:image` URLs.
+- Progress:
+  - Grok media artifact mapping now replaces persisted `data:` remote URLs
+    with compact `remoteUrlKind`, `remoteUrlLength`, and
+    `remoteUrlFingerprint` evidence while keeping the cached image file as the
+    durable payload.
+- Validation:
+  - `pnpm exec tsc --noEmit` passed
+  - focused Grok media/status tests passed with `--testTimeout 15000`
+  - installed-runtime mapping smoke confirmed future Grok visible-tile
+    artifacts do not serialize `data:image` content in artifact metadata

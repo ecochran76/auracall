@@ -408,6 +408,9 @@
       tiles through the active browser tab, then compare one preview against
       the provider download-button result before using remote media fetch as a
       fallback
+    - visible-tile captures backed by provider `data:image` URLs must cache
+      the image file and compact source evidence; status/API/MCP payloads
+      should not echo full inline image data URLs
     - after a fresh Grok image run completes, operators can explicitly retry
       resumed full-quality discovery without submitting another prompt:
       `pnpm tsx bin/auracall.ts media materialize <media_generation_id> --count 1 --json`;

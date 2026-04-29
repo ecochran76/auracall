@@ -1385,7 +1385,10 @@ describe('Grok browser media generation executor', () => {
         height: 423,
         metadata: {
           materialization: 'visible-tile-data-url',
-          remoteUrl: dataUrl,
+          remoteUrl: null,
+          remoteUrlKind: 'data-url',
+          remoteUrlLength: dataUrl.length,
+          remoteUrlFingerprint: expect.any(String),
           checksumSha256: expect.any(String),
         },
       },

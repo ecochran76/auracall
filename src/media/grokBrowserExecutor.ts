@@ -758,6 +758,7 @@ async function materializeGrokImageEntry(
   const filePath = path.join(artifactDir, fileName);
   await fs.mkdir(artifactDir, { recursive: true });
   await fs.writeFile(filePath, bytes);
+  const compactRemoteUrl = normalizeGrokArtifactRemoteUrl(remoteUrl);
   return {
     id: `grok_imagine_image_${ordinal}`,
     type: 'image',
@@ -769,7 +770,8 @@ async function materializeGrokImageEntry(
     height: numberOrNull(entry.height),
     metadata: {
       providerArtifactId: `grok_imagine_image_${ordinal}`,
-      remoteUrl,
+      remoteUrl: compactRemoteUrl,
+      ...describeGrokArtifactRemoteUrl(remoteUrl),
       materialization,
       checksumSha256: sha256Hex(bytes),
     },
@@ -1449,21 +1451,39 @@ function isGrokVideoReadbackProbeEnabled(metadata: Record<string, unknown> | nul
 
 export function mapGrokFileToMediaArtifact(file: FileRef, ordinal: number): MediaGenerationArtifact {
   const metadata = file.metadata ?? {};
+  const remoteUrl = normalizeGrokArtifactRemoteUrl(file.remoteUrl);
   return {
     id: file.id || `grok_imagine_image_${ordinal}`,
     type: 'image',
     mimeType: file.mimeType ?? null,
     fileName: file.name || `grok-imagine-${ordinal}.jpg`,
     path: file.localPath ?? null,
-    uri: file.localPath ? `file://${file.localPath}` : file.remoteUrl ?? null,
+    uri: file.localPath ? `file://${file.localPath}` : remoteUrl,
     width: numberOrNull(metadata.width),
     height: numberOrNull(metadata.height),
     metadata: {
       ...metadata,
       providerArtifactId: file.id,
-      remoteUrl: file.remoteUrl ?? null,
+      remoteUrl,
+      ...describeGrokArtifactRemoteUrl(file.remoteUrl),
       checksumSha256: file.checksumSha256 ?? null,
     },
+  };
+}
+
+function normalizeGrokArtifactRemoteUrl(value: unknown): string | null {
+  const remoteUrl = normalizeNonEmpty(value);
+  if (!remoteUrl) return null;
+  return remoteUrl.startsWith('data:') ? null : remoteUrl;
+}
+
+function describeGrokArtifactRemoteUrl(value: unknown): Record<string, unknown> {
+  const remoteUrl = normalizeNonEmpty(value);
+  if (!remoteUrl?.startsWith('data:')) return {};
+  return {
+    remoteUrlKind: 'data-url',
+    remoteUrlLength: remoteUrl.length,
+    remoteUrlFingerprint: crypto.createHash('sha256').update(remoteUrl).digest('hex').slice(0, 16),
   };
 }
 
