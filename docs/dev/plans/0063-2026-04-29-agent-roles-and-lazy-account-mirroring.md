@@ -214,6 +214,37 @@ Current implementation-facing politeness contract:
   `GET /v1/account-mirrors/status` and `GET /v1/account-mirrors/catalog`
   report the cached default ChatGPT mirror as `in_progress` with 68 remaining
   conversation detail surfaces.
+- Routine scheduler passes now prefer eligible mirrors whose
+  `mirrorCompleteness.state` is `in_progress`, and scheduler pass metrics count
+  how many eligible mirrors are still walking details.
+- Routine scheduler-triggered refreshes call the dispatcher with
+  `queueTimeoutMs: 0`. Lazy mirror work therefore only starts when the browser
+  lane is immediately available; if a real API response/media request or other
+  browser operation already owns the lane, the lazy pass records a blocked
+  refresh instead of waiting behind user work.
+- Installed-runtime dry-run `POST /status` verified the scheduler readback
+  includes the new metrics. The pass skipped because default ChatGPT was
+  routine-delayed, confirming the scheduler still respects politeness before
+  attempting any browser work.
+
+## API Work Interaction Plan
+
+Lazy mirroring must remain lower priority than API-requested work:
+
+- Real work is any user/API/MCP-requested response, media generation, explicit
+  account refresh, or operator control that needs provider/browser execution.
+- Routine lazy mirror passes may observe status and cached catalogs at any
+  time, but they may only acquire browser execution opportunistically with zero
+  queue wait.
+- If real work has already acquired the browser dispatcher, the routine mirror
+  pass exits as blocked and the scheduler tries again on its normal cadence.
+- If a routine mirror has already acquired the dispatcher before a real work
+  request arrives, the request must respect the single browser control plane
+  and wait/fail according to its own queue policy. The current mitigation is
+  the small per-cycle mirror budget.
+- Next control-plane upgrade: add cooperative cancellation/yield support so a
+  running lazy mirror can release the browser lane between detail surfaces when
+  higher-priority API work is queued.
 - default routine intervals:
   - ChatGPT: 6 hours plus up to 20 minutes jitter
   - Gemini: 12 hours plus up to 45 minutes jitter

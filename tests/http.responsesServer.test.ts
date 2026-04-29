@@ -34,6 +34,18 @@ import { createChatgptDeepResearchStatusFixture } from './fixtures/chatgptDeepRe
 
 vi.setConfig({ testTimeout: 10000 });
 
+const completeAccountMirror = {
+  state: 'complete' as const,
+  summary: 'Mirrored metadata indexes are complete within current provider surfaces.',
+  remainingDetailSurfaces: { projects: 0, conversations: 0, total: 0 },
+  signals: {
+    projectsTruncated: false,
+    conversationsTruncated: false,
+    attachmentInventoryTruncated: false,
+    attachmentCursorPresent: false,
+  },
+};
+
 describe('http responses adapter', () => {
   const cleanup: string[] = [];
 
@@ -1526,11 +1538,13 @@ describe('http responses adapter', () => {
         status: 'eligible',
         reason: 'eligible',
         eligibleAt: '2026-04-29T12:00:00.000Z',
+        mirrorCompleteness: completeAccountMirror,
       },
       metrics: {
         totalTargets: 1,
         eligibleTargets: 1,
         defaultChatgptEligibleTargets: 1,
+        inProgressEligibleTargets: 0,
       },
       refresh: null,
       error: null,
@@ -1617,11 +1631,13 @@ describe('http responses adapter', () => {
         status: 'eligible',
         reason: 'eligible',
         eligibleAt: '2026-04-29T12:00:00.000Z',
+        mirrorCompleteness: completeAccountMirror,
       },
       metrics: {
         totalTargets: 1,
         eligibleTargets: 1,
         defaultChatgptEligibleTargets: 1,
+        inProgressEligibleTargets: 0,
       },
       refresh: null,
       error: null,
@@ -1758,6 +1774,7 @@ describe('http responses adapter', () => {
         totalTargets: 0,
         eligibleTargets: 0,
         defaultChatgptEligibleTargets: 0,
+        inProgressEligibleTargets: 0,
       },
       refresh: null,
       error: null,

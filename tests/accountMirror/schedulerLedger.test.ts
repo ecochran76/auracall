@@ -6,6 +6,18 @@ import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 import { createAccountMirrorSchedulerPassLedger } from '../../src/accountMirror/schedulerLedger.js';
 import type { AccountMirrorSchedulerPassResult } from '../../src/accountMirror/schedulerService.js';
 
+const completeMirror = {
+  state: 'complete' as const,
+  summary: 'Mirrored metadata indexes are complete within current provider surfaces.',
+  remainingDetailSurfaces: { projects: 0, conversations: 0, total: 0 },
+  signals: {
+    projectsTruncated: false,
+    conversationsTruncated: false,
+    attachmentInventoryTruncated: false,
+    attachmentCursorPresent: false,
+  },
+};
+
 function createPass(input: {
   startedAt: string;
   completedAt: string;
@@ -24,11 +36,13 @@ function createPass(input: {
       status: 'eligible',
       reason: 'eligible',
       eligibleAt: input.startedAt,
+      mirrorCompleteness: completeMirror,
     },
     metrics: {
       totalTargets: 1,
       eligibleTargets: 1,
       defaultChatgptEligibleTargets: 1,
+      inProgressEligibleTargets: 0,
     },
     refresh: null,
     error: null,

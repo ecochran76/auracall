@@ -23527,3 +23527,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     catalog both report the cached default ChatGPT mirror as `in_progress`
     with 68 remaining conversation detail surfaces, while preserving five
     project, 69 conversation, three artifact, 24 file, and zero media counts
+
+## 2026-04-29 - Lazy mirror scheduler priority
+
+- Focus: make lazy mirror scheduling use completeness while preserving API
+  work priority.
+- Progress:
+  - scheduler pass target summaries now include `mirrorCompleteness`
+  - routine pass metrics include `inProgressEligibleTargets`
+  - eligible default ChatGPT mirrors whose completeness is `in_progress` are
+    preferred for lazy passes
+  - routine scheduler refreshes use `queueTimeoutMs: 0`, so lazy mirror work
+    does not wait behind real browser/API work
+  - plan 0063 now records the API work interaction policy and the future
+    cooperative-yield upgrade
+- Validation:
+  - `pnpm exec tsc --noEmit` passed
+  - focused account-mirror scheduler/status/refresh/HTTP Vitest suite passed
+  - installed-runtime dry-run `POST /status` returned scheduler metrics with
+    `inProgressEligibleTargets`; it correctly skipped because default ChatGPT
+    was routine-delayed, so no provider/browser refresh ran

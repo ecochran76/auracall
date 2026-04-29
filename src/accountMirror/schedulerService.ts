@@ -20,6 +20,7 @@ export interface AccountMirrorSchedulerSelectedTarget {
   status: AccountMirrorStatusEntry['status'];
   reason: AccountMirrorStatusEntry['reason'];
   eligibleAt: string | null;
+  mirrorCompleteness: AccountMirrorStatusEntry['mirrorCompleteness'];
 }
 
 export interface AccountMirrorSchedulerPassResult {
@@ -33,6 +34,7 @@ export interface AccountMirrorSchedulerPassResult {
     totalTargets: number;
     eligibleTargets: number;
     defaultChatgptEligibleTargets: number;
+    inProgressEligibleTargets: number;
   };
   refresh: AccountMirrorRefreshResult | null;
   error: {
@@ -62,13 +64,17 @@ export function createAccountMirrorSchedulerPassService(input: {
         explicitRefresh: false,
       });
       const eligibleTargets = status.entries.filter((entry) => entry.status === 'eligible');
-      const selected = eligibleTargets.find(
+      const defaultChatgptEligibleTargets = eligibleTargets.filter(
         (entry) => entry.provider === 'chatgpt' && entry.runtimeProfileId === 'default',
-      ) ?? null;
+      );
+      const selected = chooseSchedulerTarget(defaultChatgptEligibleTargets);
       const metrics = {
         totalTargets: status.metrics.total,
         eligibleTargets: eligibleTargets.length,
-        defaultChatgptEligibleTargets: selected ? 1 : 0,
+        defaultChatgptEligibleTargets: defaultChatgptEligibleTargets.length,
+        inProgressEligibleTargets: eligibleTargets.filter(
+          (entry) => entry.mirrorCompleteness.state === 'in_progress',
+        ).length,
       };
       if (!selected) {
         return {
@@ -102,6 +108,7 @@ export function createAccountMirrorSchedulerPassService(input: {
           provider: selected.provider,
           runtimeProfileId: selected.runtimeProfileId,
           explicitRefresh: false,
+          queueTimeoutMs: 0,
         });
         return {
           object: 'account_mirror_scheduler_pass',
@@ -139,6 +146,35 @@ export function createAccountMirrorSchedulerPassService(input: {
   };
 }
 
+function chooseSchedulerTarget(entries: AccountMirrorStatusEntry[]): AccountMirrorStatusEntry | null {
+  return [...entries].sort(compareSchedulerTargets)[0] ?? null;
+}
+
+function compareSchedulerTargets(a: AccountMirrorStatusEntry, b: AccountMirrorStatusEntry): number {
+  const priorityDelta = completenessPriority(a) - completenessPriority(b);
+  if (priorityDelta !== 0) return priorityDelta;
+  const remainingDelta = remainingDetailSurfaces(b) - remainingDetailSurfaces(a);
+  if (remainingDelta !== 0) return remainingDelta;
+  return a.runtimeProfileId.localeCompare(b.runtimeProfileId);
+}
+
+function completenessPriority(entry: AccountMirrorStatusEntry): number {
+  switch (entry.mirrorCompleteness.state) {
+    case 'in_progress':
+      return 0;
+    case 'unknown':
+      return 1;
+    case 'none':
+      return 2;
+    case 'complete':
+      return 3;
+  }
+}
+
+function remainingDetailSurfaces(entry: AccountMirrorStatusEntry): number {
+  return entry.mirrorCompleteness.remainingDetailSurfaces?.total ?? 0;
+}
+
 function summarizeTarget(entry: AccountMirrorStatusEntry): AccountMirrorSchedulerSelectedTarget {
   return {
     provider: entry.provider,
@@ -147,5 +183,6 @@ function summarizeTarget(entry: AccountMirrorStatusEntry): AccountMirrorSchedule
     status: entry.status,
     reason: entry.reason,
     eligibleAt: entry.eligibleAt,
+    mirrorCompleteness: entry.mirrorCompleteness,
   };
 }

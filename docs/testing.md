@@ -151,6 +151,10 @@
       - `accountMirrorScheduler.lastPass`
       - `accountMirrorScheduler.history.object = account_mirror_scheduler_pass_history`
       - `accountMirrorScheduler.history.entries[]`
+      - `accountMirrorScheduler.lastPass.selectedTarget.mirrorCompleteness`
+      - `accountMirrorScheduler.lastPass.metrics.inProgressEligibleTargets`
+      - routine scheduler refreshes use zero dispatcher queue wait and should
+        block/yield when real browser work already owns the control plane
       - the scheduler is disabled unless
         `--account-mirror-scheduler-interval-ms <ms>` is set
       - without `--account-mirror-scheduler-execute`, scheduler passes are

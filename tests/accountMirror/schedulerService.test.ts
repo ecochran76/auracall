@@ -110,6 +110,7 @@ describe('account mirror scheduler pass service', () => {
         totalTargets: 2,
         eligibleTargets: 1,
         defaultChatgptEligibleTargets: 1,
+        inProgressEligibleTargets: 0,
       },
     });
   });
@@ -134,6 +135,7 @@ describe('account mirror scheduler pass service', () => {
       provider: 'chatgpt',
       runtimeProfileId: 'default',
       explicitRefresh: false,
+      queueTimeoutMs: 0,
     });
     expect(result).toMatchObject({
       mode: 'execute',
@@ -141,6 +143,67 @@ describe('account mirror scheduler pass service', () => {
       refresh: {
         object: 'account_mirror_refresh',
         requestId: 'acctmirror_scheduler',
+      },
+    });
+  });
+
+  test('prioritizes in-progress default ChatGPT mirrors for lazy passes', async () => {
+    const requestRefresh = vi.fn(async () => createRefreshResult());
+    const service = createAccountMirrorSchedulerPassService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        initialState: {
+          'chatgpt:default': {
+            metadataCounts: {
+              projects: 5,
+              conversations: 69,
+              artifacts: 3,
+              files: 24,
+              media: 0,
+            },
+            metadataEvidence: {
+              identitySource: 'profile-menu',
+              projectSampleIds: ['project_1'],
+              conversationSampleIds: ['conv_1'],
+              attachmentInventory: {
+                nextProjectIndex: 5,
+                nextConversationIndex: 1,
+                detailReadLimit: 6,
+                scannedProjects: 5,
+                scannedConversations: 1,
+              },
+              truncated: {
+                projects: false,
+                conversations: false,
+                artifacts: true,
+              },
+            },
+          },
+        },
+        now: () => new Date('2026-04-29T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+    });
+
+    const result = await service.runOnce({ dryRun: true });
+
+    expect(result).toMatchObject({
+      action: 'dry-run',
+      selectedTarget: {
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        mirrorCompleteness: {
+          state: 'in_progress',
+          remainingDetailSurfaces: {
+            total: 68,
+          },
+        },
+      },
+      metrics: {
+        inProgressEligibleTargets: 1,
       },
     });
   });

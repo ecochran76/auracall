@@ -69,6 +69,11 @@
   derived completeness field with plain states and remaining surface counts so
   API/MCP callers can decide whether a mirror is usable or still walking.
 
+- 2026-04-29: Lazy mirror scheduler work must use opportunistic dispatcher
+  acquisition. Routine mirror passes should use zero queue wait so real
+  response/media/API browser work keeps priority; cooperative cancellation is
+  the later fix for mirrors that already acquired the lane.
+
 - 2026-04-29: Bot-sensitive lazy mirroring needs a politeness policy before it
   needs a background loop. Mirror schedulers should enforce provider-specific
   minimum intervals, deterministic jitter, explicit-refresh rate limits,
