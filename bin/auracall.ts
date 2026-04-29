@@ -102,7 +102,11 @@ import {
   parseApiStatusBackpressureReason,
   readApiStatusForCli,
 } from '../src/cli/apiStatusCommand.js';
-import { formatRunStatusCli, readRunStatusForCli } from '../src/cli/runStatusCommand.js';
+import {
+  assertRunStatusForCli,
+  formatRunStatusCli,
+  readRunStatusForCli,
+} from '../src/cli/runStatusCommand.js';
 import {
   buildWorkbenchCapabilityReportForCli,
   formatWorkbenchCapabilityReport,
@@ -8613,8 +8617,19 @@ const runCommand = program
 runCommand
   .command('status <id>')
   .description('Read compact status for a response or media-generation run.')
+  .option('--expect-status <status>', 'Fail unless the persisted run status matches.')
+  .option('--expect-min-artifacts <count>', 'Fail unless the run has at least this many artifacts.', parseIntOption)
+  .option('--expect-media-run-state <state>', 'Fail unless media diagnostics report this run state.')
   .option('--json', 'Emit machine-readable JSON output.', false)
-  .action(async (id: string, commandOptions: { json?: boolean }) => {
+  .action(async (
+    id: string,
+    commandOptions: {
+      expectStatus?: string;
+      expectMinArtifacts?: number;
+      expectMediaRunState?: string;
+      json?: boolean;
+    },
+  ) => {
     const normalizedId = id.trim();
     const status = await readRunStatusForCli(normalizedId);
     if (!status) {
@@ -8622,6 +8637,12 @@ runCommand
       process.exitCode = 1;
       return;
     }
+
+    assertRunStatusForCli(status, {
+      expectedStatus: commandOptions.expectStatus,
+      expectedMinArtifacts: commandOptions.expectMinArtifacts,
+      expectedMediaRunState: commandOptions.expectMediaRunState,
+    });
 
     if (commandOptions.json) {
       console.log(JSON.stringify(status, null, 2));

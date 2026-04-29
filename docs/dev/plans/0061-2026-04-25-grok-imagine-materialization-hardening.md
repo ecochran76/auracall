@@ -388,8 +388,11 @@ profile, queued dispatcher, and registry-first DevTools authority.
 - MCP media/generic run status schema and payload regression tests for
   checksum and preview/full-quality comparison metadata.
 - `pnpm exec tsc --noEmit`
-- Installed-runtime `auracall run status <id> --json` check for checksum and
-  preview-vs-full-quality fields after `pnpm run install:user-runtime`.
+- Installed-runtime `auracall run status <id>` check after
+  `pnpm run install:user-runtime`; use `--json` for checksum and
+  preview-vs-full-quality fields, and use `--expect-status`,
+  `--expect-min-artifacts`, and `--expect-media-run-state` for compact
+  terminal/materialization smokes.
 - `pnpm run plans:audit -- --keep 61`
 - `git diff --check`
 - One installed-runtime Grok browser smoke after unit/type validation, using

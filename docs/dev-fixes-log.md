@@ -90,6 +90,11 @@
   print the latest lazy mirror backpressure reason and support an expectation
   flag for installed-runtime checks.
 
+- 2026-04-29: Keep run/media operator assertions close to the durable status
+  envelope. `auracall run status <id>` should print compact media diagnostics
+  and support expectation flags for persisted status, minimum artifact count,
+  and media run state instead of forcing operators back to raw JSON.
+
 - 2026-04-29: Bot-sensitive lazy mirroring needs a politeness policy before it
   needs a background loop. Mirror schedulers should enforce provider-specific
   minimum intervals, deterministic jitter, explicit-refresh rate limits,

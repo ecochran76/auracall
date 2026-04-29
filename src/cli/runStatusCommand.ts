@@ -7,11 +7,44 @@ import {
   type AuraCallRunStatusStepSummary,
 } from '../runStatus.js';
 
+export interface RunStatusCliExpectation {
+  expectedStatus?: string | null;
+  expectedMinArtifacts?: number | null;
+  expectedMediaRunState?: string | null;
+}
+
 export async function readRunStatusForCli(id: string): Promise<AuraCallRunStatus | null> {
   return readAuraCallRunStatus(id, {
     responsesService: createExecutionResponsesService({ drainAfterCreate: false }),
     mediaGenerationService: createMediaGenerationService(),
   });
+}
+
+export function assertRunStatusForCli(
+  status: AuraCallRunStatus,
+  expectation: RunStatusCliExpectation = {},
+): void {
+  const expectedStatus = nonEmptyStringOrNull(expectation.expectedStatus);
+  if (expectedStatus && status.status !== expectedStatus) {
+    throw new Error(`Expected run ${status.id} status to be ${expectedStatus}, got ${status.status}.`);
+  }
+
+  const expectedMinArtifacts = normalizeMinArtifacts(expectation.expectedMinArtifacts);
+  if (expectedMinArtifacts !== null && status.artifactCount < expectedMinArtifacts) {
+    throw new Error(
+      `Expected run ${status.id} to have at least ${expectedMinArtifacts} artifacts, got ${status.artifactCount}.`,
+    );
+  }
+
+  const expectedMediaRunState = nonEmptyStringOrNull(expectation.expectedMediaRunState);
+  if (expectedMediaRunState) {
+    const actualMediaRunState = readMediaRunState(status);
+    if (actualMediaRunState !== expectedMediaRunState) {
+      throw new Error(
+        `Expected run ${status.id} media run state to be ${expectedMediaRunState}, got ${actualMediaRunState ?? 'unknown'}.`,
+      );
+    }
+  }
 }
 
 export function formatRunStatusCli(status: AuraCallRunStatus): string {
@@ -24,6 +57,11 @@ export function formatRunStatusCli(status: AuraCallRunStatus): string {
     `Artifacts: ${status.artifactCount}`,
   ];
 
+  const mediaDiagnostics = formatMediaDiagnostics(status);
+  if (mediaDiagnostics.length > 0) {
+    lines.push(...mediaDiagnostics);
+  }
+
   for (const artifact of status.artifacts) {
     lines.push(`- ${formatRunStatusArtifact(artifact)}`);
   }
@@ -34,6 +72,28 @@ export function formatRunStatusCli(status: AuraCallRunStatus): string {
   }
 
   return lines.join('\n');
+}
+
+function formatMediaDiagnostics(status: AuraCallRunStatus): string[] {
+  if (status.kind !== 'media_generation') return [];
+  const diagnostics = readMediaDiagnostics(status);
+  if (!diagnostics) return [];
+  const runState = isRecord(diagnostics.runState) ? diagnostics.runState : {};
+  const materialization = isRecord(diagnostics.materialization) ? diagnostics.materialization : {};
+  const provider = isRecord(diagnostics.provider) ? diagnostics.provider : {};
+  const lines = [
+    `Media run state: ${firstString(runState, ['runState']) ?? 'unknown'}`,
+    `Materialization: ${firstString(materialization, ['materialization']) ?? 'unknown'}`,
+  ];
+  const materializedPath = firstString(materialization, ['path']);
+  if (materializedPath) {
+    lines.push(`Materialized path: ${materializedPath}`);
+  }
+  const latestHref = firstString(provider, ['latestHref']);
+  if (latestHref) {
+    lines.push(`Provider href: ${latestHref}`);
+  }
+  return lines;
 }
 
 function formatRunStatusSteps(steps: AuraCallRunStatusStepSummary[], stepCount: number): string {
@@ -85,6 +145,29 @@ function firstString(record: Record<string, unknown>, keys: string[]): string | 
 
 function stringOrFallback(value: unknown, fallback: string): string {
   return typeof value === 'string' && value.trim().length > 0 ? value : fallback;
+}
+
+function readMediaRunState(status: AuraCallRunStatus): string | null {
+  const diagnostics = readMediaDiagnostics(status);
+  if (!diagnostics || !isRecord(diagnostics.runState)) return null;
+  return firstString(diagnostics.runState, ['runState']);
+}
+
+function readMediaDiagnostics(status: AuraCallRunStatus): Record<string, unknown> | null {
+  const diagnostics = status.metadata.mediaDiagnostics;
+  return isRecord(diagnostics) ? diagnostics : null;
+}
+
+function normalizeMinArtifacts(value: number | null | undefined): number | null {
+  if (value == null) return null;
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error('Expected minimum artifact count must be a non-negative number.');
+  }
+  return Math.trunc(value);
+}
+
+function nonEmptyStringOrNull(value: string | null | undefined): string | null {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

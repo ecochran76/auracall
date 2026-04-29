@@ -3,7 +3,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
-import { formatRunStatusCli, readRunStatusForCli } from '../src/cli/runStatusCommand.js';
+import {
+  assertRunStatusForCli,
+  formatRunStatusCli,
+  readRunStatusForCli,
+} from '../src/cli/runStatusCommand.js';
 import { createMediaGenerationService } from '../src/media/service.js';
 import { createExecutionRuntimeControl } from '../src/runtime/control.js';
 import { createExecutionResponsesService } from '../src/runtime/responsesService.js';
@@ -51,7 +55,8 @@ describe('run status CLI helpers', () => {
         model: 'gpt-5.2',
       },
     });
-    expect(formatRunStatusCli(status!)).toContain('Run resp_cli_status_1 (response) is completed');
+    if (!status) throw new Error('Expected response run status.');
+    expect(formatRunStatusCli(status)).toContain('Run resp_cli_status_1 (response) is completed');
   });
 
   it('falls through to media-generation run status through the CLI service wiring', async () => {
@@ -110,7 +115,70 @@ describe('run status CLI helpers', () => {
         },
       ],
     });
-    expect(formatRunStatusCli(status!)).toContain('Artifacts: 1');
+    if (!status) throw new Error('Expected media generation run status.');
+    const formatted = formatRunStatusCli(status);
+    expect(formatted).toContain('Artifacts: 1');
+    expect(formatted).toContain('Media run state: unknown');
+    expect(formatted).toContain('Materialization: unknown');
+  });
+
+  it('asserts persisted media run status without raw JSON inspection', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-cli-media-status-assert-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const service = createMediaGenerationService({
+      now: () => new Date('2026-04-23T12:10:00.000Z'),
+      generateId: () => 'medgen_cli_assert_1',
+      executor: async ({ artifactDir }) => ({
+        artifacts: [
+          {
+            id: 'artifact_cli_assert_1',
+            type: 'video',
+            fileName: 'asphalt-secret-agent.mp4',
+            path: path.join(artifactDir, 'asphalt-secret-agent.mp4'),
+            mimeType: 'video/mp4',
+            metadata: {
+              materialization: 'download-button',
+            },
+          },
+        ],
+      }),
+    });
+    await service.createGeneration({
+      provider: 'grok',
+      mediaType: 'video',
+      prompt: 'Generate a video of an asphalt secret agent',
+      transport: 'browser',
+    });
+
+    const status = await readRunStatusForCli('medgen_cli_assert_1');
+
+    if (!status) throw new Error('Expected media generation run status.');
+    expect(() => assertRunStatusForCli(status, {
+      expectedStatus: 'succeeded',
+      expectedMinArtifacts: 1,
+    })).not.toThrow();
+    expect(() => assertRunStatusForCli(status, {
+      expectedStatus: 'running',
+    })).toThrow('Expected run medgen_cli_assert_1 status to be running, got succeeded.');
+    expect(() => assertRunStatusForCli(status, {
+      expectedMinArtifacts: 2,
+    })).toThrow('Expected run medgen_cli_assert_1 to have at least 2 artifacts, got 1.');
+    expect(() => assertRunStatusForCli({
+      ...status,
+      metadata: {
+        mediaDiagnostics: {
+          runState: {
+            runState: 'terminal_video',
+          },
+        },
+      },
+    }, {
+      expectedMediaRunState: 'terminal_video',
+    })).not.toThrow();
+    expect(() => assertRunStatusForCli(status, {
+      expectedMediaRunState: 'terminal_video',
+    })).toThrow('Expected run medgen_cli_assert_1 media run state to be terminal_video, got unknown.');
   });
 
   it('reads ChatGPT Deep Research review evidence through generic CLI status wiring', async () => {
@@ -141,6 +209,7 @@ describe('run status CLI helpers', () => {
         },
       },
     });
-    expect(formatRunStatusCli(status!)).toContain(`Run ${fixture.runId} (response) is completed`);
+    if (!status) throw new Error('Expected Deep Research run status.');
+    expect(formatRunStatusCli(status)).toContain(`Run ${fixture.runId} (response) is completed`);
   });
 });

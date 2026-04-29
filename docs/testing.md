@@ -327,6 +327,9 @@
       `pnpm tsx bin/auracall.ts media generate --provider gemini --type image --transport api -p "Generate an image of an asphalt secret agent" --count 1 --json`
     - for async browser smokes, add `--no-wait` and poll with
       `pnpm tsx bin/auracall.ts run status <media_generation_id> --json`
+    - installed-runtime media smoke assertions can avoid raw JSON for common
+      terminal readback:
+      `auracall run status <media_generation_id> --expect-status succeeded --expect-min-artifacts 1 --expect-media-run-state terminal_image`
     - prefer this command for new media automation and routine operator
       smokes; the older Gemini-only `--generate-image <file>` flag is a
       compatibility shortcut for direct one-file browser image saves and does
@@ -496,6 +499,8 @@
       `?diagnostics=browser-state` switch for running browser-backed media jobs
     - CLI parity for the same durable status envelope:
       `pnpm tsx bin/auracall.ts run status <media_generation_id> --json`
+    - compact CLI assertions for that same envelope:
+      `pnpm tsx bin/auracall.ts run status <media_generation_id> --expect-status succeeded --expect-min-artifacts 1 --expect-media-run-state terminal_image`
     - inspect `timeline[]` for `running_persisted`, `executor_started`,
       optional `browser_operation_queued`, `browser_operation_acquired`,
       provider-specific progress, and terminal `completed|failed` evidence

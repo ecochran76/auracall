@@ -459,6 +459,11 @@ curl -s http://127.0.0.1:8080/v1/responses \
   -H 'Content-Type: application/json' \
   -d '{"model":"gpt-5.2","input":"Reply exactly with: local api smoke"}'
 
+auracall run status <media_generation_id> \
+  --expect-status succeeded \
+  --expect-min-artifacts 1 \
+  --expect-media-run-state terminal_image
+
 curl http://127.0.0.1:8080/v1/responses/<response_id>
 ```
 

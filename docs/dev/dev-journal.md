@@ -23599,3 +23599,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `Latest lazy mirror backpressure: routine-delayed - minimum-interval`
   - installed-runtime expectation smoke passed:
     `auracall api status --port 18102 --expect-account-mirror-backpressure routine-delayed`
+
+## 2026-04-29 - Run status CLI media assertions
+
+- Focus: avoid raw JSON inspection for the recurring media materialization
+  checks operators need after browser-backed runs.
+- Progress:
+  - `auracall run status <id>` now prints compact media run-state and
+    materialization diagnostics when the run is a media generation.
+  - added `--expect-status`, `--expect-min-artifacts`, and
+    `--expect-media-run-state` for installed-runtime smoke assertions.
+- Validation:
+  - `pnpm exec tsc --noEmit` passed
+  - focused run/media status Vitest suite passed
+  - targeted Biome lint passed
+  - `git diff --check`, `pnpm run plans:audit`, and `pnpm run docs:list`
+    passed
+  - installed-runtime temp-home smoke passed:
+    `auracall run status medgen_cli_installed_smoke_1 --expect-status succeeded --expect-min-artifacts 1`
