@@ -77,6 +77,14 @@ Lazy account mirroring should be opportunistic and conservative:
 - run on startup, idle windows, after successful provider work, and explicit
   operator/API/MCP refresh requests
 - acquire the browser operation dispatcher queue before touching CDP
+- apply a self-imposed politeness policy before queueing browser work:
+  - provider-specific minimum refresh intervals
+  - deterministic jitter so all mirrors do not wake at once
+  - shorter, still jittered explicit-refresh intervals for operator-requested
+    checks
+  - exponential failure backoff
+  - long cooldowns after provider hard stops such as CAPTCHA, `sorry`, account
+    challenge, rate limit, or sign-in required states
 - fail fast when expected identity is missing, mismatched, signed out, or
   blocked by human-verification
 - prefer metadata first:
@@ -93,6 +101,27 @@ Lazy account mirroring should be opportunistic and conservative:
 - never load immature conversation ids for validation; wait for provider-owned
   completion evidence first
 - serialize per managed browser profile and provider service
+- cap each mirror cycle with provider-specific page/read budgets; do not chase
+  infinite scroll or full-history completion in one pass
+
+Current implementation-facing politeness contract:
+
+- `src/accountMirror/politePolicy.ts` owns the first pure policy evaluator.
+- default routine intervals:
+  - ChatGPT: 6 hours plus up to 20 minutes jitter
+  - Gemini: 12 hours plus up to 45 minutes jitter
+  - Grok: 8 hours plus up to 30 minutes jitter
+- default explicit refresh intervals:
+  - ChatGPT: 10 minutes plus jitter
+  - Gemini: 30 minutes plus jitter
+  - Grok: 20 minutes plus jitter
+- hard-stop cooldowns:
+  - ChatGPT/Grok: 12 hours
+  - Gemini: 24 hours
+- default per-cycle budgets:
+  - ChatGPT: 12 page reads, 250 conversation rows, 80 artifact rows
+  - Gemini: 6 page reads, 120 conversation rows, 40 artifact rows
+  - Grok: 8 page reads, 160 conversation rows, 80 artifact rows
 
 ## Runtime Surfaces
 
@@ -136,6 +165,8 @@ Each status payload should include:
   agent name alone.
 - Tests cover config projection, mirror scheduling state, identity hard stops,
   and dispatcher queue evidence before live provider dogfood.
+- The first scheduling tests prove self-imposed jitter, minimum intervals,
+  provider hard-stop cooldowns, failure backoff, and page/read budgets.
 
 ## Non-Goals
 

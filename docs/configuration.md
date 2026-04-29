@@ -608,6 +608,15 @@ Within each file, later CLI flags still override config, and environment variabl
 - `runtimeProfiles.<name>.cache.includeProjectOnlyConversations` controls whether refresh also inserts project-only conversation IDs that were not present in the global history snapshot.
 - `runtimeProfiles.<name>.cache.cleanupDays` sets the default retention window for `auracall cache cleanup --days`.
 - Mirror-oriented cache defaults are usually `includeHistory: true`, `includeProjectOnlyConversations: true`, `historyLimit: 2000`, and `cleanupDays: 365`.
+- Lazy account mirroring must remain polite by default:
+  - routine mirror scans use provider-specific minimum intervals with
+    deterministic jitter
+  - explicit refreshes are still rate-limited and jittered
+  - provider hard stops such as CAPTCHA, `sorry`, account challenge, rate
+    limit, or sign-in required states impose long cooldowns instead of retry
+    storms
+  - each mirror pass has page/read budgets and should prefer metadata before
+    full content or binary artifact retrieval
 - `runtimeProfiles.<name>.cache.store` controls cache backend: `json` keeps legacy JSON files only, `sqlite` uses SQLite only (`cache.sqlite` per provider+identity), and `dual` reads/writes SQLite plus the JSON mirror (recommended migration mode).
 - `dev.browserPortRange` sets the fallback DevTools port range used when spawning new Chrome instances (profile/browser overrides still win).
 - `browser.*` legacy keys are still accepted and override profile defaults when present (CLI flags still win).

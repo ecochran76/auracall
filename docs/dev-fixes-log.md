@@ -5,6 +5,12 @@
   agents can describe purpose and routing, not redefine browser/account
   identity.
 
+- 2026-04-29: Bot-sensitive lazy mirroring needs a politeness policy before it
+  needs a background loop. Mirror schedulers should enforce provider-specific
+  minimum intervals, deterministic jitter, explicit-refresh rate limits,
+  exponential failure backoff, hard-stop cooldowns, and per-cycle read budgets
+  before any browser-service dispatcher enqueue.
+
 - 2026-04-27: ChatGPT post-submit media readback must not use the mature
   conversation payload reload fallback. Existing ChatGPT artifact extraction
   can reload a mature conversation to capture `/backend-api/conversation/...`

@@ -6,6 +6,10 @@
   browser operation dispatcher, documented the initial agent catalog, and
   updated configuration guidance so agent purpose fields are useful without
   implying new execution semantics.
+- Follow-up: added the first implementation-facing politeness policy in
+  `src/accountMirror/politePolicy.ts` with tests for jitter, explicit refresh
+  spacing, failure backoff, provider hard-stop cooldowns, identity hard stops,
+  and per-cycle read budgets.
 - Key boundary: default ChatGPT is the first mirror source because it has the
   richest account history, but account identity remains bound to the referenced
   AuraCall runtime profile and provider service identity.
