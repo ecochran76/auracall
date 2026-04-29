@@ -10,6 +10,10 @@
   `src/accountMirror/politePolicy.ts` with tests for jitter, explicit refresh
   spacing, failure backoff, provider hard-stop cooldowns, identity hard stops,
   and per-cycle read budgets.
+- Service readback: added `src/accountMirror/statusRegistry.ts`,
+  `/status.accountMirrorStatus`, `GET /v1/account-mirrors/status`, and MCP
+  `account_mirror_status` so operators can see eligible/delayed/blocked mirror
+  posture before any browser work is enqueued.
 - Key boundary: default ChatGPT is the first mirror source because it has the
   richest account history, but account identity remains bound to the referenced
   AuraCall runtime profile and provider service identity.

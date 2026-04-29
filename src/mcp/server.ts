@@ -13,6 +13,7 @@ import { registerMediaGenerationTool } from './tools/mediaGeneration.js';
 import { registerWorkbenchCapabilitiesTool } from './tools/workbenchCapabilities.js';
 import { registerRunStatusTool } from './tools/runStatus.js';
 import { registerRuntimeInspectTool } from './tools/runtimeInspect.js';
+import { registerAccountMirrorStatusTool } from './tools/accountMirrorStatus.js';
 import { resolveConfig } from '../schema/resolver.js';
 import type { ResolvedUserConfig } from '../config.js';
 import { createMediaGenerationService } from '../media/service.js';
@@ -23,11 +24,13 @@ import { createBrowserMediaGenerationExecutor } from '../media/browserExecutor.j
 import { createWorkbenchCapabilityService } from '../workbench/service.js';
 import { createBrowserWorkbenchCapabilityDiscovery } from '../workbench/browserDiscovery.js';
 import { createBrowserWorkbenchCapabilityDiagnostics } from '../workbench/browserDiagnostics.js';
+import { createAccountMirrorStatusRegistry } from '../accountMirror/statusRegistry.js';
 
 export interface McpServiceBundle {
   responsesService: ReturnType<typeof createExecutionResponsesService>;
   mediaGenerationService: ReturnType<typeof createMediaGenerationService>;
   workbenchCapabilityReporter: ReturnType<typeof createWorkbenchCapabilityService>;
+  accountMirrorStatusRegistry: ReturnType<typeof createAccountMirrorStatusRegistry>;
 }
 
 export interface CreateMcpServicesDeps {
@@ -68,6 +71,9 @@ export async function startMcpServer(): Promise<void> {
   });
   registerWorkbenchCapabilitiesTool(server, {
     reporter: services.workbenchCapabilityReporter,
+  });
+  registerAccountMirrorStatusTool(server, {
+    registry: services.accountMirrorStatusRegistry,
   });
   registerSessionsTool(server);
   registerSessionResources(server);
@@ -131,10 +137,14 @@ export function createMcpServicesFromConfig(
     ),
     executeStoredRunStep: async (_request, context) => configuredStoredStepExecutor(context),
   });
+  const accountMirrorStatusRegistry = createAccountMirrorStatusRegistry({
+    config: resolvedUserConfig as Record<string, unknown>,
+  });
   return {
     responsesService,
     mediaGenerationService,
     workbenchCapabilityReporter,
+    accountMirrorStatusRegistry,
   };
 }
 

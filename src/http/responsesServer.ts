@@ -88,6 +88,12 @@ import { createBrowserWorkbenchCapabilityDiscovery } from '../workbench/browserD
 import { createBrowserWorkbenchCapabilityDiagnostics } from '../workbench/browserDiagnostics.js';
 import { readAuraCallRunStatus } from '../runStatus.js';
 import type { AuraCallRunStatus } from '../runStatus.js';
+import {
+  createAccountMirrorStatusRegistry,
+  type AccountMirrorStatusRegistry,
+  type AccountMirrorStatusSummary,
+} from '../accountMirror/statusRegistry.js';
+import type { AccountMirrorProvider } from '../accountMirror/politePolicy.js';
 
 export interface ResponsesHttpServerOptions {
   host?: string;
@@ -119,6 +125,7 @@ export interface ResponsesHttpServerDeps {
     input: ProbeRuntimeRunBrowserDiagnosticsInput,
   ) => Promise<RuntimeRunInspectionBrowserDiagnosticsProbeResult | null>;
   probeMediaGenerationBrowserDiagnostics?: typeof probeMediaGenerationBrowserDiagnostics;
+  accountMirrorStatusRegistry?: AccountMirrorStatusRegistry;
 }
 
 export interface ResponsesHttpServerInstance {
@@ -210,6 +217,7 @@ interface HttpStatusResponse {
     mediaGenerationsGetTemplate: string;
     mediaGenerationsStatusTemplate: string;
     runStatusTemplate: string;
+    accountMirrorStatus: string;
     workbenchCapabilitiesList: string;
   };
   compatibility: {
@@ -239,6 +247,7 @@ interface HttpStatusResponse {
     lastStartedAt: string | null;
     lastCompletedAt: string | null;
   };
+  accountMirrorStatus: AccountMirrorStatusSummary;
   executionHints: {
     headerNames: string[];
     bodyObject: 'auracall';
@@ -266,6 +275,10 @@ export async function createResponsesHttpServer(
   const backgroundDrainIntervalMs = Math.max(0, options.backgroundDrainIntervalMs ?? 0);
   const configuredRuntimeConfig = deps.config;
   const resolvedUserConfig = asResolvedUserConfig(configuredRuntimeConfig);
+  const accountMirrorStatusRegistry = deps.accountMirrorStatusRegistry ?? createAccountMirrorStatusRegistry({
+    config: configuredRuntimeConfig,
+    now,
+  });
   const workbenchCapabilityService = createWorkbenchCapabilityService({
     now,
     catalog: deps.workbenchCapabilityCatalog,
@@ -406,8 +419,15 @@ export async function createResponsesHttpServer(
           runnerTopology,
           runner: runnerState,
           backgroundDrain: backgroundDrainState,
+          accountMirrorStatus: accountMirrorStatusRegistry.readStatus(),
         });
         sendJson(res, 200, statusResponse);
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/account-mirrors/status') {
+        const query = parseAccountMirrorStatusQuery(url.searchParams);
+        sendJson(res, 200, accountMirrorStatusRegistry.readStatus(query));
         return;
       }
 
@@ -556,6 +576,7 @@ export async function createResponsesHttpServer(
           runnerTopology: await host.summarizeRunnerTopology(),
           runner: runnerState,
           backgroundDrain: backgroundDrainState,
+          accountMirrorStatus: accountMirrorStatusRegistry.readStatus(),
           controlResult,
         });
         sendJson(res, 200, statusResponse);
@@ -1206,6 +1227,7 @@ function createHttpStatusResponse(input: {
   runnerTopology: ExecutionServiceHostRunnerTopologySummary;
   runner: HttpStatusResponse['runner'];
   backgroundDrain: HttpStatusResponse['backgroundDrain'];
+  accountMirrorStatus: AccountMirrorStatusSummary;
   controlResult?: HttpStatusResponse['controlResult'];
 }): HttpStatusResponse {
   return {
@@ -1234,6 +1256,7 @@ function createHttpStatusResponse(input: {
       mediaGenerationsGetTemplate: '/v1/media-generations/{media_generation_id}',
       mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
       runStatusTemplate: '/v1/runs/{run_id}/status[?diagnostics=browser-state]',
+      accountMirrorStatus: '/v1/account-mirrors/status[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&explicitRefresh=true]',
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
     },
@@ -1248,6 +1271,7 @@ function createHttpStatusResponse(input: {
     runnerTopology: input.runnerTopology,
     runner: input.runner,
     backgroundDrain: input.backgroundDrain,
+    accountMirrorStatus: input.accountMirrorStatus,
     executionHints: {
       headerNames: [
         'X-AuraCall-Runtime-Profile',
@@ -1514,6 +1538,12 @@ interface ParsedRunStatusQuery {
   diagnostics?: 'browser-state';
 }
 
+interface ParsedAccountMirrorStatusQuery {
+  provider?: AccountMirrorProvider;
+  runtimeProfileId?: string;
+  explicitRefresh?: boolean;
+}
+
 interface ParsedMediaGenerationCreateQuery {
   wait?: boolean;
 }
@@ -1643,6 +1673,32 @@ function parseRunStatusQuery(searchParams: URLSearchParams): ParsedRunStatusQuer
   return z.object({
     diagnostics: z.enum(['browser-state']).optional(),
   }).parse(raw);
+}
+
+function parseAccountMirrorStatusQuery(searchParams: URLSearchParams): ParsedAccountMirrorStatusQuery {
+  const raw: Record<string, unknown> = {};
+  if (searchParams.has('provider')) {
+    raw.provider = searchParams.get('provider');
+  }
+  if (searchParams.has('runtimeProfile')) {
+    raw.runtimeProfile = searchParams.get('runtimeProfile');
+  }
+  if (searchParams.has('explicitRefresh')) {
+    raw.explicitRefresh = searchParams.get('explicitRefresh');
+  }
+  const parsed = z.object({
+    provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
+    runtimeProfile: z.string().trim().min(1).optional(),
+    explicitRefresh: z
+      .enum(['0', '1', 'true', 'false'])
+      .transform((value) => value === '1' || value.toLowerCase() === 'true')
+      .optional(),
+  }).parse(raw);
+  return {
+    provider: parsed.provider,
+    runtimeProfileId: parsed.runtimeProfile,
+    explicitRefresh: parsed.explicitRefresh,
+  };
 }
 
 function parseMediaGenerationCreateQuery(searchParams: URLSearchParams): ParsedMediaGenerationCreateQuery {

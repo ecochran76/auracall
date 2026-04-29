@@ -116,6 +116,30 @@
       - `runnerTopology.runners[].selectedAsLocalExecutionOwner`
       - topology readback must not select claims, acquire leases, execute
         steps, or reassign work to another runner
+    - current expected status also includes read-only account mirror posture:
+      - `accountMirrorStatus.object = account_mirror_status`
+      - `accountMirrorStatus.metrics.total`
+      - `accountMirrorStatus.metrics.eligible`
+      - `accountMirrorStatus.metrics.delayed`
+      - `accountMirrorStatus.metrics.blocked`
+      - `accountMirrorStatus.entries[].provider`
+      - `accountMirrorStatus.entries[].runtimeProfileId`
+      - `accountMirrorStatus.entries[].browserProfileId`
+      - `accountMirrorStatus.entries[].expectedIdentityKey`
+      - `accountMirrorStatus.entries[].accountLevel`
+      - `accountMirrorStatus.entries[].status = eligible|delayed|blocked`
+      - this readback must not enqueue browser work or scrape provider pages
+    - dedicated mirror posture route:
+      - `GET /v1/account-mirrors/status`
+      - `GET /v1/account-mirrors/status?provider=chatgpt&runtimeProfile=default`
+      - `GET /v1/account-mirrors/status?provider=chatgpt&runtimeProfile=default&explicitRefresh=true`
+      - `explicitRefresh=true` evaluates the shorter polite interval but still
+        remains read-only in this slice
+    - MCP parity:
+      - `account_mirror_status`
+      - optional inputs: `provider`, `runtimeProfile`, `explicitRefresh`
+      - same read-only posture: no browser launch, CDP operation, or provider
+        scrape
     - plain `/status` also includes a compact direct-run local claim snapshot:
       - `localClaimSummary.sourceKind = direct`
       - `localClaimSummary.runnerId`

@@ -107,6 +107,12 @@ Lazy account mirroring should be opportunistic and conservative:
 Current implementation-facing politeness contract:
 
 - `src/accountMirror/politePolicy.ts` owns the first pure policy evaluator.
+- `src/accountMirror/statusRegistry.ts` owns the first read-only status
+  registry over configured runtime-profile service identities.
+- `/status.accountMirrorStatus`, `GET /v1/account-mirrors/status`, and MCP
+  `account_mirror_status` expose whether each configured service/profile
+  mirror is currently `eligible`, `delayed`, or `blocked` before any browser
+  work is enqueued.
 - default routine intervals:
   - ChatGPT: 6 hours plus up to 20 minutes jitter
   - Gemini: 12 hours plus up to 45 minutes jitter
@@ -157,6 +163,7 @@ Each status payload should include:
   contract.
 - Lazy mirroring has a service-mode plan that keeps browser/CDP access behind
   the browser operation dispatcher.
+- Read-only mirror-status reporting exists before any background mirror loop.
 - The first implementation slice targets default ChatGPT metadata-first
   mirroring only.
 - API and MCP mirror-status readback exist before any long-running background
@@ -178,7 +185,9 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Implement a read-only service-mode mirror-status registry and explicit refresh
-request path for the default ChatGPT runtime profile. The first pass should
-record identity, account level, project/conversation metadata counts, freshness,
-and dispatcher queue evidence without scraping full conversation bodies.
+Next wire explicit refresh requests into the same registry without running a
+background loop. The refresh request path should transition one eligible
+default ChatGPT mirror entry into queued/running status under the browser
+operation dispatcher, then record identity, account level, project/conversation
+metadata counts, freshness, and dispatcher queue evidence without scraping full
+conversation bodies.

@@ -59,6 +59,10 @@ describe('mcp server service wiring', () => {
       responsesService,
       mediaGenerationService,
       workbenchCapabilityReporter: workbenchReporter,
+      accountMirrorStatusRegistry: expect.objectContaining({
+        readStatus: expect.any(Function),
+        updateState: expect.any(Function),
+      }),
     });
   });
 });

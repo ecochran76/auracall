@@ -10,6 +10,7 @@ import {
   createResponsesHttpServer,
   serveResponsesHttp,
 } from '../src/http/responsesServer.js';
+import type { AccountMirrorStatusSummary } from '../src/accountMirror/statusRegistry.js';
 import { resetLiveRuntimeRunServiceStateRegistryForTests } from '../src/runtime/liveServiceStateRegistry.js';
 import { createExecutionRuntimeControl } from '../src/runtime/control.js';
 import { writeTaskRunSpecStoredRecord } from '../src/teams/store.js';
@@ -1220,6 +1221,18 @@ describe('http responses adapter', () => {
           runtimeRunInspection:
             '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}][&probe=service-state][&diagnostics=browser-state][&authority=scheduler]',
           responsesGetTemplate: '/v1/responses/{response_id}',
+          accountMirrorStatus:
+            '/v1/account-mirrors/status[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&explicitRefresh=true]',
+        },
+        accountMirrorStatus: {
+          object: 'account_mirror_status',
+          metrics: {
+            total: 0,
+            eligible: 0,
+            delayed: 0,
+            blocked: 0,
+          },
+          entries: [],
         },
         executionHints: {
           bodyObject: 'auracall',
@@ -1231,6 +1244,103 @@ describe('http responses adapter', () => {
         'X-AuraCall-Team',
         'X-AuraCall-Service',
       ]);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('reports read-only account mirror status from configured runtime profile identities', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-account-mirror-status-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        now: () => new Date('2026-04-29T12:00:00.000Z'),
+        config: {
+          model: 'gpt-5.2',
+          browser: {},
+          runtimeProfiles: {
+            default: {
+              browserProfile: 'default',
+              defaultService: 'chatgpt',
+              services: {
+                chatgpt: {
+                  identity: {
+                    email: 'ecochran76@gmail.com',
+                    accountLevel: 'Business',
+                  },
+                },
+              },
+            },
+            unbound: {
+              browserProfile: 'default',
+              defaultService: 'grok',
+              services: {
+                grok: {},
+              },
+            },
+          },
+        },
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/account-mirrors/status`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as AccountMirrorStatusSummary;
+      expect(payload).toMatchObject({
+        object: 'account_mirror_status',
+        generatedAt: '2026-04-29T12:00:00.000Z',
+        metrics: {
+          total: 2,
+          eligible: 1,
+          blocked: 1,
+        },
+      });
+      expect(payload.entries).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            provider: 'chatgpt',
+            runtimeProfileId: 'default',
+            browserProfileId: 'default',
+            expectedIdentityKey: 'ecochran76@gmail.com',
+            accountLevel: 'Business',
+            status: 'eligible',
+            reason: 'eligible',
+          }),
+          expect.objectContaining({
+            provider: 'grok',
+            runtimeProfileId: 'unbound',
+            status: 'blocked',
+            reason: 'expected-identity-missing',
+          }),
+        ]),
+      );
+
+      const filteredResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/account-mirrors/status?provider=chatgpt&runtimeProfile=default&explicitRefresh=true`,
+      );
+      expect(filteredResponse.status).toBe(200);
+      const filtered = (await filteredResponse.json()) as AccountMirrorStatusSummary;
+      expect(filtered.metrics.total).toBe(1);
+      expect(filtered.entries[0]).toMatchObject({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        status: 'eligible',
+      });
+
+      const statusResponse = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(statusResponse.status).toBe(200);
+      const statusPayload = (await statusResponse.json()) as {
+        accountMirrorStatus: AccountMirrorStatusSummary;
+      };
+      expect(statusPayload.accountMirrorStatus.metrics).toMatchObject({
+        total: 2,
+        eligible: 1,
+        blocked: 1,
+      });
     } finally {
       await server.close();
     }

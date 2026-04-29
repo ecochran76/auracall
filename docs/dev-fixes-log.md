@@ -11,6 +11,12 @@
   exponential failure backoff, hard-stop cooldowns, and per-cycle read budgets
   before any browser-service dispatcher enqueue.
 
+- 2026-04-29: Account mirror status should be observable before it is active.
+  `/status.accountMirrorStatus`, `GET /v1/account-mirrors/status`, and MCP
+  `account_mirror_status` now expose identity-bound `eligible|delayed|blocked`
+  posture from config and local mirror state without launching browsers,
+  touching CDP, or scraping provider pages.
+
 - 2026-04-27: ChatGPT post-submit media readback must not use the mature
   conversation payload reload fallback. Existing ChatGPT artifact extraction
   can reload a mature conversation to capture `/backend-api/conversation/...`
