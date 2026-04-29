@@ -50,6 +50,16 @@
   refresh path while avoiding repeated provider navigation and leaves routine
   minimum intervals to block accidental immediate re-runs.
 
+- 2026-04-29: Account mirror uploads need first-class file manifests, not
+  artifact overloading. Keep generated artifacts, user/provider files, and
+  media as separate catalog lanes so operators can answer completeness
+  questions without implying that metadata indexes are full archived content.
+
+- 2026-04-29: Attachment inventory needs a page/detail-read budget separate
+  from row-count budgets. A high row budget must not imply loading every
+  cached conversation page; sample a small number of project/conversation
+  detail surfaces, mark the manifest truncated, and let later cycles continue.
+
 - 2026-04-29: Bot-sensitive lazy mirroring needs a politeness policy before it
   needs a background loop. Mirror schedulers should enforce provider-specific
   minimum intervals, deterministic jitter, explicit-refresh rate limits,

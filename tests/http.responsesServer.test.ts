@@ -1255,7 +1255,7 @@ describe('http responses adapter', () => {
           accountMirrorStatus:
             '/v1/account-mirrors/status[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&explicitRefresh=true]',
           accountMirrorCatalog:
-            '/v1/account-mirrors/catalog[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&kind=projects|conversations|artifacts|media|all][&limit=50]',
+            '/v1/account-mirrors/catalog[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&kind=projects|conversations|artifacts|files|media|all][&limit=50]',
           accountMirrorRefresh: '/v1/account-mirrors/refresh',
         },
         accountMirrorStatus: {
@@ -1406,6 +1406,7 @@ describe('http responses adapter', () => {
           projects: 0,
           conversations: 0,
           artifacts: 0,
+          files: 0,
           media: 0,
         },
       });
@@ -1443,12 +1444,14 @@ describe('http responses adapter', () => {
               { id: 'conv_2', title: 'Conversation 2', provider: 'chatgpt' },
             ],
             artifacts: [],
+            files: [],
             media: [],
           },
           counts: {
             projects: 0,
             conversations: 2,
             artifacts: 0,
+            files: 0,
             media: 0,
           },
         },
@@ -1458,6 +1461,7 @@ describe('http responses adapter', () => {
         projects: 0,
         conversations: 2,
         artifacts: 0,
+        files: 0,
         media: 0,
       },
     };

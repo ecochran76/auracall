@@ -3,6 +3,7 @@ import { BrowserAutomationClient } from '../browser/client.js';
 import type {
   Conversation,
   ConversationArtifact,
+  FileRef,
   Project,
 } from '../browser/providers/domain.js';
 import type { AccountMirrorMediaManifestEntry } from '../browser/llmService/cache/store.js';
@@ -29,6 +30,7 @@ export interface AccountMirrorMetadataCollectorResult {
     projects: Project[];
     conversations: Conversation[];
     artifacts: ConversationArtifact[];
+    files: FileRef[];
     media: AccountMirrorMediaManifestEntry[];
   };
   evidence: {
@@ -90,19 +92,28 @@ export function createChatgptAccountMirrorMetadataCollector(
         if (result.truncated) break;
       }
       const conversations = [...rootConversations.items, ...projectConversations];
+      const inventory = await readBoundedAttachmentInventory(
+        client,
+        projects.items,
+        conversations,
+        input.limits.maxArtifactRowsPerCycle,
+        input.limits.maxPageReadsPerCycle,
+      );
       return {
         detectedIdentityKey,
         detectedAccountLevel: readAccountLevel(identity),
         metadataCounts: {
           projects: projects.items.length,
           conversations: conversations.length,
-          artifacts: 0,
+          artifacts: inventory.artifacts.length,
+          files: inventory.files.length,
           media: 0,
         },
         manifests: {
           projects: projects.items,
           conversations,
-          artifacts: [],
+          artifacts: inventory.artifacts,
+          files: inventory.files,
           media: [],
         },
         evidence: {
@@ -115,7 +126,7 @@ export function createChatgptAccountMirrorMetadataCollector(
               rootConversations.truncated ||
               projectConversations.length >= conversationBudget ||
               remainingConversationBudget <= 0,
-            artifacts: false,
+            artifacts: inventory.truncated,
           },
         },
       };
@@ -153,6 +164,152 @@ async function readBoundedConversations(
     items: conversations.slice(0, limit),
     truncated: conversations.length > limit,
   };
+}
+
+export async function readBoundedAttachmentInventory(
+  client: Pick<BrowserAutomationClient, 'listProjectFiles' | 'listConversationFiles' | 'getConversationContext'>,
+  projects: readonly Project[],
+  conversations: readonly Conversation[],
+  maxRows: number,
+  maxDetailReads: number = 6,
+): Promise<{ artifacts: ConversationArtifact[]; files: FileRef[]; truncated: boolean }> {
+  const limit = Math.max(0, Math.floor(maxRows));
+  const detailReadLimit = Math.max(1, Math.min(6, Math.floor(maxDetailReads)));
+  if (limit <= 0) {
+    return { artifacts: [], files: [], truncated: projects.length > 0 || conversations.length > 0 };
+  }
+  const artifacts = new Map<string, ConversationArtifact>();
+  const files = new Map<string, FileRef>();
+  let remaining = limit;
+  let remainingDetailReads = detailReadLimit;
+  let truncated = false;
+
+  for (const project of projects) {
+    if (remaining <= 0 || remainingDetailReads <= 0) {
+      truncated = true;
+      break;
+    }
+    remainingDetailReads -= 1;
+    const projectFiles = await safeReadProjectFiles(client, project.id);
+    for (const file of projectFiles) {
+      if (remaining <= 0) {
+        truncated = true;
+        break;
+      }
+      addFile(files, file, { projectId: project.id, source: 'project' });
+      remaining -= 1;
+    }
+  }
+
+  for (const conversation of conversations) {
+    if (remaining <= 0 || remainingDetailReads <= 0) {
+      truncated = true;
+      break;
+    }
+    remainingDetailReads -= 1;
+    const [conversationFiles, context] = await Promise.all([
+      safeReadConversationFiles(client, conversation),
+      safeReadConversationContext(client, conversation),
+    ]);
+    for (const file of conversationFiles) {
+      if (remaining <= 0) {
+        truncated = true;
+        break;
+      }
+      addFile(files, file, { conversationId: conversation.id, projectId: conversation.projectId, source: 'conversation' });
+      remaining -= 1;
+    }
+    for (const artifact of context?.artifacts ?? []) {
+      if (remaining <= 0) {
+        truncated = true;
+        break;
+      }
+      addArtifact(artifacts, artifact, conversation);
+      remaining -= 1;
+    }
+  }
+
+  if (projects.length + conversations.length > detailReadLimit) {
+    truncated = true;
+  }
+
+  return {
+    artifacts: [...artifacts.values()],
+    files: [...files.values()],
+    truncated,
+  };
+}
+
+async function safeReadProjectFiles(
+  client: Pick<BrowserAutomationClient, 'listProjectFiles'>,
+  projectId: string,
+): Promise<FileRef[]> {
+  try {
+    return await client.listProjectFiles(projectId);
+  } catch {
+    return [];
+  }
+}
+
+async function safeReadConversationFiles(
+  client: Pick<BrowserAutomationClient, 'listConversationFiles'>,
+  conversation: Conversation,
+): Promise<FileRef[]> {
+  try {
+    return await client.listConversationFiles(conversation.id, {
+      projectId: conversation.projectId,
+    });
+  } catch {
+    return [];
+  }
+}
+
+async function safeReadConversationContext(
+  client: Pick<BrowserAutomationClient, 'getConversationContext'>,
+  conversation: Conversation,
+): Promise<{ artifacts?: ConversationArtifact[] } | null> {
+  try {
+    return await client.getConversationContext(conversation.id, {
+      projectId: conversation.projectId,
+      refresh: true,
+    });
+  } catch {
+    return null;
+  }
+}
+
+function addFile(
+  files: Map<string, FileRef>,
+  file: FileRef,
+  defaults: { source: FileRef['source']; projectId?: string; conversationId?: string },
+): void {
+  const id = `${file.provider}:${file.source ?? defaults.source}:${file.id}`;
+  files.set(id, {
+    ...file,
+    provider: file.provider ?? 'chatgpt',
+    source: file.source ?? defaults.source,
+    metadata: {
+      ...(file.metadata ?? {}),
+      projectId: file.metadata?.projectId ?? defaults.projectId,
+      conversationId: file.metadata?.conversationId ?? defaults.conversationId,
+    },
+  });
+}
+
+function addArtifact(
+  artifacts: Map<string, ConversationArtifact>,
+  artifact: ConversationArtifact,
+  conversation: Conversation,
+): void {
+  const id = `${conversation.id}:${artifact.id}`;
+  artifacts.set(id, {
+    ...artifact,
+    metadata: {
+      ...(artifact.metadata ?? {}),
+      conversationId: artifact.metadata?.conversationId ?? conversation.id,
+      projectId: artifact.metadata?.projectId ?? conversation.projectId,
+    },
+  });
 }
 
 function readIdentityKey(identity: ProviderUserIdentity | null): string | null {

@@ -128,6 +128,26 @@ export class BrowserAutomationClient {
     return this.provider.readActiveConversationArtifacts(conversationId, listOptions);
   }
 
+  async listProjectFiles(
+    projectId: string,
+    options?: BrowserProviderListOptions,
+  ): Promise<FileRef[]> {
+    return this.llmService.listProjectFiles(projectId, { listOptions: options });
+  }
+
+  async listAccountFiles(
+    options?: BrowserProviderListOptions,
+  ): Promise<FileRef[]> {
+    return this.llmService.listAccountFiles({ listOptions: options });
+  }
+
+  async listConversationFiles(
+    conversationId: string,
+    options?: { projectId?: string; listOptions?: BrowserProviderListOptions },
+  ): Promise<FileRef[]> {
+    return this.llmService.listConversationFiles(conversationId, options);
+  }
+
   async materializeConversationArtifact(
     conversationId: string,
     artifact: ConversationArtifact,

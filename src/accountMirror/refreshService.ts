@@ -332,6 +332,11 @@ function createConfigBackedAccountMirrorMetadataCollector(
             runtimeProfileId: input.runtimeProfileId,
             key: 'artifacts',
           }),
+          files: readConfiguredArray(config, {
+            provider: input.provider,
+            runtimeProfileId: input.runtimeProfileId,
+            key: 'files',
+          }),
           media: readConfiguredArray(config, {
             provider: input.provider,
             runtimeProfileId: input.runtimeProfileId,
@@ -358,7 +363,7 @@ function readConfiguredArray<T = never>(
   input: {
     provider: AccountMirrorProvider;
     runtimeProfileId: string;
-    key: 'projects' | 'conversations' | 'artifacts' | 'media';
+    key: 'projects' | 'conversations' | 'artifacts' | 'files' | 'media';
   },
 ): T[] {
   const service = readServiceConfig(config, input);
@@ -423,7 +428,8 @@ function estimateMetadataCountsFromConfig(
   return {
     projects: countArrayLike(service.projects) + countOptionalString(service.projectId),
     conversations: countArrayLike(service.conversations) + countOptionalString(service.conversationId),
-    artifacts: countArrayLike(service.artifacts) + countArrayLike(service.files),
+    artifacts: countArrayLike(service.artifacts),
+    files: countArrayLike(service.files),
     media: countArrayLike(service.media) + countArrayLike(service.saved),
   };
 }

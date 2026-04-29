@@ -138,12 +138,13 @@ Current implementation-facing politeness contract:
   browser work.
 - Successful default-ChatGPT refreshes now persist the bounded project and
   conversation manifests into the existing identity-scoped provider cache
-  datasets, plus lightweight `account-mirror-artifacts` and
-  `account-mirror-media` manifest datasets. These are index rows only; full
-  content and binary artifacts remain lazy.
+  datasets, plus lightweight `account-mirror-artifacts`,
+  `account-mirror-files`, and `account-mirror-media` manifest datasets. These
+  are index rows only; full content, user uploads, and binary artifacts remain
+  lazy.
 - `src/accountMirror/catalogService.ts` owns the read-only catalog service over
   cached mirror manifests. `GET /v1/account-mirrors/catalog` and MCP
-  `account_mirror_catalog` expose project/conversation/artifact/media index
+  `account_mirror_catalog` expose project/conversation/artifact/file/media index
   rows for operators and agents without acquiring the browser dispatcher,
   launching browsers, scraping providers, submitting prompts, or loading
   conversation ids.
@@ -180,6 +181,18 @@ Current implementation-facing politeness contract:
   dispatcher operation `e3fd9664-5b67-4fa7-9d5f-43c409890b62`, cached five
   projects and 64 conversations, and then delayed the target on the routine
   minimum interval.
+- The attachment inventory slice added explicit file manifests to the mirror
+  cache/catalog contract and samples ChatGPT project files, conversation files,
+  and conversation artifact manifests within the existing per-cycle artifact
+  row budget. Account-level ChatGPT uploads remain a provider-surface gap until
+  ChatGPT exposes or AuraCall implements an account-file listing path.
+- Live default-ChatGPT attachment dogfood validated the narrowed collector:
+  `acctmirror_25a269dd-b31d-4115-935e-b16c9f89cd38` completed in about 65
+  seconds, recorded dispatcher operation
+  `b1af2e83-5975-43b5-accd-e5e786576feb`, and cached five projects, 69
+  conversations, three artifact manifests, 24 file manifests, and zero media.
+  The artifact/file inventory is intentionally marked truncated when the
+  detail-read budget is exhausted.
 - default routine intervals:
   - ChatGPT: 6 hours plus up to 20 minutes jitter
   - Gemini: 12 hours plus up to 45 minutes jitter
@@ -245,11 +258,11 @@ Each status payload should include:
   the cache store after process restart without keeping all mirror state in
   memory.
 - Bounded mirror manifests are persisted separately from the status snapshot:
-  projects, conversations, artifacts, and media indexes can be read from the
+  projects, conversations, artifacts, files, and media indexes can be read from the
   identity-scoped provider cache without submitting prompts or materializing
   full content.
 - API and MCP manifest catalog readback can list cached
-  project/conversation/artifact/media rows by provider, AuraCall runtime
+  project/conversation/artifact/file/media rows by provider, AuraCall runtime
   profile, kind, and limit without requiring callers to know cache file paths.
 - A disabled-by-default lazy scheduler can run dry-run eligibility passes from
   `api serve`, expose its last pass in `/status`, and avoid browser dispatcher
@@ -275,6 +288,6 @@ Each status payload should include:
 ## Next Implementation Slice
 
 Add an explicit compact scheduler-history readback endpoint if `/status`
-remains too large for operator workflows; otherwise extend the same
-metadata-first collector pattern to one non-ChatGPT provider behind the same
-identity gate, dispatcher queue, and politeness budgets.
+remains too large for operator workflows; otherwise add resumable attachment
+inventory cursors so later mirror cycles continue beyond the first small
+detail-read sample.

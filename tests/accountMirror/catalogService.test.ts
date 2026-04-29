@@ -58,6 +58,7 @@ describe('account mirror catalog service', () => {
           projects: 2,
           conversations: 2,
           artifacts: 1,
+          files: 1,
           media: 1,
         },
         metadataEvidence: {
@@ -81,6 +82,14 @@ describe('account mirror catalog service', () => {
           ],
           artifacts: [
             { id: 'artifact_1', title: 'Artifact 1', kind: 'document' },
+          ],
+          files: [
+            {
+              id: 'file_1',
+              name: 'Upload.pdf',
+              provider: 'chatgpt',
+              source: 'conversation',
+            },
           ],
           media: [
             { id: 'media_1', title: 'Image 1', mediaType: 'image', provider: 'chatgpt' },
@@ -109,6 +118,7 @@ describe('account mirror catalog service', () => {
           projects: 2,
           conversations: 2,
           artifacts: 1,
+          files: 1,
           media: 1,
         },
         entries: [
@@ -121,6 +131,7 @@ describe('account mirror catalog service', () => {
               projects: 2,
               conversations: 2,
               artifacts: 1,
+              files: 1,
               media: 1,
             },
           },
@@ -129,6 +140,9 @@ describe('account mirror catalog service', () => {
       expect(catalog.entries[0]?.manifests.projects).toEqual([
         { id: 'project_1', name: 'Project 1', provider: 'chatgpt' },
         { id: 'project_2', name: 'Project 2', provider: 'chatgpt' },
+      ]);
+      expect(catalog.entries[0]?.manifests.files).toEqual([
+        { id: 'file_1', name: 'Upload.pdf', provider: 'chatgpt', source: 'conversation' },
       ]);
 
       const projectsOnly = await service.readCatalog({
@@ -142,12 +156,14 @@ describe('account mirror catalog service', () => {
         projects: 1,
         conversations: 0,
         artifacts: 0,
+        files: 0,
         media: 0,
       });
       expect(projectsOnly.entries[0]?.manifests).toMatchObject({
         projects: [{ id: 'project_1' }],
         conversations: [],
         artifacts: [],
+        files: [],
         media: [],
       });
     } finally {

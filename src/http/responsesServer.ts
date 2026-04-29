@@ -1516,7 +1516,7 @@ function createHttpStatusResponse(input: {
       mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
       runStatusTemplate: '/v1/runs/{run_id}/status[?diagnostics=browser-state]',
       accountMirrorStatus: '/v1/account-mirrors/status[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&explicitRefresh=true]',
-      accountMirrorCatalog: '/v1/account-mirrors/catalog[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&kind=projects|conversations|artifacts|media|all][&limit=50]',
+      accountMirrorCatalog: '/v1/account-mirrors/catalog[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&kind=projects|conversations|artifacts|files|media|all][&limit=50]',
       accountMirrorRefresh: '/v1/account-mirrors/refresh',
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
@@ -2006,7 +2006,7 @@ function parseAccountMirrorCatalogQuery(searchParams: URLSearchParams): ParsedAc
   const parsed = z.object({
     provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
     runtimeProfile: z.string().trim().min(1).optional(),
-    kind: z.enum(['all', 'projects', 'conversations', 'artifacts', 'media']).optional(),
+    kind: z.enum(['all', 'projects', 'conversations', 'artifacts', 'files', 'media']).optional(),
     limit: z.coerce.number().int().nonnegative().optional(),
   }).parse(raw);
   return {

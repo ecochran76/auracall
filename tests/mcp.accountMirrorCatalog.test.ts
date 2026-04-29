@@ -21,12 +21,14 @@ describe('mcp account_mirror_catalog tool', () => {
             projects: [{ id: 'project_1', name: 'Project 1', provider: 'chatgpt' }],
             conversations: [],
             artifacts: [],
+            files: [],
             media: [],
           },
           counts: {
             projects: 1,
             conversations: 0,
             artifacts: 0,
+            files: 0,
             media: 0,
           },
         },
@@ -36,6 +38,7 @@ describe('mcp account_mirror_catalog tool', () => {
         projects: 1,
         conversations: 0,
         artifacts: 0,
+        files: 0,
         media: 0,
       },
     };

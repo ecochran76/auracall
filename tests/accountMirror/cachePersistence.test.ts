@@ -23,6 +23,7 @@ const baseRecord = {
     projects: 2,
     conversations: 5,
     artifacts: 1,
+    files: 1,
     media: 0,
   },
   metadataEvidence: {
@@ -56,6 +57,17 @@ const baseRecord = {
         id: 'artifact_1',
         title: 'Generated report',
         kind: 'document' as const,
+      },
+    ],
+    files: [
+      {
+        id: 'file_1',
+        name: 'Project source.pdf',
+        provider: 'chatgpt' as const,
+        source: 'project' as const,
+        metadata: {
+          projectId: 'project_1',
+        },
       },
     ],
     media: [
@@ -112,6 +124,7 @@ describe('account mirror cache persistence', () => {
           projects: 2,
           conversations: 5,
           artifacts: 1,
+          files: 1,
           media: 0,
         },
       });
@@ -129,6 +142,7 @@ describe('account mirror cache persistence', () => {
           projects: 2,
           conversations: 5,
           artifacts: 1,
+          files: 1,
           media: 0,
         },
       });
@@ -142,6 +156,9 @@ describe('account mirror cache persistence', () => {
       });
       await expect(cacheStore.readAccountMirrorArtifacts(context)).resolves.toMatchObject({
         items: [{ id: 'artifact_1', title: 'Generated report', kind: 'document' }],
+      });
+      await expect(cacheStore.readAccountMirrorFiles(context)).resolves.toMatchObject({
+        items: [{ id: 'file_1', name: 'Project source.pdf', source: 'project' }],
       });
       await expect(cacheStore.readAccountMirrorMedia(context)).resolves.toMatchObject({
         items: [{ id: 'media_1', title: 'Generated image', mediaType: 'image' }],

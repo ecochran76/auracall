@@ -175,9 +175,9 @@
     - dedicated mirror manifest catalog route:
       - `GET /v1/account-mirrors/catalog`
       - `GET /v1/account-mirrors/catalog?provider=chatgpt&runtimeProfile=default&kind=all&limit=50`
-      - `kind` can be `all`, `projects`, `conversations`, `artifacts`, or
-        `media`
-      - this readback returns cached project/conversation/artifact/media
+      - `kind` can be `all`, `projects`, `conversations`, `artifacts`,
+        `files`, or `media`
+      - this readback returns cached project/conversation/artifact/file/media
         manifest rows by provider plus bound identity; it must not acquire the
         browser dispatcher, launch browsers, submit prompts, scrape provider
         pages, or load conversation ids
@@ -195,7 +195,7 @@
         mirror data ownership
       - the same success path persists bounded project and conversation
         manifests into the existing identity-scoped provider cache datasets,
-        plus lightweight account-mirror artifact/media manifests; this does
+        plus lightweight account-mirror artifact/file/media manifests; this does
         not fetch full conversation bodies or binary artifacts
       - it must not submit prompts, fetch full conversation bodies, or load
         immature conversation ids

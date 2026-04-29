@@ -35,6 +35,7 @@ export type AccountMirrorMetadataCounts = {
   projects: number;
   conversations: number;
   artifacts: number;
+  files: number;
   media: number;
 };
 
@@ -334,6 +335,7 @@ function normalizeMetadataCounts(value: AccountMirrorMetadataCounts | null | und
     projects: normalizeCount(value?.projects),
     conversations: normalizeCount(value?.conversations),
     artifacts: normalizeCount(value?.artifacts),
+    files: normalizeCount(value?.files),
     media: normalizeCount(value?.media),
   };
 }

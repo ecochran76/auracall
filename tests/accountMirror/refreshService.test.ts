@@ -48,6 +48,7 @@ describe('account mirror refresh service', () => {
           projects: 1,
           conversations: 2,
           artifacts: 1,
+          files: 0,
           media: 0,
         },
         manifests: {
@@ -57,6 +58,7 @@ describe('account mirror refresh service', () => {
             { id: 'conv_2', title: 'Two', provider: 'chatgpt' as const },
           ],
           artifacts: [{ id: 'artifact_1', title: 'Artifact 1' }],
+          files: [],
           media: [],
         },
         evidence: {
@@ -105,6 +107,7 @@ describe('account mirror refresh service', () => {
         projects: 1,
         conversations: 2,
         artifacts: 1,
+        files: 0,
         media: 0,
       },
       metadataEvidence: {
@@ -151,6 +154,7 @@ describe('account mirror refresh service', () => {
         projects: 1,
         conversations: 2,
         artifacts: 1,
+        files: 0,
         media: 0,
       },
       metadataEvidence: expect.objectContaining({
@@ -163,6 +167,7 @@ describe('account mirror refresh service', () => {
           { id: 'conv_2', title: 'Two', provider: 'chatgpt' },
         ],
         artifacts: [{ id: 'artifact_1', title: 'Artifact 1' }],
+        files: [],
         media: [],
       },
     });

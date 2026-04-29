@@ -66,6 +66,21 @@
   five projects, 64 conversations, zero artifacts, and zero media. The next
   status read delayed default ChatGPT on the routine minimum interval instead
   of re-running immediately.
+- Attachment inventory slice: extended the mirror catalog and cache schema with
+  explicit file-manifest rows, then wired ChatGPT mirror collection to sample
+  project files, conversation files, and conversation artifact manifests within
+  the existing artifact-row budget. This remains metadata-only: it does not
+  download user uploads, fetch binary artifacts, or read full conversation
+  bodies beyond the bounded context calls needed for artifact manifests.
+- Live attachment inventory dogfood: an initial uncapped detail pass held the
+  dispatcher long enough for the HTTP client to time out, so the collector was
+  tightened to a small detail-read budget separate from artifact row count.
+  After reinstalling the user runtime, explicit default-ChatGPT refresh
+  `acctmirror_25a269dd-b31d-4115-935e-b16c9f89cd38` completed in about 65
+  seconds with dispatcher operation `b1af2e83-5975-43b5-accd-e5e786576feb`,
+  detected `ecochran76@gmail.com` on Business, and cached five projects, 69
+  conversations, three artifact manifests, 24 file manifests, and zero media.
+  Catalog readback returned matching counts plus file/artifact samples.
 - Key boundary: default ChatGPT is the first mirror source because it has the
   richest account history, but account identity remains bound to the referenced
   AuraCall runtime profile and provider service identity.

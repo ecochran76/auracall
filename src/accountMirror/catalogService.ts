@@ -14,6 +14,7 @@ export type AccountMirrorCatalogKind =
   | 'projects'
   | 'conversations'
   | 'artifacts'
+  | 'files'
   | 'media';
 
 export interface AccountMirrorCatalogRequest {
@@ -34,12 +35,14 @@ export interface AccountMirrorCatalogEntry {
     projects: unknown[];
     conversations: unknown[];
     artifacts: unknown[];
+    files: unknown[];
     media: unknown[];
   };
   counts: {
     projects: number;
     conversations: number;
     artifacts: number;
+    files: number;
     media: number;
   };
 }
@@ -55,6 +58,7 @@ export interface AccountMirrorCatalogResult {
     projects: number;
     conversations: number;
     artifacts: number;
+    files: number;
     media: number;
   };
 }
@@ -98,6 +102,7 @@ export function createAccountMirrorCatalogService(input: {
           projects: [],
           conversations: [],
           artifacts: [],
+          files: [],
           media: [],
         }, kind);
         entries.push({
@@ -112,6 +117,7 @@ export function createAccountMirrorCatalogService(input: {
             projects: manifests.projects.length,
             conversations: manifests.conversations.length,
             artifacts: manifests.artifacts.length,
+            files: manifests.files.length,
             media: manifests.media.length,
           },
         });
@@ -122,10 +128,11 @@ export function createAccountMirrorCatalogService(input: {
           acc.projects += entry.counts.projects;
           acc.conversations += entry.counts.conversations;
           acc.artifacts += entry.counts.artifacts;
+          acc.files += entry.counts.files;
           acc.media += entry.counts.media;
           return acc;
         },
-        { targets: 0, projects: 0, conversations: 0, artifacts: 0, media: 0 },
+        { targets: 0, projects: 0, conversations: 0, artifacts: 0, files: 0, media: 0 },
       );
       return {
         object: 'account_mirror_catalog',
@@ -148,6 +155,7 @@ function filterCatalogKind(
     projects: kind === 'projects' ? manifests.projects : [],
     conversations: kind === 'conversations' ? manifests.conversations : [],
     artifacts: kind === 'artifacts' ? manifests.artifacts : [],
+    files: kind === 'files' ? manifests.files : [],
     media: kind === 'media' ? manifests.media : [],
   };
 }

@@ -10,6 +10,7 @@ export type CacheIndexKind =
   | 'context'
   | 'account-mirror'
   | 'account-mirror-artifacts'
+  | 'account-mirror-files'
   | 'account-mirror-media'
   | 'account-files'
   | 'conversation-files'

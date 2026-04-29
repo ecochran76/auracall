@@ -80,6 +80,7 @@ describe('account mirror status registry', () => {
             projects: 0,
             conversations: 0,
             artifacts: 0,
+            files: 0,
             media: 0,
           },
         }),
@@ -164,6 +165,7 @@ describe('account mirror status registry', () => {
           projects: 2,
           conversations: 5,
           artifacts: 1,
+          files: 0,
           media: 0,
         },
       },
@@ -191,6 +193,7 @@ describe('account mirror status registry', () => {
         projects: 2,
         conversations: 5,
         artifacts: 1,
+        files: 0,
         media: 0,
       },
     });
@@ -215,6 +218,7 @@ describe('account mirror status registry', () => {
             projects: 3,
             conversations: 9,
             artifacts: 2,
+            files: 0,
             media: 1,
           },
         };
@@ -235,6 +239,7 @@ describe('account mirror status registry', () => {
         projects: 3,
         conversations: 9,
         artifacts: 2,
+        files: 0,
         media: 1,
       },
     });

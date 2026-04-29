@@ -201,7 +201,7 @@ Terminology note:
   `provider + boundIdentity`; runtime/browser profile ids are retained as
   binding and refresh provenance, not as duplicate mirror cache owners. The
   same refresh stores bounded project/conversation manifests and lightweight
-  artifact/media indexes without fetching full content. Operators and agents
+  artifact/file/media indexes without fetching full content. Operators and agents
   can inspect those cached indexes with
   `GET /v1/account-mirrors/catalog?provider=chatgpt&runtimeProfile=default&kind=all&limit=50`;
   catalog reads are cache-only and do not enqueue browser work. Lazy mirror

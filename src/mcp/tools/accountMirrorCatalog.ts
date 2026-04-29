@@ -10,7 +10,7 @@ import type { AccountMirrorStatusRegistry } from '../../accountMirror/statusRegi
 const accountMirrorCatalogInputShape = {
   provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
   runtimeProfile: z.string().min(1).optional(),
-  kind: z.enum(['all', 'projects', 'conversations', 'artifacts', 'media']).optional(),
+  kind: z.enum(['all', 'projects', 'conversations', 'artifacts', 'files', 'media']).optional(),
   limit: z.number().int().nonnegative().optional(),
 } satisfies z.ZodRawShape;
 
@@ -25,12 +25,14 @@ const accountMirrorCatalogEntryShape = z.object({
     projects: z.array(z.unknown()),
     conversations: z.array(z.unknown()),
     artifacts: z.array(z.unknown()),
+    files: z.array(z.unknown()),
     media: z.array(z.unknown()),
   }),
   counts: z.object({
     projects: z.number(),
     conversations: z.number(),
     artifacts: z.number(),
+    files: z.number(),
     media: z.number(),
   }),
 });
@@ -38,7 +40,7 @@ const accountMirrorCatalogEntryShape = z.object({
 const accountMirrorCatalogOutputShape = {
   object: z.literal('account_mirror_catalog'),
   generatedAt: z.string(),
-  kind: z.enum(['all', 'projects', 'conversations', 'artifacts', 'media']),
+  kind: z.enum(['all', 'projects', 'conversations', 'artifacts', 'files', 'media']),
   limit: z.number(),
   entries: z.array(accountMirrorCatalogEntryShape),
   metrics: z.object({
@@ -46,6 +48,7 @@ const accountMirrorCatalogOutputShape = {
     projects: z.number(),
     conversations: z.number(),
     artifacts: z.number(),
+    files: z.number(),
     media: z.number(),
   }),
 } satisfies z.ZodRawShape;

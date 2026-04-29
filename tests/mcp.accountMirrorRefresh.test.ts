@@ -22,6 +22,7 @@ describe('mcp account_mirror_refresh tool', () => {
         projects: 1,
         conversations: 2,
         artifacts: 0,
+        files: 0,
         media: 0,
       },
       metadataEvidence: {

@@ -12,6 +12,7 @@ import type { CacheReadResult, ProviderCacheContext } from '../../providers/cach
 import {
   PROVIDER_CACHE_TTL_MS,
   readProviderAccountMirrorArtifacts,
+  readProviderAccountMirrorFiles,
   readProviderAccountMirrorMedia,
   readProviderAccountMirrorSnapshot,
   readProjectCache,
@@ -31,6 +32,7 @@ import {
   writeProjectKnowledgeCache,
   writeProjectInstructionsCache,
   writeProviderAccountMirrorArtifacts,
+  writeProviderAccountMirrorFiles,
   writeProviderAccountMirrorMedia,
   writeProviderAccountMirrorSnapshot,
   resolveProviderCachePath,
@@ -56,6 +58,7 @@ export interface CachedConversationContextEntry {
 const ACCOUNT_FILES_ENTITY_ID = '__account__';
 const ACCOUNT_MIRROR_ENTITY_ID = '__mirror__';
 const ACCOUNT_MIRROR_ARTIFACTS_ENTITY_ID = '__mirror_artifacts__';
+const ACCOUNT_MIRROR_FILES_ENTITY_ID = '__mirror_files__';
 const ACCOUNT_MIRROR_MEDIA_ENTITY_ID = '__mirror_media__';
 
 export interface AccountMirrorCacheSnapshot {
@@ -70,6 +73,7 @@ export interface AccountMirrorCacheSnapshot {
     projects: number;
     conversations: number;
     artifacts: number;
+    files: number;
     media: number;
   };
   metadataEvidence: {
@@ -271,6 +275,13 @@ export interface CacheStore {
     context: ProviderCacheContext,
     media: AccountMirrorMediaManifestEntry[],
   ): Promise<void>;
+  readAccountMirrorFiles(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<FileRef[]>>;
+  writeAccountMirrorFiles(
+    context: ProviderCacheContext,
+    files: FileRef[],
+  ): Promise<void>;
   readProjects(context: ProviderCacheContext): Promise<CacheReadResult<Project[]>>;
   writeProjects(context: ProviderCacheContext, items: Project[]): Promise<void>;
   readConversations(context: ProviderCacheContext): Promise<CacheReadResult<Conversation[]>>;
@@ -365,6 +376,24 @@ export class JsonCacheStore implements CacheStore {
     await upsertCacheIndexEntry(context, {
       kind: 'account-mirror-artifacts',
       path: resolveCacheEntryPath(context, 'account-mirror/artifacts.json'),
+      sourceUrl: context.listOptions.configuredUrl ?? null,
+    });
+  }
+
+  async readAccountMirrorFiles(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<FileRef[]>> {
+    return readProviderAccountMirrorFiles<FileRef>(context);
+  }
+
+  async writeAccountMirrorFiles(
+    context: ProviderCacheContext,
+    files: FileRef[],
+  ): Promise<void> {
+    await writeProviderAccountMirrorFiles(context, files);
+    await upsertCacheIndexEntry(context, {
+      kind: 'account-mirror-files',
+      path: resolveCacheEntryPath(context, 'account-mirror/files.json'),
       sourceUrl: context.listOptions.configuredUrl ?? null,
     });
   }
@@ -627,6 +656,7 @@ async function loadSqliteModule(): Promise<SqliteModule> {
 type SqlDataset =
   | 'account-mirror'
   | 'account-mirror-artifacts'
+  | 'account-mirror-files'
   | 'account-mirror-media'
   | 'projects'
   | 'conversations'
@@ -692,6 +722,34 @@ export class SqliteCacheStore implements CacheStore {
     await upsertCacheIndexEntry(context, {
       kind: 'account-mirror-artifacts',
       path: resolveCacheEntryPath(context, 'account-mirror/artifacts.json'),
+      sourceUrl: context.listOptions.configuredUrl ?? null,
+    });
+  }
+
+  async readAccountMirrorFiles(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<FileRef[]>> {
+    return this.readDataset<FileRef[]>(
+      context,
+      'account-mirror-files',
+      ACCOUNT_MIRROR_FILES_ENTITY_ID,
+      [],
+    );
+  }
+
+  async writeAccountMirrorFiles(
+    context: ProviderCacheContext,
+    files: FileRef[],
+  ): Promise<void> {
+    await this.writeDataset(
+      context,
+      'account-mirror-files',
+      ACCOUNT_MIRROR_FILES_ENTITY_ID,
+      files,
+    );
+    await upsertCacheIndexEntry(context, {
+      kind: 'account-mirror-files',
+      path: resolveCacheEntryPath(context, 'account-mirror/files.json'),
       sourceUrl: context.listOptions.configuredUrl ?? null,
     });
   }
@@ -1699,6 +1757,28 @@ class DualCacheStore implements CacheStore {
       () => this.primary.writeAccountMirrorArtifacts(context, artifacts),
       () => this.secondary.writeAccountMirrorArtifacts(context, artifacts),
       'writeAccountMirrorArtifacts',
+    );
+  }
+
+  async readAccountMirrorFiles(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<FileRef[]>> {
+    return this.readThrough(
+      context,
+      () => this.primary.readAccountMirrorFiles(context),
+      () => this.secondary.readAccountMirrorFiles(context),
+      (items) => this.primary.writeAccountMirrorFiles(context, items),
+    );
+  }
+
+  async writeAccountMirrorFiles(
+    context: ProviderCacheContext,
+    files: FileRef[],
+  ): Promise<void> {
+    await this.writeBoth(
+      () => this.primary.writeAccountMirrorFiles(context, files),
+      () => this.secondary.writeAccountMirrorFiles(context, files),
+      'writeAccountMirrorFiles',
     );
   }
 

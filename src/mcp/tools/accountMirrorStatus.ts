@@ -42,6 +42,7 @@ const accountMirrorStatusEntryShape = z.object({
     projects: z.number(),
     conversations: z.number(),
     artifacts: z.number(),
+    files: z.number(),
     media: z.number(),
   }),
   metadataEvidence: z.object({

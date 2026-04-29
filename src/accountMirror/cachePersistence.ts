@@ -3,6 +3,7 @@ import type { ProviderCacheContext } from '../browser/providers/cache.js';
 import type {
   Conversation,
   ConversationArtifact,
+  FileRef,
   Project,
 } from '../browser/providers/domain.js';
 import {
@@ -37,6 +38,7 @@ export interface AccountMirrorPersistenceRecord {
     projects: Project[];
     conversations: Conversation[];
     artifacts: ConversationArtifact[];
+    files: FileRef[];
     media: AccountMirrorMediaManifestEntry[];
   };
 }
@@ -51,6 +53,7 @@ export interface AccountMirrorPersistence {
     projects: Project[];
     conversations: Conversation[];
     artifacts: ConversationArtifact[];
+    files: FileRef[];
     media: AccountMirrorMediaManifestEntry[];
   } | null>;
   readState(input: {
@@ -98,6 +101,7 @@ export function createAccountMirrorPersistence(input: {
       await cacheStore.writeProjects(context, record.manifests.projects);
       await cacheStore.writeConversations(context, record.manifests.conversations);
       await cacheStore.writeAccountMirrorArtifacts(context, record.manifests.artifacts);
+      await cacheStore.writeAccountMirrorFiles(context, record.manifests.files);
       await cacheStore.writeAccountMirrorMedia(context, record.manifests.media);
     },
     async readCatalog(request) {
@@ -114,17 +118,20 @@ export function createAccountMirrorPersistence(input: {
         projects,
         conversations,
         artifacts,
+        files,
         media,
       ] = await Promise.all([
         cacheStore.readProjects(context),
         cacheStore.readConversations(context),
         cacheStore.readAccountMirrorArtifacts(context),
+        cacheStore.readAccountMirrorFiles(context),
         cacheStore.readAccountMirrorMedia(context),
       ]);
       return {
         projects: projects.items.slice(0, limit),
         conversations: conversations.items.slice(0, limit),
         artifacts: artifacts.items.slice(0, limit),
+        files: files.items.slice(0, limit),
         media: media.items.slice(0, limit),
       };
     },
