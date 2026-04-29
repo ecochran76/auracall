@@ -55,6 +55,17 @@
   started a second installed server with the scheduler disabled, and confirmed
   `/status.accountMirrorScheduler.history.entries[0]` still reported the same
   completed timestamp while `lastPass` was `null`.
+- Installed execute dogfood: started installed `api serve` on loopback with
+  `--account-mirror-scheduler-interval-ms 600000` and
+  `--account-mirror-scheduler-execute`, then triggered one manual
+  `{"accountMirrorScheduler":{"action":"run-once","dryRun":false}}` pass. The
+  pass completed at `2026-04-29T13:59:34.688Z` with
+  `action: refresh-completed`, dispatcher operation
+  `e3fd9664-5b67-4fa7-9d5f-43c409890b62`, detected identity
+  `ecochran76@gmail.com`, account level `Business`, and metadata counts of
+  five projects, 64 conversations, zero artifacts, and zero media. The next
+  status read delayed default ChatGPT on the routine minimum interval instead
+  of re-running immediately.
 - Key boundary: default ChatGPT is the first mirror source because it has the
   richest account history, but account identity remains bound to the referenced
   AuraCall runtime profile and provider service identity.

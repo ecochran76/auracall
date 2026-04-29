@@ -159,9 +159,13 @@
         - pause: `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"pause"}}'`
         - resume: `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"resume"}}'`
         - dry-run one pass: `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"run-once"}}'`
-        - execute one pass only when the server was started with
-          `--account-mirror-scheduler-execute`:
-          `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"run-once","dryRun":false}}'`
+      - execute one pass only when the server was started with
+        `--account-mirror-scheduler-execute`:
+        `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"run-once","dryRun":false}}'`
+      - installed execute dogfood should use a long interval plus one manual
+        `run-once` to avoid repeated provider navigation; the validated
+        default-ChatGPT pass completed with five cached projects and 64 cached
+        conversations for `ecochran76@gmail.com`
     - dedicated mirror posture route:
       - `GET /v1/account-mirrors/status`
       - `GET /v1/account-mirrors/status?provider=chatgpt&runtimeProfile=default`

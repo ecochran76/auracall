@@ -45,6 +45,11 @@
   ledger entries while `lastPass` is `null`, which confirms operators can
   inspect previous cadence without immediately restarting the background loop.
 
+- 2026-04-29: Execute-mode mirror dogfood should use a long scheduler interval
+  plus one manual `run-once`, not a tight active loop. That proves the browser
+  refresh path while avoiding repeated provider navigation and leaves routine
+  minimum intervals to block accidental immediate re-runs.
+
 - 2026-04-29: Bot-sensitive lazy mirroring needs a politeness policy before it
   needs a background loop. Mirror schedulers should enforce provider-specific
   minimum intervals, deterministic jitter, explicit-refresh rate limits,

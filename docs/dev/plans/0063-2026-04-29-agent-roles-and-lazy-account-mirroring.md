@@ -171,6 +171,15 @@ Current implementation-facing politeness contract:
   persisted after stopping the scheduler-enabled server and starting a second
   scheduler-disabled server: `lastPass` reset to `null`, while
   `history.entries[0]` retained the prior dry-run completion timestamp.
+- Installed-runtime execute dogfood started `api serve` with
+  `--account-mirror-scheduler-interval-ms 600000` and
+  `--account-mirror-scheduler-execute`, then triggered one manual
+  `run-once` with `"dryRun": false`. It completed one default-ChatGPT refresh
+  at `2026-04-29T13:59:34.688Z`, detected the bound identity
+  `ecochran76@gmail.com`, detected account level `Business`, recorded
+  dispatcher operation `e3fd9664-5b67-4fa7-9d5f-43c409890b62`, cached five
+  projects and 64 conversations, and then delayed the target on the routine
+  minimum interval.
 - default routine intervals:
   - ChatGPT: 6 hours plus up to 20 minutes jitter
   - Gemini: 12 hours plus up to 45 minutes jitter
@@ -265,7 +274,7 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add an explicit operator readback for scheduler history if `/status` becomes
-too compact for longer dogfood windows; otherwise proceed to one bounded
-execute-mode default-ChatGPT refresh dogfood with the scheduler interval still
-manual/short-lived.
+Add an explicit compact scheduler-history readback endpoint if `/status`
+remains too large for operator workflows; otherwise extend the same
+metadata-first collector pattern to one non-ChatGPT provider behind the same
+identity gate, dispatcher queue, and politeness budgets.
