@@ -34,6 +34,10 @@
   in `/status.accountMirrorScheduler`; only
   `--account-mirror-scheduler-execute` lets a pass request one eligible
   default-ChatGPT routine refresh.
+- Scheduler controls: added `/status` operator controls for lazy mirror
+  scheduler pause/resume/run-once. Manual run-once remains dry-run unless the
+  server was started in scheduler execute mode and the request explicitly sets
+  `dryRun: false`.
 - Key boundary: default ChatGPT is the first mirror source because it has the
   richest account history, but account identity remains bound to the referenced
   AuraCall runtime profile and provider service identity.

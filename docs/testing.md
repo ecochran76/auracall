@@ -141,7 +141,8 @@
       - `accountMirrorScheduler.enabled`
       - `accountMirrorScheduler.dryRun`
       - `accountMirrorScheduler.intervalMs`
-      - `accountMirrorScheduler.state = disabled|idle|scheduled|running`
+      - `accountMirrorScheduler.state = disabled|idle|scheduled|running|paused`
+      - `accountMirrorScheduler.paused`
       - `accountMirrorScheduler.lastStartedAt`
       - `accountMirrorScheduler.lastCompletedAt`
       - `accountMirrorScheduler.lastPass`
@@ -152,6 +153,13 @@
         browser dispatcher
       - the first executable scheduler slice may request at most one
         default-ChatGPT routine refresh per pass
+      - scheduler operator controls share `POST /status`:
+        - pause: `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"pause"}}'`
+        - resume: `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"resume"}}'`
+        - dry-run one pass: `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"run-once"}}'`
+        - execute one pass only when the server was started with
+          `--account-mirror-scheduler-execute`:
+          `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"run-once","dryRun":false}}'`
     - dedicated mirror posture route:
       - `GET /v1/account-mirrors/status`
       - `GET /v1/account-mirrors/status?provider=chatgpt&runtimeProfile=default`

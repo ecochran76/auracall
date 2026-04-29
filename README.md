@@ -209,7 +209,12 @@ Terminology note:
   `--account-mirror-scheduler-interval-ms <ms>` to record dry-run eligibility
   passes in `/status.accountMirrorScheduler`, and add
   `--account-mirror-scheduler-execute` only when the service should request
-  eligible default-ChatGPT metadata refreshes.
+  eligible default-ChatGPT metadata refreshes. Operator controls share
+  `POST /status`: `{"accountMirrorScheduler":{"action":"pause"}}`,
+  `{"accountMirrorScheduler":{"action":"resume"}}`, or
+  `{"accountMirrorScheduler":{"action":"run-once"}}`. Manual `run-once`
+  remains dry-run unless the server was started with
+  `--account-mirror-scheduler-execute` and the request sets `"dryRun":false`.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs
@@ -595,7 +600,7 @@ Terminology note:
   - `/status` also reports bounded background-drain state:
     - `enabled`
     - `intervalMs`
-    - `state = disabled|idle|scheduled|running`
+    - `state = disabled|idle|scheduled|running|paused`
     - `paused`
     - `lastTrigger`
     - `lastStartedAt`

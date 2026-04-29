@@ -279,7 +279,8 @@ interface HttpStatusResponse {
     enabled: boolean;
     dryRun: boolean;
     intervalMs: number | null;
-    state: 'disabled' | 'idle' | 'scheduled' | 'running';
+    state: 'disabled' | 'idle' | 'scheduled' | 'running' | 'paused';
+    paused: boolean;
     lastStartedAt: string | null;
     lastCompletedAt: string | null;
     lastPass: AccountMirrorSchedulerPassResult | null;
@@ -293,6 +294,11 @@ interface HttpStatusResponse {
     | {
         kind: 'background-drain';
         action: 'pause' | 'resume';
+      }
+    | {
+        kind: 'account-mirror-scheduler';
+        action: 'pause' | 'resume' | 'run-once';
+        dryRun: boolean;
       }
     | ExecutionServiceHostOperatorControlResult;
 }
@@ -391,11 +397,13 @@ export async function createResponsesHttpServer(
     dryRun: accountMirrorSchedulerDryRun,
     intervalMs: accountMirrorSchedulerIntervalMs > 0 ? accountMirrorSchedulerIntervalMs : null,
     state: accountMirrorSchedulerIntervalMs > 0 ? 'idle' : 'disabled',
+    paused: false,
     lastStartedAt: null,
     lastCompletedAt: null,
     lastPass: null,
   };
   let backgroundDrainPaused = false;
+  let accountMirrorSchedulerPaused = false;
   let runnerHeartbeatTimer: NodeJS.Timeout | null = null;
   let closed = false;
   const drainThroughServerHost = (
@@ -456,10 +464,35 @@ export async function createResponsesHttpServer(
   };
   let accountMirrorSchedulerTimer: NodeJS.Timeout | null = null;
   let accountMirrorSchedulerScheduled = false;
+  const runAccountMirrorSchedulerPass = async (input: { dryRun: boolean }) => {
+    if (accountMirrorSchedulerState.state === 'running') {
+      return false;
+    }
+    accountMirrorSchedulerState.state = 'running';
+    accountMirrorSchedulerState.lastStartedAt = now().toISOString();
+    try {
+      accountMirrorSchedulerState.lastPass = await accountMirrorSchedulerService.runOnce({
+        dryRun: input.dryRun,
+      });
+    } catch (error) {
+      logger(error instanceof Error ? error.message : String(error));
+    } finally {
+      accountMirrorSchedulerState.lastCompletedAt = now().toISOString();
+      accountMirrorSchedulerState.state = closed
+        ? 'disabled'
+        : accountMirrorSchedulerPaused
+          ? 'paused'
+          : accountMirrorSchedulerIntervalMs > 0
+            ? 'idle'
+            : 'disabled';
+    }
+    return true;
+  };
   const scheduleAccountMirrorScheduler = (delayMs = accountMirrorSchedulerIntervalMs) => {
     if (
       closed ||
       accountMirrorSchedulerIntervalMs <= 0 ||
+      accountMirrorSchedulerPaused ||
       accountMirrorSchedulerScheduled ||
       accountMirrorSchedulerState.state === 'running'
     ) {
@@ -473,18 +506,9 @@ export async function createResponsesHttpServer(
       if (closed) {
         return;
       }
-      accountMirrorSchedulerState.state = 'running';
-      accountMirrorSchedulerState.lastStartedAt = now().toISOString();
-      try {
-        accountMirrorSchedulerState.lastPass = await accountMirrorSchedulerService.runOnce({
-          dryRun: accountMirrorSchedulerDryRun,
-        });
-      } catch (error) {
-        logger(error instanceof Error ? error.message : String(error));
-      } finally {
-        accountMirrorSchedulerState.lastCompletedAt = now().toISOString();
-        accountMirrorSchedulerState.state = closed ? 'disabled' : 'idle';
-      }
+      await runAccountMirrorSchedulerPass({
+        dryRun: accountMirrorSchedulerDryRun,
+      });
       scheduleAccountMirrorScheduler(accountMirrorSchedulerIntervalMs);
     }, delayMs);
   };
@@ -695,6 +719,61 @@ export async function createResponsesHttpServer(
             kind: 'background-drain',
             action,
           };
+        } else if ('accountMirrorScheduler' in payload) {
+          const action = payload.accountMirrorScheduler.action;
+          if (action === 'pause' || action === 'resume') {
+            if (accountMirrorSchedulerIntervalMs <= 0) {
+              sendJson(res, 409, {
+                error: {
+                  message: 'account mirror scheduler is not enabled for this server',
+                  type: 'invalid_request_error',
+                },
+              } satisfies HttpErrorPayload);
+              return;
+            }
+            if (action === 'pause') {
+              accountMirrorSchedulerPaused = true;
+              accountMirrorSchedulerState.paused = true;
+              if (accountMirrorSchedulerTimer) {
+                clearTimeout(accountMirrorSchedulerTimer);
+                accountMirrorSchedulerTimer = null;
+              }
+              accountMirrorSchedulerScheduled = false;
+              if (accountMirrorSchedulerState.state !== 'running') {
+                accountMirrorSchedulerState.state = 'paused';
+              }
+            } else {
+              accountMirrorSchedulerPaused = false;
+              accountMirrorSchedulerState.paused = false;
+              if (accountMirrorSchedulerState.state !== 'running') {
+                accountMirrorSchedulerState.state = 'idle';
+              }
+              scheduleAccountMirrorScheduler(0);
+            }
+            controlResult = {
+              kind: 'account-mirror-scheduler',
+              action,
+              dryRun: accountMirrorSchedulerDryRun,
+            };
+          } else {
+            const requestedDryRun = payload.accountMirrorScheduler.dryRun ?? true;
+            const dryRun = accountMirrorSchedulerDryRun ? true : requestedDryRun;
+            const ran = await runAccountMirrorSchedulerPass({ dryRun });
+            if (!ran) {
+              sendJson(res, 409, {
+                error: {
+                  message: 'account mirror scheduler is already running',
+                  type: 'invalid_request_error',
+                },
+              } satisfies HttpErrorPayload);
+              return;
+            }
+            controlResult = {
+              kind: 'account-mirror-scheduler',
+              action,
+              dryRun,
+            };
+          }
         } else {
           const result = await host.controlOperatorAction(createServiceHostOperatorControlInput(payload));
           if (!isSuccessfulServiceHostOperatorControlResult(result)) {
@@ -1118,8 +1197,10 @@ export async function createResponsesHttpServer(
         accountMirrorSchedulerTimer = null;
       }
       backgroundDrainPaused = false;
+      accountMirrorSchedulerPaused = false;
       backgroundDrainState.paused = false;
       backgroundDrainState.state = 'disabled';
+      accountMirrorSchedulerState.paused = false;
       accountMirrorSchedulerState.state = 'disabled';
       await host.waitForDrainQueue().catch(() => null);
       if (!deps.executionHost && runnerState.id) {
@@ -1587,6 +1668,12 @@ const STATUS_CONTROL_REQUEST_SCHEMA = z.union([
     }),
   }),
   z.object({
+    accountMirrorScheduler: z.object({
+      action: z.enum(['pause', 'resume', 'run-once']),
+      dryRun: z.boolean().optional(),
+    }),
+  }),
+  z.object({
     localActionControl: z.object({
       action: z.literal('resolve-request'),
       runId: z.string().min(1),
@@ -1638,7 +1725,12 @@ const STATUS_CONTROL_REQUEST_SCHEMA = z.union([
 
 type StatusControlRequest = z.infer<typeof STATUS_CONTROL_REQUEST_SCHEMA>;
 
-function createServiceHostOperatorControlInput(payload: Exclude<StatusControlRequest, { backgroundDrain: unknown }>): ExecutionServiceHostOperatorControlInput {
+type ServiceHostStatusControlRequest = Exclude<
+  StatusControlRequest,
+  { backgroundDrain: unknown } | { accountMirrorScheduler: unknown }
+>;
+
+function createServiceHostOperatorControlInput(payload: ServiceHostStatusControlRequest): ExecutionServiceHostOperatorControlInput {
   if ('leaseRepair' in payload) {
     return {
       kind: 'lease-repair',

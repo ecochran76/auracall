@@ -1223,6 +1223,7 @@ describe('http responses adapter', () => {
           dryRun: true,
           intervalMs: null,
           state: 'disabled',
+          paused: false,
           lastStartedAt: null,
           lastCompletedAt: null,
           lastPass: null,
@@ -1524,6 +1525,7 @@ describe('http responses adapter', () => {
           dryRun: boolean;
           intervalMs: number;
           state: string;
+          paused: boolean;
           lastPass: AccountMirrorSchedulerPassResult | null;
         };
       };
@@ -1534,6 +1536,7 @@ describe('http responses adapter', () => {
         enabled: true,
         dryRun: true,
         intervalMs: 25,
+        paused: false,
         lastPass: {
           object: 'account_mirror_scheduler_pass',
           mode: 'dry-run',
@@ -1545,6 +1548,207 @@ describe('http responses adapter', () => {
         },
       });
       expect(['idle', 'scheduled', 'running']).toContain(payload.accountMirrorScheduler.state);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('pauses, resumes, and manually triggers lazy account mirror scheduler through POST /status', async () => {
+    const runOnce = vi.fn(async (input: { dryRun: boolean }): Promise<AccountMirrorSchedulerPassResult> => ({
+      object: 'account_mirror_scheduler_pass',
+      mode: input.dryRun ? 'dry-run' : 'execute',
+      action: input.dryRun ? 'dry-run' : 'refresh-completed',
+      startedAt: '2026-04-29T12:00:00.000Z',
+      completedAt: '2026-04-29T12:00:00.000Z',
+      selectedTarget: {
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        status: 'eligible',
+        reason: 'eligible',
+        eligibleAt: '2026-04-29T12:00:00.000Z',
+      },
+      metrics: {
+        totalTargets: 1,
+        eligibleTargets: 1,
+        defaultChatgptEligibleTargets: 1,
+      },
+      refresh: null,
+      error: null,
+    }));
+    const server = await createResponsesHttpServer(
+      {
+        host: '127.0.0.1',
+        port: 0,
+        accountMirrorSchedulerIntervalMs: 1000,
+        accountMirrorSchedulerDryRun: true,
+      },
+      {
+        accountMirrorSchedulerService: {
+          runOnce,
+        },
+      },
+    );
+
+    try {
+      const pauseResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountMirrorScheduler: { action: 'pause' },
+        }),
+      });
+      expect(pauseResponse.status).toBe(200);
+      const pausedPayload = (await pauseResponse.json()) as {
+        accountMirrorScheduler: { state: string };
+        controlResult: unknown;
+      };
+      expect(pausedPayload).toMatchObject({
+        accountMirrorScheduler: {
+          enabled: true,
+          dryRun: true,
+          intervalMs: 1000,
+          state: 'paused',
+          paused: true,
+        },
+        controlResult: {
+          kind: 'account-mirror-scheduler',
+          action: 'pause',
+          dryRun: true,
+        },
+      });
+
+      const runOnceResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountMirrorScheduler: { action: 'run-once', dryRun: false },
+        }),
+      });
+      expect(runOnceResponse.status).toBe(200);
+      expect(runOnce).toHaveBeenCalledWith({
+        dryRun: true,
+      });
+      const runOncePayload = (await runOnceResponse.json()) as {
+        accountMirrorScheduler: { state: string };
+        controlResult: unknown;
+      };
+      expect(runOncePayload).toMatchObject({
+        accountMirrorScheduler: {
+          enabled: true,
+          dryRun: true,
+          state: 'paused',
+          paused: true,
+          lastStartedAt: expect.any(String),
+          lastCompletedAt: expect.any(String),
+          lastPass: {
+            object: 'account_mirror_scheduler_pass',
+            mode: 'dry-run',
+            action: 'dry-run',
+          },
+        },
+        controlResult: {
+          kind: 'account-mirror-scheduler',
+          action: 'run-once',
+          dryRun: true,
+        },
+      });
+
+      const resumeResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountMirrorScheduler: { action: 'resume' },
+        }),
+      });
+      expect(resumeResponse.status).toBe(200);
+      const resumedPayload = (await resumeResponse.json()) as {
+        accountMirrorScheduler: { state: string };
+        controlResult: unknown;
+      };
+      expect(resumedPayload).toMatchObject({
+        accountMirrorScheduler: {
+          enabled: true,
+          dryRun: true,
+          intervalMs: 1000,
+          paused: false,
+        },
+        controlResult: {
+          kind: 'account-mirror-scheduler',
+          action: 'resume',
+          dryRun: true,
+        },
+      });
+      expect(['idle', 'scheduled', 'running']).toContain(resumedPayload.accountMirrorScheduler.state);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('allows an execute-enabled manual account mirror scheduler pass through POST /status', async () => {
+    const runOnce = vi.fn(async (input: { dryRun: boolean }): Promise<AccountMirrorSchedulerPassResult> => ({
+      object: 'account_mirror_scheduler_pass',
+      mode: input.dryRun ? 'dry-run' : 'execute',
+      action: input.dryRun ? 'dry-run' : 'refresh-completed',
+      startedAt: '2026-04-29T12:00:00.000Z',
+      completedAt: '2026-04-29T12:00:00.000Z',
+      selectedTarget: null,
+      metrics: {
+        totalTargets: 0,
+        eligibleTargets: 0,
+        defaultChatgptEligibleTargets: 0,
+      },
+      refresh: null,
+      error: null,
+    }));
+    const server = await createResponsesHttpServer(
+      {
+        host: '127.0.0.1',
+        port: 0,
+        accountMirrorSchedulerDryRun: false,
+      },
+      {
+        accountMirrorSchedulerService: {
+          runOnce,
+        },
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountMirrorScheduler: { action: 'run-once', dryRun: false },
+        }),
+      });
+      expect(response.status).toBe(200);
+      expect(runOnce).toHaveBeenCalledWith({
+        dryRun: false,
+      });
+      const payload = (await response.json()) as {
+        accountMirrorScheduler: { state: string };
+        controlResult: unknown;
+      };
+      expect(payload).toMatchObject({
+        accountMirrorScheduler: {
+          enabled: false,
+          dryRun: false,
+          intervalMs: null,
+          state: 'disabled',
+          paused: false,
+          lastPass: {
+            object: 'account_mirror_scheduler_pass',
+            mode: 'execute',
+            action: 'refresh-completed',
+          },
+        },
+        controlResult: {
+          kind: 'account-mirror-scheduler',
+          action: 'run-once',
+          dryRun: false,
+        },
+      });
     } finally {
       await server.close();
     }

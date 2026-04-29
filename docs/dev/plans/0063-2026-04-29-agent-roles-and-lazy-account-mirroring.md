@@ -153,6 +153,10 @@ Current implementation-facing politeness contract:
   eligibility passes in `/status.accountMirrorScheduler`, and only
   `--account-mirror-scheduler-execute` allows a pass to request one eligible
   default-ChatGPT routine refresh.
+- `POST /status` owns the first scheduler operator controls:
+  `pause`, `resume`, and `run-once`. Manual `run-once` remains dry-run unless
+  the server was started with `--account-mirror-scheduler-execute` and the
+  request explicitly sets `"dryRun": false`.
 - default routine intervals:
   - ChatGPT: 6 hours plus up to 20 minutes jitter
   - Gemini: 12 hours plus up to 45 minutes jitter
@@ -227,6 +231,9 @@ Each status payload should include:
 - A disabled-by-default lazy scheduler can run dry-run eligibility passes from
   `api serve`, expose its last pass in `/status`, and avoid browser dispatcher
   acquisition unless execution mode is explicitly enabled.
+- Scheduler operator controls can pause/resume the timer and trigger one
+  manual pass through `POST /status`, with manual execution still requiring
+  explicit server execute mode.
 - Tests cover config projection, mirror scheduling state, identity hard stops,
   and dispatcher queue evidence before live provider dogfood.
 - The first scheduling tests prove self-imposed jitter, minimum intervals,
@@ -242,6 +249,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Next add operator control for the lazy scheduler so `/status` can pause,
-resume, and trigger one dry-run scheduler pass on demand. Keep the executable
-refresh path opt-in until live dogfood proves the dry-run cadence is quiet.
+Dogfood the dry-run scheduler from the installed runtime, inspect the `/status`
+cadence over a quiet service window, and only then consider enabling a bounded
+routine refresh pass.

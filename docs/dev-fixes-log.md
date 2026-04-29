@@ -25,6 +25,11 @@
   disabled by default, expose the last scheduler pass in `/status`, and require
   an explicit execute flag before a scheduler pass may call refresh.
 
+- 2026-04-29: Lazy account mirror scheduler control should stay on `/status`
+  with the rest of the local operator control plane. Expose pause, resume, and
+  run-once there; default manual runs to dry-run unless the server was started
+  with the execute flag and the operator explicitly requests `"dryRun": false`.
+
 - 2026-04-29: Bot-sensitive lazy mirroring needs a politeness policy before it
   needs a background loop. Mirror schedulers should enforce provider-specific
   minimum intervals, deterministic jitter, explicit-refresh rate limits,
