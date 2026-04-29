@@ -1,6 +1,9 @@
 import { describe, expect, test, vi } from 'vitest';
 import { createAccountMirrorSchedulerPassService } from '../../src/accountMirror/schedulerService.js';
-import type { AccountMirrorRefreshResult } from '../../src/accountMirror/refreshService.js';
+import {
+  AccountMirrorRefreshError,
+  type AccountMirrorRefreshResult,
+} from '../../src/accountMirror/refreshService.js';
 import { createAccountMirrorStatusRegistry } from '../../src/accountMirror/statusRegistry.js';
 
 const config = {
@@ -109,8 +112,14 @@ describe('account mirror scheduler pass service', () => {
       metrics: {
         totalTargets: 2,
         eligibleTargets: 1,
+        delayedTargets: 0,
+        blockedTargets: 1,
         defaultChatgptEligibleTargets: 1,
+        defaultChatgptDelayedTargets: 0,
         inProgressEligibleTargets: 0,
+      },
+      backpressure: {
+        reason: 'none',
       },
     });
   });
@@ -140,6 +149,9 @@ describe('account mirror scheduler pass service', () => {
     expect(result).toMatchObject({
       mode: 'execute',
       action: 'refresh-completed',
+      backpressure: {
+        reason: 'none',
+      },
       refresh: {
         object: 'account_mirror_refresh',
         requestId: 'acctmirror_scheduler',
@@ -204,6 +216,112 @@ describe('account mirror scheduler pass service', () => {
       },
       metrics: {
         inProgressEligibleTargets: 1,
+      },
+    });
+  });
+
+  test('reports routine-delayed backpressure when no default ChatGPT target is eligible', async () => {
+    const requestRefresh = vi.fn(async () => createRefreshResult());
+    const service = createAccountMirrorSchedulerPassService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        initialState: {
+          'chatgpt:default': {
+            lastSuccessAtMs: Date.parse('2026-04-29T11:59:00.000Z'),
+            detectedIdentityKey: 'ecochran76@gmail.com',
+          },
+        },
+        now: () => new Date('2026-04-29T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+    });
+
+    const result = await service.runOnce({ dryRun: false });
+
+    expect(requestRefresh).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      action: 'skipped',
+      selectedTarget: null,
+      backpressure: {
+        reason: 'routine-delayed',
+      },
+      metrics: {
+        defaultChatgptEligibleTargets: 0,
+        defaultChatgptDelayedTargets: 1,
+      },
+    });
+  });
+
+  test('reports browser-work backpressure when routine refresh cannot acquire the dispatcher', async () => {
+    const requestRefresh = vi.fn(async () => createRefreshResult());
+    requestRefresh.mockRejectedValueOnce(new AccountMirrorRefreshError(
+      503,
+      'account_mirror_browser_operation_busy',
+      'Browser operation is busy.',
+    ));
+    const service = createAccountMirrorSchedulerPassService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date('2026-04-29T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+    });
+
+    const result = await service.runOnce({ dryRun: false });
+
+    expect(result).toMatchObject({
+      action: 'refresh-blocked',
+      backpressure: {
+        reason: 'blocked-by-browser-work',
+        message: 'Browser operation is busy.',
+      },
+    });
+  });
+
+  test('reports yielded backpressure when a refresh stops for queued browser work', async () => {
+    const yieldedRefresh = createRefreshResult();
+    yieldedRefresh.metadataEvidence = {
+      identitySource: 'profile-menu',
+      projectSampleIds: [],
+      conversationSampleIds: [],
+      attachmentInventory: {
+        nextProjectIndex: 1,
+        nextConversationIndex: 0,
+        detailReadLimit: 6,
+        scannedProjects: 1,
+        scannedConversations: 0,
+        yielded: true,
+      },
+      truncated: {
+        projects: false,
+        conversations: false,
+        artifacts: true,
+      },
+    };
+    const requestRefresh = vi.fn(async () => yieldedRefresh);
+    const service = createAccountMirrorSchedulerPassService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date('2026-04-29T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+    });
+
+    const result = await service.runOnce({ dryRun: false });
+
+    expect(result).toMatchObject({
+      action: 'refresh-completed',
+      backpressure: {
+        reason: 'yielded-to-queued-work',
       },
     });
   });

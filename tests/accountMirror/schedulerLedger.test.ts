@@ -38,10 +38,17 @@ function createPass(input: {
       eligibleAt: input.startedAt,
       mirrorCompleteness: completeMirror,
     },
+    backpressure: {
+      reason: 'none',
+      message: null,
+    },
     metrics: {
       totalTargets: 1,
       eligibleTargets: 1,
+      delayedTargets: 0,
+      blockedTargets: 0,
       defaultChatgptEligibleTargets: 1,
+      defaultChatgptDelayedTargets: 0,
       inProgressEligibleTargets: 0,
     },
     refresh: null,

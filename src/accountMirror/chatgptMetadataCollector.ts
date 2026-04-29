@@ -33,6 +33,7 @@ export interface AttachmentInventoryCursor {
   detailReadLimit: number;
   scannedProjects: number;
   scannedConversations: number;
+  yielded?: boolean;
 }
 
 export interface AccountMirrorMetadataCollectorResult {
@@ -55,6 +56,7 @@ export interface AccountMirrorMetadataCollectorResult {
       conversations: boolean;
       artifacts: boolean;
     };
+    attachmentInventory?: AttachmentInventoryCursor | null;
   };
 }
 
@@ -311,6 +313,7 @@ export async function readBoundedAttachmentInventory(
         projectIndex >= projects.length && conversationIndex >= conversations.length ? 0 : projectIndex,
       nextConversationIndex:
         projectIndex >= projects.length && conversationIndex >= conversations.length ? 0 : conversationIndex,
+      yielded,
     }),
   };
 }
@@ -325,6 +328,7 @@ function createAttachmentInventoryCursor(
     scannedConversations: number;
     nextProjectIndex?: number;
     nextConversationIndex?: number;
+    yielded?: boolean;
   },
 ): AttachmentInventoryCursor {
   return {
@@ -336,6 +340,7 @@ function createAttachmentInventoryCursor(
     detailReadLimit: input.detailReadLimit,
     scannedProjects: input.scannedProjects,
     scannedConversations: input.scannedConversations,
+    yielded: input.yielded === true,
   };
 }
 

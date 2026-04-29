@@ -152,7 +152,11 @@
       - `accountMirrorScheduler.history.object = account_mirror_scheduler_pass_history`
       - `accountMirrorScheduler.history.entries[]`
       - `accountMirrorScheduler.lastPass.selectedTarget.mirrorCompleteness`
+      - `accountMirrorScheduler.lastPass.backpressure.reason = none|routine-delayed|blocked-by-browser-work|yielded-to-queued-work`
       - `accountMirrorScheduler.lastPass.metrics.inProgressEligibleTargets`
+      - `accountMirrorScheduler.lastPass.metrics.delayedTargets`
+      - `accountMirrorScheduler.lastPass.metrics.blockedTargets`
+      - `accountMirrorScheduler.lastPass.metrics.defaultChatgptDelayedTargets`
       - routine scheduler refreshes use zero dispatcher queue wait and should
         block/yield when real browser work already owns the control plane
       - after a routine mirror acquires the dispatcher, bounded attachment

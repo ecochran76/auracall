@@ -86,6 +86,7 @@ export interface AccountMirrorCacheSnapshot {
       detailReadLimit: number;
       scannedProjects: number;
       scannedConversations: number;
+      yielded?: boolean;
     } | null;
     truncated: {
       projects: boolean;

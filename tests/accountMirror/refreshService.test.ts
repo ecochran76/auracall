@@ -244,6 +244,7 @@ describe('account mirror refresh service', () => {
         detailReadLimit: 2,
         scannedProjects: 1,
         scannedConversations: 0,
+        yielded: false,
       },
       truncated: {
         projects: false,

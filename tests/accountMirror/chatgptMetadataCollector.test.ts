@@ -260,6 +260,7 @@ describe('ChatGPT account mirror metadata collector', () => {
       nextConversationIndex: 0,
       scannedProjects: 1,
       scannedConversations: 0,
+      yielded: true,
     });
     expect(client.listProjectFiles).toHaveBeenCalledTimes(1);
     expect(client.listConversationFiles).not.toHaveBeenCalled();

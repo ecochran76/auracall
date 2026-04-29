@@ -23,6 +23,17 @@ export interface AccountMirrorSchedulerSelectedTarget {
   mirrorCompleteness: AccountMirrorStatusEntry['mirrorCompleteness'];
 }
 
+export type AccountMirrorSchedulerBackpressureReason =
+  | 'none'
+  | 'routine-delayed'
+  | 'blocked-by-browser-work'
+  | 'yielded-to-queued-work';
+
+export interface AccountMirrorSchedulerBackpressure {
+  reason: AccountMirrorSchedulerBackpressureReason;
+  message: string | null;
+}
+
 export interface AccountMirrorSchedulerPassResult {
   object: 'account_mirror_scheduler_pass';
   mode: 'dry-run' | 'execute';
@@ -30,10 +41,14 @@ export interface AccountMirrorSchedulerPassResult {
   startedAt: string;
   completedAt: string;
   selectedTarget: AccountMirrorSchedulerSelectedTarget | null;
+  backpressure: AccountMirrorSchedulerBackpressure;
   metrics: {
     totalTargets: number;
     eligibleTargets: number;
+    delayedTargets: number;
+    blockedTargets: number;
     defaultChatgptEligibleTargets: number;
+    defaultChatgptDelayedTargets: number;
     inProgressEligibleTargets: number;
   };
   refresh: AccountMirrorRefreshResult | null;
@@ -64,6 +79,11 @@ export function createAccountMirrorSchedulerPassService(input: {
         explicitRefresh: false,
       });
       const eligibleTargets = status.entries.filter((entry) => entry.status === 'eligible');
+      const delayedTargets = status.entries.filter((entry) => entry.status === 'delayed');
+      const blockedTargets = status.entries.filter((entry) => entry.status === 'blocked');
+      const defaultChatgptTargets = status.entries.filter(
+        (entry) => entry.provider === 'chatgpt' && entry.runtimeProfileId === 'default',
+      );
       const defaultChatgptEligibleTargets = eligibleTargets.filter(
         (entry) => entry.provider === 'chatgpt' && entry.runtimeProfileId === 'default',
       );
@@ -71,7 +91,10 @@ export function createAccountMirrorSchedulerPassService(input: {
       const metrics = {
         totalTargets: status.metrics.total,
         eligibleTargets: eligibleTargets.length,
+        delayedTargets: delayedTargets.length,
+        blockedTargets: blockedTargets.length,
         defaultChatgptEligibleTargets: defaultChatgptEligibleTargets.length,
+        defaultChatgptDelayedTargets: defaultChatgptTargets.filter((entry) => entry.status === 'delayed').length,
         inProgressEligibleTargets: eligibleTargets.filter(
           (entry) => entry.mirrorCompleteness.state === 'in_progress',
         ).length,
@@ -84,6 +107,7 @@ export function createAccountMirrorSchedulerPassService(input: {
           startedAt: startedAt.toISOString(),
           completedAt: now().toISOString(),
           selectedTarget: null,
+          backpressure: deriveSkippedBackpressure(defaultChatgptTargets),
           metrics,
           refresh: null,
           error: null,
@@ -98,6 +122,10 @@ export function createAccountMirrorSchedulerPassService(input: {
           startedAt: startedAt.toISOString(),
           completedAt: now().toISOString(),
           selectedTarget,
+          backpressure: {
+            reason: 'none',
+            message: null,
+          },
           metrics,
           refresh: null,
           error: null,
@@ -117,6 +145,7 @@ export function createAccountMirrorSchedulerPassService(input: {
           startedAt: startedAt.toISOString(),
           completedAt: now().toISOString(),
           selectedTarget,
+          backpressure: deriveRefreshBackpressure(refresh),
           metrics,
           refresh,
           error: null,
@@ -130,6 +159,7 @@ export function createAccountMirrorSchedulerPassService(input: {
             startedAt: startedAt.toISOString(),
             completedAt: now().toISOString(),
             selectedTarget,
+            backpressure: deriveErrorBackpressure(error),
             metrics,
             refresh: null,
             error: {
@@ -143,6 +173,46 @@ export function createAccountMirrorSchedulerPassService(input: {
         throw error;
       }
     },
+  };
+}
+
+function deriveSkippedBackpressure(entries: AccountMirrorStatusEntry[]): AccountMirrorSchedulerBackpressure {
+  const delayed = entries.find((entry) => entry.status === 'delayed');
+  if (delayed) {
+    return {
+      reason: 'routine-delayed',
+      message: delayed.reason,
+    };
+  }
+  return {
+    reason: 'none',
+    message: null,
+  };
+}
+
+function deriveRefreshBackpressure(refresh: AccountMirrorRefreshResult): AccountMirrorSchedulerBackpressure {
+  if (refresh.metadataEvidence?.attachmentInventory?.yielded === true) {
+    return {
+      reason: 'yielded-to-queued-work',
+      message: 'Mirror refresh yielded between detail reads because browser work queued behind it.',
+    };
+  }
+  return {
+    reason: 'none',
+    message: null,
+  };
+}
+
+function deriveErrorBackpressure(error: AccountMirrorRefreshError): AccountMirrorSchedulerBackpressure {
+  if (error.code === 'account_mirror_browser_operation_busy') {
+    return {
+      reason: 'blocked-by-browser-work',
+      message: error.message,
+    };
+  }
+  return {
+    reason: 'none',
+    message: null,
   };
 }
 

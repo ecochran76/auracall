@@ -49,6 +49,7 @@ export type AccountMirrorMetadataEvidence = {
     detailReadLimit: number;
     scannedProjects: number;
     scannedConversations: number;
+    yielded?: boolean;
   } | null;
   truncated: {
     projects: boolean;
@@ -463,6 +464,7 @@ function normalizeAttachmentInventoryEvidence(
     detailReadLimit: normalizeCount(value.detailReadLimit),
     scannedProjects: normalizeCount(value.scannedProjects),
     scannedConversations: normalizeCount(value.scannedConversations),
+    yielded: value.yielded === true,
   };
 }
 

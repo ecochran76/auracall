@@ -217,6 +217,9 @@ Current implementation-facing politeness contract:
 - Routine scheduler passes now prefer eligible mirrors whose
   `mirrorCompleteness.state` is `in_progress`, and scheduler pass metrics count
   how many eligible mirrors are still walking details.
+- Scheduler passes expose `backpressure.reason` so operators can distinguish
+  routine politeness delay, dispatcher contention, cooperative yield, and no
+  backpressure without parsing refresh errors or attachment cursors.
 - Routine scheduler-triggered refreshes call the dispatcher with
   `queueTimeoutMs: 0`. Lazy mirror work therefore only starts when the browser
   lane is immediately available; if a real API response/media request or other

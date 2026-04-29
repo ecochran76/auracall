@@ -71,6 +71,7 @@ const accountMirrorStatusEntryShape = z.object({
       detailReadLimit: z.number(),
       scannedProjects: z.number(),
       scannedConversations: z.number(),
+      yielded: z.boolean().optional(),
     }).nullable().optional(),
     truncated: z.object({
       projects: z.boolean(),

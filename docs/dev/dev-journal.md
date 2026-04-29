@@ -23566,3 +23566,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm exec tsc --noEmit` passed
   - focused account-mirror collector/refresh/scheduler/HTTP Vitest suite
     passed
+
+## 2026-04-29 - Lazy mirror backpressure readback
+
+- Focus: make lazy mirror non-progress reasons visible to operators without
+  interpreting raw scheduler action/error combinations.
+- Progress:
+  - scheduler pass results now include `backpressure.reason`
+  - reasons distinguish `routine-delayed`, `blocked-by-browser-work`,
+    `yielded-to-queued-work`, and `none`
+  - scheduler metrics now include delayed/blocked target counts and delayed
+    default-ChatGPT target counts
+  - attachment inventory cursors now preserve a `yielded` signal for scheduler
+    readback and MCP/cache schema parity
+- Validation:
+  - `pnpm exec tsc --noEmit` passed
+  - focused scheduler/ledger/collector/status/HTTP Vitest suite passed

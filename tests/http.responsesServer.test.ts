@@ -1540,10 +1540,17 @@ describe('http responses adapter', () => {
         eligibleAt: '2026-04-29T12:00:00.000Z',
         mirrorCompleteness: completeAccountMirror,
       },
+      backpressure: {
+        reason: 'none',
+        message: null,
+      },
       metrics: {
         totalTargets: 1,
         eligibleTargets: 1,
+        delayedTargets: 0,
+        blockedTargets: 0,
         defaultChatgptEligibleTargets: 1,
+        defaultChatgptDelayedTargets: 0,
         inProgressEligibleTargets: 0,
       },
       refresh: null,
@@ -1595,6 +1602,9 @@ describe('http responses adapter', () => {
           object: 'account_mirror_scheduler_pass',
           mode: 'dry-run',
           action: 'dry-run',
+          backpressure: {
+            reason: 'none',
+          },
           selectedTarget: {
             provider: 'chatgpt',
             runtimeProfileId: 'default',
@@ -1633,10 +1643,17 @@ describe('http responses adapter', () => {
         eligibleAt: '2026-04-29T12:00:00.000Z',
         mirrorCompleteness: completeAccountMirror,
       },
+      backpressure: {
+        reason: 'none',
+        message: null,
+      },
       metrics: {
         totalTargets: 1,
         eligibleTargets: 1,
+        delayedTargets: 0,
+        blockedTargets: 0,
         defaultChatgptEligibleTargets: 1,
+        defaultChatgptDelayedTargets: 0,
         inProgressEligibleTargets: 0,
       },
       refresh: null,
@@ -1712,6 +1729,9 @@ describe('http responses adapter', () => {
             object: 'account_mirror_scheduler_pass',
             mode: 'dry-run',
             action: 'dry-run',
+            backpressure: {
+              reason: 'none',
+            },
           },
           history: {
             object: 'account_mirror_scheduler_pass_history',
@@ -1770,10 +1790,17 @@ describe('http responses adapter', () => {
       startedAt: '2026-04-29T12:00:00.000Z',
       completedAt: '2026-04-29T12:00:00.000Z',
       selectedTarget: null,
+      backpressure: {
+        reason: 'none',
+        message: null,
+      },
       metrics: {
         totalTargets: 0,
         eligibleTargets: 0,
+        delayedTargets: 0,
+        blockedTargets: 0,
         defaultChatgptEligibleTargets: 0,
+        defaultChatgptDelayedTargets: 0,
         inProgressEligibleTargets: 0,
       },
       refresh: null,

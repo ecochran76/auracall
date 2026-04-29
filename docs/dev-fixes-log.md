@@ -80,6 +80,11 @@
   continuation cursor, release the dispatcher, and let the scheduler resume
   later.
 
+- 2026-04-29: Scheduler pass `action` is not enough operator readback for lazy
+  mirror backpressure. Expose a compact `backpressure.reason` on each pass so
+  operators can tell routine politeness delay from dispatcher contention and
+  cooperative yield without parsing errors or attachment cursors.
+
 - 2026-04-29: Bot-sensitive lazy mirroring needs a politeness policy before it
   needs a background loop. Mirror schedulers should enforce provider-specific
   minimum intervals, deterministic jitter, explicit-refresh rate limits,
