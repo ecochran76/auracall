@@ -27,6 +27,18 @@ const config = {
   },
 };
 
+const completeMirror = {
+  state: 'complete' as const,
+  summary: 'Mirrored metadata indexes are complete within current provider surfaces.',
+  remainingDetailSurfaces: { projects: 0, conversations: 0, total: 0 },
+  signals: {
+    projectsTruncated: false,
+    conversationsTruncated: false,
+    attachmentInventoryTruncated: false,
+    attachmentCursorPresent: false,
+  },
+};
+
 function createRefreshResult(): AccountMirrorRefreshResult {
   return {
     object: 'account_mirror_refresh',
@@ -50,6 +62,7 @@ function createRefreshResult(): AccountMirrorRefreshResult {
       media: 0,
     },
     metadataEvidence: null,
+    mirrorCompleteness: completeMirror,
     detectedIdentityKey: 'ecochran76@gmail.com',
     detectedAccountLevel: 'Business',
     mirrorStatus: {

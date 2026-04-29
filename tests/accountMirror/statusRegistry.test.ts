@@ -83,6 +83,10 @@ describe('account mirror status registry', () => {
             files: 0,
             media: 0,
           },
+          mirrorCompleteness: expect.objectContaining({
+            state: 'none',
+            remainingDetailSurfaces: null,
+          }),
         }),
         expect.objectContaining({
           provider: 'grok',
@@ -168,6 +172,23 @@ describe('account mirror status registry', () => {
           files: 0,
           media: 0,
         },
+        metadataEvidence: {
+          identitySource: 'profile-menu',
+          projectSampleIds: ['project_1'],
+          conversationSampleIds: ['conv_1'],
+          attachmentInventory: {
+            nextProjectIndex: 2,
+            nextConversationIndex: 1,
+            detailReadLimit: 6,
+            scannedProjects: 2,
+            scannedConversations: 1,
+          },
+          truncated: {
+            projects: false,
+            conversations: false,
+            artifacts: true,
+          },
+        },
       },
     );
 
@@ -196,6 +217,18 @@ describe('account mirror status registry', () => {
         files: 0,
         media: 0,
       },
+      mirrorCompleteness: {
+        state: 'in_progress',
+        remainingDetailSurfaces: {
+          projects: 0,
+          conversations: 4,
+          total: 4,
+        },
+        signals: {
+          attachmentInventoryTruncated: true,
+          attachmentCursorPresent: true,
+        },
+      },
     });
   });
 
@@ -221,6 +254,16 @@ describe('account mirror status registry', () => {
             files: 0,
             media: 1,
           },
+          metadataEvidence: {
+            identitySource: 'profile-menu',
+            projectSampleIds: ['project_1'],
+            conversationSampleIds: ['conv_1'],
+            truncated: {
+              projects: false,
+              conversations: false,
+              artifacts: false,
+            },
+          },
         };
       },
     });
@@ -241,6 +284,14 @@ describe('account mirror status registry', () => {
         artifacts: 2,
         files: 0,
         media: 1,
+      },
+      mirrorCompleteness: {
+        state: 'complete',
+        remainingDetailSurfaces: {
+          projects: 0,
+          conversations: 0,
+          total: 0,
+        },
       },
     });
   });

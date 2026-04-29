@@ -1424,6 +1424,17 @@ describe('http responses adapter', () => {
   });
 
   it('reports read-only account mirror catalog through the API surface', async () => {
+    const mirrorCompleteness = {
+      state: 'complete' as const,
+      summary: 'Mirrored metadata indexes are complete within current provider surfaces.',
+      remainingDetailSurfaces: { projects: 0, conversations: 0, total: 0 },
+      signals: {
+        projectsTruncated: false,
+        conversationsTruncated: false,
+        attachmentInventoryTruncated: false,
+        attachmentCursorPresent: false,
+      },
+    };
     const catalog: AccountMirrorCatalogResult = {
       object: 'account_mirror_catalog',
       generatedAt: '2026-04-29T12:00:00.000Z',
@@ -1437,6 +1448,7 @@ describe('http responses adapter', () => {
           boundIdentityKey: 'ecochran76@gmail.com',
           status: 'eligible',
           reason: 'eligible',
+          mirrorCompleteness,
           manifests: {
             projects: [],
             conversations: [

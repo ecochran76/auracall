@@ -57,6 +57,22 @@ export type AccountMirrorMetadataEvidence = {
   };
 };
 
+export type AccountMirrorCompleteness = {
+  state: 'none' | 'complete' | 'in_progress' | 'unknown';
+  summary: string;
+  remainingDetailSurfaces: {
+    projects: number;
+    conversations: number;
+    total: number;
+  } | null;
+  signals: {
+    projectsTruncated: boolean;
+    conversationsTruncated: boolean;
+    attachmentInventoryTruncated: boolean;
+    attachmentCursorPresent: boolean;
+  };
+};
+
 export type AccountMirrorStatusEntry = {
   provider: AccountMirrorProvider;
   runtimeProfileId: string;
@@ -85,6 +101,7 @@ export type AccountMirrorStatusEntry = {
   };
   metadataCounts: AccountMirrorMetadataCounts;
   metadataEvidence: AccountMirrorMetadataEvidence | null;
+  mirrorCompleteness: AccountMirrorCompleteness;
   limits: AccountMirrorPolitenessDecision['limits'];
 };
 
@@ -278,6 +295,8 @@ function createStatusEntry(
   state: AccountMirrorStatusState,
   decision: AccountMirrorPolitenessDecision,
 ): AccountMirrorStatusEntry {
+  const metadataCounts = normalizeMetadataCounts(state.metadataCounts);
+  const metadataEvidence = normalizeMetadataEvidence(state.metadataEvidence);
   return {
     provider: target.provider,
     runtimeProfileId: target.runtimeProfileId,
@@ -304,8 +323,9 @@ function createStatusEntry(
       lastDispatcherOperationId: readString(state.lastDispatcherOperationId),
       lastDispatcherBlockedBy: isRecord(state.lastDispatcherBlockedBy) ? state.lastDispatcherBlockedBy : null,
     },
-    metadataCounts: normalizeMetadataCounts(state.metadataCounts),
-    metadataEvidence: normalizeMetadataEvidence(state.metadataEvidence),
+    metadataCounts,
+    metadataEvidence,
+    mirrorCompleteness: deriveMirrorCompleteness(metadataCounts, metadataEvidence),
     limits: decision.limits,
   };
 }
@@ -361,6 +381,75 @@ function normalizeMetadataEvidence(
       conversations: value.truncated?.conversations === true,
       artifacts: value.truncated?.artifacts === true,
     },
+  };
+}
+
+function deriveMirrorCompleteness(
+  counts: AccountMirrorMetadataCounts,
+  evidence: AccountMirrorMetadataEvidence | null,
+): AccountMirrorCompleteness {
+  if (!evidence) {
+    return {
+      state: 'none',
+      summary: 'No mirror snapshot has been collected.',
+      remainingDetailSurfaces: null,
+      signals: {
+        projectsTruncated: false,
+        conversationsTruncated: false,
+        attachmentInventoryTruncated: false,
+        attachmentCursorPresent: false,
+      },
+    };
+  }
+  const projectsTruncated = evidence.truncated.projects === true;
+  const conversationsTruncated = evidence.truncated.conversations === true;
+  const attachmentInventoryTruncated = evidence.truncated.artifacts === true;
+  const cursor = evidence.attachmentInventory ?? null;
+  const attachmentCursorPresent = cursor !== null;
+  const signals = {
+    projectsTruncated,
+    conversationsTruncated,
+    attachmentInventoryTruncated,
+    attachmentCursorPresent,
+  };
+  if (!projectsTruncated && !conversationsTruncated && !attachmentInventoryTruncated) {
+    return {
+      state: 'complete',
+      summary: 'Mirrored metadata indexes are complete within current provider surfaces.',
+      remainingDetailSurfaces: { projects: 0, conversations: 0, total: 0 },
+      signals,
+    };
+  }
+  if (!cursor && attachmentInventoryTruncated) {
+    return {
+      state: 'unknown',
+      summary: 'Attachment inventory is truncated and no continuation cursor is available yet.',
+      remainingDetailSurfaces: null,
+      signals,
+    };
+  }
+  if (!cursor) {
+    return {
+      state: 'in_progress',
+      summary: 'Mirror metadata is still truncated.',
+      remainingDetailSurfaces: null,
+      signals,
+    };
+  }
+  const remainingProjects = Math.max(0, counts.projects - cursor.nextProjectIndex);
+  const remainingConversations = Math.max(0, counts.conversations - cursor.nextConversationIndex);
+  const remainingTotal = remainingProjects + remainingConversations;
+  return {
+    state: 'in_progress',
+    summary: remainingTotal > 0
+      ? `Attachment inventory has ${remainingTotal} detail surfaces remaining.`
+      : 'Mirror metadata is still marked truncated; another refresh should verify completion.',
+    remainingDetailSurfaces: {
+      projects: remainingProjects,
+      conversations: remainingConversations,
+      total: remainingTotal,
+    },
+    signals,
   };
 }
 

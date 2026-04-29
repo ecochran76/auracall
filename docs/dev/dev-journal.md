@@ -23506,3 +23506,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     69 conversations, three artifact manifests, 24 file manifests, zero media,
     and seeded cursor `{ nextProjectIndex: 5, nextConversationIndex: 1,
     detailReadLimit: 6 }`
+
+## 2026-04-29 - Account mirror completeness readback
+
+- Focus: make mirror status actionable without requiring operators to reason
+  from raw cursor indexes.
+- Progress:
+  - added derived `mirrorCompleteness` to account mirror status entries,
+    refresh results, and catalog entries
+  - `mirrorCompleteness.state` reports `none`, `complete`, `in_progress`, or
+    `unknown`
+  - cursor-backed incomplete mirrors include remaining project/conversation
+    detail-surface counts
+  - MCP status, refresh, and catalog schemas now expose the derived field
+- Validation:
+  - `pnpm exec tsc --noEmit` passed
+  - focused account-mirror HTTP/MCP/status/catalog/refresh Vitest suite passed
+  - Biome lint passed for the changed status/catalog/refresh files and tests
+  - installed-runtime read-only dogfood on port 18100 confirmed status and
+    catalog both report the cached default ChatGPT mirror as `in_progress`
+    with 68 remaining conversation detail surfaces, while preserving five
+    project, 69 conversation, three artifact, 24 file, and zero media counts

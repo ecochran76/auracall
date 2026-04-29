@@ -120,6 +120,14 @@ describe('account mirror refresh service', () => {
           artifacts: false,
         },
       },
+      mirrorCompleteness: {
+        state: 'complete',
+        remainingDetailSurfaces: {
+          projects: 0,
+          conversations: 0,
+          total: 0,
+        },
+      },
       detectedIdentityKey: 'ecochran76@gmail.com',
       detectedAccountLevel: 'Business',
       dispatcher: {
@@ -277,6 +285,14 @@ describe('account mirror refresh service', () => {
       previousEvidence,
     }));
     expect(result.metadataCounts.files).toBe(2);
+    expect(result.mirrorCompleteness).toMatchObject({
+      state: 'in_progress',
+      remainingDetailSurfaces: {
+        projects: 0,
+        conversations: 1,
+        total: 1,
+      },
+    });
     expect(persistence.writeSnapshot).toHaveBeenCalledWith(expect.objectContaining({
       metadataCounts: expect.objectContaining({ files: 2 }),
       metadataEvidence: expect.objectContaining({ attachmentInventory: previousEvidence.attachmentInventory }),

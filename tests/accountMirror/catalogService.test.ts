@@ -65,10 +65,17 @@ describe('account mirror catalog service', () => {
           identitySource: 'profile-menu',
           projectSampleIds: ['project_1'],
           conversationSampleIds: ['conv_1'],
+          attachmentInventory: {
+            nextProjectIndex: 2,
+            nextConversationIndex: 1,
+            detailReadLimit: 6,
+            scannedProjects: 2,
+            scannedConversations: 1,
+          },
           truncated: {
             projects: false,
             conversations: false,
-            artifacts: false,
+            artifacts: true,
           },
         },
         manifests: {
@@ -133,6 +140,14 @@ describe('account mirror catalog service', () => {
               artifacts: 1,
               files: 1,
               media: 1,
+            },
+            mirrorCompleteness: {
+              state: 'in_progress',
+              remainingDetailSurfaces: {
+                projects: 0,
+                conversations: 1,
+                total: 1,
+              },
             },
           },
         ],

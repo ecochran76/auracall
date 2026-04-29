@@ -31,6 +31,7 @@ export interface AccountMirrorCatalogEntry {
   boundIdentityKey: string | null;
   status: AccountMirrorStatusEntry['status'];
   reason: AccountMirrorStatusEntry['reason'];
+  mirrorCompleteness: AccountMirrorStatusEntry['mirrorCompleteness'];
   manifests: {
     projects: unknown[];
     conversations: unknown[];
@@ -112,6 +113,7 @@ export function createAccountMirrorCatalogService(input: {
           boundIdentityKey: target.expectedIdentityKey,
           status: target.status,
           reason: target.reason,
+          mirrorCompleteness: target.mirrorCompleteness,
           manifests,
           counts: {
             projects: manifests.projects.length,

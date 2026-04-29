@@ -41,6 +41,22 @@ const metadataEvidenceShape = z.object({
   }),
 }).nullable();
 
+const mirrorCompletenessShape = z.object({
+  state: z.enum(['none', 'complete', 'in_progress', 'unknown']),
+  summary: z.string(),
+  remainingDetailSurfaces: z.object({
+    projects: z.number(),
+    conversations: z.number(),
+    total: z.number(),
+  }).nullable(),
+  signals: z.object({
+    projectsTruncated: z.boolean(),
+    conversationsTruncated: z.boolean(),
+    attachmentInventoryTruncated: z.boolean(),
+    attachmentCursorPresent: z.boolean(),
+  }),
+});
+
 const accountMirrorRefreshOutputShape = {
   object: z.literal('account_mirror_refresh'),
   requestId: z.string(),
@@ -57,6 +73,7 @@ const accountMirrorRefreshOutputShape = {
   }),
   metadataCounts: metadataCountsShape,
   metadataEvidence: metadataEvidenceShape,
+  mirrorCompleteness: mirrorCompletenessShape,
   detectedIdentityKey: z.string().nullable(),
   detectedAccountLevel: z.string().nullable(),
   mirrorStatus: z.unknown(),

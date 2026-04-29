@@ -14,6 +14,22 @@ const accountMirrorCatalogInputShape = {
   limit: z.number().int().nonnegative().optional(),
 } satisfies z.ZodRawShape;
 
+const mirrorCompletenessShape = z.object({
+  state: z.enum(['none', 'complete', 'in_progress', 'unknown']),
+  summary: z.string(),
+  remainingDetailSurfaces: z.object({
+    projects: z.number(),
+    conversations: z.number(),
+    total: z.number(),
+  }).nullable(),
+  signals: z.object({
+    projectsTruncated: z.boolean(),
+    conversationsTruncated: z.boolean(),
+    attachmentInventoryTruncated: z.boolean(),
+    attachmentCursorPresent: z.boolean(),
+  }),
+});
+
 const accountMirrorCatalogEntryShape = z.object({
   provider: z.enum(['chatgpt', 'gemini', 'grok']),
   runtimeProfileId: z.string(),
@@ -21,6 +37,7 @@ const accountMirrorCatalogEntryShape = z.object({
   boundIdentityKey: z.string().nullable(),
   status: z.enum(['eligible', 'delayed', 'blocked']),
   reason: z.string(),
+  mirrorCompleteness: mirrorCompletenessShape,
   manifests: z.object({
     projects: z.array(z.unknown()),
     conversations: z.array(z.unknown()),

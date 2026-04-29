@@ -12,6 +12,22 @@ const accountMirrorStatusInputShape = {
   explicitRefresh: z.boolean().optional(),
 } satisfies z.ZodRawShape;
 
+const mirrorCompletenessShape = z.object({
+  state: z.enum(['none', 'complete', 'in_progress', 'unknown']),
+  summary: z.string(),
+  remainingDetailSurfaces: z.object({
+    projects: z.number(),
+    conversations: z.number(),
+    total: z.number(),
+  }).nullable(),
+  signals: z.object({
+    projectsTruncated: z.boolean(),
+    conversationsTruncated: z.boolean(),
+    attachmentInventoryTruncated: z.boolean(),
+    attachmentCursorPresent: z.boolean(),
+  }),
+});
+
 const accountMirrorStatusEntryShape = z.object({
   provider: z.enum(['chatgpt', 'gemini', 'grok']),
   runtimeProfileId: z.string(),
@@ -62,6 +78,7 @@ const accountMirrorStatusEntryShape = z.object({
       artifacts: z.boolean(),
     }),
   }).nullable(),
+  mirrorCompleteness: mirrorCompletenessShape,
   limits: z.object({
     minIntervalMs: z.number(),
     explicitRefreshMinIntervalMs: z.number(),

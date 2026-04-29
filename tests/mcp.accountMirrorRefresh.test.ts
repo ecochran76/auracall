@@ -4,6 +4,17 @@ import { createAccountMirrorRefreshToolHandler } from '../src/mcp/tools/accountM
 
 describe('mcp account_mirror_refresh tool', () => {
   it('requests one explicit refresh through the shared account mirror service', async () => {
+    const mirrorCompleteness = {
+      state: 'complete' as const,
+      summary: 'Mirrored metadata indexes are complete within current provider surfaces.',
+      remainingDetailSurfaces: { projects: 0, conversations: 0, total: 0 },
+      signals: {
+        projectsTruncated: false,
+        conversationsTruncated: false,
+        attachmentInventoryTruncated: false,
+        attachmentCursorPresent: false,
+      },
+    };
     const response: AccountMirrorRefreshResult = {
       object: 'account_mirror_refresh' as const,
       requestId: 'acctmirror_test',
@@ -35,6 +46,7 @@ describe('mcp account_mirror_refresh tool', () => {
           artifacts: false,
         },
       },
+      mirrorCompleteness,
       detectedIdentityKey: 'ecochran76@gmail.com',
       detectedAccountLevel: 'Business',
       mirrorStatus: {

@@ -4,6 +4,17 @@ import { createAccountMirrorCatalogToolHandler } from '../src/mcp/tools/accountM
 
 describe('mcp account_mirror_catalog tool', () => {
   it('reads cached manifest catalog through the shared catalog service', async () => {
+    const mirrorCompleteness = {
+      state: 'complete' as const,
+      summary: 'Mirrored metadata indexes are complete within current provider surfaces.',
+      remainingDetailSurfaces: { projects: 0, conversations: 0, total: 0 },
+      signals: {
+        projectsTruncated: false,
+        conversationsTruncated: false,
+        attachmentInventoryTruncated: false,
+        attachmentCursorPresent: false,
+      },
+    };
     const response: AccountMirrorCatalogResult = {
       object: 'account_mirror_catalog',
       generatedAt: '2026-04-29T12:00:00.000Z',
@@ -17,6 +28,7 @@ describe('mcp account_mirror_catalog tool', () => {
           boundIdentityKey: 'ecochran76@gmail.com',
           status: 'eligible',
           reason: 'eligible',
+          mirrorCompleteness,
           manifests: {
             projects: [{ id: 'project_1', name: 'Project 1', provider: 'chatgpt' }],
             conversations: [],

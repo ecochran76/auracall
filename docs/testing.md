@@ -134,6 +134,8 @@
       - `accountMirrorStatus.entries[].metadataCounts`
       - `accountMirrorStatus.entries[].metadataEvidence`
       - `accountMirrorStatus.entries[].metadataEvidence.attachmentInventory`
+      - `accountMirrorStatus.entries[].mirrorCompleteness.state = none|complete|in_progress|unknown`
+      - `accountMirrorStatus.entries[].mirrorCompleteness.remainingDetailSurfaces`
       - this readback may hydrate counts/evidence from the existing provider
         cache store, but it must not enqueue browser work or scrape provider
         pages

@@ -57,6 +57,7 @@ export interface AccountMirrorRefreshResult {
   };
   metadataCounts: AccountMirrorMetadataCounts;
   metadataEvidence: AccountMirrorMetadataEvidence | null;
+  mirrorCompleteness: AccountMirrorStatusEntry['mirrorCompleteness'];
   detectedIdentityKey: string | null;
   detectedAccountLevel: string | null;
   mirrorStatus: AccountMirrorStatusSummary;
@@ -263,6 +264,7 @@ export function createAccountMirrorRefreshService(input: {
           metadataEvidence: collectionWithPriorManifests.evidence,
           manifests: collectionWithPriorManifests.manifests,
         });
+        const mirrorStatus = registry.readStatus({ provider, runtimeProfileId, explicitRefresh: true });
         return {
           object: 'account_mirror_refresh',
           requestId,
@@ -279,9 +281,20 @@ export function createAccountMirrorRefreshService(input: {
           },
           metadataCounts: collectionWithPriorManifests.metadataCounts,
           metadataEvidence: collectionWithPriorManifests.evidence,
+          mirrorCompleteness: mirrorStatus.entries[0]?.mirrorCompleteness ?? {
+            state: 'unknown',
+            summary: 'Mirror completeness could not be derived from the refreshed status.',
+            remainingDetailSurfaces: null,
+            signals: {
+              projectsTruncated: false,
+              conversationsTruncated: false,
+              attachmentInventoryTruncated: false,
+              attachmentCursorPresent: false,
+            },
+          },
           detectedIdentityKey: collectionWithPriorManifests.detectedIdentityKey,
           detectedAccountLevel: collectionWithPriorManifests.detectedAccountLevel,
-          mirrorStatus: registry.readStatus({ provider, runtimeProfileId, explicitRefresh: true }),
+          mirrorStatus,
         };
       } catch (error) {
         const completedAt = now();

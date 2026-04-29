@@ -205,6 +205,15 @@ Current implementation-facing politeness contract:
   existing five project, 69 conversation, three artifact, and 24 file counts,
   and persisted attachment cursor `{ nextProjectIndex: 5,
   nextConversationIndex: 1, detailReadLimit: 6 }`.
+- Status, refresh, and catalog readback now expose derived
+  `mirrorCompleteness` so operators do not need to interpret raw cursor values:
+  `none` means no snapshot, `complete` means current metadata indexes are not
+  truncated, `in_progress` means cursor-backed walking is still underway, and
+  `unknown` means truncated evidence lacks a continuation cursor.
+- Installed-runtime read-only dogfood confirmed both
+  `GET /v1/account-mirrors/status` and `GET /v1/account-mirrors/catalog`
+  report the cached default ChatGPT mirror as `in_progress` with 68 remaining
+  conversation detail surfaces.
 - default routine intervals:
   - ChatGPT: 6 hours plus up to 20 minutes jitter
   - Gemini: 12 hours plus up to 45 minutes jitter

@@ -65,6 +65,10 @@
   conversation detail surfaces. Store the next detail indexes in mirror
   evidence and merge newly discovered rows with the cached catalog.
 
+- 2026-04-29: Cursor evidence is not an operator contract by itself. Expose a
+  derived completeness field with plain states and remaining surface counts so
+  API/MCP callers can decide whether a mirror is usable or still walking.
+
 - 2026-04-29: Bot-sensitive lazy mirroring needs a politeness policy before it
   needs a background loop. Mirror schedulers should enforce provider-specific
   minimum intervals, deterministic jitter, explicit-refresh rate limits,
