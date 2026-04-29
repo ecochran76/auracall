@@ -15,6 +15,7 @@ import { registerRunStatusTool } from './tools/runStatus.js';
 import { registerRuntimeInspectTool } from './tools/runtimeInspect.js';
 import { registerAccountMirrorStatusTool } from './tools/accountMirrorStatus.js';
 import { registerAccountMirrorRefreshTool } from './tools/accountMirrorRefresh.js';
+import { registerAccountMirrorCatalogTool } from './tools/accountMirrorCatalog.js';
 import { resolveConfig } from '../schema/resolver.js';
 import type { ResolvedUserConfig } from '../config.js';
 import { createMediaGenerationService } from '../media/service.js';
@@ -28,6 +29,7 @@ import { createBrowserWorkbenchCapabilityDiagnostics } from '../workbench/browse
 import { createAccountMirrorStatusRegistry } from '../accountMirror/statusRegistry.js';
 import { createAccountMirrorRefreshService } from '../accountMirror/refreshService.js';
 import { createAccountMirrorPersistence } from '../accountMirror/cachePersistence.js';
+import { createAccountMirrorCatalogService } from '../accountMirror/catalogService.js';
 
 export interface McpServiceBundle {
   responsesService: ReturnType<typeof createExecutionResponsesService>;
@@ -35,6 +37,7 @@ export interface McpServiceBundle {
   workbenchCapabilityReporter: ReturnType<typeof createWorkbenchCapabilityService>;
   accountMirrorStatusRegistry: ReturnType<typeof createAccountMirrorStatusRegistry>;
   accountMirrorRefreshService: ReturnType<typeof createAccountMirrorRefreshService>;
+  accountMirrorCatalogService: ReturnType<typeof createAccountMirrorCatalogService>;
 }
 
 export interface CreateMcpServicesDeps {
@@ -81,6 +84,9 @@ export async function startMcpServer(): Promise<void> {
   });
   registerAccountMirrorRefreshTool(server, {
     service: services.accountMirrorRefreshService,
+  });
+  registerAccountMirrorCatalogTool(server, {
+    service: services.accountMirrorCatalogService,
   });
   registerSessionsTool(server);
   registerSessionResources(server);
@@ -156,12 +162,18 @@ export function createMcpServicesFromConfig(
     registry: accountMirrorStatusRegistry,
     persistence: accountMirrorPersistence,
   });
+  const accountMirrorCatalogService = createAccountMirrorCatalogService({
+    config: resolvedUserConfig as Record<string, unknown>,
+    registry: accountMirrorStatusRegistry,
+    persistence: accountMirrorPersistence,
+  });
   return {
     responsesService,
     mediaGenerationService,
     workbenchCapabilityReporter,
     accountMirrorStatusRegistry,
     accountMirrorRefreshService,
+    accountMirrorCatalogService,
   };
 }
 

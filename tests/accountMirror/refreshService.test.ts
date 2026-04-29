@@ -33,6 +33,7 @@ const config = {
 function createNoopPersistence(): AccountMirrorPersistence {
   return {
     writeSnapshot: vi.fn(async () => {}),
+    readCatalog: vi.fn(async () => null),
     readState: vi.fn(async () => null),
   };
 }

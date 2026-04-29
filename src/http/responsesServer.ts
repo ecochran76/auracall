@@ -100,6 +100,12 @@ import {
   type AccountMirrorRefreshService,
 } from '../accountMirror/refreshService.js';
 import { createAccountMirrorPersistence } from '../accountMirror/cachePersistence.js';
+import {
+  createAccountMirrorCatalogService,
+  type AccountMirrorCatalogKind,
+  type AccountMirrorCatalogResult,
+  type AccountMirrorCatalogService,
+} from '../accountMirror/catalogService.js';
 import type { AccountMirrorProvider } from '../accountMirror/politePolicy.js';
 
 export interface ResponsesHttpServerOptions {
@@ -134,6 +140,7 @@ export interface ResponsesHttpServerDeps {
   probeMediaGenerationBrowserDiagnostics?: typeof probeMediaGenerationBrowserDiagnostics;
   accountMirrorStatusRegistry?: AccountMirrorStatusRegistry;
   accountMirrorRefreshService?: AccountMirrorRefreshService;
+  accountMirrorCatalogService?: AccountMirrorCatalogService;
 }
 
 export interface ResponsesHttpServerInstance {
@@ -202,6 +209,7 @@ interface HttpRuntimeRunInspectionResponse {
 }
 
 interface HttpAccountMirrorRefreshResponse extends AccountMirrorRefreshResult {}
+interface HttpAccountMirrorCatalogResponse extends AccountMirrorCatalogResult {}
 
 interface HttpStatusResponse {
   object: 'status';
@@ -226,10 +234,11 @@ interface HttpStatusResponse {
     mediaGenerationsCreate: string;
     mediaGenerationsGetTemplate: string;
     mediaGenerationsStatusTemplate: string;
-      runStatusTemplate: string;
-      accountMirrorStatus: string;
-      accountMirrorRefresh: string;
-      workbenchCapabilitiesList: string;
+    runStatusTemplate: string;
+    accountMirrorStatus: string;
+    accountMirrorCatalog: string;
+    accountMirrorRefresh: string;
+    workbenchCapabilitiesList: string;
   };
   compatibility: {
     openai: true;
@@ -295,6 +304,12 @@ export async function createResponsesHttpServer(
     readPersistentState: accountMirrorPersistence.readState,
   });
   const accountMirrorRefreshService = deps.accountMirrorRefreshService ?? createAccountMirrorRefreshService({
+    config: configuredRuntimeConfig,
+    registry: accountMirrorStatusRegistry,
+    persistence: accountMirrorPersistence,
+    now,
+  });
+  const accountMirrorCatalogService = deps.accountMirrorCatalogService ?? createAccountMirrorCatalogService({
     config: configuredRuntimeConfig,
     registry: accountMirrorStatusRegistry,
     persistence: accountMirrorPersistence,
@@ -451,6 +466,13 @@ export async function createResponsesHttpServer(
         const query = parseAccountMirrorStatusQuery(url.searchParams);
         await accountMirrorStatusRegistry.refreshPersistentState?.();
         sendJson(res, 200, accountMirrorStatusRegistry.readStatus(query));
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/account-mirrors/catalog') {
+        const query = parseAccountMirrorCatalogQuery(url.searchParams);
+        const result: HttpAccountMirrorCatalogResponse = await accountMirrorCatalogService.readCatalog(query);
+        sendJson(res, 200, result);
         return;
       }
 
@@ -1309,6 +1331,7 @@ function createHttpStatusResponse(input: {
       mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
       runStatusTemplate: '/v1/runs/{run_id}/status[?diagnostics=browser-state]',
       accountMirrorStatus: '/v1/account-mirrors/status[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&explicitRefresh=true]',
+      accountMirrorCatalog: '/v1/account-mirrors/catalog[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&kind=projects|conversations|artifacts|media|all][&limit=50]',
       accountMirrorRefresh: '/v1/account-mirrors/refresh',
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
@@ -1605,6 +1628,13 @@ interface ParsedAccountMirrorStatusQuery {
   explicitRefresh?: boolean;
 }
 
+interface ParsedAccountMirrorCatalogQuery {
+  provider?: AccountMirrorProvider;
+  runtimeProfileId?: string;
+  kind?: AccountMirrorCatalogKind;
+  limit?: number;
+}
+
 interface ParsedMediaGenerationCreateQuery {
   wait?: boolean;
 }
@@ -1759,6 +1789,34 @@ function parseAccountMirrorStatusQuery(searchParams: URLSearchParams): ParsedAcc
     provider: parsed.provider,
     runtimeProfileId: parsed.runtimeProfile,
     explicitRefresh: parsed.explicitRefresh,
+  };
+}
+
+function parseAccountMirrorCatalogQuery(searchParams: URLSearchParams): ParsedAccountMirrorCatalogQuery {
+  const raw: Record<string, unknown> = {};
+  if (searchParams.has('provider')) {
+    raw.provider = searchParams.get('provider');
+  }
+  if (searchParams.has('runtimeProfile')) {
+    raw.runtimeProfile = searchParams.get('runtimeProfile');
+  }
+  if (searchParams.has('kind')) {
+    raw.kind = searchParams.get('kind');
+  }
+  if (searchParams.has('limit')) {
+    raw.limit = searchParams.get('limit');
+  }
+  const parsed = z.object({
+    provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
+    runtimeProfile: z.string().trim().min(1).optional(),
+    kind: z.enum(['all', 'projects', 'conversations', 'artifacts', 'media']).optional(),
+    limit: z.coerce.number().int().nonnegative().optional(),
+  }).parse(raw);
+  return {
+    provider: parsed.provider,
+    runtimeProfileId: parsed.runtimeProfile,
+    kind: parsed.kind,
+    limit: parsed.limit,
   };
 }
 

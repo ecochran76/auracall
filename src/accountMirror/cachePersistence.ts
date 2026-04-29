@@ -43,6 +43,16 @@ export interface AccountMirrorPersistenceRecord {
 
 export interface AccountMirrorPersistence {
   writeSnapshot(record: AccountMirrorPersistenceRecord): Promise<void>;
+  readCatalog(input: {
+    provider: AccountMirrorProvider;
+    boundIdentityKey: string | null;
+    limit?: number | null;
+  }): Promise<{
+    projects: Project[];
+    conversations: Conversation[];
+    artifacts: ConversationArtifact[];
+    media: AccountMirrorMediaManifestEntry[];
+  } | null>;
   readState(input: {
     provider: AccountMirrorProvider;
     runtimeProfileId: string;
@@ -89,6 +99,34 @@ export function createAccountMirrorPersistence(input: {
       await cacheStore.writeConversations(context, record.manifests.conversations);
       await cacheStore.writeAccountMirrorArtifacts(context, record.manifests.artifacts);
       await cacheStore.writeAccountMirrorMedia(context, record.manifests.media);
+    },
+    async readCatalog(request) {
+      if (!request.boundIdentityKey) {
+        return null;
+      }
+      const context = createMirrorCacheContext({
+        config: options.config,
+        provider: request.provider,
+        boundIdentityKey: request.boundIdentityKey,
+      });
+      const limit = normalizeLimit(request.limit);
+      const [
+        projects,
+        conversations,
+        artifacts,
+        media,
+      ] = await Promise.all([
+        cacheStore.readProjects(context),
+        cacheStore.readConversations(context),
+        cacheStore.readAccountMirrorArtifacts(context),
+        cacheStore.readAccountMirrorMedia(context),
+      ]);
+      return {
+        projects: projects.items.slice(0, limit),
+        conversations: conversations.items.slice(0, limit),
+        artifacts: artifacts.items.slice(0, limit),
+        media: media.items.slice(0, limit),
+      };
     },
     async readState(request) {
       if (!request.boundIdentityKey) {
@@ -180,4 +218,9 @@ function readNestedString(
 
 function normalizeIdentityKey(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function normalizeLimit(value: number | null | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 50;
+  return Math.max(0, Math.min(500, Math.floor(value)));
 }

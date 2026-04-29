@@ -11,6 +11,7 @@ import {
   serveResponsesHttp,
 } from '../src/http/responsesServer.js';
 import type { AccountMirrorStatusSummary } from '../src/accountMirror/statusRegistry.js';
+import type { AccountMirrorCatalogResult } from '../src/accountMirror/catalogService.js';
 import { resetLiveRuntimeRunServiceStateRegistryForTests } from '../src/runtime/liveServiceStateRegistry.js';
 import { createExecutionRuntimeControl } from '../src/runtime/control.js';
 import { writeTaskRunSpecStoredRecord } from '../src/teams/store.js';
@@ -1223,6 +1224,8 @@ describe('http responses adapter', () => {
           responsesGetTemplate: '/v1/responses/{response_id}',
           accountMirrorStatus:
             '/v1/account-mirrors/status[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&explicitRefresh=true]',
+          accountMirrorCatalog:
+            '/v1/account-mirrors/catalog[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&kind=projects|conversations|artifacts|media|all][&limit=50]',
           accountMirrorRefresh: '/v1/account-mirrors/refresh',
         },
         accountMirrorStatus: {
@@ -1383,6 +1386,80 @@ describe('http responses adapter', () => {
           running: false,
           lastDispatcherKey: expect.stringContaining('service:chatgpt'),
         }),
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('reports read-only account mirror catalog through the API surface', async () => {
+    const catalog: AccountMirrorCatalogResult = {
+      object: 'account_mirror_catalog',
+      generatedAt: '2026-04-29T12:00:00.000Z',
+      kind: 'conversations',
+      limit: 2,
+      entries: [
+        {
+          provider: 'chatgpt',
+          runtimeProfileId: 'default',
+          browserProfileId: 'default',
+          boundIdentityKey: 'ecochran76@gmail.com',
+          status: 'eligible',
+          reason: 'eligible',
+          manifests: {
+            projects: [],
+            conversations: [
+              { id: 'conv_1', title: 'Conversation 1', provider: 'chatgpt' },
+              { id: 'conv_2', title: 'Conversation 2', provider: 'chatgpt' },
+            ],
+            artifacts: [],
+            media: [],
+          },
+          counts: {
+            projects: 0,
+            conversations: 2,
+            artifacts: 0,
+            media: 0,
+          },
+        },
+      ],
+      metrics: {
+        targets: 1,
+        projects: 0,
+        conversations: 2,
+        artifacts: 0,
+        media: 0,
+      },
+    };
+    const readCatalog = vi.fn(async () => catalog);
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        accountMirrorCatalogService: {
+          readCatalog,
+        },
+      },
+    );
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/account-mirrors/catalog?provider=chatgpt&runtimeProfile=default&kind=conversations&limit=2`,
+      );
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        object: 'account_mirror_catalog',
+        kind: 'conversations',
+        limit: 2,
+        metrics: {
+          targets: 1,
+          conversations: 2,
+        },
+      });
+      expect(readCatalog).toHaveBeenCalledWith({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        kind: 'conversations',
+        limit: 2,
       });
     } finally {
       await server.close();

@@ -142,6 +142,15 @@
       - `GET /v1/account-mirrors/status?provider=chatgpt&runtimeProfile=default&explicitRefresh=true`
       - `explicitRefresh=true` evaluates the shorter polite interval but still
         remains read-only in this slice
+    - dedicated mirror manifest catalog route:
+      - `GET /v1/account-mirrors/catalog`
+      - `GET /v1/account-mirrors/catalog?provider=chatgpt&runtimeProfile=default&kind=all&limit=50`
+      - `kind` can be `all`, `projects`, `conversations`, `artifacts`, or
+        `media`
+      - this readback returns cached project/conversation/artifact/media
+        manifest rows by provider plus bound identity; it must not acquire the
+        browser dispatcher, launch browsers, submit prompts, scrape provider
+        pages, or load conversation ids
     - explicit mirror refresh route:
       - `POST /v1/account-mirrors/refresh`
       - body: `{"provider":"chatgpt","runtimeProfile":"default","explicitRefresh":true}`
@@ -162,10 +171,10 @@
         immature conversation ids
     - MCP parity:
       - `account_mirror_status`
+      - `account_mirror_catalog`
       - `account_mirror_refresh`
-      - optional inputs: `provider`, `runtimeProfile`, `explicitRefresh`
-      - status is read-only; refresh is explicit, dispatcher-owned, and
-        metadata-only in this slice
+      - status/catalog are read-only; refresh is explicit,
+        dispatcher-owned, and metadata-only in this slice
     - plain `/status` also includes a compact direct-run local claim snapshot:
       - `localClaimSummary.sourceKind = direct`
       - `localClaimSummary.runnerId`

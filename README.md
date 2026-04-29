@@ -194,13 +194,17 @@ Terminology note:
   - `GET /v1/media-generations/{media_generation_id}/status`
   - `GET /v1/runs/{run_id}/status`
   - `GET /v1/account-mirrors/status`
+  - `GET /v1/account-mirrors/catalog`
   - `POST /v1/account-mirrors/refresh`
 - Account mirror refreshes are metadata-first and identity-gated. Successful
   refreshes persist the mirror snapshot in the existing provider cache under
   `provider + boundIdentity`; runtime/browser profile ids are retained as
   binding and refresh provenance, not as duplicate mirror cache owners. The
   same refresh stores bounded project/conversation manifests and lightweight
-  artifact/media indexes without fetching full content.
+  artifact/media indexes without fetching full content. Operators and agents
+  can inspect those cached indexes with
+  `GET /v1/account-mirrors/catalog?provider=chatgpt&runtimeProfile=default&kind=all&limit=50`;
+  catalog reads are cache-only and do not enqueue browser work.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

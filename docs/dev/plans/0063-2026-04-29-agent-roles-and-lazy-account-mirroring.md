@@ -141,6 +141,12 @@ Current implementation-facing politeness contract:
   datasets, plus lightweight `account-mirror-artifacts` and
   `account-mirror-media` manifest datasets. These are index rows only; full
   content and binary artifacts remain lazy.
+- `src/accountMirror/catalogService.ts` owns the read-only catalog service over
+  cached mirror manifests. `GET /v1/account-mirrors/catalog` and MCP
+  `account_mirror_catalog` expose project/conversation/artifact/media index
+  rows for operators and agents without acquiring the browser dispatcher,
+  launching browsers, scraping providers, submitting prompts, or loading
+  conversation ids.
 - default routine intervals:
   - ChatGPT: 6 hours plus up to 20 minutes jitter
   - Gemini: 12 hours plus up to 45 minutes jitter
@@ -209,6 +215,9 @@ Each status payload should include:
   projects, conversations, artifacts, and media indexes can be read from the
   identity-scoped provider cache without submitting prompts or materializing
   full content.
+- API and MCP manifest catalog readback can list cached
+  project/conversation/artifact/media rows by provider, AuraCall runtime
+  profile, kind, and limit without requiring callers to know cache file paths.
 - Tests cover config projection, mirror scheduling state, identity hard stops,
   and dispatcher queue evidence before live provider dogfood.
 - The first scheduling tests prove self-imposed jitter, minimum intervals,
@@ -224,7 +233,8 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Next expose a read-only manifest catalog surface for operators and agents so
-they can inspect mirrored project/conversation/artifact/media indexes without
-knowing provider cache file paths. Keep refresh explicit and browser-dispatcher
-owned until the idle scheduler is added.
+Next add the first idle-scheduler eligibility loop for lazy mirroring while
+keeping refresh work dispatcher-owned and metadata-only. The first scheduler
+slice should enqueue at most one eligible default-ChatGPT mirror refresh per
+cycle, honor the existing politeness policy/backoff/cooldown decisions, and
+remain disabled or dry-run configurable for dogfood.

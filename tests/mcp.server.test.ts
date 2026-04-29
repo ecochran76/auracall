@@ -67,6 +67,9 @@ describe('mcp server service wiring', () => {
       accountMirrorRefreshService: expect.objectContaining({
         requestRefresh: expect.any(Function),
       }),
+      accountMirrorCatalogService: expect.objectContaining({
+        readCatalog: expect.any(Function),
+      }),
     });
   });
 });

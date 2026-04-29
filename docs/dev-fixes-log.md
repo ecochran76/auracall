@@ -15,6 +15,11 @@
   media manifests are reusable account indexes in identity-scoped cache
   datasets. Full content and binary artifacts stay lazy.
 
+- 2026-04-29: Account mirror manifest readback should be a cache-only catalog,
+  not another browser operation. API/MCP callers need `kind` and `limit`
+  filters over cached project/conversation/artifact/media rows, while explicit
+  refresh remains the only path that may acquire the browser dispatcher.
+
 - 2026-04-29: Bot-sensitive lazy mirroring needs a politeness policy before it
   needs a background loop. Mirror schedulers should enforce provider-specific
   minimum intervals, deterministic jitter, explicit-refresh rate limits,

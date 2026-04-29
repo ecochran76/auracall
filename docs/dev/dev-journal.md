@@ -24,6 +24,10 @@
   datasets and lightweight account-mirror artifact/media manifest datasets.
   This remains metadata-only and does not fetch full conversation bodies or
   binary artifacts.
+- Catalog readback: added `src/accountMirror/catalogService.ts`,
+  `GET /v1/account-mirrors/catalog`, and MCP `account_mirror_catalog` so
+  operators and agents can inspect cached project/conversation/artifact/media
+  manifests without knowing provider cache paths or triggering browser work.
 - Key boundary: default ChatGPT is the first mirror source because it has the
   richest account history, but account identity remains bound to the referenced
   AuraCall runtime profile and provider service identity.
