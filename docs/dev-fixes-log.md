@@ -1,3 +1,10 @@
+- 2026-04-29: Lazy account mirroring must be metadata-first, identity-gated,
+  and routed through the browser operation dispatcher. The default ChatGPT
+  tenant is the first mirror source because it has the richest account history,
+  but mirrored state must remain keyed by provider service plus bound identity;
+  agents can describe purpose and routing, not redefine browser/account
+  identity.
+
 - 2026-04-27: ChatGPT post-submit media readback must not use the mature
   conversation payload reload fallback. Existing ChatGPT artifact extraction
   can reload a mature conversation to capture `/backend-api/conversation/...`

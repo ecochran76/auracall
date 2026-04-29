@@ -161,11 +161,16 @@ In short:
 - browser profile = browser/account family
 - AuraCall runtime profile = workflow defaults layered on top of a browser profile
 
-Reserved future layers:
+Agent and team layers:
 - `agents`
-  - will reference AuraCall runtime profiles and add instructions/persona/task defaults
+  - reference AuraCall runtime profiles and add instructions/persona/task
+    defaults
+  - live execution selection currently uses only
+    `agents.<name>.runtimeProfile`
+  - `description`, `instructions`, and `metadata` are valid places to describe
+    agent purpose and future workflow policy
 - `teams`
-  - will group agents without redefining browser or runtime-profile state
+  - group agents without redefining browser or runtime-profile state
 
 Target-model note:
 - the preferred public shape is documented in
@@ -390,18 +395,36 @@ Version policy:
     }
   },
 
-  // Reserved future layers. Parsed today, not executed yet.
+  // Agent/team layers. Agent runtimeProfile selection is live; purpose fields
+  // are descriptive until a later workflow-defaults slice promotes them.
   agents: {
-    researcher: {
+    "default-chatgpt-memory-steward": {
       runtimeProfile: "default",
-      description: "Reserved future agent config",
-      instructions: "Not yet executed by Aura-Call"
+      description: "Low-churn mirror steward for the default ChatGPT tenant",
+      instructions: "Maintain account mirror freshness without submitting prompts or navigating away from active provider work.",
+      metadata: {
+        service: "chatgpt",
+        purpose: "account-mirror",
+        mirrorPolicy: {
+          mode: "lazy",
+          priority: "background",
+          contentPolicy: "metadata-first"
+        }
+      }
+    },
+    "default-chatgpt-primary": {
+      runtimeProfile: "default",
+      description: "Primary default ChatGPT account for planning, drafting, synthesis, and historical recall"
+    },
+    "consult-chatgpt-pro": {
+      runtimeProfile: "wsl-chrome-2",
+      description: "Consulting ChatGPT Pro account for Pro and Deep Research work"
     }
   },
   teams: {
-    ops: {
-      agents: ["researcher"],
-      description: "Reserved future team config"
+    "chatgpt-memory-ops": {
+      agents: ["default-chatgpt-memory-steward", "default-chatgpt-primary"],
+      description: "Default ChatGPT mirror plus primary workbench routing"
     }
   },
 
@@ -451,12 +474,15 @@ Within each file, later CLI flags still override config, and environment variabl
 - Use `--profile <name>` to switch AuraCall runtime profiles for a single run (overrides config).
 - Use `--agent <name>` to resolve a run through a reserved agent reference.
   - Today this only selects the referenced AuraCall runtime profile and its browser-profile inheritance.
-  - It does not enable separate agent execution behavior yet.
+  - It does not enable autonomous background agent behavior by itself.
   - `agents.<name>.description`, `instructions`, and `metadata` are accepted
-    config fields, but they still do not affect runtime selection, browser
-    profile resolution, or default service resolution.
+    config fields for purpose, selection, and future workflow policy, but they
+    still do not affect runtime selection, browser profile resolution, or
+    default service resolution.
   - `agents.<name>.defaults` also remains execution-inert for now; treat it as
     a placeholder seam, not a live override surface.
+  - Account identity stays on
+    `runtimeProfiles.<name>.services.<service>.identity`, not agent metadata.
   - If both `--profile` and `--agent` are passed, `--profile` wins.
 - Use `--team <name>` only for planning and inspection surfaces today.
   - It does not change the active runtime selection.

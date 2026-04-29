@@ -1,3 +1,15 @@
+## 2026-04-29 - Agent roles and lazy account mirroring plan
+
+- Focus: define account-aware agent roles and scope lazy account mirroring for
+  service mode without widening provider API work.
+- Progress: added Plan 0063 for metadata-first lazy mirroring through the
+  browser operation dispatcher, documented the initial agent catalog, and
+  updated configuration guidance so agent purpose fields are useful without
+  implying new execution semantics.
+- Key boundary: default ChatGPT is the first mirror source because it has the
+  richest account history, but account identity remains bound to the referenced
+  AuraCall runtime profile and provider service identity.
+
 ## 2026-04-27 - ChatGPT image generation audit
 
 - Focus: start Plan 0062 for first-class ChatGPT image generation and audit

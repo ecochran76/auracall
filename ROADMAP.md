@@ -37,6 +37,15 @@ Current State:
   - config/browser/provider work stays bounded maintenance or side-track work
     unless explicitly selected as the primary lane; Plan 0061 is the current
     selected provider slice
+- account-aware agents and lazy account mirroring are now scoped in
+  [docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md](docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md)
+  as a service-mode planning lane:
+  - default ChatGPT is the first mirror source because it has the richest
+    account history
+  - agent roles may specialize purpose and routing, but account identity stays
+    bound to the referenced AuraCall runtime profile
+  - lazy mirroring must be metadata-first, identity-gated, and routed through
+    the browser operation dispatcher
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local
