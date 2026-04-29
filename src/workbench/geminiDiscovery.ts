@@ -2,7 +2,9 @@ import type { WorkbenchCapability } from './types.js';
 
 interface GeminiFeatureObject {
   modes?: unknown;
+  disabled_modes?: unknown;
   deep_research?: unknown;
+  signed_out?: unknown;
   toggles?: unknown;
   detected?: unknown;
   configured?: unknown;
@@ -74,11 +76,14 @@ export function deriveGeminiWorkbenchCapabilitiesFromFeatureSignature(
     return [];
   }
   const modes = collectGeminiModes(parsed);
+  const disabledModes = new Set(collectGeminiDisabledModes(parsed));
+  const signedOut = hasGeminiSignedOutSignal(parsed);
   const capabilities: WorkbenchCapability[] = [];
 
   for (const mode of modes) {
     const mapped = GEMINI_MODE_TO_CAPABILITY[mode];
     if (!mapped) continue;
+    const disabled = signedOut || disabledModes.has(mode);
     capabilities.push({
       id: mapped.id,
       provider: 'gemini',
@@ -86,7 +91,7 @@ export function deriveGeminiWorkbenchCapabilitiesFromFeatureSignature(
       category: mapped.category,
       invocationMode: 'tool_drawer_selection',
       surfaces: ['browser_service', 'cli', 'local_api', 'mcp'],
-      availability: 'available',
+      availability: disabled ? 'blocked' : 'available',
       stability: 'observed',
       requiredInputs: [
         {
@@ -101,6 +106,8 @@ export function deriveGeminiWorkbenchCapabilitiesFromFeatureSignature(
       source: 'browser_discovery',
       metadata: {
         featureSignatureMode: mode,
+        disabled: disabled || undefined,
+        disabledReason: disabled ? signedOut ? 'gemini_signed_out' : 'gemini_tool_disabled' : undefined,
       },
     });
   }
@@ -130,6 +137,18 @@ function collectGeminiModes(root: GeminiFeatureObject): string[] {
   return Array.from(modes).sort();
 }
 
+function collectGeminiDisabledModes(root: GeminiFeatureObject): string[] {
+  const modes = new Set<string>();
+  collectDisabledFromObject(root, modes);
+  if (root.configured && typeof root.configured === 'object') {
+    collectDisabledFromObject(root.configured as GeminiFeatureObject, modes);
+  }
+  if (root.detected && typeof root.detected === 'object') {
+    collectDisabledFromObject(root.detected as GeminiFeatureObject, modes);
+  }
+  return Array.from(modes).sort();
+}
+
 function collectFromObject(source: GeminiFeatureObject, modes: Set<string>): void {
   if (Array.isArray(source.modes)) {
     for (const mode of source.modes) {
@@ -140,6 +159,25 @@ function collectFromObject(source: GeminiFeatureObject, modes: Set<string>): voi
   if (source.deep_research === true) {
     modes.add('deep research');
   }
+}
+
+function collectDisabledFromObject(source: GeminiFeatureObject, modes: Set<string>): void {
+  if (!Array.isArray(source.disabled_modes)) return;
+  for (const mode of source.disabled_modes) {
+    const normalized = normalizeMode(mode);
+    if (normalized) modes.add(normalized);
+  }
+}
+
+function hasGeminiSignedOutSignal(root: GeminiFeatureObject): boolean {
+  if (root.signed_out === true) return true;
+  if (root.configured && typeof root.configured === 'object' && (root.configured as GeminiFeatureObject).signed_out === true) {
+    return true;
+  }
+  if (root.detected && typeof root.detected === 'object' && (root.detected as GeminiFeatureObject).signed_out === true) {
+    return true;
+  }
+  return false;
 }
 
 function normalizeMode(value: unknown): string {

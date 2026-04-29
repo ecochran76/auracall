@@ -284,6 +284,10 @@ Notes:
     - first-class blocking-state classification when the selected Gemini page
       is on `google.com/sorry`, CAPTCHA, reCAPTCHA, Cloudflare, or another
       human-verification surface
+    - signed-out web-app evidence separately from managed Chrome Google-account
+      evidence; when the Gemini page shows `Sign in` or disabled tool drawer
+      rows, feature discovery records `signed_out` / `disabled_modes` and
+      media capability preflight must stay blocked
   - current boundary:
     - this is a feature/discovery seam, not full live selector diagnosis
     - package-owned live DOM discovery is available through:

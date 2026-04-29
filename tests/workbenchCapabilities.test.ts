@@ -114,6 +114,32 @@ describe('workbench capability service', () => {
     ]));
   });
 
+  it('blocks Gemini capabilities when the live feature signature shows signed-out or disabled tools', () => {
+    const capabilities = deriveGeminiWorkbenchCapabilitiesFromFeatureSignature(
+      JSON.stringify({
+        detector: 'gemini-feature-probe-v1',
+        signed_out: true,
+        modes: ['Create image', 'Create video'],
+        disabled_modes: ['Create image'],
+      }),
+      '2026-04-23T12:00:00.000Z',
+    );
+
+    expect(capabilities).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'gemini.media.create_image',
+        availability: 'blocked',
+        metadata: expect.objectContaining({
+          disabledReason: 'gemini_signed_out',
+        }),
+      }),
+      expect.objectContaining({
+        id: 'gemini.media.create_video',
+        availability: 'blocked',
+      }),
+    ]));
+  });
+
   it('derives available ChatGPT capabilities from a live feature signature', () => {
     const capabilities = deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(
       JSON.stringify({

@@ -23675,3 +23675,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - focused Grok media/status tests passed with `--testTimeout 15000`
   - installed-runtime mapping smoke confirmed future Grok visible-tile
     artifacts do not serialize `data:image` content in artifact metadata
+
+## 2026-04-29 - Gemini signed-out tool drawer capability guard
+
+- Focus: keep Gemini media/research/canvas capability reporting honest when
+  the managed Chrome profile has a Google account but the Gemini web app still
+  shows a signed-out surface.
+- Findings:
+  - `auracall doctor --target gemini --json` confirmed the local managed
+    Chrome profile is bound to `ecochran76@gmail.com`.
+  - The live Gemini page at `https://gemini.google.com/app` still showed a
+    visible `Sign in` link, and browser-tools found `Create image`,
+    `Create video`, `Canvas`, and `Deep research` as disabled drawer rows.
+  - `auracall capabilities --target gemini --category media --available-only`
+    failed fast on identity preflight with `gemini_identity_not_detected`,
+    so no media generation was attempted.
+  - `auracall login --target gemini --export-cookies` refreshed the cookie
+    export, but did not clear the signed-out Gemini web-app state.
+- Progress:
+  - Gemini feature signatures now preserve `signed_out` and
+    `disabled_modes` signals from provider and browser-tools discovery.
+  - Gemini workbench capability derivation maps signed-out or disabled tool
+    rows to `blocked` availability instead of `available`.
+- Validation:
+  - `pnpm exec tsc --noEmit` passed
+  - focused Gemini/workbench/media tests passed with `--testTimeout 15000`
+  - local doctor now reports `signed_out: true` and disabled Gemini modes in
+    `featureStatus.detected`
+  - installed runtime doctor reports the same `signed_out` / `disabled_modes`
+    evidence
+  - installed Gemini media preflight run
+    `medgen_269ced977c3b4a919f7d3daa5e2af2aa` failed before provider submit
+    with `gemini_identity_not_detected` and zero artifacts

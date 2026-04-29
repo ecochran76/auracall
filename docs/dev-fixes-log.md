@@ -15054,3 +15054,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `data:image` URLs. Do not persist or echo full data URLs in media-generation
   artifact metadata; store the cached file plus compact source evidence such
   as source kind, length, and fingerprint.
+- 2026-04-29: Gemini feature discovery must distinguish a Chrome-profile
+  Google account from a usable signed-in Gemini web app. If browser-tools sees
+  a visible Gemini `Sign in` link or disabled Gemini tool rows, carry
+  `signed_out` / `disabled_modes` in the feature signature and derive blocked
+  workbench capabilities instead of advertising media/research/canvas as
+  available.

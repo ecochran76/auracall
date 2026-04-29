@@ -177,7 +177,9 @@ type GeminiFeatureProbe = {
   grounding?: boolean;
   deep_research?: boolean;
   personal_intelligence?: boolean;
+  signed_out?: boolean;
   modes?: string[] | null;
+  disabled_modes?: string[] | null;
   toggles?: Record<string, boolean> | null;
   active_mode?: string | null;
 };
@@ -211,6 +213,15 @@ export function normalizeGeminiFeatureSignature(probe: GeminiFeatureProbe | null
         ),
       ).sort()
     : [];
+  const disabledModes = Array.isArray(probe.disabled_modes)
+    ? Array.from(
+        new Set(
+          probe.disabled_modes
+            .map((entry) => normalizeGeminiDiscoveryLabel(entry))
+            .filter((entry) => Boolean(entry) && knownModes.has(entry)),
+        ),
+      ).sort()
+    : [];
   const toggles = probe.toggles && typeof probe.toggles === 'object'
     ? Object.fromEntries(
         Object.entries(probe.toggles)
@@ -227,7 +238,9 @@ export function normalizeGeminiFeatureSignature(probe: GeminiFeatureProbe | null
     deep_research: typeof probe.deep_research === 'boolean' ? probe.deep_research : undefined,
     personal_intelligence:
       typeof probe.personal_intelligence === 'boolean' ? probe.personal_intelligence : undefined,
+    signed_out: typeof probe.signed_out === 'boolean' ? probe.signed_out : undefined,
     modes,
+    disabled_modes: disabledModes.length > 0 ? disabledModes : undefined,
     toggles: toggles && Object.keys(toggles).length > 0 ? toggles : undefined,
     active_mode:
       normalizedActiveMode && normalizedActiveMode !== 'open mode picker' ? normalizedActiveMode : undefined,
@@ -241,7 +254,9 @@ export function normalizeGeminiFeatureSignature(probe: GeminiFeatureProbe | null
     normalized.grounding !== undefined ||
     normalized.deep_research !== undefined ||
     normalized.personal_intelligence !== undefined ||
+    normalized.signed_out !== undefined ||
     normalized.modes.length > 0 ||
+    disabledModes.length > 0 ||
     (normalized.toggles && Object.keys(normalized.toggles).length > 0) ||
     normalized.active_mode !== undefined;
   if (!hasAnySignal) {
@@ -259,10 +274,23 @@ export function deriveGeminiFeatureProbeFromUiList(
   const modes = Array.from(
     new Set(
       uiList.sections.menuItems
+        .filter((item) => item.visible !== false)
         .map((item) => normalizeGeminiDiscoveryLabel(item.text ?? item.ariaLabel ?? null))
         .filter(Boolean),
     ),
   ).sort();
+  const disabledModes = Array.from(
+    new Set(
+      uiList.sections.menuItems
+        .filter((item) => item.visible !== false && item.disabled === true)
+        .map((item) => normalizeGeminiDiscoveryLabel(item.text ?? item.ariaLabel ?? null))
+        .filter(Boolean),
+    ),
+  ).sort();
+  const signedOut = uiList.sections.links.some((item) =>
+    item.visible !== false &&
+    normalizeGeminiDiscoveryLabel(item.text ?? item.ariaLabel ?? item.title ?? null) === 'sign in'
+  );
   const toggles = Object.fromEntries(
     uiList.sections.switches
       .map((item) => {
@@ -284,7 +312,9 @@ export function deriveGeminiFeatureProbeFromUiList(
     personal_intelligence: Object.hasOwn(toggles, 'personal intelligence')
       ? Boolean(toggles['personal intelligence'])
       : undefined,
+    signed_out: signedOut || undefined,
     modes,
+    disabled_modes: disabledModes.length > 0 ? disabledModes : undefined,
     toggles,
     active_mode: null,
   };
@@ -300,6 +330,13 @@ export function mergeGeminiFeatureProbes(
   const modes = Array.from(
     new Set(
       [...(providerProbe?.modes ?? []), ...(uiListProbe?.modes ?? [])]
+        .map((entry) => normalizeGeminiDiscoveryLabel(entry))
+        .filter(Boolean),
+    ),
+  ).sort();
+  const disabledModes = Array.from(
+    new Set(
+      [...(providerProbe?.disabled_modes ?? []), ...(uiListProbe?.disabled_modes ?? [])]
         .map((entry) => normalizeGeminiDiscoveryLabel(entry))
         .filter(Boolean),
     ),
@@ -325,7 +362,9 @@ export function mergeGeminiFeatureProbes(
       Object.hasOwn(toggles, 'personal intelligence')
         ? Boolean(toggles['personal intelligence'])
         : providerProbe?.personal_intelligence ?? uiListProbe?.personal_intelligence,
+    signed_out: uiListProbe?.signed_out ?? providerProbe?.signed_out,
     modes,
+    disabled_modes: disabledModes.length > 0 ? disabledModes : undefined,
     toggles,
     active_mode: normalizeGeminiDiscoveryLabel(providerProbe?.active_mode ?? uiListProbe?.active_mode ?? '') || null,
   };
@@ -1245,6 +1284,17 @@ async function readGeminiToolsDrawerProbe(Runtime: ChromeClient['Runtime']): Pro
         .filter(Boolean),
     ),
   ).sort();
+  const disabledModes = Array.from(
+    new Set(
+      rowSearch.matched
+        .filter((match) => {
+          const className = normalizeGeminiDiscoveryLabel(match.className ?? '');
+          return className.includes('disabled') || className.includes('mdc list item disabled');
+        })
+        .map((match) => normalizeGeminiDiscoveryLabel(match.text || match.ariaLabel || null))
+        .filter(Boolean),
+    ),
+  ).sort();
   const toggles = Object.fromEntries(
     toggleSearch.matched
       .map((match) => {
@@ -1267,6 +1317,7 @@ async function readGeminiToolsDrawerProbe(Runtime: ChromeClient['Runtime']): Pro
       ? Boolean(toggles['personal intelligence'])
       : undefined,
     modes,
+    disabled_modes: disabledModes.length > 0 ? disabledModes : undefined,
     toggles,
     active_mode: null,
   };
@@ -1323,6 +1374,7 @@ async function readGeminiFeatureProbe(Runtime: ChromeClient['Runtime']): Promise
         .filter((node) => visible(node));
       const drawerRoot = overlayRoots[0] || null;
       const modeLabels = new Set();
+      const disabledModeLabels = new Set();
       const toggleStates = {};
       const modeCorpus = [];
       const sourceRoot = drawerRoot || document.body;
@@ -1333,6 +1385,14 @@ async function readGeminiFeatureProbe(Runtime: ChromeClient['Runtime']): Promise
         if (ignore.has(label)) continue;
         if (label.startsWith('google account ')) continue;
         modeLabels.add(label);
+        if (
+          node instanceof HTMLButtonElement && node.disabled ||
+          node.getAttribute?.('aria-disabled') === 'true' ||
+          node.classList?.contains('mdc-list-item--disabled') ||
+          node.classList?.contains('disabled')
+        ) {
+          disabledModeLabels.add(label);
+        }
         modeCorpus.push(label);
         const ariaChecked = node.getAttribute?.('aria-checked');
         if (ariaChecked === 'true' || ariaChecked === 'false') {
@@ -1356,7 +1416,11 @@ async function readGeminiFeatureProbe(Runtime: ChromeClient['Runtime']): Promise
         grounding: Boolean(flags.grounding),
         deep_research: Boolean(flags.deep_research),
         personal_intelligence: Boolean(flags.personal_intelligence),
+        signed_out: Array.from(document.querySelectorAll('a, button'))
+          .filter((node) => visible(node))
+          .some((node) => simplify(node.getAttribute?.('aria-label') || node.textContent || '') === 'sign in'),
         modes: Array.from(modeLabels).sort(),
+        disabled_modes: Array.from(disabledModeLabels).sort(),
         toggles: toggleStates,
         active_mode: activeMode || null,
       };
