@@ -23641,3 +23641,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - focused ChatGPT service/adapter/media tests passed
   - installed passive readback of the same visible conversation returned one
     `dom-imagegen-image` artifact without submitting another generation
+  - fresh installed ChatGPT browser image run
+    `medgen_6eae1df15d5f406ea3fc25bdc7ce739f` succeeded, detected the
+    visible image on artifact poll 2, and materialized one PNG artifact via
+    `estuary-image-fetch`
+  - installed status assertion passed:
+    `auracall run status medgen_6eae1df15d5f406ea3fc25bdc7ce739f --expect-status succeeded --expect-min-artifacts 1 --expect-media-run-state terminal_image`
