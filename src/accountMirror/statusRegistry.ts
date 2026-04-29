@@ -15,11 +15,26 @@ export type AccountMirrorStatusState = {
   lastAttemptAtMs?: number | null;
   lastSuccessAtMs?: number | null;
   lastFailureAtMs?: number | null;
+  lastQueuedAtMs?: number | null;
+  lastStartedAtMs?: number | null;
+  lastCompletedAtMs?: number | null;
   consecutiveFailureCount?: number | null;
   providerCooldownUntilMs?: number | null;
   providerHardStopAtMs?: number | null;
   queued?: boolean;
   running?: boolean;
+  lastRefreshRequestId?: string | null;
+  lastDispatcherKey?: string | null;
+  lastDispatcherOperationId?: string | null;
+  lastDispatcherBlockedBy?: Record<string, unknown> | null;
+  metadataCounts?: AccountMirrorMetadataCounts | null;
+};
+
+export type AccountMirrorMetadataCounts = {
+  projects: number;
+  conversations: number;
+  artifacts: number;
+  media: number;
 };
 
 export type AccountMirrorStatusEntry = {
@@ -36,7 +51,19 @@ export type AccountMirrorStatusEntry = {
   lastAttemptAt: string | null;
   lastSuccessAt: string | null;
   lastFailureAt: string | null;
+  lastQueuedAt: string | null;
+  lastStartedAt: string | null;
+  lastCompletedAt: string | null;
   consecutiveFailureCount: number;
+  mirrorState: {
+    queued: boolean;
+    running: boolean;
+    lastRefreshRequestId: string | null;
+    lastDispatcherKey: string | null;
+    lastDispatcherOperationId: string | null;
+    lastDispatcherBlockedBy: Record<string, unknown> | null;
+  };
+  metadataCounts: AccountMirrorMetadataCounts;
   limits: AccountMirrorPolitenessDecision['limits'];
 };
 
@@ -69,6 +96,13 @@ export interface AccountMirrorStatusRegistry {
     },
     state: AccountMirrorStatusState,
   ): void;
+  mergeState(
+    key: {
+      provider: AccountMirrorProvider;
+      runtimeProfileId: string;
+    },
+    state: AccountMirrorStatusState,
+  ): AccountMirrorStatusState;
 }
 
 export function createAccountMirrorStatusRegistry(input: {
@@ -94,6 +128,15 @@ export function createAccountMirrorStatusRegistry(input: {
     readStatus,
     updateState(key, state) {
       states.set(createMirrorStateKey(key), { ...state });
+    },
+    mergeState(key, state) {
+      const stateKey = createMirrorStateKey(key);
+      const next = {
+        ...(states.get(stateKey) ?? {}),
+        ...state,
+      };
+      states.set(stateKey, next);
+      return { ...next };
     },
   };
 }
@@ -202,7 +245,19 @@ function createStatusEntry(
     lastAttemptAt: timestampToIso(state.lastAttemptAtMs),
     lastSuccessAt: timestampToIso(state.lastSuccessAtMs),
     lastFailureAt: timestampToIso(state.lastFailureAtMs),
+    lastQueuedAt: timestampToIso(state.lastQueuedAtMs),
+    lastStartedAt: timestampToIso(state.lastStartedAtMs),
+    lastCompletedAt: timestampToIso(state.lastCompletedAtMs),
     consecutiveFailureCount: Math.max(0, Math.floor(state.consecutiveFailureCount ?? 0)),
+    mirrorState: {
+      queued: state.queued === true,
+      running: state.running === true,
+      lastRefreshRequestId: readString(state.lastRefreshRequestId),
+      lastDispatcherKey: readString(state.lastDispatcherKey),
+      lastDispatcherOperationId: readString(state.lastDispatcherOperationId),
+      lastDispatcherBlockedBy: isRecord(state.lastDispatcherBlockedBy) ? state.lastDispatcherBlockedBy : null,
+    },
+    metadataCounts: normalizeMetadataCounts(state.metadataCounts),
     limits: decision.limits,
   };
 }
@@ -232,6 +287,19 @@ function readAccountLevel(service: MutableRecord): string | null {
     readString(identity.capabilityProfile) ??
     readString(identity.proAccess)
   );
+}
+
+function normalizeMetadataCounts(value: AccountMirrorMetadataCounts | null | undefined): AccountMirrorMetadataCounts {
+  return {
+    projects: normalizeCount(value?.projects),
+    conversations: normalizeCount(value?.conversations),
+    artifacts: normalizeCount(value?.artifacts),
+    media: normalizeCount(value?.media),
+  };
+}
+
+function normalizeCount(value: number | null | undefined): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.trunc(value) : 0;
 }
 
 function timestampToIso(value: number | null | undefined): string | null {

@@ -62,6 +62,10 @@ describe('mcp server service wiring', () => {
       accountMirrorStatusRegistry: expect.objectContaining({
         readStatus: expect.any(Function),
         updateState: expect.any(Function),
+        mergeState: expect.any(Function),
+      }),
+      accountMirrorRefreshService: expect.objectContaining({
+        requestRefresh: expect.any(Function),
       }),
     });
   });

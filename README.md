@@ -193,6 +193,8 @@ Terminology note:
   - `GET /v1/media-generations/{media_generation_id}`
   - `GET /v1/media-generations/{media_generation_id}/status`
   - `GET /v1/runs/{run_id}/status`
+  - `GET /v1/account-mirrors/status`
+  - `POST /v1/account-mirrors/refresh`
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

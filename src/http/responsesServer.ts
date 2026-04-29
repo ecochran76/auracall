@@ -93,6 +93,12 @@ import {
   type AccountMirrorStatusRegistry,
   type AccountMirrorStatusSummary,
 } from '../accountMirror/statusRegistry.js';
+import {
+  AccountMirrorRefreshError,
+  createAccountMirrorRefreshService,
+  type AccountMirrorRefreshResult,
+  type AccountMirrorRefreshService,
+} from '../accountMirror/refreshService.js';
 import type { AccountMirrorProvider } from '../accountMirror/politePolicy.js';
 
 export interface ResponsesHttpServerOptions {
@@ -126,6 +132,7 @@ export interface ResponsesHttpServerDeps {
   ) => Promise<RuntimeRunInspectionBrowserDiagnosticsProbeResult | null>;
   probeMediaGenerationBrowserDiagnostics?: typeof probeMediaGenerationBrowserDiagnostics;
   accountMirrorStatusRegistry?: AccountMirrorStatusRegistry;
+  accountMirrorRefreshService?: AccountMirrorRefreshService;
 }
 
 export interface ResponsesHttpServerInstance {
@@ -193,6 +200,8 @@ interface HttpRuntimeRunInspectionResponse {
   inspection: RuntimeRunInspectionPayload;
 }
 
+interface HttpAccountMirrorRefreshResponse extends AccountMirrorRefreshResult {}
+
 interface HttpStatusResponse {
   object: 'status';
   ok: true;
@@ -216,9 +225,10 @@ interface HttpStatusResponse {
     mediaGenerationsCreate: string;
     mediaGenerationsGetTemplate: string;
     mediaGenerationsStatusTemplate: string;
-    runStatusTemplate: string;
-    accountMirrorStatus: string;
-    workbenchCapabilitiesList: string;
+      runStatusTemplate: string;
+      accountMirrorStatus: string;
+      accountMirrorRefresh: string;
+      workbenchCapabilitiesList: string;
   };
   compatibility: {
     openai: true;
@@ -277,6 +287,11 @@ export async function createResponsesHttpServer(
   const resolvedUserConfig = asResolvedUserConfig(configuredRuntimeConfig);
   const accountMirrorStatusRegistry = deps.accountMirrorStatusRegistry ?? createAccountMirrorStatusRegistry({
     config: configuredRuntimeConfig,
+    now,
+  });
+  const accountMirrorRefreshService = deps.accountMirrorRefreshService ?? createAccountMirrorRefreshService({
+    config: configuredRuntimeConfig,
+    registry: accountMirrorStatusRegistry,
     now,
   });
   const workbenchCapabilityService = createWorkbenchCapabilityService({
@@ -429,6 +444,35 @@ export async function createResponsesHttpServer(
         const query = parseAccountMirrorStatusQuery(url.searchParams);
         sendJson(res, 200, accountMirrorStatusRegistry.readStatus(query));
         return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/v1/account-mirrors/refresh') {
+        const body = await readRequestBody(req);
+        const payload = ACCOUNT_MIRROR_REFRESH_REQUEST_SCHEMA.parse(JSON.parse(body || '{}'));
+        try {
+          const result = await accountMirrorRefreshService.requestRefresh({
+            provider: payload.provider,
+            runtimeProfileId: payload.runtimeProfile,
+            explicitRefresh: payload.explicitRefresh,
+            queueTimeoutMs: payload.queueTimeoutMs,
+            queuePollMs: payload.queuePollMs,
+          });
+          sendJson(res, 202, result satisfies HttpAccountMirrorRefreshResponse);
+          return;
+        } catch (error) {
+          if (error instanceof AccountMirrorRefreshError) {
+            sendJson(res, error.statusCode, {
+              error: {
+                message: error.message,
+                type: error.statusCode === 404 ? 'not_found_error' : 'invalid_request_error',
+                code: error.code,
+                details: error.details,
+              },
+            });
+            return;
+          }
+          throw error;
+        }
       }
 
       const recoveryDetailRunId = matchStatusRecoveryDetailRoute(url.pathname);
@@ -1257,6 +1301,7 @@ function createHttpStatusResponse(input: {
       mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
       runStatusTemplate: '/v1/runs/{run_id}/status[?diagnostics=browser-state]',
       accountMirrorStatus: '/v1/account-mirrors/status[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&explicitRefresh=true]',
+      accountMirrorRefresh: '/v1/account-mirrors/refresh',
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
     },
@@ -1415,6 +1460,14 @@ const TEAM_RUN_CREATE_REQUEST_SCHEMA = COMPACT_TEAM_RUN_CREATE_REQUEST_SCHEMA.ex
       path: ['taskRunSpec'],
     });
   }
+});
+
+const ACCOUNT_MIRROR_REFRESH_REQUEST_SCHEMA = z.object({
+  provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
+  runtimeProfile: z.string().trim().min(1).optional(),
+  explicitRefresh: z.boolean().optional(),
+  queueTimeoutMs: z.number().int().nonnegative().optional(),
+  queuePollMs: z.number().int().positive().optional(),
 });
 
 const STATUS_CONTROL_REQUEST_SCHEMA = z.union([

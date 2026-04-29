@@ -72,6 +72,16 @@ describe('account mirror status registry', () => {
           accountLevel: 'Business',
           status: 'eligible',
           reason: 'eligible',
+          mirrorState: expect.objectContaining({
+            queued: false,
+            running: false,
+          }),
+          metadataCounts: {
+            projects: 0,
+            conversations: 0,
+            artifacts: 0,
+            media: 0,
+          },
         }),
         expect.objectContaining({
           provider: 'grok',
@@ -130,6 +140,59 @@ describe('account mirror status registry', () => {
       reason: 'minimum-interval',
       lastSuccessAt: '2026-04-29T11:59:00.000Z',
       detectedIdentityKey: 'ecochran76@gmail.com',
+    });
+  });
+
+  test('merges dispatcher and metadata state for explicit refresh readback', () => {
+    const registry = createAccountMirrorStatusRegistry({
+      config,
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+    });
+    registry.mergeState(
+      {
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+      },
+      {
+        lastRefreshRequestId: 'acctmirror_test',
+        lastQueuedAtMs: Date.parse('2026-04-29T11:58:00.000Z'),
+        lastStartedAtMs: Date.parse('2026-04-29T11:58:01.000Z'),
+        lastCompletedAtMs: Date.parse('2026-04-29T11:58:02.000Z'),
+        lastDispatcherKey: 'managed-profile:/tmp/default/chatgpt::service:chatgpt',
+        lastDispatcherOperationId: 'op_123',
+        metadataCounts: {
+          projects: 2,
+          conversations: 5,
+          artifacts: 1,
+          media: 0,
+        },
+      },
+    );
+
+    const status = registry.readStatus({
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      explicitRefresh: true,
+    });
+
+    expect(status.entries[0]).toMatchObject({
+      lastQueuedAt: '2026-04-29T11:58:00.000Z',
+      lastStartedAt: '2026-04-29T11:58:01.000Z',
+      lastCompletedAt: '2026-04-29T11:58:02.000Z',
+      mirrorState: {
+        queued: false,
+        running: false,
+        lastRefreshRequestId: 'acctmirror_test',
+        lastDispatcherKey: 'managed-profile:/tmp/default/chatgpt::service:chatgpt',
+        lastDispatcherOperationId: 'op_123',
+        lastDispatcherBlockedBy: null,
+      },
+      metadataCounts: {
+        projects: 2,
+        conversations: 5,
+        artifacts: 1,
+        media: 0,
+      },
     });
   });
 });

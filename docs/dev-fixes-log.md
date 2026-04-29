@@ -14945,3 +14945,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `origin` URL, package metadata, badges, and operator path examples in the
   same slice; leave `upstream` pointing at `steipete/oracle` as fork
   provenance.
+- 2026-04-29: Account mirror refresh should become observable before it becomes
+  active scraping. The first explicit refresh path must acquire the browser
+  operation dispatcher, record queued/running/completed evidence, and update
+  metadata counts without launching browsers, submitting prompts, or scraping
+  provider pages.

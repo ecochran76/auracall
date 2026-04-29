@@ -128,6 +128,10 @@
       - `accountMirrorStatus.entries[].expectedIdentityKey`
       - `accountMirrorStatus.entries[].accountLevel`
       - `accountMirrorStatus.entries[].status = eligible|delayed|blocked`
+      - `accountMirrorStatus.entries[].mirrorState.queued`
+      - `accountMirrorStatus.entries[].mirrorState.running`
+      - `accountMirrorStatus.entries[].mirrorState.lastDispatcherKey`
+      - `accountMirrorStatus.entries[].metadataCounts`
       - this readback must not enqueue browser work or scrape provider pages
     - dedicated mirror posture route:
       - `GET /v1/account-mirrors/status`
@@ -135,11 +139,19 @@
       - `GET /v1/account-mirrors/status?provider=chatgpt&runtimeProfile=default&explicitRefresh=true`
       - `explicitRefresh=true` evaluates the shorter polite interval but still
         remains read-only in this slice
+    - explicit mirror refresh route:
+      - `POST /v1/account-mirrors/refresh`
+      - body: `{"provider":"chatgpt","runtimeProfile":"default","explicitRefresh":true}`
+      - current implementation is default-ChatGPT only
+      - it acquires the browser operation dispatcher and records
+        queued/running/completed evidence, but does not launch a browser,
+        submit prompts, or scrape provider pages yet
     - MCP parity:
       - `account_mirror_status`
+      - `account_mirror_refresh`
       - optional inputs: `provider`, `runtimeProfile`, `explicitRefresh`
-      - same read-only posture: no browser launch, CDP operation, or provider
-        scrape
+      - status is read-only; refresh is explicit and dispatcher-owned but still
+        metadata-only in this slice
     - plain `/status` also includes a compact direct-run local claim snapshot:
       - `localClaimSummary.sourceKind = direct`
       - `localClaimSummary.runnerId`

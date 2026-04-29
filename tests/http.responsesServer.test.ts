@@ -1223,6 +1223,7 @@ describe('http responses adapter', () => {
           responsesGetTemplate: '/v1/responses/{response_id}',
           accountMirrorStatus:
             '/v1/account-mirrors/status[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&explicitRefresh=true]',
+          accountMirrorRefresh: '/v1/account-mirrors/refresh',
         },
         accountMirrorStatus: {
           object: 'account_mirror_status',
@@ -1340,6 +1341,48 @@ describe('http responses adapter', () => {
         total: 2,
         eligible: 1,
         blocked: 1,
+      });
+
+      const refreshResponse = await fetch(`http://127.0.0.1:${server.port}/v1/account-mirrors/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          provider: 'chatgpt',
+          runtimeProfile: 'default',
+          explicitRefresh: true,
+          queueTimeoutMs: 0,
+        }),
+      });
+      expect(refreshResponse.status).toBe(202);
+      const refreshPayload = await refreshResponse.json() as {
+        object: string;
+        status: string;
+        provider: string;
+        runtimeProfileId: string;
+        metadataCounts: Record<string, number>;
+        mirrorStatus: AccountMirrorStatusSummary;
+      };
+      expect(refreshPayload).toMatchObject({
+        object: 'account_mirror_refresh',
+        status: 'completed',
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        metadataCounts: {
+          projects: 0,
+          conversations: 0,
+          artifacts: 0,
+          media: 0,
+        },
+      });
+      expect(refreshPayload.mirrorStatus.entries[0]).toMatchObject({
+        detectedIdentityKey: 'ecochran76@gmail.com',
+        mirrorState: expect.objectContaining({
+          queued: false,
+          running: false,
+          lastDispatcherKey: expect.stringContaining('service:chatgpt'),
+        }),
       });
     } finally {
       await server.close();

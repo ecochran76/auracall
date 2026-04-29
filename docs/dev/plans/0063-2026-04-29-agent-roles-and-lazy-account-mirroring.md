@@ -113,6 +113,13 @@ Current implementation-facing politeness contract:
   `account_mirror_status` expose whether each configured service/profile
   mirror is currently `eligible`, `delayed`, or `blocked` before any browser
   work is enqueued.
+- `src/accountMirror/refreshService.ts` owns the first explicit refresh request
+  path. It is intentionally narrow: default ChatGPT only, metadata/count
+  readback only, and browser operation dispatcher acquisition/release without
+  launching a browser or scraping provider pages.
+- `POST /v1/account-mirrors/refresh` and MCP `account_mirror_refresh` request
+  that one explicit refresh and return dispatcher evidence plus updated mirror
+  status.
 - default routine intervals:
   - ChatGPT: 6 hours plus up to 20 minutes jitter
   - Gemini: 12 hours plus up to 45 minutes jitter
@@ -164,6 +171,8 @@ Each status payload should include:
 - Lazy mirroring has a service-mode plan that keeps browser/CDP access behind
   the browser operation dispatcher.
 - Read-only mirror-status reporting exists before any background mirror loop.
+- Explicit default ChatGPT refresh can be requested through API/MCP and records
+  queued/running/completed dispatcher evidence without background looping.
 - The first implementation slice targets default ChatGPT metadata-first
   mirroring only.
 - API and MCP mirror-status readback exist before any long-running background
@@ -185,9 +194,8 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Next wire explicit refresh requests into the same registry without running a
-background loop. The refresh request path should transition one eligible
-default ChatGPT mirror entry into queued/running status under the browser
-operation dispatcher, then record identity, account level, project/conversation
-metadata counts, freshness, and dispatcher queue evidence without scraping full
-conversation bodies.
+Next add the first passive ChatGPT metadata collector behind the explicit
+refresh service. It should run only after the dispatcher is acquired, reuse the
+existing managed browser profile, verify the bound identity before reading any
+history surface, and collect only bounded project/conversation/artifact
+metadata. Do not add a background loop or full conversation-body scraping yet.

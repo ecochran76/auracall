@@ -23381,3 +23381,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `/home/ecochran76/workspace.local/auracall`
   - updated package metadata, README badges, and repo-local operator path
     references to the new repository identity/path
+
+## 2026-04-29 - Account mirror explicit refresh surface
+
+- Focus: add the first operator-requested account mirror refresh path without
+  introducing a background mirror loop.
+- Progress:
+  - added `src/accountMirror/refreshService.ts` for default-ChatGPT-only
+    explicit refresh requests
+  - refresh requests acquire the browser operation dispatcher, update
+    queued/running/completed mirror state, and record dispatcher evidence
+  - API route `POST /v1/account-mirrors/refresh` and MCP tool
+    `account_mirror_refresh` now share the same service
+  - status readback now includes mirror state, dispatcher evidence, and
+    metadata count fields
+- Validation:
+  - targeted account mirror/API/MCP Vitest suite passed
+  - `pnpm exec tsc --noEmit` passed
