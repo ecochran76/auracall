@@ -2,6 +2,10 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { getAuracallHomeDir } from '../auracallHome.js';
 import type { ResolvedUserConfig } from '../config.js';
+import type {
+  ConversationArtifact,
+  FileRef,
+} from '../browser/providers/domain.js';
 import { resolveManagedBrowserLaunchContextFromResolvedConfig } from '../browser/service/profileResolution.js';
 import {
   createFileBackedBrowserOperationDispatcher,
@@ -115,6 +119,7 @@ export function createAccountMirrorRefreshService(input: {
         );
       }
 
+      await registry.refreshPersistentState?.();
       const target = readSingleMirrorTarget({
         registry,
         provider,
@@ -223,33 +228,40 @@ export function createAccountMirrorRefreshService(input: {
             maxConversationRowsPerCycle: target.limits.maxConversationRowsPerCycle,
             maxArtifactRowsPerCycle: target.limits.maxArtifactRowsPerCycle,
           },
+          previousEvidence: target.metadataEvidence,
+        });
+        const collectionWithPriorManifests = await mergeCollectionWithPersistedCatalog({
+          persistence,
+          provider,
+          boundIdentityKey: target.expectedIdentityKey ?? collection.detectedIdentityKey,
+          collection,
         });
         const completedAt = now();
         registry.mergeState({ provider, runtimeProfileId }, {
           queued: false,
           running: false,
-          detectedIdentityKey: collection.detectedIdentityKey,
+          detectedIdentityKey: collectionWithPriorManifests.detectedIdentityKey,
           lastSuccessAtMs: completedAt.getTime(),
           lastCompletedAtMs: completedAt.getTime(),
           consecutiveFailureCount: 0,
-          metadataCounts: collection.metadataCounts,
-          metadataEvidence: collection.evidence,
+          metadataCounts: collectionWithPriorManifests.metadataCounts,
+          metadataEvidence: collectionWithPriorManifests.evidence,
         });
         await persistence.writeSnapshot({
           provider,
           runtimeProfileId,
           browserProfileId: target.browserProfileId,
-          boundIdentityKey: target.expectedIdentityKey ?? collection.detectedIdentityKey ?? '',
-          detectedIdentityKey: collection.detectedIdentityKey,
-          detectedAccountLevel: collection.detectedAccountLevel,
+          boundIdentityKey: target.expectedIdentityKey ?? collectionWithPriorManifests.detectedIdentityKey ?? '',
+          detectedIdentityKey: collectionWithPriorManifests.detectedIdentityKey,
+          detectedAccountLevel: collectionWithPriorManifests.detectedAccountLevel,
           requestId,
           startedAt: startedAt.toISOString(),
           completedAt: completedAt.toISOString(),
           dispatcherKey: acquired.operation.key,
           dispatcherOperationId: acquired.operation.id,
-          metadataCounts: collection.metadataCounts,
-          metadataEvidence: collection.evidence,
-          manifests: collection.manifests,
+          metadataCounts: collectionWithPriorManifests.metadataCounts,
+          metadataEvidence: collectionWithPriorManifests.evidence,
+          manifests: collectionWithPriorManifests.manifests,
         });
         return {
           object: 'account_mirror_refresh',
@@ -265,10 +277,10 @@ export function createAccountMirrorRefreshService(input: {
             operationId: acquired.operation.id,
             blockedBy: null,
           },
-          metadataCounts: collection.metadataCounts,
-          metadataEvidence: collection.evidence,
-          detectedIdentityKey: collection.detectedIdentityKey,
-          detectedAccountLevel: collection.detectedAccountLevel,
+          metadataCounts: collectionWithPriorManifests.metadataCounts,
+          metadataEvidence: collectionWithPriorManifests.evidence,
+          detectedIdentityKey: collectionWithPriorManifests.detectedIdentityKey,
+          detectedAccountLevel: collectionWithPriorManifests.detectedAccountLevel,
           mirrorStatus: registry.readStatus({ provider, runtimeProfileId, explicitRefresh: true }),
         };
       } catch (error) {
@@ -301,6 +313,91 @@ export function createAccountMirrorRefreshService(input: {
       }
     },
   };
+}
+
+async function mergeCollectionWithPersistedCatalog(input: {
+  persistence: AccountMirrorPersistence;
+  provider: AccountMirrorProvider;
+  boundIdentityKey: string | null;
+  collection: AccountMirrorMetadataCollectorResult;
+}): Promise<AccountMirrorMetadataCollectorResult> {
+  const existing = await input.persistence.readCatalog({
+    provider: input.provider,
+    boundIdentityKey: input.boundIdentityKey,
+    limit: 10_000,
+  });
+  if (!existing) {
+    return input.collection;
+  }
+  const manifests = {
+    projects: mergeById(existing.projects, input.collection.manifests.projects),
+    conversations: mergeById(existing.conversations, input.collection.manifests.conversations),
+    artifacts: mergeArtifacts(existing.artifacts, input.collection.manifests.artifacts),
+    files: mergeFiles(existing.files, input.collection.manifests.files),
+    media: mergeById(existing.media, input.collection.manifests.media),
+  };
+  return {
+    ...input.collection,
+    manifests,
+    metadataCounts: {
+      projects: manifests.projects.length,
+      conversations: manifests.conversations.length,
+      artifacts: manifests.artifacts.length,
+      files: manifests.files.length,
+      media: manifests.media.length,
+    },
+  };
+}
+
+function mergeById<T extends { id: string }>(existing: readonly T[], incoming: readonly T[]): T[] {
+  const merged = new Map<string, T>();
+  for (const item of existing) {
+    if (item?.id) merged.set(item.id, item);
+  }
+  for (const item of incoming) {
+    if (item?.id) merged.set(item.id, { ...(merged.get(item.id) ?? {}), ...item });
+  }
+  return [...merged.values()];
+}
+
+function mergeArtifacts(
+  existing: readonly ConversationArtifact[],
+  incoming: readonly ConversationArtifact[],
+): ConversationArtifact[] {
+  return mergeByKey(existing, incoming, artifactKey);
+}
+
+function mergeFiles(existing: readonly FileRef[], incoming: readonly FileRef[]): FileRef[] {
+  return mergeByKey(existing, incoming, fileKey);
+}
+
+function mergeByKey<T extends object>(
+  existing: readonly T[],
+  incoming: readonly T[],
+  createKey: (item: T) => string | null,
+): T[] {
+  const merged = new Map<string, T>();
+  for (const item of existing) {
+    const key = createKey(item);
+    if (key) merged.set(key, item);
+  }
+  for (const item of incoming) {
+    const key = createKey(item);
+    if (key) merged.set(key, { ...(merged.get(key) ?? {}), ...item });
+  }
+  return [...merged.values()];
+}
+
+function artifactKey(artifact: ConversationArtifact): string | null {
+  if (!artifact?.id) return null;
+  const metadata = isRecord(artifact.metadata) ? artifact.metadata : {};
+  const conversationId = typeof metadata.conversationId === 'string' ? metadata.conversationId : '';
+  return `${conversationId}:${artifact.id}`;
+}
+
+function fileKey(file: FileRef): string | null {
+  if (!file?.id) return null;
+  return `${file.provider ?? 'unknown'}:${file.source ?? 'unknown'}:${file.id}`;
 }
 
 function createConfigBackedAccountMirrorMetadataCollector(

@@ -133,6 +133,7 @@
       - `accountMirrorStatus.entries[].mirrorState.lastDispatcherKey`
       - `accountMirrorStatus.entries[].metadataCounts`
       - `accountMirrorStatus.entries[].metadataEvidence`
+      - `accountMirrorStatus.entries[].metadataEvidence.attachmentInventory`
       - this readback may hydrate counts/evidence from the existing provider
         cache store, but it must not enqueue browser work or scrape provider
         pages

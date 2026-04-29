@@ -43,6 +43,13 @@ export type AccountMirrorMetadataEvidence = {
   identitySource: string | null;
   projectSampleIds: string[];
   conversationSampleIds: string[];
+  attachmentInventory?: {
+    nextProjectIndex: number;
+    nextConversationIndex: number;
+    detailReadLimit: number;
+    scannedProjects: number;
+    scannedConversations: number;
+  } | null;
   truncated: {
     projects: boolean;
     conversations: boolean;
@@ -348,11 +355,25 @@ function normalizeMetadataEvidence(
     identitySource: readString(value.identitySource),
     projectSampleIds: normalizeStringArray(value.projectSampleIds),
     conversationSampleIds: normalizeStringArray(value.conversationSampleIds),
+    attachmentInventory: normalizeAttachmentInventoryEvidence(value.attachmentInventory),
     truncated: {
       projects: value.truncated?.projects === true,
       conversations: value.truncated?.conversations === true,
       artifacts: value.truncated?.artifacts === true,
     },
+  };
+}
+
+function normalizeAttachmentInventoryEvidence(
+  value: AccountMirrorMetadataEvidence['attachmentInventory'] | null | undefined,
+): AccountMirrorMetadataEvidence['attachmentInventory'] | null {
+  if (!value || !isRecord(value)) return null;
+  return {
+    nextProjectIndex: normalizeCount(value.nextProjectIndex),
+    nextConversationIndex: normalizeCount(value.nextConversationIndex),
+    detailReadLimit: normalizeCount(value.detailReadLimit),
+    scannedProjects: normalizeCount(value.scannedProjects),
+    scannedConversations: normalizeCount(value.scannedConversations),
   };
 }
 

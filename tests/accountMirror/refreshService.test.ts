@@ -137,6 +137,7 @@ describe('account mirror refresh service', () => {
         maxConversationRowsPerCycle: 250,
         maxArtifactRowsPerCycle: 80,
       },
+      previousEvidence: null,
     });
     expect(persistence.writeSnapshot).toHaveBeenCalledWith({
       provider: 'chatgpt',
@@ -187,6 +188,105 @@ describe('account mirror refresh service', () => {
         lastDispatcherBlockedBy: null,
       },
     });
+  });
+
+  test('passes the persisted attachment cursor and merges new manifest rows with the cached catalog', async () => {
+    const previousEvidence = {
+      identitySource: 'profile-menu',
+      projectSampleIds: ['project_1'],
+      conversationSampleIds: ['conv_1'],
+      attachmentInventory: {
+        nextProjectIndex: 1,
+        nextConversationIndex: 0,
+        detailReadLimit: 2,
+        scannedProjects: 1,
+        scannedConversations: 0,
+      },
+      truncated: {
+        projects: false,
+        conversations: false,
+        artifacts: true,
+      },
+    };
+    const metadataCollector = {
+      collect: vi.fn(async () => ({
+        detectedIdentityKey: 'ecochran76@gmail.com',
+        detectedAccountLevel: 'Business',
+        metadataCounts: {
+          projects: 1,
+          conversations: 1,
+          artifacts: 0,
+          files: 1,
+          media: 0,
+        },
+        manifests: {
+          projects: [{ id: 'project_1', name: 'Project 1', provider: 'chatgpt' as const }],
+          conversations: [{ id: 'conv_1', title: 'One', provider: 'chatgpt' as const }],
+          artifacts: [],
+          files: [{ id: 'file_2', name: 'Second upload.pdf', provider: 'chatgpt' as const, source: 'conversation' as const }],
+          media: [],
+        },
+        evidence: previousEvidence,
+      })),
+    };
+    const persistence: AccountMirrorPersistence = {
+      writeSnapshot: vi.fn(async () => {}),
+      readCatalog: vi.fn(async () => ({
+        projects: [{ id: 'project_1', name: 'Project 1', provider: 'chatgpt' as const }],
+        conversations: [{ id: 'conv_1', title: 'One', provider: 'chatgpt' as const }],
+        artifacts: [],
+        files: [{ id: 'file_1', name: 'First upload.pdf', provider: 'chatgpt' as const, source: 'project' as const }],
+        media: [],
+      })),
+      readState: vi.fn(async () => ({
+        detectedIdentityKey: 'ecochran76@gmail.com',
+        metadataCounts: {
+          projects: 1,
+          conversations: 1,
+          artifacts: 0,
+          files: 1,
+          media: 0,
+        },
+        metadataEvidence: previousEvidence,
+      })),
+    };
+    const registry = createAccountMirrorStatusRegistry({
+      config,
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+      readPersistentState: persistence.readState,
+    });
+    const service = createAccountMirrorRefreshService({
+      config,
+      registry,
+      dispatcher: createBrowserOperationDispatcher({
+        now: () => new Date('2026-04-29T12:00:00.000Z'),
+      }),
+      metadataCollector,
+      persistence,
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+      generateRequestId: () => 'acctmirror_cursor',
+    });
+
+    const result = await service.requestRefresh({
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      explicitRefresh: true,
+    });
+
+    expect(metadataCollector.collect).toHaveBeenCalledWith(expect.objectContaining({
+      previousEvidence,
+    }));
+    expect(result.metadataCounts.files).toBe(2);
+    expect(persistence.writeSnapshot).toHaveBeenCalledWith(expect.objectContaining({
+      metadataCounts: expect.objectContaining({ files: 2 }),
+      metadataEvidence: expect.objectContaining({ attachmentInventory: previousEvidence.attachmentInventory }),
+      manifests: expect.objectContaining({
+        files: [
+          { id: 'file_1', name: 'First upload.pdf', provider: 'chatgpt', source: 'project' },
+          { id: 'file_2', name: 'Second upload.pdf', provider: 'chatgpt', source: 'conversation' },
+        ],
+      }),
+    }));
   });
 
   test('fails fast before queueing unsupported providers in the first refresh slice', async () => {

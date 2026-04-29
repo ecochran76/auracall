@@ -9,17 +9,29 @@ import type {
 import type { AccountMirrorMediaManifestEntry } from '../browser/llmService/cache/store.js';
 import type { ProviderUserIdentity } from '../browser/providers/types.js';
 import type { AccountMirrorProvider } from './politePolicy.js';
-import type { AccountMirrorMetadataCounts } from './statusRegistry.js';
+import type {
+  AccountMirrorMetadataCounts,
+  AccountMirrorMetadataEvidence,
+} from './statusRegistry.js';
 
 export interface AccountMirrorMetadataCollectorInput {
   provider: AccountMirrorProvider;
   runtimeProfileId: string;
   expectedIdentityKey: string;
+  previousEvidence?: AccountMirrorMetadataEvidence | null;
   limits: {
     maxPageReadsPerCycle: number;
     maxConversationRowsPerCycle: number;
     maxArtifactRowsPerCycle: number;
   };
+}
+
+export interface AttachmentInventoryCursor {
+  nextProjectIndex: number;
+  nextConversationIndex: number;
+  detailReadLimit: number;
+  scannedProjects: number;
+  scannedConversations: number;
 }
 
 export interface AccountMirrorMetadataCollectorResult {
@@ -97,7 +109,10 @@ export function createChatgptAccountMirrorMetadataCollector(
         projects.items,
         conversations,
         input.limits.maxArtifactRowsPerCycle,
-        input.limits.maxPageReadsPerCycle,
+        {
+          maxDetailReads: input.limits.maxPageReadsPerCycle,
+          cursor: input.previousEvidence?.attachmentInventory ?? null,
+        },
       );
       return {
         detectedIdentityKey,
@@ -128,6 +143,7 @@ export function createChatgptAccountMirrorMetadataCollector(
               remainingConversationBudget <= 0,
             artifacts: inventory.truncated,
           },
+          attachmentInventory: inventory.cursor,
         },
       };
     },
@@ -171,25 +187,55 @@ export async function readBoundedAttachmentInventory(
   projects: readonly Project[],
   conversations: readonly Conversation[],
   maxRows: number,
-  maxDetailReads: number = 6,
-): Promise<{ artifacts: ConversationArtifact[]; files: FileRef[]; truncated: boolean }> {
+  options: number | {
+    maxDetailReads?: number;
+    cursor?: AttachmentInventoryCursor | null;
+  } = 6,
+): Promise<{
+  artifacts: ConversationArtifact[];
+  files: FileRef[];
+  truncated: boolean;
+  cursor: AttachmentInventoryCursor;
+}> {
   const limit = Math.max(0, Math.floor(maxRows));
+  const maxDetailReads = typeof options === 'number'
+    ? options
+    : options.maxDetailReads ?? 6;
+  const previousCursor = typeof options === 'number' ? null : options.cursor ?? null;
   const detailReadLimit = Math.max(1, Math.min(6, Math.floor(maxDetailReads)));
   if (limit <= 0) {
-    return { artifacts: [], files: [], truncated: projects.length > 0 || conversations.length > 0 };
+    return {
+      artifacts: [],
+      files: [],
+      truncated: projects.length > 0 || conversations.length > 0,
+      cursor: createAttachmentInventoryCursor(previousCursor, {
+        projectsLength: projects.length,
+        conversationsLength: conversations.length,
+        detailReadLimit,
+        scannedProjects: 0,
+        scannedConversations: 0,
+      }),
+    };
   }
   const artifacts = new Map<string, ConversationArtifact>();
   const files = new Map<string, FileRef>();
   let remaining = limit;
   let remainingDetailReads = detailReadLimit;
   let truncated = false;
+  let projectIndex = normalizeCursorIndex(previousCursor?.nextProjectIndex, projects.length);
+  let conversationIndex = normalizeCursorIndex(previousCursor?.nextConversationIndex, conversations.length);
+  let scannedProjects = 0;
+  let scannedConversations = 0;
 
-  for (const project of projects) {
+  for (; projectIndex < projects.length; projectIndex += 1) {
     if (remaining <= 0 || remainingDetailReads <= 0) {
       truncated = true;
       break;
     }
+    const project = projects[projectIndex];
+    if (!project) break;
     remainingDetailReads -= 1;
+    scannedProjects += 1;
     const projectFiles = await safeReadProjectFiles(client, project.id);
     for (const file of projectFiles) {
       if (remaining <= 0) {
@@ -201,12 +247,15 @@ export async function readBoundedAttachmentInventory(
     }
   }
 
-  for (const conversation of conversations) {
+  for (; conversationIndex < conversations.length; conversationIndex += 1) {
     if (remaining <= 0 || remainingDetailReads <= 0) {
       truncated = true;
       break;
     }
+    const conversation = conversations[conversationIndex];
+    if (!conversation) break;
     remainingDetailReads -= 1;
+    scannedConversations += 1;
     const [conversationFiles, context] = await Promise.all([
       safeReadConversationFiles(client, conversation),
       safeReadConversationContext(client, conversation),
@@ -229,7 +278,7 @@ export async function readBoundedAttachmentInventory(
     }
   }
 
-  if (projects.length + conversations.length > detailReadLimit) {
+  if (projectIndex < projects.length || conversationIndex < conversations.length) {
     truncated = true;
   }
 
@@ -237,7 +286,48 @@ export async function readBoundedAttachmentInventory(
     artifacts: [...artifacts.values()],
     files: [...files.values()],
     truncated,
+    cursor: createAttachmentInventoryCursor(previousCursor, {
+      projectsLength: projects.length,
+      conversationsLength: conversations.length,
+      detailReadLimit,
+      scannedProjects,
+      scannedConversations,
+      nextProjectIndex:
+        projectIndex >= projects.length && conversationIndex >= conversations.length ? 0 : projectIndex,
+      nextConversationIndex:
+        projectIndex >= projects.length && conversationIndex >= conversations.length ? 0 : conversationIndex,
+    }),
   };
+}
+
+function createAttachmentInventoryCursor(
+  previous: AttachmentInventoryCursor | null | undefined,
+  input: {
+    projectsLength: number;
+    conversationsLength: number;
+    detailReadLimit: number;
+    scannedProjects: number;
+    scannedConversations: number;
+    nextProjectIndex?: number;
+    nextConversationIndex?: number;
+  },
+): AttachmentInventoryCursor {
+  return {
+    nextProjectIndex: normalizeCursorIndex(input.nextProjectIndex ?? previous?.nextProjectIndex, input.projectsLength),
+    nextConversationIndex: normalizeCursorIndex(
+      input.nextConversationIndex ?? previous?.nextConversationIndex,
+      input.conversationsLength,
+    ),
+    detailReadLimit: input.detailReadLimit,
+    scannedProjects: input.scannedProjects,
+    scannedConversations: input.scannedConversations,
+  };
+}
+
+function normalizeCursorIndex(value: number | null | undefined, length: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return 0;
+  const index = Math.floor(value);
+  return length > 0 ? Math.min(index, length) : 0;
 }
 
 async function safeReadProjectFiles(

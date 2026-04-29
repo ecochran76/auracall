@@ -60,6 +60,11 @@
   cached conversation page; sample a small number of project/conversation
   detail surfaces, mark the manifest truncated, and let later cycles continue.
 
+- 2026-04-29: Bounded attachment inventory must persist a continuation cursor.
+  Otherwise every polite refresh keeps re-reading the first project and
+  conversation detail surfaces. Store the next detail indexes in mirror
+  evidence and merge newly discovered rows with the cached catalog.
+
 - 2026-04-29: Bot-sensitive lazy mirroring needs a politeness policy before it
   needs a background loop. Mirror schedulers should enforce provider-specific
   minimum intervals, deterministic jitter, explicit-refresh rate limits,

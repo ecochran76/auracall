@@ -193,6 +193,18 @@ Current implementation-facing politeness contract:
   conversations, three artifact manifests, 24 file manifests, and zero media.
   The artifact/file inventory is intentionally marked truncated when the
   detail-read budget is exhausted.
+- Attachment inventory now records a resumable
+  `metadataEvidence.attachmentInventory` cursor. Each refresh starts at the
+  prior project/conversation detail index, then merges newly discovered
+  artifact/file rows with the existing identity-scoped catalog before writing
+  the next snapshot. This makes repeated lazy refreshes incremental without
+  increasing the per-cycle browser-read budget.
+- Installed-runtime cursor dogfood validated the first resumed snapshot write:
+  `acctmirror_7fe49faf-5991-42be-873b-1a1fdb530a45` completed through
+  dispatcher operation `f0885a9a-53bb-48c0-926d-638fd347769f`, preserved the
+  existing five project, 69 conversation, three artifact, and 24 file counts,
+  and persisted attachment cursor `{ nextProjectIndex: 5,
+  nextConversationIndex: 1, detailReadLimit: 6 }`.
 - default routine intervals:
   - ChatGPT: 6 hours plus up to 20 minutes jitter
   - Gemini: 12 hours plus up to 45 minutes jitter

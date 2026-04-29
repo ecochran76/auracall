@@ -80,6 +80,13 @@ export interface AccountMirrorCacheSnapshot {
     identitySource: string | null;
     projectSampleIds: string[];
     conversationSampleIds: string[];
+    attachmentInventory?: {
+      nextProjectIndex: number;
+      nextConversationIndex: number;
+      detailReadLimit: number;
+      scannedProjects: number;
+      scannedConversations: number;
+    } | null;
     truncated: {
       projects: boolean;
       conversations: boolean;

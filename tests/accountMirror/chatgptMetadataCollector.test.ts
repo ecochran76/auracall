@@ -43,6 +43,12 @@ describe('ChatGPT account mirror metadata collector', () => {
 
     expect(inventory).toMatchObject({
       truncated: false,
+      cursor: {
+        nextProjectIndex: 0,
+        nextConversationIndex: 0,
+        scannedProjects: 1,
+        scannedConversations: 1,
+      },
       files: [
         {
           id: 'project-file-project_1',
@@ -144,5 +150,70 @@ describe('ChatGPT account mirror metadata collector', () => {
     expect(client.listProjectFiles).toHaveBeenCalledTimes(2);
     expect(client.listConversationFiles).not.toHaveBeenCalled();
     expect(client.getConversationContext).not.toHaveBeenCalled();
+  });
+
+  test('continues attachment inventory from the prior cursor', async () => {
+    const client = {
+      listProjectFiles: vi.fn(async (projectId: string) => [
+        {
+          id: `project-file-${projectId}`,
+          name: 'Project source.pdf',
+          provider: 'chatgpt' as const,
+          source: 'project' as const,
+        },
+      ]),
+      listConversationFiles: vi.fn(async (conversationId: string) => [
+        {
+          id: `conversation-file-${conversationId}`,
+          name: 'User upload.png',
+          provider: 'chatgpt' as const,
+          source: 'conversation' as const,
+        },
+      ]),
+      getConversationContext: vi.fn(async (conversationId: string) => ({
+        provider: 'chatgpt' as const,
+        conversationId,
+        messages: [],
+        artifacts: [],
+      })),
+    };
+
+    const inventory = await readBoundedAttachmentInventory(
+      client,
+      [
+        { id: 'project_1', name: 'Project 1', provider: 'chatgpt' },
+        { id: 'project_2', name: 'Project 2', provider: 'chatgpt' },
+      ],
+      [
+        { id: 'conv_1', title: 'Conversation 1', provider: 'chatgpt' },
+        { id: 'conv_2', title: 'Conversation 2', provider: 'chatgpt' },
+      ],
+      80,
+      {
+        maxDetailReads: 2,
+        cursor: {
+          nextProjectIndex: 1,
+          nextConversationIndex: 0,
+          detailReadLimit: 2,
+          scannedProjects: 1,
+          scannedConversations: 0,
+        },
+      },
+    );
+
+    expect(inventory.files.map((file) => file.id)).toEqual([
+      'project-file-project_2',
+      'conversation-file-conv_1',
+    ]);
+    expect(inventory.cursor).toMatchObject({
+      nextProjectIndex: 2,
+      nextConversationIndex: 1,
+      detailReadLimit: 2,
+      scannedProjects: 1,
+      scannedConversations: 1,
+    });
+    expect(inventory.truncated).toBe(true);
+    expect(client.listProjectFiles).toHaveBeenCalledWith('project_2');
+    expect(client.listConversationFiles).toHaveBeenCalledWith('conv_1', { projectId: undefined });
   });
 });

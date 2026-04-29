@@ -23480,3 +23480,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - targeted account mirror/API/MCP Vitest suite passed
   - `pnpm exec tsc --noEmit` passed
+
+## 2026-04-29 - Account mirror attachment cursoring
+
+- Focus: make artifact/file inventory advance across refreshes instead of
+  resampling the first bounded detail surfaces each cycle.
+- Progress:
+  - added `metadataEvidence.attachmentInventory` cursor evidence with next
+    project/conversation indexes and per-cycle detail-read counts
+  - the ChatGPT collector now resumes attachment inventory from the previous
+    persisted cursor
+  - refresh requests hydrate persisted state before collecting, pass the cursor
+    into the collector, and merge newly sampled manifests with the existing
+    cached catalog before writing the next snapshot
+  - MCP status/refresh schemas now expose the attachment cursor evidence
+- Validation:
+  - `pnpm exec tsc --noEmit` passed
+  - focused account-mirror Vitest suite passed, including cursor continuation
+    and cached-manifest merge coverage
+  - installed-runtime dogfood refreshed the user-scoped runtime and ran
+    `POST /v1/account-mirrors/refresh` on port 18099:
+    `acctmirror_7fe49faf-5991-42be-873b-1a1fdb530a45` completed, detected
+    `ecochran76@gmail.com` on `Business`, recorded dispatcher operation
+    `f0885a9a-53bb-48c0-926d-638fd347769f`, preserved counts at five projects,
+    69 conversations, three artifact manifests, 24 file manifests, zero media,
+    and seeded cursor `{ nextProjectIndex: 5, nextConversationIndex: 1,
+    detailReadLimit: 6 }`
