@@ -163,6 +163,14 @@ Current implementation-facing politeness contract:
   eligible default-ChatGPT routine target, dry-run last passes only, and
   `refresh: null`; pause, run-once, and resume controls all returned the
   expected `account-mirror-scheduler` control result.
+- `src/accountMirror/schedulerLedger.ts` owns the first persisted pass-history
+  seam. It stores a bounded scheduler-pass history in the AuraCall cache and
+  `/status.accountMirrorScheduler.history` exposes recent entries so cadence
+  and failure evidence survives process restart.
+- Installed-runtime restart dogfood verified that a dry-run pass history entry
+  persisted after stopping the scheduler-enabled server and starting a second
+  scheduler-disabled server: `lastPass` reset to `null`, while
+  `history.entries[0]` retained the prior dry-run completion timestamp.
 - default routine intervals:
   - ChatGPT: 6 hours plus up to 20 minutes jitter
   - Gemini: 12 hours plus up to 45 minutes jitter
@@ -240,6 +248,8 @@ Each status payload should include:
 - Scheduler operator controls can pause/resume the timer and trigger one
   manual pass through `POST /status`, with manual execution still requiring
   explicit server execute mode.
+- Scheduler pass history is persisted in a bounded cache ledger and projected
+  into `/status.accountMirrorScheduler.history`.
 - Tests cover config projection, mirror scheduling state, identity hard stops,
   and dispatcher queue evidence before live provider dogfood.
 - The first scheduling tests prove self-imposed jitter, minimum intervals,
@@ -255,6 +265,7 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add a small persisted scheduler-pass ledger or status history before routine
-execute-mode dogfood, so operators can inspect cadence and failures after a
-service restart instead of only seeing the in-memory `lastPass`.
+Add an explicit operator readback for scheduler history if `/status` becomes
+too compact for longer dogfood windows; otherwise proceed to one bounded
+execute-mode default-ChatGPT refresh dogfood with the scheduler interval still
+manual/short-lived.

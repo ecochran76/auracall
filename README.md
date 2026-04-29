@@ -215,6 +215,9 @@ Terminology note:
   `{"accountMirrorScheduler":{"action":"run-once"}}`. Manual `run-once`
   remains dry-run unless the server was started with
   `--account-mirror-scheduler-execute` and the request sets `"dryRun":false`.
+  Recent scheduler passes are persisted in the AuraCall cache and exposed at
+  `/status.accountMirrorScheduler.history` so cadence and failure evidence
+  survives a service restart.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

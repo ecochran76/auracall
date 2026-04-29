@@ -13,6 +13,7 @@ import {
 import type { AccountMirrorStatusSummary } from '../src/accountMirror/statusRegistry.js';
 import type { AccountMirrorCatalogResult } from '../src/accountMirror/catalogService.js';
 import type { AccountMirrorSchedulerPassResult } from '../src/accountMirror/schedulerService.js';
+import type { AccountMirrorSchedulerPassLedger } from '../src/accountMirror/schedulerLedger.js';
 import { resetLiveRuntimeRunServiceStateRegistryForTests } from '../src/runtime/liveServiceStateRegistry.js';
 import { createExecutionRuntimeControl } from '../src/runtime/control.js';
 import { writeTaskRunSpecStoredRecord } from '../src/teams/store.js';
@@ -105,6 +106,24 @@ describe('http responses adapter', () => {
         events: [],
       }),
     );
+  };
+
+  const createMemorySchedulerLedger = (): AccountMirrorSchedulerPassLedger => {
+    const entries: AccountMirrorSchedulerPassResult[] = [];
+    const readHistory = async () => ({
+      object: 'account_mirror_scheduler_pass_history' as const,
+      version: 1 as const,
+      updatedAt: entries[0]?.completedAt ?? null,
+      limit: 50,
+      entries,
+    });
+    return {
+      async appendPass(pass) {
+        entries.unshift(pass);
+        return readHistory();
+      },
+      readHistory,
+    };
   };
 
   const seedRequestedLocalActionDirectRun = async (
@@ -1512,6 +1531,7 @@ describe('http responses adapter', () => {
         accountMirrorSchedulerService: {
           runOnce,
         },
+        accountMirrorSchedulerLedger: createMemorySchedulerLedger(),
       },
     );
 
@@ -1527,6 +1547,10 @@ describe('http responses adapter', () => {
           state: string;
           paused: boolean;
           lastPass: AccountMirrorSchedulerPassResult | null;
+          history: {
+            object: string;
+            entries: AccountMirrorSchedulerPassResult[];
+          };
         };
       };
       expect(runOnce).toHaveBeenCalledWith({
@@ -1545,6 +1569,16 @@ describe('http responses adapter', () => {
             provider: 'chatgpt',
             runtimeProfileId: 'default',
           },
+        },
+        history: {
+          object: 'account_mirror_scheduler_pass_history',
+          entries: expect.arrayContaining([
+            expect.objectContaining({
+              object: 'account_mirror_scheduler_pass',
+              mode: 'dry-run',
+              action: 'dry-run',
+            }),
+          ]),
         },
       });
       expect(['idle', 'scheduled', 'running']).toContain(payload.accountMirrorScheduler.state);
@@ -1587,6 +1621,7 @@ describe('http responses adapter', () => {
         accountMirrorSchedulerService: {
           runOnce,
         },
+        accountMirrorSchedulerLedger: createMemorySchedulerLedger(),
       },
     );
 
@@ -1645,6 +1680,16 @@ describe('http responses adapter', () => {
             object: 'account_mirror_scheduler_pass',
             mode: 'dry-run',
             action: 'dry-run',
+          },
+          history: {
+            object: 'account_mirror_scheduler_pass_history',
+            entries: [
+              expect.objectContaining({
+                object: 'account_mirror_scheduler_pass',
+                mode: 'dry-run',
+                action: 'dry-run',
+              }),
+            ],
           },
         },
         controlResult: {
@@ -1711,6 +1756,7 @@ describe('http responses adapter', () => {
         accountMirrorSchedulerService: {
           runOnce,
         },
+        accountMirrorSchedulerLedger: createMemorySchedulerLedger(),
       },
     );
 
@@ -1741,6 +1787,16 @@ describe('http responses adapter', () => {
             object: 'account_mirror_scheduler_pass',
             mode: 'execute',
             action: 'refresh-completed',
+          },
+          history: {
+            object: 'account_mirror_scheduler_pass_history',
+            entries: [
+              expect.objectContaining({
+                object: 'account_mirror_scheduler_pass',
+                mode: 'execute',
+                action: 'refresh-completed',
+              }),
+            ],
           },
         },
         controlResult: {

@@ -45,6 +45,16 @@
   configured mirror targets, seven eligible, two blocked, one default-ChatGPT
   eligible target, dry-run last passes only, and `refresh: null` even when the
   manual request set `"dryRun": false` without execute mode.
+- Scheduler pass ledger: added bounded cache-backed scheduler pass history in
+  `src/accountMirror/schedulerLedger.ts` and projected it through
+  `/status.accountMirrorScheduler.history` so operators can inspect recent
+  dry-run/execute cadence after restarting the service.
+- Installed ledger restart dogfood: refreshed `~/.auracall/user-runtime`, ran
+  installed `api serve` with scheduler interval `750`, observed a dry-run
+  history entry completed at `2026-04-29T13:44:34.214Z`, stopped the server,
+  started a second installed server with the scheduler disabled, and confirmed
+  `/status.accountMirrorScheduler.history.entries[0]` still reported the same
+  completed timestamp while `lastPass` was `null`.
 - Key boundary: default ChatGPT is the first mirror source because it has the
   richest account history, but account identity remains bound to the referenced
   AuraCall runtime profile and provider service identity.

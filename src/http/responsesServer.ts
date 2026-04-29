@@ -111,6 +111,11 @@ import {
   type AccountMirrorSchedulerPassResult,
   type AccountMirrorSchedulerPassService,
 } from '../accountMirror/schedulerService.js';
+import {
+  createAccountMirrorSchedulerPassLedger,
+  type AccountMirrorSchedulerPassHistory,
+  type AccountMirrorSchedulerPassLedger,
+} from '../accountMirror/schedulerLedger.js';
 import type { AccountMirrorProvider } from '../accountMirror/politePolicy.js';
 
 export interface ResponsesHttpServerOptions {
@@ -149,6 +154,7 @@ export interface ResponsesHttpServerDeps {
   accountMirrorRefreshService?: AccountMirrorRefreshService;
   accountMirrorCatalogService?: AccountMirrorCatalogService;
   accountMirrorSchedulerService?: AccountMirrorSchedulerPassService;
+  accountMirrorSchedulerLedger?: AccountMirrorSchedulerPassLedger;
 }
 
 export interface ResponsesHttpServerInstance {
@@ -284,6 +290,7 @@ interface HttpStatusResponse {
     lastStartedAt: string | null;
     lastCompletedAt: string | null;
     lastPass: AccountMirrorSchedulerPassResult | null;
+    history: AccountMirrorSchedulerPassHistory;
   };
   accountMirrorStatus: AccountMirrorStatusSummary;
   executionHints: {
@@ -345,6 +352,9 @@ export async function createResponsesHttpServer(
     refreshService: accountMirrorRefreshService,
     now,
   });
+  const accountMirrorSchedulerLedger = deps.accountMirrorSchedulerLedger ?? createAccountMirrorSchedulerPassLedger({
+    config: configuredRuntimeConfig,
+  });
   const workbenchCapabilityService = createWorkbenchCapabilityService({
     now,
     catalog: deps.workbenchCapabilityCatalog,
@@ -401,6 +411,16 @@ export async function createResponsesHttpServer(
     lastStartedAt: null,
     lastCompletedAt: null,
     lastPass: null,
+    history: await accountMirrorSchedulerLedger.readHistory().catch((error) => {
+      logger(error instanceof Error ? error.message : String(error));
+      return {
+        object: 'account_mirror_scheduler_pass_history',
+        version: 1,
+        updatedAt: null,
+        limit: 50,
+        entries: [],
+      };
+    }),
   };
   let backgroundDrainPaused = false;
   let accountMirrorSchedulerPaused = false;
@@ -474,6 +494,12 @@ export async function createResponsesHttpServer(
       accountMirrorSchedulerState.lastPass = await accountMirrorSchedulerService.runOnce({
         dryRun: input.dryRun,
       });
+      accountMirrorSchedulerState.history = await accountMirrorSchedulerLedger
+        .appendPass(accountMirrorSchedulerState.lastPass)
+        .catch((error) => {
+          logger(error instanceof Error ? error.message : String(error));
+          return accountMirrorSchedulerState.history;
+        });
     } catch (error) {
       logger(error instanceof Error ? error.message : String(error));
     } finally {

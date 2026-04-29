@@ -146,6 +146,8 @@
       - `accountMirrorScheduler.lastStartedAt`
       - `accountMirrorScheduler.lastCompletedAt`
       - `accountMirrorScheduler.lastPass`
+      - `accountMirrorScheduler.history.object = account_mirror_scheduler_pass_history`
+      - `accountMirrorScheduler.history.entries[]`
       - the scheduler is disabled unless
         `--account-mirror-scheduler-interval-ms <ms>` is set
       - without `--account-mirror-scheduler-execute`, scheduler passes are

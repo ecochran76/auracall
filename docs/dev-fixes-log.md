@@ -35,6 +35,16 @@
   pause/resume, and run-once behavior without opening browsers; the remaining
   observability gap is that scheduler pass history is still in-memory only.
 
+- 2026-04-29: Scheduler pass history should survive service restarts before
+  routine execute-mode refresh dogfood. Keep the ledger bounded, cache-backed,
+  and projected on `/status.accountMirrorScheduler.history` instead of adding
+  another operator endpoint.
+
+- 2026-04-29: Restart dogfood should prove scheduler history separately from
+  in-memory `lastPass`. A scheduler-disabled server should still expose prior
+  ledger entries while `lastPass` is `null`, which confirms operators can
+  inspect previous cadence without immediately restarting the background loop.
+
 - 2026-04-29: Bot-sensitive lazy mirroring needs a politeness policy before it
   needs a background loop. Mirror schedulers should enforce provider-specific
   minimum intervals, deterministic jitter, explicit-refresh rate limits,
