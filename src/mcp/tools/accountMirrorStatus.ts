@@ -4,6 +4,7 @@ import {
   createAccountMirrorStatusRegistry,
   type AccountMirrorStatusRegistry,
 } from '../../accountMirror/statusRegistry.js';
+import { createAccountMirrorPersistence } from '../../accountMirror/cachePersistence.js';
 
 const accountMirrorStatusInputShape = {
   provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
@@ -87,8 +88,12 @@ export function registerAccountMirrorStatusTool(
   server: McpServer,
   deps: RegisterAccountMirrorStatusToolDeps = {},
 ): void {
+  const persistence = createAccountMirrorPersistence({
+    config: deps.config,
+  });
   const registry = deps.registry ?? createAccountMirrorStatusRegistry({
     config: deps.config,
+    readPersistentState: persistence.readState,
   });
   server.registerTool(
     'account_mirror_status',
@@ -108,6 +113,7 @@ export function createAccountMirrorStatusToolHandler(input: {
 }) {
   return async (rawInput: unknown) => {
     const payload = z.object(accountMirrorStatusInputShape).parse(rawInput);
+    await input.registry.refreshPersistentState?.();
     const status = input.registry.readStatus({
       provider: payload.provider,
       runtimeProfileId: payload.runtimeProfile,

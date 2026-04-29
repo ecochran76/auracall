@@ -124,6 +124,18 @@ Current implementation-facing politeness contract:
 - `POST /v1/account-mirrors/refresh` and MCP `account_mirror_refresh` request
   that one explicit refresh and return dispatcher evidence plus updated mirror
   status.
+- `src/accountMirror/cachePersistence.ts` owns the first durable persistence
+  seam. Mirror content is stored in the existing provider cache store under
+  `cache/providers/<provider>/<boundIdentity>/account-mirror/snapshot.json`
+  and the matching SQLite `account-mirror` dataset when the SQLite/dual cache
+  backend is active.
+- The canonical mirror content key is provider service plus bound identity.
+  AuraCall runtime profile and browser profile remain profile-binding and
+  refresh-provenance fields; they do not own separate copies of the same
+  account mirror.
+- `/status`, `GET /v1/account-mirrors/status`, and MCP `account_mirror_status`
+  hydrate persisted mirror counts/evidence before readback without enqueueing
+  browser work.
 - default routine intervals:
   - ChatGPT: 6 hours plus up to 20 minutes jitter
   - Gemini: 12 hours plus up to 45 minutes jitter
@@ -184,7 +196,10 @@ Each status payload should include:
 - API and MCP mirror-status readback exist before any long-running background
   mirror loop is widened.
 - Mirror storage is keyed by provider service plus bound identity, not by
-  agent name alone.
+  agent name, AuraCall runtime profile, or browser profile alone.
+- Mirror status can read the latest persisted metadata counts/evidence from
+  the cache store after process restart without keeping all mirror state in
+  memory.
 - Tests cover config projection, mirror scheduling state, identity hard stops,
   and dispatcher queue evidence before live provider dogfood.
 - The first scheduling tests prove self-imposed jitter, minimum intervals,
@@ -200,8 +215,7 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Next persist the collected mirror metadata under an identity-scoped mirror
-store. The store should be keyed by provider service plus bound identity, keep
-project/conversation/artifact manifests separate from full content, and expose
-the latest collection evidence through status without requiring the running API
-process to keep all mirror state in memory.
+Next persist richer provider manifests into the same identity-scoped provider
+cache: project rows, conversation rows, artifact manifests, and media indexes
+as separate cache datasets. Keep full content and binary artifact fetches lazy
+behind explicit requests or bounded recent-window policy.

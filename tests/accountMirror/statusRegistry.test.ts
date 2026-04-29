@@ -195,4 +195,48 @@ describe('account mirror status registry', () => {
       },
     });
   });
+
+  test('hydrates persisted mirror state without making status readback asynchronous', async () => {
+    const registry = createAccountMirrorStatusRegistry({
+      config,
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+      readPersistentState: async (target) => {
+        if (
+          target.provider !== 'chatgpt' ||
+          target.runtimeProfileId !== 'default' ||
+          target.boundIdentityKey !== 'ecochran76@gmail.com'
+        ) {
+          return null;
+        }
+        return {
+          detectedIdentityKey: 'ecochran76@gmail.com',
+          lastSuccessAtMs: Date.parse('2026-04-29T10:00:00.000Z'),
+          metadataCounts: {
+            projects: 3,
+            conversations: 9,
+            artifacts: 2,
+            media: 1,
+          },
+        };
+      },
+    });
+
+    await registry.refreshPersistentState?.();
+    const status = registry.readStatus({
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      explicitRefresh: true,
+    });
+
+    expect(status.entries[0]).toMatchObject({
+      detectedIdentityKey: 'ecochran76@gmail.com',
+      lastSuccessAt: '2026-04-29T10:00:00.000Z',
+      metadataCounts: {
+        projects: 3,
+        conversations: 9,
+        artifacts: 2,
+        media: 1,
+      },
+    });
+  });
 });

@@ -6,6 +6,7 @@ import {
 } from '../../src/accountMirror/refreshService.js';
 import { AccountMirrorIdentityMismatchError } from '../../src/accountMirror/chatgptMetadataCollector.js';
 import { createAccountMirrorStatusRegistry } from '../../src/accountMirror/statusRegistry.js';
+import type { AccountMirrorPersistence } from '../../src/accountMirror/cachePersistence.js';
 
 const config = {
   model: 'gpt-5.2',
@@ -28,6 +29,13 @@ const config = {
     },
   },
 };
+
+function createNoopPersistence(): AccountMirrorPersistence {
+  return {
+    writeSnapshot: vi.fn(async () => {}),
+    readState: vi.fn(async () => null),
+  };
+}
 
 describe('account mirror refresh service', () => {
   test('runs an explicit default ChatGPT refresh through the browser operation dispatcher', async () => {
@@ -57,6 +65,7 @@ describe('account mirror refresh service', () => {
       config,
       now: () => new Date('2026-04-29T12:00:00.000Z'),
     });
+    const persistence = createNoopPersistence();
     const service = createAccountMirrorRefreshService({
       config,
       registry,
@@ -64,6 +73,7 @@ describe('account mirror refresh service', () => {
         now: () => new Date('2026-04-29T12:00:00.000Z'),
       }),
       metadataCollector,
+      persistence,
       now: () => new Date('2026-04-29T12:00:00.000Z'),
       generateRequestId: () => 'acctmirror_test',
     });
@@ -115,6 +125,28 @@ describe('account mirror refresh service', () => {
         maxArtifactRowsPerCycle: 80,
       },
     });
+    expect(persistence.writeSnapshot).toHaveBeenCalledWith({
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      browserProfileId: 'default',
+      boundIdentityKey: 'ecochran76@gmail.com',
+      detectedIdentityKey: 'ecochran76@gmail.com',
+      detectedAccountLevel: 'Business',
+      requestId: 'acctmirror_test',
+      startedAt: '2026-04-29T12:00:00.000Z',
+      completedAt: '2026-04-29T12:00:00.000Z',
+      dispatcherKey: expect.stringContaining('service:chatgpt'),
+      dispatcherOperationId: expect.any(String),
+      metadataCounts: {
+        projects: 1,
+        conversations: 2,
+        artifacts: 1,
+        media: 0,
+      },
+      metadataEvidence: expect.objectContaining({
+        identitySource: 'profile-menu',
+      }),
+    });
     expect(result.mirrorStatus.entries[0]).toMatchObject({
       detectedIdentityKey: 'ecochran76@gmail.com',
       lastSuccessAt: '2026-04-29T12:00:00.000Z',
@@ -137,6 +169,7 @@ describe('account mirror refresh service', () => {
     const service = createAccountMirrorRefreshService({
       config,
       dispatcher: createBrowserOperationDispatcher(),
+      persistence: createNoopPersistence(),
     });
 
     await expect(
@@ -177,6 +210,7 @@ describe('account mirror refresh service', () => {
       },
       registry,
       dispatcher,
+      persistence: createNoopPersistence(),
       now: () => new Date('2026-04-29T12:00:00.000Z'),
     });
 
@@ -226,6 +260,7 @@ describe('account mirror refresh service', () => {
           );
         }),
       },
+      persistence: createNoopPersistence(),
       now: () => new Date('2026-04-29T12:00:00.000Z'),
     });
 

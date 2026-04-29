@@ -133,7 +133,9 @@
       - `accountMirrorStatus.entries[].mirrorState.lastDispatcherKey`
       - `accountMirrorStatus.entries[].metadataCounts`
       - `accountMirrorStatus.entries[].metadataEvidence`
-      - this readback must not enqueue browser work or scrape provider pages
+      - this readback may hydrate counts/evidence from the existing provider
+        cache store, but it must not enqueue browser work or scrape provider
+        pages
     - dedicated mirror posture route:
       - `GET /v1/account-mirrors/status`
       - `GET /v1/account-mirrors/status?provider=chatgpt&runtimeProfile=default`
@@ -148,6 +150,10 @@
         queued/running/completed evidence
       - after dispatcher acquisition it verifies the bound ChatGPT identity,
         then collects bounded project/conversation metadata only
+      - on success it persists the mirror snapshot under the existing provider
+        cache key for `provider + boundIdentity`; AuraCall runtime profile and
+        browser profile are stored as refresh provenance, not as duplicate
+        mirror data ownership
       - it must not submit prompts, fetch full conversation bodies, or load
         immature conversation ids
     - MCP parity:

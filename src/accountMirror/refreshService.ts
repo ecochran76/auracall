@@ -24,6 +24,10 @@ import {
   type AccountMirrorMetadataCollector,
   type AccountMirrorMetadataCollectorResult,
 } from './chatgptMetadataCollector.js';
+import {
+  createAccountMirrorPersistence,
+  type AccountMirrorPersistence,
+} from './cachePersistence.js';
 
 export interface AccountMirrorRefreshRequest {
   provider?: AccountMirrorProvider | null;
@@ -75,6 +79,7 @@ export function createAccountMirrorRefreshService(input: {
   registry?: AccountMirrorStatusRegistry;
   dispatcher?: BrowserOperationDispatcher;
   metadataCollector?: AccountMirrorMetadataCollector;
+  persistence?: AccountMirrorPersistence;
   now?: () => Date;
   generateRequestId?: () => string;
 }): AccountMirrorRefreshService {
@@ -91,6 +96,9 @@ export function createAccountMirrorRefreshService(input: {
     (isResolvedUserConfig(input.config)
       ? createChatgptAccountMirrorMetadataCollector(input.config)
       : createConfigBackedAccountMirrorMetadataCollector(input.config));
+  const persistence = input.persistence ?? createAccountMirrorPersistence({
+    config: input.config,
+  });
   const generateRequestId = input.generateRequestId ?? (() => `acctmirror_${randomUUID()}`);
 
   return {
@@ -224,6 +232,21 @@ export function createAccountMirrorRefreshService(input: {
           lastSuccessAtMs: completedAt.getTime(),
           lastCompletedAtMs: completedAt.getTime(),
           consecutiveFailureCount: 0,
+          metadataCounts: collection.metadataCounts,
+          metadataEvidence: collection.evidence,
+        });
+        await persistence.writeSnapshot({
+          provider,
+          runtimeProfileId,
+          browserProfileId: target.browserProfileId,
+          boundIdentityKey: target.expectedIdentityKey ?? collection.detectedIdentityKey ?? '',
+          detectedIdentityKey: collection.detectedIdentityKey,
+          detectedAccountLevel: collection.detectedAccountLevel,
+          requestId,
+          startedAt: startedAt.toISOString(),
+          completedAt: completedAt.toISOString(),
+          dispatcherKey: acquired.operation.key,
+          dispatcherOperationId: acquired.operation.id,
           metadataCounts: collection.metadataCounts,
           metadataEvidence: collection.evidence,
         });

@@ -10,6 +10,7 @@ import type {
 import type { CacheReadResult, ProviderCacheContext } from '../../providers/cache.js';
 import {
   PROVIDER_CACHE_TTL_MS,
+  readProviderAccountMirrorSnapshot,
   readProjectCache,
   readConversationCache,
   readConversationContextCache,
@@ -26,6 +27,7 @@ import {
   writeConversationAttachmentsCache,
   writeProjectKnowledgeCache,
   writeProjectInstructionsCache,
+  writeProviderAccountMirrorSnapshot,
   resolveProviderCachePath,
   resolveConversationCacheFileName,
   resolveConversationCacheScopeId,
@@ -47,6 +49,42 @@ export interface CachedConversationContextEntry {
 }
 
 const ACCOUNT_FILES_ENTITY_ID = '__account__';
+const ACCOUNT_MIRROR_ENTITY_ID = '__mirror__';
+
+export interface AccountMirrorCacheSnapshot {
+  object: 'account_mirror_snapshot';
+  version: 1;
+  provider: string;
+  boundIdentityKey: string;
+  detectedIdentityKey: string | null;
+  detectedAccountLevel: string | null;
+  collectedAt: string;
+  metadataCounts: {
+    projects: number;
+    conversations: number;
+    artifacts: number;
+    media: number;
+  };
+  metadataEvidence: {
+    identitySource: string | null;
+    projectSampleIds: string[];
+    conversationSampleIds: string[];
+    truncated: {
+      projects: boolean;
+      conversations: boolean;
+      artifacts: boolean;
+    };
+  } | null;
+  refresh: {
+    requestId: string;
+    runtimeProfileId: string;
+    browserProfileId: string | null;
+    startedAt: string;
+    completedAt: string;
+    dispatcherKey: string | null;
+    dispatcherOperationId: string | null;
+  };
+}
 
 function resolveConversationScopeEntityId(context: ProviderCacheContext): string {
   return resolveConversationCacheScopeId(context) ?? '';
@@ -193,6 +231,13 @@ async function readSupplementalProjectConversationCaches(
 }
 
 export interface CacheStore {
+  readAccountMirrorSnapshot(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<AccountMirrorCacheSnapshot | null>>;
+  writeAccountMirrorSnapshot(
+    context: ProviderCacheContext,
+    snapshot: AccountMirrorCacheSnapshot,
+  ): Promise<void>;
   readProjects(context: ProviderCacheContext): Promise<CacheReadResult<Project[]>>;
   writeProjects(context: ProviderCacheContext, items: Project[]): Promise<void>;
   readConversations(context: ProviderCacheContext): Promise<CacheReadResult<Conversation[]>>;
@@ -255,6 +300,24 @@ export interface CacheStore {
 }
 
 export class JsonCacheStore implements CacheStore {
+  async readAccountMirrorSnapshot(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<AccountMirrorCacheSnapshot | null>> {
+    return readProviderAccountMirrorSnapshot<AccountMirrorCacheSnapshot>(context);
+  }
+
+  async writeAccountMirrorSnapshot(
+    context: ProviderCacheContext,
+    snapshot: AccountMirrorCacheSnapshot,
+  ): Promise<void> {
+    await writeProviderAccountMirrorSnapshot(context, snapshot);
+    await upsertCacheIndexEntry(context, {
+      kind: 'account-mirror',
+      path: resolveCacheEntryPath(context, 'account-mirror/snapshot.json'),
+      sourceUrl: context.listOptions.configuredUrl ?? null,
+    });
+  }
+
   async readProjects(context: ProviderCacheContext): Promise<CacheReadResult<Project[]>> {
     return readProjectCache(context);
   }
@@ -479,6 +542,7 @@ type SqliteLikeDatabase = {
 };
 
 type SqliteModule = {
+  // biome-ignore lint/style/useNamingConvention: node:sqlite exposes this constructor as DatabaseSync.
   DatabaseSync: new (filename: string) => SqliteLikeDatabase;
 };
 
@@ -492,6 +556,7 @@ async function loadSqliteModule(): Promise<SqliteModule> {
 }
 
 type SqlDataset =
+  | 'account-mirror'
   | 'projects'
   | 'conversations'
   | 'conversation-context'
@@ -508,6 +573,29 @@ type SqlMeta = {
 
 export class SqliteCacheStore implements CacheStore {
   private readonly initPromises = new Map<string, Promise<void>>();
+
+  async readAccountMirrorSnapshot(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<AccountMirrorCacheSnapshot | null>> {
+    return this.readDataset<AccountMirrorCacheSnapshot | null>(
+      context,
+      'account-mirror',
+      ACCOUNT_MIRROR_ENTITY_ID,
+      null,
+    );
+  }
+
+  async writeAccountMirrorSnapshot(
+    context: ProviderCacheContext,
+    snapshot: AccountMirrorCacheSnapshot,
+  ): Promise<void> {
+    await this.writeDataset(context, 'account-mirror', ACCOUNT_MIRROR_ENTITY_ID, snapshot);
+    await upsertCacheIndexEntry(context, {
+      kind: 'account-mirror',
+      path: resolveCacheEntryPath(context, 'account-mirror/snapshot.json'),
+      sourceUrl: context.listOptions.configuredUrl ?? null,
+    });
+  }
 
   async readProjects(context: ProviderCacheContext): Promise<CacheReadResult<Project[]>> {
     return this.readDataset<Project[]>(context, 'projects', '', []);
@@ -1442,6 +1530,28 @@ class DualCacheStore implements CacheStore {
     private readonly primary: CacheStore,
     private readonly secondary: CacheStore,
   ) {}
+
+  async readAccountMirrorSnapshot(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<AccountMirrorCacheSnapshot | null>> {
+    return this.readThrough(
+      context,
+      () => this.primary.readAccountMirrorSnapshot(context),
+      () => this.secondary.readAccountMirrorSnapshot(context),
+      (items) => items ? this.primary.writeAccountMirrorSnapshot(context, items) : Promise.resolve(),
+    );
+  }
+
+  async writeAccountMirrorSnapshot(
+    context: ProviderCacheContext,
+    snapshot: AccountMirrorCacheSnapshot,
+  ): Promise<void> {
+    await this.writeBoth(
+      () => this.primary.writeAccountMirrorSnapshot(context, snapshot),
+      () => this.secondary.writeAccountMirrorSnapshot(context, snapshot),
+      'writeAccountMirrorSnapshot',
+    );
+  }
 
   async readProjects(context: ProviderCacheContext): Promise<CacheReadResult<Project[]>> {
     return this.readThrough(context, () => this.primary.readProjects(context), () => this.secondary.readProjects(context), (items) => this.primary.writeProjects(context, items));

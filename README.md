@@ -195,6 +195,10 @@ Terminology note:
   - `GET /v1/runs/{run_id}/status`
   - `GET /v1/account-mirrors/status`
   - `POST /v1/account-mirrors/refresh`
+- Account mirror refreshes are metadata-first and identity-gated. Successful
+  refreshes persist the mirror snapshot in the existing provider cache under
+  `provider + boundIdentity`; runtime/browser profile ids are retained as
+  binding and refresh provenance, not as duplicate mirror cache owners.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

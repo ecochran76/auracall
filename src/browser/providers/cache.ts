@@ -67,6 +67,19 @@ export async function writeProjectCache(
   await writeProviderCache(context, 'projects.json', items);
 }
 
+export async function readProviderAccountMirrorSnapshot<T>(
+  context: ProviderCacheContext,
+): Promise<CacheReadResult<T | null>> {
+  return readProviderCache<T | null>(context, 'account-mirror/snapshot.json', null);
+}
+
+export async function writeProviderAccountMirrorSnapshot<T>(
+  context: ProviderCacheContext,
+  snapshot: T,
+): Promise<void> {
+  await writeProviderCache(context, 'account-mirror/snapshot.json', snapshot);
+}
+
 export async function writeConversationCache(
   context: ProviderCacheContext,
   items: Conversation[],

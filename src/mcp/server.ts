@@ -27,6 +27,7 @@ import { createBrowserWorkbenchCapabilityDiscovery } from '../workbench/browserD
 import { createBrowserWorkbenchCapabilityDiagnostics } from '../workbench/browserDiagnostics.js';
 import { createAccountMirrorStatusRegistry } from '../accountMirror/statusRegistry.js';
 import { createAccountMirrorRefreshService } from '../accountMirror/refreshService.js';
+import { createAccountMirrorPersistence } from '../accountMirror/cachePersistence.js';
 
 export interface McpServiceBundle {
   responsesService: ReturnType<typeof createExecutionResponsesService>;
@@ -143,12 +144,17 @@ export function createMcpServicesFromConfig(
     ),
     executeStoredRunStep: async (_request, context) => configuredStoredStepExecutor(context),
   });
+  const accountMirrorPersistence = createAccountMirrorPersistence({
+    config: resolvedUserConfig as Record<string, unknown>,
+  });
   const accountMirrorStatusRegistry = createAccountMirrorStatusRegistry({
     config: resolvedUserConfig as Record<string, unknown>,
+    readPersistentState: accountMirrorPersistence.readState,
   });
   const accountMirrorRefreshService = createAccountMirrorRefreshService({
     config: resolvedUserConfig as Record<string, unknown>,
     registry: accountMirrorStatusRegistry,
+    persistence: accountMirrorPersistence,
   });
   return {
     responsesService,

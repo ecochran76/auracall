@@ -99,6 +99,7 @@ import {
   type AccountMirrorRefreshResult,
   type AccountMirrorRefreshService,
 } from '../accountMirror/refreshService.js';
+import { createAccountMirrorPersistence } from '../accountMirror/cachePersistence.js';
 import type { AccountMirrorProvider } from '../accountMirror/politePolicy.js';
 
 export interface ResponsesHttpServerOptions {
@@ -285,13 +286,18 @@ export async function createResponsesHttpServer(
   const backgroundDrainIntervalMs = Math.max(0, options.backgroundDrainIntervalMs ?? 0);
   const configuredRuntimeConfig = deps.config;
   const resolvedUserConfig = asResolvedUserConfig(configuredRuntimeConfig);
+  const accountMirrorPersistence = createAccountMirrorPersistence({
+    config: configuredRuntimeConfig,
+  });
   const accountMirrorStatusRegistry = deps.accountMirrorStatusRegistry ?? createAccountMirrorStatusRegistry({
     config: configuredRuntimeConfig,
     now,
+    readPersistentState: accountMirrorPersistence.readState,
   });
   const accountMirrorRefreshService = deps.accountMirrorRefreshService ?? createAccountMirrorRefreshService({
     config: configuredRuntimeConfig,
     registry: accountMirrorStatusRegistry,
+    persistence: accountMirrorPersistence,
     now,
   });
   const workbenchCapabilityService = createWorkbenchCapabilityService({
@@ -408,6 +414,7 @@ export async function createResponsesHttpServer(
 
       if (req.method === 'GET' && url.pathname === '/status') {
         const statusQuery = parseStatusQuery(url.searchParams);
+        await accountMirrorStatusRegistry.refreshPersistentState?.();
         await syncRunnerStateFromStore();
         const address = server.address();
         const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
@@ -442,6 +449,7 @@ export async function createResponsesHttpServer(
 
       if (req.method === 'GET' && url.pathname === '/v1/account-mirrors/status') {
         const query = parseAccountMirrorStatusQuery(url.searchParams);
+        await accountMirrorStatusRegistry.refreshPersistentState?.();
         sendJson(res, 200, accountMirrorStatusRegistry.readStatus(query));
         return;
       }

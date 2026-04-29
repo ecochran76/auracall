@@ -14,6 +14,11 @@
   `/status.accountMirrorStatus`, `GET /v1/account-mirrors/status`, and MCP
   `account_mirror_status` so operators can see eligible/delayed/blocked mirror
   posture before any browser work is enqueued.
+- Cache persistence: added `src/accountMirror/cachePersistence.ts` and the
+  `account-mirror` cache dataset so successful refreshes persist mirror
+  snapshots under the existing provider cache key for provider plus bound
+  identity. Runtime profile and browser profile are retained as binding and
+  refresh provenance, not as duplicate mirror owners.
 - Key boundary: default ChatGPT is the first mirror source because it has the
   richest account history, but account identity remains bound to the referenced
   AuraCall runtime profile and provider service identity.
