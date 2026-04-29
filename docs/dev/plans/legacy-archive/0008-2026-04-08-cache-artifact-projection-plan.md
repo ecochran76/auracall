@@ -1,7 +1,7 @@
 # Cache Artifact + Projection Sync Plan
 
 Architecture reference:
-- [cache-architecture-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-architecture-plan.md)
+- [cache-architecture-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/cache-architecture-plan.md)
   is the anti-drift contract for canonical records vs derived projections vs
   operator views.
 
@@ -59,23 +59,23 @@ That means:
 ## Current code boundary
 
 Canonical model:
-- [domain.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/domain.ts)
+- [domain.ts](/home/ecochran76/workspace.local/auracall/src/browser/providers/domain.ts)
   defines `ConversationArtifact`
 
 Projection writes today:
-- [store.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/cache/store.ts)
+- [store.ts](/home/ecochran76/workspace.local/auracall/src/browser/llmService/cache/store.ts)
   syncs `source_links`
-- [store.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/cache/store.ts)
+- [store.ts](/home/ecochran76/workspace.local/auracall/src/browser/llmService/cache/store.ts)
   syncs `file_bindings` / `file_assets`
 - artifact sync does not yet exist
 
 Operator/query surfaces today:
-- [catalog.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/cache/catalog.ts)
+- [catalog.ts](/home/ecochran76/workspace.local/auracall/src/browser/llmService/cache/catalog.ts)
   supports sources/files catalogs
 - artifact catalog/query helpers do not yet exist
 
 Export today:
-- [export.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/cache/export.ts)
+- [export.ts](/home/ecochran76/workspace.local/auracall/src/browser/llmService/cache/export.ts)
   reads `context.artifacts[]` directly
 
 ## Proposed bounded outcome

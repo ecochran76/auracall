@@ -1,10 +1,10 @@
 # Cache Remaining TODOs Plan
 
 Architecture reference:
-- [cache-architecture-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-architecture-plan.md)
+- [cache-architecture-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/cache-architecture-plan.md)
   is the anti-drift guide for canonical records vs derived projections vs
   operator views. This TODO plan should be interpreted within that model.
-- [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
+- [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/cache-artifact-projection-plan.md)
   is the concrete next-step plan for artifact catalogs and projection-sync
   extraction.
 
@@ -49,7 +49,7 @@ Purpose: make artifacts first-class cache/query entities and stop mixing
 projection sync into ad hoc store write paths.
 
 Status: Planned in
-- [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
+- [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/cache-artifact-projection-plan.md)
 
 Tasks:
 1. Add `artifact_bindings` schema + migration.

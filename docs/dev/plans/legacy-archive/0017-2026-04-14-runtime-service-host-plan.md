@@ -11,10 +11,10 @@ This plan answers one practical question:
 
 It should be read together with:
 
-- [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md)
-- [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
-- [runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-runner-slice-plan.md)
-- [http-responses-adapter-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/http-responses-adapter-plan.md)
+- [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0001-2026-04-14-execution.md)
+- [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/service-runtime-execution-plan.md)
+- [runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/runtime-runner-slice-plan.md)
+- [http-responses-adapter-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/http-responses-adapter-plan.md)
 
 ## Why this slice is next
 

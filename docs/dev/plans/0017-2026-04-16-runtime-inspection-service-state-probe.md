@@ -270,7 +270,7 @@ Current checkpoint:
 Next checkpoint:
 
 - completed; follow-on quality work now lives in
-  [0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md)
+  [0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md)
 
 ## Definition Of Done
 

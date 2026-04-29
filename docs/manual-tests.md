@@ -363,10 +363,10 @@ Use this before claiming live team readiness changes:
      pnpm tsx bin/auracall.ts teams run auracall-tooling \
      "Run one bounded node local shell action that emits AURACALL_TOOL_ACTION_OK, then reply exactly with: AURACALL_TOOL_TEAM_LIVE_SMOKE_OK" \
      --title "AuraCall tooling team live smoke" \
-     --prompt-append "For the tool envelope, use a top-level localActionRequests array with exactly one shell action. Preserve the provided toolEnvelope unchanged. Use kind \"shell\" and command \"node\". Use args [\"-e\",\"process.stdout.write('AURACALL_TOOL_ACTION_OK')\"]. Use structuredPayload {\"cwd\":\"/home/ecochran76/workspace.local/oracle\"}. After the local action succeeds, the final answer must be exactly AURACALL_TOOL_TEAM_LIVE_SMOKE_OK." \
+     --prompt-append "For the tool envelope, use a top-level localActionRequests array with exactly one shell action. Preserve the provided toolEnvelope unchanged. Use kind \"shell\" and command \"node\". Use args [\"-e\",\"process.stdout.write('AURACALL_TOOL_ACTION_OK')\"]. Use structuredPayload {\"cwd\":\"/home/ecochran76/workspace.local/auracall\"}. After the local action succeeds, the final answer must be exactly AURACALL_TOOL_TEAM_LIVE_SMOKE_OK." \
      --max-turns 2 \
      --allow-local-shell-command node \
-     --allow-local-cwd-root /home/ecochran76/workspace.local/oracle \
+     --allow-local-cwd-root /home/ecochran76/workspace.local/auracall \
      --json
    ```
 9. Run the bounded Gemini tooling workflow smoke when validating Gemini-bound
@@ -379,10 +379,10 @@ Use this before claiming live team readiness changes:
      "Use the provided toolEnvelope structured context to request one bounded shell action, then use the resulting tool outcome to return the provided finalToken exactly." \
      --title "AuraCall Gemini tooling team live smoke" \
      --prompt-append "Requester must emit exactly one JSON object with top-level localActionRequests containing the provided toolEnvelope unchanged. Do not rename fields, add markdown fences, or add prose. Finisher must output only the final token after a successful executed tool outcome." \
-     --structured-context-json '{"toolEnvelope":{"kind":"shell","summary":"Run one bounded deterministic node command","command":"node","args":["-e","process.stdout.write('\''AURACALL_TOOL_ACTION_OK'\'')"],"structuredPayload":{"cwd":"/home/ecochran76/workspace.local/oracle"}},"finalToken":"AURACALL_GEMINI_TOOL_TEAM_SMOKE_OK"}' \
+     --structured-context-json '{"toolEnvelope":{"kind":"shell","summary":"Run one bounded deterministic node command","command":"node","args":["-e","process.stdout.write('\''AURACALL_TOOL_ACTION_OK'\'')"],"structuredPayload":{"cwd":"/home/ecochran76/workspace.local/auracall"}},"finalToken":"AURACALL_GEMINI_TOOL_TEAM_SMOKE_OK"}' \
      --max-turns 2 \
      --allow-local-shell-command node \
-     --allow-local-cwd-root /home/ecochran76/workspace.local/oracle \
+     --allow-local-cwd-root /home/ecochran76/workspace.local/auracall \
      --json
    ```
 10. Current expected baseline result:

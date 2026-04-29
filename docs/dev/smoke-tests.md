@@ -2,9 +2,9 @@
 
 These are real end-to-end checks for the Grok browser path. Keep them updated as behavior changes.
 
-For the historical Grok breadth backlog after this acceptance bar, see [0024-2026-04-08-grok-remaining-crud-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0024-2026-04-08-grok-remaining-crud-plan.md).
-If a smoke fails because of structural DOM drift rather than Grok-only behavior, consult [browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md) before adding another provider-local workaround.
-For the finished ChatGPT project-management surface, see [0022-2026-04-08-chatgpt-project-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0022-2026-04-08-chatgpt-project-surface-plan.md). For the work that closed the ChatGPT browser MVP, see [0019-2026-04-08-chatgpt-conversation-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0019-2026-04-08-chatgpt-conversation-surface-plan.md). For the post-MVP polish history, see [0021-2026-04-08-chatgpt-polish-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0021-2026-04-08-chatgpt-polish-plan.md).
+For the historical Grok breadth backlog after this acceptance bar, see [0024-2026-04-08-grok-remaining-crud-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0024-2026-04-08-grok-remaining-crud-plan.md).
+If a smoke fails because of structural DOM drift rather than Grok-only behavior, consult [browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/auracall/docs/dev/browser-service-upgrade-backlog.md) before adding another provider-local workaround.
+For the finished ChatGPT project-management surface, see [0022-2026-04-08-chatgpt-project-surface-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0022-2026-04-08-chatgpt-project-surface-plan.md). For the work that closed the ChatGPT browser MVP, see [0019-2026-04-08-chatgpt-conversation-surface-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0019-2026-04-08-chatgpt-conversation-surface-plan.md). For the post-MVP polish history, see [0021-2026-04-08-chatgpt-polish-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0021-2026-04-08-chatgpt-polish-plan.md).
 
 Current post-acceptance status:
 - the full scripted WSL-primary Grok acceptance pass remains the canonical

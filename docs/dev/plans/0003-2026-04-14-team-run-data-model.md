@@ -32,9 +32,9 @@ for:
 
 It should be read together with:
 
-- [0006-2026-04-14-team-config-boundary.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0006-2026-04-14-team-config-boundary.md)
-- [0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0004-2026-04-14-team-service-execution.md)
-- [0002-2026-04-14-task-run-spec.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0002-2026-04-14-task-run-spec.md)
+- [0006-2026-04-14-team-config-boundary.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0006-2026-04-14-team-config-boundary.md)
+- [0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0004-2026-04-14-team-service-execution.md)
+- [0002-2026-04-14-task-run-spec.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0002-2026-04-14-task-run-spec.md)
 
 ## Design goals
 
@@ -64,7 +64,7 @@ The first concrete vocabulary should include four top-level entities:
 Important dependency:
 
 - this execution vocabulary assumes a separate assignment layer now captured in
-  [0002-2026-04-14-task-run-spec.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0002-2026-04-14-task-run-spec.md)
+  [0002-2026-04-14-task-run-spec.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0002-2026-04-14-task-run-spec.md)
 - `teamRun` should remain the durable execution record, not the reusable team
   definition and not the concrete assignment object
 

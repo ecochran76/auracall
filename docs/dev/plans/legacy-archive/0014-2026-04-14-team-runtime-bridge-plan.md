@@ -13,12 +13,12 @@ This plan answers one practical question:
 
 It should be read together with:
 
-- [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md)
-- [0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0004-2026-04-14-team-service-execution.md)
-- [0003-2026-04-14-team-run-data-model.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0003-2026-04-14-team-run-data-model.md)
+- [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0001-2026-04-14-execution.md)
+- [0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0004-2026-04-14-team-service-execution.md)
+- [0003-2026-04-14-team-run-data-model.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0003-2026-04-14-team-run-data-model.md)
 - archived runtime execution history:
-  - [0018-2026-04-14-service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0018-2026-04-14-service-runtime-execution-plan.md)
-  - [0017-2026-04-14-runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0017-2026-04-14-runtime-service-host-plan.md)
+  - [0018-2026-04-14-service-runtime-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0018-2026-04-14-service-runtime-execution-plan.md)
+  - [0017-2026-04-14-runtime-service-host-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0017-2026-04-14-runtime-service-host-plan.md)
 
 ## Why this slice is next
 

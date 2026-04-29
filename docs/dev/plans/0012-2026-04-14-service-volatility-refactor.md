@@ -19,7 +19,7 @@ Lane: P01
 
 Move volatile, service-specific data out of core TypeScript and into typed, checked-in service manifests without turning Aura-Call into an untyped rules engine.
 
-This is a repo-wide implementation plan. It is not a substitute for service-specific execution plans. Before any service migration starts, add a dedicated service plan using [service-volatility-service-plan-template.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-service-plan-template.md).
+This is a repo-wide implementation plan. It is not a substitute for service-specific execution plans. Before any service migration starts, add a dedicated service plan using [service-volatility-service-plan-template.md](/home/ecochran76/workspace.local/auracall/docs/dev/service-volatility-service-plan-template.md).
 
 ## Problem Statement
 
@@ -227,8 +227,8 @@ No service migration lands unless:
 
 1. Keep this plan as the controlling repo-wide document.
 2. Create a hard-coded volatility inventory for ChatGPT/Grok/Gemini.
-   - Current inventory doc: [service-volatility-inventory.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-inventory.md)
+   - Current inventory doc: [service-volatility-inventory.md](/home/ecochran76/workspace.local/auracall/docs/dev/service-volatility-inventory.md)
 3. Design the manifest schema around the inventory, not around guesses.
 4. Before implementation starts, add the first service-specific plan for the chosen pilot slice.
-   - Current first pilot: [0010-2026-04-14-service-volatility-chatgpt.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0010-2026-04-14-service-volatility-chatgpt.md)
-   - Current ChatGPT follow-on behavior/workflow plan: [service-volatility-chatgpt-workflow-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-chatgpt-workflow-plan.md)
+   - Current first pilot: [0010-2026-04-14-service-volatility-chatgpt.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0010-2026-04-14-service-volatility-chatgpt.md)
+   - Current ChatGPT follow-on behavior/workflow plan: [service-volatility-chatgpt-workflow-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/service-volatility-chatgpt-workflow-plan.md)

@@ -5,7 +5,7 @@ Goal: record the now-finished ChatGPT project-management surface after core proj
 Current status:
 - implemented: canonical `g-p-...` route handling, project list/create/rename/delete, create-time memory mode, browser-derived cache identity via `/api/auth/session`, `projects files list|add|remove --target chatgpt`, `projects instructions get|set --target chatgpt`
 - not implemented: `projects clone --target chatgpt`
-- next active surface is preserved as history in [0019-2026-04-08-chatgpt-conversation-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0019-2026-04-08-chatgpt-conversation-surface-plan.md)
+- next active surface is preserved as history in [0019-2026-04-08-chatgpt-conversation-surface-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0019-2026-04-08-chatgpt-conversation-surface-plan.md)
 
 ## Phase 1. Sources DOM Recon
 
@@ -96,4 +96,4 @@ Run one disposable end-to-end pass on the authenticated WSL Chrome profile:
 
 ## Immediate Next Step
 
-Project management is green enough to move on. Historical continuation notes live in [0019-2026-04-08-chatgpt-conversation-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0019-2026-04-08-chatgpt-conversation-surface-plan.md).
+Project management is green enough to move on. Historical continuation notes live in [0019-2026-04-08-chatgpt-conversation-surface-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0019-2026-04-08-chatgpt-conversation-surface-plan.md).

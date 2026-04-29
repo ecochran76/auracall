@@ -12,7 +12,7 @@ writes are now the explicit compatibility mode.
 
 Operational troubleshooting reference:
 
-- [config-shape-troubleshooting.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-shape-troubleshooting.md)
+- [config-shape-troubleshooting.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-shape-troubleshooting.md)
 
 ## Current state
 

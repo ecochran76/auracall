@@ -3,7 +3,7 @@
 This file is now a historical pointer.
 
 Active canonical authority has moved to
-[0002-2026-04-14-task-run-spec.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0002-2026-04-14-task-run-spec.md).
+[0002-2026-04-14-task-run-spec.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0002-2026-04-14-task-run-spec.md).
 
 Why this file still exists:
 

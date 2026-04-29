@@ -82,14 +82,14 @@ Future higher-level object that references an AuraCall runtime profile and adds:
 - narrower policy or tooling defaults
 
 Boundary reference:
-- [0009-2026-04-14-agent-config-boundary.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0009-2026-04-14-agent-config-boundary.md)
+- [0009-2026-04-14-agent-config-boundary.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0009-2026-04-14-agent-config-boundary.md)
 
 ### 4. Team
 
 Future grouping/orchestration object that coordinates multiple agents.
 
 Boundary reference:
-- [0006-2026-04-14-team-config-boundary.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0006-2026-04-14-team-config-boundary.md)
+- [0006-2026-04-14-team-config-boundary.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0006-2026-04-14-team-config-boundary.md)
 
 ## Current state
 
@@ -520,9 +520,9 @@ Current bounded follow-through at this layer:
 
 See:
 
-- [config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
-- [0009-2026-04-14-agent-config-boundary.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0009-2026-04-14-agent-config-boundary.md)
-- [0031-2026-04-08-config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0031-2026-04-08-config-model-input-alias-plan.md)
+- [config-model-target-shape.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-target-shape.md)
+- [0009-2026-04-14-agent-config-boundary.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0009-2026-04-14-agent-config-boundary.md)
+- [0031-2026-04-08-config-model-input-alias-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0031-2026-04-08-config-model-input-alias-plan.md)
 
 ## Recommended sequencing
 
@@ -578,7 +578,7 @@ The policy is now:
 
 Source of truth:
 
-- [0031-2026-04-08-config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0031-2026-04-08-config-model-input-alias-plan.md)
+- [0031-2026-04-08-config-model-input-alias-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0031-2026-04-08-config-model-input-alias-plan.md)
 
 ## Acceptance bar for the future refactor
 
@@ -605,7 +605,7 @@ that agent/team execution exists yet.
 
 The first agent contract is now documented separately in:
 
-- [0009-2026-04-14-agent-config-boundary.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0009-2026-04-14-agent-config-boundary.md)
+- [0009-2026-04-14-agent-config-boundary.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0009-2026-04-14-agent-config-boundary.md)
 
 That document is the source of truth for:
 - what agents inherit from AuraCall runtime profiles
@@ -616,7 +616,7 @@ That document is the source of truth for:
 
 The first team contract is now documented separately in:
 
-- [0006-2026-04-14-team-config-boundary.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0006-2026-04-14-team-config-boundary.md)
+- [0006-2026-04-14-team-config-boundary.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0006-2026-04-14-team-config-boundary.md)
 
 That document is the source of truth for:
 - what teams own

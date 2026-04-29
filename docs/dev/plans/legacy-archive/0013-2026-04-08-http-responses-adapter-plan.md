@@ -11,9 +11,9 @@ This plan answers one practical question:
 
 It should be read together with:
 
-- [api-compatibility-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/api-compatibility-plan.md)
-- [runtime-control-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-control-surface-plan.md)
-- [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
+- [api-compatibility-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/api-compatibility-plan.md)
+- [runtime-control-surface-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/runtime-control-surface-plan.md)
+- [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/service-runtime-execution-plan.md)
 
 ## Chosen adapter
 

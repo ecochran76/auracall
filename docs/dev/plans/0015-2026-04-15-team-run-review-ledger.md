@@ -49,7 +49,7 @@ Lane: P01
   - durable failure-derived hard-stop observations
 - the roadmap reassessment checkpoint after Slice 4 is complete
 - richer passive provider-state monitoring is now delegated to:
-  - [0016-2026-04-15-passive-provider-observations.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0016-2026-04-15-passive-provider-observations.md)
+  - [0016-2026-04-15-passive-provider-observations.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0016-2026-04-15-passive-provider-observations.md)
 
 ## Purpose
 

@@ -6,11 +6,11 @@ and push general strategies into browser-service so new service adapters are
 faster to implement.
 
 The `browser-tools` DevTools helper CLI now lives in
-[`packages/browser-service/src/browserTools.ts`](/home/ecochran76/workspace.local/oracle/packages/browser-service/src/browserTools.ts).
+[`packages/browser-service/src/browserTools.ts`](/home/ecochran76/workspace.local/auracall/packages/browser-service/src/browserTools.ts).
 Keep Aura-Call-specific config/bootstrap logic in the thin compatibility wrapper
-[`scripts/browser-tools.ts`](/home/ecochran76/workspace.local/oracle/scripts/browser-tools.ts).
+[`scripts/browser-tools.ts`](/home/ecochran76/workspace.local/auracall/scripts/browser-tools.ts).
 Browser-service-related development entrypoints are also grouped under
-[`scripts/browser-service/`](/home/ecochran76/workspace.local/oracle/scripts/browser-service/README.md)
+[`scripts/browser-service/`](/home/ecochran76/workspace.local/auracall/scripts/browser-service/README.md)
 as thin wrapper copies. Prefer the `scripts/browser-service/<name>.ts` paths in
 new docs; root `scripts/<name>.ts` paths remain compatible.
 When targeting managed Aura-Call sessions through that wrapper, prefer
@@ -42,12 +42,12 @@ Markdown`, `Export to Word`, and `Export to PDF` controls without downloading
 the artifact.
 
 Current upgrade backlog:
-- generic browser-service work: [browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md)
-- lessons review: [browser-service-lessons-review-2026-03-30.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-lessons-review-2026-03-30.md)
-- Aura-Call-only workflow work: [auracall-browser-onboarding-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/auracall-browser-onboarding-backlog.md)
+- generic browser-service work: [browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/auracall/docs/dev/browser-service-upgrade-backlog.md)
+- lessons review: [browser-service-lessons-review-2026-03-30.md](/home/ecochran76/workspace.local/auracall/docs/dev/browser-service-lessons-review-2026-03-30.md)
+- Aura-Call-only workflow work: [auracall-browser-onboarding-backlog.md](/home/ecochran76/workspace.local/auracall/docs/dev/auracall-browser-onboarding-backlog.md)
 
 Current DOM-drift extraction priorities live in the 2026-03-28 section of
-[browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md):
+[browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/auracall/docs/dev/browser-service-upgrade-backlog.md):
 - `navigateAndSettle(...)`
 - anchored row/menu action helpers
 - structured UI diagnostics wrappers

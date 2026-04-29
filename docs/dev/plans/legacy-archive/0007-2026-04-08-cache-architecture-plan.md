@@ -12,11 +12,11 @@ it is:
 
 This document is intentionally above the current implementation plans:
 
-- [cache-schema.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-schema.md)
-- [cache-db-migration-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-db-migration-plan.md)
-- [cache-sql-file-catalog-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-sql-file-catalog-plan.md)
-- [cache-remaining-todos-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-remaining-todos-plan.md)
-- [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
+- [cache-schema.md](/home/ecochran76/workspace.local/auracall/docs/dev/cache-schema.md)
+- [cache-db-migration-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/cache-db-migration-plan.md)
+- [cache-sql-file-catalog-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/cache-sql-file-catalog-plan.md)
+- [cache-remaining-todos-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/cache-remaining-todos-plan.md)
+- [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/cache-artifact-projection-plan.md)
 
 It should be treated as the anti-drift reference for future cache work:
 
@@ -496,6 +496,6 @@ The next highest-value slice is:
 
 That concrete next-step plan now exists in:
 
-- [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
+- [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/cache-artifact-projection-plan.md)
 
 That should happen before more ad hoc cache export or maintenance expansion.

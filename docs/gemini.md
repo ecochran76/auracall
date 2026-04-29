@@ -293,7 +293,7 @@ Notes:
       - drawer rows via `--class-includes toolbox-drawer-item-list-button --role menuitemcheckbox`
       - `Personal Intelligence` via `--aria-label "Personal Intelligence" --role switch`
 - The earlier raw Gemini upload protocol investigation is still preserved in:
-  - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
+  - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-native-upload-investigation.md)
   - but it is now background context, not the default path for ordinary Gemini
     browser uploads
 

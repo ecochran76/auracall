@@ -14,11 +14,11 @@ This plan answers one practical question:
 
 It should be read together with:
 
-- [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
-- [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md)
+- [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
+- [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0001-2026-04-14-execution.md)
 - archived service/runtime history:
-  - [0018-2026-04-14-service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0018-2026-04-14-service-runtime-execution-plan.md)
-  - [0017-2026-04-14-runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0017-2026-04-14-runtime-service-host-plan.md)
+  - [0018-2026-04-14-service-runtime-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0018-2026-04-14-service-runtime-execution-plan.md)
+  - [0017-2026-04-14-runtime-service-host-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0017-2026-04-14-runtime-service-host-plan.md)
 
 ## Why this is the next lane
 
@@ -171,7 +171,7 @@ should be explicit enough to move to Redis/Postgres later.
 Current checkpoint:
 
 - the first code-facing queue-ready projection seam now exists in:
-  - [src/runtime/projection.ts](/home/ecochran76/workspace.local/oracle/src/runtime/projection.ts)
+  - [src/runtime/projection.ts](/home/ecochran76/workspace.local/auracall/src/runtime/projection.ts)
 - it derives from the existing inspection/dispatch model and currently exposes:
   - `queueState`
   - `claimState`
@@ -211,11 +211,11 @@ execute a run.
 Current checkpoint:
 
 - the first explicit runtime-local affinity record/schema now exists in:
-  - [src/runtime/types.ts](/home/ecochran76/workspace.local/oracle/src/runtime/types.ts)
-  - [src/runtime/schema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/schema.ts)
-  - [src/runtime/model.ts](/home/ecochran76/workspace.local/oracle/src/runtime/model.ts)
+  - [src/runtime/types.ts](/home/ecochran76/workspace.local/auracall/src/runtime/types.ts)
+  - [src/runtime/schema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/schema.ts)
+  - [src/runtime/model.ts](/home/ecochran76/workspace.local/auracall/src/runtime/model.ts)
 - the queue-ready projection in
-  [src/runtime/projection.ts](/home/ecochran76/workspace.local/oracle/src/runtime/projection.ts)
+  [src/runtime/projection.ts](/home/ecochran76/workspace.local/auracall/src/runtime/projection.ts)
   can now consume that record directly while staying derived from runtime
   inspection state
 - current bounded affinity fields are:
@@ -245,14 +245,14 @@ Current checkpoint:
 
 - the first explicit runtime-local runner identity / heartbeat seam now exists
   in:
-  - [src/runtime/types.ts](/home/ecochran76/workspace.local/oracle/src/runtime/types.ts)
-  - [src/runtime/schema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/schema.ts)
-  - [src/runtime/model.ts](/home/ecochran76/workspace.local/oracle/src/runtime/model.ts)
+  - [src/runtime/types.ts](/home/ecochran76/workspace.local/auracall/src/runtime/types.ts)
+  - [src/runtime/schema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/schema.ts)
+  - [src/runtime/model.ts](/home/ecochran76/workspace.local/auracall/src/runtime/model.ts)
 - the first persisted local runner-registry seam now also exists in:
-  - [src/runtime/runnersStore.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runnersStore.ts)
-  - [src/runtime/runnersControl.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runnersControl.ts)
+  - [src/runtime/runnersStore.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runnersStore.ts)
+  - [src/runtime/runnersControl.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runnersControl.ts)
 - the derived queue-ready projection in
-  [src/runtime/projection.ts](/home/ecochran76/workspace.local/oracle/src/runtime/projection.ts)
+  [src/runtime/projection.ts](/home/ecochran76/workspace.local/auracall/src/runtime/projection.ts)
   can now also consume a bounded runner record directly for claim reasoning
 - current bounded runner fields are:
   - `id`
@@ -279,7 +279,7 @@ Current checkpoint:
 Current follow-on checkpoint:
 
 - one bounded persisted claim-candidate evaluation seam now exists in:
-  - [src/runtime/claims.ts](/home/ecochran76/workspace.local/oracle/src/runtime/claims.ts)
+  - [src/runtime/claims.ts](/home/ecochran76/workspace.local/auracall/src/runtime/claims.ts)
 - it combines:
   - persisted run inspection
   - the derived queue-ready projection
@@ -297,7 +297,7 @@ Current liveness checkpoint:
 
 - one bounded stale-runner expiry/reconciliation sweep now exists on the same
   local runner-control seam in:
-  - [src/runtime/runnersControl.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runnersControl.ts)
+  - [src/runtime/runnersControl.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runnersControl.ts)
 - current bounded expiry behavior:
   - reads persisted runner records
   - marks expired `active` runners as `stale`
@@ -309,7 +309,7 @@ Current liveness checkpoint:
 Current reconciliation checkpoint:
 
 - one bounded lease/runner reconciliation seam now exists in:
-  - [src/runtime/reconciliation.ts](/home/ecochran76/workspace.local/oracle/src/runtime/reconciliation.ts)
+  - [src/runtime/reconciliation.ts](/home/ecochran76/workspace.local/auracall/src/runtime/reconciliation.ts)
 - it compares:
   - active leases on persisted runs
   - persisted runner records
@@ -326,7 +326,7 @@ Current reconciliation checkpoint:
 Current repair-posture checkpoint:
 
 - one bounded repair/reclaim posture seam now exists in:
-  - [src/runtime/repair.ts](/home/ecochran76/workspace.local/oracle/src/runtime/repair.ts)
+  - [src/runtime/repair.ts](/home/ecochran76/workspace.local/auracall/src/runtime/repair.ts)
 - it maps reconciliation outcomes into:
   - `inspect-only`
   - `locally-reclaimable`
@@ -341,7 +341,7 @@ Current repair-posture checkpoint:
 Current repair-action checkpoint:
 
 - one bounded lease-repair action now exists in:
-  - [src/runtime/repair.ts](/home/ecochran76/workspace.local/oracle/src/runtime/repair.ts)
+  - [src/runtime/repair.ts](/home/ecochran76/workspace.local/auracall/src/runtime/repair.ts)
 - current bounded mutation rule:
   - mutate only `locally-reclaimable` cases
   - leave `inspect-only` and `not-reclaimable` cases untouched

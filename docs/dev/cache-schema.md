@@ -1,7 +1,7 @@
 # Cache Schema (Phase 7)
 
 Architecture reference:
-- [0007-2026-04-08-cache-architecture-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0007-2026-04-08-cache-architecture-plan.md)
+- [0007-2026-04-08-cache-architecture-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0007-2026-04-08-cache-architecture-plan.md)
   defines the anti-drift subsystem model. This schema doc describes the current
   concrete layout and should evolve in step with that architecture plan.
 

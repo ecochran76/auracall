@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ecochran76/oracle/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/ecochran76/oracle/ci.yml?branch=main&style=for-the-badge&label=tests" alt="CI Status"></a>
-  <a href="https://github.com/ecochran76/oracle"><img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-blue?style=for-the-badge" alt="Platforms"></a>
+  <a href="https://github.com/ecochran76/auracall/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/ecochran76/auracall/ci.yml?branch=main&style=for-the-badge&label=tests" alt="CI Status"></a>
+  <a href="https://github.com/ecochran76/auracall"><img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-blue?style=for-the-badge" alt="Platforms"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="MIT License"></a>
 </p>
 
@@ -1005,14 +1005,14 @@ auracall teams run auracall-multi-agent "Reply exactly with: OK" --max-turns 2 -
 auracall teams run auracall-tooling "Run one bounded node local shell action, then reply exactly with: OK" \
   --max-turns 2 \
   --allow-local-shell-command node \
-  --allow-local-cwd-root /home/ecochran76/workspace.local/oracle \
+  --allow-local-cwd-root /home/ecochran76/workspace.local/auracall \
   --json
 
 # Require operator approval/cancellation before the bounded local action can proceed
 auracall teams run auracall-tooling "Request one bounded node local shell action, then wait for operator approval/cancellation" \
   --max-turns 2 \
   --allow-local-shell-command node \
-  --allow-local-cwd-root /home/ecochran76/workspace.local/oracle \
+  --allow-local-cwd-root /home/ecochran76/workspace.local/auracall \
   --require-local-action-approval \
   --json
 
@@ -1093,9 +1093,9 @@ Current boundary:
 - The current multi-agent live target is:
   - `auracall teams run auracall-multi-agent "Reply exactly with: AURACALL_MULTI_AGENT_LIVE_SMOKE_OK" --title "AuraCall multi-agent team live smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_MULTI_AGENT_LIVE_SMOKE_OK and nothing else." --max-turns 2 --json`
 - The current bounded tooling live target is:
-  - `auracall teams run auracall-tooling "Run one bounded node local shell action that emits AURACALL_TOOL_ACTION_OK, then reply exactly with: AURACALL_TOOL_TEAM_LIVE_SMOKE_OK" --title "AuraCall tooling team live smoke" --prompt-append "For the tool envelope, use a top-level localActionRequests array with exactly one shell action. Preserve the provided toolEnvelope unchanged. Use kind \"shell\" and command \"node\". Use args [\"-e\",\"process.stdout.write('AURACALL_TOOL_ACTION_OK')\"]. Use structuredPayload {\"cwd\":\"/home/ecochran76/workspace.local/oracle\"}. After the local action succeeds, the final answer must be exactly AURACALL_TOOL_TEAM_LIVE_SMOKE_OK." --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/oracle --json`
+  - `auracall teams run auracall-tooling "Run one bounded node local shell action that emits AURACALL_TOOL_ACTION_OK, then reply exactly with: AURACALL_TOOL_TEAM_LIVE_SMOKE_OK" --title "AuraCall tooling team live smoke" --prompt-append "For the tool envelope, use a top-level localActionRequests array with exactly one shell action. Preserve the provided toolEnvelope unchanged. Use kind \"shell\" and command \"node\". Use args [\"-e\",\"process.stdout.write('AURACALL_TOOL_ACTION_OK')\"]. Use structuredPayload {\"cwd\":\"/home/ecochran76/workspace.local/auracall\"}. After the local action succeeds, the final answer must be exactly AURACALL_TOOL_TEAM_LIVE_SMOKE_OK." --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/auracall --json`
 - Gemini-bound team experimentation is now also live on the same stored-step seam:
-  - `auracall teams run auracall-gemini-tooling "Use the provided toolEnvelope structured context to request one bounded shell action, then use the resulting tool outcome to return the provided finalToken exactly." --title "AuraCall Gemini tooling team live smoke" --prompt-append "Requester must emit exactly one JSON object with top-level localActionRequests containing the provided toolEnvelope unchanged. Do not rename fields, add markdown fences, or add prose. Finisher must output only the final token after a successful executed tool outcome." --structured-context-json '{"toolEnvelope":{"kind":"shell","summary":"Run one bounded deterministic node command","command":"node","args":["-e","process.stdout.write('\''AURACALL_TOOL_ACTION_OK'\'')"],"structuredPayload":{"cwd":"/home/ecochran76/workspace.local/oracle"}},"finalToken":"AURACALL_GEMINI_TOOL_TEAM_SMOKE_OK"}' --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/oracle --json`
+  - `auracall teams run auracall-gemini-tooling "Use the provided toolEnvelope structured context to request one bounded shell action, then use the resulting tool outcome to return the provided finalToken exactly." --title "AuraCall Gemini tooling team live smoke" --prompt-append "Requester must emit exactly one JSON object with top-level localActionRequests containing the provided toolEnvelope unchanged. Do not rename fields, add markdown fences, or add prose. Finisher must output only the final token after a successful executed tool outcome." --structured-context-json '{"toolEnvelope":{"kind":"shell","summary":"Run one bounded deterministic node command","command":"node","args":["-e","process.stdout.write('\''AURACALL_TOOL_ACTION_OK'\'')"],"structuredPayload":{"cwd":"/home/ecochran76/workspace.local/auracall"}},"finalToken":"AURACALL_GEMINI_TOOL_TEAM_SMOKE_OK"}' --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/auracall --json`
   - on this WSL Chrome pairing, stored Gemini team execution may need exported cookies first:
     - `pnpm tsx bin/auracall.ts login --target gemini --profile auracall-gemini-pro --export-cookies`
   - stored Gemini team execution now reuses the same scoped/home exported-cookie fallback as direct Gemini browser mode when Linux keyring cookie reads return no Google auth cookies

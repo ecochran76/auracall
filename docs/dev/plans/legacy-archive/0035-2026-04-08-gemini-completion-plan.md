@@ -21,18 +21,18 @@ Gemini already exists in two real surfaces:
 Current evidence in-repo:
 
 - docs:
-  - [docs/gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
+  - [docs/gemini.md](/home/ecochran76/workspace.local/auracall/docs/gemini.md)
 - API adapter:
-  - [src/oracle/gemini.ts](/home/ecochran76/workspace.local/oracle/src/oracle/gemini.ts)
+  - [src/oracle/gemini.ts](/home/ecochran76/workspace.local/auracall/src/oracle/gemini.ts)
 - web executor:
-  - [src/gemini-web/executor.ts](/home/ecochran76/workspace.local/oracle/src/gemini-web/executor.ts)
+  - [src/gemini-web/executor.ts](/home/ecochran76/workspace.local/auracall/src/gemini-web/executor.ts)
 - web client:
-  - [src/gemini-web/client.ts](/home/ecochran76/workspace.local/oracle/src/gemini-web/client.ts)
+  - [src/gemini-web/client.ts](/home/ecochran76/workspace.local/auracall/src/gemini-web/client.ts)
 - tests:
-  - [tests/gemini.test.ts](/home/ecochran76/workspace.local/oracle/tests/gemini.test.ts)
-  - [tests/gemini-web/executor.test.ts](/home/ecochran76/workspace.local/oracle/tests/gemini-web/executor.test.ts)
-  - [tests/live/gemini-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/gemini-live.test.ts)
-  - [tests/live/gemini-web-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/gemini-web-live.test.ts)
+  - [tests/gemini.test.ts](/home/ecochran76/workspace.local/auracall/tests/gemini.test.ts)
+  - [tests/gemini-web/executor.test.ts](/home/ecochran76/workspace.local/auracall/tests/gemini-web/executor.test.ts)
+  - [tests/live/gemini-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/gemini-live.test.ts)
+  - [tests/live/gemini-web-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/gemini-web-live.test.ts)
 
 That means Gemini is not a greenfield implementation. The real question is how
 to finish and align it.
@@ -223,8 +223,8 @@ Acceptance:
 
 Status:
 - completed enough on 2026-04-03 via:
-  - [docs/gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
-  - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - [docs/gemini.md](/home/ecochran76/workspace.local/auracall/docs/gemini.md)
+  - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 
 Outcome:
 - the supported Gemini matrix is now explicit
@@ -417,7 +417,7 @@ Status:
 - remaining work:
   - move more maintenance internals out of `bin/auracall.ts`
   - land artifact-first cache model improvements from:
-    - [0008-2026-04-08-cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0008-2026-04-08-cache-artifact-projection-plan.md)
+    - [0008-2026-04-08-cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0008-2026-04-08-cache-artifact-projection-plan.md)
 
 ### Slice 6: Close explicit provider-surface gaps toward ChatGPT/Grok parity
 
@@ -470,7 +470,7 @@ Current assessment:
 - this bar is effectively met
 - the remaining work should be tracked under two different buckets:
   - shared cache architecture work:
-    - [0008-2026-04-08-cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0008-2026-04-08-cache-artifact-projection-plan.md)
+    - [0008-2026-04-08-cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0008-2026-04-08-cache-artifact-projection-plan.md)
   - Gemini provider backlog:
     - account-level files parity
     - broader artifact parity/fetch parity beyond image/music/video/canvas
@@ -538,7 +538,7 @@ The next Gemini feature-expansion track should be:
 
 That work is preserved as background history in:
 
-- [0023-2026-04-08-gemini-conversation-gem-cache-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0023-2026-04-08-gemini-conversation-gem-cache-plan.md)
+- [0023-2026-04-08-gemini-conversation-gem-cache-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0023-2026-04-08-gemini-conversation-gem-cache-plan.md)
 
 Guardrail:
 
@@ -665,7 +665,7 @@ Current recommendation:
     - current live failure:
       - `Waiting failed: 45000ms exceeded`
 - the raw upload investigation note remains useful context:
-  - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
+  - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-native-upload-investigation.md)
   - but it should not pull the next slice back into raw-protocol parity work by
     default
 

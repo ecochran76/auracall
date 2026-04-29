@@ -3,7 +3,7 @@
 This file is now a historical pointer.
 
 Active canonical authority has moved to
-[0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0004-2026-04-14-team-service-execution.md).
+[0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0004-2026-04-14-team-service-execution.md).
 
 Why this file still exists:
 

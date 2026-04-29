@@ -4,12 +4,12 @@
 Codify repeatable steps for UI automation so we avoid rediscovering DOM quirks.
 
 For generic DOM-drift follow-on work, use
-[browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md)
+[browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/auracall/docs/dev/browser-service-upgrade-backlog.md)
 as the extraction plan. If a repair looks reusable, prefer moving it into
 `packages/browser-service/` over adding another provider-local workaround.
 For a broader package-boundary review after the ChatGPT MVP/polish cycle, start
 with
-[browser-service-lessons-review-2026-03-30.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-lessons-review-2026-03-30.md)
+[browser-service-lessons-review-2026-03-30.md](/home/ecochran76/workspace.local/auracall/docs/dev/browser-service-lessons-review-2026-03-30.md)
 before deciding whether the next fix belongs in browser-service or in a
 provider adapter.
 Current plan: keep trigger/button scoring in the adapter unless it clearly

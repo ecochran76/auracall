@@ -3,7 +3,7 @@
 This file is now a historical pointer.
 
 Active execution authority has moved to
-[0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md).
+[0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0001-2026-04-14-execution.md).
 
 Why this file still exists:
 

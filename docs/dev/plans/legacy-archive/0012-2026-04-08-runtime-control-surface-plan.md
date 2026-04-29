@@ -11,9 +11,9 @@ This plan answers one practical question:
 
 It should be read together with:
 
-- [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
-- [api-compatibility-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/api-compatibility-plan.md)
-- [mcp.md](/home/ecochran76/workspace.local/oracle/docs/mcp.md)
+- [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/service-runtime-execution-plan.md)
+- [api-compatibility-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/api-compatibility-plan.md)
+- [mcp.md](/home/ecochran76/workspace.local/auracall/docs/mcp.md)
 
 ## Current runtime foundation
 

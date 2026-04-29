@@ -21,10 +21,10 @@ as:
 
 It should be read together with:
 
-- [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
-- [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md)
-- [mcp.md](/home/ecochran76/workspace.local/oracle/docs/mcp.md)
-- [openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+- [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/service-runtime-execution-plan.md)
+- [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0001-2026-04-14-execution.md)
+- [mcp.md](/home/ecochran76/workspace.local/auracall/docs/mcp.md)
+- [openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
 
 ## Current checkpoint
 

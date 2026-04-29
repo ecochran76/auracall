@@ -46,7 +46,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ecochran76/oracle.git"
+    "url": "git+https://github.com/ecochran76/auracall.git"
   },
   "engines": {
     "node": ">=22"
@@ -63,9 +63,9 @@
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ecochran76/oracle/issues"
+    "url": "https://github.com/ecochran76/auracall/issues"
   },
-  "homepage": "https://github.com/ecochran76/oracle#readme",
+  "homepage": "https://github.com/ecochran76/auracall#readme",
   "dependencies": {
     "@anthropic-ai/tokenizer": "^0.0.4",
     "@google/genai": "^1.34.0",

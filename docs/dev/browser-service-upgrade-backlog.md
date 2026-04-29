@@ -8,7 +8,7 @@ DevTools targeting, tab selection, readiness detection, structured probing, and
 instance diagnostics.
 
 Latest cross-provider review:
-- [browser-service-lessons-review-2026-03-30.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-lessons-review-2026-03-30.md)
+- [browser-service-lessons-review-2026-03-30.md](/home/ecochran76/workspace.local/auracall/docs/dev/browser-service-lessons-review-2026-03-30.md)
   captures the confirmed ChatGPT-era package-boundary lessons and the next
   recommended extraction order.
 
@@ -142,7 +142,7 @@ Progress as of 2026-03-30:
   - registry liveness classification + safer stale-entry pruning / reattach diagnostics
 
 Current registry/reattach reliability execution doc:
-- [browser-service-reattach-reliability-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0014-2026-04-14-browser-service-reattach-reliability.md)
+- [browser-service-reattach-reliability-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0014-2026-04-14-browser-service-reattach-reliability.md)
 
 Current active plan:
 - Keep provider-local trigger scoring in adapters unless the same scoring shape

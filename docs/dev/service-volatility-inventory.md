@@ -4,7 +4,7 @@
 
 Inventory the hard-coded, service-specific volatility currently embedded in Aura-Call so the manifest schema is designed from real usage instead of guesses.
 
-This is the prerequisite for implementation under [service-volatility-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0012-2026-04-14-service-volatility-refactor.md).
+This is the prerequisite for implementation under [service-volatility-refactor-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0012-2026-04-14-service-volatility-refactor.md).
 
 ## Existing Data-Driven Footholds
 
@@ -369,4 +369,4 @@ Before implementation starts:
 3. name the required acceptance gate
 
 Current first service plan:
-- [0010-2026-04-14-service-volatility-chatgpt.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0010-2026-04-14-service-volatility-chatgpt.md)
+- [0010-2026-04-14-service-volatility-chatgpt.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0010-2026-04-14-service-volatility-chatgpt.md)

@@ -44,11 +44,11 @@ This plan answers one practical question:
 
 It should be read together with:
 
-- [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
-- [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md)
+- [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
+- [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0001-2026-04-14-execution.md)
 - archived service/runtime history:
-  - [0018-2026-04-14-service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0018-2026-04-14-service-runtime-execution-plan.md)
-  - [0017-2026-04-14-runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0017-2026-04-14-runtime-service-host-plan.md)
+  - [0018-2026-04-14-service-runtime-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0018-2026-04-14-service-runtime-execution-plan.md)
+  - [0017-2026-04-14-runtime-service-host-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0017-2026-04-14-runtime-service-host-plan.md)
 
 ## Why this is the next lane
 
@@ -200,7 +200,7 @@ should be explicit enough to move to Redis/Postgres later.
 Current checkpoint:
 
 - the first code-facing queue-ready projection seam now exists in:
-  - [src/runtime/projection.ts](/home/ecochran76/workspace.local/oracle/src/runtime/projection.ts)
+  - [src/runtime/projection.ts](/home/ecochran76/workspace.local/auracall/src/runtime/projection.ts)
 - it derives from the existing inspection/dispatch model and currently exposes:
   - `queueState`
   - `claimState`
@@ -240,11 +240,11 @@ execute a run.
 Current checkpoint:
 
 - the first explicit runtime-local affinity record/schema now exists in:
-  - [src/runtime/types.ts](/home/ecochran76/workspace.local/oracle/src/runtime/types.ts)
-  - [src/runtime/schema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/schema.ts)
-  - [src/runtime/model.ts](/home/ecochran76/workspace.local/oracle/src/runtime/model.ts)
+  - [src/runtime/types.ts](/home/ecochran76/workspace.local/auracall/src/runtime/types.ts)
+  - [src/runtime/schema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/schema.ts)
+  - [src/runtime/model.ts](/home/ecochran76/workspace.local/auracall/src/runtime/model.ts)
 - the queue-ready projection in
-  [src/runtime/projection.ts](/home/ecochran76/workspace.local/oracle/src/runtime/projection.ts)
+  [src/runtime/projection.ts](/home/ecochran76/workspace.local/auracall/src/runtime/projection.ts)
   can now consume that record directly while staying derived from runtime
   inspection state
 - configured service identity is now projected into that same affinity model:

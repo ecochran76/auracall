@@ -1579,7 +1579,7 @@
   - runtime/team/config/http implementation seams
   - test and live-test posture
 - Added
-  [2026-04-20-project-roadmap-360.md](/home/ecochran76/workspace.local/oracle/docs/dev/reviews/2026-04-20-project-roadmap-360.md)
+  [2026-04-20-project-roadmap-360.md](/home/ecochran76/workspace.local/auracall/docs/dev/reviews/2026-04-20-project-roadmap-360.md)
   as the durable review artifact.
 - Main review conclusion:
   - Aura-Call has enough runtime/team/task/readback foundation to stop
@@ -1605,7 +1605,7 @@
   - persisted `response.output` items
 - Did not add another runtime normalization path in this slice.
 - Updated
-  [0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0004-2026-04-14-team-service-execution.md)
+  [0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0004-2026-04-14-team-service-execution.md)
   with an explicit checkpoint that:
   - records the enforced deterministic envelope for routing/error handling,
     local actions, artifacts, handoffs, assignment identity, and readback
@@ -1624,12 +1624,12 @@
     discarded the full visible response timeline and fell back to
     artifact-derived output
 - Added
-  [src/runtime/responseOutput.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responseOutput.ts)
+  [src/runtime/responseOutput.ts](/home/ecochran76/workspace.local/auracall/src/runtime/responseOutput.ts)
   as the shared normalizer for deterministic response-output items and
   response-output structured outputs.
 - Rewired:
-  - [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts)
-  - [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+  - [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/auracall/src/runtime/responsesService.ts)
+  - [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
 - Added focused coverage proving malformed `response.output` siblings are
   ignored while valid `message` / `artifact` siblings remain visible in order
   through service and HTTP readback.
@@ -1647,15 +1647,15 @@
   - the runner appended those refs directly and relied on full bundle schema
     validation to fail late instead of dropping malformed entries at ingress
 - Added
-  [src/runtime/artifactRef.ts](/home/ecochran76/workspace.local/oracle/src/runtime/artifactRef.ts)
+  [src/runtime/artifactRef.ts](/home/ecochran76/workspace.local/auracall/src/runtime/artifactRef.ts)
   as the shared bounded artifact-ref normalizer for runtime ingress.
 - Rewired
-  [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+  [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
   so provider output artifacts, provider shared-state artifacts, and
   local-action shared-state artifacts are normalized before persistence and
   requested-output enforcement.
 - Added focused regression coverage in
-  [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+  [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
   proving malformed provider/host artifact refs are ignored while valid refs
   persist in the same canonical `id` / `kind` / `path` / `uri` / `title`
   shape.
@@ -1672,14 +1672,14 @@
   - response readback and recovery-detail fallback summaries independently
     recounted `requestedOutputs` / `inputArtifacts` from raw arrays
 - Added
-  [src/runtime/taskTransfer.ts](/home/ecochran76/workspace.local/oracle/src/runtime/taskTransfer.ts)
+  [src/runtime/taskTransfer.ts](/home/ecochran76/workspace.local/auracall/src/runtime/taskTransfer.ts)
   as the shared bounded normalizer for persisted task-transfer payloads.
 - Rewired:
-  - [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
-  - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
-  - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+  - [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
+  - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts)
+  - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
 - Added focused regression coverage in
-  [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+  [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
   proving malformed persisted transfer entries are not injected into downstream
   prompts or counted in consumed-transfer summaries.
 - Updated the `0003` / `0004` execution authorities so handoff transfer
@@ -1695,14 +1695,14 @@
   - the runtime runner still harvested `step.output.structuredData.localActionRequests`
     with a narrower ad hoc check that only honored canonical `kind`
 - Tightened
-  [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+  [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
   so runner-side local-action harvesting now normalizes the same bounded alias
   vocabulary before policy evaluation and persistence:
   - `kind` / `actionType` / `type`
   - `structuredPayload` / `payload`
   - canonical fallback summary when the producer omits `summary`
 - Added focused regression coverage in
-  [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+  [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
   proving `actionType`-style requests are still policy-checked, persisted,
   and executed through the canonical request shape.
 - Updated the active `0004` authority so local-action requests are explicitly
@@ -1720,14 +1720,14 @@
     assignment identity belongs only to the
     `taskRunSpec -> teamRun -> runtime` chain
 - Tightened
-  [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts)
+  [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/auracall/src/runtime/responsesService.ts)
   and
-  [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+  [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts)
   so response readback now suppresses `taskRunSpecId` and
   `taskRunSpecSummary` unless `sourceKind = team-run`.
 - Added focused regressions proving the suppression on:
-  - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
-  - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
+  - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 - Updated the active `0004` authority and public response-readback docs so the
   bounded response contract now states the same team-run-only assignment rule
   explicitly.
@@ -2041,9 +2041,9 @@
   - close the completed review-ledger checkpoint and choose the next bounded
     observability lane
 - Completed:
-  - closed [0015-2026-04-15-team-run-review-ledger.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md)
+  - closed [0015-2026-04-15-team-run-review-ledger.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md)
     after finishing its four implementation slices
-  - added [0016-2026-04-15-passive-provider-observations.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0016-2026-04-15-passive-provider-observations.md)
+  - added [0016-2026-04-15-passive-provider-observations.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0016-2026-04-15-passive-provider-observations.md)
     as the next bounded plan
   - selected adapter-owned passive provider observations as the next explicit
     implementation lane
@@ -2111,9 +2111,9 @@
   - implement the internal projection-only review ledger without widening
     public team execution behavior
 - Completed:
-  - added [reviewLedger.ts](/home/ecochran76/workspace.local/oracle/src/teams/reviewLedger.ts)
+  - added [reviewLedger.ts](/home/ecochran76/workspace.local/auracall/src/teams/reviewLedger.ts)
     as the internal read-only ledger projection helper
-  - added [teams.reviewLedger.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.reviewLedger.test.ts)
+  - added [teams.reviewLedger.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.reviewLedger.test.ts)
     covering:
     - deterministic serial step ordering
     - handoff and artifact projection
@@ -2132,12 +2132,12 @@
   - convert the service-health/passive-monitoring/reproducibility design
     discussion into canonical planning authority before implementation
 - Completed:
-  - added [docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md)
+  - added [docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md)
     as the bounded plan for whole-sequence team-run review
-  - updated [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+  - updated [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
     so team-run review and observability is the next higher-level
     service/runtime lane
-  - updated [RUNBOOK.md](/home/ecochran76/workspace.local/oracle/RUNBOOK.md)
+  - updated [RUNBOOK.md](/home/ecochran76/workspace.local/auracall/RUNBOOK.md)
     with the sequencing decision and first implementation checkpoint
 - Decision:
   - build the durable review ledger before broad passive provider-state
@@ -2156,7 +2156,7 @@
 ## 2026-04-15 - OpenAI endpoint doc authority realignment
 
 - Completed one bounded secondary-doc authority cleanup:
-  - updated [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+  - updated [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
     to match the current tested local server surface for:
     - `GET /status`
     - `GET /status/recovery/{run_id}`
@@ -2173,7 +2173,7 @@
 ## 2026-04-15 - Api serve runner account-affinity projection
 
 - Completed one bounded durable-runner account-affinity refinement:
-  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
     so persisted `api serve` runner records now derive `serviceAccountIds`
     from configured global or runtime-profile service identities when present
   - added the first stable configured-identity id shape:
@@ -2189,13 +2189,13 @@
 ## 2026-04-15 - Configured account affinity on runtime inspection
 
 - Completed one bounded run-side affinity refinement:
-  - added [src/config/serviceAccountIdentity.ts](/home/ecochran76/workspace.local/oracle/src/config/serviceAccountIdentity.ts)
+  - added [src/config/serviceAccountIdentity.ts](/home/ecochran76/workspace.local/auracall/src/config/serviceAccountIdentity.ts)
     as the shared configured service-account id helper
-  - added [src/runtime/configuredAffinity.ts](/home/ecochran76/workspace.local/oracle/src/runtime/configuredAffinity.ts)
+  - added [src/runtime/configuredAffinity.ts](/home/ecochran76/workspace.local/auracall/src/runtime/configuredAffinity.ts)
     so runtime inspection and service-host local claims can derive a
     `requiredServiceAccountId` from configured service identity for the active
     step service
-  - wired that helper through [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+  - wired that helper through [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
     for the local `api serve` host without adding new public routes or live
     browser probing
   - locked the HTTP runtime inspection contract for both missing and matching
@@ -2204,7 +2204,7 @@
 ## 2026-04-15 - Runtime inspection queue projection rendering
 
 - Completed one bounded runtime-inspection operator-surface refinement:
-  - updated [src/cli/runtimeInspectionCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/runtimeInspectionCommand.ts)
+  - updated [src/cli/runtimeInspectionCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/runtimeInspectionCommand.ts)
     so the CLI formatter now preserves more of the existing queue projection:
     - `activeLeaseId`
     - `activeLeaseOwnerId`
@@ -2217,7 +2217,7 @@
 ## 2026-04-15 - Local claim status maps
 
 - Completed one bounded local-claim summary refinement:
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so local claim summaries now preserve bounded `statusByRunId` alongside
     grouped run-id buckets and free-form reasons
   - kept the summary compact:
@@ -2229,7 +2229,7 @@
 ## 2026-04-15 - Recovery detail suspicious-idle attention
 
 - Completed one bounded recovery-detail operator-readback refinement:
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so per-run recovery detail now preserves
     `attention.kind = suspiciously-idle` when the lease health already
     classifies the active lease that way, even when repair posture stays
@@ -2243,7 +2243,7 @@
 ## 2026-04-15 - Startup recovery suspicious-idle attention logs
 
 - Completed one bounded startup-recovery observability refinement:
-  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
     so startup recovery logs now preserve bounded
     `attention=suspiciously-idle:<count>` when active leases look idle-but-not-stale
   - kept the existing skip taxonomy unchanged:
@@ -2254,7 +2254,7 @@
 ## 2026-04-15 - Runtime inspection alias match summary
 
 - Completed one more bounded read-only runtime inspection refinement:
-  - updated [src/runtime/inspection.ts](/home/ecochran76/workspace.local/oracle/src/runtime/inspection.ts)
+  - updated [src/runtime/inspection.ts](/home/ecochran76/workspace.local/auracall/src/runtime/inspection.ts)
     so alias-based runtime inspection now also preserves:
     - `matchingRuntimeRunCount`
     - bounded `matchingRuntimeRunIds`
@@ -2268,7 +2268,7 @@
 ## 2026-04-15 - Runtime inspection alias provenance
 
 - Completed a bounded operator-readback refinement for runtime inspection:
-  - updated [src/runtime/inspection.ts](/home/ecochran76/workspace.local/oracle/src/runtime/inspection.ts)
+  - updated [src/runtime/inspection.ts](/home/ecochran76/workspace.local/auracall/src/runtime/inspection.ts)
     so runtime inspection now preserves:
     - `resolvedBy`
     - `queryId`
@@ -2279,16 +2279,16 @@
     - `runtimeRunId`
     - `teamRunId`
     - `taskRunSpecId`
-  - updated [README.md](/home/ecochran76/workspace.local/oracle/README.md) and
-    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - updated [README.md](/home/ecochran76/workspace.local/auracall/README.md) and
+    [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     so the read-only runtime inspection response contract reflects the same
     provenance fields.
 
 ## 2026-04-15 - Runtime inspection contract doc alignment
 
 - Completed cross-authority doc alignment for the public runtime inspection API:
-  - updated [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md) and
-    [docs/dev/plans/0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md) to match the current runtime lookup keys:
+  - updated [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md) and
+    [docs/dev/plans/0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0001-2026-04-14-execution.md) to match the current runtime lookup keys:
     - `runId`
     - `runtimeRunId`
     - `teamRunId`
@@ -2299,7 +2299,7 @@
 ## 2026-04-15 - Runtime inspect alias contract alignment
 
 - Completed focused documentation-and-test alignment for runtime run inspection aliases:
-  - Updated [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) so
+  - Updated [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts) so
     `GET /v1/runtime-runs/inspect` is now validated for:
     - `runId`
     - `runtimeRunId`
@@ -2308,8 +2308,8 @@
   - Kept and preserved `runId`+`runnerId` runner-aware affinity evaluation coverage.
   - Added explicit invalid-shape HTTP assertion for missing runtime lookup keys with
     `Provide --run-id, --runtime-run-id, --team-run-id, or --task-run-spec-id.`
-  - Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md) and
-    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - Updated [README.md](/home/ecochran76/workspace.local/auracall/README.md) and
+    [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     runtime inspect sections to match the same four-lookup contract.
 
 ## 2026-04-13 - Live-suite consolidation tier map
@@ -2318,7 +2318,7 @@
   - turn the roadmap reassessment into concrete operator-facing guidance for
     which live suites should run routinely versus remain opt-in
 - Completed:
-  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     with a concrete tier map instead of only high-level posture language
   - classified the current live suites as:
     - stable baseline:
@@ -2332,19 +2332,19 @@
     - flaky-but-informative probes:
       - provider/browser paths that still need bounded reruns or stronger
         auth/cooldown preflight, especially some Gemini-resume situations
-  - updated [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+  - updated [README.md](/home/ecochran76/workspace.local/auracall/README.md)
     so the top-level testing pointer now reflects the tiered live-suite model
   - added one routine baseline script in
-    [package.json](/home/ecochran76/workspace.local/oracle/package.json):
+    [package.json](/home/ecochran76/workspace.local/auracall/package.json):
     - `pnpm run test:live:team:baseline`
     - current scope:
       - Grok default team baseline cases
       - ChatGPT single-provider team baseline
   - added matching tier comments near the env-gate definitions in:
-    - [team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
-    - [team-chatgpt-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-chatgpt-live.test.ts)
-    - [team-gemini-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-gemini-live.test.ts)
-    - [team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts)
+    - [team-grok-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-grok-live.test.ts)
+    - [team-chatgpt-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-chatgpt-live.test.ts)
+    - [team-gemini-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-gemini-live.test.ts)
+    - [team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts)
 - Verification:
   - reviewed current live test inventory and gates:
     - `tests/live/team-grok-live.test.ts`
@@ -2352,9 +2352,9 @@
     - `tests/live/team-gemini-live.test.ts`
     - `tests/live/team-multiservice-live.test.ts`
   - reviewed current roadmap closeout docs before patching:
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
-    - [docs/dev/dev-journal.md](/home/ecochran76/workspace.local/oracle/docs/dev/dev-journal.md)
-    - [docs/dev-fixes-log.md](/home/ecochran76/workspace.local/oracle/docs/dev-fixes-log.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
+    - [docs/dev/dev-journal.md](/home/ecochran76/workspace.local/auracall/docs/dev/dev-journal.md)
+    - [docs/dev-fixes-log.md](/home/ecochran76/workspace.local/auracall/docs/dev-fixes-log.md)
 - Why it matters:
   - routine operators now have a smaller default live target
   - the broader provider/operator matrix remains available without pretending
@@ -2370,31 +2370,31 @@
 - Completed:
   - added bounded `metadata.executionSummary.stepSummaries` projection to
     response readback in:
-    - [apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
-    - [apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts)
-    - [apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts)
+    - [apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts)
+    - [apiSchema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiSchema.ts)
+    - [apiTypes.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiTypes.ts)
   - added focused mixed-provider team-run coverage in:
-    - [runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
-    - [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
-  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
+    - [http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     so response readback guidance now points at `executionSummary.stepSummaries`
     for mixed-provider routing proof
   - tightened mixed-provider live assertions in
-    [team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts)
+    [team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts)
     so the live suite now checks the full split explicitly:
     - top-level response metadata stays compact
     - `executionSummary.stepSummaries` carries route truth
     - recovery detail remains the timeline surface
   - tightened the model-level runtime assertion in
-    [runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    [runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
     so the compact-versus-projected split is explicit:
     - top-level `metadata.service` / `metadata.runtimeProfile` must remain on
       the compact entry-side summary
     - `executionSummary.stepSummaries` must carry the full mixed-provider route
   - added explicit negative assertions in
-    [runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    [runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
     and
-    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
     so response `metadata.executionSummary` does not silently grow
     recovery-only fields such as:
     - `activeLease`
@@ -2407,68 +2407,68 @@
     `structuredOutputs[key="response.output"]`, and does not silently absorb
     `metadata.executionSummary` fields
   - added explicit serve-wrapper coverage in
-    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
     that `recoverRunsOnStartSourceKind = all` preserves the documented startup
     recovery scope:
     - default remains `direct`
     - `team-run` recovers only team runs
     - `all` recovers both direct and team runs
   - added explicit serve-wrapper coverage in
-    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
     that startup-recovery cap still applies after widening scope to `all`:
     - mixed direct + team candidates are still bounded by
       `recoverRunsOnStartMaxRuns`
     - the startup log stays on `Startup recovery (all) completed`
     - cap saturation still reports `limit-reached`
   - added explicit targeted-drain host coverage in
-    [runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    [runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
     that a team run keeps the operator-facing ownership failure explicit:
     - `drainRun(...)` returns `status = skipped`
     - `reason = skipReason = claim-owner-unavailable`
     - the persisted run keeps `sourceKind = team-run`
   - added explicit repeated-pass host accounting coverage in
-    [runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    [runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
     so `drainRunsUntilIdle(...)` keeps:
     - repeated executed passes for the same run
     - one reclaimed stale-lease entry only once in `expiredLeaseRunIds`
   - added explicit skipped targeted-drain readback coverage in
-    [runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    [runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
     and
-    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts):
+    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts):
     - `operatorControlSummary.targetedDrain.status = skipped`
     - `reason = skipReason = claim-owner-unavailable`
     - recovery detail timeline retains the persisted skipped drain note
   - added explicit cancellation fallback readback coverage in
-    [runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    [runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
     and
-    [runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts):
+    [runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts):
     - when no cancellation `note-added` event exists, readback falls back to
       the cancelled run's `updatedAt`
     - `source = null`
     - `reason = null`
   - added explicit negative assertions in
-    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
     that recovery detail does not grow routing fields such as:
     - `runtimeProfile`
     - `service`
     - `stepSummaries`
   - aligned the user-facing `/status` operator docs in
-    [README.md](/home/ecochran76/workspace.local/oracle/README.md) so
+    [README.md](/home/ecochran76/workspace.local/auracall/README.md) so
     `localActionControl.resolve-request` matches the tested host/server scope:
     - currently `requested` local action records on direct or team runs
   - aligned the user-facing response-readback docs in
-    [README.md](/home/ecochran76/workspace.local/oracle/README.md) so the
+    [README.md](/home/ecochran76/workspace.local/auracall/README.md) so the
     mixed-provider routing contract is explicit there too:
     - top-level `metadata.service` / `metadata.runtimeProfile` stay compact
     - `metadata.executionSummary.stepSummaries` carries route truth
     - recovery detail remains the lifecycle timeline surface
   - completed one final bounded operator-doc audit across
-    [README.md](/home/ecochran76/workspace.local/oracle/README.md) and
-    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    [README.md](/home/ecochran76/workspace.local/auracall/README.md) and
+    [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     and did not find another comparably high-value stale statement on the same
     seam
   - added explicit negative assertions in
-    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
     so `GET /status?recovery=true` stays a compact summary surface and does not
     silently grow per-run detail fields such as:
     - `taskRunSpecId`
@@ -2476,7 +2476,7 @@
     - `handoffTransferSummary`
     - `leaseHealth`
   - tightened the `/status?recovery=true` test contract in
-    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
     so the local-claim split is explicit:
     - top-level `localClaimSummary` stays the direct-run snapshot
     - `recoverySummary.localClaim` follows the requested recovery source scope
@@ -2487,9 +2487,9 @@
     - recovery/source filters do not reshape either surface
     - that remains true even when `recoverySummary` is filtered to
       `team-run` or `all`
-  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     so the recovery summary versus per-run detail split is explicit there too
-  - aligned [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+  - aligned [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
     with the current tested `/status` operator scope so it no longer describes:
     - `resume-human-escalation` as direct-run-only
     - `drain-run` as direct-run-only
@@ -2510,7 +2510,7 @@
     provider instead of leaving it Grok-only
 - Completed:
   - extended
-    [tests/live/team-chatgpt-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-chatgpt-live.test.ts)
+    [tests/live/team-chatgpt-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-chatgpt-live.test.ts)
     with one opt-in ChatGPT cancelled-local-action case gated behind:
     - `AURACALL_CHATGPT_CANCELLATION_LIVE_TEST=1`
   - reused the existing `auracall-chatgpt-tooling` team rather than adding a
@@ -2558,11 +2558,11 @@
     - `cancelled`
     now both escalate to human escalation
   - added local regressions in:
-    - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/teamRunCommand.test.ts)
-    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/teamRunCommand.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
   - extended
-    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-grok-live.test.ts)
     with one opt-in cancelled-local-action case gated behind:
     - `AURACALL_CANCELLATION_LIVE_TEST=1`
   - fixed the new live-test cleanup path so it remains batched but cannot hang
@@ -2604,13 +2604,13 @@
     happy-path team coverage
 - Completed:
   - widened the existing local-action control seam in
-    [serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    [serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so `resolve-request` is no longer artificially direct-run-only
   - added local regressions proving team-run local-action resolution through:
-    - [runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
-    - [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
+    - [http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - extended
-    [team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    [team-grok-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-grok-live.test.ts)
     with one opt-in rejected-local-action case gated behind:
     - `AURACALL_REJECTION_LIVE_TEST=1`
   - proved the real negative path that the current runtime actually takes:
@@ -2645,7 +2645,7 @@
     provider-backed team path, not just Grok
 - Completed:
   - added one ChatGPT approval live case in
-    [tests/live/team-chatgpt-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-chatgpt-live.test.ts)
+    [tests/live/team-chatgpt-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-chatgpt-live.test.ts)
   - reuses a new external-configured two-step ChatGPT team:
     - `auracall-chatgpt-tooling`
     - requester emits one intentionally forbidden bounded shell action
@@ -2683,7 +2683,7 @@
     can be resumed and drained through the existing `/status` seam
 - Progress:
   - extended
-    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-grok-live.test.ts)
     with one new opt-in approval case gated behind:
     - `AURACALL_APPROVAL_LIVE_TEST=1`
   - kept the live trigger narrow by reusing `auracall-tooling` rather than
@@ -2707,7 +2707,7 @@
     - stored terminal step summary reaches:
       - `AURACALL_TEAM_APPROVAL_LIVE_SMOKE_OK`
   - updated:
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `git log --oneline -5`
   - `pnpm vitest run tests/live/team-grok-live.test.ts`
@@ -2727,7 +2727,7 @@
     can already pause for human escalation in the stored runtime
 - Progress:
   - updated
-    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so the existing host controls:
     - `resume-human-escalation`
     - `drain-run`
@@ -2738,11 +2738,11 @@
     - targeted drain still executes exactly one host-owned pass for the chosen
       run
   - updated
-    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
     with a service-host proof that a paused team run can be resumed and then
     drained through the same control seam
   - updated
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
     so `POST /status` now proves the same operator path on a `team-run`
     record:
     - resume paused team run
@@ -2750,8 +2750,8 @@
     - response readback carries bounded `operatorControlSummary`
     - recovery detail carries the bounded resumed execution timeline
   - updated:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `git log --oneline -5`
   - `pnpm vitest run tests/runtime.serviceHost.test.ts -t "human escalation|targeted host drain"`
@@ -2779,7 +2779,7 @@
     - no tools
     - exact final token
   - extended
-    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts)
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts)
     with a second provider pairing that proves:
     - real `auracall teams run auracall-cross-service-gemini ... --json`
     - durable host readback
@@ -2792,9 +2792,9 @@
       - `__Secure-1PSID`
       - `__Secure-1PSIDTS`
   - updated:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/manual-tests.md](/home/ecochran76/workspace.local/auracall/docs/manual-tests.md)
 - Verification:
   - `git log --oneline -5`
   - `pnpm tsx bin/auracall.ts config show --team auracall-cross-service-gemini`
@@ -2827,7 +2827,7 @@
     - no tools
     - exact final token
   - added a dedicated opt-in live harness in
-    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts)
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts)
     that proves:
     - real `auracall teams run auracall-cross-service ... --json`
     - durable host readback
@@ -2839,9 +2839,9 @@
     - then `grok-browser`
     locks in a fixed order
   - updated:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/manual-tests.md](/home/ecochran76/workspace.local/auracall/docs/manual-tests.md)
 - Verification:
   - `git log --oneline -5`
   - `pnpm tsx bin/auracall.ts config show --agent auracall-chatgpt-planner`
@@ -2868,16 +2868,16 @@
     - `auracall-chatgpt-orchestrator`
     - `auracall-chatgpt-solo`
   - added a dedicated opt-in live harness in
-    [tests/live/team-chatgpt-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-chatgpt-live.test.ts)
+    [tests/live/team-chatgpt-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-chatgpt-live.test.ts)
     that proves:
     - real `auracall teams run auracall-chatgpt-solo ... --json`
     - durable host readback through `serviceHost.readRecoveryDetail(...)`
     - HTTP `GET /status/recovery/{run_id}`
     - HTTP `GET /v1/responses/{response_id}`
   - extended
-    [tests/live/liveConversationCleanup.ts](/home/ecochran76/workspace.local/oracle/tests/live/liveConversationCleanup.ts)
+    [tests/live/liveConversationCleanup.ts](/home/ecochran76/workspace.local/auracall/tests/live/liveConversationCleanup.ts)
     and
-    [tests/live/liveConversationCleanup.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/liveConversationCleanup.test.ts)
+    [tests/live/liveConversationCleanup.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/liveConversationCleanup.test.ts)
     so batched exact-id live cleanup now also supports `chatgpt`
   - corrected the first live-test preflight assumption:
     - source Chrome `Default` ChatGPT cookies are not the right authority for
@@ -2887,9 +2887,9 @@
     - the live suite now probes the real provider-backed team path directly
       instead of falsely skipping on source-cookie absence
   - updated:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/manual-tests.md](/home/ecochran76/workspace.local/auracall/docs/manual-tests.md)
 - Verification:
   - `git log --oneline -5`
   - `pnpm tsx bin/auracall.ts config show --agent auracall-chatgpt-orchestrator`
@@ -2919,7 +2919,7 @@
     lifecycle without widening product surface
 - Progress:
   - updated
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
     so one cohesive regression now proves the full direct operator path:
     - seed one paused direct run
     - resume it through `POST /status`
@@ -2931,7 +2931,7 @@
       - resume note
       - targeted drain note
   - updated
-    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     with the focused regression entrypoint:
     - `pnpm vitest run tests/http.responsesServer.test.ts -t "operator control summary"`
 - Verification:
@@ -2952,7 +2952,7 @@
   - make the cleanup path exact-id safe on both Grok and Gemini
 - Progress:
   - patched
-    [src/gemini-web/executor.ts](/home/ecochran76/workspace.local/oracle/src/gemini-web/executor.ts)
+    [src/gemini-web/executor.ts](/home/ecochran76/workspace.local/auracall/src/gemini-web/executor.ts)
     so Gemini stored team steps now retain browser conversation identity:
     - extracts conversation ids from Gemini metadata keys currently seen in the
       repo/live path:
@@ -2966,11 +2966,11 @@
       - `conversationId`
       - canonical `tabUrl`
   - added focused coverage in:
-    - [tests/gemini-web/executor.test.ts](/home/ecochran76/workspace.local/oracle/tests/gemini-web/executor.test.ts)
-    - [tests/runtime.configuredExecutor.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.configuredExecutor.test.ts)
+    - [tests/gemini-web/executor.test.ts](/home/ecochran76/workspace.local/auracall/tests/gemini-web/executor.test.ts)
+    - [tests/runtime.configuredExecutor.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.configuredExecutor.test.ts)
   - added a new exact-id live-test cleanup helper in:
-    - [tests/live/liveConversationCleanup.ts](/home/ecochran76/workspace.local/oracle/tests/live/liveConversationCleanup.ts)
-    - [tests/live/liveConversationCleanup.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/liveConversationCleanup.test.ts)
+    - [tests/live/liveConversationCleanup.ts](/home/ecochran76/workspace.local/auracall/tests/live/liveConversationCleanup.ts)
+    - [tests/live/liveConversationCleanup.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/liveConversationCleanup.test.ts)
   - the cleanup policy is intentionally batched:
     - enqueue successful provider conversation ids into:
       - `~/.auracall/live-test-cleanup/grok-team-conversations.json`
@@ -2980,8 +2980,8 @@
     - delete by exact id only through:
       - `auracall delete <conversationId> --target <provider> --yes`
   - wired the batched cleanup helper into:
-    - [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
-    - [tests/live/team-gemini-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-gemini-live.test.ts)
+    - [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-grok-live.test.ts)
+    - [tests/live/team-gemini-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-gemini-live.test.ts)
     - cleanup runs only after successful assertions while the provider live-test
       lock is still held
 - Verification:
@@ -3003,10 +3003,10 @@
     Grok/Auto team
 - Progress:
   - added
-    [src/runtime/configuredExecutor.ts](/home/ecochran76/workspace.local/oracle/src/runtime/configuredExecutor.ts)
+    [src/runtime/configuredExecutor.ts](/home/ecochran76/workspace.local/auracall/src/runtime/configuredExecutor.ts)
     as the provider-backed stored-step executor for browser-backed team runs
   - wired
-    [src/cli/teamRunCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/teamRunCommand.ts)
+    [src/cli/teamRunCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/teamRunCommand.ts)
     to use that executor by default through the existing runtime bridge
   - tightened managed browser-profile ownership for stored team steps:
     - when a runtime profile resolves an explicit `manualLoginProfileDir`, the
@@ -3019,18 +3019,18 @@
       - `~/.auracall/browser-profiles/auracall-grok-auto/grok`
   - fixed a fast-reply Grok completion bug:
     - exported a Grok-specific assistant snapshot reader from
-      [src/browser/actions/grok.ts](/home/ecochran76/workspace.local/oracle/src/browser/actions/grok.ts)
+      [src/browser/actions/grok.ts](/home/ecochran76/workspace.local/auracall/src/browser/actions/grok.ts)
     - passed a pre-submit Grok assistant baseline through both Grok browser
       execution paths in
-      [src/browser/index.ts](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
+      [src/browser/index.ts](/home/ecochran76/workspace.local/auracall/src/browser/index.ts)
     - this prevents the post-submit waiter from self-baselining on an already
       completed answer and hanging until timeout
   - added/updated focused coverage in:
-    - [tests/runtime.configuredExecutor.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.configuredExecutor.test.ts)
-    - [tests/browser/grokActions.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/grokActions.test.ts)
-    - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/teamRunCommand.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
-    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+    - [tests/runtime.configuredExecutor.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.configuredExecutor.test.ts)
+    - [tests/browser/grokActions.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/grokActions.test.ts)
+    - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/teamRunCommand.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts)
   - reran the canonical live team smoke:
     - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 pnpm tsx bin/auracall.ts teams run auracall-solo "Reply exactly with: AURACALL_TEAM_SMOKE_OK" --title "AuraCall team smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_TEAM_SMOKE_OK and nothing else." --max-turns 1 --json`
   - live result now proves the full browser/provider seam:
@@ -3065,11 +3065,11 @@
     does against the current runtime substrate
 - Progress:
   - added
-    [src/cli/teamRunCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/teamRunCommand.ts)
+    [src/cli/teamRunCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/teamRunCommand.ts)
     with bounded CLI task-run-spec synthesis plus
     `executeConfiguredTeamRun(...)`
   - wired a new command in
-    [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts):
+    [bin/auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts):
     - `auracall teams run <teamId> <objective>`
   - kept the first entrypoint narrow:
     - config-backed team selection
@@ -3082,9 +3082,9 @@
       - max turns
     - text or `--json` output for operator inspection
   - added focused regression coverage in:
-    - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/teamRunCommand.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
-    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+    - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/teamRunCommand.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts)
   - ran the first live smoke against the configured Grok-backed team:
     - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 pnpm tsx bin/auracall.ts teams run auracall-solo "Reply exactly with: AURACALL_TEAM_SMOKE_OK" --title "AuraCall team smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_TEAM_SMOKE_OK and nothing else." --max-turns 1 --json`
   - live result:
@@ -3162,15 +3162,15 @@
     workflow experiments
 - Progress:
   - reviewed the current executable seams and live-test posture across:
-    - [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
-    - [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
-    - [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts)
-    - [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts)
-    - [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
-    - [tests/live/openai-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/openai-live.test.ts)
-    - [tests/live/multi-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/multi-live.test.ts)
-    - [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
-    - [docs/dev/team-runtime-bridge-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-runtime-bridge-plan.md)
+    - [bin/auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
+    - [src/cli/configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
+    - [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/auracall/src/teams/runtimeBridge.ts)
+    - [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/auracall/src/runtime/responsesService.ts)
+    - [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
+    - [tests/live/openai-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/openai-live.test.ts)
+    - [tests/live/multi-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/multi-live.test.ts)
+    - [docs/manual-tests.md](/home/ecochran76/workspace.local/auracall/docs/manual-tests.md)
+    - [docs/dev/team-runtime-bridge-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-runtime-bridge-plan.md)
   - audit result:
     - the team runtime bridge is real and well covered in repo tests, but it is
       still not a real operator or client execution entrypoint
@@ -3178,9 +3178,9 @@
     - the current `POST /v1/responses` path still creates direct runs rather
       than team runs
     - there is still no team/task-run-spec live test coverage under
-      [tests/live](/home/ecochran76/workspace.local/oracle/tests/live)
+      [tests/live](/home/ecochran76/workspace.local/auracall/tests/live)
     - there is still no team-run manual smoke in
-      [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
+      [docs/manual-tests.md](/home/ecochran76/workspace.local/auracall/docs/manual-tests.md)
   - checkpoint decision:
     - pause further team/task-run-spec API/readback/model growth
     - before any live team experimentation, add:
@@ -3191,7 +3191,7 @@
     - prefer a bounded CLI/dev execution path over widening the public API
       surface first
     - reuse the existing
-      [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts)
+      [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/auracall/src/teams/runtimeBridge.ts)
       bridge directly
     - keep the first liveable path:
       - sequential only
@@ -3217,7 +3217,7 @@
     orchestration timeline summary instead of growing the response surface
     further
 - Progress:
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so `GET /status/recovery/{run_id}` now includes bounded
     `orchestrationTimelineSummary`
   - current bounded fields:
@@ -3235,12 +3235,12 @@
     - no raw history dump
     - no new route family
   - added focused proof in:
-    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - updated operator/user-facing docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
 - Verification:
   - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -3259,9 +3259,9 @@
     operator-only view
 - Progress:
   - updated:
-    - [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts)
-    - [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts)
-    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    - [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiTypes.ts)
+    - [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiSchema.ts)
+    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts)
     so `GET /v1/responses/{response_id}` now includes bounded
     `metadata.executionSummary.orchestrationTimelineSummary`
   - current bounded fields:
@@ -3284,13 +3284,13 @@
     - no raw history dump
     - no new route family
   - added focused proof in:
-    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.api.test.ts)
-    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.api.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - updated user-facing docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
 - Verification:
   - `pnpm vitest run tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -3308,13 +3308,13 @@
     readback after recovery-detail coverage landed
 - Progress:
   - audited the current handoff-transfer line across:
-    - [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
-    - [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts)
-    - [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
-    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
-    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
-    - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
-    - [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md)
+    - [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts)
+    - [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/auracall/src/teams/runtimeBridge.ts)
+    - [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
+    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts)
+    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
+    - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-service-execution-plan.md)
+    - [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-run-data-model-plan.md)
   - checkpoint decision:
     - the bounded handoff-transfer line is now coherent enough to pause:
       - planner shaping exists
@@ -3333,10 +3333,10 @@
     - move to one bounded shared-state/history projection for consumed
       handoff transfer context
     - rationale:
-      - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
+      - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-service-execution-plan.md)
         requires handoffs to be explicit, serializable, and storable for
         postmortem/debug
-      - [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md)
+      - [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-run-data-model-plan.md)
         defines shared state as the durable orchestration record with handoff
         history
       - that is a higher-leverage orchestration seam than another summary field
@@ -3356,7 +3356,7 @@
     runtime-consumed handoff transfer contract
 - Progress:
   - updated
-    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so `readRecoveryDetail(...)` now returns bounded
     `handoffTransferSummary`
   - current bounded fields:
@@ -3373,12 +3373,12 @@
     dependent step on the current run; compact `/status?recovery=true` stayed
     unchanged
   - added focused proof in:
-    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - updated docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -3396,9 +3396,9 @@
     handoff `taskTransfer` contract
 - Progress:
   - updated:
-    - [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts)
-    - [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts)
-    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    - [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiTypes.ts)
+    - [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiSchema.ts)
+    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts)
     so `GET /v1/responses/{response_id}` now includes bounded
     `metadata.executionSummary.handoffTransferSummary`
   - current bounded fields:
@@ -3415,13 +3415,13 @@
     terminal-or-latest step; no second transfer store or payload mirror was
     introduced
   - added focused proof in:
-    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.api.test.ts)
-    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.api.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - updated docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - `pnpm vitest run tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -3439,7 +3439,7 @@
     downstream runtime/shared-state seam instead of widening the handoff model
 - Progress:
   - updated
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so later-step execution now reads incoming dependency handoffs and projects
     bounded task-transfer context into:
     - `sharedStateContext.dependencyTaskTransfers`
@@ -3448,15 +3448,15 @@
   - kept the consumer read-only and derived from the existing handoff payload;
     no new shared transfer store or orchestration vocabulary was introduced
   - expanded focused proof in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
     covering:
     - direct-run downstream execution context
     - team-runtime bridge downstream execution context
   - updated docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -3475,7 +3475,7 @@
     substrate
 - Progress:
   - updated
-    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts)
     so `createPlannedTeamRunHandoffs(...)` now derives one compact
     `structuredData.taskTransfer` contract from the source step when that step
     carries task-aware planning data
@@ -3498,16 +3498,16 @@
     artifact refs; no second handoff model, artifact store, or evaluator
     vocabulary was introduced
   - added focused proof in:
-    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
     covering:
     - planner-side task-aware handoff shaping
     - bridge preservation of the same bounded handoff contract through created
       and final runtime records
   - updated docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - `pnpm vitest run tests/teams.model.test.ts tests/teams.runtimeBridge.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -3525,11 +3525,11 @@
     `TaskRunSpec` consumption after the `inputArtifacts` line became coherent
 - Progress:
   - audited the current task-run-spec consumer state across:
-    - [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
-    - [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
-    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
-    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts)
+    - [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
+    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts)
+    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/task-run-spec-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
   - checkpoint decision:
     - the bounded task-run-spec field-consumption line is now coherent enough
       to pause:
@@ -3572,9 +3572,9 @@
     the existing `GET /v1/responses/{response_id}` surface
 - Progress:
   - updated:
-    - [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts)
-    - [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts)
-    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    - [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiTypes.ts)
+    - [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiSchema.ts)
+    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts)
     so response readback now includes bounded
     `metadata.executionSummary.inputArtifactSummary`
   - current bounded fields:
@@ -3589,14 +3589,14 @@
     terminal-or-latest artifact-bearing step; no second artifact store was
     introduced
   - added focused proof in:
-    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.api.test.ts)
-    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.api.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - updated docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - focused response/readback regression slice
   - `pnpm vitest run tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
@@ -3613,7 +3613,7 @@
   - add the first bounded `inputArtifacts` runtime/service consumer without
     inventing a second artifact model or fuzzy success evaluator
 - Progress:
-  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so runtime execution now injects task input artifacts into the same
     execution-time context seam already used for task context and structured
     context
@@ -3625,12 +3625,12 @@
   - this reuses existing `step.input.artifacts` transport instead of inventing
     a second artifact store or a new request model
   - added focused proof in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
   - updated docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - focused runtime/bridge regression slice
   - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
@@ -3649,11 +3649,11 @@
     seam
 - Progress:
   - audited the current task-run-spec runtime signal across:
-    - [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
-    - [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
-    - [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts)
-    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md)
-    - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
+    - [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
+    - [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts)
+    - [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/auracall/src/teams/runtimeBridge.ts)
+    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/task-run-spec-plan.md)
+    - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-service-execution-plan.md)
   - explicit checkpoint decision:
     - the `providerBudget` sub-line is now coherent enough to pause:
       - `maxRequests`
@@ -3686,7 +3686,7 @@
   - turn `constraints.providerBudget.maxTokens` into a real runtime rule using
     only the stored usage signal that now exists
 - Progress:
-  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so the runner now sums durable `step.providerUsage.*.totalTokens` entries
     before the next runnable step executes
   - the first rule stays conservative:
@@ -3697,12 +3697,12 @@
     - bounded failure code:
       `task_provider_token_limit_exceeded`
   - added focused proof in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
   - updated user-facing docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
 - Verification:
   - tmux session `oracle-provider-budget-max-tokens`
   - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
@@ -3722,7 +3722,7 @@
     path so later token-budget work can use real stored usage instead of
     estimates
 - Progress:
-  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so `executeStoredRunStep(...)` may now return real usage alongside output
   - the runner now persists that usage in durable shared state as one bounded
     step-scoped structured output:
@@ -3735,21 +3735,21 @@
       - `reasoningTokens`
       - `totalTokens`
   - updated response readback in:
-    - [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts)
-    - [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts)
-    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    - [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiTypes.ts)
+    - [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiSchema.ts)
+    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts)
     so `GET /v1/responses/{response_id}` now returns bounded
     `metadata.executionSummary.providerUsageSummary` from that same durable
     structured output
   - added focused proof in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - updated user-facing docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
 - Verification:
   - tmux session `oracle-runtime-usage-ingestion`
   - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.responsesService.test.ts tests/teams.runtimeBridge.test.ts tests/http.responsesServer.test.ts tests/runtime.api.test.ts`
@@ -3769,13 +3769,13 @@
     accounting
 - Progress:
   - audited the current runtime and provider paths:
-    - [src/runtime/types.ts](/home/ecochran76/workspace.local/oracle/src/runtime/types.ts)
-    - [src/runtime/model.ts](/home/ecochran76/workspace.local/oracle/src/runtime/model.ts)
-    - [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts)
-    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
-    - [src/sessionManager.ts](/home/ecochran76/workspace.local/oracle/src/sessionManager.ts)
-    - [src/oracle/types.ts](/home/ecochran76/workspace.local/oracle/src/oracle/types.ts)
-    - [src/oracle/client.ts](/home/ecochran76/workspace.local/oracle/src/oracle/client.ts)
+    - [src/runtime/types.ts](/home/ecochran76/workspace.local/auracall/src/runtime/types.ts)
+    - [src/runtime/model.ts](/home/ecochran76/workspace.local/auracall/src/runtime/model.ts)
+    - [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/auracall/src/runtime/responsesService.ts)
+    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts)
+    - [src/sessionManager.ts](/home/ecochran76/workspace.local/auracall/src/sessionManager.ts)
+    - [src/oracle/types.ts](/home/ecochran76/workspace.local/auracall/src/oracle/types.ts)
+    - [src/oracle/client.ts](/home/ecochran76/workspace.local/auracall/src/oracle/client.ts)
   - confirmed the decisive split:
     - provider/API usage exists in the session/oracle layer
     - durable runtime/service execution records do not store usage or token
@@ -3803,7 +3803,7 @@
   - make the first bounded `constraints.providerBudget` field affect runtime
     behavior instead of remaining task-run-spec metadata only
 - Progress:
-  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so the runner now reads
     `step.input.structuredData.constraints.providerBudget.maxRequests`
     before lease acquisition and step execution
@@ -3813,12 +3813,12 @@
       execution
     - use bounded failure code `task_provider_request_limit_exceeded`
   - added focused proof in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
   - updated user-facing docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
 - Verification:
   - tmux session `oracle-provider-budget-max-requests`
   - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
@@ -3836,10 +3836,10 @@
     choose the next task-run-spec runtime/service consumer by roadmap leverage
 - Progress:
   - audited the current requested-output lane against:
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
-    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md)
-    - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
-    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
+    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/task-run-spec-plan.md)
+    - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-service-execution-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
   - confirmed the requested-output sub-line is now coherent enough to pause:
     - fulfillment readback
     - readback policy
@@ -3854,10 +3854,10 @@
 - Verification:
   - audit/docs-only checkpoint
   - reviewed:
-    - [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
-    - [src/runtime/localActions.ts](/home/ecochran76/workspace.local/oracle/src/runtime/localActions.ts)
-    - [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
+    - [src/runtime/localActions.ts](/home/ecochran76/workspace.local/auracall/src/runtime/localActions.ts)
+    - [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Issues:
   - there is no immediate blocker on the requested-output lane
   - the main risk now is continuing to deepen requested-output semantics
@@ -3869,7 +3869,7 @@
   - remove the split where response readback failed for missing required
     outputs but stored runtime/service state could still remain `succeeded`
 - Progress:
-  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so the local runner now checks required requested-output fulfillment just
     before persisting a would-be success bundle
   - clearly missing required outputs now persist as failed runtime/service
@@ -3881,12 +3881,12 @@
     - preserves produced output on the failed step
     - does not introduce schema validation or a second output-contract model
   - added focused proof in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
   - updated user-facing docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
 - Verification:
   - tmux session `oracle-requested-output-stored-enforcement`
   - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
@@ -3902,7 +3902,7 @@
   - make clearly missing required requested outputs affect terminal response
     behavior, not just readback policy text
 - Progress:
-  - updated [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+  - updated [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts)
     so response creation now downgrades terminal readback from `completed` to
     `failed` when:
     - the stored run otherwise succeeded
@@ -3915,13 +3915,13 @@
     - runtime run status is not rewritten
     - enforcement stays on response-surface semantics only
   - added focused proof in:
-    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.api.test.ts)
-    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.api.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - updated user-facing docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
 - Verification:
   - tmux session `oracle-requested-output-enforcement`
   - `pnpm vitest run tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
@@ -3937,9 +3937,9 @@
   - add one stronger required-output policy seam on top of the new requested
     output fulfillment evidence without changing runtime terminal status
 - Progress:
-  - updated [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts),
-    [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts), and
-    [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+  - updated [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiTypes.ts),
+    [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiSchema.ts), and
+    [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts)
     so response readback now also includes bounded
     `metadata.executionSummary.requestedOutputPolicy`
   - current bounded policy statuses are:
@@ -3948,13 +3948,13 @@
   - policy is derived from the same `requestedOutputSummary` evidence path
     instead of inventing a second output-contract model
   - added focused proof in:
-    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.api.test.ts)
-    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.api.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - updated user-facing docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
 - Verification:
   - tmux session `oracle-requested-output-policy`
   - `pnpm vitest run tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
@@ -3971,9 +3971,9 @@
   - make `TaskRunSpec.requestedOutputs` affect runtime-backed response
     readback instead of remaining planning-only metadata
 - Progress:
-  - updated [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts),
-    [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts), and
-    [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+  - updated [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiTypes.ts),
+    [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiSchema.ts), and
+    [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts)
     so `GET /v1/responses/{response_id}` now returns bounded
     `metadata.executionSummary.requestedOutputSummary`
   - the summary is derived conservatively from:
@@ -3982,13 +3982,13 @@
     - actual stored response artifacts
     - non-internal structured outputs
   - added focused proof in:
-    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.api.test.ts)
-    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.api.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - updated user-facing docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
 - Verification:
   - tmux session `oracle-requested-output-summary`
   - `pnpm vitest run tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
@@ -4005,18 +4005,18 @@
   - make `TaskRunSpec.context` a real runtime input instead of leaving it as
     planning-only metadata
 - Progress:
-  - updated [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts) so
+  - updated [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts) so
     task-aware planning now carries `taskContext` into planned step
     structured data
-  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts) so
+  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts) so
     runtime step execution now injects task context into:
     - `sharedStateContext.taskContext`
     - `sharedStateContext.taskContextPromptContext`
     - the bounded prompt context passed to prompt-driven execution
   - added focused proof in:
-    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
 - Verification:
   - tmux session `oracle-taskrunspec-context`
   - `pnpm vitest run tests/teams.model.test.ts tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts tests/teams.service.test.ts`
@@ -4036,14 +4036,14 @@
     instead of leaving `TaskRunSpec` limited to planning, runtime storage, and
     readback
 - Progress:
-  - updated [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts) with task-aware entrypoints:
+  - updated [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/auracall/src/teams/runtimeBridge.ts) with task-aware entrypoints:
     - `executeFromConfigTaskRunSpec(...)`
     - `executeFromResolvedTeamTaskRunSpec(...)`
   - wired those entrypoints through the existing task-aware service-plan
     builders instead of inventing a parallel execution path
   - updated bridge execution summaries so they now carry `taskRunSpecId`
   - added focused proof in
-    [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
     that a task-aware bridge run preserves `taskRunSpecId` on:
     - planned `teamRun`
     - created runtime run
@@ -4082,10 +4082,10 @@
 - Verification:
   - audit/docs-only checkpoint
   - reviewed:
-    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
-    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
-    - [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts)
+    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
+    - [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Issues:
   - no current code blocker remains on assignment-identity exposure; the main
     risk is expanding compact status surfaces without a demonstrated consumer
@@ -4096,17 +4096,17 @@
   - expose assignment identity on the bounded per-run recovery detail route
     without bloating the compact recovery summary
 - Progress:
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so `readRecoveryDetail(...)` now returns `taskRunSpecId`
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so `readRecoveryDetail(...)` now returns `taskRunSpecId`
   - kept the compact summary unchanged:
     - no `taskRunSpecId` added to `/status?recovery=true`
     - assignment identity stays on the per-run detail/readback surfaces
   - added focused proof in:
-    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - updated user-facing docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - tmux session `oracle-taskrunspec-recovery-detail`
   - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts tests/runtime.responsesService.test.ts`
@@ -4125,18 +4125,18 @@
   - carry the new runtime-side `taskRunSpecId` binding through one real
     readback surface instead of leaving it as an internal-only field
 - Progress:
-  - updated [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts), [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts), and [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts) so `GET /v1/responses/{response_id}` now includes `metadata.taskRunSpecId`
+  - updated [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiTypes.ts), [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiSchema.ts), and [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts) so `GET /v1/responses/{response_id}` now includes `metadata.taskRunSpecId`
   - kept this slice bounded:
     - top-level response metadata only
     - no new execution summary variant
     - no new status or recovery surface
   - added focused proof in:
-    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - updated user-facing docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - tmux session `oracle-taskrunspec-readback-final`
   - `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts tests/runtime.model.test.ts tests/runtime.schema.test.ts tests/runtime.types.test.ts`
@@ -4154,12 +4154,12 @@
     `TaskRunSpec` contract so runtime run records carry a first-class
     `taskRunSpecId`
 - Progress:
-  - updated [src/runtime/types.ts](/home/ecochran76/workspace.local/oracle/src/runtime/types.ts), [src/runtime/schema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/schema.ts), and [src/runtime/model.ts](/home/ecochran76/workspace.local/oracle/src/runtime/model.ts) so `ExecutionRun` now carries `taskRunSpecId`
+  - updated [src/runtime/types.ts](/home/ecochran76/workspace.local/auracall/src/runtime/types.ts), [src/runtime/schema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/schema.ts), and [src/runtime/model.ts](/home/ecochran76/workspace.local/auracall/src/runtime/model.ts) so `ExecutionRun` now carries `taskRunSpecId`
   - updated the team-run projection seam so `teamRun.taskRunSpecId` is copied onto the runtime run record instead of surviving only inside step-scoped structured data
   - expanded focused proof in:
-    - [tests/runtime.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.types.test.ts)
-    - [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.schema.test.ts)
-    - [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.model.test.ts)
+    - [tests/runtime.types.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.types.test.ts)
+    - [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.schema.test.ts)
+    - [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.model.test.ts)
   - kept this slice bounded:
     - no new public execution surface
     - no `TaskRunSpec` contract broadening
@@ -4179,7 +4179,7 @@
 - Focus:
   - land the first bounded code-facing `TaskRunSpec` contract and prove the initial `teamRun.taskRunSpecId` binding through the existing team planning seam
 - Progress:
-  - tightened [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts), [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts), and [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts) so `TaskRunSpec` now matches the bounded contract from [task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md):
+  - tightened [src/teams/types.ts](/home/ecochran76/workspace.local/auracall/src/teams/types.ts), [src/teams/schema.ts](/home/ecochran76/workspace.local/auracall/src/teams/schema.ts), and [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts) so `TaskRunSpec` now matches the bounded contract from [task-run-spec-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/task-run-spec-plan.md):
     - explicit output kinds / formats / destinations
     - explicit input-artifact kinds plus `required`
     - explicit `constraints`
@@ -4189,13 +4189,13 @@
   - kept the projection boundary explicit:
     - `TaskRunSpec.requestedBy` remains structured assignment intent
     - `TeamRun.requestedBy` remains the simpler execution-side operator label
-    - [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts) now projects the former onto the latter at the team-run seam
+    - [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts) now projects the former onto the latter at the team-run seam
   - proved the first code-facing binding through the existing team planning/service/runtime path by updating:
-    - [tests/teams.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.types.test.ts)
-    - [tests/teams.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.schema.test.ts)
-    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
-    - [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/teams.types.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.types.test.ts)
+    - [tests/teams.schema.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.schema.test.ts)
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts)
+    - [tests/teams.service.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.service.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
 - Verification:
   - tmux session `oracle-taskrunspec-verify`: `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts tests/teams.service.test.ts tests/teams.runtimeBridge.test.ts`
   - tmux session `oracle-taskrunspec-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -4208,7 +4208,7 @@
 - Focus:
   - define one concrete bounded `taskRunSpec` contract before any code-facing team/runtime binding work starts
 - Progress:
-  - tightened [task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md) from a broad field list into one concrete bounded contract with:
+  - tightened [task-run-spec-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/task-run-spec-plan.md) from a broad field list into one concrete bounded contract with:
     - explicit top-level `TaskRunSpec` shape
     - bounded helper contracts for `requestedOutputs` and `inputArtifacts`
     - one example object
@@ -4216,9 +4216,9 @@
       - one selected `team`
       - one selected `taskRunSpec`
       - one planned `teamRun`
-  - updated [team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md) so the first code-facing `teamRun` slice is expected to carry `taskRunSpecId`
-  - updated [team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md) so the MVP contract explicitly rejects treating bare `team` config as the complete executable input once `taskRunSpec` exists
-  - updated [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) to point the next code slice at:
+  - updated [team-run-data-model-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-run-data-model-plan.md) so the first code-facing `teamRun` slice is expected to carry `taskRunSpecId`
+  - updated [team-service-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-service-execution-plan.md) so the MVP contract explicitly rejects treating bare `team` config as the complete executable input once `taskRunSpec` exists
+  - updated [next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md) to point the next code slice at:
     - first `TaskRunSpec` schema/model
     - then `teamRun.taskRunSpecId` binding
 - Verification:
@@ -4233,17 +4233,17 @@
   - decide the next bounded architecture seam now that the local-action / human-resume / targeted-drain line is coherent enough to pause
 - Progress:
   - audited:
-    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
-    - [docs/dev/runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-runner-slice-plan.md)
-    - [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
-    - [docs/dev/service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
+    - [docs/dev/runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/runtime-runner-slice-plan.md)
+    - [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/runtime-service-host-plan.md)
+    - [docs/dev/service-runtime-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/service-runtime-execution-plan.md)
   - recorded the current checkpoint explicitly:
     - local-action request resolution exists
     - human-escalation resume exists
     - targeted drain exists
     - bounded responses-side operator readback exists
-  - recorded the reassessment decision in [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md):
+  - recorded the reassessment decision in [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md):
     - pause further local runner/service lifecycle readback expansion here
     - move the next active design seam upward to one concrete task / run-spec binding shape
 - Verification:
@@ -4257,14 +4257,14 @@
 - Focus:
   - add one compact operator-visible outcome summary for the new local-action / resume / drain line on existing `GET /v1/responses/{response_id}` reads
 - Progress:
-  - updated [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts), [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts), and [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts) so `metadata.executionSummary` now includes bounded `operatorControlSummary`
+  - updated [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts), [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiTypes.ts), and [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiSchema.ts) so `metadata.executionSummary` now includes bounded `operatorControlSummary`
   - kept the seam narrow:
     - derive `humanEscalationResume` from persisted `human.resume.<stepId>` structured output
     - derive `targetedDrain` from persisted operator `note-added` drain events
     - no new route family
     - no mutation during readback
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so targeted `drainRun(...)` persists a compact operator event that later responses readback can project
-  - added focused coverage in [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so targeted `drainRun(...)` persists a compact operator event that later responses readback can project
+  - added focused coverage in [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 - Verification:
   - tmux session `oracle-operator-control-summary-verify`: `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - tmux session `oracle-operator-control-summary-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -4276,14 +4276,14 @@
 - Focus:
   - add one bounded post-resume follow-through seam for direct runs on the existing `POST /status` surface
 - Progress:
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so the host can now run one targeted drain pass for a single direct run through `drainRun(...)`
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so the host can now run one targeted drain pass for a single direct run through `drainRun(...)`
   - kept the seam narrow:
     - only direct runs
     - one host-owned pass for the requested run
     - no new route family
     - no reassignment or multi-runner scheduler behavior
-  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so `POST /status` now accepts `{"runControl":{"action":"drain-run","runId":"..."}}`
-  - added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts) so `POST /status` now accepts `{"runControl":{"action":"drain-run","runId":"..."}}`
+  - added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 - Verification:
   - tmux session `oracle-drain-run-verify`: `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
   - tmux session `oracle-drain-run-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -4295,14 +4295,14 @@
 - Focus:
   - add one bounded post-resolution lifecycle seam for direct runs paused on human escalation
 - Progress:
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so the host can now resume one direct run paused for human escalation through the existing runtime resume semantics
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so the host can now resume one direct run paused for human escalation through the existing runtime resume semantics
   - kept the seam narrow:
     - only direct runs
     - only runs with a cancelled human-escalation step
     - no new route family
     - no reassignment or scheduler behavior
-  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so `POST /status` now accepts `{"runControl":{"action":"resume-human-escalation",...}}`
-  - added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts) so `POST /status` now accepts `{"runControl":{"action":"resume-human-escalation",...}}`
+  - added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 - Verification:
   - tmux session `oracle-human-resume-verify`: `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
   - tmux session `oracle-human-resume-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -4314,15 +4314,15 @@
 - Focus:
   - add one bounded local-action lifecycle control seam on the existing `POST /status` surface
 - Progress:
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so the host can now resolve one persisted local-action request as `approved`, `rejected`, or `cancelled`
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so the host can now resolve one persisted local-action request as `approved`, `rejected`, or `cancelled`
   - kept the seam narrow:
     - only direct runs
     - only currently `requested` local action records
     - no new route family
     - no host-side execution or reassignment
-  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so `POST /status` now accepts `localActionControl.resolve-request`
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts) so `POST /status` now accepts `localActionControl.resolve-request`
   - kept readback coherent by updating the persisted `step.localActionOutcomes.*` structured output in the same mutation, so later `GET /v1/responses/{response_id}` reads show the resolved local-action state through the existing `metadata.executionSummary.localActionSummary`
-  - added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 - Verification:
   - tmux session `oracle-local-action-control-verify`: `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
   - tmux session `oracle-local-action-control-verify-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -4334,12 +4334,12 @@
 - Focus:
   - add one bounded local-action lifecycle readback seam on the existing `GET /v1/responses/{response_id}` surface
 - Progress:
-  - updated [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts), [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts), and [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts) so `metadata.executionSummary` now includes bounded `localActionSummary`
+  - updated [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts), [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiTypes.ts), and [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiSchema.ts) so `metadata.executionSummary` now includes bounded `localActionSummary`
   - kept the seam narrow:
     - reuse the already-persisted `step.localActionOutcomes.*` structured output
     - no new route family
     - no mutation during readback
-  - added focused coverage in [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - added focused coverage in [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 - Verification:
   - tmux session `oracle-local-action-readback`: `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - tmux session `oracle-local-action-readback-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -4351,7 +4351,7 @@
 - Focus:
   - decide the next bounded service-host / runner lifecycle seam now that the cancel line is coherent enough to pause
 - Progress:
-  - audited [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md), [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md), [docs/dev/runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-runner-slice-plan.md), [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md), and [docs/dev/service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
+  - audited [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md), [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md), [docs/dev/runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/runtime-runner-slice-plan.md), [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/runtime-service-host-plan.md), and [docs/dev/service-runtime-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/service-runtime-execution-plan.md)
   - confirmed the cancel sub-line is now coherent enough to pause:
     - bounded local cancel control on `POST /status`
     - late-completion protection
@@ -4372,12 +4372,12 @@
 - Focus:
   - add one bounded post-cancel lifecycle seam by exposing cancellation outcome through the existing `GET /v1/responses/{response_id}` readback
 - Progress:
-  - updated [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts), [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts), and [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts) so `metadata.executionSummary` now includes bounded `cancellationSummary`
+  - updated [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts), [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiTypes.ts), and [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiSchema.ts) so `metadata.executionSummary` now includes bounded `cancellationSummary`
   - kept the seam narrow:
     - reuse the existing `cancelled` runtime vocabulary
     - derive the summary from the stored cancellation note event
     - no new route family and no mutation during readback
-  - added focused coverage in [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - added focused coverage in [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 - Verification:
   - tmux session `oracle-cancelled-readback`: `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - tmux session `oracle-cancelled-readback-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -4389,13 +4389,13 @@
 - Focus:
   - add one bounded read-only cancelled-run visibility seam on the existing recovery summary/detail paths
 - Progress:
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so recovery summary now separates `cancelledRunIds` from `idleRunIds` and returns bounded `cancellation.reasonsByRunId`
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so per-run recovery detail now returns `hostState: cancelled` plus a bounded `cancellation` block with `cancelledAt`, `source`, and `reason`
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so recovery summary now separates `cancelledRunIds` from `idleRunIds` and returns bounded `cancellation.reasonsByRunId`
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so per-run recovery detail now returns `hostState: cancelled` plus a bounded `cancellation` block with `cancelledAt`, `source`, and `reason`
   - kept the seam derived from the stored runtime bundle:
     - no second stop vocabulary
     - no new route family
     - no mutation during readback
-  - added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 - Verification:
   - tmux session `oracle-cancel-visibility`: `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
   - tmux session `oracle-cancel-visibility-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -4407,10 +4407,10 @@
 - Focus:
   - add one conservative stop/cancel seam for active runner-owned execution without widening into reassignment or multi-runner control
 - Progress:
-  - added [cancelExecutionRun(...) in src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts) so runtime-backed runs can be mutated into the existing `cancelled` vocabulary while preserving terminal steps and emitting a cancellation note event
-  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts) so delayed step completion now rereads the latest persisted record and preserves a winning external cancellation instead of overwriting it
-  - added [cancelOwnedRun(...) in src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts), bounded to active leases owned by the configured local runner/host
-  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so `POST /status` now accepts `{"runControl":{"action":"cancel-run","runId":"..."}}` on the existing control surface
+  - added [cancelExecutionRun(...) in src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts) so runtime-backed runs can be mutated into the existing `cancelled` vocabulary while preserving terminal steps and emitting a cancellation note event
+  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts) so delayed step completion now rereads the latest persisted record and preserves a winning external cancellation instead of overwriting it
+  - added [cancelOwnedRun(...) in src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts), bounded to active leases owned by the configured local runner/host
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts) so `POST /status` now accepts `{"runControl":{"action":"cancel-run","runId":"..."}}` on the existing control surface
   - kept the first control path narrow:
     - active local ownership required
     - inactive or not-owned runs are rejected cleanly
@@ -4426,7 +4426,7 @@
 - Focus:
   - decide the next bounded live runner/service ownership seam instead of continuing local reporting work by inertia
 - Progress:
-  - audited [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md), [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md), [docs/dev/runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-runner-slice-plan.md), [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md), and [docs/dev/service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
+  - audited [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md), [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md), [docs/dev/runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/runtime-runner-slice-plan.md), [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/runtime-service-host-plan.md), and [docs/dev/service-runtime-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/service-runtime-execution-plan.md)
   - confirmed the stale-heartbeat sub-line is now coherent enough to pause:
     - classification
     - manual repair
@@ -4448,9 +4448,9 @@
 - Focus:
   - add one compact operator-facing consumer of the new `stale-heartbeat-inspect-only` attention signal
 - Progress:
-  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so startup recovery now reads the bounded recovery summary after the drain pass and emits `attention=stale-heartbeat-inspect-only:<count>` when unrepaired inspect-only stale-heartbeat cases remain
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts) so startup recovery now reads the bounded recovery summary after the drain pass and emits `attention=stale-heartbeat-inspect-only:<count>` when unrepaired inspect-only stale-heartbeat cases remain
   - kept the startup log compact and conditional; ordinary startup logs stay unchanged when there is no attention to surface
-  - added focused coverage in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - added focused coverage in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 - Verification:
   - `pnpm vitest run tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -4462,12 +4462,12 @@
 - Focus:
   - add one read-only escalation/attention seam for `stale-heartbeat` cases that remain `inspect-only`
 - Progress:
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so recovery summary now includes bounded `attention` aggregates and per-run recovery detail now includes `attention` when a `stale-heartbeat` lease is still only inspectable
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so recovery summary now includes bounded `attention` aggregates and per-run recovery detail now includes `attention` when a `stale-heartbeat` lease is still only inspectable
   - kept the seam narrow:
     - it only lights up for `stale-heartbeat` plus `inspect-only`
     - it does not apply to `suspiciously-idle`
     - it does not mutate leases or schedule work
-  - expanded focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - expanded focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -4479,7 +4479,7 @@
 - Focus:
   - remove the parallel host-only reclaim path so bounded host recovery uses the same stale-heartbeat repair seam as the operator action
 - Progress:
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so host recovery summary and host drain now route stale-heartbeat lease repair through the same evaluated repair path used by `repairStaleHeartbeatLease(...)`
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so host recovery summary and host drain now route stale-heartbeat lease repair through the same evaluated repair path used by `repairStaleHeartbeatLease(...)`
   - kept behavior conservative:
     - reclaimable stale-heartbeat leases are still repaired
     - `suspiciously-idle` remains read-only
@@ -4496,10 +4496,10 @@
 - Focus:
   - add one bounded operator action for `stale-heartbeat` without broadening repair or scheduling behavior
 - Progress:
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) with `repairStaleHeartbeatLease(...)`, which only repairs runs currently classified as `stale-heartbeat` when the existing durable repair posture is already `locally-reclaimable`
-  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so `POST /status` now also accepts `{"leaseRepair":{"action":"repair-stale-heartbeat","runId":"..."}}` on the existing operator-control surface
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) with `repairStaleHeartbeatLease(...)`, which only repairs runs currently classified as `stale-heartbeat` when the existing durable repair posture is already `locally-reclaimable`
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts) so `POST /status` now also accepts `{"leaseRepair":{"action":"repair-stale-heartbeat","runId":"..."}}` on the existing operator-control surface
   - kept `suspiciously-idle` diagnostic only; the new action explicitly rejects it instead of mutating the lease
-  - expanded focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - expanded focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts tests/runtime.repair.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -4511,10 +4511,10 @@
 - Focus:
   - use the new active-lease health classification in one conservative host decision without changing repair or reassignment behavior
 - Progress:
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so active leases classified as `stale-heartbeat` now skip with that explicit reason during bounded host drain instead of falling back to generic `active-lease`
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so active leases classified as `stale-heartbeat` now skip with that explicit reason during bounded host drain instead of falling back to generic `active-lease`
   - kept `suspiciously-idle` diagnostic only; it still does not change host drain behavior
-  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so startup recovery logs now break out `stale-heartbeat` explicitly in metrics
-  - updated focused expectations in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts) so startup recovery logs now break out `stale-heartbeat` explicitly in metrics
+  - updated focused expectations in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -4525,10 +4525,10 @@
 - Focus:
   - classify active runner-owned leases as fresh, stale-heartbeat, or suspiciously idle without changing repair or scheduling behavior
 - Progress:
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so recovery summary now includes bounded `activeLeaseHealth` aggregates and per-run recovery detail now includes `leaseHealth`
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so recovery summary now includes bounded `activeLeaseHealth` aggregates and per-run recovery detail now includes `leaseHealth`
   - kept the seam read-only and derived from the current active lease, runner liveness, and persisted runner activity metadata
-  - expanded focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) for fresh, stale-heartbeat, and suspiciously-idle cases and in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) for recovery-surface propagation
-  - updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md), and [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md) so the operator-facing recovery contract stays aligned
+  - expanded focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts) for fresh, stale-heartbeat, and suspiciously-idle cases and in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts) for recovery-surface propagation
+  - updated [README.md](/home/ecochran76/workspace.local/auracall/README.md), [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md), and [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md) so the operator-facing recovery contract stays aligned
 - Verification:
   - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -4539,13 +4539,13 @@
 - Focus:
   - keep live runner-owned leases fresh while a delayed local execution step is still running
 - Progress:
-  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts) so bounded local execution now starts with a fresh lease expiry, runs a bounded lease-heartbeat loop during step execution, rereads the latest run record before final persist, and stops the heartbeat before release
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so the host seam can pass bounded lease-heartbeat settings through to the runner-owned execution path
+  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts) so bounded local execution now starts with a fresh lease expiry, runs a bounded lease-heartbeat loop during step execution, rereads the latest run record before final persist, and stops the heartbeat before release
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so the host seam can pass bounded lease-heartbeat settings through to the runner-owned execution path
   - expanded focused coverage in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
-  - updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md), and [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md) so operator-facing lease-freshness behavior stays explicit
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
+  - updated [README.md](/home/ecochran76/workspace.local/auracall/README.md), [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md), and [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md) so operator-facing lease-freshness behavior stays explicit
 - Verification:
   - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -4558,27 +4558,27 @@
   - make the persisted local runner record reflect real execution activity, not only heartbeat liveness
 - Progress:
   - updated
-    [src/runtime/types.ts](/home/ecochran76/workspace.local/oracle/src/runtime/types.ts),
-    [src/runtime/schema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/schema.ts),
-    and [src/runtime/model.ts](/home/ecochran76/workspace.local/oracle/src/runtime/model.ts)
+    [src/runtime/types.ts](/home/ecochran76/workspace.local/auracall/src/runtime/types.ts),
+    [src/runtime/schema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/schema.ts),
+    and [src/runtime/model.ts](/home/ecochran76/workspace.local/auracall/src/runtime/model.ts)
     with bounded runner activity fields:
     - `lastActivityAt`
     - `lastClaimedRunId`
-  - updated [src/runtime/runnersControl.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runnersControl.ts)
+  - updated [src/runtime/runnersControl.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runnersControl.ts)
     with one bounded `recordRunnerActivity(...)` control seam
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so successful local execution records runner activity after a run actually advances
-  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
     so plain `/status` refreshes and exposes:
     - `runner.lastActivityAt`
     - `runner.lastClaimedRunId`
   - expanded focused coverage in:
-    - [tests/runtime.runnersControl.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runnersControl.test.ts)
-    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
-    - [tests/runtime.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.types.test.ts)
-    - [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.schema.test.ts)
-    - [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.model.test.ts)
+    - [tests/runtime.runnersControl.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runnersControl.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
+    - [tests/runtime.types.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.types.test.ts)
+    - [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.schema.test.ts)
+    - [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.model.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.runnersControl.test.ts tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts tests/runtime.types.test.ts tests/runtime.schema.test.ts tests/runtime.model.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -4601,145 +4601,145 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 - Date: 2026-04-11
 - Focus: Mirror compact local-claim posture onto plain `/status` without making status reads repair state.
-- Progress: Extended [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) with a read-only `summarizeLocalClaimState(...)` helper that reuses the single-runner selection seam without invoking the broader repair/recovery summary path. Updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so plain `/status` now returns `localClaimSummary` for the configured local runner while `GET /status?recovery=true` keeps the fuller recovery-scoped `recoverySummary.localClaim` aggregate. Added focused coverage in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) and re-verified [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts). Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md) so plain-status vs recovery-status local-claim behavior is explicit.
+- Progress: Extended [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) with a read-only `summarizeLocalClaimState(...)` helper that reuses the single-runner selection seam without invoking the broader repair/recovery summary path. Updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts) so plain `/status` now returns `localClaimSummary` for the configured local runner while `GET /status?recovery=true` keeps the fuller recovery-scoped `recoverySummary.localClaim` aggregate. Added focused coverage in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts) and re-verified [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts). Updated [README.md](/home/ecochran76/workspace.local/auracall/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md) so plain-status vs recovery-status local-claim behavior is explicit.
 - Issues: Plain `/status` now exposes direct-run local claim posture only. Broader source filtering still belongs to the recovery-scoped surface.
 - Next: Move upward to the next live runner/service ownership seam rather than adding more status variants unless operators prove a concrete need.
 
 - Date: 2026-04-11
 - Focus: Add one compact local-claim summary/read surface on top of the single-runner selection seam.
-- Progress: Extended [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so `summarizeRecoveryState(...)` now returns a bounded `localClaim` aggregate when a host `runnerId` is configured. The summary reuses the existing [src/runtime/claims.ts](/home/ecochran76/workspace.local/oracle/src/runtime/claims.ts) single-runner selection seam and reports `runnerId`, selected/blocked/not-ready/unavailable run IDs, and compact reasons. That same contract now flows through [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) on `GET /status?recovery=true` without adding a new route family. Added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts). Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md) so the operator-facing summary contract stays accurate.
+- Progress: Extended [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so `summarizeRecoveryState(...)` now returns a bounded `localClaim` aggregate when a host `runnerId` is configured. The summary reuses the existing [src/runtime/claims.ts](/home/ecochran76/workspace.local/auracall/src/runtime/claims.ts) single-runner selection seam and reports `runnerId`, selected/blocked/not-ready/unavailable run IDs, and compact reasons. That same contract now flows through [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts) on `GET /status?recovery=true` without adding a new route family. Added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts). Updated [README.md](/home/ecochran76/workspace.local/auracall/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md) so the operator-facing summary contract stays accurate.
 - Issues: This is still intentionally compact and single-runner scoped. Exact per-run diagnosis remains on `/status/recovery/{run_id}`.
 - Next: Decide whether the next slice should expose this compact local-claim summary on plain `/status` as well, or move upward to the next live runner/service ownership seam instead.
 
 - Date: 2026-04-11
 - Focus: Add one bounded local runner-selection seam on top of the live single-runner claim model.
-- Progress: Extended [src/runtime/claims.ts](/home/ecochran76/workspace.local/oracle/src/runtime/claims.ts) with `selectStoredExecutionRunLocalClaim(...)`, which wraps the existing single-runner local-claim evaluation and marks only `eligible` claims as `selected`. Updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so both `drainRunsOnce(...)` and `readRecoveryDetail(...)` now consume that same selection seam instead of duplicating local-runner claim reasoning. `localClaim` detail now includes `selected`, and bounded host execution now blocks with `claim-owner-unavailable` whenever the configured local runner is present but not actually selectable. Added focused coverage in [tests/runtime.claims.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.claims.test.ts), [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts), and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts). Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md) so the operator-facing contract stays aligned.
+- Progress: Extended [src/runtime/claims.ts](/home/ecochran76/workspace.local/auracall/src/runtime/claims.ts) with `selectStoredExecutionRunLocalClaim(...)`, which wraps the existing single-runner local-claim evaluation and marks only `eligible` claims as `selected`. Updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so both `drainRunsOnce(...)` and `readRecoveryDetail(...)` now consume that same selection seam instead of duplicating local-runner claim reasoning. `localClaim` detail now includes `selected`, and bounded host execution now blocks with `claim-owner-unavailable` whenever the configured local runner is present but not actually selectable. Added focused coverage in [tests/runtime.claims.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.claims.test.ts), [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts), and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts). Updated [README.md](/home/ecochran76/workspace.local/auracall/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md) so the operator-facing contract stays aligned.
 - Issues: This remains a bounded single-runner seam. It decides whether the configured local runner is selected, but it still does not rank or compete multiple runners.
 - Next: Add one bounded local runner-selection summary/read surface if operators need it; otherwise move upward to the next live runner/service ownership seam instead of inventing multi-runner scheduling early.
 
 - Date: 2026-04-11
 - Focus: Add one bounded local claim-read seam on top of the live runner-owned host model.
-- Progress: Extended [src/runtime/claims.ts](/home/ecochran76/workspace.local/oracle/src/runtime/claims.ts) with a read-only `evaluateStoredExecutionRunLocalClaim(...)` helper for one configured runner and threaded that through [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) as `readRecoveryDetail(...).localClaim`. The existing recovery-detail surface now reports the configured local runner's claim posture for the inspected run, including `runnerId`, `hostId`, status, queue/claim state, and affinity reasoning. Updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) only indirectly by preserving the same `/status/recovery/{run_id}` route and letting it carry the richer detail payload. Added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) for an eligible configured local runner and updated [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) to prove the held-by-lease local-claim posture through the HTTP detail route. Re-verified [tests/runtime.claims.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.claims.test.ts) beside the new seam. Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md) so the operator-facing detail contract stays accurate.
+- Progress: Extended [src/runtime/claims.ts](/home/ecochran76/workspace.local/auracall/src/runtime/claims.ts) with a read-only `evaluateStoredExecutionRunLocalClaim(...)` helper for one configured runner and threaded that through [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) as `readRecoveryDetail(...).localClaim`. The existing recovery-detail surface now reports the configured local runner's claim posture for the inspected run, including `runnerId`, `hostId`, status, queue/claim state, and affinity reasoning. Updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts) only indirectly by preserving the same `/status/recovery/{run_id}` route and letting it carry the richer detail payload. Added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts) for an eligible configured local runner and updated [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts) to prove the held-by-lease local-claim posture through the HTTP detail route. Re-verified [tests/runtime.claims.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.claims.test.ts) beside the new seam. Updated [README.md](/home/ecochran76/workspace.local/auracall/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md) so the operator-facing detail contract stays accurate.
 - Issues: This is still read-only and single-runner scoped. It explains local claim posture, but it does not yet select among multiple runners or mutate claim ownership by itself.
 - Next: Add one bounded local runner-selection seam or compact claim-summary surface before considering any broader multi-runner scheduling.
 
 - Date: 2026-04-11
 - Focus: Make `serviceHost` consume the live persisted runner identity for bounded local claim ownership.
-- Progress: Updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so hosts configured with a persisted `runnerId` now claim work only through that runner when it is active and unexpired. The first bounded rule is conservative: if the configured runner is missing, stale, or expired, `serviceHost` now skips new runnable work with `claim-owner-unavailable` instead of silently claiming through a generic host string. When the runner is healthy, the lease owner is now the runner id itself. Wired [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) to pass the same live runner id into the host claim path. Added focused regressions in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) for both the healthy-runner and missing-runner cases, then re-verified [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts). Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md) so the ownership semantics are explicit.
+- Progress: Updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so hosts configured with a persisted `runnerId` now claim work only through that runner when it is active and unexpired. The first bounded rule is conservative: if the configured runner is missing, stale, or expired, `serviceHost` now skips new runnable work with `claim-owner-unavailable` instead of silently claiming through a generic host string. When the runner is healthy, the lease owner is now the runner id itself. Wired [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts) to pass the same live runner id into the host claim path. Added focused regressions in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts) for both the healthy-runner and missing-runner cases, then re-verified [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts). Updated [README.md](/home/ecochran76/workspace.local/auracall/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md) so the ownership semantics are explicit.
 - Issues: The host now respects a live single-runner identity, but it still does not choose among multiple candidate runners or reassign work after a blocked claim. This remains single-runner ownership only.
 - Next: Add one bounded runner-aware local claim selection seam or local claim-read surface before considering broader multi-runner scheduling.
 
 - Date: 2026-04-11
 - Focus: Turn the durable runner model into live `api serve` ownership with self-registration and heartbeats.
-- Progress: Updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so the local `api serve` host now owns one persisted runner record for its actual bound `host:port`, passes the same runner-control seam into `serviceHost`, heartbeats that runner while the server is alive, and marks it stale on shutdown. `/status` now reports the live runner posture under a bounded `runner` block instead of forcing operators to inspect runner JSON files directly. Added focused coverage in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) for active status reporting and stale-on-close behavior, then re-verified [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) to make sure the host seam still stays green beside the live-runner change. Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md) so the operator contract is explicit.
+- Progress: Updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts) so the local `api serve` host now owns one persisted runner record for its actual bound `host:port`, passes the same runner-control seam into `serviceHost`, heartbeats that runner while the server is alive, and marks it stale on shutdown. `/status` now reports the live runner posture under a bounded `runner` block instead of forcing operators to inspect runner JSON files directly. Added focused coverage in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts) for active status reporting and stale-on-close behavior, then re-verified [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts) to make sure the host seam still stays green beside the live-runner change. Updated [README.md](/home/ecochran76/workspace.local/auracall/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md) so the operator contract is explicit.
 - Issues: This is still single-host ownership only. The server now owns a real runner identity, but there is still no persisted claim loop that selects among multiple active runners or reassigns work between them.
 - Next: Add one bounded runner-aware host execution seam that consumes the persisted runner identity for claim/lease behavior instead of stopping at heartbeat-only ownership.
 
 - Date: 2026-04-11
 - Focus: Reassess the durable-state lane after the new recovery summary/detail checkpoints.
-- Progress: Audited [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md), [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md), [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md), [docs/dev/runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-runner-slice-plan.md), and [docs/dev/service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md). The conclusion is now explicit in the planning docs: this durable-state sub-lane is coherent enough to pause. The next higher-yield missing seam is no longer more durable vocabulary or more operator surface. It is live runner ownership: `api serve` / `serviceHost` still do not register themselves as persisted runners or heartbeat that identity while alive, so the durable runner model remains disconnected from the actual host loop.
+- Progress: Audited [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md), [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md), [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/durable-state-account-mirroring-plan.md), [docs/dev/runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/runtime-runner-slice-plan.md), and [docs/dev/service-runtime-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/service-runtime-execution-plan.md). The conclusion is now explicit in the planning docs: this durable-state sub-lane is coherent enough to pause. The next higher-yield missing seam is no longer more durable vocabulary or more operator surface. It is live runner ownership: `api serve` / `serviceHost` still do not register themselves as persisted runners or heartbeat that identity while alive, so the durable runner model remains disconnected from the actual host loop.
 - Issues: The repo now has durable runner records, claim reasoning, reconciliation, repair, and operator inspection, but no live service path owns a persisted runner identity yet.
 - Next: Reopen the service-host / runner orchestration lane with one bounded runner self-registration + heartbeat seam for `api serve`.
 
 - Date: 2026-04-11
 - Focus: Add one separate detailed recovery read surface instead of growing the summary payload further.
-- Progress: Extended [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) with `readRecoveryDetail(runId)` so the host can return one read-only per-run view containing current host classification, active lease snapshot, dispatch posture, and reconciliation / repair posture with reasons. Exposed that seam through [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) as `GET /status/recovery/{run_id}` and updated the status route metadata to advertise the new template. Added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts), including the 404 path. Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md) so the operator surface is explicit.
+- Progress: Extended [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) with `readRecoveryDetail(runId)` so the host can return one read-only per-run view containing current host classification, active lease snapshot, dispatch posture, and reconciliation / repair posture with reasons. Exposed that seam through [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts) as `GET /status/recovery/{run_id}` and updated the status route metadata to advertise the new template. Added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts), including the 404 path. Updated [README.md](/home/ecochran76/workspace.local/auracall/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md) so the operator surface is explicit.
 - Issues: The detailed read surface now exists, but it is still single-run only. There is still no bulk detail listing, which is intentional for now.
 - Next: Pause detailed recovery-surface expansion unless operators prove they need bulk detail or richer reconciliation payloads.
 
 - Date: 2026-04-11
 - Focus: Add per-run repair reasons on the existing recovery summary surface.
-- Progress: Extended [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so `recoverySummary.leaseRepair` now also includes `reasonsByRunId`, derived directly from the existing repair-classification reason strings. Kept the seam bounded and read-only: there is still one recovery surface and one repair vocabulary, just with a per-run reason map on top. Updated [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) to prove both the direct host summary and `/status?recovery=true` propagation. Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md) so the operator contract is explicit.
+- Progress: Extended [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so `recoverySummary.leaseRepair` now also includes `reasonsByRunId`, derived directly from the existing repair-classification reason strings. Kept the seam bounded and read-only: there is still one recovery surface and one repair vocabulary, just with a per-run reason map on top. Updated [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts) to prove both the direct host summary and `/status?recovery=true` propagation. Updated [README.md](/home/ecochran76/workspace.local/auracall/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md) so the operator contract is explicit.
 - Issues: Operators can now see per-run repair reasons, but the surface is still summary-shaped. There is still no deeper per-run reconciliation payload beyond the bounded reason map.
 - Next: If more depth is needed, add one bounded detailed reconciliation read surface that stays separate from the lightweight recovery summary.
 
 - Date: 2026-04-11
 - Focus: Expose reconciliation/repair posture through the existing recovery summary surface.
-- Progress: Extended [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so `summarizeRecoveryState(...)` now returns a bounded `leaseRepair` block with `locallyReclaimableRunIds`, `inspectOnlyRunIds`, `notReclaimableRunIds`, `repairedRunIds`, and matching metrics. Kept the seam aligned with the existing repair vocabulary instead of inventing a second status model. Updated [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) to prove both the direct host summary and `/status?recovery=true` propagation, including the stateful case where an earlier recovery read repairs a locally reclaimable lease before a later summary call. Updated operator docs in [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md).
+- Progress: Extended [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so `summarizeRecoveryState(...)` now returns a bounded `leaseRepair` block with `locallyReclaimableRunIds`, `inspectOnlyRunIds`, `notReclaimableRunIds`, `repairedRunIds`, and matching metrics. Kept the seam aligned with the existing repair vocabulary instead of inventing a second status model. Updated [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts) to prove both the direct host summary and `/status?recovery=true` propagation, including the stateful case where an earlier recovery read repairs a locally reclaimable lease before a later summary call. Updated operator docs in [README.md](/home/ecochran76/workspace.local/auracall/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md).
 - Issues: Recovery reporting is now explicit, but it still only exposes aggregate repair posture. There is still no per-run detailed reconciliation reason on the operator surface.
 - Next: Add one bounded per-run reconciliation/repair reason seam if operators need deeper inspection, but keep it read-only and aligned with the current vocabulary.
 
 - Date: 2026-04-11
 - Focus: Thread the new conservative lease-repair seam into `serviceHost`.
-- Progress: Updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so bounded host recovery now expires stale runner records before drain/recovery-summary passes and routes expired active-lease repair through `repairStoredExecutionRunLease(...)` instead of blanket-expiring every lease by timestamp alone. The current host rule is now explicit: stale or missing runner plus expired lease is locally reclaimable; active runner plus expired lease remains `active-lease`. Expanded [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) with focused regressions for both the conservative reclaim path and the read-only active-runner path. Updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md), [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md), and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) to record the new host-consumption checkpoint.
+- Progress: Updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts) so bounded host recovery now expires stale runner records before drain/recovery-summary passes and routes expired active-lease repair through `repairStoredExecutionRunLease(...)` instead of blanket-expiring every lease by timestamp alone. The current host rule is now explicit: stale or missing runner plus expired lease is locally reclaimable; active runner plus expired lease remains `active-lease`. Expanded [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts) with focused regressions for both the conservative reclaim path and the read-only active-runner path. Updated [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md), [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/durable-state-account-mirroring-plan.md), and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md) to record the new host-consumption checkpoint.
 - Issues: `serviceHost` now consumes the conservative repair seam, but reconciliation/repair posture is still not surfaced through operator status. Lease repair also remains limited to local expiry through the existing control path; there is still no reassignment policy.
 - Next: Add one bounded operator/reporting seam for reconciliation/repair posture before attempting broader automatic reclaim or reassignment behavior.
 
 - Date: 2026-04-11
 - Focus: Add the first conservative lease-repair action for locally reclaimable cases.
-- Progress: Extended [src/runtime/repair.ts](/home/ecochran76/workspace.local/oracle/src/runtime/repair.ts) with `repairStoredExecutionRunLease(...)`, gated strictly by the existing repair-posture seam. The current action mutates only `locally-reclaimable` cases and expires the active lease through the existing runtime control seam, while leaving `inspect-only` and `not-reclaimable` cases untouched. Expanded [tests/runtime.repair.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.repair.test.ts) to prove both the reclaimable mutation path and the read-only inspect-only path, then re-verified the adjacent repair/reconciliation/runner/store/control suite. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the first repair-action checkpoint is explicit.
+- Progress: Extended [src/runtime/repair.ts](/home/ecochran76/workspace.local/auracall/src/runtime/repair.ts) with `repairStoredExecutionRunLease(...)`, gated strictly by the existing repair-posture seam. The current action mutates only `locally-reclaimable` cases and expires the active lease through the existing runtime control seam, while leaving `inspect-only` and `not-reclaimable` cases untouched. Expanded [tests/runtime.repair.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.repair.test.ts) to prove both the reclaimable mutation path and the read-only inspect-only path, then re-verified the adjacent repair/reconciliation/runner/store/control suite. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md) so the first repair-action checkpoint is explicit.
 - Issues: The first repair action exists, but it is still a library/control seam only. The host layer does not yet consume reconciliation/repair posture automatically during bounded recovery or drain.
 - Next: Add one bounded service-host consumption seam so host recovery can inspect and optionally use the new repair classification/action instead of relying only on older lease/run heuristics.
 
 - Date: 2026-04-11
 - Focus: Add bounded repair/reclaim posture on top of lease/runner reconciliation.
-- Progress: Added [src/runtime/repair.ts](/home/ecochran76/workspace.local/oracle/src/runtime/repair.ts) as the first repair-classification seam for the durable-state lane. The new helper maps reconciliation outcomes into `inspect-only`, `locally-reclaimable`, or `not-reclaimable`, with one explicit conservative rule: stale or missing runner ownership is only locally reclaimable after the active lease itself is expired. Added focused coverage in [tests/runtime.repair.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.repair.test.ts), then re-verified the adjacent reconciliation, runner-control, claims, runner-store, run-store, and runtime-control suite. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the repair-posture checkpoint is explicit.
+- Progress: Added [src/runtime/repair.ts](/home/ecochran76/workspace.local/auracall/src/runtime/repair.ts) as the first repair-classification seam for the durable-state lane. The new helper maps reconciliation outcomes into `inspect-only`, `locally-reclaimable`, or `not-reclaimable`, with one explicit conservative rule: stale or missing runner ownership is only locally reclaimable after the active lease itself is expired. Added focused coverage in [tests/runtime.repair.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.repair.test.ts), then re-verified the adjacent reconciliation, runner-control, claims, runner-store, run-store, and runtime-control suite. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md) so the repair-posture checkpoint is explicit.
 - Issues: Repair posture is now explicit, but it is still policy-only. There is still no bounded repair action that actually clears or expires a locally reclaimable lease.
 - Next: Add the first bounded lease-repair action for `locally-reclaimable` cases only, keeping all other postures read-only.
 
 - Date: 2026-04-11
 - Focus: Add diagnosis-first lease/runner reconciliation on top of persisted runner liveness.
-- Progress: Added [src/runtime/reconciliation.ts](/home/ecochran76/workspace.local/oracle/src/runtime/reconciliation.ts) as the first bounded lease/runner reconciliation seam. The helper compares active leases on persisted runs against persisted runner records and classifies them as `no-active-lease`, `active-runner`, `stale-runner`, or `missing-runner`. Added focused coverage in [tests/runtime.reconciliation.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.reconciliation.test.ts), then re-verified the adjacent runner-control, claims, runner-store, run-store, and runtime-control suite. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the reconciliation checkpoint is explicit.
+- Progress: Added [src/runtime/reconciliation.ts](/home/ecochran76/workspace.local/auracall/src/runtime/reconciliation.ts) as the first bounded lease/runner reconciliation seam. The helper compares active leases on persisted runs against persisted runner records and classifies them as `no-active-lease`, `active-runner`, `stale-runner`, or `missing-runner`. Added focused coverage in [tests/runtime.reconciliation.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.reconciliation.test.ts), then re-verified the adjacent runner-control, claims, runner-store, run-store, and runtime-control suite. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md) so the reconciliation checkpoint is explicit.
 - Issues: Reconciliation is now explicit, but it is still diagnosis-only. There is still no bounded repair policy for what to do with an active lease owned by a stale or missing runner.
 - Next: Add one bounded repair/reclaim posture seam that decides which stale/missing-runner lease situations are only inspectable versus locally reclaimable.
 
 - Date: 2026-04-11
 - Focus: Add bounded stale-runner expiry/reconciliation on the persisted runner-control seam.
-- Progress: Extended [src/runtime/runnersControl.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runnersControl.ts) with `expireRunners(...)` so persisted runner records can be swept from `active` to `stale` when `expiresAt` has passed. Kept the behavior bounded: it only updates runner liveness metadata and does not mutate leases. Expanded focused coverage in [tests/runtime.runnersControl.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runnersControl.test.ts) for the sweep itself and in [tests/runtime.claims.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.claims.test.ts) to prove later claim-candidate evaluation reflects the stale posture. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the runner-liveness checkpoint is recorded explicitly.
+- Progress: Extended [src/runtime/runnersControl.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runnersControl.ts) with `expireRunners(...)` so persisted runner records can be swept from `active` to `stale` when `expiresAt` has passed. Kept the behavior bounded: it only updates runner liveness metadata and does not mutate leases. Expanded focused coverage in [tests/runtime.runnersControl.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runnersControl.test.ts) for the sweep itself and in [tests/runtime.claims.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.claims.test.ts) to prove later claim-candidate evaluation reflects the stale posture. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md) so the runner-liveness checkpoint is recorded explicitly.
 - Issues: Runner liveness cleanup is now explicit, but stale runners still are not reconciled against old active leases. There is still no bounded seam that explains whether a stale runner’s outstanding leases should be treated as reclaimable, merely inspectable, or immediately expired.
 - Next: Add one bounded lease/runner reconciliation seam that compares stale runner records against active leases and returns deterministic local repair posture without becoming a scheduler.
 
 - Date: 2026-04-11
 - Focus: Add a bounded persisted claim-candidate evaluation seam over runner records and queue posture.
-- Progress: Added [src/runtime/claims.ts](/home/ecochran76/workspace.local/oracle/src/runtime/claims.ts) as the first persisted claim-candidate helper for the durable-state lane. The new seam combines persisted run inspection, the existing derived queue-ready projection, explicit affinity requirements, and persisted runner records to classify local candidates as `eligible`, `blocked-affinity`, `stale-runner`, or `not-ready`. Added focused coverage in [tests/runtime.claims.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.claims.test.ts), then re-verified the adjacent runner/projection/store/control suite. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the new checkpoint is recorded explicitly.
+- Progress: Added [src/runtime/claims.ts](/home/ecochran76/workspace.local/auracall/src/runtime/claims.ts) as the first persisted claim-candidate helper for the durable-state lane. The new seam combines persisted run inspection, the existing derived queue-ready projection, explicit affinity requirements, and persisted runner records to classify local candidates as `eligible`, `blocked-affinity`, `stale-runner`, or `not-ready`. Added focused coverage in [tests/runtime.claims.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.claims.test.ts), then re-verified the adjacent runner/projection/store/control suite. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md) so the new checkpoint is recorded explicitly.
 - Issues: Candidate evaluation is now explicit, but stale-runner expiry/reconciliation is still manual. There is still no bounded sweep that marks expired active runners stale or reconciles runner liveness with old leases.
 - Next: Add one bounded stale-runner expiry/reconciliation seam so persisted runner records stop relying on purely external callers to flip `active` to `stale`.
 
 - Date: 2026-04-11
 - Focus: Add the first persisted runner-registry/store seam for durable ownership and liveness.
-- Progress: Added a revisioned local runner registry in [src/runtime/runnersStore.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runnersStore.ts) and a bounded control seam in [src/runtime/runnersControl.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runnersControl.ts). The current persisted operations are `register`, `read`, `list`, `heartbeat`, and `mark stale`, using the same local JSON record pattern as runtime run records. Added focused coverage in [tests/runtime.runnersStore.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runnersStore.test.ts) and [tests/runtime.runnersControl.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runnersControl.test.ts), then re-verified the adjacent runtime type/schema/model/projection/store/control suite. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the active durable-state lane now records the persisted runner-registry checkpoint explicitly.
+- Progress: Added a revisioned local runner registry in [src/runtime/runnersStore.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runnersStore.ts) and a bounded control seam in [src/runtime/runnersControl.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runnersControl.ts). The current persisted operations are `register`, `read`, `list`, `heartbeat`, and `mark stale`, using the same local JSON record pattern as runtime run records. Added focused coverage in [tests/runtime.runnersStore.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runnersStore.test.ts) and [tests/runtime.runnersControl.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runnersControl.test.ts), then re-verified the adjacent runtime type/schema/model/projection/store/control suite. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md) so the active durable-state lane now records the persisted runner-registry checkpoint explicitly.
 - Issues: Runner records are now durable, but they still are not tied into claim selection beyond direct projection evaluation. There is still no claim-candidate selection surface over persisted runner records, and no automatic stale-runner cleanup or lease/runner reconciliation logic.
 - Next: Add one bounded claim-candidate evaluation seam that reads persisted runner records plus the existing queue projection and returns eligible vs blocked local claim candidates without inventing a distributed scheduler.
 
 - Date: 2026-04-11
 - Focus: Add the first explicit runtime-local runner identity / heartbeat seam for durable claim ownership.
-- Progress: Added the first bounded runner record vocabulary in [src/runtime/types.ts](/home/ecochran76/workspace.local/oracle/src/runtime/types.ts), [src/runtime/schema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/schema.ts), and [src/runtime/model.ts](/home/ecochran76/workspace.local/oracle/src/runtime/model.ts). The current runner record covers `id`, `hostId`, `status`, `startedAt`, `lastHeartbeatAt`, `expiresAt`, `serviceIds`, `runtimeProfileIds`, `browserProfileIds`, `serviceAccountIds`, `browserCapable`, and `eligibilityNote`. Updated [src/runtime/projection.ts](/home/ecochran76/workspace.local/oracle/src/runtime/projection.ts) so the derived queue-ready projection can evaluate one bounded runner record directly against explicit affinity requirements, including active vs stale heartbeat posture. Expanded focused coverage in [tests/runtime.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.types.test.ts), [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.schema.test.ts), [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.model.test.ts), and [tests/runtime.projection.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.projection.test.ts). Focused Vitest and repo typecheck both passed.
+- Progress: Added the first bounded runner record vocabulary in [src/runtime/types.ts](/home/ecochran76/workspace.local/auracall/src/runtime/types.ts), [src/runtime/schema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/schema.ts), and [src/runtime/model.ts](/home/ecochran76/workspace.local/auracall/src/runtime/model.ts). The current runner record covers `id`, `hostId`, `status`, `startedAt`, `lastHeartbeatAt`, `expiresAt`, `serviceIds`, `runtimeProfileIds`, `browserProfileIds`, `serviceAccountIds`, `browserCapable`, and `eligibilityNote`. Updated [src/runtime/projection.ts](/home/ecochran76/workspace.local/auracall/src/runtime/projection.ts) so the derived queue-ready projection can evaluate one bounded runner record directly against explicit affinity requirements, including active vs stale heartbeat posture. Expanded focused coverage in [tests/runtime.types.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.types.test.ts), [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.schema.test.ts), [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.model.test.ts), and [tests/runtime.projection.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.projection.test.ts). Focused Vitest and repo typecheck both passed.
 - Issues: Runner ownership/liveness is now explicit enough for local claim reasoning, but it is still only a record/schema seam. There is still no durable runner registry, heartbeat persistence policy beyond local records, or multi-runner claim workflow.
 - Next: Define the next bounded durable-state seam for a real runner registry/store path or claim-candidate evaluation surface so leases stop being the only persisted ownership artifact.
 
 - Date: 2026-04-11
 - Focus: Add the first explicit runtime-local affinity seam for the durable-state lane.
-- Progress: Added the first bounded affinity vocabulary in [src/runtime/types.ts](/home/ecochran76/workspace.local/oracle/src/runtime/types.ts), [src/runtime/schema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/schema.ts), and [src/runtime/model.ts](/home/ecochran76/workspace.local/oracle/src/runtime/model.ts). The current explicit affinity record covers `service`, `serviceAccountId`, `browserRequired`, `runtimeProfileId`, `browserProfileId`, `hostRequirement`, `requiredHostId`, and `eligibilityNote`. Updated [src/runtime/projection.ts](/home/ecochran76/workspace.local/oracle/src/runtime/projection.ts) so the derived queue-ready projection can consume that record directly while preserving the existing evaluation hook for future claim policy. Expanded focused coverage in [tests/runtime.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.types.test.ts), [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.schema.test.ts), [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.model.test.ts), and [tests/runtime.projection.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.projection.test.ts). Focused Vitest and repo typecheck both passed.
+- Progress: Added the first bounded affinity vocabulary in [src/runtime/types.ts](/home/ecochran76/workspace.local/auracall/src/runtime/types.ts), [src/runtime/schema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/schema.ts), and [src/runtime/model.ts](/home/ecochran76/workspace.local/auracall/src/runtime/model.ts). The current explicit affinity record covers `service`, `serviceAccountId`, `browserRequired`, `runtimeProfileId`, `browserProfileId`, `hostRequirement`, `requiredHostId`, and `eligibilityNote`. Updated [src/runtime/projection.ts](/home/ecochran76/workspace.local/auracall/src/runtime/projection.ts) so the derived queue-ready projection can consume that record directly while preserving the existing evaluation hook for future claim policy. Expanded focused coverage in [tests/runtime.types.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.types.test.ts), [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.schema.test.ts), [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.model.test.ts), and [tests/runtime.projection.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.projection.test.ts). Focused Vitest and repo typecheck both passed.
 - Issues: Affinity is now explicit enough for local durable claim reasoning, but it is still local-only. There is still no durable account-mirroring implementation, runner-heartbeat claim policy, or multi-runner affinity ownership model.
 - Next: Define the next bounded durable-state seam for runner identity / heartbeat ownership so future claim decisions stop depending only on the current local host posture.
 
 - Date: 2026-04-09
 - Focus: Add role-aware team planning inputs and explicit planned handoff entities.
-- Progress: Extended the internal planning seam so config teams can now carry optional `instructions` plus `roles` metadata with per-role agent binding, order, instructions, step kind, optional response-shape hints, and `handoffToRole`. Updated [src/schema/types.ts](/home/ecochran76/workspace.local/oracle/src/schema/types.ts) and [tests/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/config.test.ts) for that config shape. Then extended [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts) and [src/teams/service.ts](/home/ecochran76/workspace.local/oracle/src/teams/service.ts) so task-aware planning can consume those role definitions from config, generate richer role-specific prompts, and expose planned `handoffs[]` derived from the step graph. Focused coverage passed in [tests/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/config.test.ts), [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts), [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts), and [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.model.test.ts), with repo typecheck also green.
+- Progress: Extended the internal planning seam so config teams can now carry optional `instructions` plus `roles` metadata with per-role agent binding, order, instructions, step kind, optional response-shape hints, and `handoffToRole`. Updated [src/schema/types.ts](/home/ecochran76/workspace.local/auracall/src/schema/types.ts) and [tests/config.test.ts](/home/ecochran76/workspace.local/auracall/tests/config.test.ts) for that config shape. Then extended [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts) and [src/teams/service.ts](/home/ecochran76/workspace.local/auracall/src/teams/service.ts) so task-aware planning can consume those role definitions from config, generate richer role-specific prompts, and expose planned `handoffs[]` derived from the step graph. Focused coverage passed in [tests/config.test.ts](/home/ecochran76/workspace.local/auracall/tests/config.test.ts), [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts), [tests/teams.service.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.service.test.ts), and [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.model.test.ts), with repo typecheck also green.
 - Issues: This is still a conservative internal planner. Role-aware planning currently comes from config-driven task-aware paths, while the fallback planner still uses ordered members when role metadata is absent. Planned handoffs exist at the service-plan layer only and are not yet persisted as part of the team-run bundle/runtime projection.
 - Next: Define whether planned handoffs should become first-class persisted team-run entities at bundle creation time, and decide whether local host-action requests need their own durable entity rather than living only in policy and future step-output payloads.
 
 - Date: 2026-04-09
 - Focus: Make planned team runs consume `taskRunSpec` explicitly instead of relying only on member-order defaults.
-- Progress: Extended the team planner/model seam so [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts) now supports `createTeamRunBundleFromResolvedTeamTaskRunSpec(...)` and derives planned step prompts, artifacts, structured task metadata, and step kinds from `taskRunSpec` input. Added an explicit `taskRunSpecId` link on planned `teamRun` records in [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts) and [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts), plus a service-level helper in [src/teams/service.ts](/home/ecochran76/workspace.local/oracle/src/teams/service.ts). Focused coverage now proves task-aware planning in [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts), [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts), and [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.model.test.ts). Focused Vitest and repo typecheck both passed.
+- Progress: Extended the team planner/model seam so [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts) now supports `createTeamRunBundleFromResolvedTeamTaskRunSpec(...)` and derives planned step prompts, artifacts, structured task metadata, and step kinds from `taskRunSpec` input. Added an explicit `taskRunSpecId` link on planned `teamRun` records in [src/teams/types.ts](/home/ecochran76/workspace.local/auracall/src/teams/types.ts) and [src/teams/schema.ts](/home/ecochran76/workspace.local/auracall/src/teams/schema.ts), plus a service-level helper in [src/teams/service.ts](/home/ecochran76/workspace.local/auracall/src/teams/service.ts). Focused coverage now proves task-aware planning in [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts), [tests/teams.service.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.service.test.ts), and [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.model.test.ts). Focused Vitest and repo typecheck both passed.
 - Issues: The task-aware planner is still conservative. It remains sequential and still uses member order as the base dependency chain; the improvement is that assignment intent now shapes planned step input/kind instead of being absent from the planner.
 - Next: Decide whether the next planner slice should add explicit role-aware step derivation and handoff entity planning, or define the first local-action request entity so host actions stop living only as policy and future step-output data.
 
 - Date: 2026-04-09
 - Focus: Land the first code-facing assignment object for team execution planning.
-- Progress: Added the first `taskRunSpec` code seam under [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts), [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts), and [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts). The new shape now covers requested outputs, input artifacts, turn policy, human-interaction policy, and local-action policy, with conservative defaults plus `createTaskRunSpec(...)` as a bounded normalization helper. Added focused coverage in [tests/teams.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.types.test.ts), [tests/teams.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.schema.test.ts), and [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts). Focused Vitest and repo typecheck both passed.
+- Progress: Added the first `taskRunSpec` code seam under [src/teams/types.ts](/home/ecochran76/workspace.local/auracall/src/teams/types.ts), [src/teams/schema.ts](/home/ecochran76/workspace.local/auracall/src/teams/schema.ts), and [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts). The new shape now covers requested outputs, input artifacts, turn policy, human-interaction policy, and local-action policy, with conservative defaults plus `createTaskRunSpec(...)` as a bounded normalization helper. Added focused coverage in [tests/teams.types.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.types.test.ts), [tests/teams.schema.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.schema.test.ts), and [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts). Focused Vitest and repo typecheck both passed.
 - Issues: The new assignment object is not wired into the team planner yet. Current internal team planning still derives sequential prompt-like steps directly from resolved member order.
 - Next: Define the first planner mapping from `team + taskRunSpec` into planned `teamRun` steps without exposing a public `team run` surface yet.
 
 - Date: 2026-04-09
 - Focus: Define the first code-facing task/run-spec model before public team execution semantics.
-- Progress: Added [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md) as the first dedicated assignment-layer design note. It now separates `team`, `task / run spec`, and `run`; recommends `taskRunSpec` as the first bounded object name; defines the minimum assignment fields; and gives unattended multi-turn automation plus host-action requests a clear home. Linked that plan from [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md), [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md), and [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md) so later execution work is gated on the assignment layer instead of inferring it from current team-run builder defaults.
+- Progress: Added [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/task-run-spec-plan.md) as the first dedicated assignment-layer design note. It now separates `team`, `task / run spec`, and `run`; recommends `taskRunSpec` as the first bounded object name; defines the minimum assignment fields; and gives unattended multi-turn automation plus host-action requests a clear home. Linked that plan from [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md), [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md), and [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-run-data-model-plan.md) so later execution work is gated on the assignment layer instead of inferring it from current team-run builder defaults.
 - Issues: This is still planning-only. No `src/*` schema or runtime mapping exists yet, and the existing internal team planner still derives sequential prompt-like steps directly from member order.
 - Next: Decide whether to implement the first code-facing assignment schema as `taskRunSpec` or `taskSpec`, then define how that object maps into planned `teamRun` steps and handoff contracts.
 
 - Date: 2026-04-09
 - Focus: Elevate team/task/run semantics into roadmap checkpoints instead of leaving them as planning narrative.
-- Progress: Updated [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the roadmap now explicitly gates future public team execution on three semantic checkpoints:
+- Progress: Updated [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md) so the roadmap now explicitly gates future public team execution on three semantic checkpoints:
   - `team` as reusable orchestration template
   - `task` / `run spec` as the concrete assignment layer
   - conservative `team run` execution only after that split is codified
@@ -4749,7 +4749,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 - Date: 2026-04-09
 - Focus: Freeze the team concept before exposing any public team-execution surface.
-- Progress: Audited the current team boundary, service-execution, runtime-bridge, and CLI docs/code against the intended product model. Updated [docs/dev/team-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-config-boundary-plan.md), [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md), and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the conceptual split is explicit: a `team` is a reusable orchestration template, a separate `task` / `run spec` carries the concrete assignment, and a `run` is the durable execution attempt. The docs now also warn that the current internal sequential member-to-step projection is an MVP execution strategy, not the canonical product meaning of team semantics.
+- Progress: Audited the current team boundary, service-execution, runtime-bridge, and CLI docs/code against the intended product model. Updated [docs/dev/team-config-boundary-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-config-boundary-plan.md), [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-service-execution-plan.md), and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md) so the conceptual split is explicit: a `team` is a reusable orchestration template, a separate `task` / `run spec` carries the concrete assignment, and a `run` is the durable execution attempt. The docs now also warn that the current internal sequential member-to-step projection is an MVP execution strategy, not the canonical product meaning of team semantics.
 - Issues: The repo still has no final schema naming or transport shape for `task` / `run spec`, and the current internal `src/teams/model.ts` builder still projects raw member order to prompt-shaped sequential steps.
 - Next: Decide the first code-facing shape for `task` / `run spec` before adding any public `team run` CLI/API surface, and keep the current runtime bridge internal until that boundary is settled.
 
@@ -4761,25 +4761,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 - Date: 2026-04-09
 - Focus: Expose startup recovery controls on the `api serve` command surface.
-- Progress: Added recovery control flags to `auracall api serve` in [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts): `--no-recover-runs-on-start` and `--recover-runs-on-start-max <count>`. The defaults remain `recover` enabled with cap 100. Updated [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md) so operators can intentionally tune or disable startup recovery.
+- Progress: Added recovery control flags to `auracall api serve` in [bin/auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts): `--no-recover-runs-on-start` and `--recover-runs-on-start-max <count>`. The defaults remain `recover` enabled with cap 100. Updated [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md) so operators can intentionally tune or disable startup recovery.
 - Issues: No daemon behavior is introduced; this stays a startup-only bounded hook.
 - Next: Validate CLI defaults in one smoke run and decide whether a dedicated recovery daemon is still needed for multi-process restart scenarios.
 
 - Date: 2026-04-09
 - Focus: Harden startup recovery observability for bounded host recovery.
-- Progress: Added coverage in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) for startup-recovery cap saturation (`recoverRunsOnStartMaxRuns`) so bounded recovery logs include a `cap=<n> hits reached` marker plus skip-reason accounting when candidates exceed the run cap.
+- Progress: Added coverage in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts) for startup-recovery cap saturation (`recoverRunsOnStartMaxRuns`) so bounded recovery logs include a `cap=<n> hits reached` marker plus skip-reason accounting when candidates exceed the run cap.
 - Issues: None.
 - Next: Keep startup recovery bounded and startup-only while we validate whether a dedicated recovery daemon is needed for multi-process operators.
 
 - Date: 2026-04-09
 - Focus: Add startup run recovery to `serve` without changing route shape.
-- Progress: Updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so `serveResponsesHttp` starts with `recoverRunsOnStart: true`, and `createResponsesHttpServer` can now invoke `executionHost.drainRunsUntilIdle(...)` for stale persisted direct runs before serving readback. Added host reuse options (`recoverRunsOnStart`, `recoverRunsOnStartMaxRuns`) and optional injectable `executionHost`, and ensured recovered runs use the same injected `now`/runner wiring as foreground execution. Exported `createExecutionRequestFromRecord` from [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts) so server-level host recovery can reconstruct requests with the same normalization path used by request-driven execution.
+- Progress: Updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts) so `serveResponsesHttp` starts with `recoverRunsOnStart: true`, and `createResponsesHttpServer` can now invoke `executionHost.drainRunsUntilIdle(...)` for stale persisted direct runs before serving readback. Added host reuse options (`recoverRunsOnStart`, `recoverRunsOnStartMaxRuns`) and optional injectable `executionHost`, and ensured recovered runs use the same injected `now`/runner wiring as foreground execution. Exported `createExecutionRequestFromRecord` from [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/auracall/src/runtime/responsesService.ts) so server-level host recovery can reconstruct requests with the same normalization path used by request-driven execution.
 - Issues: This recovery remains bounded and direct-run only. We intentionally avoid introducing a background scheduler; startup recovery is a recovery-on-launch hook.
 - Next: Reassess whether recovery should remain startup-only or move to a dedicated recovery daemon before widening beyond the `responses` API.
 
 - Date: 2026-04-09
 - Focus: Harden the responses service seam by reusing a single host and preserving stored-run context.
-- Progress: Updated [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts) to accept an injected runtime host, reuse one `ExecutionServiceHost`, and reconstruct a full `ExecutionRequest` from persisted run records before invoking the runner callback. The callback now receives both `(request, context)` so downstream executors can use run/step details without additional store lookups. Added/updated targeted regression coverage in [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts) to assert callback reconstruction behavior.
+- Progress: Updated [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/auracall/src/runtime/responsesService.ts) to accept an injected runtime host, reuse one `ExecutionServiceHost`, and reconstruct a full `ExecutionRequest` from persisted run records before invoking the runner callback. The callback now receives both `(request, context)` so downstream executors can use run/step details without additional store lookups. Added/updated targeted regression coverage in [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts) to assert callback reconstruction behavior.
 - Issues: Existing record-to-request reconstruction currently trusts normalized legacy shapes and backfills defaults, so it is intentionally conservative and aligned to the direct-run request shape currently emitted by `createDirectExecutionBundle`.
 - Next: Decide whether we should extend this seam to a dedicated background polling host for API serve or keep this bounded synchronous callback path as the runtime/API checkpoint and shift to the broader roadmap review.
 
@@ -4899,19 +4899,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 - Date: 2026-03-31
 - Focus: Finish the last pure declarative Grok route cleanup and stop the route-manifest slice at the right boundary.
-- Progress: Replaced the remaining hardcoded Grok root conversation URL fallbacks embedded in browser-evaluated scripts with helper-backed injected values in [src/browser/providers/grokAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/grokAdapter.ts). A final grep now shows only manifest defaults/templates themselves, not duplicated runtime route literals. Focused Grok/registry tests and `pnpm run check` passed.
+- Progress: Replaced the remaining hardcoded Grok root conversation URL fallbacks embedded in browser-evaluated scripts with helper-backed injected values in [src/browser/providers/grokAdapter.ts](/home/ecochran76/workspace.local/auracall/src/browser/providers/grokAdapter.ts). A final grep now shows only manifest defaults/templates themselves, not duplicated runtime route literals. Focused Grok/registry tests and `pnpm run check` passed.
 - Issues: The remaining Grok-specific strings now mostly sit inside workflow/scrape code paths or the manifest defaults themselves, so continuing this slice further would start mixing declarative extraction with behavior work.
 - Next: Stop the Grok manifest-route work here and switch back to the next real gate: a guarded ChatGPT live acceptance window.
 
 - Date: 2026-03-31
 - Focus: Continue low-risk Grok route extraction after the central manifest/defaults cutover.
-- Progress: Replaced the remaining obvious declarative Grok route strings in [src/browser/providers/grokAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/grokAdapter.ts), [src/browser/index.ts](/home/ecochran76/workspace.local/oracle/src/browser/index.ts), and [src/browser/llmService/llmService.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/llmService.ts) with manifest-backed helpers/constants. Added `projectConversations` to the Grok route manifest and extended focused coverage in [tests/browser/grokAdapter.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/grokAdapter.test.ts) and [tests/services/registry.test.ts](/home/ecochran76/workspace.local/oracle/tests/services/registry.test.ts). Focused Vitest suites and `pnpm run check` passed.
+- Progress: Replaced the remaining obvious declarative Grok route strings in [src/browser/providers/grokAdapter.ts](/home/ecochran76/workspace.local/auracall/src/browser/providers/grokAdapter.ts), [src/browser/index.ts](/home/ecochran76/workspace.local/auracall/src/browser/index.ts), and [src/browser/llmService/llmService.ts](/home/ecochran76/workspace.local/auracall/src/browser/llmService/llmService.ts) with manifest-backed helpers/constants. Added `projectConversations` to the Grok route manifest and extended focused coverage in [tests/browser/grokAdapter.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/grokAdapter.test.ts) and [tests/services/registry.test.ts](/home/ecochran76/workspace.local/auracall/tests/services/registry.test.ts). Focused Vitest suites and `pnpm run check` passed.
 - Issues: This still intentionally stops short of deeper provider-local workflow paths where URL handling is tangled with scraping/state recovery logic.
 - Next: Re-inventory the remaining Grok hardcoded strings and stop the manifest slice once the leftovers stop being purely declarative.
 
 - Date: 2026-03-31
 - Focus: Restore repo-wide green checks and continue low-risk manifest extraction outside ChatGPT live flows.
-- Progress: Fixed the `ResolvedBrowserConfig.target` typing mismatch by overriding `getConfig()` in [src/browser/service/browserService.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/browserService.ts), which cleared the repo-wide `pnpm run check` blocker. Then extended `configs/auracall.services.json` with Grok and Gemini route templates/cookie origins, cut central consumers over in [src/browser/constants.ts](/home/ecochran76/workspace.local/oracle/src/browser/constants.ts), [src/browser/login.ts](/home/ecochran76/workspace.local/oracle/src/browser/login.ts), [src/config.ts](/home/ecochran76/workspace.local/oracle/src/config.ts), [src/browser/providers/grokAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/grokAdapter.ts), and [src/browser/providers/index.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/index.ts), and added focused coverage in [tests/services/registry.test.ts](/home/ecochran76/workspace.local/oracle/tests/services/registry.test.ts) and [tests/browser/grokAdapter.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/grokAdapter.test.ts). Focused Vitest suites and `pnpm run check` now pass.
+- Progress: Fixed the `ResolvedBrowserConfig.target` typing mismatch by overriding `getConfig()` in [src/browser/service/browserService.ts](/home/ecochran76/workspace.local/auracall/src/browser/service/browserService.ts), which cleared the repo-wide `pnpm run check` blocker. Then extended `configs/auracall.services.json` with Grok and Gemini route templates/cookie origins, cut central consumers over in [src/browser/constants.ts](/home/ecochran76/workspace.local/auracall/src/browser/constants.ts), [src/browser/login.ts](/home/ecochran76/workspace.local/auracall/src/browser/login.ts), [src/config.ts](/home/ecochran76/workspace.local/auracall/src/config.ts), [src/browser/providers/grokAdapter.ts](/home/ecochran76/workspace.local/auracall/src/browser/providers/grokAdapter.ts), and [src/browser/providers/index.ts](/home/ecochran76/workspace.local/auracall/src/browser/providers/index.ts), and added focused coverage in [tests/services/registry.test.ts](/home/ecochran76/workspace.local/auracall/tests/services/registry.test.ts) and [tests/browser/grokAdapter.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/grokAdapter.test.ts). Focused Vitest suites and `pnpm run check` now pass.
 - Issues: Live ChatGPT `root-base` acceptance still remains a separate timing/rate-limit problem; this slice deliberately avoided spending more writes there.
 - Next: Keep manifest extraction on low-risk declarative surfaces only, then return to a single guarded ChatGPT live acceptance window once the remaining non-live slice is exhausted.
 
@@ -8987,24 +8987,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     larger config-model refactor
 - What changed:
   - promoted the config-model refactor to the active architecture track in
-    [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
   - replaced the execution board in
-    [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    [next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
     so it now centers:
     - target config shape
     - one non-breaking schema/runtime seam
     - browser reliability in maintenance mode
   - added a new target-shape doc:
-    [config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
+    [config-model-target-shape.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-target-shape.md)
     with the intended public layering:
     - `browserProfiles`
     - `runtimeProfiles`
     - `agents`
     - `teams`
   - updated
-    [config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+    [config-model-refactor-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-refactor-plan.md)
     and
-    [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    [configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     so the current bridge keys are explicitly documented as transitional
 - Notes:
   - no runtime behavior changed in this slice
@@ -9018,17 +9018,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     config-model track
 - What changed:
   - updated
-    [profileResolution.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/profileResolution.ts)
+    [profileResolution.ts](/home/ecochran76/workspace.local/auracall/src/browser/service/profileResolution.ts)
     so the typed resolved seam now speaks in browser-profile terms internally:
     - `profileFamily.browserProfileId`
     - `browserProfile`
   - kept the current public bridge key unchanged:
     - `profiles.<name>.browserFamily`
   - updated
-    [profileConfig.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/profileConfig.ts)
+    [profileConfig.ts](/home/ecochran76/workspace.local/auracall/src/browser/service/profileConfig.ts)
     to consume the renamed internal seam
   - expanded
-    [profileResolution.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/profileResolution.test.ts)
+    [profileResolution.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/profileResolution.test.ts)
     with a regression that proves the public `browserFamily` config key still
     bridges into the new internal `browserProfileId`
 - Verification:
@@ -9045,15 +9045,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     the current public bridge keys
 - What changed:
   - added schema-level bridge/ownership names in
-    [types.ts](/home/ecochran76/workspace.local/oracle/src/schema/types.ts):
+    [types.ts](/home/ecochran76/workspace.local/auracall/src/schema/types.ts):
     - `RuntimeProfileBrowserReferenceSchema`
     - `BrowserProfilesConfigSchema`
     - `RuntimeProfilesConfigSchema`
   - rewired
-    [config/schema.ts](/home/ecochran76/workspace.local/oracle/src/config/schema.ts)
+    [config/schema.ts](/home/ecochran76/workspace.local/auracall/src/config/schema.ts)
     to compose through those names instead of repeating the raw record shapes
   - added a direct schema-level regression in
-    [tests/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/config.test.ts)
+    [tests/config.test.ts](/home/ecochran76/workspace.local/auracall/tests/config.test.ts)
     proving the current bridge still parses:
     - `browserFamilies.<name>`
     - `profiles.<name>.browserFamily`
@@ -9073,19 +9073,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     raw key knowledge inline
 - What changed:
   - added
-    [config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    [config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
     with narrow bridge-aware helpers for:
     - browser profiles
     - AuraCall runtime profiles
     - the runtime-profile -> browser-profile bridge reference
   - rewired
-    [config.ts](/home/ecochran76/workspace.local/oracle/src/config.ts)
+    [config.ts](/home/ecochran76/workspace.local/auracall/src/config.ts)
     default scaffolding through those helpers
   - rewired
-    [browserWizard.ts](/home/ecochran76/workspace.local/oracle/src/cli/browserWizard.ts)
+    [browserWizard.ts](/home/ecochran76/workspace.local/auracall/src/cli/browserWizard.ts)
     patch generation through those helpers
   - added direct helper coverage in
-    [configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    [configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -9103,12 +9103,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     compatibility path stops open-coding browser-profile reference handling
 - What changed:
   - updated
-    [migrate.ts](/home/ecochran76/workspace.local/oracle/src/config/migrate.ts)
+    [migrate.ts](/home/ecochran76/workspace.local/auracall/src/config/migrate.ts)
     to use the bridge-aware helpers when:
     - reading a runtime profile's browser-profile bridge
     - copying `auracallProfiles` back into `profiles`
   - added direct migration coverage in
-    [configMigrate.test.ts](/home/ecochran76/workspace.local/oracle/tests/configMigrate.test.ts)
+    [configMigrate.test.ts](/home/ecochran76/workspace.local/auracall/tests/configMigrate.test.ts)
     for:
     - `normalizeConfigV1toV2(...)`
     - `materializeConfigV2(...)`
@@ -9131,7 +9131,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `auracallProfiles`
 - What changed:
   - expanded
-    [config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    [config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
     with active/bridge runtime-profile helpers:
     - `getCurrentRuntimeProfiles(...)`
     - `getLegacyRuntimeProfiles(...)`
@@ -9139,16 +9139,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `getActiveRuntimeProfileName(...)`
     - `getActiveRuntimeProfile(...)`
   - updated
-    [schema/resolver.ts](/home/ecochran76/workspace.local/oracle/src/schema/resolver.ts)
+    [schema/resolver.ts](/home/ecochran76/workspace.local/auracall/src/schema/resolver.ts)
     to use those helpers for active runtime-profile selection and application
   - updated
-    [llmService.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/llmService.ts)
+    [llmService.ts](/home/ecochran76/workspace.local/auracall/src/browser/llmService/llmService.ts)
     so profile-scoped identity/features now resolve through the same bridge
     helpers instead of reading only `auracallProfiles`
   - expanded
-    [configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    [configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
     and
-    [llmServiceIdentity.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/llmServiceIdentity.test.ts)
+    [llmServiceIdentity.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/llmServiceIdentity.test.ts)
     to cover:
     - active runtime-profile bridge selection
     - current `profiles` bridge usage when legacy `auracallProfiles` is absent
@@ -9168,7 +9168,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     ambiguous "profiles"
 - What changed:
   - updated
-    [auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    [auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     command descriptions/options/prompts for:
     - `--profile`
     - `doctor`
@@ -9179,7 +9179,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `config migrate`
     - `profile scaffold`
   - updated
-    [browserWizard.ts](/home/ecochran76/workspace.local/oracle/src/cli/browserWizard.ts)
+    [browserWizard.ts](/home/ecochran76/workspace.local/auracall/src/cli/browserWizard.ts)
     validation text so it explicitly says `AuraCall runtime profile name`
 - Verification:
   - `pnpm vitest run tests/cli/browserWizard.test.ts tests/config.test.ts tests/configModel.test.ts tests/browser/profileDoctor.test.ts --maxWorkers 1`
@@ -9196,19 +9196,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     terms without changing the stored bridge-key layout
 - What changed:
   - added
-    [configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    [configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     with:
     - `buildConfigShowReport(...)`
     - `formatConfigShowReport(...)`
   - updated
-    [auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    [auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     to add:
     - `auracall config show`
     - `auracall config show --json`
   - added focused coverage in
-    [configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    [configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
   - updated
-    [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    [configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     to document the new read-only inspection command
 - Verification:
   - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
@@ -9230,12 +9230,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     just wrote or preserved
 - What changed:
   - expanded
-    [configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    [configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     with:
     - `buildRuntimeProfileBridgeSummary(...)`
     - `formatRuntimeProfileBridgeSummary(...)`
   - updated
-    [auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    [auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     so:
     - `auracall wizard` confirmation/output now mentions the browser profile
       bridge explicitly
@@ -9244,10 +9244,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `auracall profile scaffold` prints the scaffolded runtime-profile/browser-profile
       bridge after writing
   - expanded
-    [configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    [configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
     with direct compact-summary coverage
   - updated
-    [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    [configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     to note that `config migrate` and `profile scaffold` now print a bridge
     summary in target-model terms
 - Verification:
@@ -9269,20 +9269,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     just the currently active profile
 - What changed:
   - expanded
-    [configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    [configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     with:
     - `buildProfileListReport(...)`
     - `formatProfileListReport(...)`
   - updated
-    [auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    [auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     to add:
     - `auracall profile list`
     - `auracall profile list --json`
   - expanded
-    [configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    [configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
     with inventory-report coverage
   - updated
-    [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    [configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     to document the new inventory command
 - Verification:
   - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
@@ -9303,24 +9303,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `config show` / `profile list`
 - What changed:
   - expanded
-    [configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    [configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     with:
     - `buildConfigDoctorReport(...)`
     - `formatConfigDoctorReport(...)`
   - updated
-    [auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    [auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     to add:
     - `auracall config doctor`
     - `auracall config doctor --json`
   - expanded
-    [configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    [configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
     with bridge-health coverage for:
     - missing browser-profile references
     - dangling browser-profile references
     - unused browser profiles
     - legacy runtime profiles
   - updated
-    [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    [configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     to document the new doctor command
 - Verification:
   - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
@@ -9342,18 +9342,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     exit-code mode instead of leaving it as a human-only warning surface
 - What changed:
   - expanded
-    [configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    [configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     with:
     - `resolveConfigDoctorExitCode(...)`
   - updated
-    [auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    [auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     so `auracall config doctor --strict` exits nonzero when warnings are
     present
   - expanded
-    [configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    [configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
     with strict exit-code coverage
   - updated
-    [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    [configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     to document `--strict`
 - Verification:
   - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
@@ -9372,18 +9372,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     instead of reading raw bridge-key fields directly
 - What changed:
   - expanded
-    [config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    [config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
     with:
     - `getBrowserProfile(...)`
     - `getRuntimeProfileBrowserProfile(...)`
   - updated
-    [profileResolution.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/profileResolution.ts)
+    [profileResolution.ts](/home/ecochran76/workspace.local/auracall/src/browser/service/profileResolution.ts)
     so browser-profile selection now uses the config-model helper seam instead
     of directly reading:
     - `merged.browserFamilies`
     - `profile.browserFamily`
   - expanded
-    [configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    [configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
     with direct browser-profile lookup coverage
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
@@ -9401,16 +9401,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     of re-implementing that preference ad hoc in CLI-only code
 - What changed:
   - expanded
-    [config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    [config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
     with:
     - `getPreferredRuntimeProfileName(...)`
     - `getPreferredRuntimeProfile(...)`
   - updated runtime consumers to use that shared precedence rule:
-    - [schema/resolver.ts](/home/ecochran76/workspace.local/oracle/src/schema/resolver.ts)
-    - [llmService.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/llmService.ts)
-    - [configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    - [schema/resolver.ts](/home/ecochran76/workspace.local/auracall/src/schema/resolver.ts)
+    - [llmService.ts](/home/ecochran76/workspace.local/auracall/src/browser/llmService/llmService.ts)
+    - [configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
   - expanded
-    [configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    [configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
     with explicit current-vs-legacy precedence coverage
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/schema/resolver.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/config.test.ts --maxWorkers 1`
@@ -9432,20 +9432,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - bootstrap cookie source path
 - What changed:
   - expanded
-    [profileResolution.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/profileResolution.ts)
+    [profileResolution.ts](/home/ecochran76/workspace.local/auracall/src/browser/service/profileResolution.ts)
     with:
     - `resolveManagedBrowserLaunchContextFromResolvedConfig(...)`
   - rewired runtime consumers to use that shared seam:
-    - [index.ts](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
-    - [login.ts](/home/ecochran76/workspace.local/oracle/src/browser/login.ts)
-    - [profileDoctor.ts](/home/ecochran76/workspace.local/oracle/src/browser/profileDoctor.ts)
-    - [browserService.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/browserService.ts)
-    - [portResolution.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/portResolution.ts)
-    - [registryDiagnostics.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/registryDiagnostics.ts)
-    - [reattachCore.ts](/home/ecochran76/workspace.local/oracle/src/browser/reattachCore.ts)
+    - [index.ts](/home/ecochran76/workspace.local/auracall/src/browser/index.ts)
+    - [login.ts](/home/ecochran76/workspace.local/auracall/src/browser/login.ts)
+    - [profileDoctor.ts](/home/ecochran76/workspace.local/auracall/src/browser/profileDoctor.ts)
+    - [browserService.ts](/home/ecochran76/workspace.local/auracall/src/browser/service/browserService.ts)
+    - [portResolution.ts](/home/ecochran76/workspace.local/auracall/src/browser/service/portResolution.ts)
+    - [registryDiagnostics.ts](/home/ecochran76/workspace.local/auracall/src/browser/service/registryDiagnostics.ts)
+    - [reattachCore.ts](/home/ecochran76/workspace.local/auracall/src/browser/reattachCore.ts)
   - expanded tests:
-    - [profileResolution.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/profileResolution.test.ts)
-    - [browserModeExports.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/browserModeExports.test.ts)
+    - [profileResolution.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/profileResolution.test.ts)
+    - [browserModeExports.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/browserModeExports.test.ts)
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/schema/resolver.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/login.test.ts tests/browser/profileDoctor.test.ts tests/browser/portResolution.test.ts tests/browser/browserService.test.ts tests/browser/reattach.test.ts tests/browser/registryDiagnostics.test.ts tests/browser/browserModeExports.test.ts tests/cli/sessionDisplay.coverage.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -9463,20 +9463,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - registry diagnostics / wrong-browser-profile classification
 - What changed:
   - expanded
-    [profileResolution.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/profileResolution.ts)
+    [profileResolution.ts](/home/ecochran76/workspace.local/auracall/src/browser/service/profileResolution.ts)
     with:
     - `resolveSessionBrowserLaunchContext(...)`
   - updated
-    [reattach.ts](/home/ecochran76/workspace.local/oracle/src/browser/reattach.ts)
+    [reattach.ts](/home/ecochran76/workspace.local/auracall/src/browser/reattach.ts)
     to resolve session browser config once and reuse it for:
     - `runtimeDeps.resolveBrowserConfig(...)`
     - `classifyRuntimeBrowserProfileFailure(...)`
   - updated
-    [registryDiagnostics.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/registryDiagnostics.ts)
+    [registryDiagnostics.ts](/home/ecochran76/workspace.local/auracall/src/browser/service/registryDiagnostics.ts)
     so reattach diagnostics can accept a pre-resolved session launch context
     instead of always rebuilding one internally
   - expanded
-    [profileResolution.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/profileResolution.test.ts)
+    [profileResolution.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/profileResolution.test.ts)
     with direct session-launch-context coverage
 - Verification:
   - `pnpm vitest run tests/browser/reattach.test.ts tests/browser/registryDiagnostics.test.ts tests/browser/profileResolution.test.ts tests/cli/sessionDisplay.coverage.test.ts tests/browser/browserModeExports.test.ts --maxWorkers 1`
@@ -9495,11 +9495,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - destructive-retry eligibility check
 - What changed:
   - added a local runtime-entry helper in
-    [index.ts](/home/ecochran76/workspace.local/oracle/src/browser/index.ts):
+    [index.ts](/home/ecochran76/workspace.local/auracall/src/browser/index.ts):
     - `prepareManagedBrowserProfileLaunch(...)`
   - updated both browser entry paths to consume it:
-    - [runBrowserMode(...)](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
-    - [runGrokBrowserMode(...)](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
+    - [runBrowserMode(...)](/home/ecochran76/workspace.local/auracall/src/browser/index.ts)
+    - [runGrokBrowserMode(...)](/home/ecochran76/workspace.local/auracall/src/browser/index.ts)
 - Verification:
   - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/browser/reattach.test.ts tests/browser/registryDiagnostics.test.ts tests/browser/profileResolution.test.ts tests/browser/profileDoctor.test.ts tests/browser/login.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -9518,14 +9518,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - fixed DevTools port assignment when strategy is not `auto`
 - What changed:
   - added
-    [resolveBrowserRuntimeEntryContext(...)](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
+    [resolveBrowserRuntimeEntryContext(...)](/home/ecochran76/workspace.local/auracall/src/browser/index.ts)
     plus a test export wrapper in
-    [index.ts](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
+    [index.ts](/home/ecochran76/workspace.local/auracall/src/browser/index.ts)
   - updated
-    [runBrowserMode(...)](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
+    [runBrowserMode(...)](/home/ecochran76/workspace.local/auracall/src/browser/index.ts)
     to consume that helper instead of open-coding the same entry logic inline
   - expanded
-    [browserModeExports.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/browserModeExports.test.ts)
+    [browserModeExports.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/browserModeExports.test.ts)
     with deterministic fixed-port injection coverage
 - Verification:
   - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/browser/reattach.test.ts tests/browser/registryDiagnostics.test.ts tests/browser/profileResolution.test.ts tests/browser/profileDoctor.test.ts tests/browser/login.test.ts --maxWorkers 1`
@@ -9545,20 +9545,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     without accepting new public input keys yet
 - What changed:
   - expanded
-    [config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    [config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
     with:
     - `projectConfigModel(...)`
     - projected browser/runtime profile types
   - updated JSON-oriented config inspection reports in
-    [configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts):
+    [configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts):
     - `buildConfigShowReport(...)`
     - `buildProfileListReport(...)`
     to include a read-only `projectedModel`
   - expanded tests:
-    - [configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
-    - [configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    - [configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
+    - [configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
   - documented the new inspection-only projection in
-    [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    [configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -9575,17 +9575,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `runtimeProfiles`
 - What changed:
   - added
-    [config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
+    [config-model-input-alias-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-input-alias-plan.md)
     to define:
     - dual-read phases
     - precedence rules
     - write-back policy
     - diagnostics expectations
   - linked that policy from:
-    - [config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
-    - [config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
-    - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
-    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    - [config-model-refactor-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-refactor-plan.md)
+    - [config-model-target-shape.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-target-shape.md)
+    - [next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
 - Notes:
   - no behavior changed in this slice
   - this locks the rule that target-shape input aliases should not be accepted
@@ -9599,13 +9599,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - What changed:
   - added
     `analyzeConfigModelBridgeHealth(...)` plus shared doctor issue/report types
-    in [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    in [src/config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
   - rewired
-    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     so `buildConfigDoctorReport(...)` now delegates to the shared model-layer
     analyzer
   - expanded
-    [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    [tests/configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
     with direct bridge-health coverage
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
@@ -9621,7 +9621,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     model-layer view
 - What changed:
   - added `inspectConfigModel(...)` in
-    [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    [src/config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
     to centralize:
     - active AuraCall runtime profile
     - active browser profile
@@ -9632,11 +9632,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - bridge-key presence state
     - projected target model
   - rewired
-    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     so `buildConfigShowReport(...)` and `buildProfileListReport(...)` consume
     that shared inspection helper instead of rebuilding overlapping state
   - expanded
-    [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    [tests/configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
     with direct inspection-view coverage
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
@@ -9651,13 +9651,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - move bridge-key metadata itself onto the shared config-model seam
 - What changed:
   - added `ConfigModelBridgeKeys` and `CONFIG_MODEL_BRIDGE_KEYS` in
-    [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    [src/config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
   - extended `inspectConfigModel(...)` to return shared `bridgeKeys`
   - rewired
-    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     so `config show` / `profile list` no longer hardcode bridge-key names
   - expanded
-    [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    [tests/configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
     to pin the shared bridge-key contract
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
@@ -9677,16 +9677,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `runtimeProfiles`
     - `runtimeProfiles.<name>.browserProfile`
   - shared model helpers in
-    [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    [src/config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
     now give target keys precedence over bridge keys
   - shared doctor analysis now reports mixed/conflicting bridge vs target
     config state, including conflicting nested browser-profile references
   - normalization in
-    [src/config/migrate.ts](/home/ecochran76/workspace.local/oracle/src/config/migrate.ts)
+    [src/config/migrate.ts](/home/ecochran76/workspace.local/auracall/src/config/migrate.ts)
     now applies current alias/compatibility handling to `runtimeProfiles.*`
     paths too
   - updated user-facing docs in
-    [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     to say dual-read is supported while writes remain bridge-key-first
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/configMigrate.test.ts tests/config.test.ts tests/schema/resolver.test.ts tests/cli/configCommand.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
@@ -9702,20 +9702,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     precedence explicitly now that dual-read is live
 - What changed:
   - extended shared doctor/inspection data in
-    [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    [src/config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
     with:
     - target-key presence
     - read precedence summaries
   - updated
-    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     so:
     - `config show` reports target-key presence alongside bridge-key presence
     - `config doctor` reports whether target keys are present and which side
       currently wins for browser-profile/runtime-profile reads
   - expanded
-    [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
     and
-    [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    [tests/configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
     to pin the new JSON and text output
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/configMigrate.test.ts tests/schema/resolver.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
@@ -9731,23 +9731,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     write behavior
 - What changed:
   - added `targetShape` support to
-    [materializeConfigV2(...)](/home/ecochran76/workspace.local/oracle/src/config/migrate.ts)
+    [materializeConfigV2(...)](/home/ecochran76/workspace.local/auracall/src/config/migrate.ts)
     so migrated output can emit:
     - `browserProfiles`
     - `runtimeProfiles`
     - `runtimeProfiles.<name>.browserProfile`
   - updated
-    [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    [bin/auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     to support:
     - `auracall config migrate --target-shape`
     - explicit write-mode messaging after write
   - expanded
-    [tests/configMigrate.test.ts](/home/ecochran76/workspace.local/oracle/tests/configMigrate.test.ts)
+    [tests/configMigrate.test.ts](/home/ecochran76/workspace.local/auracall/tests/configMigrate.test.ts)
     to pin target-shape migrated output
   - updated user/docs planning references in:
-    - [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
-    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
+    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-input-alias-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - `pnpm vitest run tests/configMigrate.test.ts tests/configModel.test.ts tests/config.test.ts tests/schema/resolver.test.ts tests/cli/configCommand.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -9762,22 +9762,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     changing scaffold defaults
 - What changed:
   - updated
-    [src/config.ts](/home/ecochran76/workspace.local/oracle/src/config.ts)
+    [src/config.ts](/home/ecochran76/workspace.local/auracall/src/config.ts)
     so `scaffoldDefaultConfigFile(...)` can write either:
     - bridge-key output by default
     - target-shape output when `targetShape: true`
   - updated
-    [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    [bin/auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     to support:
     - `auracall profile scaffold --target-shape`
     - explicit write-mode messaging after scaffold
   - expanded
-    [tests/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/config.test.ts)
+    [tests/config.test.ts](/home/ecochran76/workspace.local/auracall/tests/config.test.ts)
     with direct target-shape scaffold coverage
   - updated docs/plans in:
-    - [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
-    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
+    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-input-alias-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - `pnpm vitest run tests/config.test.ts tests/configMigrate.test.ts tests/configModel.test.ts tests/schema/resolver.test.ts tests/cli/configCommand.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -9791,17 +9791,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - add future-troubleshooting docs for the dual-shape config era
 - What changed:
   - added
-    [config-shape-troubleshooting.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-shape-troubleshooting.md)
+    [config-shape-troubleshooting.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-shape-troubleshooting.md)
     covering:
     - bridge-shape vs target-shape vs mixed-shape
     - read precedence
     - common `config doctor` findings
     - when to use explicit target-shape write commands
   - linked it from:
-    - [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
-    - [config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
-    - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
-    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    - [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
+    - [config-model-input-alias-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-input-alias-plan.md)
+    - [next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
 - Notes:
   - docs only
   - intended for future troubleshooting, not end-user onboarding
@@ -9812,21 +9812,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - extend explicit target-shape writes to the guided `wizard` path without
     flipping the default bridge-key onboarding output
 - What changed:
-  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     so `auracall wizard` now accepts:
     - `--target-shape`
     - explicit write-mode reporting after the config write
   - kept
-    [src/cli/browserWizard.ts](/home/ecochran76/workspace.local/oracle/src/cli/browserWizard.ts)
+    [src/cli/browserWizard.ts](/home/ecochran76/workspace.local/auracall/src/cli/browserWizard.ts)
     bridge-oriented so the command still materializes target-shape output at
     the write boundary instead of changing patch semantics
   - expanded
-    [tests/cli/browserWizard.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/browserWizard.test.ts)
+    [tests/cli/browserWizard.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/browserWizard.test.ts)
     with direct wizard merge/materialize coverage for target-shape output
   - updated docs/plans in:
-    - [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
-    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
+    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-input-alias-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - `pnpm vitest run tests/config.test.ts tests/configMigrate.test.ts tests/configModel.test.ts tests/schema/resolver.test.ts tests/cli/configCommand.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -9842,17 +9842,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Focus:
   - make the target-shape config model the primary documented public shape
 - What changed:
-  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     so:
     - `browserProfiles` / `runtimeProfiles` are the primary documented keys
     - the main config example is target-shaped
     - bridge keys are framed as compatibility/troubleshooting keys
   - updated planning/troubleshooting docs in:
-    - [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
-    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
-    - [docs/dev/config-shape-troubleshooting.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-shape-troubleshooting.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
-    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    - [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-refactor-plan.md)
+    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-input-alias-plan.md)
+    - [docs/dev/config-shape-troubleshooting.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-shape-troubleshooting.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
 - Notes:
   - docs only
   - bridge keys remain supported for compatibility and troubleshooting
@@ -9862,10 +9862,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Focus:
   - make target-shape the default write output across config-writing commands
 - What changed:
-  - updated [src/config.ts](/home/ecochran76/workspace.local/oracle/src/config.ts)
+  - updated [src/config.ts](/home/ecochran76/workspace.local/auracall/src/config.ts)
     so default scaffolding now writes target-shape unless compatibility bridge
     output is explicitly requested
-  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     so:
     - `wizard`
     - `config migrate`
@@ -9874,15 +9874,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - added explicit `--bridge-shape` compatibility mode for those commands
   - kept `--target-shape` accepted explicitly so scripts can still state the
     intended write mode directly
-  - expanded [tests/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/config.test.ts)
+  - expanded [tests/config.test.ts](/home/ecochran76/workspace.local/auracall/tests/config.test.ts)
     so default scaffold output is target-shaped and compatibility bridge output
     is still covered explicitly
   - updated docs/plans in:
-    - [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
-    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
-    - [docs/dev/config-shape-troubleshooting.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-shape-troubleshooting.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
-    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    - [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
+    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-input-alias-plan.md)
+    - [docs/dev/config-shape-troubleshooting.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-shape-troubleshooting.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
 - Verification:
   - `pnpm vitest run tests/config.test.ts tests/configMigrate.test.ts tests/configModel.test.ts tests/schema/resolver.test.ts tests/cli/configCommand.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -9894,24 +9894,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Focus:
   - define `version: 3` as the target-shape config era and make write-version semantics explicit
 - What changed:
-  - updated [src/config/migrate.ts](/home/ecochran76/workspace.local/oracle/src/config/migrate.ts)
+  - updated [src/config/migrate.ts](/home/ecochran76/workspace.local/auracall/src/config/migrate.ts)
     so materialized target-shape output now writes:
     - `version: 3`
     and compatibility bridge output writes:
     - `version: 2`
   - expanded:
-    - [tests/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/config.test.ts)
-    - [tests/configMigrate.test.ts](/home/ecochran76/workspace.local/oracle/tests/configMigrate.test.ts)
+    - [tests/config.test.ts](/home/ecochran76/workspace.local/auracall/tests/config.test.ts)
+    - [tests/configMigrate.test.ts](/home/ecochran76/workspace.local/auracall/tests/configMigrate.test.ts)
     to pin:
     - target-shape default scaffold => `version: 3`
     - bridge-shape scaffold => `version: 2`
     - target-shape migrate output => `version: 3`
     - compatibility bridge materialization => `version: 2`
   - updated version-policy docs in:
-    - [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
-    - [docs/dev/config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
-    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
+    - [docs/dev/config-model-target-shape.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-target-shape.md)
+    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-input-alias-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - `pnpm vitest run tests/config.test.ts tests/configMigrate.test.ts tests/configModel.test.ts tests/schema/resolver.test.ts tests/cli/configCommand.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -9925,12 +9925,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - remove leftover `v2` wording from operator surfaces now that target-shape
     and `version: 3` are the primary write policy
 - What changed:
-  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     so `config migrate` now:
     - describes itself as the current config layout with version-3 target-shape
       default output
     - defaults its output suffix to `.v3` instead of `.v2`
-  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     examples to match the new default output suffix
 - Verification:
   - `pnpm run check`
@@ -9944,28 +9944,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     target-shape configs while keeping `auracallProfile` as compatibility input
 - What changed:
   - updated:
-    - [src/schema/types.ts](/home/ecochran76/workspace.local/oracle/src/schema/types.ts)
-    - [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
-    - [src/config/migrate.ts](/home/ecochran76/workspace.local/oracle/src/config/migrate.ts)
-    - [src/schema/resolver.ts](/home/ecochran76/workspace.local/oracle/src/schema/resolver.ts)
+    - [src/schema/types.ts](/home/ecochran76/workspace.local/auracall/src/schema/types.ts)
+    - [src/config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
+    - [src/config/migrate.ts](/home/ecochran76/workspace.local/auracall/src/config/migrate.ts)
+    - [src/schema/resolver.ts](/home/ecochran76/workspace.local/auracall/src/schema/resolver.ts)
     so target-shape config reads/writes now center:
     - `defaultRuntimeProfile`
     while normalization/resolution still populates:
     - `auracallProfile`
     for compatibility consumers in the runtime stack
   - expanded:
-    - [tests/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/config.test.ts)
-    - [tests/configMigrate.test.ts](/home/ecochran76/workspace.local/oracle/tests/configMigrate.test.ts)
-    - [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
-    - [tests/schema/resolver.test.ts](/home/ecochran76/workspace.local/oracle/tests/schema/resolver.test.ts)
+    - [tests/config.test.ts](/home/ecochran76/workspace.local/auracall/tests/config.test.ts)
+    - [tests/configMigrate.test.ts](/home/ecochran76/workspace.local/auracall/tests/configMigrate.test.ts)
+    - [tests/configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
+    - [tests/schema/resolver.test.ts](/home/ecochran76/workspace.local/auracall/tests/schema/resolver.test.ts)
     to pin:
     - target-shape schema acceptance
     - target-shape writes emitting `defaultRuntimeProfile`
     - compatibility bridge writes remapping back to `auracallProfile`
     - selector precedence preferring `defaultRuntimeProfile`
   - updated user-facing docs:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
 - Verification:
   - `pnpm vitest run tests/config.test.ts tests/configMigrate.test.ts tests/configModel.test.ts tests/schema/resolver.test.ts tests/cli/configCommand.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -9979,18 +9979,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - surface `defaultRuntimeProfile` versus compatibility `auracallProfile`
     presence in config inspection output
 - What changed:
-  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     so:
     - `config show` reports both selector keys and whether each is present
     - `config doctor` reports the same selector-key presence alongside its
       bridge-health analysis
     - `profile list` stays unchanged for this slice
-  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
     to pin:
     - bridge-shape selector reporting
     - target-shape selector reporting
     - formatted text output for both `config show` and `config doctor`
-  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     to note that config inspection now surfaces selector-key presence too
 - Verification:
   - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
@@ -10005,22 +10005,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - treat the public config transition as complete enough and move the active
     architecture track up to agent/team-ready layering
 - What changed:
-  - updated [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+  - updated [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
     to mark the config-model transition checkpoint as complete enough through:
     - target-shaped reads
     - target-shaped default writes
     - target-vs-bridge inspection/doctor visibility
     - `defaultRuntimeProfile` as the primary selector
-  - updated [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+  - updated [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
     so the next active slice is now:
     - agent/team-ready config layering
     - one small runtime/schema seam for future `agent -> runtimeProfile`
       composition
     instead of more config-shape migration polish
-  - updated [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+  - updated [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-refactor-plan.md)
     to reflect that the bridge/target public-shape transition is now a
     checkpoint, not the main remaining refactor question
-  - updated [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
+  - updated [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-input-alias-plan.md)
     to mark target-first read/write behavior as implemented and alias mechanics
     as no longer the active pressure
 - Verification:
@@ -10036,18 +10036,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - add the first shared read-only `agent -> runtimeProfile -> browserProfile`
     projection seam
 - What changed:
-  - updated [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+  - updated [src/config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
     to project reserved future layers through the shared target model:
     - `agents[]`
     - `teams[]`
     - agent inheritance of runtime-profile browser/default-service context
   - expanded:
-    - [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
-    - [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    - [tests/configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
+    - [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
     to pin:
     - agent projection through runtime profiles
     - empty projected agent/team arrays in existing inspection/report paths
-  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     so the documented `projectedModel` JSON contract now includes:
     - `agents[]`
     - `teams[]`
@@ -10064,17 +10064,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Focus:
   - surface projected agents/teams directly in config inspection reports
 - What changed:
-  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     so:
     - `config show` now reports available `agents` and `teams`
     - `profile list` now reports projected:
       - agents with inherited runtime/browser/default-service context
       - teams with current agent membership
-  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
     to pin:
     - empty agent/team reporting in existing config-show/profile-list flows
     - non-empty projected agent/team inventory reporting
-  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     to describe the richer inspection surface
 - Verification:
   - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
@@ -10089,16 +10089,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Focus:
   - add the first reserved-layer doctor warnings for agents and teams
 - What changed:
-  - updated [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+  - updated [src/config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
     so the shared config-model doctor now flags:
     - agents with no `runtimeProfile`
     - agents that reference missing AuraCall runtime profiles
     - teams that reference missing agents
   - expanded:
-    - [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
-    - [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    - [tests/configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
+    - [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
     to pin the new shared doctor issue codes and surfaced CLI doctor text
-  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     so config doctor coverage now includes reserved agent/team reference checks
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
@@ -10113,21 +10113,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - expose resolved versus missing team members directly in the projected model
     and inventory report
 - What changed:
-  - updated [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+  - updated [src/config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
     so projected teams now carry per-member resolution status plus inherited:
     - runtime profile
     - browser profile
     - default service
-  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     so `profile list` prints resolved versus missing team members explicitly
   - expanded:
-    - [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
-    - [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    - [tests/configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
+    - [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
     to pin:
     - resolved team-member projection
     - unresolved team-member projection
     - inventory text for both cases
-  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     to note unresolved team-member visibility in the inventory surface
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
@@ -10142,7 +10142,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Focus:
   - add the first shared agent-selection resolver for future non-CLI consumers
 - What changed:
-  - updated [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+  - updated [src/config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
     to add:
     - `getAgent(...)`
     - `resolveAgentSelection(...)`
@@ -10152,7 +10152,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `browserProfileId`
     - `defaultService`
     - `exists`
-  - expanded [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+  - expanded [tests/configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
     to pin:
     - resolved agent selection
     - missing agent selection
@@ -10169,15 +10169,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Focus:
   - use the shared agent-selection resolver in one real read-only consumer
 - What changed:
-  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     so `config show` now exposes `resolvedAgents[]` built from:
     - `resolveAgentSelection(...)`
-  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
     to pin:
     - empty resolved-agent reporting
     - non-empty resolved-agent reporting
     - formatted text output for resolved agents
-  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     to describe the new read-only `config show` resolved-agent view
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
@@ -10193,9 +10193,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     agent-selection seam
 - What changed:
   - updated:
-    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
-    - [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
+    - [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-refactor-plan.md)
     to record that reserved `agents` / `teams` are now:
     - parsed
     - projected
@@ -10216,25 +10216,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - thread one optional agent selection into a real execution-adjacent
     resolution path without adding agent execution behavior
 - What changed:
-  - updated [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+  - updated [src/config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
     so shared runtime-profile selection now accepts:
     - `explicitAgentId`
     and resolves it through:
     - `agent -> runtimeProfile -> browserProfile`
-  - updated [src/schema/resolver.ts](/home/ecochran76/workspace.local/oracle/src/schema/resolver.ts)
+  - updated [src/schema/resolver.ts](/home/ecochran76/workspace.local/auracall/src/schema/resolver.ts)
     so `resolveConfig(...)` now threads optional CLI agent selection into the
     shared resolver path before runtime/browser overrides are applied
-  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     to add:
     - `--agent <name>`
     as a selection-only seam
   - expanded:
-    - [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
-    - [tests/schema/resolver.test.ts](/home/ecochran76/workspace.local/oracle/tests/schema/resolver.test.ts)
+    - [tests/configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
+    - [tests/schema/resolver.test.ts](/home/ecochran76/workspace.local/auracall/tests/schema/resolver.test.ts)
     to pin:
     - explicit agent -> runtime profile resolution
     - explicit `--profile` precedence above `--agent`
-  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     to describe the new selection semantics and their limits
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/schema/resolver.test.ts tests/config.test.ts tests/cli/configCommand.test.ts --maxWorkers 1`
@@ -10250,18 +10250,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - make the new `--agent` selection seam visible in the main troubleshooting
     reports
 - What changed:
-  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     so:
     - `config show` now surfaces the currently selected agent resolution
     - `config doctor` now surfaces the currently selected agent resolution
-  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     to pass the optional CLI `--agent` selection through to those report
     builders
-  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
     to pin:
     - selected-agent text output
     - selected-agent JSON contract fields
-  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     to describe the new troubleshooting visibility
 - Verification:
   - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/schema/resolver.test.ts tests/config.test.ts --maxWorkers 1`
@@ -10275,17 +10275,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Focus:
   - preserve selected-agent provenance in stored session metadata
 - What changed:
-  - updated [src/sessionManager.ts](/home/ecochran76/workspace.local/oracle/src/sessionManager.ts)
+  - updated [src/sessionManager.ts](/home/ecochran76/workspace.local/auracall/src/sessionManager.ts)
     so stored run options now persist:
     - `selectedAgentId`
-  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     so both:
     - normal session creation
     - managed browser verification session creation
     pass through the optional selected agent id
-  - expanded [tests/sessionManager.test.ts](/home/ecochran76/workspace.local/oracle/tests/sessionManager.test.ts)
+  - expanded [tests/sessionManager.test.ts](/home/ecochran76/workspace.local/auracall/tests/sessionManager.test.ts)
     to pin stored metadata persistence for selected-agent provenance
-  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     to note that detached runs and postmortems now preserve the agent
     selection source
 - Verification:
@@ -10301,20 +10301,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Focus:
   - surface stored selected-agent provenance in session/status output
 - What changed:
-  - updated [src/cli/sessionCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/sessionCommand.ts)
+  - updated [src/cli/sessionCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/sessionCommand.ts)
     so session/status JSON now includes:
     - `selectedAgentId`
     as a normalized top-level field beside the raw stored options
-  - updated [src/cli/sessionDisplay.ts](/home/ecochran76/workspace.local/oracle/src/cli/sessionDisplay.ts)
+  - updated [src/cli/sessionDisplay.ts](/home/ecochran76/workspace.local/auracall/src/cli/sessionDisplay.ts)
     so human-readable:
     - `auracall status`
     - `auracall session <id>`
     now print selected-agent provenance when present
   - expanded:
-    - [tests/cli/sessionCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/sessionCommand.test.ts)
-    - [tests/cli/sessionDisplay.coverage.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/sessionDisplay.coverage.test.ts)
+    - [tests/cli/sessionCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/sessionCommand.test.ts)
+    - [tests/cli/sessionDisplay.coverage.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/sessionDisplay.coverage.test.ts)
     to pin both JSON and human-readable provenance output
-  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     to document the new session/status visibility
 - Verification:
   - `pnpm vitest run tests/cli/sessionCommand.test.ts tests/cli/sessionDisplay.coverage.test.ts tests/sessionManager.test.ts --maxWorkers 1`
@@ -10336,9 +10336,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - config/session/status surfaces now expose the selected-agent chain
     - session metadata now preserves `selectedAgentId`
   - updated:
-    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
-    - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
-    - [config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
+    - [next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
+    - [config-model-refactor-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-refactor-plan.md)
     to recommend the next methodical choice:
     - first shared agent-aware runtime helper
     before
@@ -10356,22 +10356,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     execution behavior
 - What changed:
   - added `resolveRuntimeSelection(...)` in
-    [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    [src/config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
     as the first shared bundle for:
     - selected agent
     - resolved AuraCall runtime profile
     - resolved browser profile
     - inherited default service
   - rewired real config/runtime resolution in
-    [src/schema/resolver.ts](/home/ecochran76/workspace.local/oracle/src/schema/resolver.ts)
+    [src/schema/resolver.ts](/home/ecochran76/workspace.local/auracall/src/schema/resolver.ts)
     so `applyOracleProfile(...)` now consumes that shared selection bundle
     instead of reconstructing runtime-profile selection ad hoc
   - rewired config inspection/report assembly in
-    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     so `config show`, `config doctor`, and bridge summaries consume the same
     runtime-selection helper
   - expanded
-    [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    [tests/configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
     with direct coverage for:
     - explicit `--agent`
     - explicit `--profile` winning over `--agent`
@@ -10389,18 +10389,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     profile-resolution layer
 - What changed:
   - added `resolveSelectedBrowserProfileResolution(...)` in
-    [src/browser/service/profileResolution.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/profileResolution.ts)
+    [src/browser/service/profileResolution.ts](/home/ecochran76/workspace.local/auracall/src/browser/service/profileResolution.ts)
     as the first browser-facing helper that combines:
     - shared runtime selection
     - resolved browser-profile layering
     - explicit runtime-profile override support for call sites that already
       hold a selected AuraCall runtime profile object
   - rewired
-    [src/browser/service/profileConfig.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/profileConfig.ts)
+    [src/browser/service/profileConfig.ts](/home/ecochran76/workspace.local/auracall/src/browser/service/profileConfig.ts)
     to consume that helper instead of rebuilding browser-profile resolution
     directly
   - expanded
-    [tests/browser/profileResolution.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/profileResolution.test.ts)
+    [tests/browser/profileResolution.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/profileResolution.test.ts)
     with direct coverage for:
     - explicit `--agent` browser-profile resolution
     - explicit `--profile` winning over `--agent` in browser-profile
@@ -10421,22 +10421,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     itself, not only in outer session metadata
 - What changed:
   - added `selectedAgentId` to the browser config/session types in:
-    - [src/browser/types.ts](/home/ecochran76/workspace.local/oracle/src/browser/types.ts)
-    - [src/sessionManager.ts](/home/ecochran76/workspace.local/oracle/src/sessionManager.ts)
+    - [src/browser/types.ts](/home/ecochran76/workspace.local/auracall/src/browser/types.ts)
+    - [src/sessionManager.ts](/home/ecochran76/workspace.local/auracall/src/sessionManager.ts)
   - updated
-    [src/cli/browserConfig.ts](/home/ecochran76/workspace.local/oracle/src/cli/browserConfig.ts)
+    [src/cli/browserConfig.ts](/home/ecochran76/workspace.local/auracall/src/cli/browserConfig.ts)
     so `buildBrowserConfig(...)` carries `selectedAgentId` into the actual
     browser session config object
   - updated the real browser-config call sites in
-    [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    [bin/auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     so:
     - normal browser runs
     - setup verification runs
     - Grok conversation/browser helper runs
     all preserve selected-agent provenance in the browser config object itself
   - expanded tests in:
-    - [tests/cli/browserConfig.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/browserConfig.test.ts)
-    - [tests/browser/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/config.test.ts)
+    - [tests/cli/browserConfig.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/browserConfig.test.ts)
+    - [tests/browser/config.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/config.test.ts)
 - Verification:
   - `pnpm vitest run tests/cli/browserConfig.test.ts tests/browser/config.test.ts tests/configModel.test.ts tests/schema/resolver.test.ts tests/sessionManager.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -10452,10 +10452,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     execution diagnostics can consume it without leaving the browser seam
 - What changed:
   - added `selectedAgentId` to browser runtime metadata in:
-    - [src/browser/types.ts](/home/ecochran76/workspace.local/oracle/src/browser/types.ts)
-    - [src/sessionManager.ts](/home/ecochran76/workspace.local/oracle/src/sessionManager.ts)
+    - [src/browser/types.ts](/home/ecochran76/workspace.local/auracall/src/browser/types.ts)
+    - [src/sessionManager.ts](/home/ecochran76/workspace.local/auracall/src/sessionManager.ts)
   - updated browser runtime hint emission in
-    [src/browser/index.ts](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
+    [src/browser/index.ts](/home/ecochran76/workspace.local/auracall/src/browser/index.ts)
     across:
     - managed ChatGPT browser runs
     - remote ChatGPT browser runs
@@ -10463,8 +10463,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - managed Grok browser runs
     so runtime hints now include `selectedAgentId` from the browser config
   - expanded tests in:
-    - [tests/browser/sessionRunner.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/sessionRunner.test.ts)
-    - [tests/cli/sessionRunner.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/sessionRunner.test.ts)
+    - [tests/browser/sessionRunner.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/sessionRunner.test.ts)
+    - [tests/cli/sessionRunner.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/sessionRunner.test.ts)
     to pin both runtime-hint persistence and browser-failure runtime metadata
     with selected-agent provenance
 - Verification:
@@ -10482,17 +10482,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     troubleshooting output
 - What changed:
   - added normalized `runtimeSelectedAgentId` to session/status JSON in
-    [src/cli/sessionCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/sessionCommand.ts)
+    [src/cli/sessionCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/sessionCommand.ts)
   - updated
-    [src/cli/sessionDisplay.ts](/home/ecochran76/workspace.local/oracle/src/cli/sessionDisplay.ts)
+    [src/cli/sessionDisplay.ts](/home/ecochran76/workspace.local/auracall/src/cli/sessionDisplay.ts)
     so human-readable output now prints browser-local selected-agent
     provenance only when it adds information beyond the original request
     options:
     - `runtime agent: ...` in status rows
     - `Runtime-selected agent: ...` in attached session metadata
   - expanded:
-    - [tests/cli/sessionDisplay.coverage.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/sessionDisplay.coverage.test.ts)
-    - [tests/cli/sessionCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/sessionCommand.test.ts)
+    - [tests/cli/sessionDisplay.coverage.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/sessionDisplay.coverage.test.ts)
+    - [tests/cli/sessionCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/sessionCommand.test.ts)
     to pin both the conditional text output and the normalized JSON field
 - Verification:
   - `pnpm vitest run tests/cli/sessionDisplay.coverage.test.ts tests/cli/sessionCommand.test.ts tests/browser/sessionRunner.test.ts tests/cli/sessionRunner.test.ts --maxWorkers 1`
@@ -10517,9 +10517,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - browser runtime metadata provenance
     - session/status postmortem visibility
   - updated:
-    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
-    - [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
+    - [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-refactor-plan.md)
     to recommend the next bounded architecture slice:
     - first team-side readiness seam
     instead of
@@ -10537,7 +10537,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     runtime provenance is in place
 - What changed:
   - added shared team selection helpers in
-    [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts):
+    [src/config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts):
     - `getTeam(...)`
     - `resolveTeamSelection(...)`
   - `resolveTeamSelection(...)` now gives one canonical read-only bundle for:
@@ -10546,11 +10546,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - per-member resolution through
       `agent -> AuraCall runtime profile -> browser profile`
     - `exists`
-  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     so `profile list` consumes that helper instead of rebuilding team-member
     resolution from projected arrays
   - added direct coverage in
-    [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    [tests/configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -10565,14 +10565,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - mirror the new team-selection helper into `config show` so troubleshooting
     has the same normalized team contract that agents already have
 - What changed:
-  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     so `buildConfigShowReport(...)` now includes `resolvedTeams[]` from
     `resolveTeamSelection(...)`
   - updated the human-readable `config show` formatter to print resolved team
     membership and per-member inherited runtime/browser/default-service context
-  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
     to pin both the JSON report shape and text output
-  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     to document the new read-only resolved-team inspection surface
 - Verification:
   - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
@@ -10589,7 +10589,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     work can ask which runtime/browser contexts a team would activate
 - What changed:
   - added `resolveTeamRuntimeSelections(...)` in
-    [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    [src/config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
   - the helper now returns one read-only bundle for:
     - `teamId`
     - `agentIds`
@@ -10598,7 +10598,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - importantly, unresolved team members now stay unresolved in that helper
     instead of falling back to the active default runtime profile
   - added direct coverage in
-    [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    [tests/configModel.test.ts](/home/ecochran76/workspace.local/auracall/tests/configModel.test.ts)
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -10613,16 +10613,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     adding any `--team` runtime semantics
 - What changed:
   - added
-    [docs/dev/team-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-config-boundary-plan.md)
+    [docs/dev/team-config-boundary-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-config-boundary-plan.md)
     as the source of truth for:
     - what teams own
     - what teams inherit through agents/runtime profiles
     - what must remain owned below the team layer
     - what must remain deferred to the future service/runners layer
   - updated:
-    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
-    - [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
+    - [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/config-model-refactor-plan.md)
     to mark the first team-side readiness seam complete enough and to make the
     next recommendation explicit:
     - define team execution boundary first
@@ -10641,11 +10641,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     inspection/runtime-planning surfaces
 - What changed:
   - added `--team <name>` as a read-only planning selector in
-    [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    [bin/auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     for:
     - `config show`
     - `config doctor`
-  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     so both report builders now expose:
     - `selectedTeam`
     - per-member runtime planning state from
@@ -10654,9 +10654,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `--team` does not choose a member
     - `--team` does not override `--profile`
     - `--team` does not override `--agent`
-  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
     to pin the planning-only semantics
-  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/auracall/docs/configuration.md)
     to document `--team` as an inspection/planning surface only
 - Verification:
   - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
@@ -10672,13 +10672,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     workflow surface
 - What changed:
   - tightened the ChatGPT rename-editor readiness gate in
-    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/auracall/src/browser/providers/chatgptAdapter.ts)
     so it only accepts the real inline rename input:
     - `input[name="title-editor"]`
     - removed the prior broad fallbacks that treated any active text input or
       selected text as rename-editor readiness
   - added `matchesChatgptRenameEditorProbe(...)` and focused coverage in
-    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/chatgptAdapter.test.ts)
+    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/chatgptAdapter.test.ts)
   - replaced the ad hoc rename-persistence probe with the existing canonical
     `matchesChatgptConversationTitleProbe(...)` semantics by adding one shared
     title-probe reader and reusing it in:
@@ -10712,7 +10712,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - runner result: `PASS (root-base)`
   - persisted state file:
-    [chatgpt-rename-smoke-state.json](/home/ecochran76/workspace.local/oracle/docs/dev/tmp/chatgpt-rename-smoke-state.json)
+    [chatgpt-rename-smoke-state.json](/home/ecochran76/workspace.local/auracall/docs/dev/tmp/chatgpt-rename-smoke-state.json)
 - Notes:
   - this proves the stricter `title-editor` gate and canonical title-persistence
     matcher work on the current live ChatGPT root rename surface, not just in
@@ -10736,7 +10736,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - runner result: `PASS (root-base)`
   - persisted state file:
-    [chatgpt-rename-smoke-state-wsl-chrome-2.json](/home/ecochran76/workspace.local/oracle/docs/dev/tmp/chatgpt-rename-smoke-state-wsl-chrome-2.json)
+    [chatgpt-rename-smoke-state-wsl-chrome-2.json](/home/ecochran76/workspace.local/auracall/docs/dev/tmp/chatgpt-rename-smoke-state-wsl-chrome-2.json)
 - Notes:
   - this is the explicit multi-window/multi-account proof for the rename
     hardening slice:
@@ -10750,7 +10750,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     the second managed browser profile/account
 - What changed:
   - rewired ChatGPT root delete confirmation detection in
-    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/auracall/src/browser/providers/chatgptAdapter.ts)
     to use one shared delete-confirmation probe reader plus the existing
     `matchesChatgptDeleteConfirmationProbe(...)` matcher
   - removed the old duplicate in-page delete-confirmation expression so the
@@ -10779,7 +10779,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     one canonical post-reload source-name truth
 - What changed:
   - added `findChatgptProjectSourceName(...)` in
-    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/auracall/src/browser/providers/chatgptAdapter.ts)
     as the normalized project-source matcher
   - rewired project-source persistence checks to use the normalized source list
     after a sources-tab reload instead of separate ad hoc persisted-present and
@@ -10789,7 +10789,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - remove still must disappear from the live source list before persistence
       polling
   - added focused matcher coverage in
-    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/chatgptAdapter.test.ts)
+    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/chatgptAdapter.test.ts)
   - live-smoked the changed surface on `wsl-chrome-2` with the disposable
     project acceptance phase:
     - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts --profile wsl-chrome-2 --phase project --state-file docs/dev/tmp/chatgpt-project-sources-smoke-state-wsl-chrome-2.json`
@@ -10799,7 +10799,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - live runner result:
     - `PASS (project)` on `wsl-chrome-2`
   - persisted state file:
-    [chatgpt-project-sources-smoke-state-wsl-chrome-2.json](/home/ecochran76/workspace.local/oracle/docs/dev/tmp/chatgpt-project-sources-smoke-state-wsl-chrome-2.json)
+    [chatgpt-project-sources-smoke-state-wsl-chrome-2.json](/home/ecochran76/workspace.local/auracall/docs/dev/tmp/chatgpt-project-sources-smoke-state-wsl-chrome-2.json)
 - Notes:
   - the important live proof here is that the phase moved cleanly through:
     - project create/rename
@@ -10815,14 +10815,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - What changed:
   - reviewed the current ChatGPT hardening plan and the remaining high-signal
     recovery/persistence call sites in
-    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/auracall/src/browser/providers/chatgptAdapter.ts)
   - confirmed that the recently landed canonical seams now cover:
     - root rename editor readiness
     - root rename persistence
     - root delete confirmation
     - project-source persisted presence/absence after sources-tab reload
   - updated
-    [chatgpt-hardening-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-hardening-plan.md)
+    [chatgpt-hardening-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/chatgpt-hardening-plan.md)
     with the current live-proof status and the ranked next candidates
 - Audit result:
   - strongest remaining bounded mutation candidate:
@@ -10846,7 +10846,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     instructions writes share one authoritative reopen-to-verify contract
 - What changed:
   - added `matchesChatgptProjectSettingsSnapshot(...)` in
-    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/auracall/src/browser/providers/chatgptAdapter.ts)
     as the canonical persisted-settings matcher
   - replaced the split field-specific persistence helpers with one shared
     `waitForProjectSettingsApplied(...)` path built on:
@@ -10865,7 +10865,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - the old DOM expression as bounded fallback
     to preserve the already-green project phase while keeping one shared helper
   - added focused matcher coverage in
-    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/chatgptAdapter.test.ts)
+    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/chatgptAdapter.test.ts)
   - live-smoked the full bounded project phase on `wsl-chrome-2` after the
     repair:
     - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts --profile wsl-chrome-2 --phase project --state-file docs/dev/tmp/chatgpt-project-settings-smoke-state-wsl-chrome-2.json`
@@ -10875,7 +10875,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - live runner result:
     - `PASS (project)` on `wsl-chrome-2`
   - persisted state file:
-    [chatgpt-project-settings-smoke-state-wsl-chrome-2.json](/home/ecochran76/workspace.local/oracle/docs/dev/tmp/chatgpt-project-settings-smoke-state-wsl-chrome-2.json)
+    [chatgpt-project-settings-smoke-state-wsl-chrome-2.json](/home/ecochran76/workspace.local/auracall/docs/dev/tmp/chatgpt-project-settings-smoke-state-wsl-chrome-2.json)
 - Notes:
   - this live proof covered the exact settings-slice surfaces plus incidental
     regression coverage for project sources:
@@ -10890,7 +10890,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     mutation slices
 - What changed:
   - reviewed the current hardening plan against the current adapter state in
-    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/auracall/src/browser/providers/chatgptAdapter.ts)
   - confirmed the mutation-oriented persistence surfaces are now substantially
     better covered by canonical seams:
     - root rename readiness + persistence
@@ -10898,7 +10898,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - project-source persisted presence/absence after reload
     - project settings / instructions persisted snapshot verification
   - updated
-    [chatgpt-hardening-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-hardening-plan.md)
+    [chatgpt-hardening-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/chatgpt-hardening-plan.md)
     to re-rank the remaining work
 - Audit result:
   - next highest-value slice is now the broader read-path recovery consistency
@@ -10921,7 +10921,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - land the first bounded ChatGPT read-side recovery consistency slice
 - What changed:
   - added a shared read-surface helper in
-    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/auracall/src/browser/providers/chatgptAdapter.ts)
     for conversation-scoped read paths
   - the helper now owns the common fallback order:
     - navigate to the conversation route
@@ -10939,7 +10939,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts --profile wsl-chrome-2 --phase root-base --state-file docs/dev/tmp/chatgpt-read-surface-smoke-state-wsl-chrome-2.json`
     - result: `PASS (root-base)`
   - persisted state file:
-    [chatgpt-read-surface-smoke-state-wsl-chrome-2.json](/home/ecochran76/workspace.local/oracle/docs/dev/tmp/chatgpt-read-surface-smoke-state-wsl-chrome-2.json)
+    [chatgpt-read-surface-smoke-state-wsl-chrome-2.json](/home/ecochran76/workspace.local/auracall/docs/dev/tmp/chatgpt-read-surface-smoke-state-wsl-chrome-2.json)
 - Notes:
   - this live proof covered the exact read-side surface touched by the slice:
     `conversations context get` on the `wsl-chrome-2` managed browser profile
@@ -10951,10 +10951,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     conversation-surface readiness slice
 - What changed:
   - reviewed the remaining read-path hotspots in
-    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/auracall/src/browser/providers/chatgptAdapter.ts)
     after `refactor: share chatgpt read-surface readiness`
   - updated
-    [chatgpt-hardening-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-hardening-plan.md)
+    [chatgpt-hardening-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/chatgpt-hardening-plan.md)
     to reflect the narrower remaining gap
 - Audit result:
   - route/surface recovery is now centralized for:
@@ -10980,7 +10980,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - take the first artifact-local ChatGPT hardening slice
 - What changed:
   - added a canonical image artifact matcher in
-    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/auracall/src/browser/providers/chatgptAdapter.ts)
     so image readiness and image `src` resolution now share the same identity
     contract
   - rewired:
@@ -10989,7 +10989,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     to use the same matcher instead of duplicating separate file-id/title
     matching logic
   - added focused coverage in
-    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/chatgptAdapter.test.ts)
+    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/chatgptAdapter.test.ts)
 - Verification:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -11004,7 +11004,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - take the adjacent artifact-local download/spreadsheet button identity slice
 - What changed:
   - added a canonical download-button matcher in
-    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/auracall/src/browser/providers/chatgptAdapter.ts)
     for assistant artifact buttons
   - rewired the regular download-button tagger and the spreadsheet-card tagger
     through one shared button-tagging path so they now share:
@@ -11012,7 +11012,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - message/turn identity matching
     - optional button-index matching
   - added focused coverage in
-    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/chatgptAdapter.test.ts)
+    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/chatgptAdapter.test.ts)
 - Verification:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -11027,13 +11027,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - take the remaining artifact-local canvas enrichment consistency slice
 - What changed:
   - added a shared canvas content resolver in
-    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/auracall/src/browser/providers/chatgptAdapter.ts)
     so canvas materialization now reads through the same enrichment path as the
     broader payload+probe merge logic
   - rewired canvas artifact materialization to use that resolver instead of
     partially reimplementing the metadata-vs-probe fallback locally
   - added focused coverage in
-    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/chatgptAdapter.test.ts)
+    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/chatgptAdapter.test.ts)
     for:
     - existing content winning over probes
     - title-only fallback when no textdoc id is present
@@ -11062,11 +11062,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       materialized the DOCX
     - immediate standalone `context get` retry then succeeded
   - hardened the ChatGPT retry layer in
-    [src/browser/llmService/llmService.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/llmService.ts)
+    [src/browser/llmService/llmService.ts](/home/ecochran76/workspace.local/auracall/src/browser/llmService/llmService.ts)
     so transient conversation read misses (`content not found` /
     `messages not found`) are treated as retryable ChatGPT read failures
   - added focused retry coverage in
-    [tests/browser/llmServiceRateLimit.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/llmServiceRateLimit.test.ts)
+    [tests/browser/llmServiceRateLimit.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/llmServiceRateLimit.test.ts)
 - Verification:
   - `pnpm vitest run tests/browser/llmServiceRateLimit.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -11092,14 +11092,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     prompt-commit failure
 - What changed:
   - added a pre-submit readiness gate in
-    [src/browser/actions/promptComposer.ts](/home/ecochran76/workspace.local/oracle/src/browser/actions/promptComposer.ts)
+    [src/browser/actions/promptComposer.ts](/home/ecochran76/workspace.local/auracall/src/browser/actions/promptComposer.ts)
     so prompt submission now waits for the composer/send surface to settle
     before attempting the send path
   - this specifically avoids falling through to a premature Enter-key fallback
     while the previous turn is still hot or the send surface has not fully
     become ready again
   - added focused coverage in
-    [tests/browser/promptComposer.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/promptComposer.test.ts)
+    [tests/browser/promptComposer.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/promptComposer.test.ts)
     for:
     - waiting until hot-conversation submit readiness clears
     - accepting immediate readiness when the conversation is already settled
@@ -11236,7 +11236,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - team/service planning
 - What changed:
   - added a read-only TypeScript module at
-    [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts)
+    [src/teams/types.ts](/home/ecochran76/workspace.local/auracall/src/teams/types.ts)
     that mirrors the planned future entity vocabulary:
     - `TeamRun`
     - `TeamRunStep`
@@ -11245,7 +11245,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - added conservative default execution policy constants without attaching
     any runner or service behavior
   - added focused coverage in
-    [tests/teams.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.types.test.ts)
+    [tests/teams.types.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.types.test.ts)
 - Verification:
   - `pnpm vitest run tests/teams.types.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -11256,7 +11256,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - team/service planning
 - What changed:
   - added a read-only Zod schema module at
-    [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts)
+    [src/teams/schema.ts](/home/ecochran76/workspace.local/auracall/src/teams/schema.ts)
     that mirrors the team-run types seam for:
     - `TeamRun`
     - `TeamRunStep`
@@ -11265,7 +11265,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - kept the schema seam local to the team module instead of mixing it into the
     main config schema surface
   - added focused coverage in
-    [tests/teams.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.schema.test.ts)
+    [tests/teams.schema.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.schema.test.ts)
 - Verification:
   - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -11276,7 +11276,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - team/service planning
 - What changed:
   - added a read-only model helper module at
-    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts)
     with small validated builders for:
     - `createTeamRunStep(...)`
     - `createTeamRunSharedState(...)`
@@ -11284,7 +11284,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the bundle factory now turns ordered step inputs into a stable planned
     `teamRun + steps + sharedState` shape using the existing team-run schemas
   - added focused coverage in
-    [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+    [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts)
 - Verification:
   - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -11295,7 +11295,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - team/service planning
 - What changed:
   - extended
-    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts)
     with read-only planners that bridge existing config-model team resolution
     into the new team-run model:
     - `createTeamRunBundleFromResolvedTeam(...)`
@@ -11308,7 +11308,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - unresolved team members are preserved as `blocked` planned steps instead of
     being silently dropped
   - expanded
-    [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+    [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts)
 - Verification:
   - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -11319,7 +11319,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - team/service planning
 - What changed:
   - extended
-    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     so `config show --team <name>` now exposes a read-only `plannedTeamRun`
     block built from the new team-run model helpers
   - the report now shows:
@@ -11328,7 +11328,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - per-step resolved runtime/browser/service identity
     - blocked unresolved members
   - expanded
-    [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
 - Verification:
   - `pnpm vitest run tests/cli/configCommand.test.ts tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -11339,13 +11339,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - team/service planning
 - What changed:
   - extended
-    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/auracall/src/cli/configCommand.ts)
     so `config doctor --team <name>` now exposes the same read-only
     `plannedTeamRun` bundle already used by `config show --team <name>`
   - factored the inspection-only planner construction into one local helper so
     show/doctor share the same deterministic bundle shape
   - expanded
-    [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/configCommand.test.ts)
     to pin:
     - no planned run for non-team doctor reports
     - full planned run parity for selected-team doctor reports
@@ -11359,7 +11359,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - team/service planning
 - What changed:
   - added a new read-only service-facing helper module at
-    [src/teams/service.ts](/home/ecochran76/workspace.local/oracle/src/teams/service.ts)
+    [src/teams/service.ts](/home/ecochran76/workspace.local/auracall/src/teams/service.ts)
   - it turns the validated `teamRun + steps + sharedState` bundle into one
     canonical service-ready plan with:
     - ordered `steps`
@@ -11375,7 +11375,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - no retries
     - no service mode behavior
   - added focused coverage in
-    [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
+    [tests/teams.service.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.service.test.ts)
 - Verification:
   - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts tests/teams.service.test.ts --maxWorkers 1`
   - `pnpm run check`
@@ -11385,7 +11385,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Current focus:
   - roadmap / sequencing
 - What changed:
-  - updated [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+  - updated [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
     to add explicit future platform tracks for:
     - service mode and runner orchestration
     - durable state and account mirroring
@@ -11394,7 +11394,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - provider expansion
     - agent orchestration and local actions
   - updated
-    [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
     with:
     - the new platform-priority rationale
     - `Now / Soon / Later` buckets
@@ -11408,7 +11408,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - provider expansion planning
 - What changed:
   - added
-    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
     to pin a bounded Gemini completion approach
   - the plan records:
     - what already exists in Gemini API and Gemini web/browser paths
@@ -11419,8 +11419,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       - live proof refresh
       - one bounded implementation gap
   - aligned:
-    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - docs/planning only
 
@@ -11429,7 +11429,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Current focus:
   - Gemini planning / docs
 - What changed:
-  - updated [docs/gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
+  - updated [docs/gemini.md](/home/ecochran76/workspace.local/auracall/docs/gemini.md)
     with a concrete Gemini feature matrix covering:
     - API vs Gemini web/browser
     - text
@@ -11441,11 +11441,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - search/tooling
     - Gem URL targeting
     - cookie/login flow
-  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     to pin the current Gemini support/proof baseline and the intended live-proof
     target surfaces
   - updated
-    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
     to mark Slice 1 complete enough and point the next Gemini work at
     operator/runtime alignment
 - Verification:
@@ -11456,17 +11456,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Current focus:
   - Gemini operator/runtime alignment
 - What changed:
-  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     so `auracall doctor --target gemini` is now explicitly supported only in
     `--local-only` mode
-  - updated [src/browser/profileDoctor.ts](/home/ecochran76/workspace.local/oracle/src/browser/profileDoctor.ts)
+  - updated [src/browser/profileDoctor.ts](/home/ecochran76/workspace.local/auracall/src/browser/profileDoctor.ts)
     so Gemini doctor identity status now carries an explicit reason instead of
     a bare unsupported flag
-  - updated [docs/gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
-    and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - updated [docs/gemini.md](/home/ecochran76/workspace.local/auracall/docs/gemini.md)
+    and [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     to document that boundary directly
   - expanded
-    [tests/browser/profileDoctor.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/profileDoctor.test.ts)
+    [tests/browser/profileDoctor.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/profileDoctor.test.ts)
     for the new Gemini doctor identity semantics
 - Verification:
   - `pnpm vitest run tests/browser/profileDoctor.test.ts --maxWorkers 1`
@@ -11477,16 +11477,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Current focus:
   - Gemini operator/runtime alignment
 - What changed:
-  - updated [docs/gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
+  - updated [docs/gemini.md](/home/ecochran76/workspace.local/auracall/docs/gemini.md)
     so Gemini web targeting is documented primarily in terms of:
     - AuraCall runtime profiles
     - service-scoped `services.gemini.url`
     - browser profile selection
   - updated
-    [docs/wsl-gemini-runbook.md](/home/ecochran76/workspace.local/oracle/docs/wsl-gemini-runbook.md)
+    [docs/wsl-gemini-runbook.md](/home/ecochran76/workspace.local/auracall/docs/wsl-gemini-runbook.md)
     to replace old `oracle` examples with current `auracall` usage and a
     target-shape config example
-  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
     help text so `--gemini-url` is described consistently as a Gemini web URL
     override
 - Verification:
@@ -11498,13 +11498,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Gemini completion planning
 - What changed:
   - updated
-    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
     to mark Slice 2 complete enough and make Slice 3 the next active Gemini
     step
-  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     to pin the intended Gemini live-proof execution order
   - updated
-    [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
     so the broader execution board reflects that Gemini should move to proof
     refresh instead of more operator alignment cleanup
 - Verification:
@@ -11515,16 +11515,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Current focus:
   - Gemini live-proof refresh
 - What changed:
-  - fixed [src/browser/config.ts](/home/ecochran76/workspace.local/oracle/src/browser/config.ts)
+  - fixed [src/browser/config.ts](/home/ecochran76/workspace.local/auracall/src/browser/config.ts)
     so Gemini browser targets resolve the generic browser `url` field from
     Gemini inputs instead of inheriting ChatGPT defaults
-  - expanded [tests/browser/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/config.test.ts)
+  - expanded [tests/browser/config.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/config.test.ts)
     to pin:
     - Gemini target URL resolution
     - Gemini default managed browser profile derivation
-  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     and
-    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
     with the first fresh Gemini web proof results
 - Live proof:
   - pairing: `default` AuraCall runtime profile -> `default` browser profile
@@ -11551,17 +11551,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Gemini live-proof / cookie-path alignment
 - What changed:
   - added a managed-profile cookie export helper in
-    [src/browser/profileStore.ts](/home/ecochran76/workspace.local/oracle/src/browser/profileStore.ts)
-  - updated [src/browser/login.ts](/home/ecochran76/workspace.local/oracle/src/browser/login.ts)
+    [src/browser/profileStore.ts](/home/ecochran76/workspace.local/auracall/src/browser/profileStore.ts)
+  - updated [src/browser/login.ts](/home/ecochran76/workspace.local/auracall/src/browser/login.ts)
     so `auracall login --target gemini --export-cookies` now writes:
     - the primary runtime-profile-scoped cookie file under the managed Gemini
       browser profile
     - the old `~/.auracall/cookies.json` compatibility file
-  - updated [src/cli/browserConfig.ts](/home/ecochran76/workspace.local/oracle/src/cli/browserConfig.ts)
+  - updated [src/cli/browserConfig.ts](/home/ecochran76/workspace.local/auracall/src/cli/browserConfig.ts)
     so Gemini browser runs prefer the scoped exported-cookie file before the
     legacy global fallback
   - expanded
-    [tests/cli/browserConfig.inlineCookies.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/browserConfig.inlineCookies.test.ts)
+    [tests/cli/browserConfig.inlineCookies.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/browserConfig.inlineCookies.test.ts)
     for the scoped Gemini fallback order
 - Verification:
   - focused inline-cookie/browser-config tests
@@ -11576,9 +11576,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - browser profile `default`
   - kept the host on the runtime-profile-scoped exported-cookie fallback:
     - `/home/ecochran76/.auracall/browser-profiles/default/gemini/cookies.json`
-  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     and
-    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
     with the new proof result
 - Live proof:
   - Gemini YouTube run: green
@@ -11599,9 +11599,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - browser profile `default`
   - kept the host on the runtime-profile-scoped exported-cookie fallback:
     - `/home/ecochran76/.auracall/browser-profiles/default/gemini/cookies.json`
-  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     and
-    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
     to record the result as a proof/capability outcome rather than a code
     regression
 - Live proof:
@@ -11628,9 +11628,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - used a disposable local PNG input with the same runtime-profile-scoped
     exported-cookie fallback:
     - `/home/ecochran76/.auracall/browser-profiles/default/gemini/cookies.json`
-  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     and
-    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
     to record the result as a proof/capability outcome rather than a code
     regression
 - Live proof:
@@ -11651,9 +11651,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Current focus:
   - Gemini proof/status planning
 - What changed:
-  - updated [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+  - updated [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
     to mark the live-proof refresh complete enough for one explicit pairing
-  - updated [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+  - updated [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
     so Gemini now points at a deliberate next decision instead of continued
     probing on the same account
 - Outcome:
@@ -11677,8 +11677,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `auracall --profile default doctor --target gemini --local-only --json`
     - `auracall --profile wsl-chrome-2 doctor --target gemini --local-only --json`
     - `auracall --profile windows-chrome-test doctor --target gemini --local-only --json`
-  - updated [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
-    and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+  - updated [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
+    and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
     so the next Gemini step is framed honestly
 - Outcome:
   - `default -> gemini` is currently the only Gemini-ready pairing on this host
@@ -11700,9 +11700,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini`
   - local Gemini doctor now reports that pairing as initialized and live
   - ran one narrow text probe on the same pairing
-  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     and
-    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
     to record the result honestly
 - Outcome:
   - `wsl-chrome-2 -> gemini` is now initialized
@@ -11722,17 +11722,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Gemini login/export hardening
 - What changed:
   - updated
-    [packages/browser-service/src/loginHelpers.ts](/home/ecochran76/workspace.local/oracle/packages/browser-service/src/loginHelpers.ts)
+    [packages/browser-service/src/loginHelpers.ts](/home/ecochran76/workspace.local/auracall/packages/browser-service/src/loginHelpers.ts)
     so the shared cookie-export wait loop can run a signed-out DOM probe and
     fail early instead of waiting indefinitely for required cookies
-  - updated [src/browser/login.ts](/home/ecochran76/workspace.local/oracle/src/browser/login.ts)
+  - updated [src/browser/login.ts](/home/ecochran76/workspace.local/auracall/src/browser/login.ts)
     so Gemini export-cookies now uses a target-specific visible `Sign in`
     probe against the opened login page
   - added focused coverage in:
-    - [tests/browser-service/loginHelpers.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser-service/loginHelpers.test.ts)
-    - [tests/browser/geminiLogin.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/geminiLogin.test.ts)
-  - updated [docs/gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
-    and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [tests/browser-service/loginHelpers.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser-service/loginHelpers.test.ts)
+    - [tests/browser/geminiLogin.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/geminiLogin.test.ts)
+  - updated [docs/gemini.md](/home/ecochran76/workspace.local/auracall/docs/gemini.md)
+    and [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     for the new operator-visible behavior
 - Verification:
   - `pnpm vitest run tests/browser-service/loginHelpers.test.ts tests/browser/geminiLogin.test.ts tests/browser/login.test.ts tests/browser/browserLoginCore.test.ts --maxWorkers 1`
@@ -11748,9 +11748,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the new signed-out detection fired live on the opened Gemini page instead
     of leaving the pairing in an ambiguous "waiting for cookies" state
   - updated
-    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     and
-    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
     to stop describing `wsl-chrome-2 -> gemini` as merely "initialized and
     live"
 - Outcome:
@@ -11770,10 +11770,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Gemini login/export recovery
 - What changed:
   - updated
-    [packages/browser-service/src/loginHelpers.ts](/home/ecochran76/workspace.local/oracle/packages/browser-service/src/loginHelpers.ts)
+    [packages/browser-service/src/loginHelpers.ts](/home/ecochran76/workspace.local/auracall/packages/browser-service/src/loginHelpers.ts)
     so signed-out cookie export flows can attempt one bounded recovery action
     and wait through a short post-click grace window before failing
-  - updated [src/browser/login.ts](/home/ecochran76/workspace.local/oracle/src/browser/login.ts)
+  - updated [src/browser/login.ts](/home/ecochran76/workspace.local/auracall/src/browser/login.ts)
     so Gemini uses that seam to click a visible `Sign in` CTA once on the
     Gemini surface
   - updated Gemini docs/testing notes to distinguish:
@@ -11803,9 +11803,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     runtime-profile-scoped cookie export:
     - `AURACALL_BROWSER_COOKIES_FILE=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gemini-3-pro --prompt 'Reply exactly with: WSL2 GEMINI TEXT GREEN 2' --wait --verbose --force`
   - updated
-    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     and
-    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
     to promote this pairing from login-ready to text-green
 - Outcome:
   - Gemini returned exactly:
@@ -11871,10 +11871,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Current focus:
   - Gemini real attachment transport
 - What changed:
-  - updated [src/gemini-web/client.ts](/home/ecochran76/workspace.local/oracle/src/gemini-web/client.ts)
+  - updated [src/gemini-web/client.ts](/home/ecochran76/workspace.local/auracall/src/gemini-web/client.ts)
     so Gemini uploads now send a MIME-typed blob instead of an untyped file
   - added focused coverage in
-    [upload.test.ts](/home/ecochran76/workspace.local/oracle/tests/gemini-web/upload.test.ts)
+    [upload.test.ts](/home/ecochran76/workspace.local/auracall/tests/gemini-web/upload.test.ts)
     to prove a `.png` upload is posted as `image/png`
 - Outcome:
   - focused Gemini tests are green
@@ -11893,10 +11893,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Current focus:
   - Gemini real attachment transport
 - What changed:
-  - updated [src/gemini-web/client.ts](/home/ecochran76/workspace.local/oracle/src/gemini-web/client.ts)
+  - updated [src/gemini-web/client.ts](/home/ecochran76/workspace.local/auracall/src/gemini-web/client.ts)
     so uploaded Gemini attachments now carry filename and MIME metadata in the
     `f.req` payload tuple, not just the upload id
-  - expanded [upload.test.ts](/home/ecochran76/workspace.local/oracle/tests/gemini-web/upload.test.ts)
+  - expanded [upload.test.ts](/home/ecochran76/workspace.local/auracall/tests/gemini-web/upload.test.ts)
     to prove the generated `f.req` payload now includes:
     - `[[fileId, 1, null, mimeType], fileName]`
 - Outcome:
@@ -11919,12 +11919,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Gemini real attachment transport diagnostics
 - What changed:
   - added control-frame-only Gemini response detection in
-    [src/gemini-web/client.ts](/home/ecochran76/workspace.local/oracle/src/gemini-web/client.ts)
-  - updated [src/gemini-web/executor.ts](/home/ecochran76/workspace.local/oracle/src/gemini-web/executor.ts)
+    [src/gemini-web/client.ts](/home/ecochran76/workspace.local/auracall/src/gemini-web/client.ts)
+  - updated [src/gemini-web/executor.ts](/home/ecochran76/workspace.local/auracall/src/gemini-web/executor.ts)
     so attachment/text runs no longer treat that shape as a clean empty success
   - added focused coverage in:
-    - [parse.test.ts](/home/ecochran76/workspace.local/oracle/tests/gemini-web/parse.test.ts)
-    - [executor.test.ts](/home/ecochran76/workspace.local/oracle/tests/gemini-web/executor.test.ts)
+    - [parse.test.ts](/home/ecochran76/workspace.local/auracall/tests/gemini-web/parse.test.ts)
+    - [executor.test.ts](/home/ecochran76/workspace.local/auracall/tests/gemini-web/executor.test.ts)
 - Outcome:
   - the underlying Gemini upload gap is still not fixed
   - but the current forced-upload image path now fails explicitly with:
@@ -11963,7 +11963,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Current focus:
   - Gemini native attachment transport investigation
 - What changed:
-  - added [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
+  - added [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-native-upload-investigation.md)
     to pin the current live Gemini upload UI anchors supplied during
     investigation:
     - upload menu item:
@@ -12529,7 +12529,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     and browser-service extraction line reached a good checkpoint
 - What changed:
   - added:
-    - [gemini-conversation-gem-cache-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-conversation-gem-cache-plan.md)
+    - [gemini-conversation-gem-cache-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-conversation-gem-cache-plan.md)
   - linked it from:
     - `gemini-completion-plan.md`
     - `next-execution-plan.md`
@@ -13128,7 +13128,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm exec tsc -p tsconfig.json --noEmit`
   - live:
     - upload:
-      - `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/browser-profiles/default/gemini/cookies.json pnpm tsx bin/auracall.ts projects files add 61f0e955b0ca --file /home/ecochran76/workspace.local/oracle/AGENTS.md --target gemini --profile default --verbose`
+      - `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/browser-profiles/default/gemini/cookies.json pnpm tsx bin/auracall.ts projects files add 61f0e955b0ca --file /home/ecochran76/workspace.local/auracall/AGENTS.md --target gemini --profile default --verbose`
       - returned:
         - `Uploaded 1 file(s) to project 61f0e955b0ca.`
     - fresh list:
@@ -13349,7 +13349,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## 2026-04-05 - First shared cache operator seam is now in place
 
 - What changed:
-  - added [operatorContext.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/cache/operatorContext.ts)
+  - added [operatorContext.ts](/home/ecochran76/workspace.local/auracall/src/browser/llmService/cache/operatorContext.ts)
     as the first shared cache operator layer for:
     - provider validation
     - configured URL ownership
@@ -13396,7 +13396,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## 2026-04-05 - Wrote the cache architecture anti-drift plan
 
 - Added:
-  - [cache-architecture-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-architecture-plan.md)
+  - [cache-architecture-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/cache-architecture-plan.md)
 - What it does:
   - defines the cache subsystem in four layers:
     - cache scope
@@ -13408,13 +13408,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - records anti-drift rules for future cache work
 - Alignment:
   - linked the new architecture plan from:
-    - [cache-schema.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-schema.md)
-    - [cache-remaining-todos-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-remaining-todos-plan.md)
+    - [cache-schema.md](/home/ecochran76/workspace.local/auracall/docs/dev/cache-schema.md)
+    - [cache-remaining-todos-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/cache-remaining-todos-plan.md)
 
 ## 2026-04-05 - Turned the cache architecture note into a concrete artifact/projection implementation plan
 
 - Added:
-  - [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
+  - [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/cache-artifact-projection-plan.md)
 - What it does:
   - turns the architecture note into one bounded next slice
   - defines:
@@ -13425,15 +13425,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       de facto artifact model
 - Alignment:
   - linked the new plan from:
-    - [cache-architecture-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-architecture-plan.md)
-    - [cache-remaining-todos-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-remaining-todos-plan.md)
+    - [cache-architecture-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/cache-architecture-plan.md)
+    - [cache-remaining-todos-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/cache-remaining-todos-plan.md)
 
 ## 2026-04-05 - Reframed Gemini CLI parity as closed for now, with explicit backlog
 
 - Planning update:
   - updated:
-    - [gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
-    - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
+    - [next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Main conclusion:
   - Gemini CLI/operator parity for already-green surfaces is now largely in
     maintenance mode
@@ -13449,7 +13449,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 - What changed:
   - added:
-    - [projectionSync.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/cache/projectionSync.ts)
+    - [projectionSync.ts](/home/ecochran76/workspace.local/auracall/src/browser/llmService/cache/projectionSync.ts)
   - `SqliteCacheStore` now uses that shared projection seam for:
     - source links
     - file bindings
@@ -13457,9 +13457,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - added first-class SQLite artifact projection support:
     - `artifact_bindings`
   - added internal artifact catalog reads in:
-    - [catalog.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/cache/catalog.ts)
+    - [catalog.ts](/home/ecochran76/workspace.local/auracall/src/browser/llmService/cache/catalog.ts)
   - added focused regression coverage in:
-    - [cacheCatalog.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/cacheCatalog.test.ts)
+    - [cacheCatalog.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/cacheCatalog.test.ts)
 - Verification:
   - `pnpm vitest run tests/browser/cacheCatalog.test.ts tests/browser/providerCache.test.ts tests/cli/cacheGeminiParity.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -13478,9 +13478,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - added CLI regression coverage for:
     - `cache artifacts list --provider gemini`
 - Docs updated:
-  - [browser-mode.md](/home/ecochran76/workspace.local/oracle/docs/browser-mode.md)
-  - [gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
-  - [testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - [browser-mode.md](/home/ecochran76/workspace.local/auracall/docs/browser-mode.md)
+  - [gemini.md](/home/ecochran76/workspace.local/auracall/docs/gemini.md)
+  - [testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/cli/cacheGeminiParity.test.ts tests/browser/cacheCatalog.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -13528,8 +13528,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     tooling still only understood source/file parity drift
   - that left cache integrity checks structurally incomplete
 - Docs updated:
-  - [browser-mode.md](/home/ecochran76/workspace.local/oracle/docs/browser-mode.md)
-  - [testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - [browser-mode.md](/home/ecochran76/workspace.local/auracall/docs/browser-mode.md)
+  - [testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/cli/cacheGeminiParity.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -13555,7 +13555,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - one centralized conversation inventory read path is a better foundation for
     broader reporting and discovery work
 - Docs updated:
-  - [browser-mode.md](/home/ecochran76/workspace.local/oracle/docs/browser-mode.md)
+  - [browser-mode.md](/home/ecochran76/workspace.local/auracall/docs/browser-mode.md)
 - Verification:
   - `pnpm vitest run tests/browser/cacheCatalog.test.ts tests/browser/cacheExport.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -13580,7 +13580,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     for `conversations.json`
   - it did not expose what was actually present in the conversation cache
 - Docs updated:
-  - [browser-mode.md](/home/ecochran76/workspace.local/oracle/docs/browser-mode.md)
+  - [browser-mode.md](/home/ecochran76/workspace.local/auracall/docs/browser-mode.md)
 - Verification:
   - `pnpm vitest run tests/cli/cacheGeminiParity.test.ts tests/browser/cacheCatalog.test.ts tests/browser/cacheExport.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -13605,8 +13605,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - maintenance reports should not require a second command just to understand
     what cache volume is being checked
 - Docs updated:
-  - [browser-mode.md](/home/ecochran76/workspace.local/oracle/docs/browser-mode.md)
-  - [testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - [browser-mode.md](/home/ecochran76/workspace.local/auracall/docs/browser-mode.md)
+  - [testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/cli/cacheGeminiParity.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -13629,8 +13629,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - maintenance summaries were still too dataset-shaped and did not clearly say
     what conversational cache volume a mutation would affect
 - Docs updated:
-  - [browser-mode.md](/home/ecochran76/workspace.local/oracle/docs/browser-mode.md)
-  - [testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - [browser-mode.md](/home/ecochran76/workspace.local/auracall/docs/browser-mode.md)
+  - [testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/cli/cacheGeminiParity.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -13660,10 +13660,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - added focused provider-surface coverage in
     `tests/browser/geminiAdapter.test.ts`
 - Docs updated:
-  - [gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
-  - [testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-  - [gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
-  - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+  - [gemini.md](/home/ecochran76/workspace.local/auracall/docs/gemini.md)
+  - [testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+  - [gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
+  - [next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - `pnpm vitest run tests/browser/geminiAdapter.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -13704,10 +13704,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `tests/browser/geminiAdapter.test.ts`
     - `tests/browser/llmServiceContext.test.ts`
 - Docs updated:
-  - [gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
-  - [testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-  - [gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
-  - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+  - [gemini.md](/home/ecochran76/workspace.local/auracall/docs/gemini.md)
+  - [testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+  - [gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
+  - [next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceContext.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -13743,10 +13743,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Gemini now returns synthetic stable conversation file refs shaped like:
     - `gemini-conversation-file:<conversationId>:<ordinal>:<name>`
 - Docs updated:
-  - [gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
-  - [testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-  - [gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
-  - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+  - [gemini.md](/home/ecochran76/workspace.local/auracall/docs/gemini.md)
+  - [testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+  - [gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
+  - [next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceContext.test.ts tests/browser/llmServiceFiles.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -13785,10 +13785,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     parse it in Node, which avoided the earlier CDP by-value marshaling gap
     that was dropping `artifacts[]`
 - Docs updated:
-  - [gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
-  - [testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-  - [gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
-  - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+  - [gemini.md](/home/ecochran76/workspace.local/auracall/docs/gemini.md)
+  - [testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+  - [gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
+  - [next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceContext.test.ts tests/browser/llmServiceFiles.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -13831,10 +13831,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `configs/auracall.services.json` so discovery can feed a durable drift
     signature instead of one-off ad hoc text probes
 - Docs updated:
-  - [gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
-  - [testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-  - [gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
-  - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+  - [gemini.md](/home/ecochran76/workspace.local/auracall/docs/gemini.md)
+  - [testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+  - [gemini-completion-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/gemini-completion-plan.md)
+  - [next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/profileDoctor.test.ts tests/cli/browserSetup.test.ts tests/services/registry.test.ts tests/browser/llmServiceIdentity.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -13894,10 +13894,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `search --aria-label "Personal Intelligence" --role switch --json`
     returned the live switch node with `checked: true`
 - Docs updated:
-  - [docs/dev/browser-service-tools.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-tools.md)
-  - [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md)
-  - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-  - [docs/gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
+  - [docs/dev/browser-service-tools.md](/home/ecochran76/workspace.local/auracall/docs/dev/browser-service-tools.md)
+  - [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/auracall/docs/dev/browser-service-upgrade-backlog.md)
+  - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+  - [docs/gemini.md](/home/ecochran76/workspace.local/auracall/docs/gemini.md)
 - Durable lesson:
   - volatile provider DOM discovery belongs on one package-owned structured
     DOM-census seam; adapters should consume reusable facts from that seam
@@ -13974,9 +13974,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/browser/browserTools.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
 - Docs updated:
-  - [docs/dev/browser-service-tools.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-tools.md)
-  - [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md)
-  - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - [docs/dev/browser-service-tools.md](/home/ecochran76/workspace.local/auracall/docs/dev/browser-service-tools.md)
+  - [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/auracall/docs/dev/browser-service-upgrade-backlog.md)
+  - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Next:
   - use `ls` plus `search` as the browser-service evidence surfaces before
     widening Gemini doctor/discovery semantics again
@@ -14542,7 +14542,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - make the package boundary legible on its own before future independent
     launch work
 - Progress:
-  - added [`packages/browser-service/README.md`](/home/ecochran76/workspace.local/oracle/packages/browser-service/README.md)
+  - added [`packages/browser-service/README.md`](/home/ecochran76/workspace.local/auracall/packages/browser-service/README.md)
   - the new package README now documents:
     - purpose
     - stable vs provisional exports
@@ -14619,14 +14619,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     bounded next implementation plan
 - Progress:
   - added
-    [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
+    [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/service-runtime-execution-plan.md)
   - anchored the next track around:
     - one durable execution vocabulary
     - sequential-first dispatch
     - lease/runner ownership
     - one shared execution core for CLI, API, and MCP
   - linked the active roadmap to that plan from
-    [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    [next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Notes:
   - the repo already has useful planning/data seams in `src/teams/*`
   - the next goal is not broad service mode delivery; it is preventing future
@@ -14669,7 +14669,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     contract
 - Progress:
   - added
-    [api-compatibility-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/api-compatibility-plan.md)
+    [api-compatibility-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/api-compatibility-plan.md)
   - set the default API policy to:
     - standard `/v1/models`
     - standard `/v1/responses`
@@ -14959,21 +14959,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - expose a lightweight operator visibility path for service-host recovery state
 - Progress:
   - added optional status query support in
-    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts):
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts):
     - `GET /status?recovery=true` (or `1`) to request the current recovery
       summary
     - optional `sourceKind=direct|team-run` filtering (defaults to `direct`)
   - added focused test coverage in
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
     for:
     - default direct recovery summary
     - filtered team recovery summary
     - invalid query combinations
   - updated user docs:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
-    - [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
+    - [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/runtime-service-host-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - `pnpm vitest run tests/http.responsesServer.test.ts`
 - Issues:
@@ -14988,18 +14988,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - added source-kind selection for startup recovery on `auracall api serve` via
     `--recover-runs-on-start-source <direct|team-run|all>`
   - wired startup recovery to filter `direct`, `team-run`, or both (`all`) in
-    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
   - fixed status-query semantics so `/status` now supports
     `sourceKind=all` and no longer rejects status-only filters on non-status routes
   - added regression coverage in
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
     for:
     - `sourceKind=all` recovery summary
     - non-status routes with status-filter-like query params
   - updated user docs and command help text for consistent wording:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
-    - [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
+    - [bin/auracall.ts](/home/ecochran76/workspace.local/auracall/bin/auracall.ts)
 - Verification:
   - `pnpm vitest run tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15013,30 +15013,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     transiently
 - Progress:
   - extended the team-run bundle shape in:
-    [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts)
-    [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts)
-    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    [src/teams/types.ts](/home/ecochran76/workspace.local/auracall/src/teams/types.ts)
+    [src/teams/schema.ts](/home/ecochran76/workspace.local/auracall/src/teams/schema.ts)
+    [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts)
     to carry:
     - persisted `handoffs`
     - persisted `localActionRequests`
   - added a first explicit local host-action entity via
     `createTeamRunLocalActionRequest(...)`
   - updated
-    [src/teams/service.ts](/home/ecochran76/workspace.local/oracle/src/teams/service.ts)
+    [src/teams/service.ts](/home/ecochran76/workspace.local/auracall/src/teams/service.ts)
     to consume persisted handoffs/local action requests in the service plan
     instead of recomputing handoffs inside the planner seam
   - updated runtime projection in:
-    [src/runtime/types.ts](/home/ecochran76/workspace.local/oracle/src/runtime/types.ts)
-    [src/runtime/schema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/schema.ts)
-    [src/runtime/model.ts](/home/ecochran76/workspace.local/oracle/src/runtime/model.ts)
+    [src/runtime/types.ts](/home/ecochran76/workspace.local/auracall/src/runtime/types.ts)
+    [src/runtime/schema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/schema.ts)
+    [src/runtime/model.ts](/home/ecochran76/workspace.local/auracall/src/runtime/model.ts)
     so projected execution bundles retain both entity families
   - added focused coverage in:
-    - [tests/teams.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.types.test.ts)
-    - [tests/teams.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.schema.test.ts)
-    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
-    - [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
-    - [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.model.test.ts)
-    - [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.schema.test.ts)
+    - [tests/teams.types.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.types.test.ts)
+    - [tests/teams.schema.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.schema.test.ts)
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts)
+    - [tests/teams.service.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.service.test.ts)
+    - [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.model.test.ts)
+    - [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.schema.test.ts)
 - Verification:
   - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts tests/teams.service.test.ts tests/runtime.model.test.ts tests/runtime.schema.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15052,16 +15052,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     lifecycle
 - Progress:
   - updated
-    [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts)
-    [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts)
-    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    [src/teams/types.ts](/home/ecochran76/workspace.local/auracall/src/teams/types.ts)
+    [src/teams/schema.ts](/home/ecochran76/workspace.local/auracall/src/teams/schema.ts)
+    [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts)
     so `localActionRequest` records can carry:
     - approval timestamp
     - completion timestamp
     - result summary
     - result payload
   - extended
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so a step output may emit `structuredData.localActionRequests[]`
   - added bounded request derivation rules:
     - respects step-level `localActionPolicy`
@@ -15071,13 +15071,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `executed`, `failed`, `rejected`, or similar and persist result metadata in
     the run bundle
   - threaded that callback through:
-    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
-    - [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts)
+    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
+    - [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/auracall/src/teams/runtimeBridge.ts)
   - added focused coverage in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
     - updated bundle/entity expectation coverage in:
-      - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+      - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/runtime.model.test.ts tests/runtime.schema.test.ts tests/teams.model.test.ts tests/teams.service.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15092,7 +15092,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     lifecycle
 - Progress:
   - added
-    [src/runtime/localActions.ts](/home/ecochran76/workspace.local/oracle/src/runtime/localActions.ts)
+    [src/runtime/localActions.ts](/home/ecochran76/workspace.local/auracall/src/runtime/localActions.ts)
     with the first built-in local action executor:
     - supports `kind: "shell"`
     - uses `execFile` with explicit arg arrays
@@ -15100,12 +15100,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - captures stdout/stderr with truncation
     - records failure payloads without throwing the whole host layer
   - updated
-    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     to use the built-in executor by default when no injected
     `executeLocalActionRequest` callback is supplied
   - added focused coverage in:
-    - [tests/runtime.localActions.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.localActions.test.ts)
-    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [tests/runtime.localActions.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.localActions.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
   - kept the lifecycle internal-only; no public CLI/API surface changed
 - Verification:
   - `pnpm vitest run tests/runtime.localActions.test.ts tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/runtime.model.test.ts tests/runtime.schema.test.ts`
@@ -15123,15 +15123,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     complexity path
 - Progress:
   - extended task/run-spec local-action policy in:
-    [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts)
-    [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts)
-    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    [src/teams/types.ts](/home/ecochran76/workspace.local/auracall/src/teams/types.ts)
+    [src/teams/schema.ts](/home/ecochran76/workspace.local/auracall/src/teams/schema.ts)
+    [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts)
     with:
     - `complexityStage`
     - `allowedCommands`
     - `allowedCwdRoots`
   - hardened the built-in shell executor in
-    [src/runtime/localActions.ts](/home/ecochran76/workspace.local/oracle/src/runtime/localActions.ts)
+    [src/runtime/localActions.ts](/home/ecochran76/workspace.local/auracall/src/runtime/localActions.ts)
     so it now:
     - merges per-step `localActionPolicy` narrowing into host defaults
     - rejects disallowed commands
@@ -15139,18 +15139,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - preserves explicit stage labeling (`bounded-command`, `repo-automation`,
       `extended`) for result payloads and planning
   - added focused regression coverage in:
-    - [tests/runtime.localActions.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.localActions.test.ts)
+    - [tests/runtime.localActions.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.localActions.test.ts)
       for:
       - allowed command
       - unsupported kind
       - rejected command
       - rejected cwd
     - updated task policy default expectations in:
-      - [tests/teams.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.types.test.ts)
-      - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+      - [tests/teams.types.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.types.test.ts)
+      - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts)
   - aligned the planning docs:
-    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/task-run-spec-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts tests/runtime.localActions.test.ts tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/runtime.model.test.ts tests/runtime.schema.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15165,20 +15165,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     paths
 - Progress:
   - verified and kept the live host policy seam through:
-    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
-    - [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts)
-    - [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
-    - [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
+    - [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/auracall/src/runtime/responsesService.ts)
+    - [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
+    - [src/config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
   - confirmed `auracall api serve` now resolves host-owned shell policy from
     runtime config via `resolveHostLocalActionExecutionPolicy(...)`
   - removed the stale duplicate runtime local-action schema/helper path from:
-    - [src/schema/types.ts](/home/ecochran76/workspace.local/oracle/src/schema/types.ts)
-    - [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    - [src/schema/types.ts](/home/ecochran76/workspace.local/auracall/src/schema/types.ts)
+    - [src/config/model.ts](/home/ecochran76/workspace.local/auracall/src/config/model.ts)
   - kept focused coverage green in:
-    - [tests/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/config.test.ts)
-    - [tests/runtime.localActions.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.localActions.test.ts)
-    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
-    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    - [tests/config.test.ts](/home/ecochran76/workspace.local/auracall/tests/config.test.ts)
+    - [tests/runtime.localActions.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.localActions.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
 - Verification:
   - `pnpm vitest run tests/config.test.ts tests/runtime.localActions.test.ts tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15192,26 +15192,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     instead of letting command breadth drift ad hoc
 - Progress:
   - extended task-level local-action policy in:
-    [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts)
-    [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts)
-    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    [src/teams/types.ts](/home/ecochran76/workspace.local/auracall/src/teams/types.ts)
+    [src/teams/schema.ts](/home/ecochran76/workspace.local/auracall/src/teams/schema.ts)
+    [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts)
     to support:
     - `allowedCommands`
     - `allowedCwdRoots`
   - updated
-    [src/runtime/localActions.ts](/home/ecochran76/workspace.local/oracle/src/runtime/localActions.ts)
+    [src/runtime/localActions.ts](/home/ecochran76/workspace.local/auracall/src/runtime/localActions.ts)
     so the built-in shell executor:
     - still has one narrow host/runtime default ceiling
     - allows task/step policy to narrow command and cwd scope further
     - accepts allowlisted commands by exact path or basename
   - strengthened focused coverage in:
-    - [tests/runtime.localActions.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.localActions.test.ts)
-    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
-    - [tests/teams.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.types.test.ts)
-    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+    - [tests/runtime.localActions.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.localActions.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
+    - [tests/teams.types.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.types.test.ts)
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts)
   - updated planning docs so the staged rollout is durable:
-    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/task-run-spec-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts tests/runtime.localActions.test.ts tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15226,7 +15226,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     orchestrator logic without introducing a second source of truth
 - Progress:
   - confirmed the canonical projection seam stays in
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts),
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts),
     where request derivation and execution resolution already happen
   - verified runtime shared-state summaries now publish one machine-readable
     per-step structured output using the convention:
@@ -15239,7 +15239,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - extended the team-runtime bridge regression to prove that config-driven
     team execution preserves those shared-state summaries when host policy
     rejects a local action request:
-    [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/teams.runtimeBridge.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15255,7 +15255,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     them
 - Progress:
   - updated
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so `executeStoredRunStep` now receives an execution-context step whose
     `input.structuredData.sharedStateContext` includes:
     - `dependencyStepIds`
@@ -15266,8 +15266,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - derived shared-state `structuredOutputs`
   - added focused regressions proving later steps can read dependency-scoped
     outcome summaries in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/teams.runtimeBridge.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15282,7 +15282,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     prompt guidance for later steps
 - Progress:
   - updated
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so execution-context step building now appends one bounded prompt block when
     dependency-local-action outcomes exist:
     - `Dependency local action outcomes:`
@@ -15290,8 +15290,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - kept the same data available structurally under
     `sharedStateContext.dependencyLocalActionOutcomePromptContext`
   - proved the behavior in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/teams.runtimeBridge.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15306,18 +15306,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     context already used by shared state and prompt shaping
 - Progress:
   - updated
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so when a step completes with resolved local-action requests, handoffs whose
     `fromStepId` matches that completed step now gain:
     - `structuredData.localActionOutcomeSummaryKey`
     - `structuredData.localActionOutcomeContext`
   - updated
-    [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts)
+    [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/auracall/src/teams/runtimeBridge.ts)
     so projected runtime bundles retain planned handoffs instead of dropping
     them before execution-time updates
   - proved the new durable handoff shaping in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/teams.runtimeBridge.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15332,7 +15332,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     host-action summary vocabulary
 - Progress:
   - updated
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so execution-context steps now derive:
     - `dependencyLocalActionDecisionGuidance`
     - `dependencyLocalActionDecisionPromptContext`
@@ -15348,8 +15348,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     and handoff context stay aligned
   - added focused regression coverage for `continue`, `steer`, and `escalate`
     in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/teams.runtimeBridge.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15365,7 +15365,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     the existing human-interaction policy seam
 - Progress:
   - updated
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so `escalate` now maps to:
     - `defaultBehavior: continue` => advisory only
     - `defaultBehavior: pause` + `allowHumanEscalation: true` => controlled
@@ -15373,7 +15373,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `defaultBehavior: fail` or human escalation disallowed => deterministic
       runner failure with `human_escalation_required`
   - added focused coverage in
-    [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
     for:
     - advisory `continue`
     - pause-for-human
@@ -15392,7 +15392,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     bridge path, not only the direct runner path
 - Progress:
   - extended
-    [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
     with bridge-path regressions for:
     - pause-for-human using default bridge behavior
     - fail-on-escalate using one wrapped-control mutation of the created runtime
@@ -15415,10 +15415,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `defaultBehavior: pause`
 - Progress:
   - added
-    [resumeHumanEscalation(...)](/home/ecochran76/workspace.local/oracle/src/runtime/control.ts)
+    [resumeHumanEscalation(...)](/home/ecochran76/workspace.local/auracall/src/runtime/control.ts)
     to the runtime control seam
   - added
-    [resumeExecutionRunAfterHumanEscalation(...)](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [resumeExecutionRunAfterHumanEscalation(...)](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so resume:
     - reopens the cancelled human-escalated step as `runnable`
     - restores run/shared-state to active
@@ -15426,8 +15426,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - adds a one-shot `humanEscalationResume` override on the reopened step so
       it does not immediately re-pause on the same escalation signal
   - proved the seam in:
-    - [tests/runtime.control.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.control.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.control.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.control.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.control.test.ts tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/teams.runtimeBridge.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15441,11 +15441,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     reopened step without inventing a second resume vocabulary
 - Progress:
   - updated
-    [src/runtime/contract.ts](/home/ecochran76/workspace.local/oracle/src/runtime/contract.ts)
-    and [src/runtime/control.ts](/home/ecochran76/workspace.local/oracle/src/runtime/control.ts)
+    [src/runtime/contract.ts](/home/ecochran76/workspace.local/auracall/src/runtime/contract.ts)
+    and [src/runtime/control.ts](/home/ecochran76/workspace.local/auracall/src/runtime/control.ts)
     so `resumeHumanEscalation(...)` now accepts optional `guidance`
   - updated
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so resume now:
     - writes `guidance` onto `human.resume.<stepId>`
     - carries the same payload on the reopened step under
@@ -15454,9 +15454,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - appends one bounded `Human resume guidance:` prompt block for the resumed
       step
   - proved the seam in:
-    - [tests/runtime.control.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.control.test.ts)
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.control.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.control.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.control.test.ts tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15471,10 +15471,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     typed mutation path
 - Progress:
   - updated
-    [src/runtime/contract.ts](/home/ecochran76/workspace.local/oracle/src/runtime/contract.ts)
+    [src/runtime/contract.ts](/home/ecochran76/workspace.local/auracall/src/runtime/contract.ts)
     so `resumeHumanEscalation(...)` now also accepts a typed `override`
   - updated
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so the first allowed typed override is:
     - `override.promptAppend`
     and it is:
@@ -15485,8 +15485,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - rendered into the resumed step prompt under one bounded
       `Human resume override:` block
   - proved the seam in:
-    - [tests/runtime.control.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.control.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.control.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.control.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.control.test.ts tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15501,11 +15501,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     policy mutation
 - Progress:
   - updated
-    [src/runtime/contract.ts](/home/ecochran76/workspace.local/oracle/src/runtime/contract.ts)
+    [src/runtime/contract.ts](/home/ecochran76/workspace.local/auracall/src/runtime/contract.ts)
     so typed resume override now also accepts:
     - `override.structuredContext`
   - updated
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so resumed execution now exposes that typed context as:
     - `sharedStateContext.humanEscalationResumeOverrideStructuredContext`
     and appends one bounded prompt block:
@@ -15516,8 +15516,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - used only for resumed step execution context and prompt shaping
     - not allowed to mutate policy or host-permission seams
   - proved the seam in:
-    - [tests/runtime.control.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.control.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.control.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.control.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.control.test.ts tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15532,7 +15532,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     behavior contract
 - Progress:
   - updated
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so dependency-scoped `steer` guidance now carries one typed contract:
     - `kind: host-action-steer`
     - `recommendedAction: continue-with-caution`
@@ -15546,8 +15546,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - kept handoff shaping on the same vocabulary by carrying the contract inside
     existing `localActionDecisionGuidance`
   - proved the seam in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.control.test.ts tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15562,10 +15562,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     next higher-yield roadmap lane
 - Progress:
   - audited:
-    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
-    - [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
-    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
+    - [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/runtime-service-host-plan.md)
+    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
   - current decision:
     - pause further orchestration-contract deepening
     - keep public `team run` deferred
@@ -15594,10 +15594,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     and into the HTTP server host layer
 - Progress:
   - confirmed
-    [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts)
+    [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/auracall/src/runtime/responsesService.ts)
     already supports persistence-only creation through `drainAfterCreate: false`
   - updated
-    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
     so the server now:
     - constructs the responses service in persistence-only mode
     - drains through one server-owned serialized scheduler on the shared
@@ -15605,8 +15605,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - reuses that same scheduler for startup recovery and per-request direct
       response drain
   - expanded focused coverage in:
-    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
     including a new concurrent create regression that proves server-owned drain
     calls do not overlap
 - Verification:
@@ -15624,7 +15624,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     is already the execution owner
 - Progress:
   - updated
-    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
     so background drain is now:
     - single-flight
     - timer-driven for `api serve`
@@ -15635,13 +15635,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       drain is enabled
     - relies on the server-owned background loop to advance the run
   - expanded focused coverage in
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
     for:
     - create returns `in_progress` and later converges through background drain
     - background drain stops scheduling after server close
   - updated user/operator docs:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15656,7 +15656,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     server/serviceHost scheduler
 - Progress:
   - updated
-    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
     so the server now:
     - supports a bounded background drain cadence
     - reuses the same serialized server-owned drain queue
@@ -15664,7 +15664,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       background drain work
     - clears the timer and awaits queued drain work during shutdown
   - expanded focused coverage in
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
     to prove a persisted runnable direct run can complete through background
     drain even when startup recovery is disabled
 - Verification:
@@ -15681,7 +15681,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     without widening the route family
 - Progress:
   - updated
-    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
     so `/status` now reports:
     - `backgroundDrain.enabled`
     - `backgroundDrain.intervalMs`
@@ -15694,12 +15694,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - no new scheduler path
     - no protocol expansion
   - expanded focused coverage in
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
     to prove `/status` can observe live running/scheduled/idle background drain
     behavior
   - updated user/operator docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15714,7 +15714,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     drain loop without introducing a new route family
 - Progress:
   - updated
-    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
     so `POST /status` now accepts:
     - `{"backgroundDrain":{"action":"pause"}}`
     - `{"backgroundDrain":{"action":"resume"}}`
@@ -15730,11 +15730,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - no second scheduler
     - no broader transport/control plane
   - expanded focused coverage in
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
     to prove paused runs stay `in_progress` until resumed, then complete
   - updated user/operator docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15750,7 +15750,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     widening the control or transport surface
 - Progress:
   - updated
-    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so stranded run recovery now:
     - attempts the normal rewind-to-runnable repair
     - on one persist failure, rereads the latest record
@@ -15760,7 +15760,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - no multi-host coordination assumptions
     - no change to active-lease behavior
   - expanded focused coverage in
-    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
     to prove one simulated persist race does not strand recovery permanently
 - Verification:
   - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
@@ -15777,7 +15777,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     distinguishes stranded runs the host can repair from ones it cannot
 - Progress:
   - updated
-    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so recovery summaries now classify lease-free running work into:
     - `recoverableStrandedRunIds`
     - `strandedRunIds`
@@ -15786,11 +15786,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - do not change active-lease behavior
     - do not widen recovery beyond existing bounded repair semantics
   - updated focused expectations in:
-    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - updated operator docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15805,7 +15805,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     do not swamp executed work in bounded multi-pass drain results
 - Progress:
   - updated
-    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so `drainRunsUntilIdle(...)` now:
     - preserves per-pass execution history
     - collapses repeated skipped states to the latest unresolved skip per run
@@ -15816,10 +15816,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - no recovery-policy widening
     - no HTTP route expansion
   - expanded focused coverage in:
-    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - updated operator/testing docs in:
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15835,7 +15835,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     for non-executable runs after `maxRuns` is reached
 - Progress:
   - updated
-    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so `drainRunsOnce(...)` now:
     - still reports `limit-reached` for executable work blocked only by the cap
     - preserves `active-lease` for busy runs after the cap
@@ -15847,14 +15847,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - no new recovery classes
     - no transport or route changes
   - expanded focused coverage in
-    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
     for one capped mixed batch with:
     - executed work
     - executable work deferred by cap
     - idle work
     - active-lease work
   - updated operator/testing guidance in
-    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15870,7 +15870,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     execution budget on the most actionable work first
 - Progress:
   - updated
-    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so `drainRunsOnce(...)` now inspects and prioritizes candidates before
     execution using this bounded order:
     - runnable
@@ -15884,13 +15884,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - no scheduler change
     - no transport or route changes
   - expanded focused coverage in
-    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
     to prove:
     - newer runnable work beats older recoverable-stranded work under `maxRuns: 1`
     - capped mixed batches still preserve real skip posture for non-executable
       work
   - updated operator/testing guidance in
-    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15905,7 +15905,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     implicit
 - Progress:
   - documented the policy directly in
-    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts):
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts):
     - priority classes remain:
       - runnable
       - recoverable stranded
@@ -15915,13 +15915,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - within each class, scheduling is intentionally oldest-first by
       `createdAt`
   - expanded focused coverage in
-    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
     to prove:
     - oldest runnable work executes first within the runnable class
     - oldest recoverable-stranded work executes first within the
       recoverable-stranded class
   - updated operator/testing guidance in
-    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15936,7 +15936,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     scheduling policy
 - Progress:
   - updated
-    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so when both actionable classes are present and `maxRuns > 1`:
     - one slot is reserved for the oldest recoverable-stranded run
     - remaining slots go to oldest runnable runs
@@ -15945,13 +15945,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - no scheduler change
     - no dynamic fairness loop
   - expanded focused coverage in
-    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
     to prove:
     - a recoverable-stranded run still gets one execution slot in a mixed
       actionable batch with `maxRuns: 2`
     - a later runnable run is deferred with `limit-reached`
   - updated operator/testing guidance in
-    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -15966,7 +15966,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     budgeting model rather than adding more scheduling nuance
 - Progress:
   - updated
-    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so `summarizeRecoveryState(...)` now also returns aggregate
     `metrics` for:
     - `reclaimableCount`
@@ -15977,17 +15977,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `actionableCount`
     - `nonExecutableCount`
   - updated
-    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
     so startup recovery logs now emit aligned aggregate metrics for:
     - `deferred-by-budget`
     - `active-lease`
     - `stranded`
     - `idle`
   - expanded focused coverage in:
-    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - updated operator/testing guidance in
-    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -16003,15 +16003,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     substrate boundary explicitly
 - Progress:
   - added
-    [durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md)
+    [durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/durable-state-account-mirroring-plan.md)
     to define the first bounded design checkpoint for:
     - durable queue/run/step/handoff ownership
     - service-account/browser-affinity mirroring
     - multi-runner lease/heartbeat ownership
     - replay/postmortem guarantees
   - linked that plan from:
-    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
-    - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
+    - [next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
   - froze the decision boundary:
     - current `api serve` / `serviceHost` recovery is coherent enough for an
       internal checkpoint
@@ -16033,7 +16033,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     without widening service-mode breadth
 - Progress:
   - added
-    [src/runtime/projection.ts](/home/ecochran76/workspace.local/oracle/src/runtime/projection.ts)
+    [src/runtime/projection.ts](/home/ecochran76/workspace.local/auracall/src/runtime/projection.ts)
     with the first derived queue-ready projection over the existing runtime
     inspection model
   - the projection now exposes:
@@ -16048,15 +16048,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - no second durable source of truth
     - no new public route or worker behavior
   - added focused coverage in
-    [tests/runtime.projection.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.projection.test.ts)
+    [tests/runtime.projection.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.projection.test.ts)
     for:
     - claimable runnable work
     - active-lease posture
     - recoverable-stranded posture
     - affinity-blocked claim posture
   - updated planning docs in:
-    - [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/durable-state-account-mirroring-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - `pnpm vitest run tests/runtime.projection.test.ts tests/runtime.dispatcher.test.ts tests/runtime.control.test.ts tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -16071,10 +16071,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     continue or yield to a higher-leverage substrate question
 - Progress:
   - audited:
-    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
-    - [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
-    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
+    - [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/runtime-service-host-plan.md)
+    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
   - conclusion:
     - the local host-recovery/operator-visibility lane is now coherent enough
       for an internal checkpoint
@@ -16086,7 +16086,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       - explicit replay/postmortem-ready persistence beyond the current
         single-process host
   - updated
-    [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
     so the next active recommendation now shifts away from more `serviceHost`
     tuning and toward that durable-state / runner-ownership planning seam
 - Verification:
@@ -16102,18 +16102,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     batches in `serviceHost`
 - Progress:
   - confirmed the existing host-drain candidate classification in
-    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     now orders work as:
     - `runnable`
     - `recoverable-stranded`
     - then non-executable classes
   - added focused regression coverage in
-    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
     proving that, under `maxRuns: 1`, a newer runnable run is executed ahead of
     an older recoverable stranded run, and the stranded run is reported as
     `limit-reached`
   - updated operator/testing guidance in
-    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -16129,21 +16129,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     the server host seam
 - Progress:
   - updated
-    [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts)
+    [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/auracall/src/runtime/responsesService.ts)
     so the service can now run in create-only mode via `drainAfterCreate: false`
   - updated
-    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
     so `POST /v1/responses` now:
     - persists the run through the responses service
     - invokes bounded host-owned drain through
-      [serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+      [serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     - rereads the persisted response for the HTTP payload
   - kept the route surface unchanged:
     - no streaming
     - no auth
     - no `chat/completions`
   - added focused create-only coverage in
-    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -16159,12 +16159,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     or yield to a higher-value execution lane
 - Progress:
   - reviewed:
-    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
-    - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
-    - [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
-    - [runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
-    - [api-compatibility-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/api-compatibility-plan.md)
-    - [http-responses-adapter-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/http-responses-adapter-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
+    - [next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
+    - [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/service-runtime-execution-plan.md)
+    - [runtime-service-host-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/runtime-service-host-plan.md)
+    - [api-compatibility-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/api-compatibility-plan.md)
+    - [http-responses-adapter-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/http-responses-adapter-plan.md)
   - conclusion:
     - the orchestration semantics lane is now coherent enough for an internal
       checkpoint:
@@ -16196,16 +16196,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     input instead of planned-only metadata
 - Progress:
   - updated
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so runtime execution context now carries task structured context through:
     - `step.input.structuredData.sharedStateContext.taskStructuredContext`
     - `step.input.structuredData.sharedStateContext.taskStructuredContextPromptContext`
     - appended prompt context for prompt-driven execution
   - expanded focused coverage in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
-    - rechecked [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
-    - rechecked [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
+    - rechecked [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts)
+    - rechecked [tests/teams.service.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.service.test.ts)
 - Verification:
   - tmux session `oracle-taskrunspec-structured-context-recheck`
     - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts tests/teams.model.test.ts tests/teams.service.test.ts`
@@ -16234,15 +16234,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `overrides.structuredContext`
     - `requestedOutputs`
   - recorded the pause decision for further budget-policy expansion in
-    [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
 - Verification:
   - docs/code audit only
   - reviewed:
-    - [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
-    - [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
-    - [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts)
-    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md)
-    - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
+    - [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
+    - [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts)
+    - [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/auracall/src/teams/runtimeBridge.ts)
+    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/task-run-spec-plan.md)
+    - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-service-execution-plan.md)
 - Issues:
   - task assignment content is still mostly prompt-time metadata and structured
     payload, not a first-class runtime/request consumer seam
@@ -16254,17 +16254,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     runtime behavior instead of remaining inert structured data
 - Progress:
   - updated
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so the runner now fails before executing a step when elapsed run age from
     `run.createdAt` exceeds
     `step.input.structuredData.constraints.maxRuntimeMinutes`
   - used one explicit failure code:
     - `task_runtime_limit_exceeded`
   - expanded focused coverage in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
-    - rechecked [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
-    - rechecked [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
+    - rechecked [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts)
+    - rechecked [tests/teams.service.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.service.test.ts)
 - Verification:
   - tmux session `oracle-taskrunspec-runtime-budget`
     - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts tests/teams.model.test.ts tests/teams.service.test.ts`
@@ -16281,16 +16281,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     behavior instead of remaining inert structured data
 - Progress:
   - updated
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so the runner now fails before executing a step whose order exceeds the
     task turn limit carried in `step.input.structuredData.turnPolicy.maxTurns`
   - used one explicit failure code:
     - `task_turn_limit_exceeded`
   - expanded focused coverage in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
-    - rechecked [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
-    - rechecked [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
+    - rechecked [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts)
+    - rechecked [tests/teams.service.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.service.test.ts)
 - Verification:
   - tmux session `oracle-taskrunspec-turn-budget`
     - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts tests/teams.model.test.ts tests/teams.service.test.ts`
@@ -16308,13 +16308,13 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     identities actually used per step in the team-runtime bridge summary
 - Progress:
   - updated
-    [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts)
+    [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/auracall/src/teams/runtimeBridge.ts)
     so each bridge step summary now carries:
     - `runtimeProfileId`
     - `browserProfileId`
     - `service`
   - expanded focused coverage in
-    [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
     to prove a task-selected runtime override survives:
     - planned team step
     - created runtime step
@@ -16337,7 +16337,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     identity on the existing team planning path
 - Progress:
   - updated
-    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts)
     so task-aware planning now:
     - re-resolves execution identity from `overrides.runtimeProfileId` during
       config-driven planning
@@ -16345,9 +16345,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - blocks incompatible resolved-team selections cleanly instead of silently
       ignoring the override
   - expanded focused coverage in:
-    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
-    - [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts)
+    - [tests/teams.service.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.service.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
 - Verification:
   - tmux session `oracle-taskrunspec-runtime-override`
     - `pnpm vitest run tests/teams.model.test.ts tests/teams.service.test.ts tests/teams.runtimeBridge.test.ts`
@@ -16366,7 +16366,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     propagation and bridge/readback surfaces
 - Progress:
   - updated
-    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    [src/teams/model.ts](/home/ecochran76/workspace.local/auracall/src/teams/model.ts)
     so task-aware planning now consumes:
     - `overrides.agentIds` to filter planned team members/roles
     - `overrides.promptAppend` to extend planned step prompts
@@ -16374,9 +16374,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `constraints.allowedServices` / `constraints.blockedServices` to block
       incompatible planned steps
   - expanded focused coverage in:
-    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
-    - [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.model.test.ts)
+    - [tests/teams.service.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.service.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
 - Verification:
   - tmux session `oracle-taskrunspec-planning-recheck`
     - `pnpm vitest run tests/teams.model.test.ts tests/teams.service.test.ts tests/teams.runtimeBridge.test.ts`
@@ -16395,25 +16395,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     plan for later expansion
 - Progress:
   - updated
-    [src/runtime/localActions.ts](/home/ecochran76/workspace.local/oracle/src/runtime/localActions.ts)
+    [src/runtime/localActions.ts](/home/ecochran76/workspace.local/auracall/src/runtime/localActions.ts)
     to enforce:
     - default shell command allowlist
     - allowed cwd roots
     - policy-owned timeout clamp
     - policy-owned capture limits
   - updated
-    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so the built-in executor is now parameterized by one explicit host-side
     policy object
   - expanded focused coverage in
-    [tests/runtime.localActions.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.localActions.test.ts)
+    [tests/runtime.localActions.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.localActions.test.ts)
     for:
     - allowed command
     - unsupported action kind
     - rejected disallowed command
     - rejected disallowed cwd
   - recorded the staged local-command rollout in
-    [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
     with:
     - `bounded-command`
     - `repo-automation`
@@ -16433,7 +16433,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `localActionRequests`
 - Progress:
   - updated
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so each step that emits local actions now also appends:
     - one step-scoped shared-state structured output keyed as
       `step.localActionOutcomes.<stepId>`
@@ -16442,10 +16442,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `bundle.localActionRequests`; the shared-state projection is derived from
     resolved request records, not from free-form output blobs
   - expanded focused coverage in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
-    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
-    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -16461,7 +16461,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     handoffs plus current-step dependency shape
 - Progress:
   - updated
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so any step that executes with incoming dependency `taskTransfer` context
     now also appends:
     - one internal shared-state structured output keyed as
@@ -16473,8 +16473,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - marked the projection internal for requested-output evidence so the new
     orchestration state does not pollute required-output fulfillment
   - expanded focused coverage in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -16491,21 +16491,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     handoffs when both are present
 - Progress:
   - updated
-    [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/auracall/src/runtime/apiModel.ts)
     so `GET /v1/responses/{response_id}` now prefers
     `step.consumedTaskTransfers.<stepId>` for
     `metadata.executionSummary.handoffTransferSummary`
   - updated
-    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so `GET /status/recovery/{run_id}` now prefers the same stored consumed
     transfer projection for `handoffTransferSummary`
   - kept the public/output vocabulary unchanged and retained planned-handoff
     fallback when stored consumed state is absent
   - expanded focused coverage in:
-    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.api.test.ts)
-    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
-    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.api.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -16521,10 +16521,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     handoff-transfer line
 - Progress:
   - re-reviewed the current execution/docs stack:
-    - [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md)
-    - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
-    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md)
-    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-run-data-model-plan.md)
+    - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-service-execution-plan.md)
+    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/task-run-spec-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
   - confirmed the handoff-transfer line is coherent enough to pause:
     - planner shaping
     - runtime consumption
@@ -16556,16 +16556,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     actually consumes an incoming task-transfer handoff
 - Progress:
   - updated
-    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/auracall/src/runtime/runner.ts)
     so a succeeded step with incoming dependency `taskTransfer` handoffs now:
     - advances those handoffs from `prepared` to `consumed`
     - appends `handoff consumed by <stepId>` to the handoff notes
     - appends one explicit `handoff-consumed` execution history event on the
       existing durable shared-state/history seam
   - updated runtime event vocabulary in:
-    - [src/runtime/types.ts](/home/ecochran76/workspace.local/oracle/src/runtime/types.ts)
-    - [src/runtime/schema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/schema.ts)
-    - [src/runtime/model.ts](/home/ecochran76/workspace.local/oracle/src/runtime/model.ts)
+    - [src/runtime/types.ts](/home/ecochran76/workspace.local/auracall/src/runtime/types.ts)
+    - [src/runtime/schema.ts](/home/ecochran76/workspace.local/auracall/src/runtime/schema.ts)
+    - [src/runtime/model.ts](/home/ecochran76/workspace.local/auracall/src/runtime/model.ts)
     so handoff consumption is a first-class execution event instead of being
     collapsed into generic notes
   - kept the lifecycle rule narrow:
@@ -16573,10 +16573,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       advance to `consumed`
     - local-action-only guidance handoffs remain unchanged
   - expanded focused coverage in:
-    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
-    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
-    - [tests/runtime.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.types.test.ts)
-    - [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.schema.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.types.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.types.test.ts)
+    - [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.schema.test.ts)
 - Verification:
   - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts tests/runtime.types.test.ts tests/runtime.schema.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
@@ -16591,10 +16591,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     line is coherent enough to pause
 - Progress:
   - re-reviewed the broader runtime/service plans:
-    - [docs/dev/service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
-    - [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
-    - [docs/dev/runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-runner-slice-plan.md)
-    - [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md)
+    - [docs/dev/service-runtime-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/service-runtime-execution-plan.md)
+    - [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/runtime-service-host-plan.md)
+    - [docs/dev/runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/runtime-runner-slice-plan.md)
+    - [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-run-data-model-plan.md)
   - confirmed the handoff line is coherent enough to pause:
     - planner shaping
     - runtime consumption
@@ -16636,14 +16636,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `resolveProjectIdByName(...)` already exists
     - exact-name matching already exists
     - `createProject(...)` did not preflight duplicates before provider create
-  - hardened [src/browser/llmService/llmService.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/llmService.ts):
+  - hardened [src/browser/llmService/llmService.ts](/home/ecochran76/workspace.local/auracall/src/browser/llmService/llmService.ts):
     - exact-name duplicate now throws before provider creation
     - ambiguous multi-candidate matches now also throw before creation
   - added focused regression coverage in:
-    - [tests/browser/llmServiceFiles.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/llmServiceFiles.test.ts)
+    - [tests/browser/llmServiceFiles.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/llmServiceFiles.test.ts)
   - updated operator docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/browser/llmServiceFiles.test.ts`
     - pass
@@ -16706,7 +16706,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - add automated live coverage for the working `auracall-solo` Grok team path
 - Progress:
   - added the first opt-in live test in:
-    - [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    - [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-grok-live.test.ts)
   - kept the scope narrow:
     - real CLI path only
     - `auracall-solo` only
@@ -16719,7 +16719,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - top-level `execution`
     - not a flat payload
   - updated operator docs in:
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/live/team-grok-live.test.ts`
     - pass as skipped when `AURACALL_LIVE_TEST` is unset
@@ -16749,7 +16749,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     the durable runtime/operator readback seam
 - Progress:
   - extended
-    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-grok-live.test.ts)
     to use the returned `execution.runtimeRunId`
   - after the real CLI run completes, the test now:
     - creates `createExecutionRuntimeControl()`
@@ -16762,7 +16762,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - non-empty `orchestrationTimelineSummary`
     - at least one `step-succeeded` item in the durable timeline
   - updated operator docs in:
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/live/team-grok-live.test.ts`
     - pass as skipped when `AURACALL_LIVE_TEST` is unset
@@ -16782,7 +16782,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     operator read surface
 - Progress:
   - extended
-    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-grok-live.test.ts)
     again after the CLI run completes
   - the live test now:
     - creates `createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control })`
@@ -16798,7 +16798,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - non-empty `detail.orchestrationTimelineSummary`
     - at least one durable `step-succeeded` timeline item
   - updated operator docs in:
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/live/team-grok-live.test.ts`
     - pass as skipped when `AURACALL_LIVE_TEST` is unset
@@ -16818,7 +16818,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `GET /v1/responses/{response_id}` seam
 - Progress:
   - extended
-    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-grok-live.test.ts)
     to reuse the same bounded local responses server started against the live
     runtime store
   - the live test now reads:
@@ -16836,7 +16836,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       `metadata.executionSummary.orchestrationTimelineSummary`
     - at least one durable `step-succeeded` timeline item
   - updated operator docs in:
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
 - Verification:
   - `pnpm vitest run tests/live/team-grok-live.test.ts`
     - pass as skipped when `AURACALL_LIVE_TEST` is unset
@@ -16869,7 +16869,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `pnpm tsx bin/auracall.ts config show --agent auracall-finisher`
     - `pnpm tsx bin/auracall.ts config show --team auracall-two-step`
   - extended
-    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-grok-live.test.ts)
     to add one broader-workflow live case for:
     - `auracall-two-step`
     - `AURACALL_TEAM_TWO_STEP_LIVE_SMOKE_OK`
@@ -16882,9 +16882,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - HTTP response readback
     - at least one `handoff-consumed` durable timeline item
   - updated operator/user docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/manual-tests.md](/home/ecochran76/workspace.local/auracall/docs/manual-tests.md)
 - Verification:
   - `pnpm tsx bin/auracall.ts config show --agent auracall-finisher`
     - pass
@@ -16911,27 +16911,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     the service
 - Progress:
   - added a shared simple provider guard helper in
-    [simpleProviderGuard.ts](/home/ecochran76/workspace.local/oracle/src/browser/simpleProviderGuard.ts)
+    [simpleProviderGuard.ts](/home/ecochran76/workspace.local/auracall/src/browser/simpleProviderGuard.ts)
     for persisted per-provider cooldown state keyed by browser profile
   - extended
-    [llmService.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/llmService.ts)
+    [llmService.ts](/home/ecochran76/workspace.local/auracall/src/browser/llmService/llmService.ts)
     so Grok now uses the same simple guard model already used by Gemini:
     - persisted cooldown on clear Grok rate-limit errors
     - bounded write spacing across separate service instances
   - extended
-    [index.ts](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
+    [index.ts](/home/ecochran76/workspace.local/auracall/src/browser/index.ts)
     so browser-backed Grok runs now:
     - enforce a persisted per-managed-browser-profile cooldown/spacing record
       before execution
     - note successful Grok browser mutations
     - persist a cooldown on clear rate-limit failures
   - added focused coverage in:
-    - [simpleProviderGuard.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/simpleProviderGuard.test.ts)
-    - [llmServiceRateLimit.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/llmServiceRateLimit.test.ts)
+    - [simpleProviderGuard.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/simpleProviderGuard.test.ts)
+    - [llmServiceRateLimit.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/llmServiceRateLimit.test.ts)
   - updated operator/user docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/manual-tests.md](/home/ecochran76/workspace.local/auracall/docs/manual-tests.md)
 - Verification:
   - `pnpm vitest run tests/browser/simpleProviderGuard.test.ts tests/browser/llmServiceRateLimit.test.ts tests/browser/browserModeExports.test.ts`
     - pass
@@ -17002,7 +17002,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `handoff`
     - `synthesis`
   - extended
-    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-grok-live.test.ts)
     to add one real multi-agent live case for:
     - `auracall-multi-agent`
     - `AURACALL_MULTI_AGENT_LIVE_SMOKE_OK`
@@ -17016,9 +17016,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - HTTP response readback
     - at least one durable `handoff-consumed` timeline item
   - updated operator/user docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/manual-tests.md](/home/ecochran76/workspace.local/auracall/docs/manual-tests.md)
 - Verification:
   - `pnpm tsx bin/auracall.ts config show --agent auracall-planner`
     - pass
@@ -17060,8 +17060,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - currently supports bounded shell actions only
     - tolerates `kind`, `actionType`, or `type` when the value is `shell`
   - added focused regression coverage in:
-    - [tests/runtime.configuredExecutor.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.configuredExecutor.test.ts)
-    - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/teamRunCommand.test.ts)
+    - [tests/runtime.configuredExecutor.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.configuredExecutor.test.ts)
+    - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/teamRunCommand.test.ts)
   - added one new live-configured team outside repo code:
     - `auracall-tool-requester`
     - `auracall-tooling`
@@ -17071,9 +17071,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       cwd root
     - second Grok step emits the exact final token
   - updated operator/user docs in:
-    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
-    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
-    - [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
+    - [README.md](/home/ecochran76/workspace.local/auracall/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
+    - [docs/manual-tests.md](/home/ecochran76/workspace.local/auracall/docs/manual-tests.md)
 - Verification:
   - `pnpm vitest run tests/runtime.configuredExecutor.test.ts tests/cli/teamRunCommand.test.ts`
     - pass
@@ -17084,7 +17084,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm exec tsc -p tsconfig.json --noEmit`
     - pass
   - manual tooling smoke:
-    - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 pnpm tsx bin/auracall.ts teams run auracall-tooling "Run one bounded node local shell action that emits AURACALL_TOOL_ACTION_OK, then reply exactly with: AURACALL_TOOL_TEAM_LIVE_SMOKE_OK" --title "AuraCall tooling team live smoke" --prompt-append "For the tool envelope, use a top-level localActionRequests array with exactly one shell action. Use actionType \"shell\" and command \"node\". Use args [\"-e\",\"process.stdout.write('AURACALL_TOOL_ACTION_OK')\"]. Use structuredPayload {\"cwd\":\"/home/ecochran76/workspace.local/oracle\"}. After the local action succeeds, the final answer must be exactly AURACALL_TOOL_TEAM_LIVE_SMOKE_OK." --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/oracle --json`
+    - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 pnpm tsx bin/auracall.ts teams run auracall-tooling "Run one bounded node local shell action that emits AURACALL_TOOL_ACTION_OK, then reply exactly with: AURACALL_TOOL_TEAM_LIVE_SMOKE_OK" --title "AuraCall tooling team live smoke" --prompt-append "For the tool envelope, use a top-level localActionRequests array with exactly one shell action. Use actionType \"shell\" and command \"node\". Use args [\"-e\",\"process.stdout.write('AURACALL_TOOL_ACTION_OK')\"]. Use structuredPayload {\"cwd\":\"/home/ecochran76/workspace.local/auracall\"}. After the local action succeeds, the final answer must be exactly AURACALL_TOOL_TEAM_LIVE_SMOKE_OK." --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/auracall --json`
     - pass
     - returned:
       - `runtimeRunStatus = succeeded`
@@ -17106,7 +17106,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - matching `llmService` Grok guard logic now recognizes the same message
       family for persisted cooldown state
   - the matching live Vitest case exists in
-    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-grok-live.test.ts)
     and is intentionally gated behind:
     - `AURACALL_TOOLING_LIVE_TEST=1`
   - stable baseline Grok live coverage remains:
@@ -17149,7 +17149,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `pnpm exec tsc -p tsconfig.json --noEmit`
       - pass
     - live Gemini tooling team smoke:
-      - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 pnpm tsx bin/auracall.ts teams run auracall-gemini-tooling "Use the provided toolEnvelope structured context to request one bounded shell action, then use the resulting tool outcome to return the provided finalToken exactly." --title "AuraCall Gemini tooling team live smoke" --prompt-append "Requester must emit exactly one JSON object with top-level localActionRequests containing the provided toolEnvelope unchanged. Do not rename fields, add markdown fences, or add prose. Finisher must output only the final token after a successful executed tool outcome." --structured-context-json '{"toolEnvelope":{"kind":"shell","summary":"Run one bounded deterministic node command","command":"node","args":["-e","process.stdout.write('\''AURACALL_TOOL_ACTION_OK'\'')"],"structuredPayload":{"cwd":"/home/ecochran76/workspace.local/oracle"}},"finalToken":"AURACALL_GEMINI_TOOL_TEAM_SMOKE_OK"}' --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/oracle --json`
+      - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 pnpm tsx bin/auracall.ts teams run auracall-gemini-tooling "Use the provided toolEnvelope structured context to request one bounded shell action, then use the resulting tool outcome to return the provided finalToken exactly." --title "AuraCall Gemini tooling team live smoke" --prompt-append "Requester must emit exactly one JSON object with top-level localActionRequests containing the provided toolEnvelope unchanged. Do not rename fields, add markdown fences, or add prose. Finisher must output only the final token after a successful executed tool outcome." --structured-context-json '{"toolEnvelope":{"kind":"shell","summary":"Run one bounded deterministic node command","command":"node","args":["-e","process.stdout.write('\''AURACALL_TOOL_ACTION_OK'\'')"],"structuredPayload":{"cwd":"/home/ecochran76/workspace.local/auracall"}},"finalToken":"AURACALL_GEMINI_TOOL_TEAM_SMOKE_OK"}' --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/auracall --json`
       - pass
       - returned:
         - `runtimeRunStatus = succeeded`
@@ -17184,7 +17184,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       - `auracall-grok-auto`
       - `grok`
   - added gated live case in
-    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts):
     - `AURACALL_MULTISERVICE_CANCELLATION_LIVE_TEST=1`
   - verification:
     - `pnpm tsx bin/auracall.ts config show --team auracall-cross-service-tooling`
@@ -17214,7 +17214,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   ChatGPT-to-Grok tooling team and the same existing `/status`
   operator-control seam:
   - added gated live case in
-    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts):
     - `AURACALL_MULTISERVICE_REJECTION_LIVE_TEST=1`
   - verification:
     - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
@@ -17240,7 +17240,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   ChatGPT-to-Grok tooling team and the same existing `/status`
   operator-control seam:
   - added gated live case in
-    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts):
     - `AURACALL_MULTISERVICE_APPROVAL_LIVE_TEST=1`
   - verification:
     - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
@@ -17282,7 +17282,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       - `auracall-gemini-pro`
       - `gemini`
   - added gated live case in
-    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts):
     - `AURACALL_MULTISERVICE_GEMINI_APPROVAL_LIVE_TEST=1`
   - verification:
     - `pnpm tsx bin/auracall.ts config show --team auracall-cross-service-gemini-tooling`
@@ -17313,7 +17313,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - reused external team:
     - `auracall-cross-service-gemini-tooling`
   - added gated live case in
-    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts):
     - `AURACALL_MULTISERVICE_GEMINI_REJECTION_LIVE_TEST=1`
   - verification:
     - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
@@ -17345,7 +17345,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - reused external team:
     - `auracall-cross-service-gemini-tooling`
   - added gated live case in
-    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts):
     - `AURACALL_MULTISERVICE_GEMINI_CANCELLATION_LIVE_TEST=1`
   - verification:
     - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
@@ -17385,7 +17385,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       - `wsl-chrome-2`
       - `chatgpt`
   - added gated live case in
-    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts):
     - `AURACALL_MULTISERVICE_REVERSE_APPROVAL_LIVE_TEST=1`
   - verification:
     - `pnpm tsx bin/auracall.ts config show --team auracall-reverse-cross-service-tooling`
@@ -17429,7 +17429,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - reused external team:
     - `auracall-reverse-cross-service-tooling`
   - added gated live case in
-    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts):
     - `AURACALL_MULTISERVICE_REVERSE_CANCELLATION_LIVE_TEST=1`
   - verification:
     - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
@@ -17456,7 +17456,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - reused external team:
     - `auracall-reverse-cross-service-tooling`
   - added gated live case in
-    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts):
     - `AURACALL_MULTISERVICE_REVERSE_REJECTION_LIVE_TEST=1`
   - verification:
     - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
@@ -17486,7 +17486,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - config backup written:
     - `/home/ecochran76/.auracall/config.json.bak-2026-04-13-144923-reverse-cross-service-gemini-tooling`
   - added gated live case in
-    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts):
     - `AURACALL_MULTISERVICE_REVERSE_GEMINI_APPROVAL_LIVE_TEST=1`
   - verification:
     - `pnpm tsx bin/auracall.ts config show --team auracall-reverse-cross-service-gemini-tooling`
@@ -17520,7 +17520,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - reused external team:
     - `auracall-reverse-cross-service-gemini-tooling`
   - added gated live case in
-    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts):
     - `AURACALL_MULTISERVICE_REVERSE_GEMINI_CANCELLATION_LIVE_TEST=1`
   - verification:
     - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
@@ -17548,7 +17548,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - reused external team:
     - `auracall-reverse-cross-service-gemini-tooling`
   - added gated live case in
-    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts):
     - `AURACALL_MULTISERVICE_REVERSE_GEMINI_REJECTION_LIVE_TEST=1`
   - verification:
     - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
@@ -17578,7 +17578,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - config backup written:
     - `/home/ecochran76/.auracall/config.json.bak-2026-04-13-gemini-chatgpt-reverse-approval`
   - added gated live case in
-    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts):
     - `AURACALL_MULTISERVICE_GEMINI_TO_CHATGPT_APPROVAL_LIVE_TEST=1`
   - verification:
     - `pnpm tsx bin/auracall.ts config show --team auracall-reverse-cross-service-chatgpt-tooling`
@@ -17613,7 +17613,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - reused external team:
     - `auracall-reverse-cross-service-chatgpt-tooling`
   - added gated live case in
-    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts):
     - `AURACALL_MULTISERVICE_GEMINI_TO_CHATGPT_CANCELLATION_LIVE_TEST=1`
   - verification:
     - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
@@ -17651,7 +17651,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - reused external team:
     - `auracall-reverse-cross-service-chatgpt-tooling`
   - added gated live case in
-    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/auracall/tests/live/team-multiservice-live.test.ts):
     - `AURACALL_MULTISERVICE_GEMINI_TO_CHATGPT_REJECTION_LIVE_TEST=1`
   - verification:
     - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
@@ -17710,9 +17710,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-13: Response local-action readback now has explicit terminal-step
   precedence coverage across both runtime and HTTP surfaces:
   - added the missing HTTP regression in
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
     to match the existing runtime regression in
-    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
   - seeded a two-step team run with:
     - one older `step.localActionOutcomes.<stepOneId>` summary
     - one terminal `step.localActionOutcomes.<stepTwoId>` summary
@@ -17726,7 +17726,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-13: Cancellation no-note fallback is now explicit on the HTTP
   recovery-detail surface too:
   - added a focused regression in
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
     for `GET /status/recovery/{run_id}` when the cancelled run has no
     cancellation `note-added` event
   - locked the same fallback already covered in runtime response readback and
@@ -17741,9 +17741,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-13: Operator-control summary precedence is now explicit across
   runtime and HTTP response readback:
   - added focused regressions in
-    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
     and
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - seeded runs with:
     - multiple persisted `human.resume.<stepId>` summaries
     - multiple persisted operator `drain-run` note events
@@ -17756,9 +17756,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-13: Requested-output fulfillment now has an explicit internal-output
   exclusion rule across runtime and HTTP response readback:
   - added focused regressions in
-    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
     and
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - seeded runs whose shared state only exposed internal structured outputs:
     - `response.output`
     - `human.resume.<stepId>`
@@ -17771,9 +17771,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-13: Orchestration timeline windowing is now explicit across response
   readback and recovery detail:
   - added focused regressions in
-    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
     and
-    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
   - seeded `12` relevant orchestration events and confirmed both surfaces keep:
     - `total = 12`
     - only the newest `10` items
@@ -17783,9 +17783,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-13: Handoff-transfer summary precedence is now explicit across
   response readback and recovery detail:
   - added focused regressions in
-    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
     and
-    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
   - seeded runs where both existed:
     - planned handoff fallback data
     - stored `step.consumedTaskTransfers.<stepId>` summary
@@ -17797,9 +17797,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-13: Provider-usage summary precedence is now explicit across runtime
   and HTTP response readback:
   - added focused regressions in
-    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
     and
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - seeded succeeded multi-step runs with:
     - an older `step.providerUsage.<stepId>` summary
     - a terminal-step `step.providerUsage.<stepId>` summary
@@ -17812,9 +17812,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-14: Requested-output contract precedence is now explicit across
   runtime and HTTP response readback:
   - added focused regressions in
-    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
     and
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - seeded succeeded multi-step runs where:
     - an older step required an artifact bundle
     - the terminal step required only a final response
@@ -17828,9 +17828,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-14: Failure-summary precedence is now explicit across runtime and
   HTTP response readback:
   - added focused regressions in
-    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
     and
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - seeded failed runs where both existed at terminal readback:
     - an explicit terminal step failure
     - a missing required requested output
@@ -17843,9 +17843,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-14: Input-artifact summary precedence is now explicit across runtime
   and HTTP response readback:
   - added focused regressions in
-    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
     and
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - seeded succeeded multi-step runs where:
     - an older step carried one artifact
     - the terminal step carried a different artifact
@@ -17858,9 +17858,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-14: Recovery-detail handoff-transfer fallback is now explicit across
   host and HTTP recovery-detail readback:
   - added focused regressions in
-    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
     and
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - seeded planned team runs where:
     - the selected dependent step had a planned handoff with `taskTransfer`
     - no stored `step.consumedTaskTransfers.<stepId>` summary existed
@@ -17910,7 +17910,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - the repo now has a real canonical policy location and plan location
       without forcing a broad planning rewrite in the same turn
 - 2026-04-14: Added a deterministic plan-library migration audit helper:
-  - added [audit-plan-library.ts](/home/ecochran76/workspace.local/oracle/scripts/audit-plan-library.ts)
+  - added [audit-plan-library.ts](/home/ecochran76/workspace.local/auracall/scripts/audit-plan-library.ts)
   - added `pnpm run plans:audit`
   - the helper ranks loose plan candidates from:
     - canonical path
@@ -17922,36 +17922,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `merge = 12`
     - `retire = 24`
   - highest-priority merge candidate is now explicit:
-    - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
     - proposed canonical target:
-      [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md)
+      [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0001-2026-04-14-execution.md)
   - why this matters:
     - planning migration can now be triaged deterministically instead of by
       ad hoc memory or manual browsing
 - 2026-04-14: Migrated the active execution board into the canonical plans
   directory:
   - added
-    [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md)
+    [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0001-2026-04-14-execution.md)
     as the active bounded execution plan
   - rewired active entrypoints in:
-    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
-    - [RUNBOOK.md](/home/ecochran76/workspace.local/oracle/RUNBOOK.md)
-    - [AGENTS.md](/home/ecochran76/workspace.local/oracle/AGENTS.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
+    - [RUNBOOK.md](/home/ecochran76/workspace.local/auracall/RUNBOOK.md)
+    - [AGENTS.md](/home/ecochran76/workspace.local/auracall/AGENTS.md)
   - demoted
-    [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    [next-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/next-execution-plan.md)
     to a historical pointer instead of deleting it
   - why this matters:
     - the repo now has one canonical active execution plan path while keeping
       historical links stable during migration
 - 2026-04-14: Tightened the first planning-compliance normalization pass:
   - moved the informational plans index out of `docs/dev/plans/` to
-    [plan-index.md](/home/ecochran76/workspace.local/oracle/docs/dev/plan-index.md)
+    [plan-index.md](/home/ecochran76/workspace.local/auracall/docs/dev/plan-index.md)
     so the stricter plan audit no longer treats it as a plan artifact
   - added deterministic execution-lane metadata:
     - `Lane: P01` on
-      [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md)
+      [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0001-2026-04-14-execution.md)
     - matching `Lane: P01` and `Current State` note in
-      [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+      [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
   - why this matters:
     - the canonical execution plan now has a stable authority key and the
       strict audit surface has less repo-local noise
@@ -17968,12 +17968,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-14: Migrated the task / run-spec plan into the canonical plans
   directory:
   - added
-    [0002-2026-04-14-task-run-spec.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0002-2026-04-14-task-run-spec.md)
+    [0002-2026-04-14-task-run-spec.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0002-2026-04-14-task-run-spec.md)
     as the canonical task / run-spec plan
   - rewired the roadmap and the adjacent team-run data-model plan to the new
     canonical path
   - demoted
-    [task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md)
+    [task-run-spec-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/task-run-spec-plan.md)
     to a historical pointer instead of deleting it
   - why this matters:
     - the first post-framework loose-plan migration is now real and preserves
@@ -17981,12 +17981,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-14: Migrated the team-run data-model plan into the canonical plans
   directory:
   - added
-    [0003-2026-04-14-team-run-data-model.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0003-2026-04-14-team-run-data-model.md)
+    [0003-2026-04-14-team-run-data-model.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0003-2026-04-14-team-run-data-model.md)
     as the canonical team-run data-model plan
   - rewired the roadmap, runbook, and adjacent canonical task / run-spec plan
     to the new canonical path
   - demoted
-    [team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md)
+    [team-run-data-model-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-run-data-model-plan.md)
     to a historical pointer instead of deleting it
   - why this matters:
     - the second loose-plan migration is now complete without reopening the
@@ -18013,12 +18013,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-14: Migrated the team service-execution plan into the canonical
   plans directory:
   - added
-    [0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0004-2026-04-14-team-service-execution.md)
+    [0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0004-2026-04-14-team-service-execution.md)
     as the canonical team service-execution plan
   - rewired the roadmap, runbook, and adjacent canonical task/data-model plans
     to the new canonical path
   - demoted
-    [team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
+    [team-service-execution-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-service-execution-plan.md)
     to a historical pointer instead of deleting it
   - why this matters:
     - the reviewed migration batch is now advancing in dependency order instead
@@ -18026,9 +18026,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-14: Terminal-step selection precedence is now explicit across
   runtime and HTTP response readback:
   - added focused regressions in
-    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
     and
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - seeded failed runs where both existed:
     - an earlier failed step
     - a later succeeded step
@@ -18042,9 +18042,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-14: Input-artifact fallback is now explicit across runtime and HTTP
   response readback:
   - added focused regressions in
-    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
     and
-    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - seeded succeeded multi-step runs where:
     - the terminal step had no input artifacts
     - the latest earlier step did
@@ -18109,37 +18109,37 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-14: Migrated the durable-state ownership plan into canonical
   authority:
   - added
-    [0005-2026-04-14-durable-state-account-mirroring.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)
+    [0005-2026-04-14-durable-state-account-mirroring.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)
     as the canonical durable-state ownership plan
   - rewired roadmap and runbook authority to the canonical path
   - archived the old loose file as searchable history instead of leaving it as
     a second live authority path
   - recorded the legacy move in
-    [docs/dev/plans/legacy-archive/INDEX.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/INDEX.md)
+    [docs/dev/plans/legacy-archive/INDEX.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/INDEX.md)
     so the canonical-vs-archived split stays explicit
   - why this matters:
     - the highest-signal remaining runtime/service design lane now lives under
       the canonical planning contract
 - 2026-04-14: Migrated the team boundary into canonical authority:
   - added
-    [0006-2026-04-14-team-config-boundary.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0006-2026-04-14-team-config-boundary.md)
+    [0006-2026-04-14-team-config-boundary.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0006-2026-04-14-team-config-boundary.md)
     as the canonical team boundary plan
   - rewired roadmap, runbook, and adjacent canonical team/task plans to the
     canonical path
   - archived the old loose file as
-    [0027-2026-04-09-team-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0027-2026-04-09-team-config-boundary-plan.md)
+    [0027-2026-04-09-team-config-boundary-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0027-2026-04-09-team-config-boundary-plan.md)
     and recorded it in the legacy archive index
   - why this matters:
     - the team/task/service foundation cluster now carries its main boundary
       docs under the canonical planning contract instead of split loose paths
 - 2026-04-14: Migrated the config-model umbrella into canonical authority:
   - added
-    [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md)
+    [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0007-2026-04-14-config-model-refactor.md)
     as the canonical repo-wide config architecture plan
   - rewired roadmap, runbook, and the live browser/config cross-links to the
     canonical path
   - archived the old loose file as
-    [0028-2026-04-08-config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0028-2026-04-08-config-model-refactor-plan.md)
+    [0028-2026-04-08-config-model-refactor-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0028-2026-04-08-config-model-refactor-plan.md)
     and recorded it in the legacy archive index
   - why this matters:
     - the remaining config/boundary cluster now has one canonical umbrella
@@ -18147,24 +18147,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-14: Migrated the browser-profile family refactor plan into canonical
   authority:
   - added
-    [0008-2026-04-14-browser-profile-family-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0008-2026-04-14-browser-profile-family-refactor.md)
+    [0008-2026-04-14-browser-profile-family-refactor.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0008-2026-04-14-browser-profile-family-refactor.md)
     as the canonical browser-profile subtrack plan
   - rewired roadmap, runbook, `AGENTS.md`, and the active execution board to
     the canonical path
   - archived the old loose file as
-    [0029-2026-04-08-browser-profile-family-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0029-2026-04-08-browser-profile-family-refactor-plan.md)
+    [0029-2026-04-08-browser-profile-family-refactor-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0029-2026-04-08-browser-profile-family-refactor-plan.md)
     and recorded it in the legacy archive index
   - why this matters:
     - the most active browser/config subtrack is now canonical instead of
       remaining a loose special-case authority path
 - 2026-04-14: Migrated the agent boundary into canonical authority:
   - added
-    [0009-2026-04-14-agent-config-boundary.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0009-2026-04-14-agent-config-boundary.md)
+    [0009-2026-04-14-agent-config-boundary.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0009-2026-04-14-agent-config-boundary.md)
     as the canonical agent-boundary plan
   - rewired roadmap, runbook, and the canonical config execution docs to the
     canonical path
   - archived the old loose file as
-    [0030-2026-04-08-agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0030-2026-04-08-agent-config-boundary-plan.md)
+    [0030-2026-04-08-agent-config-boundary-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0030-2026-04-08-agent-config-boundary-plan.md)
     and recorded it in the legacy archive index
   - why this matters:
     - the config cluster now carries both umbrella and boundary authority under
@@ -18172,17 +18172,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-14: Archived the alias-policy holdover and promoted the next two live
   browser/service plans into canonical authority:
   - archived the superseded alias-policy doc as
-    [0031-2026-04-08-config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0031-2026-04-08-config-model-input-alias-plan.md)
+    [0031-2026-04-08-config-model-input-alias-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0031-2026-04-08-config-model-input-alias-plan.md)
   - added
-    [0010-2026-04-14-service-volatility-chatgpt.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0010-2026-04-14-service-volatility-chatgpt.md)
+    [0010-2026-04-14-service-volatility-chatgpt.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0010-2026-04-14-service-volatility-chatgpt.md)
     as the canonical ChatGPT service-volatility pilot
   - added
-    [0011-2026-04-14-browser-service-refactor-roadmap.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md)
+    [0011-2026-04-14-browser-service-refactor-roadmap.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md)
     as the canonical browser-service roadmap
   - archived the old loose files as
-    [0032-2026-04-08-service-volatility-chatgpt-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0032-2026-04-08-service-volatility-chatgpt-plan.md)
+    [0032-2026-04-08-service-volatility-chatgpt-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0032-2026-04-08-service-volatility-chatgpt-plan.md)
     and
-    [0033-2026-03-18-browser-service-refactor-roadmap.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0033-2026-03-18-browser-service-refactor-roadmap.md)
+    [0033-2026-03-18-browser-service-refactor-roadmap.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0033-2026-03-18-browser-service-refactor-roadmap.md)
   - why this matters:
     - the active browser/service planning surface is now concentrated in the
       canonical plan directory, and the stale alias-policy doc is no longer a
@@ -18219,7 +18219,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Completed the focused service-host proof for configured service-account
   affinity:
   - added direct local-claim coverage in
-    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
     proving a runner without the configured
     `service-account:<service>:<identity-key>` id is `blocked-affinity`
   - added the matching positive case proving the same configured id makes the
@@ -18236,7 +18236,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Added direct runtime-inspection helper coverage for configured
   service-account affinity:
   - added
-    [tests/runtime.inspection.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.inspection.test.ts)
+    [tests/runtime.inspection.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.inspection.test.ts)
     to prove `inspectRuntimeRun(...)` projects the same configured
     `requiredServiceAccountId` and missing-account reason that local-claim
     evaluation uses
@@ -18249,10 +18249,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## 2026-04-15 - Configured account-affinity docs boundary
 
 - Tightened live operator docs for configured service-account affinity:
-  - updated [README.md](/home/ecochran76/workspace.local/oracle/README.md),
-    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md),
+  - updated [README.md](/home/ecochran76/workspace.local/auracall/README.md),
+    [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md),
     and
-    [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
     to state that `service-account:<service>:<identity-key>` affinity is
     derived from configured service identity only
   - made the non-goal explicit:
@@ -18269,18 +18269,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 - Reassessed the active execution roadmap after the configured account-affinity
   checkpoint:
-  - updated [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+  - updated [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
     so Durable State And Account Mirroring is now `in progress` with an
     explicit single-runner/local-service checkpoint
   - updated
-    [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md)
+    [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0001-2026-04-14-execution.md)
     to stop adding more account-affinity reporting by default and move to one
     bounded validation checkpoint
   - updated
-    [0005-2026-04-14-durable-state-account-mirroring.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)
+    [0005-2026-04-14-durable-state-account-mirroring.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)
     with the shipped single-runner/account-affinity state and the next
     `api serve` smoke acceptance criteria
-  - recorded the decision in [RUNBOOK.md](/home/ecochran76/workspace.local/oracle/RUNBOOK.md)
+  - recorded the decision in [RUNBOOK.md](/home/ecochran76/workspace.local/auracall/RUNBOOK.md)
   - why this matters:
     - the lane now has a validation-first checkpoint instead of drifting into
       public team execution writes or multi-runner service mode prematurely.
@@ -18308,9 +18308,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - the durable-state/account-affinity checkpoint is now validated end to end
       without touching live browser state or public team execution writes.
 - Updated the active roadmap and execution plans after the smoke:
-  - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
-  - [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md)
-  - [0005-2026-04-14-durable-state-account-mirroring.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)
+  - [ROADMAP.md](/home/ecochran76/workspace.local/auracall/ROADMAP.md)
+  - [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0001-2026-04-14-execution.md)
+  - [0005-2026-04-14-durable-state-account-mirroring.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)
   - decision:
     - pause the durable-state/account-affinity sub-lane at this green
       single-runner checkpoint
@@ -18320,18 +18320,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 - Completed a bounded contract-cleanup slice around targeted drain readback fixtures:
   - updated skipped targeted-drain response/readback fixtures in:
-    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - canonicalized them to match the live service-host behavior:
     - `skipReason` stays the bounded enum `claim-owner-unavailable`
     - free-form `reason` / persisted operator note carries the actionable local-claim explanation
   - corrected the stale durable rule in
-    [docs/dev-fixes-log.md](/home/ecochran76/workspace.local/oracle/docs/dev-fixes-log.md)
+    [docs/dev-fixes-log.md](/home/ecochran76/workspace.local/auracall/docs/dev-fixes-log.md)
     so targeted-drain ownership failures no longer imply `reason = skipReason`.
 ## 2026-04-15 - Stale-heartbeat repair action reconciliation detail
 
 - Completed one bounded operator-action refinement for stale-heartbeat repair:
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so `repairStaleHeartbeatLease(...)` now preserves
     `reconciliationReason` in the returned action result alongside:
     - `reason`
@@ -18341,16 +18341,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     reconciliation detail that explains why the lease was stale or not
     reclaimable.
   - added focused host and HTTP coverage in:
-    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
-  - updated [README.md](/home/ecochran76/workspace.local/oracle/README.md) and
-    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
+  - updated [README.md](/home/ecochran76/workspace.local/auracall/README.md) and
+    [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     so the `POST /status` lease-repair action documents the same bounded
     detail field.
 ## 2026-04-15 - Operator action result identity/timestamp detail
 
 - Completed one bounded `/status` operator-action refinement:
-  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
     so successful local-action resolution now also returns:
     - `resolvedAt`
     - `ownerStepId`
@@ -18361,20 +18361,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     already-persisted identifiers/timestamps that callers otherwise had to
     rediscover through later response readback.
   - added focused host and HTTP coverage in:
-    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
-  - updated [README.md](/home/ecochran76/workspace.local/oracle/README.md) and
-    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
+  - updated [README.md](/home/ecochran76/workspace.local/auracall/README.md) and
+    [docs/testing.md](/home/ecochran76/workspace.local/auracall/docs/testing.md)
     so the `/status` action-result contract reflects the same bounded detail.
 ## 2026-04-16 - Gemini live probe prefers executor-owned active state
 
 - Completed one bounded Gemini live-probe refinement for
   `GET /v1/runtime-runs/inspect?...&probe=service-state`:
   - added
-    [src/runtime/liveServiceStateRegistry.ts](/home/ecochran76/workspace.local/oracle/src/runtime/liveServiceStateRegistry.ts)
+    [src/runtime/liveServiceStateRegistry.ts](/home/ecochran76/workspace.local/auracall/src/runtime/liveServiceStateRegistry.ts)
     as a transient in-memory registry for active run-scoped provider state
   - updated
-    [src/runtime/configuredExecutor.ts](/home/ecochran76/workspace.local/oracle/src/runtime/configuredExecutor.ts)
+    [src/runtime/configuredExecutor.ts](/home/ecochran76/workspace.local/auracall/src/runtime/configuredExecutor.ts)
     so browser-backed Gemini execution records transient active `thinking`
     state under:
     - `state = thinking`
@@ -18382,12 +18382,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `evidenceRef = gemini-web-request-started`
     - `confidence = medium`
   - updated
-    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
     so the default Gemini live probe prefers that executor-owned active state
     before falling back to page/DOM evidence
   - added focused coverage in:
-    - [tests/runtime.configuredExecutor.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.configuredExecutor.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.configuredExecutor.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.configuredExecutor.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - live proof on `auracall-gemini-pro` via `auracall api serve --port 8096`
     showed repeated mid-turn `serviceState` readback of:
     - `probeStatus = observed`
@@ -18400,26 +18400,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 - Completed one bounded Grok live-probe slice for
   `GET /v1/runtime-runs/inspect?...&probe=service-state`:
-  - updated [src/browser/liveServiceState.ts](/home/ecochran76/workspace.local/oracle/src/browser/liveServiceState.ts)
+  - updated [src/browser/liveServiceState.ts](/home/ecochran76/workspace.local/auracall/src/browser/liveServiceState.ts)
     with a provider-owned Grok live helper that can read:
     - `response-incoming`
     - `provider-error`
     - `login-required`
-  - updated [src/runtime/configuredExecutor.ts](/home/ecochran76/workspace.local/oracle/src/runtime/configuredExecutor.ts)
+  - updated [src/runtime/configuredExecutor.ts](/home/ecochran76/workspace.local/auracall/src/runtime/configuredExecutor.ts)
     so browser-backed Grok execution records transient active `thinking`
     state under:
     - `state = thinking`
     - `source = browser-service`
     - `evidenceRef = grok-prompt-submitted`
     - `confidence = medium`
-  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
     so the default Grok live probe prefers executor-owned active state before
     falling back to page/DOM evidence and refuses non-browser runtime
     profiles
   - added focused coverage in:
-    - [tests/browser/liveServiceState.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/liveServiceState.test.ts)
-    - [tests/runtime.configuredExecutor.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.configuredExecutor.test.ts)
-    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/browser/liveServiceState.test.ts](/home/ecochran76/workspace.local/auracall/tests/browser/liveServiceState.test.ts)
+    - [tests/runtime.configuredExecutor.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.configuredExecutor.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   - live proof on `auracall-grok-auto` via `auracall api serve --port 8097`
     showed repeated mid-turn `serviceState` readback of:
     - `probeStatus = observed`
@@ -18434,10 +18434,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Reassessed the runtime-inspection `serviceState` lane after provider-breadth
   completion:
   - closed
-    [0017-2026-04-16-runtime-inspection-service-state-probe.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md)
+    [0017-2026-04-16-runtime-inspection-service-state-probe.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md)
     as the completed breadth checkpoint
   - opened
-    [0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md)
+    [0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md)
     as the bounded quality follow-up lane
   - kept the architectural boundary unchanged:
     - richer Gemini/Grok mid-turn states must stay on the existing
@@ -18456,17 +18456,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Bounded DOM inspection on the managed Gemini browser profile still showed the
   idle/home surface rather than active answer-bearing chat history.
 - Recorded the conclusion in
-  [0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md):
+  [0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md):
   keep Gemini executor-owned `thinking` as the honest fallback on this
   machine/profile instead of inventing richer heuristic states.
 ## 2026-04-17 - Grok quality follow-up recorded as negative evidence
 
 - Implemented one bounded Grok precedence refinement in
-  [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+  [src/http/responsesServer.ts](/home/ecochran76/workspace.local/auracall/src/http/responsesServer.ts)
   so provider-owned visible answer state can override transient executor-owned
   `thinking` when it is actually present.
 - Added focused HTTP coverage in
-  [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   for that precedence rule.
 - Live `api serve` quality proof on this machine/profile still showed:
   - active `thinking` via executor-owned `grok-prompt-submitted`
@@ -18474,14 +18474,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - no stable provider-owned `response-incoming` during the active polling
     window
 - Recorded the conclusion in
-  [0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md):
+  [0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md):
   keep Grok executor-owned `thinking` as the honest active fallback on this
   machine/profile while retaining the stricter precedence logic for future
   runs that do expose provider-owned answer visibility.
 ## 2026-04-17 - Service-state reassessment closed without a new lane
 
 - Reassessed the live runtime-inspection `serviceState` lane after closing
-  [0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md).
+  [0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md).
 - Decision:
   - do not open another bounded `serviceState` implementation plan right now
   - keep the current run-scoped seam in maintenance mode
@@ -18496,7 +18496,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## 2026-04-17 - Durable-state checkpoint closed without a new slice
 
 - Reassessed
-  [0005-2026-04-14-durable-state-account-mirroring.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)
+  [0005-2026-04-14-durable-state-account-mirroring.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)
   after re-reading the current roadmap and the already-shipped
   single-runner/account-affinity checkpoint.
 - Decision:
@@ -18513,7 +18513,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## 2026-04-17 - Config doctor warns on browser-owned runtime overrides
 
 - Completed one bounded config-model refactor slice under
-  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
+  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
   `config doctor` now warns when an AuraCall runtime profile still carries
   broad browser-owned override state through:
   - broad launch/browser-family fields under
@@ -18528,7 +18528,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## 2026-04-17 - Config migrate hoists obvious browser-owned runtime overrides
 
 - Completed one bounded follow-up slice under
-  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
+  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
   `config migrate` now hoists obvious broad browser-owned runtime fields into
   the referenced browser profile when it is safe.
 - Current auto-cleanup scope:
@@ -18543,7 +18543,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## 2026-04-17 - Service-scoped runtime overrides now have explicit advisory policy
 
 - Completed one bounded follow-up under
-  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
+  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
   `config doctor` now surfaces service-scoped browser escape hatches as
   informational policy guidance when they still live under
   `runtimeProfiles.<name>.browser`.
@@ -18559,7 +18559,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## 2026-04-17 - Config doctor now separates relocatable service fields from escape hatches
 
 - Completed one bounded follow-up under
-  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
+  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
   `config doctor` no longer treats all service-scoped browser fields as one
   advisory bucket.
 - Current diagnostic split:
@@ -18581,7 +18581,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## 2026-04-17 - Manual-login escape hatches now have an explicit lower-level contract
 
 - Completed one bounded follow-up under
-  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
+  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
   lower-level browser profile resolution now drops `manualLoginProfileDir`
   whenever `manualLogin` is explicitly disabled.
 - Current contract:
@@ -18593,7 +18593,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## 2026-04-17 - Config doctor now flags default-equivalent managed profile paths as redundant
 
 - Completed one bounded follow-up under
-  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
+  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
   `config doctor` now identifies explicit `manualLoginProfileDir` values that
   merely duplicate Aura-Call's derived managed profile path.
 - Current policy:
@@ -18602,7 +18602,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## 2026-04-17 - Config migrate now removes redundant default-equivalent managed profile paths
 
 - Completed one bounded follow-up under
-  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
+  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
   `config migrate` now removes `manualLoginProfileDir` values only when they
   exactly match Aura-Call's derived managed profile path for the same AuraCall
   runtime profile + service target.
@@ -18614,7 +18614,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## 2026-04-17 - Config doctor and migrate now trim redundant inherited service defaults
 
 - Completed one bounded follow-up under
-  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
+  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
   runtime-profile service values for `modelStrategy`, `thinkingTime`, and
   `composerTool` are now treated as redundant when they exactly mirror the
   already-inherited top-level `services.<service>` defaults.
@@ -18625,7 +18625,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## 2026-04-17 - HTTP status posture test now isolates AuraCall home state
 
 - Follow-up hygiene after the broad checkpoint sweep:
-  [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   now overrides AuraCall home with a temp directory for the
   `/status` development-posture case.
 - Reason:
@@ -18639,7 +18639,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   the heavy HTTP responses test file now carries an explicit `10000ms`
   Vitest per-file timeout budget, including the suspiciously-idle lease repair
   case in
-  [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
   instead of relying on the default `5000ms`.
 - Reason:
   - isolated HTTP cases were functionally green but aggregate load in the same
@@ -19749,8 +19749,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   selecting/evaluating the queried runner or active-lease owner.
 - Added focused regressions proving the same stale-heartbeat posture now holds
   on:
-  - [runtime.inspection.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.inspection.test.ts)
-  - [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - [runtime.inspection.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.inspection.test.ts)
+  - [http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 ## 2026-04-19 - Runtime inspection task-run-spec aliases now stay team-run scoped
 
 - Audited the next inspection-selection seam after the runner-liveness fix and
@@ -19764,35 +19764,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `sourceKind = team-run` history only.
 - Added focused regressions proving the team-run-backed runtime still wins even
   when a newer direct run shares the same `taskRunSpecId` on:
-  - [runtime.inspection.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.inspection.test.ts)
-  - [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - [runtime.inspection.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.inspection.test.ts)
+  - [http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 ## 2026-04-19 - Review ledger task-run-spec lookup contract lock
 
 - Audited the adjacent review-ledger selection seam after the runtime
   inspection fix.
 - Did not find a new implementation bug in
-  [src/teams/reviewLedger.ts](/home/ecochran76/workspace.local/oracle/src/teams/reviewLedger.ts):
+  [src/teams/reviewLedger.ts](/home/ecochran76/workspace.local/auracall/src/teams/reviewLedger.ts):
   the lookup was already scoped to `sourceKind = team-run`.
 - The remaining gap was durability: the repo did not yet have a focused
   regression proving review-ledger lookup keeps `taskRunSpecId` aliases inside
   team-run history even when a newer direct run shares the same id.
 - Added that regression in
-  [tests/teams.reviewLedger.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.reviewLedger.test.ts)
+  [tests/teams.reviewLedger.test.ts](/home/ecochran76/workspace.local/auracall/tests/teams.reviewLedger.test.ts)
   and updated the active `0004` authority to state the same rule explicitly.
 ## 2026-04-19 - Team inspection task-run-spec lookup contract lock
 
 - Audited the next adjacent team-run inspection selection seam after locking
   review-ledger lookup.
 - Did not find a new implementation bug in
-  [src/teams/inspection.ts](/home/ecochran76/workspace.local/oracle/src/teams/inspection.ts):
+  [src/teams/inspection.ts](/home/ecochran76/workspace.local/auracall/src/teams/inspection.ts):
   the lookup was already scoped to `sourceKind = team-run`.
 - The remaining gap was public-surface durability: the CLI inspection helper
   and `/v1/team-runs/inspect?taskRunSpecId=...` route did not yet have a
   focused regression proving a newer direct run with the same `taskRunSpecId`
   cannot displace the task-backed team attempt.
 - Added that mixed-history regression on:
-  - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/teamRunCommand.test.ts)
-  - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/teamRunCommand.test.ts)
+  - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 - Updated the active `0004` authority so team inspection now states the same
   team-run-only alias rule as runtime inspection and review-ledger lookup.
 ## 2026-04-19 - Team inspection runtime-run-id direct-run rejection
@@ -19804,12 +19804,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `inspectTeamRunLinkage(...)` still projected a direct run through the
     team-run inspection surface
 - Tightened
-  [src/teams/inspection.ts](/home/ecochran76/workspace.local/oracle/src/teams/inspection.ts)
+  [src/teams/inspection.ts](/home/ecochran76/workspace.local/auracall/src/teams/inspection.ts)
   so `runtimeRunId` lookup now rejects non-team runtime runs instead of
   returning them as team inspection payloads.
 - Added focused regressions proving the direct-run rejection on:
-  - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/teamRunCommand.test.ts)
-  - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/teamRunCommand.test.ts)
+  - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 - Updated the active `0004` authority so the team-inspection surface is now
   explicitly team-run-only on both:
   - `taskRunSpecId`
@@ -19819,14 +19819,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Audited the adjacent team-review surface after fixing team inspection
   `runtimeRunId` handling.
 - Did not find a new implementation bug in
-  [src/teams/reviewLedger.ts](/home/ecochran76/workspace.local/oracle/src/teams/reviewLedger.ts):
+  [src/teams/reviewLedger.ts](/home/ecochran76/workspace.local/auracall/src/teams/reviewLedger.ts):
   direct runtime runs were already rejected on the `runtimeRunId` path.
 - The remaining gap was durability on the public helper surface: the repo did
   not yet prove that
-  [reviewConfiguredTeamRun(...)](/home/ecochran76/workspace.local/oracle/src/cli/teamRunCommand.ts)
+  [reviewConfiguredTeamRun(...)](/home/ecochran76/workspace.local/auracall/src/cli/teamRunCommand.ts)
   preserves that same team-run-only boundary.
 - Added a focused CLI regression in
-  [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/teamRunCommand.test.ts)
+  [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/auracall/tests/cli/teamRunCommand.test.ts)
   and updated the active `0004` authority to state the same rule explicitly.
 ## 2026-04-19 - Park the narrower team review/inspection boundary lane
 
@@ -19853,12 +19853,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     even though assignment identity belongs to the
     `taskRunSpec -> teamRun -> runtime` chain
 - Tightened
-  [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+  [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/auracall/src/runtime/serviceHost.ts)
   so recovery detail now suppresses `taskRunSpecId` and
   `taskRunSpecSummary` unless `sourceKind = team-run`.
 - Added focused regressions proving the suppression on:
-  - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
-  - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/auracall/tests/runtime.serviceHost.test.ts)
+  - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/auracall/tests/http.responsesServer.test.ts)
 - Updated the active `0004` authority and testing docs so the bounded recovery
   detail contract now states the same team-run-only assignment rule
   explicitly.
@@ -19869,7 +19869,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   direct-run assignment-identity leak and tightened the governing contract
   instead of opening another ad hoc surface-specific lane.
 - Clarified in
-  [0003-2026-04-14-team-run-data-model.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0003-2026-04-14-team-run-data-model.md)
+  [0003-2026-04-14-team-run-data-model.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0003-2026-04-14-team-run-data-model.md)
   that artifact refs and handoff payloads must stay on one logical execution
   envelope across:
   - step input/output
@@ -19877,7 +19877,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - shared-state inventory
   - local host action exchange
 - Clarified in
-  [0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0004-2026-04-14-team-service-execution.md)
+  [0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0004-2026-04-14-team-service-execution.md)
   that AuraCall needs one deterministic machine-handling contract split into:
   - logical execution envelope
   - bounded readback envelope
@@ -19888,7 +19888,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `taskRunSpecId` / `taskRunSpecSummary` remain team-only identity fields,
     not general runtime metadata
 - Updated
-  [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+  [docs/openai-endpoints.md](/home/ecochran76/workspace.local/auracall/docs/openai-endpoints.md)
   so the public dev-server contract now reflects that same split.
 
 ## 2026-04-20 - Public team-run route live-smoke result
@@ -23346,3 +23346,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Progress:
   - confirmed GitHub CLI auth is active for `ecochran76`
   - marked `CHANGELOG.md` `0.1.0` as released on `2026-04-28` before tagging
+
+## 2026-04-28 - Repository rename to auracall
+
+- Focus: rename the fork repository from `oracle` to `auracall` now that the
+  product/package line has cut `v0.1.0`.
+- Progress:
+  - renamed GitHub repo `ecochran76/oracle` to `ecochran76/auracall`
+  - updated local `origin` to `https://github.com/ecochran76/auracall.git`
+  - kept `upstream` on `https://github.com/steipete/oracle.git` for fork
+    provenance
+  - moved local checkout from
+    `/home/ecochran76/workspace.local/oracle` to
+    `/home/ecochran76/workspace.local/auracall`
+  - updated package metadata, README badges, and repo-local operator path
+    references to the new repository identity/path

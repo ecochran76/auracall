@@ -3,7 +3,7 @@
 This file is now a historical pointer.
 
 Active canonical authority has moved to
-[0003-2026-04-14-team-run-data-model.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0003-2026-04-14-team-run-data-model.md).
+[0003-2026-04-14-team-run-data-model.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0003-2026-04-14-team-run-data-model.md).
 
 Why this file still exists:
 

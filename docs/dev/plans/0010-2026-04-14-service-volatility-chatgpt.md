@@ -25,7 +25,7 @@ Run the first narrow service-volatility pilot on ChatGPT by extracting only low-
 
 This pilot should validate the manifest architecture without moving ChatGPT’s fragile workflow logic into config.
 
-Follow-on behavior/workflow planning is archived in [0025-2026-04-08-service-volatility-chatgpt-workflow-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0025-2026-04-08-service-volatility-chatgpt-workflow-plan.md).
+Follow-on behavior/workflow planning is archived in [0025-2026-04-08-service-volatility-chatgpt-workflow-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0025-2026-04-08-service-volatility-chatgpt-workflow-plan.md).
 
 ## Scope
 

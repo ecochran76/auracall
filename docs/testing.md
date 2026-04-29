@@ -1140,7 +1140,7 @@
       - runnable
       - recoverable stranded
       - then non-executable classes
-- Service-volatility refactor rule: do not treat this as a pure config shuffle. Every extraction phase must keep a named regression set green and every service slice must declare its own acceptance bar before implementation starts. See [service-volatility-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0012-2026-04-14-service-volatility-refactor.md) and [service-volatility-service-plan-template.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-service-plan-template.md).
+- Service-volatility refactor rule: do not treat this as a pure config shuffle. Every extraction phase must keep a named regression set green and every service slice must declare its own acceptance bar before implementation starts. See [service-volatility-refactor-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0012-2026-04-14-service-volatility-refactor.md) and [service-volatility-service-plan-template.md](/home/ecochran76/workspace.local/auracall/docs/dev/service-volatility-service-plan-template.md).
 - Gemini unit/regression: `pnpm vitest run tests/gemini.test.ts tests/gemini-web`.
 - Gemini support matrix checkpoint:
   - API:
@@ -1350,7 +1350,7 @@
   - current acceptance bar:
     - initial `auracall-chatgpt-tooling` run uses:
       - `--allow-local-shell-command node`
-      - `--allow-local-cwd-root /home/ecochran76/workspace.local/oracle`
+      - `--allow-local-cwd-root /home/ecochran76/workspace.local/auracall`
       - `--require-local-action-approval`
     - initial run returns:
       - `runtimeRunStatus = cancelled`
@@ -1408,7 +1408,7 @@
     - current acceptance bar:
       - initial `auracall-tooling` run uses:
         - `--allow-local-shell-command node`
-        - `--allow-local-cwd-root /home/ecochran76/workspace.local/oracle`
+        - `--allow-local-cwd-root /home/ecochran76/workspace.local/auracall`
         - `--require-local-action-approval`
       - initial run returns:
         - `runtimeRunStatus = cancelled`
@@ -1756,7 +1756,7 @@
     - `sharedStateNotes` includes consumed-transfer evidence for step 2
     - `finalOutputSummary = "AURACALL_MULTI_AGENT_LIVE_SMOKE_OK"`
   - bounded tooling smoke:
-    - `pnpm tsx bin/auracall.ts teams run auracall-tooling "Run one bounded node local shell action that emits AURACALL_TOOL_ACTION_OK, then reply exactly with: AURACALL_TOOL_TEAM_LIVE_SMOKE_OK" --title "AuraCall tooling team live smoke" --prompt-append "For the tool envelope, use a top-level localActionRequests array with exactly one shell action. Preserve the provided toolEnvelope unchanged. Use kind \"shell\" and command \"node\". Use args [\"-e\",\"process.stdout.write('AURACALL_TOOL_ACTION_OK')\"]. Use structuredPayload {\"cwd\":\"/home/ecochran76/workspace.local/oracle\"}. After the local action succeeds, the final answer must be exactly AURACALL_TOOL_TEAM_LIVE_SMOKE_OK." --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/oracle --json`
+    - `pnpm tsx bin/auracall.ts teams run auracall-tooling "Run one bounded node local shell action that emits AURACALL_TOOL_ACTION_OK, then reply exactly with: AURACALL_TOOL_TEAM_LIVE_SMOKE_OK" --title "AuraCall tooling team live smoke" --prompt-append "For the tool envelope, use a top-level localActionRequests array with exactly one shell action. Preserve the provided toolEnvelope unchanged. Use kind \"shell\" and command \"node\". Use args [\"-e\",\"process.stdout.write('AURACALL_TOOL_ACTION_OK')\"]. Use structuredPayload {\"cwd\":\"/home/ecochran76/workspace.local/auracall\"}. After the local action succeeds, the final answer must be exactly AURACALL_TOOL_TEAM_LIVE_SMOKE_OK." --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/auracall --json`
   - current expected result:
     - real `taskRunSpec` payload
     - `runtimeSourceKind = team-run`
@@ -1775,7 +1775,7 @@
     - do not treat occasional Grok envelope drift as a transport regression on
       the stable baseline team suite
 - Gemini bounded tooling team smoke on 2026-04-12:
-  - `pnpm tsx bin/auracall.ts teams run auracall-gemini-tooling "Use the provided toolEnvelope structured context to request one bounded shell action, then use the resulting tool outcome to return the provided finalToken exactly." --title "AuraCall Gemini tooling team live smoke" --prompt-append "Requester must emit exactly one JSON object with top-level localActionRequests containing the provided toolEnvelope unchanged. Do not rename fields, add markdown fences, or add prose. Finisher must output only the final token after a successful executed tool outcome." --structured-context-json '{"toolEnvelope":{"kind":"shell","summary":"Run one bounded deterministic node command","command":"node","args":["-e","process.stdout.write('\''AURACALL_TOOL_ACTION_OK'\'')"],"structuredPayload":{"cwd":"/home/ecochran76/workspace.local/oracle"}},"finalToken":"AURACALL_GEMINI_TOOL_TEAM_SMOKE_OK"}' --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/oracle --json`
+  - `pnpm tsx bin/auracall.ts teams run auracall-gemini-tooling "Use the provided toolEnvelope structured context to request one bounded shell action, then use the resulting tool outcome to return the provided finalToken exactly." --title "AuraCall Gemini tooling team live smoke" --prompt-append "Requester must emit exactly one JSON object with top-level localActionRequests containing the provided toolEnvelope unchanged. Do not rename fields, add markdown fences, or add prose. Finisher must output only the final token after a successful executed tool outcome." --structured-context-json '{"toolEnvelope":{"kind":"shell","summary":"Run one bounded deterministic node command","command":"node","args":["-e","process.stdout.write('\''AURACALL_TOOL_ACTION_OK'\'')"],"structuredPayload":{"cwd":"/home/ecochran76/workspace.local/auracall"}},"finalToken":"AURACALL_GEMINI_TOOL_TEAM_SMOKE_OK"}' --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/auracall --json`
   - expected result:
     - `runtimeSourceKind = team-run`
     - `runtimeRunStatus = succeeded`
@@ -2057,8 +2057,8 @@
     - `root-followups` green
     - `cleanup` green
   - Existing-conversation browser runs now reject reused assistant turns when a visible ChatGPT rate-limit modal blocks the new send, instead of returning the previous assistant answer as false success.
-  - Post-MVP polish history is archived in [0021-2026-04-08-chatgpt-polish-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0021-2026-04-08-chatgpt-polish-plan.md).
-  - Broader hostile-state hardening history is archived in [0020-2026-04-08-chatgpt-hardening-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0020-2026-04-08-chatgpt-hardening-plan.md).
+  - Post-MVP polish history is archived in [0021-2026-04-08-chatgpt-polish-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0021-2026-04-08-chatgpt-polish-plan.md).
+  - Broader hostile-state hardening history is archived in [0020-2026-04-08-chatgpt-hardening-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0020-2026-04-08-chatgpt-hardening-plan.md).
 - MCP focused: `pnpm test:mcp` (builds then stdio smoke via mcporter).
 - MCP media/workbench service wiring:
   - `pnpm vitest run tests/mcp.server.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/mcp.workbenchCapabilities.test.ts --maxWorkers 1`

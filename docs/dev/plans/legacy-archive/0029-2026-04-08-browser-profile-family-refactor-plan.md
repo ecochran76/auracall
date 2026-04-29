@@ -383,4 +383,4 @@ Scope to defer to the broader config-model refactor:
 - any agent/team-facing config design
 
 See:
-- [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md)
+- [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0007-2026-04-14-config-model-refactor.md)

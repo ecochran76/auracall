@@ -12,10 +12,10 @@ This plan exists to answer one practical question:
 
 It should be read together with:
 
-- [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md)
-- [agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
-- [team-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-config-boundary-plan.md)
-- [0003-2026-04-14-team-run-data-model.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0003-2026-04-14-team-run-data-model.md)
+- [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0001-2026-04-14-execution.md)
+- [agent-config-boundary-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/agent-config-boundary-plan.md)
+- [team-config-boundary-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/team-config-boundary-plan.md)
+- [0003-2026-04-14-team-run-data-model.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/0003-2026-04-14-team-run-data-model.md)
 
 ## Current baseline
 
@@ -285,7 +285,7 @@ Current recommended next slice:
 
 That slice is now detailed in:
 
-- [runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-runner-slice-plan.md)
+- [runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/runtime-runner-slice-plan.md)
 
 Updated checkpoint after the first runner slice:
 
@@ -300,7 +300,7 @@ Updated checkpoint after the first runner slice:
 
 That next slice is now detailed in:
 
-- [runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
+- [runtime-service-host-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/runtime-service-host-plan.md)
 
 ### Slice 5: Team execution bridge
 

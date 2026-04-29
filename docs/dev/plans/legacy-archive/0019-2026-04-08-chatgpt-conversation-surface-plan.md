@@ -1,6 +1,6 @@
 # ChatGPT Conversation Surface Plan
 
-Goal: record the work that closed the ChatGPT browser MVP after project-management CRUD stabilized on the managed WSL Chrome path. Post-MVP polish history is tracked separately in [0021-2026-04-08-chatgpt-polish-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0021-2026-04-08-chatgpt-polish-plan.md).
+Goal: record the work that closed the ChatGPT browser MVP after project-management CRUD stabilized on the managed WSL Chrome path. Post-MVP polish history is tracked separately in [0021-2026-04-08-chatgpt-polish-plan.md](/home/ecochran76/workspace.local/auracall/docs/dev/plans/legacy-archive/0021-2026-04-08-chatgpt-polish-plan.md).
 
 Guardrails:
 - keep live validation on non-Pro tiers for this account
