@@ -204,7 +204,12 @@ Terminology note:
   artifact/media indexes without fetching full content. Operators and agents
   can inspect those cached indexes with
   `GET /v1/account-mirrors/catalog?provider=chatgpt&runtimeProfile=default&kind=all&limit=50`;
-  catalog reads are cache-only and do not enqueue browser work.
+  catalog reads are cache-only and do not enqueue browser work. Lazy mirror
+  scheduling is disabled by default; start `api serve` with
+  `--account-mirror-scheduler-interval-ms <ms>` to record dry-run eligibility
+  passes in `/status.accountMirrorScheduler`, and add
+  `--account-mirror-scheduler-execute` only when the service should request
+  eligible default-ChatGPT metadata refreshes.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

@@ -136,6 +136,22 @@
       - this readback may hydrate counts/evidence from the existing provider
         cache store, but it must not enqueue browser work or scrape provider
         pages
+    - current expected status also includes lazy account mirror scheduler
+      posture:
+      - `accountMirrorScheduler.enabled`
+      - `accountMirrorScheduler.dryRun`
+      - `accountMirrorScheduler.intervalMs`
+      - `accountMirrorScheduler.state = disabled|idle|scheduled|running`
+      - `accountMirrorScheduler.lastStartedAt`
+      - `accountMirrorScheduler.lastCompletedAt`
+      - `accountMirrorScheduler.lastPass`
+      - the scheduler is disabled unless
+        `--account-mirror-scheduler-interval-ms <ms>` is set
+      - without `--account-mirror-scheduler-execute`, scheduler passes are
+        dry-run only and must not call the refresh service or acquire the
+        browser dispatcher
+      - the first executable scheduler slice may request at most one
+        default-ChatGPT routine refresh per pass
     - dedicated mirror posture route:
       - `GET /v1/account-mirrors/status`
       - `GET /v1/account-mirrors/status?provider=chatgpt&runtimeProfile=default`

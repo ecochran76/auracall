@@ -12,6 +12,7 @@ import {
 } from '../src/http/responsesServer.js';
 import type { AccountMirrorStatusSummary } from '../src/accountMirror/statusRegistry.js';
 import type { AccountMirrorCatalogResult } from '../src/accountMirror/catalogService.js';
+import type { AccountMirrorSchedulerPassResult } from '../src/accountMirror/schedulerService.js';
 import { resetLiveRuntimeRunServiceStateRegistryForTests } from '../src/runtime/liveServiceStateRegistry.js';
 import { createExecutionRuntimeControl } from '../src/runtime/control.js';
 import { writeTaskRunSpecStoredRecord } from '../src/teams/store.js';
@@ -1217,6 +1218,15 @@ describe('http responses adapter', () => {
           lastStartedAt: null,
           lastCompletedAt: null,
         },
+        accountMirrorScheduler: {
+          enabled: false,
+          dryRun: true,
+          intervalMs: null,
+          state: 'disabled',
+          lastStartedAt: null,
+          lastCompletedAt: null,
+          lastPass: null,
+        },
         routes: {
           recoveryDetailTemplate: '/status/recovery/{run_id}',
           runtimeRunInspection:
@@ -1461,6 +1471,80 @@ describe('http responses adapter', () => {
         kind: 'conversations',
         limit: 2,
       });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('reports dry-run lazy account mirror scheduler passes through /status', async () => {
+    const pass: AccountMirrorSchedulerPassResult = {
+      object: 'account_mirror_scheduler_pass',
+      mode: 'dry-run',
+      action: 'dry-run',
+      startedAt: '2026-04-29T12:00:00.000Z',
+      completedAt: '2026-04-29T12:00:00.000Z',
+      selectedTarget: {
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        status: 'eligible',
+        reason: 'eligible',
+        eligibleAt: '2026-04-29T12:00:00.000Z',
+      },
+      metrics: {
+        totalTargets: 1,
+        eligibleTargets: 1,
+        defaultChatgptEligibleTargets: 1,
+      },
+      refresh: null,
+      error: null,
+    };
+    const runOnce = vi.fn(async () => pass);
+    const server = await createResponsesHttpServer(
+      {
+        host: '127.0.0.1',
+        port: 0,
+        accountMirrorSchedulerIntervalMs: 25,
+        accountMirrorSchedulerDryRun: true,
+      },
+      {
+        accountMirrorSchedulerService: {
+          runOnce,
+        },
+      },
+    );
+
+    try {
+      await delay(40);
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(response.status).toBe(200);
+      const payload = await response.json() as {
+        accountMirrorScheduler: {
+          enabled: boolean;
+          dryRun: boolean;
+          intervalMs: number;
+          state: string;
+          lastPass: AccountMirrorSchedulerPassResult | null;
+        };
+      };
+      expect(runOnce).toHaveBeenCalledWith({
+        dryRun: true,
+      });
+      expect(payload.accountMirrorScheduler).toMatchObject({
+        enabled: true,
+        dryRun: true,
+        intervalMs: 25,
+        lastPass: {
+          object: 'account_mirror_scheduler_pass',
+          mode: 'dry-run',
+          action: 'dry-run',
+          selectedTarget: {
+            provider: 'chatgpt',
+            runtimeProfileId: 'default',
+          },
+        },
+      });
+      expect(['idle', 'scheduled', 'running']).toContain(payload.accountMirrorScheduler.state);
     } finally {
       await server.close();
     }

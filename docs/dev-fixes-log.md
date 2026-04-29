@@ -20,6 +20,11 @@
   filters over cached project/conversation/artifact/media rows, while explicit
   refresh remains the only path that may acquire the browser dispatcher.
 
+- 2026-04-29: Lazy account mirror scheduling should prove cadence in dry-run
+  mode before executing browser refreshes. Keep the `api serve` scheduler
+  disabled by default, expose the last scheduler pass in `/status`, and require
+  an explicit execute flag before a scheduler pass may call refresh.
+
 - 2026-04-29: Bot-sensitive lazy mirroring needs a politeness policy before it
   needs a background loop. Mirror schedulers should enforce provider-specific
   minimum intervals, deterministic jitter, explicit-refresh rate limits,

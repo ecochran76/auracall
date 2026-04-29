@@ -147,6 +147,12 @@ Current implementation-facing politeness contract:
   rows for operators and agents without acquiring the browser dispatcher,
   launching browsers, scraping providers, submitting prompts, or loading
   conversation ids.
+- `src/accountMirror/schedulerService.ts` owns the first scheduler pass seam.
+  `api serve` keeps the scheduler disabled by default; when
+  `--account-mirror-scheduler-interval-ms` is set it records dry-run
+  eligibility passes in `/status.accountMirrorScheduler`, and only
+  `--account-mirror-scheduler-execute` allows a pass to request one eligible
+  default-ChatGPT routine refresh.
 - default routine intervals:
   - ChatGPT: 6 hours plus up to 20 minutes jitter
   - Gemini: 12 hours plus up to 45 minutes jitter
@@ -218,6 +224,9 @@ Each status payload should include:
 - API and MCP manifest catalog readback can list cached
   project/conversation/artifact/media rows by provider, AuraCall runtime
   profile, kind, and limit without requiring callers to know cache file paths.
+- A disabled-by-default lazy scheduler can run dry-run eligibility passes from
+  `api serve`, expose its last pass in `/status`, and avoid browser dispatcher
+  acquisition unless execution mode is explicitly enabled.
 - Tests cover config projection, mirror scheduling state, identity hard stops,
   and dispatcher queue evidence before live provider dogfood.
 - The first scheduling tests prove self-imposed jitter, minimum intervals,
@@ -233,8 +242,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Next add the first idle-scheduler eligibility loop for lazy mirroring while
-keeping refresh work dispatcher-owned and metadata-only. The first scheduler
-slice should enqueue at most one eligible default-ChatGPT mirror refresh per
-cycle, honor the existing politeness policy/backoff/cooldown decisions, and
-remain disabled or dry-run configurable for dogfood.
+Next add operator control for the lazy scheduler so `/status` can pause,
+resume, and trigger one dry-run scheduler pass on demand. Keep the executable
+refresh path opt-in until live dogfood proves the dry-run cadence is quiet.

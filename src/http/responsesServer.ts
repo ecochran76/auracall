@@ -106,6 +106,11 @@ import {
   type AccountMirrorCatalogResult,
   type AccountMirrorCatalogService,
 } from '../accountMirror/catalogService.js';
+import {
+  createAccountMirrorSchedulerPassService,
+  type AccountMirrorSchedulerPassResult,
+  type AccountMirrorSchedulerPassService,
+} from '../accountMirror/schedulerService.js';
 import type { AccountMirrorProvider } from '../accountMirror/politePolicy.js';
 
 export interface ResponsesHttpServerOptions {
@@ -116,6 +121,8 @@ export interface ResponsesHttpServerOptions {
   recoverRunsOnStartMaxRuns?: number;
   recoverRunsOnStartSourceKind?: ExecutionRunSourceKind | 'all';
   backgroundDrainIntervalMs?: number;
+  accountMirrorSchedulerIntervalMs?: number;
+  accountMirrorSchedulerDryRun?: boolean;
 }
 
 export interface ResponsesHttpServerDeps {
@@ -141,6 +148,7 @@ export interface ResponsesHttpServerDeps {
   accountMirrorStatusRegistry?: AccountMirrorStatusRegistry;
   accountMirrorRefreshService?: AccountMirrorRefreshService;
   accountMirrorCatalogService?: AccountMirrorCatalogService;
+  accountMirrorSchedulerService?: AccountMirrorSchedulerPassService;
 }
 
 export interface ResponsesHttpServerInstance {
@@ -267,6 +275,15 @@ interface HttpStatusResponse {
     lastStartedAt: string | null;
     lastCompletedAt: string | null;
   };
+  accountMirrorScheduler: {
+    enabled: boolean;
+    dryRun: boolean;
+    intervalMs: number | null;
+    state: 'disabled' | 'idle' | 'scheduled' | 'running';
+    lastStartedAt: string | null;
+    lastCompletedAt: string | null;
+    lastPass: AccountMirrorSchedulerPassResult | null;
+  };
   accountMirrorStatus: AccountMirrorStatusSummary;
   executionHints: {
     headerNames: string[];
@@ -293,6 +310,8 @@ export async function createResponsesHttpServer(
   const recoverRunsOnStartMaxRuns = options.recoverRunsOnStartMaxRuns ?? 100;
   const recoverRunsOnStartSourceKind = options.recoverRunsOnStartSourceKind ?? 'direct';
   const backgroundDrainIntervalMs = Math.max(0, options.backgroundDrainIntervalMs ?? 0);
+  const accountMirrorSchedulerIntervalMs = Math.max(0, options.accountMirrorSchedulerIntervalMs ?? 0);
+  const accountMirrorSchedulerDryRun = options.accountMirrorSchedulerDryRun ?? true;
   const configuredRuntimeConfig = deps.config;
   const resolvedUserConfig = asResolvedUserConfig(configuredRuntimeConfig);
   const accountMirrorPersistence = createAccountMirrorPersistence({
@@ -313,6 +332,11 @@ export async function createResponsesHttpServer(
     config: configuredRuntimeConfig,
     registry: accountMirrorStatusRegistry,
     persistence: accountMirrorPersistence,
+    now,
+  });
+  const accountMirrorSchedulerService = deps.accountMirrorSchedulerService ?? createAccountMirrorSchedulerPassService({
+    registry: accountMirrorStatusRegistry,
+    refreshService: accountMirrorRefreshService,
     now,
   });
   const workbenchCapabilityService = createWorkbenchCapabilityService({
@@ -361,6 +385,15 @@ export async function createResponsesHttpServer(
     lastTrigger: null,
     lastStartedAt: null,
     lastCompletedAt: null,
+  };
+  const accountMirrorSchedulerState: HttpStatusResponse['accountMirrorScheduler'] = {
+    enabled: accountMirrorSchedulerIntervalMs > 0,
+    dryRun: accountMirrorSchedulerDryRun,
+    intervalMs: accountMirrorSchedulerIntervalMs > 0 ? accountMirrorSchedulerIntervalMs : null,
+    state: accountMirrorSchedulerIntervalMs > 0 ? 'idle' : 'disabled',
+    lastStartedAt: null,
+    lastCompletedAt: null,
+    lastPass: null,
   };
   let backgroundDrainPaused = false;
   let runnerHeartbeatTimer: NodeJS.Timeout | null = null;
@@ -421,6 +454,40 @@ export async function createResponsesHttpServer(
       scheduleBackgroundDrain(backgroundDrainIntervalMs);
     }, delayMs);
   };
+  let accountMirrorSchedulerTimer: NodeJS.Timeout | null = null;
+  let accountMirrorSchedulerScheduled = false;
+  const scheduleAccountMirrorScheduler = (delayMs = accountMirrorSchedulerIntervalMs) => {
+    if (
+      closed ||
+      accountMirrorSchedulerIntervalMs <= 0 ||
+      accountMirrorSchedulerScheduled ||
+      accountMirrorSchedulerState.state === 'running'
+    ) {
+      return;
+    }
+    accountMirrorSchedulerScheduled = true;
+    accountMirrorSchedulerState.state = 'scheduled';
+    accountMirrorSchedulerTimer = setTimeout(async () => {
+      accountMirrorSchedulerScheduled = false;
+      accountMirrorSchedulerTimer = null;
+      if (closed) {
+        return;
+      }
+      accountMirrorSchedulerState.state = 'running';
+      accountMirrorSchedulerState.lastStartedAt = now().toISOString();
+      try {
+        accountMirrorSchedulerState.lastPass = await accountMirrorSchedulerService.runOnce({
+          dryRun: accountMirrorSchedulerDryRun,
+        });
+      } catch (error) {
+        logger(error instanceof Error ? error.message : String(error));
+      } finally {
+        accountMirrorSchedulerState.lastCompletedAt = now().toISOString();
+        accountMirrorSchedulerState.state = closed ? 'disabled' : 'idle';
+      }
+      scheduleAccountMirrorScheduler(accountMirrorSchedulerIntervalMs);
+    }, delayMs);
+  };
   const server = http.createServer();
 
   server.on('request', async (req, res) => {
@@ -456,6 +523,7 @@ export async function createResponsesHttpServer(
           runnerTopology,
           runner: runnerState,
           backgroundDrain: backgroundDrainState,
+          accountMirrorScheduler: accountMirrorSchedulerState,
           accountMirrorStatus: accountMirrorStatusRegistry.readStatus(),
         });
         sendJson(res, 200, statusResponse);
@@ -650,6 +718,7 @@ export async function createResponsesHttpServer(
           runnerTopology: await host.summarizeRunnerTopology(),
           runner: runnerState,
           backgroundDrain: backgroundDrainState,
+          accountMirrorScheduler: accountMirrorSchedulerState,
           accountMirrorStatus: accountMirrorStatusRegistry.readStatus(),
           controlResult,
         });
@@ -1030,6 +1099,7 @@ export async function createResponsesHttpServer(
     );
   }
   scheduleBackgroundDrain();
+  scheduleAccountMirrorScheduler();
 
   return {
     port: address.port,
@@ -1043,9 +1113,14 @@ export async function createResponsesHttpServer(
         clearTimeout(backgroundDrainTimer);
         backgroundDrainTimer = null;
       }
+      if (accountMirrorSchedulerTimer) {
+        clearTimeout(accountMirrorSchedulerTimer);
+        accountMirrorSchedulerTimer = null;
+      }
       backgroundDrainPaused = false;
       backgroundDrainState.paused = false;
       backgroundDrainState.state = 'disabled';
+      accountMirrorSchedulerState.state = 'disabled';
       await host.waitForDrainQueue().catch(() => null);
       if (!deps.executionHost && runnerState.id) {
         const staleRunner = await host.markLocalRunnerStale(localRunnerLifecycleOptions);
@@ -1084,6 +1159,8 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
       recoverRunsOnStart: serverOptions.recoverRunsOnStart ?? true,
       recoverRunsOnStartSourceKind: serverOptions.recoverRunsOnStartSourceKind,
       backgroundDrainIntervalMs: serverOptions.backgroundDrainIntervalMs ?? 250,
+      accountMirrorSchedulerIntervalMs: serverOptions.accountMirrorSchedulerIntervalMs ?? 0,
+      accountMirrorSchedulerDryRun: serverOptions.accountMirrorSchedulerDryRun ?? true,
     },
     {
       config: resolvedUserConfig as Record<string, unknown>,
@@ -1119,7 +1196,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   }
   logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
-    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}',
+    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, POST /v1/account-mirrors/refresh',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   logger('Leave this terminal running; press Ctrl+C to stop auracall api serve.');
@@ -1301,6 +1378,7 @@ function createHttpStatusResponse(input: {
   runnerTopology: ExecutionServiceHostRunnerTopologySummary;
   runner: HttpStatusResponse['runner'];
   backgroundDrain: HttpStatusResponse['backgroundDrain'];
+  accountMirrorScheduler: HttpStatusResponse['accountMirrorScheduler'];
   accountMirrorStatus: AccountMirrorStatusSummary;
   controlResult?: HttpStatusResponse['controlResult'];
 }): HttpStatusResponse {
@@ -1347,6 +1425,7 @@ function createHttpStatusResponse(input: {
     runnerTopology: input.runnerTopology,
     runner: input.runner,
     backgroundDrain: input.backgroundDrain,
+    accountMirrorScheduler: input.accountMirrorScheduler,
     accountMirrorStatus: input.accountMirrorStatus,
     executionHints: {
       headerNames: [

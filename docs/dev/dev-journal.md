@@ -28,6 +28,12 @@
   `GET /v1/account-mirrors/catalog`, and MCP `account_mirror_catalog` so
   operators and agents can inspect cached project/conversation/artifact/media
   manifests without knowing provider cache paths or triggering browser work.
+- Lazy scheduler: added `src/accountMirror/schedulerService.ts` plus
+  disabled-by-default `api serve` timer wiring. Setting
+  `--account-mirror-scheduler-interval-ms` records dry-run eligibility passes
+  in `/status.accountMirrorScheduler`; only
+  `--account-mirror-scheduler-execute` lets a pass request one eligible
+  default-ChatGPT routine refresh.
 - Key boundary: default ChatGPT is the first mirror source because it has the
   richest account history, but account identity remains bound to the referenced
   AuraCall runtime profile and provider service identity.

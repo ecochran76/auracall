@@ -954,6 +954,16 @@ apiCommand
     },
     'direct',
   )
+  .option(
+    '--account-mirror-scheduler-interval-ms <ms>',
+    'Enable lazy account mirror scheduler passes at this interval. Defaults disabled.',
+    parseIntOption,
+    0,
+  )
+  .option(
+    '--account-mirror-scheduler-execute',
+    'Let lazy account mirror scheduler passes execute eligible refreshes. Default is dry-run.',
+  )
   .action(async (commandOptions) => {
     const { serveResponsesHttp } = await import('../src/http/responsesServer.js');
     const parentOptions = program.opts?.() ?? {};
@@ -965,6 +975,8 @@ apiCommand
       recoverRunsOnStart: Boolean(commandOptions.recoverRunsOnStart),
       recoverRunsOnStartMaxRuns: commandOptions.recoverRunsOnStartMax,
       recoverRunsOnStartSourceKind: commandOptions.recoverRunsOnStartSource,
+      accountMirrorSchedulerIntervalMs: commandOptions.accountMirrorSchedulerIntervalMs,
+      accountMirrorSchedulerDryRun: !commandOptions.accountMirrorSchedulerExecute,
     });
   });
 
