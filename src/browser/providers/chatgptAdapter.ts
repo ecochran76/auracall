@@ -571,6 +571,15 @@ type ChatgptImageArtifactProbe = {
   alt?: string | null;
 };
 
+type ChatgptVisibleImageArtifactProbe = ChatgptImageArtifactProbe & {
+  turnId?: string | null;
+  messageId?: string | null;
+  messageIndex?: number | null;
+  imageIndex?: number | null;
+  wrapperId?: string | null;
+  title?: string | null;
+};
+
 type ChatgptDeleteConfirmationProbe = {
   dialogText?: string | null;
   buttonLabels?: string[] | null;
@@ -1211,6 +1220,10 @@ export function matchesChatgptImageArtifactProbe(
   if (!src) {
     return false;
   }
+  const artifactUri = normalizeUiText(artifact.uri);
+  if (artifactUri && src === artifactUri) {
+    return true;
+  }
   const fileId = extractChatgptArtifactFileId(artifact.uri);
   if (fileId && src.includes(`id=${fileId}`)) {
     return true;
@@ -1220,6 +1233,50 @@ export function matchesChatgptImageArtifactProbe(
   }
   const expectedTitle = normalizeUiText(artifact.title).toLowerCase();
   return Boolean(expectedTitle) && alt.includes(expectedTitle);
+}
+
+export function normalizeChatgptVisibleImageArtifactProbes(
+  probes: ReadonlyArray<ChatgptVisibleImageArtifactProbe>,
+): ConversationArtifact[] {
+  const artifacts: ConversationArtifact[] = [];
+  const seen = new Set<string>();
+  for (const probe of probes) {
+    const src = normalizeUiText(probe.src);
+    if (!src) continue;
+    const messageId = normalizeUiText(probe.messageId) || undefined;
+    const turnId = normalizeUiText(probe.turnId) || undefined;
+    const wrapperId = normalizeUiText(probe.wrapperId) || undefined;
+    const imageIndex =
+      typeof probe.imageIndex === 'number' && Number.isFinite(probe.imageIndex)
+        ? probe.imageIndex
+        : artifacts.length;
+    const messageIndex =
+      typeof probe.messageIndex === 'number' && Number.isFinite(probe.messageIndex)
+        ? probe.messageIndex
+        : undefined;
+    const title =
+      normalizeUiText(probe.title) ||
+      normalizeUiText(probe.alt) ||
+      `${CHATGPT_ARTIFACT_DEFAULT_IMAGE_TITLE} ${artifacts.length + 1}`;
+    const identity = `${turnId || messageId || `message-${messageIndex ?? 'n/a'}`}:${src}`;
+    if (seen.has(identity)) continue;
+    seen.add(identity);
+    artifacts.push({
+      id: `image-dom:${encodeURIComponent(turnId || messageId || `message-${messageIndex ?? 'n/a'}`)}:${encodeURIComponent(wrapperId || String(imageIndex))}`,
+      title,
+      kind: 'image',
+      uri: src,
+      messageIndex,
+      messageId,
+      metadata: {
+        extraction: 'dom-imagegen-image',
+        ...(turnId ? { turnId } : {}),
+        ...(wrapperId ? { wrapperId } : {}),
+        ...(typeof imageIndex === 'number' ? { imageIndex } : {}),
+      },
+    });
+  }
+  return artifacts;
 }
 
 export function matchesChatgptDownloadButtonProbe(
@@ -5824,10 +5881,16 @@ async function readChatgptConversationContextWithClient(
     const domDownloadArtifacts = normalizeChatgptConversationDownloadArtifactProbes(
       await readVisibleChatgptDownloadArtifactProbesWithClient(client),
     );
+    const domImageArtifacts = normalizeChatgptVisibleImageArtifactProbes(
+      await readVisibleChatgptImageArtifactProbesWithClient(client),
+    );
     const canvasProbes = await readVisibleChatgptCanvasProbesWithClient(client);
     const artifacts = mergeChatgptCanvasArtifactContent(
       mergeChatgptConversationArtifacts(
-        mergeChatgptConversationArtifacts(payloadArtifacts, domDownloadArtifacts),
+        mergeChatgptConversationArtifacts(
+          mergeChatgptConversationArtifacts(payloadArtifacts, domDownloadArtifacts),
+          domImageArtifacts,
+        ),
         deepResearchArtifacts,
       ),
       canvasProbes,
@@ -5866,9 +5929,14 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
             return {
               section,
               messageIndex,
-              role: normalize(roleNode?.getAttribute('data-message-author-role') || ''),
+              role: normalize(
+                roleNode?.getAttribute('data-message-author-role') ||
+                section.getAttribute('data-message-author-role') ||
+                section.getAttribute('data-turn') ||
+                '',
+              ),
               turnId: normalize(section.getAttribute('data-turn-id') || ''),
-              messageId: normalize(roleNode?.getAttribute('data-message-id') || ''),
+              messageId: normalize(roleNode?.getAttribute('data-message-id') || section.getAttribute('data-message-id') || ''),
             };
           });
         return roots.flatMap((entry) => {
@@ -5909,6 +5977,87 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
         messageId: readStringField(item, 'messageId'),
         messageIndex: readFiniteNumberField(item, 'messageIndex'),
         buttonIndex: readFiniteNumberField(item, 'buttonIndex'),
+        title: readStringField(item, 'title'),
+      }))
+    : [];
+}
+
+async function readVisibleChatgptImageArtifactProbesWithClient(
+  client: ChromeClient,
+): Promise<ChatgptVisibleImageArtifactProbe[]> {
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const isVisible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        if (rect.width <= 4 || rect.height <= 4) return false;
+        const style = node.ownerDocument.defaultView.getComputedStyle(node);
+        return style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity || '1') > 0;
+      };
+      const roots = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}))
+        .map((section, messageIndex) => {
+          const roleNode = section.querySelector(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)});
+          return {
+            section,
+            messageIndex,
+            role: normalize(
+              roleNode?.getAttribute('data-message-author-role') ||
+              section.getAttribute('data-message-author-role') ||
+              section.getAttribute('data-turn') ||
+              '',
+            ),
+            turnId: normalize(section.getAttribute('data-turn-id') || ''),
+            messageId: normalize(roleNode?.getAttribute('data-message-id') || section.getAttribute('data-message-id') || ''),
+          };
+        });
+      return roots.flatMap((entry) => {
+        if (entry.role !== 'assistant') return [];
+        const imageRoots = Array.from(entry.section.querySelectorAll('[id^="image-"], [class*="imagegen-image"]'))
+          .filter(isVisible);
+        const rootImages = imageRoots.flatMap((root, rootIndex) => {
+          const wrapperId = normalize(root.getAttribute('id') || '') || \`image-root-\${rootIndex}\`;
+          return Array.from(root.querySelectorAll('img')).map((img, imageIndex) => ({
+            turnId: entry.turnId || null,
+            messageId: entry.messageId || null,
+            messageIndex: entry.messageIndex,
+            imageIndex,
+            wrapperId,
+            src: normalize(img.currentSrc || img.getAttribute('src') || ''),
+            alt: normalize(img.getAttribute('alt') || ''),
+            title: normalize(img.getAttribute('alt') || root.getAttribute('aria-label') || ''),
+            visible: isVisible(img),
+          }));
+        });
+        const fallbackImages = Array.from(entry.section.querySelectorAll('img'))
+          .map((img, imageIndex) => ({
+            turnId: entry.turnId || null,
+            messageId: entry.messageId || null,
+            messageIndex: entry.messageIndex,
+            imageIndex,
+            wrapperId: null,
+            src: normalize(img.currentSrc || img.getAttribute('src') || ''),
+            alt: normalize(img.getAttribute('alt') || ''),
+            title: normalize(img.getAttribute('alt') || ''),
+            visible: isVisible(img),
+          }));
+        return [...rootImages, ...fallbackImages]
+          .filter((probe) => probe.visible && probe.src && /^(https?:|blob:|data:image\\/)/i.test(probe.src))
+          .map(({ visible, ...probe }) => probe);
+      });
+    })()`,
+    returnByValue: true,
+  });
+  const value = result?.value;
+  return Array.isArray(value)
+    ? value.filter(isRecord).map((item) => ({
+        turnId: readStringField(item, 'turnId'),
+        messageId: readStringField(item, 'messageId'),
+        messageIndex: readFiniteNumberField(item, 'messageIndex'),
+        imageIndex: readFiniteNumberField(item, 'imageIndex'),
+        wrapperId: readStringField(item, 'wrapperId'),
+        src: readStringField(item, 'src'),
+        alt: readStringField(item, 'alt'),
         title: readStringField(item, 'title'),
       }))
     : [];
@@ -6551,8 +6700,13 @@ async function tagChatgptArtifactButtonWithClient(
             return {
               section,
               messageIndex,
-              role: normalize(roleNode?.getAttribute('data-message-author-role') || ''),
-              messageId: normalize(roleNode?.getAttribute('data-message-id') || ''),
+              role: normalize(
+                roleNode?.getAttribute('data-message-author-role') ||
+                section.getAttribute('data-message-author-role') ||
+                section.getAttribute('data-turn') ||
+                '',
+              ),
+              messageId: normalize(roleNode?.getAttribute('data-message-id') || section.getAttribute('data-message-id') || ''),
               turnId: normalize(section.getAttribute('data-turn-id') || ''),
             };
           })

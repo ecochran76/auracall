@@ -345,6 +345,11 @@
     and performs post-submit image readback/materialization on that same tab
     without re-opening or reloading the conversation:
     - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"chatgpt","mediaType":"image","transport":"browser","prompt":"Generate an image of an asphalt secret agent"}'`
+    - ChatGPT image media runs intentionally skip model switching before tool
+      selection because the signed-in home composer can expose `Create image`
+      without a model selector.
+    - image readback should accept visible ImageGen DOM image artifacts when
+      payload artifacts have not yet exposed `image_asset_pointer` entries.
   - create a browser-transport Gemini video request only when intentionally
     spending one of the small daily Gemini video-generation quota slots:
     - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"gemini","mediaType":"video","transport":"browser","prompt":"Generate a video of an asphalt secret agent"}'`

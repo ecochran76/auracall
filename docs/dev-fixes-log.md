@@ -95,6 +95,12 @@
   and support expectation flags for persisted status, minimum artifact count,
   and media run state instead of forcing operators back to raw JSON.
 
+- 2026-04-29: ChatGPT image generation should not require the model switcher
+  on the home composer. The current signed-in ChatGPT root surface can expose
+  the composer and `Create image` tool without a model selector; browser media
+  runs should skip model switching for `chatgpt.media.create_image` and rely on
+  visible ImageGen DOM artifacts when payload artifacts lag behind the UI.
+
 - 2026-04-29: Bot-sensitive lazy mirroring needs a politeness policy before it
   needs a background loop. Mirror schedulers should enforce provider-specific
   minimum intervals, deterministic jitter, explicit-refresh rate limits,

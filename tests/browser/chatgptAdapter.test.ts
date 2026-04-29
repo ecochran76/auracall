@@ -16,6 +16,7 @@ import {
   matchesChatgptDeleteConfirmationProbe,
   matchesChatgptDownloadButtonProbe,
   matchesChatgptImageArtifactProbe,
+  normalizeChatgptVisibleImageArtifactProbes,
   matchesChatgptProjectDeleteConfirmationProbe,
   matchesChatgptProjectSettingsSnapshot,
   matchesChatgptRenameEditorProbe,
@@ -395,6 +396,21 @@ describe('matchesChatgptImageArtifactProbe', () => {
     ).toBe(true);
   });
 
+  test('matches image probes by exact visible DOM image src', () => {
+    expect(
+      matchesChatgptImageArtifactProbe(
+        {
+          src: 'blob:https://chatgpt.com/generated-image',
+          alt: '',
+        },
+        {
+          title: 'Generated image',
+          uri: 'blob:https://chatgpt.com/generated-image',
+        },
+      ),
+    ).toBe(true);
+  });
+
   test('falls back to alt-text title matching when no file id is available', () => {
     expect(
       matchesChatgptImageArtifactProbe(
@@ -435,6 +451,72 @@ describe('matchesChatgptImageArtifactProbe', () => {
         },
       ),
     ).toBe(false);
+  });
+});
+
+describe('normalizeChatgptVisibleImageArtifactProbes', () => {
+  test('turns visible ImageGen DOM probes into image artifacts', () => {
+    expect(
+      normalizeChatgptVisibleImageArtifactProbes([
+        {
+          turnId: 'turn-1',
+          messageId: 'msg-1',
+          messageIndex: 1,
+          imageIndex: 0,
+          wrapperId: 'image-abc',
+          src: 'blob:https://chatgpt.com/generated-image',
+          alt: '',
+          title: '',
+        },
+      ]),
+    ).toEqual([
+      expect.objectContaining({
+        id: 'image-dom:turn-1:image-abc',
+        title: 'Generated image 1',
+        kind: 'image',
+        uri: 'blob:https://chatgpt.com/generated-image',
+        messageIndex: 1,
+        messageId: 'msg-1',
+        metadata: expect.objectContaining({
+          extraction: 'dom-imagegen-image',
+          turnId: 'turn-1',
+          wrapperId: 'image-abc',
+        }),
+      }),
+    ]);
+  });
+
+  test('deduplicates repeated rendered nodes for the same visible image src', () => {
+    const artifacts = normalizeChatgptVisibleImageArtifactProbes([
+      {
+        turnId: 'turn-1',
+        messageId: null,
+        messageIndex: 1,
+        imageIndex: 0,
+        wrapperId: 'image-abc',
+        src: 'https://chatgpt.com/backend-api/estuary/content?id=file_abc',
+        alt: '',
+        title: '',
+      },
+      {
+        turnId: 'turn-1',
+        messageId: null,
+        messageIndex: 1,
+        imageIndex: 1,
+        wrapperId: null,
+        src: 'https://chatgpt.com/backend-api/estuary/content?id=file_abc',
+        alt: '',
+        title: '',
+      },
+    ]);
+
+    expect(artifacts).toHaveLength(1);
+    expect(artifacts[0]).toEqual(
+      expect.objectContaining({
+        id: 'image-dom:turn-1:image-abc',
+        uri: 'https://chatgpt.com/backend-api/estuary/content?id=file_abc',
+      }),
+    );
   });
 });
 

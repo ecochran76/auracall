@@ -23617,3 +23617,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     passed
   - installed-runtime temp-home smoke passed:
     `auracall run status medgen_cli_installed_smoke_1 --expect-status succeeded --expect-min-artifacts 1`
+
+## 2026-04-29 - ChatGPT image dogfood readback
+
+- Focus: dogfood one real browser-backed media run and use compact run-status
+  assertions to find the next actual gap.
+- Findings:
+  - installed ChatGPT image run `medgen_bad483ed8c0a4661af3a27e00068fb17`
+    failed before prompt submission because the current home composer did not
+    expose a model selector.
+  - source retry `medgen_9e988dba85cb4cc296653d2fdd5b088f` skipped model
+    switching, selected `Create image`, submitted successfully, and stayed on
+    `https://chatgpt.com/c/69f2879f-f960-8325-85dc-4364e143e4fb`.
+  - the generated image was visible in the DOM after timeout, but payload
+    artifact polling returned zero artifacts.
+- Progress:
+  - ChatGPT image media runs now force `modelStrategy = ignore` while selecting
+    the `Create image` composer tool.
+  - ChatGPT conversation artifact extraction now includes visible ImageGen DOM
+    image artifacts as a fallback for payload lag.
+- Validation:
+  - `pnpm exec tsc --noEmit` passed
+  - focused ChatGPT service/adapter/media tests passed
+  - installed passive readback of the same visible conversation returned one
+    `dom-imagegen-image` artifact without submitting another generation

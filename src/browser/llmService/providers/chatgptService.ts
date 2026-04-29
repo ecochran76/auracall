@@ -64,6 +64,7 @@ export class ChatgptService extends LlmService {
       options?.configuredUrl ??
       this.getConfiguredUrl();
     const browserConfig = this.serviceUserConfig.browser ?? {};
+    const isChatgptImageGeneration = input.capabilityId === 'chatgpt.media.create_image';
     const result = await runBrowserMode({
       prompt: input.prompt,
       completionMode: 'prompt_submitted',
@@ -78,9 +79,8 @@ export class ChatgptService extends LlmService {
         timeoutMs: input.timeoutMs ?? browserConfig.timeoutMs,
         keepBrowser: true,
         auracallProfileName: this.serviceUserConfig.auracallProfile ?? null,
-        composerTool: input.capabilityId === 'chatgpt.media.create_image'
-          ? 'create image'
-          : (browserConfig.composerTool ?? null),
+        modelStrategy: isChatgptImageGeneration ? 'ignore' : browserConfig.modelStrategy,
+        composerTool: isChatgptImageGeneration ? 'create image' : (browserConfig.composerTool ?? null),
       },
       log: this.createProgressLogger(input.onProgress),
     });
