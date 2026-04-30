@@ -149,6 +149,7 @@ Always read:
 - `docs/dev/policies/0009-documentation-change-control.md`
 - `docs/dev/policies/0017-turn-closeout.md`
 - `docs/dev/policies/0018-validation-and-handoff.md`
+- `docs/dev/policies/0020-lint-warning-debt.md`
 
 For planning/roadmap work also read:
 - `docs/dev/policies/0005-planning-discipline.md`

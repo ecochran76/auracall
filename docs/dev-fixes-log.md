@@ -15113,3 +15113,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   shape but do not inspect the input, prefer explicit underscore parameters over
   destructuring unused fields. That keeps the mock contract visible without
   carrying unused-parameter diagnostics.
+- 2026-04-30: The remaining warning-level Biome diagnostics need policy before
+  more code churn. Provider/API casing, deliberately malformed fixtures, and
+  fixture setup assertions should be locally justified or adapted at boundaries,
+  not mechanically renamed or globally hidden without a repo decision.

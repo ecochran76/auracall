@@ -23902,3 +23902,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run typecheck`
   - Biome warning count dropped from 538 to 534; `noUnusedFunctionParameters`
     is now zero.
+
+## 2026-04-30 - Lint warning debt policy
+
+- Focus: make the remaining warning-level Biome diagnostics an explicit repo
+  policy rather than implicit cleanup noise.
+- Progress:
+  - Added `docs/dev/policies/0020-lint-warning-debt.md`.
+  - Wired the new policy into `AGENTS.md` as an always-read policy.
+  - Updated release docs to point warning-level lint interpretation at the new
+    policy.
+  - Current remaining warning classes are `useNamingConvention` (315),
+    `noExplicitAny` (164), and `noNonNullAssertion` (55).
+- Validation:
+  - The policy records when to keep external/provider casing, when local
+    suppressions are acceptable, and when warnings should be converted into
+    typed helper code.

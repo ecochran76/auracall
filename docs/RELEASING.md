@@ -34,7 +34,7 @@
 4. **Validation**
    - [ ] `pnpm run check` (type errors block release).
    - [ ] `pnpm vitest run --maxWorkers 1 --testTimeout 15000` (the release helper uses this serial form by default; the normal parallel `pnpm test` can trip short unit-test timeouts under load)
-   - [ ] `pnpm run lint` (error-level lint diagnostics block release; current warning-level Biome diagnostics are tracked as separate cleanup debt)
+   - [ ] `pnpm run lint` (error-level lint diagnostics block release; warning-level Biome diagnostics follow `docs/dev/policies/0020-lint-warning-debt.md`)
    - [ ] Optional live smoke (with real `OPENAI_API_KEY`): `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/openai-live.test.ts`
    - [ ] MCP sanity check: with `config/mcporter.json` pointed at the local stdio server (`auracall-local`), run `mcporter list auracall-local --schema --config config/mcporter.json` after building (`pnpm build`) to ensure tools/resources are discoverable.
    - [ ] Installed MCP API status smoke: after refreshing the user runtime, run `pnpm run smoke:mcp-api-status` and confirm `disabled` plus `scheduled` account-mirror scheduler postures.
