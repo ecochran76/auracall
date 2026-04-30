@@ -24166,3 +24166,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Biome warning count dropped from 197 to 192.
   - Remaining classes are `useNamingConvention` (57), `noExplicitAny` (83),
     and `noNonNullAssertion` (52).
+
+## 2026-04-30 - Profile doctor Chrome metadata casing
+
+- Focus: clear `profileDoctor` naming warnings for the browser client export
+  mock and Chrome `Local State` profile metadata fixtures.
+- Progress:
+  - Added a local justification for the mocked `BrowserAutomationClient` export
+    shape.
+  - Added `createChromeLocalState(...)` to centralize the Chrome
+    `info_cache.Default` fixture shape with one local `useLiteralKeys`
+    justification.
+- Validation:
+  - `pnpm exec biome lint tests/browser/profileDoctor.test.ts --reporter=json`
+  - `pnpm vitest run tests/browser/profileDoctor.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm run typecheck`
+  - `pnpm run lint`
+  - `pnpm run docs:list`
+  - Biome warning count dropped from 192 to 188.
+  - Remaining classes are `useNamingConvention` (53), `noExplicitAny` (83),
+    and `noNonNullAssertion` (52).

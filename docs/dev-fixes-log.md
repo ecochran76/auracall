@@ -15168,3 +15168,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-04-30: Chrome target-reuse tests should follow the same CDP casing
   policy as manual-login tests. Keep DevTools and `chrome-remote-interface`
   mock keys API-shaped, and justify them locally at the mock boundary.
+- 2026-04-30: Profile-doctor Chrome `Local State` fixtures should use a helper
+  for `info_cache.Default` account metadata. That keeps Chrome-owned key casing
+  in one place and avoids repeated naming suppressions in individual tests.

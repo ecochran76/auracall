@@ -8,6 +8,7 @@ const browserAutomationClientMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../../src/browser/client.js', () => ({
+  // biome-ignore lint/style/useNamingConvention: mocked module export matches the production class name.
   BrowserAutomationClient: {
     fromConfig: browserAutomationClientMocks.fromConfig,
   },
@@ -19,6 +20,31 @@ import {
   inspectBrowserDoctorIdentity,
   inspectBrowserDoctorState,
 } from '../../src/browser/profileDoctor.js';
+
+type ChromeProfileInfo = {
+  name: string;
+  user_name: string;
+  gaia_name: string;
+  gaia_given_name: string;
+  gaia_id: string;
+  is_consented_primary_account: boolean;
+};
+
+function createChromeLocalState(defaultProfile: ChromeProfileInfo) {
+  return {
+    signin: {
+      active_accounts: {
+        abc: '1',
+      },
+    },
+    profile: {
+      info_cache: {
+        // biome-ignore lint/complexity/useLiteralKeys: quoted Chrome profile key would trip naming-convention diagnostics.
+        ['Default']: defaultProfile,
+      },
+    },
+  };
+}
 
 describe('profileDoctor', () => {
   const cleanup: string[] = [];
@@ -325,25 +351,14 @@ describe('profileDoctor', () => {
     await fs.writeFile(
       path.join(managedProfileDir, 'Local State'),
       JSON.stringify(
-        {
-          signin: {
-            active_accounts: {
-              abc: '1',
-            },
-          },
-          profile: {
-            info_cache: {
-              Default: {
-                name: 'Personal',
-                user_name: 'ecochran76@gmail.com',
-                gaia_name: 'Eric Cochran',
-                gaia_given_name: 'Eric',
-                gaia_id: '108150140934027970801',
-                is_consented_primary_account: false,
-              },
-            },
-          },
-        },
+        createChromeLocalState({
+          name: 'Personal',
+          user_name: 'ecochran76@gmail.com',
+          gaia_name: 'Eric Cochran',
+          gaia_given_name: 'Eric',
+          gaia_id: '108150140934027970801',
+          is_consented_primary_account: false,
+        }),
         null,
         2,
       ),
@@ -395,25 +410,14 @@ describe('profileDoctor', () => {
     await fs.writeFile(
       path.join(managedProfileDir, 'Local State'),
       JSON.stringify(
-        {
-          signin: {
-            active_accounts: {
-              abc: '1',
-            },
-          },
-          profile: {
-            info_cache: {
-              Default: {
-                name: 'Eric',
-                user_name: '',
-                gaia_name: '',
-                gaia_given_name: '',
-                gaia_id: '',
-                is_consented_primary_account: false,
-              },
-            },
-          },
-        },
+        createChromeLocalState({
+          name: 'Eric',
+          user_name: '',
+          gaia_name: '',
+          gaia_given_name: '',
+          gaia_id: '',
+          is_consented_primary_account: false,
+        }),
         null,
         2,
       ),
@@ -465,25 +469,14 @@ describe('profileDoctor', () => {
     await fs.writeFile(
       path.join(managedProfileDir, 'Local State'),
       JSON.stringify(
-        {
-          signin: {
-            active_accounts: {
-              abc: '1',
-            },
-          },
-          profile: {
-            info_cache: {
-              Default: {
-                name: 'Eric',
-                user_name: '',
-                gaia_name: '',
-                gaia_given_name: '',
-                gaia_id: '',
-                is_consented_primary_account: false,
-              },
-            },
-          },
-        },
+        createChromeLocalState({
+          name: 'Eric',
+          user_name: '',
+          gaia_name: '',
+          gaia_given_name: '',
+          gaia_id: '',
+          is_consented_primary_account: false,
+        }),
         null,
         2,
       ),
