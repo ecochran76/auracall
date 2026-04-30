@@ -23733,3 +23733,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     conversation `6a131154e90f7362`, observed the generated image on artifact
     poll 4, and materialized:
     `/home/ecochran76/.auracall/runtime/media-generations/medgen_499f56b2a2004efc825f4368d0117833/artifacts/Generated image 1.png`
+
+## 2026-04-29 - Browser operator dashboard
+
+- Focus: make browser state discoverable to operators without introducing a
+  second browser control plane.
+- Progress:
+  - Added read-only `/ops/browser` HTML served by `api serve`, with
+    `/dashboard` as an alias.
+  - The page auto-loads only `/status` and account-mirror status. Browser
+    diagnostics stay behind explicit operator buttons for workbench and run
+    probes.
+  - `/status.routes.operatorBrowserDashboard` now advertises the dashboard.
+- Validation:
+  - Added HTTP coverage for `/ops/browser`, `/dashboard`, and the status route
+    advertisement.

@@ -90,6 +90,9 @@ auracall --profile auracall-gemini-pro api serve --port 8080
 # Probe the local dev server posture
 curl http://127.0.0.1:8080/status
 
+# Open the local read-only browser operator dashboard
+xdg-open http://127.0.0.1:8080/ops/browser
+
 # Explicitly allow a non-loopback bind only when you mean it
 auracall api serve --host 0.0.0.0 --listen-public --port 8080
 
@@ -180,6 +183,8 @@ Terminology note:
   `auracall --profile <name> api serve` to bind response, runtime, workbench,
   and media behavior to a non-default AuraCall runtime profile. Current
   endpoints are:
+  - `GET /ops/browser`
+  - `GET /dashboard` (alias)
   - `GET /status`
   - `GET /status/recovery/{run_id}`
   - `POST /v1/team-runs`
@@ -458,7 +463,11 @@ Terminology note:
         - workbench capability reports support the same switch for selected
           providers, so Grok Imagine account-gating evidence can be inspected
           without submitting a prompt
-          recorded at prompt submission
+        - media status can also surface provider browser diagnostics recorded at
+          prompt submission
+        - the local read-only `/ops/browser` dashboard links these seams and
+          only runs browser-state probes when an operator explicitly clicks a
+          probe
       - optional `schedulerAuthority` when explicitly requested with
         `authority=scheduler`
         - this is read-only scheduler evidence, not assignment authority

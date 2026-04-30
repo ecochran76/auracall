@@ -253,6 +253,7 @@ interface HttpStatusResponse {
     accountMirrorCatalog: string;
     accountMirrorRefresh: string;
     workbenchCapabilitiesList: string;
+    operatorBrowserDashboard: string;
   };
   compatibility: {
     openai: true;
@@ -543,6 +544,11 @@ export async function createResponsesHttpServer(
   server.on('request', async (req, res) => {
     try {
       const url = new URL(req.url ?? '/', 'http://127.0.0.1');
+
+      if (req.method === 'GET' && (url.pathname === '/ops/browser' || url.pathname === '/dashboard')) {
+        sendHtml(res, 200, createOperatorBrowserDashboardHtml());
+        return;
+      }
 
       if (req.method === 'GET' && url.pathname === '/status') {
         const statusQuery = parseStatusQuery(url.searchParams);
@@ -1520,6 +1526,7 @@ function createHttpStatusResponse(input: {
       accountMirrorRefresh: '/v1/account-mirrors/refresh',
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
+      operatorBrowserDashboard: '/ops/browser',
     },
     compatibility: {
       openai: true,
@@ -2202,4 +2209,269 @@ async function readRequestBody(req: http.IncomingMessage): Promise<string> {
 function sendJson(res: http.ServerResponse, statusCode: number, payload: unknown): void {
   res.writeHead(statusCode, { 'Content-Type': 'application/json' });
   res.end(`${JSON.stringify(payload)}\n`);
+}
+
+function sendHtml(res: http.ServerResponse, statusCode: number, html: string): void {
+  res.writeHead(statusCode, {
+    'Content-Type': 'text/html; charset=utf-8',
+    'Cache-Control': 'no-store',
+  });
+  res.end(html);
+}
+
+function createOperatorBrowserDashboardHtml(): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AuraCall Browser Ops</title>
+  <style>
+    :root {
+      color-scheme: dark light;
+      --bg: #101114;
+      --panel: #181b20;
+      --panel-2: #20242b;
+      --text: #f2f4f8;
+      --muted: #a9b1bd;
+      --line: #343a44;
+      --accent: #71d3c6;
+      --warn: #ffd166;
+      --bad: #ff6b6b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main { max-width: 1180px; margin: 0 auto; padding: 24px; }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    h2 { font-size: 15px; margin: 0 0 12px; }
+    p { margin: 0; color: var(--muted); }
+    a { color: var(--accent); }
+    .top { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 18px; }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; }
+    .panel {
+      grid-column: span 12;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+    }
+    @media (min-width: 900px) {
+      .half { grid-column: span 6; }
+      .third { grid-column: span 4; }
+      .wide { grid-column: span 8; }
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    label { color: var(--muted); font-size: 12px; display: grid; gap: 4px; }
+    select, input, button {
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      color: var(--text);
+      min-height: 34px;
+      padding: 6px 9px;
+      font: inherit;
+    }
+    button { cursor: pointer; }
+    button.primary { border-color: var(--accent); }
+    button:disabled { cursor: not-allowed; opacity: 0.6; }
+    dl { display: grid; grid-template-columns: 140px 1fr; gap: 6px 10px; margin: 0; }
+    dt { color: var(--muted); }
+    dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: #0b0c0f;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      max-height: 440px;
+      overflow: auto;
+    }
+    .ok { color: var(--accent); }
+    .warn { color: var(--warn); }
+    .bad { color: var(--bad); }
+    .muted { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="top">
+      <div>
+        <h1>AuraCall Browser Ops</h1>
+        <p>Read-only operator view. Browser diagnostics run only when requested.</p>
+      </div>
+      <button id="refreshStatus">Refresh Status</button>
+    </div>
+
+    <div class="grid">
+      <section class="panel half">
+        <h2>Server</h2>
+        <dl id="serverSummary">
+          <dt>Status</dt><dd class="muted">Loading...</dd>
+        </dl>
+      </section>
+
+      <section class="panel half">
+        <h2>Account Mirrors</h2>
+        <pre id="mirrorStatus">Loading...</pre>
+      </section>
+
+      <section class="panel wide">
+        <h2>Browser Workbench Probe</h2>
+        <div class="row" style="margin-bottom: 10px;">
+          <label>Provider
+            <select id="provider">
+              <option value="chatgpt">chatgpt</option>
+              <option value="gemini">gemini</option>
+              <option value="grok">grok</option>
+            </select>
+          </label>
+          <label>Category
+            <select id="category">
+              <option value="">all</option>
+              <option value="media">media</option>
+              <option value="research">research</option>
+              <option value="canvas">canvas</option>
+              <option value="app">app</option>
+              <option value="skill">skill</option>
+              <option value="connector">connector</option>
+              <option value="file">file</option>
+              <option value="search">search</option>
+            </select>
+          </label>
+          <label>Runtime Profile
+            <input id="runtimeProfile" placeholder="default">
+          </label>
+          <button id="probeWorkbench" class="primary">Probe Browser State</button>
+        </div>
+        <pre id="workbenchOutput">No probe yet.</pre>
+      </section>
+
+      <section class="panel third">
+        <h2>Run Status</h2>
+        <div class="row" style="margin-bottom: 10px;">
+          <label>Run ID
+            <input id="runId" placeholder="run or media generation id">
+          </label>
+          <button id="probeRun">Inspect</button>
+        </div>
+        <pre id="runOutput">No run selected.</pre>
+      </section>
+
+      <section class="panel">
+        <h2>Useful Endpoints</h2>
+        <dl>
+          <dt>Dashboard</dt><dd><a href="/ops/browser">/ops/browser</a></dd>
+          <dt>Status</dt><dd><a href="/status">/status</a></dd>
+          <dt>Workbench</dt><dd>/v1/workbench-capabilities?provider=gemini&amp;diagnostics=browser-state</dd>
+          <dt>Run Status</dt><dd>/v1/runs/{run_id}/status?diagnostics=browser-state</dd>
+          <dt>Runtime Inspect</dt><dd>/v1/runtime-runs/inspect?runId={run_id}&amp;probe=service-state&amp;diagnostics=browser-state</dd>
+        </dl>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const asJson = (value) => JSON.stringify(value, null, 2);
+
+    async function fetchJson(path) {
+      const response = await fetch(path, { cache: 'no-store' });
+      const text = await response.text();
+      let payload;
+      try {
+        payload = text ? JSON.parse(text) : null;
+      } catch {
+        payload = text;
+      }
+      if (!response.ok) {
+        throw new Error(asJson({ status: response.status, payload }));
+      }
+      return payload;
+    }
+
+    function renderServerSummary(status) {
+      const binding = status.binding || {};
+      const runner = status.runner || {};
+      const scheduler = status.accountMirrorScheduler || {};
+      const dashboard = status.routes && status.routes.operatorBrowserDashboard;
+      $('serverSummary').innerHTML = [
+        ['Status', status.ok ? '<span class="ok">ok</span>' : '<span class="bad">not ok</span>'],
+        ['Version', status.version || 'unknown'],
+        ['Binding', [binding.host, binding.port].filter(Boolean).join(':') || 'unknown'],
+        ['Local Only', binding.localOnly ? '<span class="ok">true</span>' : '<span class="warn">false</span>'],
+        ['Runner', runner.status || 'unknown'],
+        ['Runner ID', runner.id || 'none'],
+        ['Mirror Scheduler', scheduler.state || 'unknown'],
+        ['Dashboard Route', dashboard || '/ops/browser'],
+      ].map(([key, value]) => '<dt>' + key + '</dt><dd>' + value + '</dd>').join('');
+    }
+
+    async function refreshStatus() {
+      $('serverSummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
+      $('mirrorStatus').textContent = 'Loading...';
+      try {
+        const status = await fetchJson('/status');
+        renderServerSummary(status);
+      } catch (error) {
+        $('serverSummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
+      }
+      try {
+        $('mirrorStatus').textContent = asJson(await fetchJson('/v1/account-mirrors/status'));
+      } catch (error) {
+        $('mirrorStatus').textContent = String(error.message || error);
+      }
+    }
+
+    async function probeWorkbench() {
+      const button = $('probeWorkbench');
+      button.disabled = true;
+      $('workbenchOutput').textContent = 'Probing...';
+      try {
+        const params = new URLSearchParams({
+          provider: $('provider').value,
+          diagnostics: 'browser-state',
+          includeUnavailable: 'true',
+        });
+        if ($('category').value) params.set('category', $('category').value);
+        if ($('runtimeProfile').value.trim()) params.set('runtimeProfile', $('runtimeProfile').value.trim());
+        $('workbenchOutput').textContent = asJson(await fetchJson('/v1/workbench-capabilities?' + params.toString()));
+      } catch (error) {
+        $('workbenchOutput').textContent = String(error.message || error);
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function probeRun() {
+      const id = $('runId').value.trim();
+      if (!id) {
+        $('runOutput').textContent = 'Enter a run id.';
+        return;
+      }
+      const button = $('probeRun');
+      button.disabled = true;
+      $('runOutput').textContent = 'Inspecting...';
+      try {
+        $('runOutput').textContent = asJson(await fetchJson('/v1/runs/' + encodeURIComponent(id) + '/status?diagnostics=browser-state'));
+      } catch (error) {
+        $('runOutput').textContent = String(error.message || error);
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    $('refreshStatus').addEventListener('click', refreshStatus);
+    $('probeWorkbench').addEventListener('click', probeWorkbench);
+    $('probeRun').addEventListener('click', probeRun);
+    refreshStatus();
+  </script>
+</body>
+</html>`;
 }

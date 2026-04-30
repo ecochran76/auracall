@@ -15064,3 +15064,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `mat-mdc-tooltip-disabled`; that class means tooltip disabled, not tool
   disabled. Only treat exact `disabled` or `mdc-list-item--disabled` class
   tokens as disabled Gemini tool-row evidence.
+- 2026-04-29: Browser-state operator visibility should use a read-only
+  dashboard over existing API seams instead of adding a second browser control
+  path. `/ops/browser` is local, cache-disabled HTML; it fetches `/status` on
+  load and only runs `diagnostics=browser-state` probes after an explicit
+  operator click.

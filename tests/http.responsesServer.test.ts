@@ -13576,6 +13576,39 @@ describe('http responses adapter', () => {
           bodyObject: 'auracall',
         },
       });
+      expect((payload.routes as Record<string, unknown>).operatorBrowserDashboard).toBe('/ops/browser');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('serves a read-only browser operator dashboard', async () => {
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/ops/browser`);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('text/html');
+      expect(response.headers.get('cache-control')).toContain('no-store');
+      const html = await response.text();
+      expect(html).toContain('AuraCall Browser Ops');
+      expect(html).toContain('/v1/workbench-capabilities');
+      expect(html).toContain('diagnostics=browser-state');
+      expect(html).toContain('/v1/runs/{run_id}/status');
+      expect(html).toContain('Probe Browser State');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('serves the browser operator dashboard from the dashboard alias', async () => {
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/dashboard`);
+      expect(response.status).toBe(200);
+      const html = await response.text();
+      expect(html).toContain('AuraCall Browser Ops');
     } finally {
       await server.close();
     }
