@@ -34,6 +34,16 @@ import { createChatgptDeepResearchStatusFixture } from './fixtures/chatgptDeepRe
 
 vi.setConfig({ testTimeout: 10000 });
 
+type JsonValue = string | number | boolean | null | JsonObject | JsonValue[];
+type JsonObject = { [key: string]: JsonValue | undefined };
+
+function requireJsonObject(value: JsonValue | undefined, label: string): JsonObject {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`${label} was not a JSON object.`);
+  }
+  return value;
+}
+
 const completeAccountMirror = {
   state: 'complete' as const,
   summary: 'Mirrored metadata indexes are complete within current provider surfaces.',
@@ -591,7 +601,7 @@ describe('http responses adapter', () => {
 
       const statusResponse = await fetch(`http://127.0.0.1:${server.port}/status`);
       expect(statusResponse.status).toBe(200);
-      const statusPayload = (await statusResponse.json()) as Record<string, any>;
+      const statusPayload = (await statusResponse.json()) as JsonObject;
       expect(statusPayload).toMatchObject({
         runner: {
           id: `runner:http-responses:127.0.0.1:${server.port}`,
@@ -2577,7 +2587,7 @@ describe('http responses adapter', () => {
       await delay(35);
       const runningResponse = await fetch(`http://127.0.0.1:${server.port}/status`);
       expect(runningResponse.status).toBe(200);
-      const runningPayload = (await runningResponse.json()) as Record<string, any>;
+      const runningPayload = (await runningResponse.json()) as JsonObject;
       expect(runningPayload).toMatchObject({
         backgroundDrain: {
           enabled: true,
@@ -2592,7 +2602,7 @@ describe('http responses adapter', () => {
       await delay(90);
       const idleResponse = await fetch(`http://127.0.0.1:${server.port}/status`);
       expect(idleResponse.status).toBe(200);
-      const idlePayload = (await idleResponse.json()) as Record<string, any>;
+      const idlePayload = (await idleResponse.json()) as JsonObject;
       expect(idlePayload).toMatchObject({
         backgroundDrain: {
           enabled: true,
@@ -2603,7 +2613,9 @@ describe('http responses adapter', () => {
           lastCompletedAt: expect.any(String),
         },
       });
-      expect(['idle', 'scheduled', 'running']).toContain(idlePayload.backgroundDrain.state);
+      expect(['idle', 'scheduled', 'running']).toContain(
+        requireJsonObject(idlePayload.backgroundDrain, 'backgroundDrain').state,
+      );
       expect(drainCalls).toBeGreaterThan(0);
     } finally {
       await server.close();
@@ -2632,7 +2644,7 @@ describe('http responses adapter', () => {
         }),
       });
       expect(pauseResponse.status).toBe(200);
-      const pausedPayload = (await pauseResponse.json()) as Record<string, any>;
+      const pausedPayload = (await pauseResponse.json()) as JsonObject;
       expect(pausedPayload).toMatchObject({
         backgroundDrain: {
           enabled: true,
@@ -2659,7 +2671,7 @@ describe('http responses adapter', () => {
         }),
       });
       expect(resumeResponse.status).toBe(200);
-      const resumedPayload = (await resumeResponse.json()) as Record<string, any>;
+      const resumedPayload = (await resumeResponse.json()) as JsonObject;
       expect(resumedPayload).toMatchObject({
         backgroundDrain: {
           enabled: true,
@@ -2717,7 +2729,7 @@ describe('http responses adapter', () => {
         }),
       });
       expect(repairResponse.status).toBe(200);
-      const repairPayload = (await repairResponse.json()) as Record<string, any>;
+      const repairPayload = (await repairResponse.json()) as JsonObject;
       expect(repairPayload).toMatchObject({
         controlResult: {
           kind: 'lease-repair',
@@ -2770,7 +2782,7 @@ describe('http responses adapter', () => {
         }),
       });
       expect(response.status).toBe(200);
-      const payload = (await response.json()) as Record<string, any>;
+      const payload = (await response.json()) as JsonObject;
       const localRunnerId = `runner:http-responses:127.0.0.1:${server.port}`;
       expect(payload.controlResult).toMatchObject({
         kind: 'scheduler-control',
@@ -2842,7 +2854,7 @@ describe('http responses adapter', () => {
         }),
       });
       expect(repairResponse.status).toBe(409);
-      const repairPayload = (await repairResponse.json()) as Record<string, any>;
+      const repairPayload = (await repairResponse.json()) as JsonObject;
       expect(repairPayload).toMatchObject({
         error: {
           type: 'invalid_request_error',
@@ -2918,7 +2930,7 @@ describe('http responses adapter', () => {
         }),
       });
       expect(cancelResponse.status).toBe(200);
-      const cancelPayload = (await cancelResponse.json()) as Record<string, any>;
+      const cancelPayload = (await cancelResponse.json()) as JsonObject;
       expect(cancelPayload).toMatchObject({
         controlResult: {
           kind: 'run-control',
@@ -3025,7 +3037,7 @@ describe('http responses adapter', () => {
 
       const summaryResponse = await fetch(`http://127.0.0.1:${server.port}/status?recovery=true`);
       expect(summaryResponse.status).toBe(200);
-      const summaryPayload = (await summaryResponse.json()) as Record<string, any>;
+      const summaryPayload = (await summaryResponse.json()) as JsonObject;
       expect(summaryPayload).toMatchObject({
         recoverySummary: {
           cancelledRunIds: ['status_cancel_recovery'],
@@ -3047,7 +3059,7 @@ describe('http responses adapter', () => {
         `http://127.0.0.1:${server.port}/status/recovery/status_cancel_recovery`,
       );
       expect(detailResponse.status).toBe(200);
-      const detailPayload = (await detailResponse.json()) as Record<string, any>;
+      const detailPayload = (await detailResponse.json()) as JsonObject;
       expect(detailPayload).toMatchObject({
         detail: {
           runId: 'status_cancel_recovery',
@@ -3148,7 +3160,7 @@ describe('http responses adapter', () => {
     try {
       const detailResponse = await fetch(`http://127.0.0.1:${server.port}/status/recovery/${runId}`);
       expect(detailResponse.status).toBe(200);
-      const detailPayload = (await detailResponse.json()) as Record<string, any>;
+      const detailPayload = (await detailResponse.json()) as JsonObject;
       expect(detailPayload).toMatchObject({
         detail: {
           runId,
@@ -3225,7 +3237,7 @@ describe('http responses adapter', () => {
         }),
       });
       expect(cancelResponse.status).toBe(409);
-      const cancelPayload = (await cancelResponse.json()) as Record<string, any>;
+      const cancelPayload = (await cancelResponse.json()) as JsonObject;
       expect(cancelPayload).toMatchObject({
         error: {
           type: 'invalid_request_error',
@@ -5577,7 +5589,7 @@ describe('http responses adapter', () => {
         `http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?runId=${runId}&probe=service-state`,
       );
       expect(response.status).toBe(200);
-      const payload = (await response.json()) as Record<string, any>;
+      const payload = (await response.json()) as JsonObject;
       expect(payload).toMatchObject({
         inspection: {
           serviceState: {
@@ -5715,7 +5727,7 @@ describe('http responses adapter', () => {
         `http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?runId=${runId}&diagnostics=browser-state`,
       );
       expect(response.status).toBe(200);
-      const payload = (await response.json()) as Record<string, any>;
+      const payload = (await response.json()) as JsonObject;
       expect(payload).toMatchObject({
         inspection: {
           browserDiagnostics: {
@@ -9260,7 +9272,7 @@ describe('http responses adapter', () => {
         }),
       });
       expect(resolveResponse.status).toBe(200);
-      const resolvePayload = (await resolveResponse.json()) as Record<string, any>;
+      const resolvePayload = (await resolveResponse.json()) as JsonObject;
       expect(resolvePayload).toMatchObject({
         controlResult: {
           kind: 'local-action-control',
@@ -9286,7 +9298,7 @@ describe('http responses adapter', () => {
 
       const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/status_local_action_control`);
       expect(reread.status).toBe(200);
-      const rereadPayload = (await reread.json()) as Record<string, any>;
+      const rereadPayload = (await reread.json()) as JsonObject;
       expect(rereadPayload).toMatchObject({
         id: 'status_local_action_control',
         status: 'completed',
@@ -9359,7 +9371,7 @@ describe('http responses adapter', () => {
         }),
       });
       expect(resolveResponse.status).toBe(200);
-      const resolvePayload = (await resolveResponse.json()) as Record<string, any>;
+      const resolvePayload = (await resolveResponse.json()) as JsonObject;
       expect(resolvePayload).toMatchObject({
         controlResult: {
           kind: 'local-action-control',
@@ -9386,7 +9398,7 @@ describe('http responses adapter', () => {
 
       const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/status_team_local_action_control`);
       expect(reread.status).toBe(200);
-      const rereadPayload = (await reread.json()) as Record<string, any>;
+      const rereadPayload = (await reread.json()) as JsonObject;
       expect(rereadPayload).toMatchObject({
         id: 'status_team_local_action_control',
         status: 'completed',
@@ -9508,7 +9520,7 @@ describe('http responses adapter', () => {
         }),
       });
       expect(resolveResponse.status).toBe(409);
-      const resolvePayload = (await resolveResponse.json()) as Record<string, any>;
+      const resolvePayload = (await resolveResponse.json()) as JsonObject;
       expect(resolvePayload).toMatchObject({
         error: {
           type: 'invalid_request_error',
@@ -9564,7 +9576,7 @@ describe('http responses adapter', () => {
         }),
       });
       expect(resumeResponse.status).toBe(200);
-      const resumePayload = (await resumeResponse.json()) as Record<string, any>;
+      const resumePayload = (await resumeResponse.json()) as JsonObject;
       expect(resumePayload).toMatchObject({
         controlResult: {
           kind: 'run-control',
@@ -9591,7 +9603,7 @@ describe('http responses adapter', () => {
 
       const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/status_resume_human`);
       expect(reread.status).toBe(200);
-      const rereadPayload = (await reread.json()) as Record<string, any>;
+      const rereadPayload = (await reread.json()) as JsonObject;
       expect(rereadPayload).toMatchObject({
         id: 'status_resume_human',
         status: 'in_progress',
@@ -9629,7 +9641,7 @@ describe('http responses adapter', () => {
         }),
       });
       expect(resumeResponse.status).toBe(409);
-      const resumePayload = (await resumeResponse.json()) as Record<string, any>;
+      const resumePayload = (await resumeResponse.json()) as JsonObject;
       expect(resumePayload).toMatchObject({
         error: {
           type: 'invalid_request_error',
@@ -9695,7 +9707,7 @@ describe('http responses adapter', () => {
         }),
       });
       expect(drainResponse.status).toBe(200);
-      const drainPayload = (await drainResponse.json()) as Record<string, any>;
+      const drainPayload = (await drainResponse.json()) as JsonObject;
       expect(drainPayload).toMatchObject({
         controlResult: {
           kind: 'run-control',
@@ -9710,7 +9722,7 @@ describe('http responses adapter', () => {
 
       const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/status_drain_run`);
       expect(reread.status).toBe(200);
-      const rereadPayload = (await reread.json()) as Record<string, any>;
+      const rereadPayload = (await reread.json()) as JsonObject;
       expect(rereadPayload).toMatchObject({
         id: 'status_drain_run',
         status: 'completed',
@@ -9763,7 +9775,7 @@ describe('http responses adapter', () => {
         }),
       });
       expect(resumeResponse.status).toBe(200);
-      const resumePayload = (await resumeResponse.json()) as Record<string, any>;
+      const resumePayload = (await resumeResponse.json()) as JsonObject;
       expect(resumePayload).toMatchObject({
         controlResult: {
           kind: 'run-control',
@@ -9788,7 +9800,7 @@ describe('http responses adapter', () => {
         }),
       });
       expect(drainResponse.status).toBe(200);
-      const drainPayload = (await drainResponse.json()) as Record<string, any>;
+      const drainPayload = (await drainResponse.json()) as JsonObject;
       expect(drainPayload).toMatchObject({
         controlResult: {
           kind: 'run-control',
@@ -9803,7 +9815,7 @@ describe('http responses adapter', () => {
 
       const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/status_team_drain_run`);
       expect(reread.status).toBe(200);
-      const rereadPayload = (await reread.json()) as Record<string, any>;
+      const rereadPayload = (await reread.json()) as JsonObject;
       expect(rereadPayload).toMatchObject({
         id: 'status_team_drain_run',
         status: 'completed',
@@ -9828,7 +9840,7 @@ describe('http responses adapter', () => {
 
       const recoveryResponse = await fetch(`http://127.0.0.1:${server.port}/status/recovery/status_team_drain_run`);
       expect(recoveryResponse.status).toBe(200);
-      const recoveryPayload = (await recoveryResponse.json()) as Record<string, any>;
+      const recoveryPayload = (await recoveryResponse.json()) as JsonObject;
       expect(recoveryPayload).toMatchObject({
         object: 'recovery_detail',
         detail: {
@@ -9839,7 +9851,12 @@ describe('http responses adapter', () => {
           },
         },
       });
-      expect(recoveryPayload.detail.orchestrationTimelineSummary.items).toEqual(
+      expect(
+        requireJsonObject(
+          requireJsonObject(recoveryPayload.detail, 'detail').orchestrationTimelineSummary,
+          'orchestrationTimelineSummary',
+        ).items,
+      ).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             type: 'note-added',
@@ -9913,7 +9930,7 @@ describe('http responses adapter', () => {
     try {
       const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/status_drain_run_missing_runner`);
       expect(reread.status).toBe(200);
-      const rereadPayload = (await reread.json()) as Record<string, any>;
+      const rereadPayload = (await reread.json()) as JsonObject;
       expect(rereadPayload).toMatchObject({
         id: 'status_drain_run_missing_runner',
         status: 'in_progress',
@@ -9992,7 +10009,7 @@ describe('http responses adapter', () => {
 
       const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/status_operator_summary`);
       expect(reread.status).toBe(200);
-      const rereadPayload = (await reread.json()) as Record<string, any>;
+      const rereadPayload = (await reread.json()) as JsonObject;
       expect(rereadPayload).toMatchObject({
         id: 'status_operator_summary',
         status: 'completed',
@@ -10016,7 +10033,7 @@ describe('http responses adapter', () => {
 
       const recoveryRead = await fetch(`http://127.0.0.1:${server.port}/status/recovery/status_operator_summary`);
       expect(recoveryRead.status).toBe(200);
-      const recoveryPayload = (await recoveryRead.json()) as Record<string, any>;
+      const recoveryPayload = (await recoveryRead.json()) as JsonObject;
       expect(recoveryPayload).toMatchObject({
         object: 'recovery_detail',
         detail: {
@@ -10027,7 +10044,12 @@ describe('http responses adapter', () => {
           },
         },
       });
-      expect(recoveryPayload.detail.orchestrationTimelineSummary.items).toEqual(
+      expect(
+        requireJsonObject(
+          requireJsonObject(recoveryPayload.detail, 'detail').orchestrationTimelineSummary,
+          'orchestrationTimelineSummary',
+        ).items,
+      ).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             type: 'note-added',
@@ -10176,7 +10198,7 @@ describe('http responses adapter', () => {
         }),
       });
       expect(drainResponse.status).toBe(200);
-      const drainPayload = (await drainResponse.json()) as Record<string, any>;
+      const drainPayload = (await drainResponse.json()) as JsonObject;
       expect(drainPayload).toMatchObject({
         controlResult: {
           kind: 'run-control',
@@ -10195,7 +10217,7 @@ describe('http responses adapter', () => {
 
       const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
       expect(reread.status).toBe(200);
-      const rereadPayload = (await reread.json()) as Record<string, any>;
+      const rereadPayload = (await reread.json()) as JsonObject;
       expect(rereadPayload).toMatchObject({
         id: runId,
         status: 'completed',
@@ -10353,7 +10375,7 @@ describe('http responses adapter', () => {
 
       const recoveryResponse = await fetch(`http://127.0.0.1:${server.port}/status/recovery/${runId}`);
       expect(recoveryResponse.status).toBe(200);
-      const recoveryPayload = (await recoveryResponse.json()) as Record<string, any>;
+      const recoveryPayload = (await recoveryResponse.json()) as JsonObject;
       expect(recoveryPayload).toMatchObject({
         object: 'recovery_detail',
         detail: {
@@ -10508,7 +10530,7 @@ describe('http responses adapter', () => {
         `http://127.0.0.1:${server.port}/status?recovery=true&sourceKind=all`,
       );
       expect(recoverySummaryResponse.status).toBe(200);
-      const recoverySummaryPayload = (await recoverySummaryResponse.json()) as Record<string, any>;
+      const recoverySummaryPayload = (await recoverySummaryResponse.json()) as JsonObject;
       expect(recoverySummaryPayload).toMatchObject({
         recoverySummary: {
           reclaimableRunIds: [runId],
@@ -10648,7 +10670,7 @@ describe('http responses adapter', () => {
         `http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?runId=${runId}`,
       );
       expect(defaultInspectResponse.status).toBe(200);
-      const defaultInspectPayload = (await defaultInspectResponse.json()) as Record<string, any>;
+      const defaultInspectPayload = (await defaultInspectResponse.json()) as JsonObject;
       expect(defaultInspectPayload).toMatchObject({
         inspection: {
           queryRunId: runId,
@@ -10670,7 +10692,7 @@ describe('http responses adapter', () => {
         `http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?runId=${runId}&runnerId=${runnerId}`,
       );
       expect(queriedInspectResponse.status).toBe(200);
-      const queriedInspectPayload = (await queriedInspectResponse.json()) as Record<string, any>;
+      const queriedInspectPayload = (await queriedInspectResponse.json()) as JsonObject;
       expect(queriedInspectPayload).toMatchObject({
         inspection: {
           queryRunId: runId,
@@ -10839,7 +10861,7 @@ describe('http responses adapter', () => {
     try {
       const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
       expect(reread.status).toBe(200);
-      const rereadPayload = (await reread.json()) as Record<string, any>;
+      const rereadPayload = (await reread.json()) as JsonObject;
       expect(rereadPayload).toMatchObject({
         id: runId,
         status: 'in_progress',
@@ -10863,8 +10885,13 @@ describe('http responses adapter', () => {
 
       const recoveryRead = await fetch(`http://127.0.0.1:${server.port}/status/recovery/${runId}`);
       expect(recoveryRead.status).toBe(200);
-      const recoveryPayload = (await recoveryRead.json()) as Record<string, any>;
-          expect(recoveryPayload.detail.orchestrationTimelineSummary.items).toEqual(
+      const recoveryPayload = (await recoveryRead.json()) as JsonObject;
+      expect(
+        requireJsonObject(
+          requireJsonObject(recoveryPayload.detail, 'detail').orchestrationTimelineSummary,
+          'orchestrationTimelineSummary',
+        ).items,
+      ).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             type: 'note-added',
@@ -11106,7 +11133,7 @@ describe('http responses adapter', () => {
     try {
       const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
       expect(reread.status).toBe(200);
-      const rereadPayload = (await reread.json()) as Record<string, any>;
+      const rereadPayload = (await reread.json()) as JsonObject;
       expect(rereadPayload).toMatchObject({
         id: runId,
         status: 'completed',

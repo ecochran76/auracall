@@ -23950,3 +23950,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Biome warning count dropped from 433 to 315.
   - The current remaining classes are `noExplicitAny` (164),
     `noNonNullAssertion` (55), and `useNamingConvention` (96).
+
+## 2026-04-30 - HTTP response test JSON typing
+
+- Focus: start real `noExplicitAny` cleanup in the largest remaining test
+  cluster without changing runtime response behavior.
+- Progress:
+  - Added a recursive `JsonObject` fixture type in
+    `tests/http.responsesServer.test.ts`.
+  - Replaced parsed HTTP response payload casts from `Record<string, any>` to
+    `JsonObject`.
+  - Added a small `requireJsonObject(...)` narrowing helper for nested dynamic
+    recovery/status assertions.
+- Validation:
+  - `pnpm run typecheck`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 --testTimeout 15000`
+  - Repo-wide `noExplicitAny` count dropped from 164 to 123.
+  - `tests/http.responsesServer.test.ts` now has zero `noExplicitAny`
+    diagnostics; its remaining warnings are fixture non-null assertions.

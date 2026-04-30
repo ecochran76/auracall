@@ -15126,3 +15126,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   directory-wide by convenience. A broad `tests/live/**/*.ts` override made
   existing inline ignores stale, so prefer listing only the files whose warnings
   are dominated by env or external process casing.
+- 2026-04-30: For HTTP JSON response tests, use a recursive `JsonObject`
+  fixture type plus narrow object guards instead of `Record<string, any>`.
+  This preserves dynamic response-shape assertions while keeping malformed or
+  open-ended payload handling explicit.
