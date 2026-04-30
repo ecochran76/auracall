@@ -15130,3 +15130,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   fixture type plus narrow object guards instead of `Record<string, any>`.
   This preserves dynamic response-shape assertions while keeping malformed or
   open-ended payload handling explicit.
+- 2026-04-30: For config migration tests, wrap transitional bridge-shape
+  payloads in typed fixture helpers instead of repeating `as any` at every
+  call. The helper marks the OracleConfig migration boundary once while keeping
+  individual test cases readable.

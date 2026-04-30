@@ -1,9 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { materializeConfigV2, normalizeConfigV1toV2 } from '../src/config/migrate.js';
+import type { OracleConfig } from '../src/config/schema.js';
+
+type ConfigMigrationFixture = Partial<OracleConfig> & Record<string, unknown>;
+
+function configFixture(config: ConfigMigrationFixture): OracleConfig {
+  return config as OracleConfig;
+}
+
+function normalizeFixture(config: ConfigMigrationFixture, options?: Parameters<typeof normalizeConfigV1toV2>[1]) {
+  return normalizeConfigV1toV2(configFixture(config), options);
+}
+
+function materializeFixture(config: ConfigMigrationFixture, options?: Parameters<typeof materializeConfigV2>[1]) {
+  return materializeConfigV2(configFixture(config), options);
+}
 
 describe('config migrate bridge helpers', () => {
   it('preserves the runtime-profile browserFamily bridge when normalizing into auracallProfiles', () => {
-    const result = normalizeConfigV1toV2({
+    const result = normalizeFixture({
       profiles: {
         consulting: {
           engine: 'browser',
@@ -11,14 +26,14 @@ describe('config migrate bridge helpers', () => {
           defaultService: 'chatgpt',
         },
       },
-    } as any);
+    });
 
     expect(result.auracallProfiles?.consulting?.browserFamily).toBe('wsl-chrome-2');
     expect(result.auracallProfiles?.consulting?.defaultService).toBe('chatgpt');
   });
 
   it('accepts target runtimeProfiles during normalization while still materializing legacy auracallProfiles', () => {
-    const result = normalizeConfigV1toV2({
+    const result = normalizeFixture({
       runtimeProfiles: {
         consulting: {
           engine: 'browser',
@@ -29,7 +44,7 @@ describe('config migrate bridge helpers', () => {
           defaultService: 'chatgpt',
         },
       },
-    } as any);
+    });
 
     expect(result.runtimeProfiles?.consulting?.browserProfile).toBe('wsl-chrome-2');
     expect(result.runtimeProfiles?.consulting?.browser?.manualLogin).toBe(true);
@@ -38,7 +53,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('normalizes defaultRuntimeProfile into auracallProfile for compatibility consumers', () => {
-    const result = normalizeConfigV1toV2({
+    const result = normalizeFixture({
       version: 3,
       defaultRuntimeProfile: 'consulting',
       runtimeProfiles: {
@@ -48,14 +63,14 @@ describe('config migrate bridge helpers', () => {
           defaultService: 'chatgpt',
         },
       },
-    } as any);
+    });
 
     expect(result.defaultRuntimeProfile).toBe('consulting');
     expect(result.auracallProfile).toBe('consulting');
   });
 
   it('fills root model and browser defaults from llmDefaults only when those target values are absent', () => {
-    const result = normalizeConfigV1toV2({
+    const result = normalizeFixture({
       version: 3,
       llmDefaults: {
         model: 'gpt-5.1',
@@ -63,7 +78,7 @@ describe('config migrate bridge helpers', () => {
         defaultProjectName: 'Legacy Project',
         defaultProjectId: 'g-p-legacy-project',
       },
-    } as any);
+    });
 
     expect(result.model).toBe('gpt-5.1');
     expect(result.browser).toMatchObject({
@@ -74,7 +89,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('keeps explicit root model and browser defaults ahead of llmDefaults during normalization', () => {
-    const result = normalizeConfigV1toV2({
+    const result = normalizeFixture({
       version: 3,
       model: 'gpt-5.2',
       browser: {
@@ -88,7 +103,7 @@ describe('config migrate bridge helpers', () => {
         defaultProjectName: 'Legacy Project',
         defaultProjectId: 'g-p-legacy-project',
       },
-    } as any);
+    });
 
     expect(result.model).toBe('gpt-5.2');
     expect(result.browser).toMatchObject({
@@ -105,7 +120,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('materializes legacy auracallProfiles back into profiles without losing browserFamily', () => {
-    const result = materializeConfigV2({
+    const result = materializeFixture({
       version: 2,
       auracallProfiles: {
         consulting: {
@@ -114,7 +129,7 @@ describe('config migrate bridge helpers', () => {
           defaultService: 'chatgpt',
         },
       },
-    } as any);
+    });
 
     expect(result.version).toBe(2);
     expect(result.profiles?.consulting?.browserFamily).toBe('wsl-chrome-2');
@@ -122,7 +137,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('can materialize explicit target-shape output for config migrate', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 2,
         auracallProfile: 'consulting',
@@ -138,7 +153,7 @@ describe('config migrate bridge helpers', () => {
             defaultService: 'chatgpt',
           },
         },
-      } as any,
+      },
       { targetShape: true },
     );
 
@@ -153,7 +168,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('moves obvious browser-owned runtime overrides into the referenced target browser profile', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 3,
         defaultRuntimeProfile: 'consulting',
@@ -174,7 +189,7 @@ describe('config migrate bridge helpers', () => {
             defaultService: 'chatgpt',
           },
         },
-      } as any,
+      },
       { targetShape: true },
     );
 
@@ -189,7 +204,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('preserves service-scoped browser overrides inside the runtime profile during target-shape cleanup when no default service is declared', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 3,
         defaultRuntimeProfile: 'consulting',
@@ -210,7 +225,7 @@ describe('config migrate bridge helpers', () => {
             },
           },
         },
-      } as any,
+      },
       { targetShape: true },
     );
 
@@ -226,7 +241,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('moves service-scoped browser overrides into the default service config when the target is explicit', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 3,
         defaultRuntimeProfile: 'consulting',
@@ -249,7 +264,7 @@ describe('config migrate bridge helpers', () => {
             },
           },
         },
-      } as any,
+      },
       { targetShape: true },
     );
 
@@ -264,7 +279,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('does not auto-relocate root-browser compatibility aliases into service defaults during target-shape cleanup', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 3,
         defaultRuntimeProfile: 'consulting',
@@ -289,7 +304,7 @@ describe('config migrate bridge helpers', () => {
             defaultService: 'chatgpt',
           },
         },
-      } as any,
+      },
       { targetShape: true },
     );
 
@@ -306,7 +321,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('keeps conflicting managed-profile escape hatches in the runtime browser block during target-shape cleanup', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 3,
         defaultRuntimeProfile: 'consulting',
@@ -332,7 +347,7 @@ describe('config migrate bridge helpers', () => {
             },
           },
         },
-      } as any,
+      },
       { targetShape: true },
     );
 
@@ -347,7 +362,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('removes default-equivalent managed profile paths during target-shape cleanup', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 3,
         defaultRuntimeProfile: 'consulting',
@@ -375,7 +390,7 @@ describe('config migrate bridge helpers', () => {
             },
           },
         },
-      } as any,
+      },
       { targetShape: true },
     );
 
@@ -387,7 +402,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('preserves external managed profile paths during target-shape cleanup', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 3,
         defaultRuntimeProfile: 'consulting',
@@ -415,7 +430,7 @@ describe('config migrate bridge helpers', () => {
             },
           },
         },
-      } as any,
+      },
       { targetShape: true },
     );
 
@@ -430,7 +445,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('removes default-equivalent runtime-profile service overrides during target-shape cleanup', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 3,
         defaultRuntimeProfile: 'consulting',
@@ -459,7 +474,7 @@ describe('config migrate bridge helpers', () => {
             },
           },
         },
-      } as any,
+      },
       { targetShape: true },
     );
 
@@ -469,7 +484,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('preserves conflicting service-scoped values in runtimeProfile.browser during cleanup', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 3,
         defaultRuntimeProfile: 'consulting',
@@ -494,7 +509,7 @@ describe('config migrate bridge helpers', () => {
             },
           },
         },
-      } as any,
+      },
       { targetShape: true },
     );
 
@@ -508,7 +523,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('downgrades target-shaped input to version 2 when compatibility bridge output is requested', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 3,
         defaultRuntimeProfile: 'consulting',
@@ -524,7 +539,7 @@ describe('config migrate bridge helpers', () => {
             defaultService: 'chatgpt',
           },
         },
-      } as any,
+      },
       { targetShape: false },
     );
 
@@ -544,7 +559,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('treats target-shaped definitions as authoritative when writing compatibility bridge output', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 3,
         defaultRuntimeProfile: 'consulting',
@@ -572,7 +587,7 @@ describe('config migrate bridge helpers', () => {
             defaultService: 'grok',
           },
         },
-      } as any,
+      },
       { targetShape: false },
     );
 
@@ -589,7 +604,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('keeps browser-owned keepBrowser on the bridge browser family when writing compatibility output', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 3,
         defaultRuntimeProfile: 'consulting',
@@ -606,7 +621,7 @@ describe('config migrate bridge helpers', () => {
             defaultService: 'chatgpt',
           },
         },
-      } as any,
+      },
       { targetShape: false },
     );
 
@@ -622,7 +637,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('backfills llmDefaults project and model defaults from root browser state for compatibility bridge output', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 3,
         defaultRuntimeProfile: 'consulting',
@@ -644,7 +659,7 @@ describe('config migrate bridge helpers', () => {
             defaultService: 'chatgpt',
           },
         },
-      } as any,
+      },
       { targetShape: false },
     );
 
@@ -657,7 +672,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('preserves explicit llmDefaults during compatibility bridge materialization', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 3,
         defaultRuntimeProfile: 'consulting',
@@ -685,7 +700,7 @@ describe('config migrate bridge helpers', () => {
             defaultService: 'chatgpt',
           },
         },
-      } as any,
+      },
       { targetShape: false },
     );
 
@@ -698,7 +713,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('moves obvious browser-owned runtime overrides into the referenced bridge browser family', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 2,
         auracallProfile: 'consulting',
@@ -718,7 +733,7 @@ describe('config migrate bridge helpers', () => {
             defaultService: 'chatgpt',
           },
         },
-      } as any,
+      },
       { targetShape: false },
     );
 
@@ -732,7 +747,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('moves service-scoped browser overrides into the default service config for bridge-shape cleanup', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 2,
         auracallProfile: 'consulting',
@@ -752,7 +767,7 @@ describe('config migrate bridge helpers', () => {
             },
           },
         },
-      } as any,
+      },
       { targetShape: false },
     );
 
@@ -764,7 +779,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('removes default-equivalent managed profile paths during bridge-shape cleanup', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 2,
         auracallProfile: 'consulting',
@@ -792,7 +807,7 @@ describe('config migrate bridge helpers', () => {
             },
           },
         },
-      } as any,
+      },
       { targetShape: false },
     );
 
@@ -804,7 +819,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('removes default-equivalent runtime-profile service overrides during bridge-shape cleanup', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 2,
         auracallProfile: 'consulting',
@@ -831,7 +846,7 @@ describe('config migrate bridge helpers', () => {
             },
           },
         },
-      } as any,
+      },
       { targetShape: false },
     );
 
@@ -841,7 +856,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('prunes empty services containers after conservative cleanup', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 3,
         defaultRuntimeProfile: 'consulting',
@@ -865,7 +880,7 @@ describe('config migrate bridge helpers', () => {
             },
           },
         },
-      } as any,
+      },
       { targetShape: true },
     );
 
@@ -873,7 +888,7 @@ describe('config migrate bridge helpers', () => {
   });
 
   it('keeps conflicting runtime browser overrides in place during migration cleanup', () => {
-    const result = materializeConfigV2(
+    const result = materializeFixture(
       {
         version: 3,
         defaultRuntimeProfile: 'consulting',
@@ -895,7 +910,7 @@ describe('config migrate bridge helpers', () => {
             defaultService: 'chatgpt',
           },
         },
-      } as any,
+      },
       { targetShape: true },
     );
 

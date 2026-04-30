@@ -23968,3 +23968,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Repo-wide `noExplicitAny` count dropped from 164 to 123.
   - `tests/http.responsesServer.test.ts` now has zero `noExplicitAny`
     diagnostics; its remaining warnings are fixture non-null assertions.
+
+## 2026-04-30 - Config migration fixture typing
+
+- Focus: continue `noExplicitAny` cleanup by localizing intentional migration
+  bridge-shape casts in the config migration test suite.
+- Progress:
+  - Added typed fixture wrappers in `tests/configMigrate.test.ts` for
+    normalize/materialize migration calls.
+  - Removed 27 repeated `as any` casts from transitional config fixtures while
+    keeping the OracleConfig boundary explicit.
+- Validation:
+  - `pnpm run typecheck`
+  - `pnpm vitest run tests/configMigrate.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm run lint`
+  - `pnpm run docs:list`
+  - Biome warning count dropped from 274 to 247.
+  - Repo-wide `noExplicitAny` count dropped from 123 to 96.
