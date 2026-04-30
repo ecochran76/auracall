@@ -264,6 +264,13 @@ Lazy mirroring must remain lower priority than API-requested work:
   the current mirror operation, the collector marks the inventory truncated,
   preserves the continuation cursor, releases the dispatcher, and lets the
   scheduler try again later.
+- Queue observations now record the queued request owner as well as the active
+  blocker. Routine mirrors yield to user/API browser work such as response
+  execution and media generation, but they do not preempt themselves just
+  because another routine mirror refresh is queued behind the active mirror.
+- Browser media generation now writes to the shared queue-observation ledger,
+  so lazy live follow can detect media work waiting behind an already-running
+  mirror pass instead of relying only on response browser-execution events.
 - This first cooperative-yield contract is intentionally boundary-scoped: it
   yields between detail surfaces, not in the middle of a provider DOM read.
 - default routine intervals:

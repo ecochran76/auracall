@@ -1,4 +1,7 @@
+import path from 'node:path';
+
 import type {
+  BrowserOperationAcquireInput,
   BrowserOperationRecord,
   BrowserOperationKeyInput,
 } from '../../packages/browser-service/src/service/operationDispatcher.js';
@@ -13,10 +16,20 @@ export interface BrowserOperationQueueObservation {
   event: BrowserOperationQueueObservationEvent;
   at: string;
   key: string;
+  requested?: BrowserOperationQueueRequestSummary | null;
   operation: BrowserOperationQueueRecordSummary | null;
   blockedBy: BrowserOperationQueueRecordSummary | null;
   attempt: number | null;
   elapsedMs: number | null;
+}
+
+export interface BrowserOperationQueueRequestSummary {
+  kind: BrowserOperationRecord['kind'];
+  operationClass: BrowserOperationRecord['operationClass'];
+  ownerPid: number;
+  ownerCommand: string | null;
+  managedProfileDir: string | null;
+  serviceTarget: string | null;
 }
 
 export interface BrowserOperationQueueRecordSummary {
@@ -41,6 +54,7 @@ const observationsByKey = new Map<string, BrowserOperationQueueObservation[]>();
 export function recordBrowserOperationQueueObservation(input: {
   event: BrowserOperationQueueObservationEvent;
   key: string;
+  requested?: BrowserOperationAcquireInput | null;
   operation?: BrowserOperationRecord | null;
   blockedBy?: BrowserOperationRecord | null;
   attempt?: number | null;
@@ -51,6 +65,7 @@ export function recordBrowserOperationQueueObservation(input: {
     event: input.event,
     at: input.at ?? new Date().toISOString(),
     key: input.key,
+    requested: summarizeOperationRequest(input.requested ?? null),
     operation: summarizeOperationRecord(input.operation ?? null),
     blockedBy: summarizeOperationRecord(input.blockedBy ?? null),
     attempt: typeof input.attempt === 'number' && Number.isFinite(input.attempt) ? Math.trunc(input.attempt) : null,
@@ -89,6 +104,20 @@ export function summarizeBrowserOperationQueueObservationsByKey(
 
 export function clearBrowserOperationQueueObservationsForTest(): void {
   observationsByKey.clear();
+}
+
+function summarizeOperationRequest(input: BrowserOperationAcquireInput | null): BrowserOperationQueueRequestSummary | null {
+  if (!input) {
+    return null;
+  }
+  return {
+    kind: input.kind,
+    operationClass: input.operationClass,
+    ownerPid: input.ownerPid ?? process.pid,
+    ownerCommand: input.ownerCommand ?? null,
+    managedProfileDir: input.managedProfileDir ? path.resolve(input.managedProfileDir) : null,
+    serviceTarget: input.serviceTarget ?? null,
+  };
 }
 
 function summarizeOperationRecord(record: BrowserOperationRecord | null): BrowserOperationQueueRecordSummary | null {

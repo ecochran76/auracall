@@ -15171,3 +15171,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-04-30: Profile-doctor Chrome `Local State` fixtures should use a helper
   for `info_cache.Default` account metadata. That keeps Chrome-owned key casing
   in one place and avoids repeated naming suppressions in individual tests.
+- 2026-04-30: Lazy account-mirror queue observations need to include the
+  queued request owner, not only the active blocker. Cooperative yield should
+  release an active routine mirror for response/media browser work, while a
+  second routine mirror refresh should not force the active mirror to preempt
+  itself.

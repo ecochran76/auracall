@@ -29,6 +29,7 @@ import {
   type BrowserOperationBusyResult,
   type BrowserOperationRecord,
 } from '../../packages/browser-service/src/service/operationDispatcher.js';
+import { recordBrowserOperationQueueObservation } from '../browser/operationQueueObservations.js';
 
 const DEFAULT_BROWSER_MEDIA_QUEUE_TIMEOUT_MS = 10 * 60 * 1000;
 const DEFAULT_BROWSER_MEDIA_QUEUE_POLL_MS = 1000;
@@ -177,6 +178,14 @@ async function withQueuedBrowserMediaOperation<T>(
         return;
       }
       blockedOperationIds.add(result.blockedBy.id);
+      recordBrowserOperationQueueObservation({
+        event: 'queued',
+        key: result.key,
+        requested: operationInput,
+        blockedBy: result.blockedBy,
+        attempt: context.attempt,
+        elapsedMs: context.elapsedMs,
+      });
       await input.emitTimeline?.({
         event: 'browser_operation_queued',
         details: {

@@ -2094,3 +2094,25 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification target:
   - `pnpm run plans:audit -- --keep 61`
   - `git diff --check`
+
+## Turn 70 | 2026-04-30
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: return from lint-warning cleanup to lazy live follow and tighten the
+  cooperative yield contract between routine mirrors and real browser work.
+- Change:
+  - queue observations now include the queued request owner as well as the
+    active blocker
+  - response browser execution, media generation, and mirror refresh requests
+    write comparable queue-observation records
+  - account-mirror collectors yield when response/media browser work queues
+    behind an active lazy mirror, but do not yield only because another routine
+    mirror refresh is queued
+- Verification target:
+  - `pnpm vitest run tests/accountMirror/refreshService.test.ts tests/accountMirror/schedulerService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/mediaBrowserExecutor.test.ts tests/browser/browserModeExports.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm vitest run tests/cli/runtimeInspectionCommand.test.ts tests/http.responsesServer.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm run typecheck`
+  - `pnpm run lint`
+  - `pnpm run docs:list`
+  - `git diff --check`

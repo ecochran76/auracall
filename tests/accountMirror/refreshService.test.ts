@@ -167,6 +167,13 @@ describe('account mirror refresh service', () => {
     recordBrowserOperationQueueObservation({
       event: 'queued',
       key: dispatcherKey,
+      requested: {
+        managedProfileDir: '/tmp/auracall-default-chatgpt',
+        serviceTarget: 'chatgpt',
+        kind: 'browser-execution',
+        operationClass: 'exclusive-probe',
+        ownerCommand: 'account-mirror-refresh:chatgpt:default',
+      },
       blockedBy: {
         id: dispatcherOperationId,
         key: dispatcherKey,
@@ -180,6 +187,31 @@ describe('account mirror refresh service', () => {
         updatedAt: '2026-04-29T12:00:00.001Z',
       },
       at: '2026-04-29T12:00:00.001Z',
+    });
+    expect(await Promise.resolve(collectInput?.shouldYield?.())).toBe(false);
+    recordBrowserOperationQueueObservation({
+      event: 'queued',
+      key: dispatcherKey,
+      requested: {
+        managedProfileDir: '/tmp/auracall-default-chatgpt',
+        serviceTarget: 'chatgpt',
+        kind: 'browser-execution',
+        operationClass: 'exclusive-mutating',
+        ownerCommand: 'browser-execution',
+      },
+      blockedBy: {
+        id: dispatcherOperationId,
+        key: dispatcherKey,
+        managedProfileDir: '/tmp/auracall-default-chatgpt',
+        serviceTarget: 'chatgpt',
+        kind: 'browser-execution',
+        operationClass: 'exclusive-mutating',
+        ownerPid: process.pid,
+        ownerCommand: 'account-mirror-refresh:chatgpt:default',
+        startedAt: '2026-04-29T12:00:00.000Z',
+        updatedAt: '2026-04-29T12:00:00.002Z',
+      },
+      at: '2026-04-29T12:00:00.002Z',
     });
     expect(await Promise.resolve(collectInput?.shouldYield?.())).toBe(true);
     expect(persistence.writeSnapshot).toHaveBeenCalledWith({

@@ -52,6 +52,9 @@ Current State:
     `lastWakeReason`, `lastWakeAt`, and `operatorStatus.posture` for operator
     audit; MCP `api_status` exposes the same local API posture for agent
     assertions
+  - cooperative yield now classifies queued browser work by owner command, so
+    routine mirrors yield to response/media browser work without preempting
+    themselves for another routine mirror refresh
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local

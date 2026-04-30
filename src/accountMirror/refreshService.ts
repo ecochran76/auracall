@@ -14,7 +14,10 @@ import {
   type BrowserOperationDispatcher,
   type BrowserOperationRecord,
 } from '../../packages/browser-service/src/service/operationDispatcher.js';
-import { summarizeBrowserOperationQueueObservationsByKey } from '../browser/operationQueueObservations.js';
+import {
+  recordBrowserOperationQueueObservation,
+  summarizeBrowserOperationQueueObservationsByKey,
+} from '../browser/operationQueueObservations.js';
 import type { AccountMirrorProvider } from './politePolicy.js';
 import type {
   AccountMirrorMetadataEvidence,
@@ -168,16 +171,23 @@ export function createAccountMirrorRefreshService(input: {
         lastDispatcherBlockedBy: null,
       });
 
-      const acquired = await dispatcher.acquireQueued({
+      const operationInput = {
         managedProfileDir,
         serviceTarget: provider,
         kind: 'browser-execution',
         operationClass: 'exclusive-probe',
         ownerCommand: `account-mirror-refresh:${provider}:${runtimeProfileId}`,
-      }, {
+      } as const;
+      const acquired = await dispatcher.acquireQueued(operationInput, {
         timeoutMs: normalizeNonNegativeInteger(request.queueTimeoutMs, 30_000),
         pollMs: normalizePositiveInteger(request.queuePollMs, 1_000),
         onBlocked: (result) => {
+          recordBrowserOperationQueueObservation({
+            event: 'queued',
+            key: result.key,
+            requested: operationInput,
+            blockedBy: result.blockedBy,
+          });
           registry.mergeState({ provider, runtimeProfileId }, {
             queued: true,
             running: false,
@@ -336,10 +346,14 @@ function shouldYieldAccountMirrorRefresh(acquired: BrowserOperationAcquiredResul
   return observations.items.some((observation) =>
     observation.event === 'queued' &&
     observation.blockedBy?.id === acquired.operation.id &&
-    observation.operation === null &&
     observation.blockedBy.ownerCommand === acquired.operation.ownerCommand &&
+    isRealWorkQueuedBehindMirror(observation.requested?.ownerCommand ?? null) &&
     isHigherPriorityQueuedOperation(observation.at, acquired.operation.startedAt)
   );
+}
+
+function isRealWorkQueuedBehindMirror(ownerCommand: string | null): boolean {
+  return ownerCommand === null || !ownerCommand.startsWith('account-mirror-refresh:');
 }
 
 function isHigherPriorityQueuedOperation(observationAt: string, operationStartedAt: string): boolean {

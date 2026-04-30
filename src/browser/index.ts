@@ -387,13 +387,14 @@ async function acquireBrowserExecutionOperation(options: {
     lockRoot: path.join(getAuracallHomeDir(), 'browser-operations'),
   });
   const seenBlockedOperationIds = new Set<string>();
-  const acquired = await dispatcher.acquireQueued({
+  const operationInput = {
     managedProfileDir: options.managedProfileDir,
     serviceTarget: options.target,
     kind: 'browser-execution',
     operationClass: 'exclusive-mutating',
     ownerCommand: 'browser-execution',
-  }, {
+  } as const;
+  const acquired = await dispatcher.acquireQueued(operationInput, {
     timeoutMs: resolveBrowserExecutionQueueNumber(options.queueTimeoutMs, 10 * 60 * 1000),
     pollMs: resolveBrowserExecutionQueueNumber(options.queuePollMs, 1000),
     onBlocked: (result, context) => {
@@ -404,6 +405,7 @@ async function acquireBrowserExecutionOperation(options: {
       recordBrowserOperationQueueObservation({
         event: 'queued',
         key: result.key,
+        requested: operationInput,
         blockedBy: result.blockedBy,
         attempt: context.attempt,
         elapsedMs: context.elapsedMs,

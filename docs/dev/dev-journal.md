@@ -24186,3 +24186,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Biome warning count dropped from 192 to 188.
   - Remaining classes are `useNamingConvention` (53), `noExplicitAny` (83),
     and `noNonNullAssertion` (52).
+
+## 2026-04-30 - Lazy live follow queue ownership
+
+- Focus: return to lazy live follow and prevent routine mirrors from blocking
+  real browser/API work once a mirror pass has already acquired the dispatcher.
+- Progress:
+  - Added queued-request summaries to browser operation queue observations.
+  - Recorded comparable queue observations for response browser execution,
+    browser media generation, and account-mirror refreshes.
+  - Updated account-mirror cooperative yield so routine mirrors yield to
+    response/media browser work but not to another routine mirror refresh.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/refreshService.test.ts tests/accountMirror/schedulerService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/mediaBrowserExecutor.test.ts tests/browser/browserModeExports.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm vitest run tests/cli/runtimeInspectionCommand.test.ts tests/http.responsesServer.test.ts tests/mcp.runStatus.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm run typecheck`
+  - `pnpm run lint`
+  - `pnpm run docs:list`
+  - `git diff --check`
+  - `pnpm run lint` still reports the pre-existing 188 warnings; this slice
+    did not resume lint-warning drain work.
