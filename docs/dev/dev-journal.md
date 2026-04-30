@@ -23845,3 +23845,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - Full release gates passed with 1,861 tests passing, 65 skipped, and build
     complete.
+
+## 2026-04-30 - Release target moved to 0.1.1
+
+- Focus: avoid reusing or moving the already-pushed `v0.1.0` tag.
+- Progress:
+  - Confirmed local and remote `v0.1.0` both point at `fe8aa851`, while current
+    `main` includes substantial post-0.1.0 work.
+  - Removed stale local `auracall-0.1.0.tgz*` artifacts.
+  - Bumped package metadata and changelog target to `0.1.1` for the current
+    release candidate.
+- Validation:
+  - The 0.1.1 candidate needs fresh gates/artifacts/smoke before tagging.

@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.1.1 — 2026-04-30
+
+### Added
+- Account mirroring: add cache-backed account mirror status, catalog, refresh,
+  scheduler controls, scheduler history, artifact/file/media inventory, and
+  completeness readback for provider plus bound-identity mirrors.
+- Operations: add the read-only browser operator dashboard and expose lazy mirror
+  wake reason, backpressure, and scheduler posture through local API, CLI, and
+  MCP `api_status`.
+- Release workflow: add installed MCP API-status smoke coverage plus the
+  `operator-smoke` release phase for user-scoped runtime and MCP readiness.
+
+### Changed
+- Repository/runtime: complete the AuraCall repository rename and keep
+  repo/GitHub tarball plus user-scoped runtime as the active distribution path.
+- Account mirroring: nudge lazy mirror follow-up after response/media work
+  finishes instead of running mirror scraping inline with user requests.
+
+### Fixed
+- Browser media: harden ChatGPT image readback/materialization, Gemini media
+  tool readiness, and Grok visible tile metadata handling.
+- Browser providers: fail fast on signed-out or wrong-account browser states and
+  tighten Gemini tooltip/button handling around media capability detection.
+- Release docs: clarify that type errors and error-level lint diagnostics block
+  release while existing warning-level Biome diagnostics remain tracked cleanup
+  debt.
+
 ## 0.1.0 — 2026-04-28
 
 AuraCall starts a new package/version line at `0.1.0`. Older entries below are

@@ -15097,3 +15097,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `./scripts/release.sh gates` blocks type errors and error-level lint
   diagnostics; the existing warning-level Biome diagnostics remain tracked
   cleanup debt instead of an implicit release blocker.
+- 2026-04-30: Do not reuse or move an already-pushed release tag when the
+  current release candidate has advanced. `v0.1.0` already points at
+  `fe8aa851`, so the current post-0.1.0 work should cut as `0.1.1` with fresh
+  artifacts instead of attaching current tarballs to the old tag.

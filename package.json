@@ -1,6 +1,6 @@
 {
   "name": "auracall",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Aura-Call CLI for browser and API automation across ChatGPT, Grok, Gemini, and other supported models.",
   "type": "module",
   "main": "dist/bin/auracall.js",
