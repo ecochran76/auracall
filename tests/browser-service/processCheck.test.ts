@@ -16,26 +16,33 @@ afterEach(() => {
   }
 });
 
+function createWindowsProcessPayload(processId: number, commandLine: string) {
+  return {
+    // biome-ignore lint/style/useNamingConvention: mirrors Win32_Process JSON field names.
+    ProcessId: processId,
+    // biome-ignore lint/style/useNamingConvention: mirrors Win32_Process JSON field names.
+    CommandLine: commandLine,
+  };
+}
+
 describe('processCheck (package)', () => {
   test('matches the requested Windows user-data-dir exactly on WSL and extracts the debug port', async () => {
     process.env.WSL_DISTRO_NAME = 'Ubuntu';
     const tempDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-processcheck-'));
     const fakePowerShell = path.join(tempDir, 'powershell.exe');
     const payload = JSON.stringify([
-      {
-        ProcessId: 111,
-        CommandLine:
-          '"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" ' +
+      createWindowsProcessPayload(
+        111,
+        '"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" ' +
           '--remote-debugging-port=45000 ' +
           '--user-data-dir=C:\\Users\\ecoch\\AppData\\Local\\AuraCall\\browser-profiles\\other\\grok about:blank',
-      },
-      {
-        ProcessId: 222,
-        CommandLine:
-          '"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" ' +
+      ),
+      createWindowsProcessPayload(
+        222,
+        '"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" ' +
           '--remote-debugging-port=45879 ' +
           '--user-data-dir=C:\\Users\\ecoch\\AppData\\Local\\AuraCall\\browser-profiles\\default\\grok about:blank',
-      },
+      ),
     ]);
 
     await writeFile(fakePowerShell, `#!/bin/sh\nprintf '%s' '${payload}'\n`, 'utf8');
@@ -71,13 +78,12 @@ describe('processCheck (package)', () => {
     const tempDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-processcheck-'));
     const fakePowerShell = path.join(tempDir, 'powershell.exe');
     const payload = JSON.stringify([
-      {
-        ProcessId: 222,
-        CommandLine:
-          '"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" ' +
+      createWindowsProcessPayload(
+        222,
+        '"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" ' +
           '--remote-debugging-port=45894 ' +
           '--user-data-dir=C:\\Users\\ecoch\\AppData\\Local\\AuraCall\\browser-profiles\\default\\grok about:blank',
-      },
+      ),
     ]);
 
     await writeFile(

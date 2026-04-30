@@ -6,10 +6,12 @@ const {
   resolveChromeEndpointMock,
 } = vi.hoisted(() => {
   const client = {
+    // biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
     Network: {
       enable: vi.fn(async () => undefined),
       getCookies: vi.fn(async () => ({ cookies: [] })),
     },
+    // biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
     Runtime: {
       enable: vi.fn(async () => undefined),
       evaluate: vi.fn(async () => ({ result: { value: false } })),

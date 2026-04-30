@@ -75,7 +75,8 @@ describe('profileStore', () => {
         profile: {
           last_used: 'Profile 1',
           info_cache: {
-            Default: {
+            // biome-ignore lint/complexity/useLiteralKeys: quoted Chrome profile key would trip naming-convention diagnostics.
+            ['Default']: {
               name: 'Your Chrome',
               user_name: '',
               is_consented_primary_account: false,
@@ -106,7 +107,8 @@ describe('profileStore', () => {
         profile: {
           last_used: 'Profile 1',
           info_cache: {
-            Default: {
+            // biome-ignore lint/complexity/useLiteralKeys: quoted Chrome profile key would trip naming-convention diagnostics.
+            ['Default']: {
               name: 'Your Chrome',
               user_name: '',
               is_consented_primary_account: false,

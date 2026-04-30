@@ -15161,3 +15161,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   before suppressing naming warnings. A single helper with a justified
   `Runtime` key is clearer than repeating the same external protocol exception
   across every provider-state case.
+- 2026-04-30: Windows and Chrome profile fixtures should preserve upstream
+  field names at the fixture boundary. Use small helpers or computed keys with
+  local lint justifications for `Win32_Process` rows and Chrome `Local State`
+  profile keys instead of renaming those payloads.

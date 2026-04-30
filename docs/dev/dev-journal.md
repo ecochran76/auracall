@@ -24124,3 +24124,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Biome warning count dropped from 225 to 208.
   - Remaining classes are `useNamingConvention` (73), `noExplicitAny` (83),
     and `noNonNullAssertion` (52).
+
+## 2026-04-30 - Browser service external fixture casing
+
+- Focus: clear browser-service warnings for DevTools, Win32 process, and Chrome
+  profile metadata fixture casing.
+- Progress:
+  - Added local `useNamingConvention` justifications for login-helper
+    `Network` and `Runtime` CDP mocks.
+  - Wrapped PowerShell `Win32_Process` rows in a helper that preserves
+    `ProcessId` and `CommandLine` field names with one boundary justification.
+  - Used computed Chrome `Local State` `Default` profile keys with local
+    `useLiteralKeys` justifications so the fixture remains faithful without
+    triggering naming diagnostics.
+- Validation:
+  - `pnpm exec biome lint tests/browser-service/loginHelpers.test.ts tests/browser-service/processCheck.test.ts tests/browser/profileResolution.test.ts tests/browser/profileStore.test.ts --reporter=json`
+  - `pnpm vitest run tests/browser-service/loginHelpers.test.ts tests/browser-service/processCheck.test.ts tests/browser/profileResolution.test.ts tests/browser/profileStore.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm run typecheck`
+  - `pnpm run lint`
+  - `pnpm run docs:list`
+  - Biome warning count dropped from 208 to 197.
+  - Remaining classes are `useNamingConvention` (62), `noExplicitAny` (83),
+    and `noNonNullAssertion` (52).
