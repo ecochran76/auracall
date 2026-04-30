@@ -61,6 +61,33 @@ Shared prereqs
    ```
    Uses a built-in browserConfig (ChatGPT URL + cookie sync) and the provided model label for the picker (heads-up: if the ChatGPT UI renames the model label, this may need an update).
 
+## MCP `api_status` against local API
+
+Use this to verify MCP operators can assert the local API scheduler posture
+without shelling out to `auracall api status`.
+
+1) Refresh the installed user runtime:
+   ```bash
+   pnpm run install:user-runtime
+   ```
+
+2) Run both local API posture smokes:
+   ```bash
+   pnpm tsx scripts/smoke-api-status-mcp.ts --mode both --port 18081
+   ```
+
+Expected output:
+```text
+disabled: posture=disabled state=disabled port=18081
+enabled: posture=scheduled state=scheduled port=18082
+```
+
+The enabled smoke starts `auracall api serve` with
+`--account-mirror-scheduler-interval-ms 600000` and expects `scheduled`, not
+`ready`, because the scheduler arms its cadence timer immediately. The smoke
+does not enable `--account-mirror-scheduler-execute`, does not launch browsers,
+and stops each temporary API server before exiting.
+
 ## Claude Code smoke (tmux + cli)
 
 Use this to verify Claude Code can reach the Aura-Call MCP server end-to-end.

@@ -23804,3 +23804,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `expectedAccountMirrorBackpressure` assertions.
 - Validation:
   - Added direct MCP handler coverage for readback and posture mismatch errors.
+
+## 2026-04-30 - Installed MCP API status dogfood
+
+- Focus: prove installed MCP `api_status` can assert local API scheduler
+  posture.
+- Progress:
+  - Added `scripts/smoke-api-status-mcp.ts` for disabled/enabled local API
+    posture smokes through installed MCP.
+  - Documented the smoke in `docs/testing/mcp-smoke.md` and `docs/mcp.md`.
+- Validation:
+  - Installed MCP returned `disabled` for a scheduler-disabled temporary API
+    server.
+  - Installed MCP returned `scheduled` for a dry-run scheduler-enabled
+    temporary API server.

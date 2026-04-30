@@ -15085,3 +15085,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   operators. MCP `api_status` now reads local `/status` and supports
   account-mirror posture/backpressure expectations without launching browsers or
   touching provider pages.
+- 2026-04-30: The MCP `api_status` smoke should prove both startup postures.
+  A scheduler-enabled `api serve` reports `scheduled` immediately because the
+  cadence timer is armed; use that as the expected posture for enabled dry-run
+  smoke, while scheduler-disabled smoke should report `disabled`.
