@@ -15165,3 +15165,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   field names at the fixture boundary. Use small helpers or computed keys with
   local lint justifications for `Win32_Process` rows and Chrome `Local State`
   profile keys instead of renaming those payloads.
+- 2026-04-30: Chrome target-reuse tests should follow the same CDP casing
+  policy as manual-login tests. Keep DevTools and `chrome-remote-interface`
+  mock keys API-shaped, and justify them locally at the mock boundary.

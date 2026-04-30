@@ -4,12 +4,14 @@ const {
   client,
   cdpMock,
   resolveChromeEndpointMock,
-  } = vi.hoisted(() => {
-    const client = {
-      Browser: {
+} = vi.hoisted(() => {
+  const client = {
+    // biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
+    Browser: {
       getWindowForTarget: vi.fn(async (_input: { targetId: string }) => ({ windowId: 1 })),
       setWindowBounds: vi.fn(async () => undefined),
     },
+    // biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
     Page: {
       enable: vi.fn(async () => undefined),
       navigate: vi.fn(async () => undefined),
@@ -21,8 +23,11 @@ const {
   const cdpMock = Object.assign(
     vi.fn(async () => client),
     {
+      // biome-ignore lint/style/useNamingConvention: chrome-remote-interface static API uses PascalCase.
       List: vi.fn(),
+      // biome-ignore lint/style/useNamingConvention: chrome-remote-interface static API uses PascalCase.
       New: vi.fn(),
+      // biome-ignore lint/style/useNamingConvention: chrome-remote-interface static API uses PascalCase.
       Close: vi.fn(),
     },
   );

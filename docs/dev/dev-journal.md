@@ -24146,3 +24146,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Biome warning count dropped from 208 to 197.
   - Remaining classes are `useNamingConvention` (62), `noExplicitAny` (83),
     and `noNonNullAssertion` (52).
+
+## 2026-04-30 - Chrome target reuse CDP casing
+
+- Focus: clear the CDP and `chrome-remote-interface` casing warnings in
+  `tests/browser-service/chromeTargetReuse.test.ts`.
+- Progress:
+  - Added local `useNamingConvention` justifications for DevTools
+    `Browser`/`Page` domains and `chrome-remote-interface` `List`/`New`/`Close`
+    static API members.
+  - Fixed stale indentation in the hoisted test fixture while preserving the
+    external API-shaped mock.
+- Validation:
+  - `pnpm exec biome lint tests/browser-service/chromeTargetReuse.test.ts --reporter=json`
+  - `pnpm vitest run tests/browser-service/chromeTargetReuse.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm run typecheck`
+  - `pnpm run lint`
+  - `pnpm run docs:list`
+  - Biome warning count dropped from 197 to 192.
+  - Remaining classes are `useNamingConvention` (57), `noExplicitAny` (83),
+    and `noNonNullAssertion` (52).
