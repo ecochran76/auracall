@@ -23791,3 +23791,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `/ops/browser` now shows the latest mirror posture in the server summary.
 - Validation:
   - Added focused HTTP and CLI assertions for operator posture.
+
+## 2026-04-30 - MCP API status posture
+
+- Focus: let MCP operators assert the same lazy mirror scheduler posture exposed
+  by local API and CLI status.
+- Progress:
+  - Added MCP `api_status`, which reads local API `/status`.
+  - The tool returns the same compact scheduler summary used by the CLI,
+    including `scheduler.operatorStatus`.
+  - The tool supports `expectedAccountMirrorPosture` and
+    `expectedAccountMirrorBackpressure` assertions.
+- Validation:
+  - Added direct MCP handler coverage for readback and posture mismatch errors.

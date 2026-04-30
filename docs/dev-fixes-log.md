@@ -15081,3 +15081,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `/status.accountMirrorScheduler.operatorStatus.posture` now distinguishes
   disabled, paused, active, ready, healthy, and backpressured states without
   requiring operators to inspect the latest pass internals.
+- 2026-04-30: MCP agents need the same local API scheduler posture as CLI
+  operators. MCP `api_status` now reads local `/status` and supports
+  account-mirror posture/backpressure expectations without launching browsers or
+  touching provider pages.

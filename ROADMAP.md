@@ -50,7 +50,8 @@ Current State:
     media settles or response-run drain completes, while routine refreshes keep
     zero browser queue wait; `/status.accountMirrorScheduler` reports
     `lastWakeReason`, `lastWakeAt`, and `operatorStatus.posture` for operator
-    audit
+    audit; MCP `api_status` exposes the same local API posture for agent
+    assertions
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local

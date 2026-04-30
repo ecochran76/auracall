@@ -57,6 +57,20 @@
 - CLI parity: `auracall run status <id> --json` reads the same durable status
   envelope from local storage.
 
+### `api_status`
+- Inputs: `port` for the local `auracall api serve` listener; optional `host`,
+  `timeoutMs`, `expectedAccountMirrorPosture`, and
+  `expectedAccountMirrorBackpressure`.
+- Behavior: reads the local API `/status` endpoint and returns the same compact
+  scheduler summary used by `auracall api status`, including
+  `scheduler.operatorStatus.posture`, wake reason, and latest mirror
+  backpressure. It does not launch browsers, touch CDP, submit provider work,
+  or read provider pages.
+- Use this when an MCP operator needs to assert lazy mirror readiness or
+  backpressure without shelling out to the CLI. `account_mirror_status` remains
+  the cache-only per-target mirror status tool; `api_status` is specifically
+  for the running API service posture.
+
 ### `runtime_inspect`
 - Inputs: one runtime lookup key, `runId`, `runtimeRunId`, `teamRunId`, or
   `taskRunSpecId`; optional `runnerId`; optional `probe: "service-state"`;

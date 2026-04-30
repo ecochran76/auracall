@@ -178,6 +178,10 @@ Current implementation-facing politeness contract:
 - `/status.accountMirrorScheduler.operatorStatus.posture` gives operators a
   compact scheduler read without inspecting pass internals: `disabled`,
   `paused`, `running`, `scheduled`, `ready`, `healthy`, or `backpressured`.
+- MCP `api_status` reads the local API `/status` summary and supports
+  `expectedAccountMirrorPosture` / `expectedAccountMirrorBackpressure` so
+  agents can assert the running scheduler posture without shelling out to the
+  CLI.
 - Installed-runtime execute dogfood started `api serve` with
   `--account-mirror-scheduler-interval-ms 600000` and
   `--account-mirror-scheduler-execute`, then triggered one manual

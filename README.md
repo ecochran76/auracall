@@ -227,9 +227,12 @@ Terminology note:
   live-follow nudges after real work settles.
   `/status.accountMirrorScheduler.operatorStatus.posture` gives the compact
   operator read: `disabled`, `paused`, `running`, `scheduled`, `ready`,
-  `healthy`, or `backpressured`. For live execute dogfood, prefer a long
-  interval plus one manual `run-once` request so the scheduler proves the
-  refresh path without repeatedly touching bot-sensitive provider pages.
+  `healthy`, or `backpressured`. MCP `api_status` reads the same local
+  `/status` posture and supports expectation fields so agents can assert
+  scheduler readiness without shelling out to the CLI. For live execute
+  dogfood, prefer a long interval plus one manual `run-once` request so the
+  scheduler proves the refresh path without repeatedly touching bot-sensitive
+  provider pages.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

@@ -222,6 +222,8 @@
       - it must not submit prompts, fetch full conversation bodies, or load
         immature conversation ids
     - MCP parity:
+      - `api_status` reads local API `/status` and exposes
+        `scheduler.operatorStatus.posture`
       - `account_mirror_status`
       - `account_mirror_catalog`
       - `account_mirror_refresh`
