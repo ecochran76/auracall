@@ -1,6 +1,29 @@
 import { describe, expect, test, vi } from 'vitest';
 import type { ResolvedUserConfig } from '../../src/config.js';
 import { BrowserService } from '../../src/browser/service/browserService.js';
+import type {
+  BrowserInstance,
+  ClassifiedBrowserInstance,
+} from '../../packages/browser-service/src/service/stateRegistry.js';
+import type { InstanceScanResult } from '../../packages/browser-service/src/service/instanceScanner.js';
+
+function browserInstance(overrides: Partial<BrowserInstance> = {}): BrowserInstance {
+  return {
+    pid: 9999,
+    port: 9222,
+    host: '127.0.0.1',
+    profilePath: '/tmp/profile',
+    profileName: 'Default',
+    type: 'chrome',
+    launchedAt: new Date().toISOString(),
+    lastSeenAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+function classifiedInstances(instances: ClassifiedBrowserInstance[]): ClassifiedBrowserInstance[] {
+  return instances;
+}
 
 const sessionMocks = vi.hoisted(() => ({
   resolveBrowserListTarget: vi.fn(async () => ({ host: '127.0.0.1', port: 9222 })),
@@ -13,7 +36,7 @@ vi.mock('../../src/browser/service/session.js', () => ({
 }));
 
 const instanceScannerMocks = vi.hoisted(() => ({
-  scanRegisteredInstance: vi.fn(async () => ({
+  scanRegisteredInstance: vi.fn<() => Promise<InstanceScanResult | null>>(async () => ({
     instance: {
       pid: 9999,
       port: 9222,
@@ -39,8 +62,8 @@ vi.mock('../../packages/browser-service/src/service/instanceScanner.js', async (
 });
 
 const stateRegistryMocks = vi.hoisted(() => ({
-  listInstances: vi.fn(async () => []),
-  listInstancesWithLiveness: vi.fn(async () => []),
+  listInstances: vi.fn<() => Promise<BrowserInstance[]>>(async () => []),
+  listInstancesWithLiveness: vi.fn<() => Promise<ClassifiedBrowserInstance[]>>(async () => []),
   updateInstance: vi.fn(async () => {}),
   registerInstance: vi.fn(async () => {}),
 }));
@@ -320,7 +343,7 @@ describe('BrowserService resolveServiceTarget', () => {
 
   test('does not scan a selected DevTools port from a different managed browser profile', async () => {
     loggerMessages.length = 0;
-    stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce([
+    stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce(classifiedInstances([
       {
         instance: {
           pid: 1111,
@@ -333,7 +356,8 @@ describe('BrowserService resolveServiceTarget', () => {
           lastSeenAt: new Date().toISOString(),
         },
         alive: true,
-        liveness: 'alive',
+        liveness: 'live',
+        actualPid: null,
       },
       {
         instance: {
@@ -347,9 +371,10 @@ describe('BrowserService resolveServiceTarget', () => {
           lastSeenAt: new Date().toISOString(),
         },
         alive: true,
-        liveness: 'alive',
+        liveness: 'live',
+        actualPid: null,
       },
-    ] as any);
+    ]));
     instanceScannerMocks.scanRegisteredInstance.mockResolvedValueOnce({
       instance: {
         pid: 2222,
@@ -398,7 +423,7 @@ describe('BrowserService resolveServiceTarget', () => {
   });
 
   test('fails closed when a selected DevTools port belongs to another managed browser profile', async () => {
-    stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce([
+    stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce(classifiedInstances([
       {
         instance: {
           pid: 1111,
@@ -411,9 +436,10 @@ describe('BrowserService resolveServiceTarget', () => {
           lastSeenAt: new Date().toISOString(),
         },
         alive: true,
-        liveness: 'alive',
+        liveness: 'live',
+        actualPid: null,
       },
-    ] as any);
+    ]));
 
     const service = BrowserService.fromConfig(
       {
@@ -438,42 +464,24 @@ describe('BrowserService resolveServiceTarget', () => {
 
   test('reports discarded stale registry candidates for the selected port and expected profile', async () => {
     loggerMessages.length = 0;
-    stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce([
+    stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce(classifiedInstances([
       {
-        instance: {
-          pid: 9999,
-          port: 9222,
-          host: '127.0.0.1',
-          profilePath: '/tmp/profile',
-          profileName: 'Default',
-          type: 'chrome',
-          launchedAt: new Date().toISOString(),
-          lastSeenAt: new Date().toISOString(),
-        },
+        instance: browserInstance(),
         alive: false,
         liveness: 'dead-port',
         actualPid: 9999,
       },
       {
-        instance: {
+        instance: browserInstance({
           pid: 8888,
           port: 4555,
-          host: '127.0.0.1',
-          profilePath: '/tmp/profile',
-          profileName: 'Default',
-          type: 'chrome',
-          launchedAt: new Date().toISOString(),
-          lastSeenAt: new Date().toISOString(),
-        },
+        }),
         alive: false,
         liveness: 'profile-mismatch',
         actualPid: 7777,
       },
-    ] as any);
-    instanceScannerMocks.scanRegisteredInstance.mockResolvedValueOnce({
-      instance: undefined,
-      tabs: [],
-    } as any);
+    ]));
+    instanceScannerMocks.scanRegisteredInstance.mockResolvedValueOnce(null);
     const service = BrowserService.fromConfig(baseConfig);
     const target = await service.resolveServiceTarget({
       serviceId: 'chatgpt',

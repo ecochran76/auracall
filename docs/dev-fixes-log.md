@@ -15142,3 +15142,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-04-30: Browser port-resolution wrapper tests can use a typed minimal
   `ResolvedUserConfig` fixture helper for partial config shapes that exercise
   routing behavior. Prefer that narrow helper over call-site `as any` casts.
+- 2026-04-30: Browser service registry tests should type state-registry and
+  instance-scanner mocks with the package boundary types. Use `null` for a
+  missing instance scan and the real liveness literal `live`, not test-only
+  placeholders hidden behind `any`.

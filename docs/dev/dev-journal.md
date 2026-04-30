@@ -24024,3 +24024,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Biome warning count dropped from 239 to 238.
   - Remaining classes are `useNamingConvention` (95), `noExplicitAny` (89),
     and `noNonNullAssertion` (54).
+
+## 2026-04-30 - Browser service scanner fixture typing
+
+- Focus: clear the `noExplicitAny` cluster in
+  `tests/browser/browserService.test.ts` around browser registry and scanner
+  fixtures.
+- Progress:
+  - Typed the state-registry and instance-scanner mocks with the package
+    boundary types.
+  - Added small `BrowserInstance` and `ClassifiedBrowserInstance` fixture
+    helpers for liveness rows.
+  - Replaced the no-instance scanner fixture with the real `null` result shape.
+  - Corrected live registry liveness fixtures from the stale test-only
+    `"alive"` string to the package `"live"` literal.
+- Validation:
+  - `pnpm run typecheck`
+  - `pnpm vitest run tests/browser/browserService.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm run lint`
+  - `pnpm run docs:list`
+  - Biome warning count dropped from 238 to 234.
+  - Remaining classes are `useNamingConvention` (95), `noExplicitAny` (85),
+    and `noNonNullAssertion` (54).
