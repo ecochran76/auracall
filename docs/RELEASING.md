@@ -32,9 +32,9 @@
   - [ ] Ensure README reflects current CLI options (globs, `--status`, heartbeat behavior).
   - [ ] **Release notes must exactly match the version’s changelog section** (full Added/Changed/Fixed/Tests bullets, no omissions). After creating the GitHub release, compare the body to `CHANGELOG.md` and fix any mismatch.
 4. **Validation**
-   - [ ] `pnpm run check` (zero warnings allowed; fail on any lint/type warnings).
+   - [ ] `pnpm run check` (type errors block release).
    - [ ] `pnpm vitest run --maxWorkers 1 --testTimeout 15000` (the release helper uses this serial form by default; the normal parallel `pnpm test` can trip short unit-test timeouts under load)
-   - [ ] `pnpm run lint`
+   - [ ] `pnpm run lint` (error-level lint diagnostics block release; current warning-level Biome diagnostics are tracked as separate cleanup debt)
    - [ ] Optional live smoke (with real `OPENAI_API_KEY`): `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/openai-live.test.ts`
    - [ ] MCP sanity check: with `config/mcporter.json` pointed at the local stdio server (`auracall-local`), run `mcporter list auracall-local --schema --config config/mcporter.json` after building (`pnpm build`) to ensure tools/resources are discoverable.
    - [ ] Installed MCP API status smoke: after refreshing the user runtime, run `pnpm run smoke:mcp-api-status` and confirm `disabled` plus `scheduled` account-mirror scheduler postures.

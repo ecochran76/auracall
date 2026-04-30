@@ -23831,3 +23831,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - Release helper syntax and the package smoke script are covered in this
     slice's verification.
+
+## 2026-04-30 - Release gates lint policy correction
+
+- Focus: align the release checklist with the lint policy that the release
+  helper actually enforces.
+- Progress:
+  - Confirmed `./scripts/release.sh gates` passes check, warning-level lint,
+    serial Vitest, and build.
+  - Updated `docs/RELEASING.md` so type errors and error-level lint diagnostics
+    block release, while the existing warning-level Biome diagnostics remain
+    separate cleanup debt.
+- Validation:
+  - Full release gates passed with 1,861 tests passing, 65 skipped, and build
+    complete.

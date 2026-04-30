@@ -15093,3 +15093,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `pnpm run smoke:mcp-api-status` is now the stable command, and
   `./scripts/release.sh operator-smoke` refreshes the user runtime, runs that
   smoke, and prints the installed CLI version before a release tag.
+- 2026-04-30: Release lint policy should match the helper's actual behavior.
+  `./scripts/release.sh gates` blocks type errors and error-level lint
+  diagnostics; the existing warning-level Biome diagnostics remain tracked
+  cleanup debt instead of an implicit release blocker.
