@@ -240,16 +240,13 @@ function compareExecutionRunClaimCandidates(
 }
 
 function claimCandidateRank(status: ExecutionRunClaimCandidateStatus): number {
-  switch (status) {
-    case 'eligible':
-      return 0;
-    case 'blocked-affinity':
-      return 1;
-    case 'stale-runner':
-      return 2;
-    case 'not-ready':
-      return 3;
-  }
+  const rankByStatus: Record<ExecutionRunClaimCandidateStatus, number> = {
+    eligible: 0,
+    'blocked-affinity': 1,
+    'stale-runner': 2,
+    'not-ready': 3,
+  };
+  return rankByStatus[status];
 }
 
 

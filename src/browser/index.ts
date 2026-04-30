@@ -1210,7 +1210,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     }
   };
 
-  const manualLogin = true;
+  const manualLogin: boolean = true;
   const {
     userDataDir,
     chromeProfile,
@@ -2197,30 +2197,22 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       if (!keepBrowserOpen) {
         if (!connectionClosedUnexpectedly) {
           try {
-            if (manualLogin) {
-              await gracefulShutdownChrome(chrome, client ?? null, logger);
-            } else {
-              await chrome.kill();
-            }
+            await gracefulShutdownChrome(chrome, client ?? null, logger);
           } catch {
             // ignore kill failures
           }
         }
-        if (manualLogin && !effectiveKeepBrowser) {
-          const shouldCleanup = await shouldCleanupManualLoginProfileState(
-            userDataDir,
-            logger.verbose ? logger : undefined,
-            {
-              connectionClosedUnexpectedly,
-              host: chromeHost,
-            },
-          );
-          if (shouldCleanup) {
-            // Preserve the persistent manual-login profile, but clear stale reattach hints.
-            await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'never' }).catch(() => undefined);
-          }
-        } else {
-          await rm(userDataDir, { recursive: true, force: true }).catch(() => undefined);
+        const shouldCleanup = await shouldCleanupManualLoginProfileState(
+          userDataDir,
+          logger.verbose ? logger : undefined,
+          {
+            connectionClosedUnexpectedly,
+            host: chromeHost,
+          },
+        );
+        if (shouldCleanup) {
+          // Preserve the persistent manual-login profile, but clear stale reattach hints.
+          await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'never' }).catch(() => undefined);
         }
         if (!connectionClosedUnexpectedly) {
           const totalSeconds = (Date.now() - startedAt) / 1000;
@@ -3458,7 +3450,7 @@ async function runGrokBrowserMode({
       logger(`Failed to persist runtime hint: ${message}`);
     }
   };
-  const manualLogin = true;
+  const manualLogin: boolean = true;
   const runtimeTarget = (config.target ?? 'grok') as 'grok';
   const {
     userDataDir,
@@ -3513,7 +3505,7 @@ async function runGrokBrowserMode({
     rememberOwnedChrome(chrome);
   }
   chromeHost = (chrome as unknown as { host?: string }).host ?? '127.0.0.1';
-  if (manualLogin && chrome.port) {
+  if (chrome.port) {
     await writeDevToolsActivePort(userDataDir, chrome.port);
     if (!reusedChrome && chrome.pid) {
       await writeChromePid(userDataDir, chrome.pid);
@@ -3542,9 +3534,7 @@ async function runGrokBrowserMode({
     } catch {
       // ignore cleanup errors
     }
-    if (manualLogin) {
-      await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_recorded_pid_dead' });
-    }
+    await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_recorded_pid_dead' });
     effectiveConfig = { ...effectiveConfig, debugPort: fallbackPort };
     chrome = await launchChrome(
       {
@@ -3557,7 +3547,7 @@ async function runGrokBrowserMode({
     );
     rememberOwnedChrome(chrome);
     chromeHost = (chrome as unknown as { host?: string }).host ?? '127.0.0.1';
-    if (manualLogin && chrome.port) {
+    if (chrome.port) {
       await writeDevToolsActivePort(userDataDir, chrome.port);
       if (chrome.pid) {
         await writeChromePid(userDataDir, chrome.pid);
@@ -3824,27 +3814,17 @@ async function runGrokBrowserMode({
       const keepBrowserOpen = effectiveKeepBrowser || preserveBrowserOnError;
       if (!keepBrowserOpen && chrome) {
         try {
-          if (manualLogin) {
-            await gracefulShutdownChrome(chrome, client ?? null, logger);
-          } else {
-            await chrome.kill();
-          }
+          await gracefulShutdownChrome(chrome, client ?? null, logger);
         } catch {
           // ignore
         }
       }
-      if (manualLogin) {
-        if (!keepBrowserOpen) {
-          const shouldCleanup = await shouldCleanupManualLoginProfileState(userDataDir, logger, {
-            connectionClosedUnexpectedly,
-          });
-          if (shouldCleanup) {
-            await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_recorded_pid_dead' });
-          }
-        }
-      } else {
-        if (!keepBrowserOpen) {
-          await rm(userDataDir, { recursive: true, force: true }).catch(() => undefined);
+      if (!keepBrowserOpen) {
+        const shouldCleanup = await shouldCleanupManualLoginProfileState(userDataDir, logger, {
+          connectionClosedUnexpectedly,
+        });
+        if (shouldCleanup) {
+          await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_recorded_pid_dead' });
         }
       }
       removeTerminationHooks?.();

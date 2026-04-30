@@ -15105,3 +15105,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   style churn. Start with source-level unsafe assertions and script-level raw
   metadata parsing before touching schema/test naming-convention warnings,
   because provider payload casing and fixtures need a separate policy decision.
+- 2026-04-30: When `noUnnecessaryConditions` flags browser runtime code, remove
+  dead branches only after confirming the runtime mode is intentionally fixed.
+  The managed ChatGPT/Grok browser paths are manual-profile paths, so cleanup
+  should preserve profile state instead of falling back to temp-profile removal.

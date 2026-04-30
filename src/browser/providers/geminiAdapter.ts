@@ -4755,7 +4755,7 @@ async function readGeminiConversationContextWithClient(
 async function _openGeminiConversationMenu(
   client: ChromeClient,
   conversationId: string,
-  trace?: GeminiDeleteTrace,
+  trace: GeminiDeleteTrace,
 ): Promise<void> {
   await navigateToGeminiConversationSurface(client, GEMINI_APP_URL);
   await dismissGeminiPreciseLocationDialog(client.Runtime);
@@ -4798,9 +4798,7 @@ async function _openGeminiConversationMenu(
     y: hoverY,
     button: 'none',
   });
-  if (trace) {
-    trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-hover'));
-  }
+  trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-hover'));
   const menuButtonReady = await waitForPredicate(
     client.Runtime,
     `(() => {
@@ -4828,9 +4826,7 @@ async function _openGeminiConversationMenu(
     },
   );
   if (!menuButtonReady.ok) {
-    if (trace) {
-      trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'menu-button-missing'));
-    }
+    trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'menu-button-missing'));
     throw new Error('conversation-actions-menu-missing');
   }
   const { result } = await client.Runtime.evaluate({
@@ -4868,12 +4864,10 @@ async function _openGeminiConversationMenu(
   if (!payload.clicked) {
     throw new Error(`Gemini conversation row menu not found for ${conversationId}.`);
   }
-  if (trace) {
-    trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-menu-click'));
-  }
+  trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-menu-click'));
 }
 
-async function selectGeminiConversationDeleteMenuItem(client: ChromeClient, trace?: GeminiDeleteTrace): Promise<void> {
+async function selectGeminiConversationDeleteMenuItem(client: ChromeClient, trace: GeminiDeleteTrace): Promise<void> {
   const ready = await waitForPredicate(
     client.Runtime,
     `(() => {
@@ -4889,9 +4883,7 @@ async function selectGeminiConversationDeleteMenuItem(client: ChromeClient, trac
     },
   );
   if (!ready.ok) {
-    if (trace) {
-      trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'delete-menu-missing'));
-    }
+    trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'delete-menu-missing'));
     throw new Error('Gemini conversation delete menu did not open.');
   }
   const { result } = await client.Runtime.evaluate({
@@ -4907,9 +4899,7 @@ async function selectGeminiConversationDeleteMenuItem(client: ChromeClient, trac
   if (!payload.ok) {
     throw new Error(payload.reason || 'Gemini conversation delete menu item not found.');
   }
-  if (trace) {
-    trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-delete-click'));
-  }
+  trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-delete-click'));
 }
 
 async function openGeminiConversationRenameDialog(client: ChromeClient): Promise<void> {
@@ -5050,7 +5040,7 @@ async function renameGeminiConversationOnPage(
 
 async function clickGeminiConversationDeleteConfirmations(
   client: ChromeClient,
-  trace?: GeminiDeleteTrace,
+  trace: GeminiDeleteTrace,
 ): Promise<number> {
   const opened = await waitForPredicate(
     client.Runtime,
@@ -5078,14 +5068,10 @@ async function clickGeminiConversationDeleteConfirmations(
     },
   );
   if (!opened.ok) {
-    if (trace) {
-      trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'confirm-dialog-missing'));
-    }
+    trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'confirm-dialog-missing'));
     throw new Error('Gemini conversation delete confirmation dialog did not open.');
   }
-  if (trace) {
-    trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'confirm-dialog-open'));
-  }
+  trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'confirm-dialog-open'));
   let clicked = 0;
   const clearedPredicate = `(() => {
     const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
@@ -5149,9 +5135,7 @@ async function clickGeminiConversationDeleteConfirmations(
       description: 'Gemini conversation delete confirmation dismissed',
     });
     if (cleared.ok) {
-      if (trace) {
-        trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-confirm-click'));
-      }
+      trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-confirm-click'));
       return clicked;
     }
   }
@@ -5172,9 +5156,7 @@ async function clickGeminiConversationDeleteConfirmations(
       description: 'Gemini conversation delete confirmation dismissed',
     });
     if (cleared.ok) {
-      if (trace) {
-        trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-confirm-click'));
-      }
+      trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-confirm-click'));
       return clicked;
     }
   }
@@ -5188,7 +5170,7 @@ async function waitForGeminiConversationRemoved(
   client: ChromeClient,
   conversationId: string,
   timeoutMs: number = 90_000,
-  trace?: GeminiDeleteTrace,
+  trace: GeminiDeleteTrace,
 ): Promise<void> {
   const freshAbsenceRequired = 2;
   let consecutiveFreshAbsenceCount = 0;
@@ -5268,9 +5250,7 @@ async function waitForGeminiConversationRemoved(
     });
     await new Promise((resolve) => setTimeout(resolve, 5_000));
   }
-  if (trace) {
-    trace.push(...verifierTrace);
-  }
+  trace.push(...verifierTrace);
   const traceSummary = summarizeGeminiDeleteTrace(verifierTrace, 4);
   if (lastSeen) {
     throw new Error(`Gemini conversation ${conversationId} still appears in the conversation list after delete. trace=${traceSummary}`);

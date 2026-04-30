@@ -124,14 +124,12 @@ export function createAuracallBrowserSetupContract(
 }
 
 function defaultVerificationModelForTarget(target: BrowserSetupTarget): ModelName {
-  switch (target) {
-    case 'gemini':
-      return 'gemini-3-pro';
-    case 'grok':
-      return 'grok-4.20';
-    default:
-      return 'gpt-5.2';
-  }
+  const defaultModelByTarget: Record<BrowserSetupTarget, ModelName> = {
+    chatgpt: 'gpt-5.2',
+    gemini: 'gemini-3-pro',
+    grok: 'grok-4.20',
+  };
+  return defaultModelByTarget[target];
 }
 
 function inferBrowserTargetFromModel(model: ModelName): BrowserSetupTarget | null {

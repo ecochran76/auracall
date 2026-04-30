@@ -346,14 +346,12 @@ function dedupeBrowserWizardChoices(choices: BrowserWizardChoice[]): BrowserWiza
 }
 
 function defaultWizardModelForTarget(target: BrowserWizardTarget): string {
-  switch (target) {
-    case 'gemini':
-      return 'gemini-3-pro';
-    case 'grok':
-      return 'grok-4.20';
-    default:
-      return 'gpt-5.2';
-  }
+  const defaultModelByTarget: Record<BrowserWizardTarget, string> = {
+    chatgpt: 'gpt-5.2',
+    gemini: 'gemini-3-pro',
+    grok: 'grok-4.20',
+  };
+  return defaultModelByTarget[target];
 }
 
 function titleCase(value: string): string {

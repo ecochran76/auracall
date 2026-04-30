@@ -2381,15 +2381,15 @@ function readExecutionRunCancellation(record: ExecutionRunStoredRecord): {
   };
 }
 
-function defaultLocalActionResolutionReason(resolution: 'approved' | 'rejected' | 'cancelled'): string {
-  switch (resolution) {
-    case 'approved':
-      return 'local action approved by service host operator control';
-    case 'rejected':
-      return 'local action rejected by service host operator control';
-    case 'cancelled':
-      return 'local action cancelled by service host operator control';
-  }
+type LocalActionResolution = 'approved' | 'rejected' | 'cancelled';
+
+function defaultLocalActionResolutionReason(resolution: LocalActionResolution): string {
+  const reasonByResolution: Record<LocalActionResolution, string> = {
+    approved: 'local action approved by service host operator control',
+    rejected: 'local action rejected by service host operator control',
+    cancelled: 'local action cancelled by service host operator control',
+  };
+  return reasonByResolution[resolution];
 }
 
 async function persistOperatorDrainEvent(
@@ -2602,20 +2602,15 @@ function hostDrainCandidatePriority(kind: HostDrainCandidateKind): number {
   // 2. actionable recoverable-stranded work
   // 3. non-executable classes
   // Within each class, preserve oldest-first createdAt ordering.
-  switch (kind) {
-    case 'runnable':
-      return 0;
-    case 'recoverable-stranded':
-      return 1;
-    case 'active-lease':
-      return 2;
-    case 'stranded':
-      return 3;
-    case 'idle':
-      return 4;
-    case 'missing':
-      return 5;
-  }
+  const priorityByKind: Record<HostDrainCandidateKind, number> = {
+    runnable: 0,
+    'recoverable-stranded': 1,
+    'active-lease': 2,
+    stranded: 3,
+    idle: 4,
+    missing: 5,
+  };
+  return priorityByKind[kind];
 }
 
 function createActionableExecutionPlan(candidates: HostDrainCandidateInspection[], maxRuns: number): Set<string> {

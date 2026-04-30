@@ -23874,3 +23874,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/browser/featureDiscovery.test.ts --maxWorkers 1 --testTimeout 15000`
   - Biome warning count dropped from 574 to 563; source-level
     `noNonNullAssertion` and script-level `noExplicitAny` are now zero.
+
+## 2026-04-30 - Lint debt runtime condition cleanup
+
+- Focus: clear remaining source-level `noUnnecessaryConditions` diagnostics
+  without touching schema/test naming-convention debt.
+- Progress:
+  - Removed dead manual-login branches from managed browser cleanup and
+    reattach paths while preserving manual profile state behavior.
+  - Converted small exhaustive switches to typed lookup tables in browser
+    setup, feature URL matching, runtime claims, and service-host priority
+    helpers.
+  - Made Gemini delete trace collection explicit in the delete-only helpers.
+- Validation:
+  - `pnpm run typecheck`
+  - Biome warning count dropped from 563 to 538; source-level
+    `noUnnecessaryConditions` is now zero.

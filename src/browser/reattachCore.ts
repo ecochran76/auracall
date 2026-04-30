@@ -351,7 +351,6 @@ async function resumeBrowserSessionViaNewChrome(
     throw new Error('Reattach runtime dependencies missing; cannot launch new Chrome.');
   }
   const resolved = runtimeDeps.resolveBrowserConfig(config ?? {});
-  const manualLogin = true;
   const launchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
     auracallProfile: config?.auracallProfileName ?? null,
     browser: resolved,
@@ -461,11 +460,9 @@ async function resumeBrowserSessionViaNewChrome(
     } catch {
       // ignore
     }
-    if (manualLogin) {
-      await runtimeDeps.cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'never' }).catch(
-        () => undefined,
-      );
-    }
+    await runtimeDeps.cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'never' }).catch(
+      () => undefined,
+    );
   }
 
   return { answerText: aligned.answerText, answerMarkdown: aligned.answerMarkdown };

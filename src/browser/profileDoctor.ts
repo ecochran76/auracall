@@ -224,16 +224,12 @@ export function createAuracallBrowserFeaturesContract(
 }
 
 export function resolveBrowserFeatureUrlContains(target: BrowserDoctorTarget): string {
-  switch (target) {
-    case 'chatgpt':
-      return 'chatgpt.com';
-    case 'grok':
-      return 'grok.com';
-    case 'gemini':
-      return 'gemini.google.com';
-    default:
-      return target;
-  }
+  const urlContainsByTarget: Record<BrowserDoctorTarget, string> = {
+    chatgpt: 'chatgpt.com',
+    grok: 'grok.com',
+    gemini: 'gemini.google.com',
+  };
+  return urlContainsByTarget[target];
 }
 
 export function isLoopbackBrowserHost(host: string | null | undefined): boolean {

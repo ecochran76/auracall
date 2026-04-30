@@ -7,14 +7,12 @@ const GEMINI_COMPATIBLE_HOSTS = requireBundledServiceCompatibleHosts('gemini');
 const GROK_COMPATIBLE_HOSTS = requireBundledServiceCompatibleHosts('grok');
 
 export function resolveCompatibleHostsForTarget(target: BrowserServiceTarget): string[] {
-  switch (target) {
-    case 'chatgpt':
-      return [...CHATGPT_COMPATIBLE_HOSTS];
-    case 'gemini':
-      return [...GEMINI_COMPATIBLE_HOSTS];
-    case 'grok':
-      return [...GROK_COMPATIBLE_HOSTS];
-  }
+  const compatibleHostsByTarget: Record<BrowserServiceTarget, string[]> = {
+    chatgpt: CHATGPT_COMPATIBLE_HOSTS,
+    gemini: GEMINI_COMPATIBLE_HOSTS,
+    grok: GROK_COMPATIBLE_HOSTS,
+  };
+  return [...compatibleHostsByTarget[target]];
 }
 
 export function resolveCompatibleHostsForUrl(url: string | null | undefined): string[] {
