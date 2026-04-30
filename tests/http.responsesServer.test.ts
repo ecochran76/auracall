@@ -138,6 +138,15 @@ describe('http responses adapter', () => {
     };
   };
 
+  const waitForPredicate = async (predicate: () => boolean, timeoutMs = 1_000): Promise<void> => {
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+      if (predicate()) return;
+      await delay(25);
+    }
+    expect(predicate()).toBe(true);
+  };
+
   const seedRequestedLocalActionDirectRun = async (
     control: ReturnType<typeof createExecutionRuntimeControl>,
     runId: string,
@@ -1863,6 +1872,84 @@ describe('http responses adapter', () => {
           kind: 'account-mirror-scheduler',
           action: 'run-once',
           dryRun: false,
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('nudges lazy account mirror follow-up after media generation settles', async () => {
+    const pass: AccountMirrorSchedulerPassResult = {
+      object: 'account_mirror_scheduler_pass',
+      mode: 'dry-run',
+      action: 'skipped',
+      startedAt: '2026-04-29T12:00:00.000Z',
+      completedAt: '2026-04-29T12:00:00.000Z',
+      selectedTarget: null,
+      backpressure: {
+        reason: 'routine-delayed',
+        message: 'routine delay',
+      },
+      metrics: {
+        totalTargets: 1,
+        eligibleTargets: 0,
+        delayedTargets: 1,
+        blockedTargets: 0,
+        defaultChatgptEligibleTargets: 0,
+        defaultChatgptDelayedTargets: 1,
+        inProgressEligibleTargets: 0,
+      },
+      refresh: null,
+      error: null,
+    };
+    const runOnce = vi.fn(async () => pass);
+    const server = await createResponsesHttpServer(
+      {
+        host: '127.0.0.1',
+        port: 0,
+        accountMirrorSchedulerIntervalMs: 60_000,
+        accountMirrorSchedulerDryRun: true,
+      },
+      {
+        accountMirrorSchedulerService: {
+          runOnce,
+        },
+        accountMirrorSchedulerLedger: createMemorySchedulerLedger(),
+        mediaGenerationExecutor: async () => ({
+          artifacts: [
+            {
+              id: 'artifact_followup_1',
+              type: 'image',
+              mimeType: 'image/png',
+            },
+          ],
+        }),
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/media-generations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'gemini',
+          mediaType: 'image',
+          prompt: 'Generate an image of an asphalt secret agent',
+          wait: true,
+        }),
+      });
+      expect(response.status).toBe(200);
+      await waitForPredicate(() => runOnce.mock.calls.length > 0);
+      expect(runOnce).toHaveBeenCalledWith({ dryRun: true });
+      const statusResponse = await fetch(`http://127.0.0.1:${server.port}/status`);
+      const status = (await statusResponse.json()) as {
+        accountMirrorScheduler: { lastPass: AccountMirrorSchedulerPassResult | null };
+      };
+      expect(status.accountMirrorScheduler.lastPass).toMatchObject({
+        object: 'account_mirror_scheduler_pass',
+        backpressure: {
+          reason: 'routine-delayed',
         },
       });
     } finally {

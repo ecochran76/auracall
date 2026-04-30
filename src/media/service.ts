@@ -26,6 +26,7 @@ export interface MediaGenerationServiceDeps {
   materializer?: MediaGenerationMaterializer;
   capabilityReporter?: WorkbenchCapabilityReporter | null;
   runtimeProfile?: string | null;
+  onGenerationSettled?: (response: MediaGenerationResponse) => void | Promise<void>;
 }
 
 export interface MediaGenerationService {
@@ -263,6 +264,7 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
         failure: null,
       } satisfies MediaGenerationResponse);
       await store.writeResponse(response, { persistedAt: completedAt });
+      await notifyGenerationSettled(response);
       return response;
     } catch (error) {
       const completedAt = now().toISOString();
@@ -289,7 +291,17 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
         failure,
       } satisfies MediaGenerationResponse);
       await store.writeResponse(response, { persistedAt: completedAt });
+      await notifyGenerationSettled(response);
       return response;
+    }
+  }
+
+  async function notifyGenerationSettled(response: MediaGenerationResponse): Promise<void> {
+    if (!deps.onGenerationSettled) return;
+    try {
+      await deps.onGenerationSettled(response);
+    } catch {
+      // Settlement hooks are observational; they must not change provider work results.
     }
   }
 }

@@ -1,11 +1,27 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import { createMediaGenerationService, MediaGenerationExecutionError } from '../src/media/service.js';
 import { createMediaGenerationRecordStore } from '../src/media/store.js';
 import type { WorkbenchCapabilityReporter } from '../src/workbench/types.js';
+
+async function waitForExpect(assertion: () => void | Promise<void>, timeoutMs = 1_000): Promise<void> {
+  const started = Date.now();
+  let lastError: unknown = null;
+  while (Date.now() - started < timeoutMs) {
+    try {
+      await assertion();
+      return;
+    } catch (error) {
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+  }
+  if (lastError) throw lastError;
+  await assertion();
+}
 
 describe('media generation service', () => {
   const cleanup: string[] = [];
@@ -167,6 +183,42 @@ describe('media generation service', () => {
 
     const readBack = await service.readGeneration('medgen_test_1');
     expect(readBack).toEqual(created);
+  });
+
+  it('notifies when asynchronous generation settles', async () => {
+    const settled = vi.fn();
+    const service = createMediaGenerationService({
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+      generateId: () => 'medgen_async_settled',
+      executor: async () => ({
+        artifacts: [
+          {
+            id: 'artifact_async_1',
+            type: 'image',
+            mimeType: 'image/png',
+          },
+        ],
+      }),
+      onGenerationSettled: settled,
+    });
+
+    const running = await service.createGenerationAsync?.({
+      provider: 'gemini',
+      mediaType: 'image',
+      prompt: 'Generate an image of an asphalt secret agent',
+      source: 'api',
+    });
+
+    expect(running).toMatchObject({
+      id: 'medgen_async_settled',
+      status: 'running',
+    });
+    await waitForExpect(() => {
+      expect(settled).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'medgen_async_settled',
+        status: 'succeeded',
+      }));
+    });
   });
 
   it('accepts ChatGPT browser image requests through the shared schema', async () => {

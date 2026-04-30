@@ -23748,3 +23748,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - Added HTTP coverage for `/ops/browser`, `/dashboard`, and the status route
     advertisement.
+
+## 2026-04-29 - Lazy live follow scheduler nudge
+
+- Focus: resume lazy account-mirror work without letting it compete with user
+  API/browser requests.
+- Progress:
+  - Media generation settlement now calls an observational hook.
+  - `api serve` uses that hook to nudge the existing account-mirror scheduler
+    after media work completes.
+  - Response creation now nudges the same scheduler after the response-run
+    drain completes.
+  - The nudge keeps the existing scheduler policy: disabled unless configured,
+    dry-run unless execute-enabled, and zero queue wait for routine refreshes.
+- Validation:
+  - Added media-service coverage for async settlement notification.
+  - Added HTTP coverage proving settled media work triggers a lazy scheduler
+    pass through `/status` readback.

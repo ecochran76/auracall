@@ -15069,3 +15069,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   path. `/ops/browser` is local, cache-disabled HTML; it fetches `/status` on
   load and only runs `diagnostics=browser-state` probes after an explicit
   operator click.
+- 2026-04-29: Lazy live follow should wake the account-mirror scheduler after
+  real work finishes, not run mirror scraping inline. Media generation
+  settlement and response-run drain completion now nudge the existing scheduler;
+  routine refreshes still use politeness checks and zero browser queue wait.

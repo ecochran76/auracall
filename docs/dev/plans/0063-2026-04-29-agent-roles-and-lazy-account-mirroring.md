@@ -228,6 +228,10 @@ Current implementation-facing politeness contract:
   lane is immediately available; if a real API response/media request or other
   browser operation already owns the lane, the lazy pass records a blocked
   refresh instead of waiting behind user work.
+- API-served real work now nudges the same lazy scheduler after media generation
+  settles and after response-run drain completes. The nudge only reschedules the
+  existing account-mirror scheduler; it does not scrape directly, bypass
+  politeness, or wait behind browser work.
 - Installed-runtime dry-run `POST /status` verified the scheduler readback
   includes the new metrics. The pass skipped because default ChatGPT was
   routine-delayed, confirming the scheduler still respects politeness before

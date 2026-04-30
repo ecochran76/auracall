@@ -374,6 +374,9 @@ export async function createResponsesHttpServer(
       typeof resolvedUserConfig?.auracallProfile === 'string'
         ? resolvedUserConfig.auracallProfile
         : null,
+    onGenerationSettled: () => {
+      scheduleAccountMirrorSchedulerFollowUp(0);
+    },
   });
   const localRunnerCapabilitySummary = createLocalRunnerCapabilitySummary(configuredRuntimeConfig);
   const createRunAffinity = configuredRuntimeConfig
@@ -425,6 +428,7 @@ export async function createResponsesHttpServer(
   };
   let backgroundDrainPaused = false;
   let accountMirrorSchedulerPaused = false;
+  let accountMirrorFollowUpAfterNextDrain = false;
   let runnerHeartbeatTimer: NodeJS.Timeout | null = null;
   let closed = false;
   const drainThroughServerHost = (
@@ -448,6 +452,10 @@ export async function createResponsesHttpServer(
       if (backgroundDrainState.state !== 'disabled') {
         backgroundDrainState.state = closed ? 'disabled' : backgroundDrainPaused ? 'paused' : 'idle';
         backgroundDrainState.lastCompletedAt = now().toISOString();
+      }
+      if (accountMirrorFollowUpAfterNextDrain) {
+        accountMirrorFollowUpAfterNextDrain = false;
+        scheduleAccountMirrorSchedulerFollowUp(0);
       }
     });
   };
@@ -538,6 +546,22 @@ export async function createResponsesHttpServer(
       });
       scheduleAccountMirrorScheduler(accountMirrorSchedulerIntervalMs);
     }, delayMs);
+  };
+  const scheduleAccountMirrorSchedulerFollowUp = (delayMs = 0) => {
+    if (
+      closed ||
+      accountMirrorSchedulerIntervalMs <= 0 ||
+      accountMirrorSchedulerPaused ||
+      accountMirrorSchedulerState.state === 'running'
+    ) {
+      return;
+    }
+    if (accountMirrorSchedulerScheduled && accountMirrorSchedulerTimer) {
+      clearTimeout(accountMirrorSchedulerTimer);
+      accountMirrorSchedulerTimer = null;
+      accountMirrorSchedulerScheduled = false;
+    }
+    scheduleAccountMirrorScheduler(delayMs);
   };
   const server = http.createServer();
 
@@ -919,6 +943,7 @@ export async function createResponsesHttpServer(
         const request = createExecutionRequest(mergeExecutionRequestHints(parsedBody, req.headers));
         const createdResponse = await responsesService.createResponse(request);
         if (backgroundDrainIntervalMs > 0) {
+          accountMirrorFollowUpAfterNextDrain = true;
           scheduleBackgroundDrain(0);
           sendJson(res, 200, createdResponse);
         } else {
@@ -927,6 +952,7 @@ export async function createResponsesHttpServer(
             maxRuns: 1,
             trigger: 'request-create',
           });
+          scheduleAccountMirrorSchedulerFollowUp(0);
           const drainedResponse = await responsesService.readResponse(createdResponse.id);
           sendJson(res, 200, drainedResponse ?? createdResponse);
         }

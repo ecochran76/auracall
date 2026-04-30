@@ -46,6 +46,9 @@ Current State:
     bound to the referenced AuraCall runtime profile
   - lazy mirroring must be metadata-first, identity-gated, and routed through
     the browser operation dispatcher
+  - lazy live follow now wakes the existing mirror scheduler after API-served
+    media settles or response-run drain completes, while routine refreshes keep
+    zero browser queue wait
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local
