@@ -1,8 +1,13 @@
 import { describe, expect, test, vi } from 'vitest';
 import { collectReattachRegistryDiagnostics } from '../../src/browser/service/registryDiagnostics.js';
+import type { ClassifiedBrowserInstance } from '../../packages/browser-service/src/service/stateRegistry.js';
+
+function classifiedInstances(instances: ClassifiedBrowserInstance[]): ClassifiedBrowserInstance[] {
+  return instances;
+}
 
 const stateRegistryMocks = vi.hoisted(() => ({
-  listInstancesWithLiveness: vi.fn(async () => []),
+  listInstancesWithLiveness: vi.fn<() => Promise<ClassifiedBrowserInstance[]>>(async () => []),
 }));
 
 vi.mock('../../packages/browser-service/src/service/stateRegistry.js', async (importOriginal) => {
@@ -15,7 +20,7 @@ vi.mock('../../packages/browser-service/src/service/stateRegistry.js', async (im
 
 describe('collectReattachRegistryDiagnostics', () => {
   test('collects stale selected-port and expected-profile candidates for a reattach runtime', async () => {
-    stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce([
+    stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce(classifiedInstances([
       {
         instance: {
           pid: 9001,
@@ -46,7 +51,7 @@ describe('collectReattachRegistryDiagnostics', () => {
         liveness: 'profile-mismatch',
         actualPid: 7777,
       },
-    ] as any);
+    ]));
 
     const result = await collectReattachRegistryDiagnostics({
       runtime: { chromePort: 9222, chromeHost: '127.0.0.1' },
@@ -75,7 +80,7 @@ describe('collectReattachRegistryDiagnostics', () => {
   });
 
   test('collects live selected-port owners for cross-profile reattach checks', async () => {
-    stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce([
+    stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce(classifiedInstances([
       {
         instance: {
           pid: 9010,
@@ -91,7 +96,7 @@ describe('collectReattachRegistryDiagnostics', () => {
         liveness: 'live',
         actualPid: 9010,
       },
-    ] as any);
+    ]));
 
     const result = await collectReattachRegistryDiagnostics({
       runtime: { chromePort: 45013, chromeHost: '127.0.0.1' },

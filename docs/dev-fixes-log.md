@@ -15146,3 +15146,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   instance-scanner mocks with the package boundary types. Use `null` for a
   missing instance scan and the real liveness literal `live`, not test-only
   placeholders hidden behind `any`.
+- 2026-04-30: Reattach registry-diagnostics tests should share the typed
+  `ClassifiedBrowserInstance[]` fixture pattern used by browser-service tests
+  instead of casting liveness arrays through `any`.

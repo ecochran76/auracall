@@ -24046,3 +24046,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Biome warning count dropped from 238 to 234.
   - Remaining classes are `useNamingConvention` (95), `noExplicitAny` (85),
     and `noNonNullAssertion` (54).
+
+## 2026-04-30 - Registry diagnostics fixture typing
+
+- Focus: apply the typed registry-liveness fixture pattern to the reattach
+  diagnostics tests.
+- Progress:
+  - Typed the `listInstancesWithLiveness` mock with
+    `ClassifiedBrowserInstance[]`.
+  - Replaced two registry candidate array `as any` casts with a typed fixture
+    helper.
+- Validation:
+  - `pnpm run typecheck`
+  - `pnpm vitest run tests/browser/registryDiagnostics.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm run lint`
+  - `pnpm run docs:list`
+  - Biome warning count dropped from 234 to 232.
+  - Remaining classes are `useNamingConvention` (95), `noExplicitAny` (83),
+    and `noNonNullAssertion` (54).
