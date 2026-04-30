@@ -15122,3 +15122,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   deliberately mirror TypeScript type names. Prefer a file-scoped Biome
   override for those boundary modules over renaming schema exports or adding
   repetitive per-declaration ignores.
+- 2026-04-30: Boundary naming overrides should stay file-list scoped, not
+  directory-wide by convenience. A broad `tests/live/**/*.ts` override made
+  existing inline ignores stale, so prefer listing only the files whose warnings
+  are dominated by env or external process casing.

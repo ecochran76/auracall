@@ -23935,3 +23935,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run typecheck`
   - Biome warning count dropped from 534 to 433.
   - The five schema boundary files now report zero warnings.
+
+## 2026-04-30 - External boundary naming suppression
+
+- Focus: apply the lint-warning policy to intentional external casing in env,
+  HTTP, Node API, CDP, and internal marker boundary files.
+- Progress:
+  - Added scoped Biome `useNamingConvention` overrides for acceptance/smoke
+    scripts, selected live/env tests, cache HTTP/SQLite boundary modules,
+    CDP domain-name call sites, and explicit internal marker files.
+  - Avoided broad `tests/live/**/*.ts` suppression because it made existing
+    inline ignores stale.
+- Validation:
+  - Biome warning count dropped from 433 to 315.
+  - The current remaining classes are `noExplicitAny` (164),
+    `noNonNullAssertion` (55), and `useNamingConvention` (96).

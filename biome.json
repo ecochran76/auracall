@@ -136,6 +136,54 @@
           }
         }
       }
+    },
+    {
+      "includes": [
+        "scripts/chatgpt-acceptance.ts",
+        "scripts/grok-acceptance.ts",
+        "scripts/smoke-api-status-mcp.ts",
+        "scripts/verify-cache-refresh-modes.ts",
+        "tests/live/liveConversationCleanup.ts",
+        "tests/live/team-chatgpt-live.test.ts",
+        "tests/live/team-gemini-live.test.ts",
+        "tests/live/team-multiservice-live.test.ts",
+        "tests/cli/cacheGeminiParity.test.ts",
+        "tests/http.responsesServer.test.ts",
+        "tests/mediaBrowserDiagnostics.test.ts",
+        "tests/mcp.integration.test.ts",
+        "tests/mcp.resources.test.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/browser/actions/grok.ts",
+        "src/browser/actions/navigation.ts",
+        "src/browser/index.ts",
+        "src/browser/llmService/cache/catalog.ts",
+        "src/browser/llmService/cache/export.ts",
+        "src/browser/llmService/cache/search.ts",
+        "src/browser/providers/chatgptAdapter.ts",
+        "src/browser/providers/geminiAdapter.ts",
+        "src/browser/providers/grokAdapter.ts",
+        "src/browser/providers/mutationAudit.ts",
+        "src/browser/reattachCore.ts",
+        "src/gemini-web/browserNative.ts",
+        "src/runtime/stepOutputContract.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
     }
   ]
 }
