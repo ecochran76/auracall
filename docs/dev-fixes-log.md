@@ -15077,3 +15077,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `/status.accountMirrorScheduler.lastWakeReason` and `lastWakeAt` now
   distinguish startup/routine cadence, operator controls, media settlement, and
   response-drain completion.
+- 2026-04-30: Lazy mirror status should include a compact operator posture.
+  `/status.accountMirrorScheduler.operatorStatus.posture` now distinguishes
+  disabled, paused, active, ready, healthy, and backpressured states without
+  requiring operators to inspect the latest pass internals.

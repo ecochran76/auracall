@@ -98,7 +98,9 @@ import {
 } from '../src/cli/runtimeInspectionCommand.js';
 import {
   assertApiStatusBackpressure,
+  assertApiStatusSchedulerPosture,
   formatApiStatusCliSummary,
+  parseApiStatusAccountMirrorPosture,
   parseApiStatusBackpressureReason,
   readApiStatusForCli,
 } from '../src/cli/apiStatusCommand.js';
@@ -1001,6 +1003,11 @@ apiCommand
     'Fail unless accountMirrorScheduler.lastPass.backpressure.reason matches.',
     parseApiStatusBackpressureReason,
   )
+  .option(
+    '--expect-account-mirror-posture <posture>',
+    'Fail unless accountMirrorScheduler.operatorStatus.posture matches.',
+    parseApiStatusAccountMirrorPosture,
+  )
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
     const summary = await readApiStatusForCli({
@@ -1010,6 +1017,9 @@ apiCommand
     });
     assertApiStatusBackpressure(summary, {
       expectedReason: commandOptions.expectAccountMirrorBackpressure,
+    });
+    assertApiStatusSchedulerPosture(summary, {
+      expectedPosture: commandOptions.expectAccountMirrorPosture,
     });
     if (commandOptions.json) {
       console.log(JSON.stringify(summary, null, 2));

@@ -1594,6 +1594,7 @@ describe('http responses adapter', () => {
           paused: boolean;
           lastWakeReason: string | null;
           lastWakeAt: string | null;
+          operatorStatus: { posture: string; reason: string; backpressureReason: string | null };
           lastPass: AccountMirrorSchedulerPassResult | null;
           history: {
             object: string;
@@ -1610,6 +1611,10 @@ describe('http responses adapter', () => {
         intervalMs: 25,
         paused: false,
         lastWakeAt: expect.any(String),
+        operatorStatus: {
+          posture: 'healthy',
+          backpressureReason: 'none',
+        },
         lastPass: {
           object: 'account_mirror_scheduler_pass',
           mode: 'dry-run',
@@ -1738,6 +1743,10 @@ describe('http responses adapter', () => {
           paused: true,
           lastWakeReason: 'operator-run-once',
           lastWakeAt: expect.any(String),
+          operatorStatus: {
+            posture: 'paused',
+            backpressureReason: null,
+          },
           lastStartedAt: expect.any(String),
           lastCompletedAt: expect.any(String),
           lastPass: {
@@ -1860,6 +1869,10 @@ describe('http responses adapter', () => {
           paused: false,
           lastWakeReason: 'operator-run-once',
           lastWakeAt: expect.any(String),
+          operatorStatus: {
+            posture: 'disabled',
+            backpressureReason: null,
+          },
           lastPass: {
             object: 'account_mirror_scheduler_pass',
             mode: 'execute',
@@ -1955,11 +1968,17 @@ describe('http responses adapter', () => {
         accountMirrorScheduler: {
           lastWakeReason: string | null;
           lastWakeAt: string | null;
+          operatorStatus: { posture: string; reason: string; backpressureReason: string | null };
           lastPass: AccountMirrorSchedulerPassResult | null;
         };
       };
       expect(status.accountMirrorScheduler.lastWakeReason).toBe('media-generation-settled');
       expect(status.accountMirrorScheduler.lastWakeAt).toEqual(expect.any(String));
+      expect(status.accountMirrorScheduler.operatorStatus).toMatchObject({
+        posture: 'backpressured',
+        reason: 'routine delay',
+        backpressureReason: 'routine-delayed',
+      });
       expect(status.accountMirrorScheduler.lastPass).toMatchObject({
         object: 'account_mirror_scheduler_pass',
         backpressure: {

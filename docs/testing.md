@@ -151,6 +151,9 @@
       - `accountMirrorScheduler.lastStartedAt`
       - `accountMirrorScheduler.lastCompletedAt`
       - `accountMirrorScheduler.lastPass`
+      - `accountMirrorScheduler.operatorStatus.posture = disabled|paused|running|scheduled|ready|healthy|backpressured`
+      - `accountMirrorScheduler.operatorStatus.reason`
+      - `accountMirrorScheduler.operatorStatus.backpressureReason`
       - `accountMirrorScheduler.history.object = account_mirror_scheduler_pass_history`
       - `accountMirrorScheduler.history.entries[]`
       - `accountMirrorScheduler.lastPass.selectedTarget.mirrorCompleteness`

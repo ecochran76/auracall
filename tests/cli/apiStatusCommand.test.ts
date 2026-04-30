@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   assertApiStatusBackpressure,
+  assertApiStatusSchedulerPosture,
   formatApiStatusCliSummary,
+  parseApiStatusAccountMirrorPosture,
   parseApiStatusBackpressureReason,
   readApiStatusForCli,
   summarizeApiStatusPayload,
@@ -15,6 +17,11 @@ const statusPayload = {
     dryRun: true,
     lastWakeReason: 'media-generation-settled',
     lastWakeAt: '2026-04-29T12:00:01.000Z',
+    operatorStatus: {
+      posture: 'backpressured',
+      reason: 'minimum interval has not elapsed',
+      backpressureReason: 'routine-delayed',
+    },
     lastPass: {
       action: 'skipped',
       backpressure: {
@@ -43,6 +50,11 @@ describe('api status CLI helpers', () => {
         lastWakeReason: 'media-generation-settled',
         lastWakeAt: '2026-04-29T12:00:01.000Z',
         lastAction: 'skipped',
+        operatorStatus: {
+          posture: 'backpressured',
+          reason: 'minimum interval has not elapsed',
+          backpressureReason: 'routine-delayed',
+        },
         backpressure: {
           reason: 'routine-delayed',
           message: 'minimum interval has not elapsed',
@@ -54,6 +66,9 @@ describe('api status CLI helpers', () => {
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
       'Latest lazy mirror wake: media-generation-settled at 2026-04-29T12:00:01.000Z',
+    );
+    expect(formatApiStatusCliSummary(summary)).toContain(
+      'Account mirror posture: backpressured - minimum interval has not elapsed',
     );
   });
 
@@ -70,6 +85,22 @@ describe('api status CLI helpers', () => {
       expectedReason: 'blocked-by-browser-work',
     })).toThrow(
       'Expected accountMirrorScheduler.lastPass.backpressure.reason to be blocked-by-browser-work, got routine-delayed.',
+    );
+  });
+
+  it('asserts the expected account mirror scheduler posture', () => {
+    const summary = summarizeApiStatusPayload(statusPayload, {
+      host: '127.0.0.1',
+      port: 18080,
+    });
+
+    expect(() => assertApiStatusSchedulerPosture(summary, {
+      expectedPosture: 'backpressured',
+    })).not.toThrow();
+    expect(() => assertApiStatusSchedulerPosture(summary, {
+      expectedPosture: 'disabled',
+    })).toThrow(
+      'Expected accountMirrorScheduler.operatorStatus.posture to be disabled, got backpressured.',
     );
   });
 
@@ -98,6 +129,14 @@ describe('api status CLI helpers', () => {
     expect(parseApiStatusBackpressureReason('yielded-to-queued-work')).toBe('yielded-to-queued-work');
     expect(() => parseApiStatusBackpressureReason('delayed')).toThrow(
       'Invalid backpressure reason "delayed". Use one of:',
+    );
+  });
+
+  it('validates expected account mirror posture names', () => {
+    expect(parseApiStatusAccountMirrorPosture('disabled')).toBe('disabled');
+    expect(parseApiStatusAccountMirrorPosture('backpressured')).toBe('backpressured');
+    expect(() => parseApiStatusAccountMirrorPosture('blocked')).toThrow(
+      'Invalid account mirror posture "blocked". Use one of:',
     );
   });
 });

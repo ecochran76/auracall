@@ -49,7 +49,8 @@ Current State:
   - lazy live follow now wakes the existing mirror scheduler after API-served
     media settles or response-run drain completes, while routine refreshes keep
     zero browser queue wait; `/status.accountMirrorScheduler` reports
-    `lastWakeReason` and `lastWakeAt` for operator audit
+    `lastWakeReason`, `lastWakeAt`, and `operatorStatus.posture` for operator
+    audit
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local

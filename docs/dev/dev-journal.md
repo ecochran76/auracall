@@ -23778,3 +23778,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     reason.
 - Validation:
   - Added focused HTTP and CLI assertions for wake reason readback.
+
+## 2026-04-30 - Lazy mirror operator posture
+
+- Focus: make scheduler disabled/backpressured states easy to assert from API
+  status.
+- Progress:
+  - Added `/status.accountMirrorScheduler.operatorStatus` with compact posture,
+    reason, and backpressure readback.
+  - Added API status CLI parsing and
+    `--expect-account-mirror-posture <posture>` for smoke assertions.
+  - `/ops/browser` now shows the latest mirror posture in the server summary.
+- Validation:
+  - Added focused HTTP and CLI assertions for operator posture.

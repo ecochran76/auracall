@@ -7,6 +7,18 @@ export const API_STATUS_BACKPRESSURE_REASONS = [
 
 export type ApiStatusBackpressureReason = typeof API_STATUS_BACKPRESSURE_REASONS[number];
 
+export const API_STATUS_ACCOUNT_MIRROR_POSTURES = [
+  'disabled',
+  'paused',
+  'running',
+  'scheduled',
+  'ready',
+  'healthy',
+  'backpressured',
+] as const;
+
+export type ApiStatusAccountMirrorPosture = typeof API_STATUS_ACCOUNT_MIRROR_POSTURES[number];
+
 export interface ApiStatusCliOptions {
   host?: string | null;
   port?: number | null;
@@ -17,9 +29,19 @@ export interface ApiStatusBackpressureExpectation {
   expectedReason?: ApiStatusBackpressureReason | null;
 }
 
+export interface ApiStatusSchedulerPostureExpectation {
+  expectedPosture?: ApiStatusAccountMirrorPosture | null;
+}
+
 export interface ApiStatusBackpressureSummary {
   reason: ApiStatusBackpressureReason | 'unknown';
   message: string | null;
+}
+
+export interface ApiStatusSchedulerOperatorSummary {
+  posture: ApiStatusAccountMirrorPosture | 'unknown';
+  reason: string | null;
+  backpressureReason: string | null;
 }
 
 export interface ApiStatusSchedulerSummary {
@@ -29,6 +51,7 @@ export interface ApiStatusSchedulerSummary {
   lastWakeReason: string | null;
   lastWakeAt: string | null;
   lastAction: string | null;
+  operatorStatus: ApiStatusSchedulerOperatorSummary;
   backpressure: ApiStatusBackpressureSummary;
 }
 
@@ -72,6 +95,7 @@ export function summarizeApiStatusPayload(
     ? record.accountMirrorScheduler
     : {};
   const lastPass = isRecord(scheduler.lastPass) ? scheduler.lastPass : {};
+  const operatorStatus = isRecord(scheduler.operatorStatus) ? scheduler.operatorStatus : {};
   const backpressure = isRecord(lastPass.backpressure) ? lastPass.backpressure : {};
   return {
     ok: typeof record.ok === 'boolean' ? record.ok : null,
@@ -84,6 +108,11 @@ export function summarizeApiStatusPayload(
       lastWakeReason: readString(scheduler.lastWakeReason),
       lastWakeAt: readString(scheduler.lastWakeAt),
       lastAction: readString(lastPass.action),
+      operatorStatus: {
+        posture: normalizeApiStatusAccountMirrorPosture(operatorStatus.posture),
+        reason: readString(operatorStatus.reason),
+        backpressureReason: readString(operatorStatus.backpressureReason),
+      },
       backpressure: {
         reason: normalizeApiStatusBackpressureReason(backpressure.reason),
         message: readString(backpressure.message),
@@ -91,6 +120,20 @@ export function summarizeApiStatusPayload(
     },
     raw,
   };
+}
+
+export function assertApiStatusSchedulerPosture(
+  summary: ApiStatusCliSummary,
+  expectation: ApiStatusSchedulerPostureExpectation = {},
+): void {
+  const expectedPosture = expectation.expectedPosture ?? null;
+  if (!expectedPosture) return;
+  const actualPosture = summary.scheduler.operatorStatus.posture;
+  if (actualPosture !== expectedPosture) {
+    throw new Error(
+      `Expected accountMirrorScheduler.operatorStatus.posture to be ${expectedPosture}, got ${actualPosture}.`,
+    );
+  }
 }
 
 export function assertApiStatusBackpressure(
@@ -110,9 +153,11 @@ export function assertApiStatusBackpressure(
 export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string {
   const scheduler = summary.scheduler;
   const backpressure = scheduler.backpressure;
+  const operatorStatus = scheduler.operatorStatus;
   const lines = [
     `AuraCall API status: ${summary.ok === null ? 'unknown' : summary.ok ? 'ok' : 'not-ok'} (${summary.host}:${summary.port})`,
     `Account mirror scheduler: state=${scheduler.state ?? 'unknown'} enabled=${formatNullableBoolean(scheduler.enabled)} dryRun=${formatNullableBoolean(scheduler.dryRun)}`,
+    `Account mirror posture: ${operatorStatus.posture}${operatorStatus.reason ? ` - ${operatorStatus.reason}` : ''}`,
     `Latest lazy mirror wake: ${scheduler.lastWakeReason ?? 'unknown'}${scheduler.lastWakeAt ? ` at ${scheduler.lastWakeAt}` : ''}`,
     `Latest lazy mirror backpressure: ${backpressure.reason}${backpressure.message ? ` - ${backpressure.message}` : ''}`,
   ];
@@ -122,11 +167,31 @@ export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string 
   return lines.join('\n');
 }
 
+export function normalizeApiStatusAccountMirrorPosture(value: unknown): ApiStatusSchedulerOperatorSummary['posture'] {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  return API_STATUS_ACCOUNT_MIRROR_POSTURES.includes(normalized as ApiStatusAccountMirrorPosture)
+    ? normalized as ApiStatusAccountMirrorPosture
+    : 'unknown';
+}
+
 export function normalizeApiStatusBackpressureReason(value: unknown): ApiStatusBackpressureSummary['reason'] {
   const normalized = typeof value === 'string' ? value.trim() : '';
   return API_STATUS_BACKPRESSURE_REASONS.includes(normalized as ApiStatusBackpressureReason)
     ? normalized as ApiStatusBackpressureReason
     : 'unknown';
+}
+
+export function parseApiStatusAccountMirrorPosture(
+  value: string | undefined,
+): ApiStatusAccountMirrorPosture | undefined {
+  if (value == null) return undefined;
+  const normalized = value.trim();
+  if (API_STATUS_ACCOUNT_MIRROR_POSTURES.includes(normalized as ApiStatusAccountMirrorPosture)) {
+    return normalized as ApiStatusAccountMirrorPosture;
+  }
+  throw new Error(
+    `Invalid account mirror posture "${value}". Use one of: ${API_STATUS_ACCOUNT_MIRROR_POSTURES.join(', ')}.`,
+  );
 }
 
 export function parseApiStatusBackpressureReason(value: string | undefined): ApiStatusBackpressureReason | undefined {

@@ -224,8 +224,11 @@ Terminology note:
   `/status.accountMirrorScheduler.history` so cadence and failure evidence
   survives a service restart. `/status.accountMirrorScheduler.lastWakeReason`
   and `lastWakeAt` distinguish routine cadence, manual operator wakes, and
-  live-follow nudges after real work settles. For live execute dogfood, prefer a
-  long interval plus one manual `run-once` request so the scheduler proves the
+  live-follow nudges after real work settles.
+  `/status.accountMirrorScheduler.operatorStatus.posture` gives the compact
+  operator read: `disabled`, `paused`, `running`, `scheduled`, `ready`,
+  `healthy`, or `backpressured`. For live execute dogfood, prefer a long
+  interval plus one manual `run-once` request so the scheduler proves the
   refresh path without repeatedly touching bot-sensitive provider pages.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`

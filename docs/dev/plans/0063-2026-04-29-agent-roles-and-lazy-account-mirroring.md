@@ -175,6 +175,9 @@ Current implementation-facing politeness contract:
 - `/status.accountMirrorScheduler.lastWakeReason` and `lastWakeAt` expose why
   the latest lazy scheduler pass woke up: startup cadence, routine cadence,
   manual operator run/resume, media settlement, or response-drain completion.
+- `/status.accountMirrorScheduler.operatorStatus.posture` gives operators a
+  compact scheduler read without inspecting pass internals: `disabled`,
+  `paused`, `running`, `scheduled`, `ready`, `healthy`, or `backpressured`.
 - Installed-runtime execute dogfood started `api serve` with
   `--account-mirror-scheduler-interval-ms 600000` and
   `--account-mirror-scheduler-execute`, then triggered one manual

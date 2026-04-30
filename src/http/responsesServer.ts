@@ -233,6 +233,21 @@ type AccountMirrorSchedulerWakeReason =
   | 'media-generation-settled'
   | 'response-drain-completed';
 
+type AccountMirrorSchedulerOperatorPosture =
+  | 'disabled'
+  | 'paused'
+  | 'running'
+  | 'scheduled'
+  | 'ready'
+  | 'healthy'
+  | 'backpressured';
+
+interface AccountMirrorSchedulerOperatorStatus {
+  posture: AccountMirrorSchedulerOperatorPosture;
+  reason: string;
+  backpressureReason: string | null;
+}
+
 interface HttpStatusResponse {
   object: 'status';
   ok: true;
@@ -301,6 +316,7 @@ interface HttpStatusResponse {
     lastStartedAt: string | null;
     lastCompletedAt: string | null;
     lastPass: AccountMirrorSchedulerPassResult | null;
+    operatorStatus: AccountMirrorSchedulerOperatorStatus;
     history: AccountMirrorSchedulerPassHistory;
   };
   accountMirrorStatus: AccountMirrorStatusSummary;
@@ -427,6 +443,13 @@ export async function createResponsesHttpServer(
     lastStartedAt: null,
     lastCompletedAt: null,
     lastPass: null,
+    operatorStatus: {
+      posture: accountMirrorSchedulerIntervalMs > 0 ? 'ready' : 'disabled',
+      reason: accountMirrorSchedulerIntervalMs > 0
+        ? 'account mirror scheduler is enabled and waiting for its first pass'
+        : 'account mirror scheduler is disabled; set --account-mirror-scheduler-interval-ms to enable cadence and live-follow wakes',
+      backpressureReason: null,
+    },
     history: await accountMirrorSchedulerLedger.readHistory().catch((error) => {
       logger(error instanceof Error ? error.message : String(error));
       return {
@@ -1593,7 +1616,10 @@ function createHttpStatusResponse(input: {
     runnerTopology: input.runnerTopology,
     runner: input.runner,
     backgroundDrain: input.backgroundDrain,
-    accountMirrorScheduler: input.accountMirrorScheduler,
+    accountMirrorScheduler: {
+      ...input.accountMirrorScheduler,
+      operatorStatus: createAccountMirrorSchedulerOperatorStatus(input.accountMirrorScheduler),
+    },
     accountMirrorStatus: input.accountMirrorStatus,
     executionHints: {
       headerNames: [
@@ -1605,6 +1631,60 @@ function createHttpStatusResponse(input: {
       bodyObject: 'auracall',
     },
     controlResult: input.controlResult,
+  };
+}
+
+function createAccountMirrorSchedulerOperatorStatus(
+  scheduler: HttpStatusResponse['accountMirrorScheduler'],
+): AccountMirrorSchedulerOperatorStatus {
+  if (!scheduler.enabled) {
+    return {
+      posture: 'disabled',
+      reason:
+        'account mirror scheduler is disabled; set --account-mirror-scheduler-interval-ms to enable cadence and live-follow wakes',
+      backpressureReason: null,
+    };
+  }
+  if (scheduler.paused || scheduler.state === 'paused') {
+    return {
+      posture: 'paused',
+      reason: 'account mirror scheduler is paused by operator control',
+      backpressureReason: null,
+    };
+  }
+  if (scheduler.state === 'running') {
+    return {
+      posture: 'running',
+      reason: 'account mirror scheduler pass is currently running',
+      backpressureReason: null,
+    };
+  }
+  const backpressureReason = scheduler.lastPass?.backpressure?.reason ?? null;
+  if (backpressureReason && backpressureReason !== 'none') {
+    return {
+      posture: 'backpressured',
+      reason: scheduler.lastPass?.backpressure?.message ?? `latest pass reported ${backpressureReason}`,
+      backpressureReason,
+    };
+  }
+  if (scheduler.lastPass) {
+    return {
+      posture: 'healthy',
+      reason: 'latest account mirror scheduler pass completed without backpressure',
+      backpressureReason: backpressureReason ?? null,
+    };
+  }
+  if (scheduler.state === 'scheduled') {
+    return {
+      posture: 'scheduled',
+      reason: 'account mirror scheduler has a pass queued on its cadence timer',
+      backpressureReason: null,
+    };
+  }
+  return {
+    posture: 'ready',
+    reason: 'account mirror scheduler is enabled and waiting for its first pass',
+    backpressureReason: null,
   };
 }
 
@@ -2463,6 +2543,7 @@ function createOperatorBrowserDashboardHtml(): string {
         ['Runner', runner.status || 'unknown'],
         ['Runner ID', runner.id || 'none'],
         ['Mirror Scheduler', scheduler.state || 'unknown'],
+        ['Mirror Posture', scheduler.operatorStatus ? scheduler.operatorStatus.posture : 'unknown'],
         ['Mirror Wake', scheduler.lastWakeReason || 'none'],
         ['Mirror Wake At', scheduler.lastWakeAt || 'never'],
         ['Dashboard Route', dashboard || '/ops/browser'],
