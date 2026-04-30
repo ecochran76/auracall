@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 import { runBrowserMode, CHATGPT_URL } from '../../src/browserMode.js';
+import { resolveBrowserConfig } from '../../src/browser/config.js';
 import {
   buildThinkingStatusExpressionForTest,
   formatChatgptBlockingSurfaceErrorForTest,
@@ -13,6 +14,7 @@ import {
 } from '../../src/browser/index.js';
 import { BrowserAutomationError } from '../../src/oracle/errors.js';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
+import type { BrowserAutomationConfig, BrowserLogger, ChromeClient } from '../../src/browser/types.js';
 import {
   clearBrowserOperationQueueObservationsForTest,
   summarizeBrowserOperationQueueObservations,
@@ -21,6 +23,25 @@ import { createFileBackedBrowserOperationDispatcher } from '../../packages/brows
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+
+type JsonValue = null | boolean | number | string | JsonValue[] | JsonObject;
+type JsonObject = { [key: string]: JsonValue };
+
+function runtimeFixture(runtime: Pick<ChromeClient['Runtime'], 'evaluate'>): ChromeClient['Runtime'] {
+  return runtime as ChromeClient['Runtime'];
+}
+
+function parseJsonObject(raw: string): JsonObject {
+  const parsed: unknown = JSON.parse(raw);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Expected JSON object');
+  }
+  return parsed as JsonObject;
+}
+
+function resolvedBrowserConfig(config: BrowserAutomationConfig) {
+  return resolveBrowserConfig(config);
+}
 
 describe('browserMode exports', () => {
   test('re-exports runBrowserMode and constants', () => {
@@ -81,13 +102,13 @@ describe('browserMode exports', () => {
     await fs.writeFile(sourceCookiePath, '');
     await fs.writeFile(bootstrapCookiePath, '');
     const context = resolveManagedBrowserLaunchContextForTest(
-      {
+      resolvedBrowserConfig({
         target: 'grok',
         chromeProfile: 'Default',
         chromeCookiePath: sourceCookiePath,
         bootstrapCookiePath,
         managedProfileRoot: path.join(tempRoot, 'managed-root'),
-      } as any,
+      }),
       'grok',
     );
 
@@ -99,12 +120,12 @@ describe('browserMode exports', () => {
 
   test('resolves managed browser launch context within the selected AuraCall runtime profile', () => {
     const context = resolveManagedBrowserLaunchContextForTest(
-      {
+      resolvedBrowserConfig({
         target: 'chatgpt',
         chromeProfile: 'Profile 1',
         managedProfileRoot: '/home/test/.auracall/browser-profiles',
         manualLoginProfileDir: '/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt',
-      } as any,
+      }),
       'chatgpt',
       'wsl-chrome-2',
     );
@@ -115,16 +136,16 @@ describe('browserMode exports', () => {
   });
 
   test('resolves browser runtime entry config and injects a fixed debug port when needed', async () => {
-    const logger = Object.assign(() => {}, { verbose: undefined as boolean | undefined });
-    const pickDebugPort = async () => 45555;
+    const logger: BrowserLogger = Object.assign(() => {}, { verbose: undefined as boolean | undefined });
+    const pickDebugPort: NonNullable<Parameters<typeof resolveBrowserRuntimeEntryContextForTest>[0]['pickDebugPort']> = async () => 45555;
     const result = await resolveBrowserRuntimeEntryContextForTest({
       config: {
         target: 'grok',
         debug: true,
         debugPortStrategy: 'fixed',
-      } as any,
+      } satisfies BrowserAutomationConfig,
       log: logger,
-      pickDebugPort: pickDebugPort as any,
+      pickDebugPort,
     });
 
     expect(result.target).toBe('grok');
@@ -320,10 +341,11 @@ describe('browserMode exports', () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-send-postmortem-'));
     setAuracallHomeDirOverrideForTest(tempRoot);
     try {
-      const logger = Object.assign(() => {}, { verbose: true, sessionLog: () => {} });
-      const RUNTIME = {
+      const logger: BrowserLogger = Object.assign(() => {}, { verbose: true, sessionLog: () => {} });
+      const runtime = runtimeFixture({
         evaluate: async () => ({
           result: {
+            type: 'object',
             value: {
               href: 'https://chatgpt.com/c/example',
               title: 'ChatGPT',
@@ -335,9 +357,10 @@ describe('browserMode exports', () => {
             },
           },
         }),
-      } as any;
+      });
       await logChatgptUnexpectedStateForTest({
-        Runtime: RUNTIME,
+        // biome-ignore lint/style/useNamingConvention: CDP domain name matches the production helper contract.
+        Runtime: runtime,
         logger,
         context: 'chatgpt-stale-send-blocked',
         surface: { kind: 'retry-affordance', summary: 'retry', details: { source: 'button' } },
@@ -346,12 +369,16 @@ describe('browserMode exports', () => {
       const dir = path.join(tempRoot, 'postmortems', 'browser');
       const files = await fs.readdir(dir);
       expect(files.some((name) => name.includes('chatgpt-stale-send-blocked'))).toBe(true);
-      const filePath = path.join(dir, files[0]!);
-      const stored = JSON.parse(await fs.readFile(filePath, 'utf8')) as Record<string, any>;
+      const firstFile = files[0];
+      if (!firstFile) {
+        throw new Error('Expected browser postmortem file');
+      }
+      const filePath = path.join(dir, firstFile);
+      const stored = parseJsonObject(await fs.readFile(filePath, 'utf8'));
       expect(stored.mode).toBe('send');
-      expect(stored.surface.kind).toBe('retry-affordance');
+      expect((stored.surface as JsonObject).kind).toBe('retry-affordance');
       expect(stored.policy).toBe('fail-fast-no-auto-retry-click');
-      expect(stored.snapshot.retryButtons).toEqual(['Retry']);
+      expect((stored.snapshot as JsonObject).retryButtons).toEqual(['Retry']);
     } finally {
       setAuracallHomeDirOverrideForTest(null);
       await fs.rm(tempRoot, { recursive: true, force: true });

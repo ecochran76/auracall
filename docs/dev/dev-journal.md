@@ -23985,3 +23985,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run docs:list`
   - Biome warning count dropped from 274 to 247.
   - Repo-wide `noExplicitAny` count dropped from 123 to 96.
+
+## 2026-04-30 - Browser mode export fixture typing
+
+- Focus: clear the compact warning cluster in
+  `tests/browser/browserModeExports.test.ts` without changing browser runtime
+  behavior.
+- Progress:
+  - Replaced launch-config fixture casts with resolved typed browser config
+    fixtures.
+  - Typed the debug-port picker and logger fixtures.
+  - Replaced the postmortem JSON `any` cast with a guarded JSON-object helper.
+  - Removed the postmortem filename non-null assertion.
+  - Kept the CDP `Runtime` property as an explicitly justified
+    naming-convention boundary.
+- Validation:
+  - `pnpm run typecheck`
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm run lint`
+  - `pnpm run docs:list`
+  - Biome warning count dropped from 247 to 239.
+  - Remaining classes are `useNamingConvention` (95), `noExplicitAny` (90),
+    and `noNonNullAssertion` (54).

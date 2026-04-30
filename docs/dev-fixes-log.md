@@ -15134,3 +15134,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   payloads in typed fixture helpers instead of repeating `as any` at every
   call. The helper marks the OracleConfig migration boundary once while keeping
   individual test cases readable.
+- 2026-04-30: Browser mode export tests should resolve partial launch fixtures
+  through `resolveBrowserConfig(...)` before passing them to managed-profile
+  helpers. For CDP runtime mocks, type the narrow `Runtime.evaluate` fixture and
+  locally justify the external `Runtime` property name instead of using broad
+  `any` casts.
