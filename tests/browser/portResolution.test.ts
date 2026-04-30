@@ -1,5 +1,12 @@
 import { describe, expect, test, vi } from 'vitest';
 import { resolveBrowserListTarget } from '../../src/browser/service/portResolution.js';
+import type { ResolvedUserConfig } from '../../src/config.js';
+
+type BrowserListUserConfigFixture = Partial<ResolvedUserConfig> & Pick<ResolvedUserConfig, 'browser'>;
+
+function userConfigFixture(config: BrowserListUserConfigFixture): ResolvedUserConfig {
+  return config as ResolvedUserConfig;
+}
 
 const portResolutionCoreMocks = vi.hoisted(() => ({
   resolveBrowserListTargetCore: vi.fn(async () => undefined),
@@ -18,7 +25,7 @@ describe('resolveBrowserListTarget', () => {
     portResolutionCoreMocks.resolveBrowserListTargetCore.mockResolvedValueOnce(undefined);
 
     await resolveBrowserListTarget(
-      {
+      userConfigFixture({
         auracallProfile: 'default',
         browser: {
           target: 'chatgpt',
@@ -34,7 +41,7 @@ describe('resolveBrowserListTarget', () => {
             manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/grok',
           },
         },
-      } as any,
+      }),
       'chatgpt',
     );
 

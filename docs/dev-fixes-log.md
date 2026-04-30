@@ -15139,3 +15139,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   helpers. For CDP runtime mocks, type the narrow `Runtime.evaluate` fixture and
   locally justify the external `Runtime` property name instead of using broad
   `any` casts.
+- 2026-04-30: Browser port-resolution wrapper tests can use a typed minimal
+  `ResolvedUserConfig` fixture helper for partial config shapes that exercise
+  routing behavior. Prefer that narrow helper over call-site `as any` casts.

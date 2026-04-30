@@ -24007,3 +24007,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Biome warning count dropped from 247 to 239.
   - Remaining classes are `useNamingConvention` (95), `noExplicitAny` (90),
     and `noNonNullAssertion` (54).
+
+## 2026-04-30 - Browser port resolution fixture typing
+
+- Focus: clear the remaining `noExplicitAny` warning in the browser port
+  resolution wrapper test.
+- Progress:
+  - Added a typed minimal `ResolvedUserConfig` fixture helper in
+    `tests/browser/portResolution.test.ts`.
+  - Replaced the stale fixed-port test config `as any` cast with that helper.
+- Validation:
+  - `pnpm run typecheck`
+  - `pnpm vitest run tests/browser/portResolution.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm run lint`
+  - `pnpm run docs:list`
+  - Biome warning count dropped from 239 to 238.
+  - Remaining classes are `useNamingConvention` (95), `noExplicitAny` (89),
+    and `noNonNullAssertion` (54).
