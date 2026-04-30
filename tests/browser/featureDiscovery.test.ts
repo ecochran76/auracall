@@ -8,7 +8,29 @@ import {
   resolveBrowserFeaturesBaseline,
   writeBrowserFeaturesSnapshot,
 } from '../../src/browser/featureDiscovery.js';
-import type { AuracallBrowserFeaturesContract } from '../../src/browser/profileDoctor.js';
+import type {
+  AuracallBrowserFeaturesContract,
+  BrowserDoctorFeatureReport,
+} from '../../src/browser/profileDoctor.js';
+import type { BrowserToolsDoctorContract } from '../../packages/browser-service/src/browserTools.js';
+
+function requireBrowserTools(
+  value: AuracallBrowserFeaturesContract['runtime']['browserTools'],
+): BrowserToolsDoctorContract {
+  if (!value) {
+    throw new Error('baseline browser tools are required for this test');
+  }
+  return value;
+}
+
+function requireFeatureStatus(
+  value: AuracallBrowserFeaturesContract['featureStatus'],
+): BrowserDoctorFeatureReport {
+  if (!value) {
+    throw new Error('baseline feature status is required for this test');
+  }
+  return value;
+}
 
 describe('featureDiscovery', () => {
   const cleanup: string[] = [];
@@ -163,16 +185,17 @@ describe('featureDiscovery', () => {
       },
     };
 
-    const baselineBrowserTools = baseline.runtime.browserTools!;
+    const baselineBrowserTools = requireBrowserTools(baseline.runtime.browserTools);
     const baselineUiList = baselineBrowserTools.report.uiList;
     if (!baselineUiList) {
       throw new Error('baseline browser tools UI list is required for this test');
     }
+    const baselineFeatureStatus = requireFeatureStatus(baseline.featureStatus);
     const current: AuracallBrowserFeaturesContract = {
       ...baseline,
       generatedAt: '2026-04-07T02:05:00.000Z',
       featureStatus: {
-        ...baseline.featureStatus!,
+        ...baselineFeatureStatus,
         featureSignature:
           '{"detector":"gemini-feature-probe-v1","modes":["canvas","create video"],"toggles":{"personal intelligence":false,"deep mode":true}}',
         detected: {

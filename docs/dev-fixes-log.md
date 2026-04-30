@@ -15149,3 +15149,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-04-30: Reattach registry-diagnostics tests should share the typed
   `ClassifiedBrowserInstance[]` fixture pattern used by browser-service tests
   instead of casting liveness arrays through `any`.
+- 2026-04-30: Feature-discovery diff tests should narrow nullable contract
+  fields with explicit fixture requirement helpers instead of non-null
+  assertions. That keeps optional production fields honest while making test
+  fixture failures actionable.

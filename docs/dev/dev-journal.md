@@ -24064,3 +24064,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Biome warning count dropped from 234 to 232.
   - Remaining classes are `useNamingConvention` (95), `noExplicitAny` (83),
     and `noNonNullAssertion` (54).
+
+## 2026-04-30 - Feature discovery nullable fixture narrowing
+
+- Focus: clear the non-null assertions in
+  `tests/browser/featureDiscovery.test.ts`.
+- Progress:
+  - Added explicit `requireBrowserTools(...)` and `requireFeatureStatus(...)`
+    helpers for the baseline fixture fields that the diff test requires.
+  - Replaced two `!` assertions with helper-based narrowing and clearer test
+    failure messages.
+- Validation:
+  - `pnpm run typecheck`
+  - `pnpm vitest run tests/browser/featureDiscovery.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm run lint`
+  - `pnpm run docs:list`
+  - Biome warning count dropped from 232 to 230.
+  - Remaining classes are `useNamingConvention` (95), `noExplicitAny` (83),
+    and `noNonNullAssertion` (52).
