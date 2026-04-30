@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # AuraCall release helper
-# Phases: gates | artifacts | smoke | tag | publish | all
+# Phases: gates | artifacts | smoke | operator-smoke | tag | publish | all
 # npm publish is intentionally opt-in; current releases are repo/GitHub
 # tarball and user-scoped runtime oriented.
 # Defaults to using the guardrail runner when available; falls back to env when
@@ -92,6 +92,13 @@ phase_smoke() {
   ( cd "$tmp" && npm exec --yes --package "$tgz" -- auracall "Smoke from empty dir" --dry-run )
 }
 
+phase_operator_smoke() {
+  banner "Operator runtime + MCP API status smoke"
+  run "$RUNNER" pnpm run install:user-runtime
+  run "$RUNNER" pnpm run smoke:mcp-api-status
+  run "$RUNNER" "$HOME/.local/bin/auracall" --version
+}
+
 phase_tag() {
   banner "Tag and push"
   git tag "v${VERSION}"
@@ -106,9 +113,11 @@ Phases (run individually or all):
   gates      pnpm check, lint, test, build
   artifacts  npm pack + sha1/sha256
   smoke      empty-dir smoke from local auracall-<version>.tgz
+  operator-smoke
+             refresh user runtime and verify installed MCP api_status
   tag        git tag v<version> && push tags
   publish    deferred npm publish; requires AURACALL_ENABLE_NPM_PUBLISH=1
-  all        run gates, artifacts, smoke, and tag
+  all        run gates, artifacts, smoke, operator-smoke, and tag
 
 Environment:
   MCP_RUNNER (default ./runner) - guardrail wrapper
@@ -125,8 +134,9 @@ main() {
     artifacts) phase_artifacts ;;
     publish) phase_publish ;;
     smoke) phase_smoke ;;
+    operator-smoke) phase_operator_smoke ;;
     tag) phase_tag ;;
-    all) phase_gates; phase_artifacts; phase_smoke; phase_tag ;;
+    all) phase_gates; phase_artifacts; phase_smoke; phase_operator_smoke; phase_tag ;;
     *) usage; exit 1 ;;
   esac
 }

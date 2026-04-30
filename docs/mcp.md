@@ -71,9 +71,9 @@
   the cache-only per-target mirror status tool; `api_status` is specifically
   for the running API service posture.
 - Smoke: after `pnpm run install:user-runtime`, run
-  `pnpm tsx scripts/smoke-api-status-mcp.ts --mode both --port 18081` to start
-  short-lived local API servers and verify installed MCP `api_status` reports
-  `disabled` and `scheduled` mirror scheduler postures.
+  `pnpm run smoke:mcp-api-status` to start short-lived local API servers and
+  verify installed MCP `api_status` reports `disabled` and `scheduled` mirror
+  scheduler postures.
 
 ### `runtime_inspect`
 - Inputs: one runtime lookup key, `runId`, `runtimeRunId`, `teamRunId`, or

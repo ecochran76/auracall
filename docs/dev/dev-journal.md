@@ -23818,3 +23818,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     server.
   - Installed MCP returned `scheduled` for a dry-run scheduler-enabled
     temporary API server.
+
+## 2026-04-30 - Release preflight MCP status smoke
+
+- Focus: make the installed MCP API status smoke a regular release preflight,
+  not an ad hoc operator command.
+- Progress:
+  - Added `pnpm run smoke:mcp-api-status` as the stable operator command.
+  - Added `./scripts/release.sh operator-smoke` to refresh the user runtime,
+    run the installed MCP posture smoke, and print the installed version.
+  - Updated release and MCP smoke docs to reference the stable script.
+- Validation:
+  - Release helper syntax and the package smoke script are covered in this
+    slice's verification.

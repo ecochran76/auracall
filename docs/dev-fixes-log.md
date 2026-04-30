@@ -15089,3 +15089,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   A scheduler-enabled `api serve` reports `scheduled` immediately because the
   cadence timer is armed; use that as the expected posture for enabled dry-run
   smoke, while scheduler-disabled smoke should report `disabled`.
+- 2026-04-30: Release preflight should exercise the installed MCP status path.
+  `pnpm run smoke:mcp-api-status` is now the stable command, and
+  `./scripts/release.sh operator-smoke` refreshes the user runtime, runs that
+  smoke, and prints the installed CLI version before a release tag.

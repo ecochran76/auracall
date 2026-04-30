@@ -2,10 +2,10 @@
 
 > Current distribution is repo/GitHub tarball plus user-scoped runtime. Public
 > npm distribution is intentionally deferred. For a guarded, phased flow, run
-> `./scripts/release.sh <phase>` (gates | artifacts | smoke | tag | all); it
-> stops on the first error so you can resume after fixing issues. The helper
-> uses `./runner` only when its runtime is available and otherwise falls back to
-> `/usr/bin/env`.
+> `./scripts/release.sh <phase>` (gates | artifacts | smoke | operator-smoke |
+> tag | all); it stops on the first error so you can resume after fixing
+> issues. The helper uses `./runner` only when its runtime is available and
+> otherwise falls back to `/usr/bin/env`.
 
 1. **Version & metadata**
    - [ ] Update `package.json` version. AuraCall is a new package line and starts at `0.1.0`; do not inherit upstream Oracle numbering.
@@ -37,11 +37,12 @@
    - [ ] `pnpm run lint`
    - [ ] Optional live smoke (with real `OPENAI_API_KEY`): `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/openai-live.test.ts`
    - [ ] MCP sanity check: with `config/mcporter.json` pointed at the local stdio server (`auracall-local`), run `mcporter list auracall-local --schema --config config/mcporter.json` after building (`pnpm build`) to ensure tools/resources are discoverable.
+   - [ ] Installed MCP API status smoke: after refreshing the user runtime, run `pnpm run smoke:mcp-api-status` and confirm `disabled` plus `scheduled` account-mirror scheduler postures.
 5. **Publish / distribute**
    - [ ] Ensure git status is clean; commit and push any pending changes.
    - [ ] Run `./scripts/release.sh smoke` to verify the local tarball executes from an empty directory.
-   - [ ] Run `pnpm run install:user-runtime` to refresh the operator runtime from the current checkout.
-   - [ ] Verify installed runtime: `~/.local/bin/auracall --version` and one dry-run command.
+   - [ ] Run `./scripts/release.sh operator-smoke` to refresh the operator runtime, verify installed MCP `api_status`, and print the installed version.
+   - [ ] Verify installed runtime with one dry-run command when the release changes CLI execution behavior.
    - [ ] Keep npm publish disabled unless the project deliberately opens that channel. The helper requires `AURACALL_ENABLE_NPM_PUBLISH=1` before the `publish` phase will run.
 6. **Post-release**
   - [ ] Verify GitHub release exists for `vX.Y.Z` and has the intended assets (tarball + checksums if produced). Add missing assets before announcing.

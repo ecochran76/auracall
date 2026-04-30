@@ -73,7 +73,7 @@ without shelling out to `auracall api status`.
 
 2) Run both local API posture smokes:
    ```bash
-   pnpm tsx scripts/smoke-api-status-mcp.ts --mode both --port 18081
+   pnpm run smoke:mcp-api-status
    ```
 
 Expected output:
