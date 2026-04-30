@@ -15153,3 +15153,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   fields with explicit fixture requirement helpers instead of non-null
   assertions. That keeps optional production fields honest while making test
   fixture failures actionable.
+- 2026-04-30: Manual-login CDP mocks should keep DevTools and
+  `chrome-remote-interface` PascalCase keys and use local
+  `useNamingConvention` justifications. Do not rename external API keys just to
+  satisfy style rules.

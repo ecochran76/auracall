@@ -24082,3 +24082,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Biome warning count dropped from 232 to 230.
   - Remaining classes are `useNamingConvention` (95), `noExplicitAny` (83),
     and `noNonNullAssertion` (52).
+
+## 2026-04-30 - Manual login CDP naming boundary
+
+- Focus: clear intentional CDP and `chrome-remote-interface` naming warnings in
+  `tests/browser/manualLogin.test.ts`.
+- Progress:
+  - Added local `useNamingConvention` justifications for DevTools
+    `Browser`/`Page` domains and `chrome-remote-interface` `List`/`New`/`Close`
+    static API members.
+  - Kept the mocks shaped like the external API rather than renaming provider
+    boundary keys.
+- Validation:
+  - `pnpm exec biome lint tests/browser/manualLogin.test.ts --reporter=json`
+  - `pnpm vitest run tests/browser/manualLogin.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm run typecheck`
+  - `pnpm run lint`
+  - `pnpm run docs:list`
+  - `git diff --check`
+  - Biome warning count dropped from 230 to 225.
+  - Remaining classes are `useNamingConvention` (90), `noExplicitAny` (83),
+    and `noNonNullAssertion` (52).
