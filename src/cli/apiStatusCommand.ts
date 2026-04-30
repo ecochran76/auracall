@@ -26,6 +26,8 @@ export interface ApiStatusSchedulerSummary {
   enabled: boolean | null;
   state: string | null;
   dryRun: boolean | null;
+  lastWakeReason: string | null;
+  lastWakeAt: string | null;
   lastAction: string | null;
   backpressure: ApiStatusBackpressureSummary;
 }
@@ -79,6 +81,8 @@ export function summarizeApiStatusPayload(
       enabled: typeof scheduler.enabled === 'boolean' ? scheduler.enabled : null,
       state: readString(scheduler.state),
       dryRun: typeof scheduler.dryRun === 'boolean' ? scheduler.dryRun : null,
+      lastWakeReason: readString(scheduler.lastWakeReason),
+      lastWakeAt: readString(scheduler.lastWakeAt),
       lastAction: readString(lastPass.action),
       backpressure: {
         reason: normalizeApiStatusBackpressureReason(backpressure.reason),
@@ -109,6 +113,7 @@ export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string 
   const lines = [
     `AuraCall API status: ${summary.ok === null ? 'unknown' : summary.ok ? 'ok' : 'not-ok'} (${summary.host}:${summary.port})`,
     `Account mirror scheduler: state=${scheduler.state ?? 'unknown'} enabled=${formatNullableBoolean(scheduler.enabled)} dryRun=${formatNullableBoolean(scheduler.dryRun)}`,
+    `Latest lazy mirror wake: ${scheduler.lastWakeReason ?? 'unknown'}${scheduler.lastWakeAt ? ` at ${scheduler.lastWakeAt}` : ''}`,
     `Latest lazy mirror backpressure: ${backpressure.reason}${backpressure.message ? ` - ${backpressure.message}` : ''}`,
   ];
   if (scheduler.lastAction) {

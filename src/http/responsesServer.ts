@@ -225,6 +225,14 @@ interface HttpRuntimeRunInspectionResponse {
 interface HttpAccountMirrorRefreshResponse extends AccountMirrorRefreshResult {}
 interface HttpAccountMirrorCatalogResponse extends AccountMirrorCatalogResult {}
 
+type AccountMirrorSchedulerWakeReason =
+  | 'startup-cadence'
+  | 'cadence'
+  | 'operator-run-once'
+  | 'operator-resume'
+  | 'media-generation-settled'
+  | 'response-drain-completed';
+
 interface HttpStatusResponse {
   object: 'status';
   ok: true;
@@ -288,6 +296,8 @@ interface HttpStatusResponse {
     intervalMs: number | null;
     state: 'disabled' | 'idle' | 'scheduled' | 'running' | 'paused';
     paused: boolean;
+    lastWakeReason: AccountMirrorSchedulerWakeReason | null;
+    lastWakeAt: string | null;
     lastStartedAt: string | null;
     lastCompletedAt: string | null;
     lastPass: AccountMirrorSchedulerPassResult | null;
@@ -375,7 +385,7 @@ export async function createResponsesHttpServer(
         ? resolvedUserConfig.auracallProfile
         : null,
     onGenerationSettled: () => {
-      scheduleAccountMirrorSchedulerFollowUp(0);
+      scheduleAccountMirrorSchedulerFollowUp(0, 'media-generation-settled');
     },
   });
   const localRunnerCapabilitySummary = createLocalRunnerCapabilitySummary(configuredRuntimeConfig);
@@ -412,6 +422,8 @@ export async function createResponsesHttpServer(
     intervalMs: accountMirrorSchedulerIntervalMs > 0 ? accountMirrorSchedulerIntervalMs : null,
     state: accountMirrorSchedulerIntervalMs > 0 ? 'idle' : 'disabled',
     paused: false,
+    lastWakeReason: null,
+    lastWakeAt: null,
     lastStartedAt: null,
     lastCompletedAt: null,
     lastPass: null,
@@ -455,7 +467,7 @@ export async function createResponsesHttpServer(
       }
       if (accountMirrorFollowUpAfterNextDrain) {
         accountMirrorFollowUpAfterNextDrain = false;
-        scheduleAccountMirrorSchedulerFollowUp(0);
+        scheduleAccountMirrorSchedulerFollowUp(0, 'response-drain-completed');
       }
     });
   };
@@ -493,12 +505,18 @@ export async function createResponsesHttpServer(
   };
   let accountMirrorSchedulerTimer: NodeJS.Timeout | null = null;
   let accountMirrorSchedulerScheduled = false;
-  const runAccountMirrorSchedulerPass = async (input: { dryRun: boolean }) => {
+  const runAccountMirrorSchedulerPass = async (input: {
+    dryRun: boolean;
+    wakeReason: AccountMirrorSchedulerWakeReason;
+  }) => {
     if (accountMirrorSchedulerState.state === 'running') {
       return false;
     }
+    const wakeAt = now().toISOString();
     accountMirrorSchedulerState.state = 'running';
-    accountMirrorSchedulerState.lastStartedAt = now().toISOString();
+    accountMirrorSchedulerState.lastWakeReason = input.wakeReason;
+    accountMirrorSchedulerState.lastWakeAt = wakeAt;
+    accountMirrorSchedulerState.lastStartedAt = wakeAt;
     try {
       accountMirrorSchedulerState.lastPass = await accountMirrorSchedulerService.runOnce({
         dryRun: input.dryRun,
@@ -523,7 +541,10 @@ export async function createResponsesHttpServer(
     }
     return true;
   };
-  const scheduleAccountMirrorScheduler = (delayMs = accountMirrorSchedulerIntervalMs) => {
+  const scheduleAccountMirrorScheduler = (
+    delayMs = accountMirrorSchedulerIntervalMs,
+    wakeReason: AccountMirrorSchedulerWakeReason = 'cadence',
+  ) => {
     if (
       closed ||
       accountMirrorSchedulerIntervalMs <= 0 ||
@@ -543,11 +564,15 @@ export async function createResponsesHttpServer(
       }
       await runAccountMirrorSchedulerPass({
         dryRun: accountMirrorSchedulerDryRun,
+        wakeReason,
       });
-      scheduleAccountMirrorScheduler(accountMirrorSchedulerIntervalMs);
+      scheduleAccountMirrorScheduler(accountMirrorSchedulerIntervalMs, 'cadence');
     }, delayMs);
   };
-  const scheduleAccountMirrorSchedulerFollowUp = (delayMs = 0) => {
+  const scheduleAccountMirrorSchedulerFollowUp = (
+    delayMs = 0,
+    wakeReason: AccountMirrorSchedulerWakeReason,
+  ) => {
     if (
       closed ||
       accountMirrorSchedulerIntervalMs <= 0 ||
@@ -561,7 +586,7 @@ export async function createResponsesHttpServer(
       accountMirrorSchedulerTimer = null;
       accountMirrorSchedulerScheduled = false;
     }
-    scheduleAccountMirrorScheduler(delayMs);
+    scheduleAccountMirrorScheduler(delayMs, wakeReason);
   };
   const server = http.createServer();
 
@@ -804,7 +829,7 @@ export async function createResponsesHttpServer(
               if (accountMirrorSchedulerState.state !== 'running') {
                 accountMirrorSchedulerState.state = 'idle';
               }
-              scheduleAccountMirrorScheduler(0);
+              scheduleAccountMirrorScheduler(0, 'operator-resume');
             }
             controlResult = {
               kind: 'account-mirror-scheduler',
@@ -814,7 +839,10 @@ export async function createResponsesHttpServer(
           } else {
             const requestedDryRun = payload.accountMirrorScheduler.dryRun ?? true;
             const dryRun = accountMirrorSchedulerDryRun ? true : requestedDryRun;
-            const ran = await runAccountMirrorSchedulerPass({ dryRun });
+            const ran = await runAccountMirrorSchedulerPass({
+              dryRun,
+              wakeReason: 'operator-run-once',
+            });
             if (!ran) {
               sendJson(res, 409, {
                 error: {
@@ -952,7 +980,7 @@ export async function createResponsesHttpServer(
             maxRuns: 1,
             trigger: 'request-create',
           });
-          scheduleAccountMirrorSchedulerFollowUp(0);
+          scheduleAccountMirrorSchedulerFollowUp(0, 'response-drain-completed');
           const drainedResponse = await responsesService.readResponse(createdResponse.id);
           sendJson(res, 200, drainedResponse ?? createdResponse);
         }
@@ -1236,7 +1264,7 @@ export async function createResponsesHttpServer(
     );
   }
   scheduleBackgroundDrain();
-  scheduleAccountMirrorScheduler();
+  scheduleAccountMirrorScheduler(accountMirrorSchedulerIntervalMs, 'startup-cadence');
 
   return {
     port: address.port,
@@ -2435,6 +2463,8 @@ function createOperatorBrowserDashboardHtml(): string {
         ['Runner', runner.status || 'unknown'],
         ['Runner ID', runner.id || 'none'],
         ['Mirror Scheduler', scheduler.state || 'unknown'],
+        ['Mirror Wake', scheduler.lastWakeReason || 'none'],
+        ['Mirror Wake At', scheduler.lastWakeAt || 'never'],
         ['Dashboard Route', dashboard || '/ops/browser'],
       ].map(([key, value]) => '<dt>' + key + '</dt><dd>' + value + '</dd>').join('');
     }

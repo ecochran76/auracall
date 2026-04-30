@@ -146,6 +146,8 @@
       - `accountMirrorScheduler.intervalMs`
       - `accountMirrorScheduler.state = disabled|idle|scheduled|running|paused`
       - `accountMirrorScheduler.paused`
+      - `accountMirrorScheduler.lastWakeReason = startup-cadence|cadence|operator-run-once|operator-resume|media-generation-settled|response-drain-completed|null`
+      - `accountMirrorScheduler.lastWakeAt`
       - `accountMirrorScheduler.lastStartedAt`
       - `accountMirrorScheduler.lastCompletedAt`
       - `accountMirrorScheduler.lastPass`

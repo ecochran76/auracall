@@ -13,6 +13,8 @@ const statusPayload = {
     enabled: true,
     state: 'idle',
     dryRun: true,
+    lastWakeReason: 'media-generation-settled',
+    lastWakeAt: '2026-04-29T12:00:01.000Z',
     lastPass: {
       action: 'skipped',
       backpressure: {
@@ -38,6 +40,8 @@ describe('api status CLI helpers', () => {
         enabled: true,
         state: 'idle',
         dryRun: true,
+        lastWakeReason: 'media-generation-settled',
+        lastWakeAt: '2026-04-29T12:00:01.000Z',
         lastAction: 'skipped',
         backpressure: {
           reason: 'routine-delayed',
@@ -47,6 +51,9 @@ describe('api status CLI helpers', () => {
     });
     expect(formatApiStatusCliSummary(summary)).toContain(
       'Latest lazy mirror backpressure: routine-delayed - minimum interval has not elapsed',
+    );
+    expect(formatApiStatusCliSummary(summary)).toContain(
+      'Latest lazy mirror wake: media-generation-settled at 2026-04-29T12:00:01.000Z',
     );
   });
 

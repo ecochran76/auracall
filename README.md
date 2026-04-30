@@ -222,9 +222,11 @@ Terminology note:
   `--account-mirror-scheduler-execute` and the request sets `"dryRun":false`.
   Recent scheduler passes are persisted in the AuraCall cache and exposed at
   `/status.accountMirrorScheduler.history` so cadence and failure evidence
-  survives a service restart. For live execute dogfood, prefer a long interval
-  plus one manual `run-once` request so the scheduler proves the refresh path
-  without repeatedly touching bot-sensitive provider pages.
+  survives a service restart. `/status.accountMirrorScheduler.lastWakeReason`
+  and `lastWakeAt` distinguish routine cadence, manual operator wakes, and
+  live-follow nudges after real work settles. For live execute dogfood, prefer a
+  long interval plus one manual `run-once` request so the scheduler proves the
+  refresh path without repeatedly touching bot-sensitive provider pages.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

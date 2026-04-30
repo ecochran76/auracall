@@ -172,6 +172,9 @@ Current implementation-facing politeness contract:
   persisted after stopping the scheduler-enabled server and starting a second
   scheduler-disabled server: `lastPass` reset to `null`, while
   `history.entries[0]` retained the prior dry-run completion timestamp.
+- `/status.accountMirrorScheduler.lastWakeReason` and `lastWakeAt` expose why
+  the latest lazy scheduler pass woke up: startup cadence, routine cadence,
+  manual operator run/resume, media settlement, or response-drain completion.
 - Installed-runtime execute dogfood started `api serve` with
   `--account-mirror-scheduler-interval-ms 600000` and
   `--account-mirror-scheduler-execute`, then triggered one manual

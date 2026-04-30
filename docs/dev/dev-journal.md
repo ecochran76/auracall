@@ -23765,3 +23765,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Added media-service coverage for async settlement notification.
   - Added HTTP coverage proving settled media work triggers a lazy scheduler
     pass through `/status` readback.
+
+## 2026-04-29 - Lazy mirror wake reason status
+
+- Focus: make post-work lazy mirror follow-up auditable from `/status`.
+- Progress:
+  - Added `lastWakeReason` and `lastWakeAt` to
+    `/status.accountMirrorScheduler`.
+  - Scheduler wakes now identify startup cadence, routine cadence, manual
+    operator run/resume, media settlement, or response-drain completion.
+  - The API status CLI and `/ops/browser` dashboard include the latest wake
+    reason.
+- Validation:
+  - Added focused HTTP and CLI assertions for wake reason readback.

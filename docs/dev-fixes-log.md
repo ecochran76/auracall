@@ -15073,3 +15073,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   real work finishes, not run mirror scraping inline. Media generation
   settlement and response-run drain completion now nudge the existing scheduler;
   routine refreshes still use politeness checks and zero browser queue wait.
+- 2026-04-29: Lazy mirror status should report why the scheduler woke up.
+  `/status.accountMirrorScheduler.lastWakeReason` and `lastWakeAt` now
+  distinguish startup/routine cadence, operator controls, media settlement, and
+  response-drain completion.

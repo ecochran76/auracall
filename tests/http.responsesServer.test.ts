@@ -1592,6 +1592,8 @@ describe('http responses adapter', () => {
           intervalMs: number;
           state: string;
           paused: boolean;
+          lastWakeReason: string | null;
+          lastWakeAt: string | null;
           lastPass: AccountMirrorSchedulerPassResult | null;
           history: {
             object: string;
@@ -1607,6 +1609,7 @@ describe('http responses adapter', () => {
         dryRun: true,
         intervalMs: 25,
         paused: false,
+        lastWakeAt: expect.any(String),
         lastPass: {
           object: 'account_mirror_scheduler_pass',
           mode: 'dry-run',
@@ -1630,6 +1633,7 @@ describe('http responses adapter', () => {
           ]),
         },
       });
+      expect(['startup-cadence', 'cadence']).toContain(payload.accountMirrorScheduler.lastWakeReason);
       expect(['idle', 'scheduled', 'running']).toContain(payload.accountMirrorScheduler.state);
     } finally {
       await server.close();
@@ -1732,6 +1736,8 @@ describe('http responses adapter', () => {
           dryRun: true,
           state: 'paused',
           paused: true,
+          lastWakeReason: 'operator-run-once',
+          lastWakeAt: expect.any(String),
           lastStartedAt: expect.any(String),
           lastCompletedAt: expect.any(String),
           lastPass: {
@@ -1852,6 +1858,8 @@ describe('http responses adapter', () => {
           intervalMs: null,
           state: 'disabled',
           paused: false,
+          lastWakeReason: 'operator-run-once',
+          lastWakeAt: expect.any(String),
           lastPass: {
             object: 'account_mirror_scheduler_pass',
             mode: 'execute',
@@ -1944,8 +1952,14 @@ describe('http responses adapter', () => {
       expect(runOnce).toHaveBeenCalledWith({ dryRun: true });
       const statusResponse = await fetch(`http://127.0.0.1:${server.port}/status`);
       const status = (await statusResponse.json()) as {
-        accountMirrorScheduler: { lastPass: AccountMirrorSchedulerPassResult | null };
+        accountMirrorScheduler: {
+          lastWakeReason: string | null;
+          lastWakeAt: string | null;
+          lastPass: AccountMirrorSchedulerPassResult | null;
+        };
       };
+      expect(status.accountMirrorScheduler.lastWakeReason).toBe('media-generation-settled');
+      expect(status.accountMirrorScheduler.lastWakeAt).toEqual(expect.any(String));
       expect(status.accountMirrorScheduler.lastPass).toMatchObject({
         object: 'account_mirror_scheduler_pass',
         backpressure: {
