@@ -23890,3 +23890,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run typecheck`
   - Biome warning count dropped from 563 to 538; source-level
     `noUnnecessaryConditions` is now zero.
+
+## 2026-04-30 - Lint debt unused parameter cleanup
+
+- Focus: clear the remaining small non-naming warning class before deciding
+  how to handle schema/test naming and fixture `any` debt.
+- Progress:
+  - Marked unused mock callback inputs explicitly in browser-service and Gemini
+    list-option tests.
+- Validation:
+  - `pnpm run typecheck`
+  - Biome warning count dropped from 538 to 534; `noUnusedFunctionParameters`
+    is now zero.

@@ -610,7 +610,7 @@ describe('llmService project file cache writes', () => {
 
   test('buildListOptions falls back to the Gemini app URL when no Gemini URL is configured', async () => {
     const browserService = {
-      resolveServiceTarget: vi.fn(async ({ configuredUrl }: { configuredUrl?: string | null }) => ({
+      resolveServiceTarget: vi.fn(async (_input: { configuredUrl?: string | null }) => ({
         host: '127.0.0.1',
         port: undefined,
         tab: null,

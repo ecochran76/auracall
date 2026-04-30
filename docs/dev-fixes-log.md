@@ -15109,3 +15109,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   dead branches only after confirming the runtime mode is intentionally fixed.
   The managed ChatGPT/Grok browser paths are manual-profile paths, so cleanup
   should preserve profile state instead of falling back to temp-profile removal.
+- 2026-04-30: For test mocks that intentionally accept a production callback
+  shape but do not inspect the input, prefer explicit underscore parameters over
+  destructuring unused fields. That keeps the mock contract visible without
+  carrying unused-parameter diagnostics.

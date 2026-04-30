@@ -4,10 +4,10 @@ const {
   client,
   cdpMock,
   resolveChromeEndpointMock,
-} = vi.hoisted(() => {
-  const client = {
-    Browser: {
-      getWindowForTarget: vi.fn(async ({ targetId }: { targetId: string }) => ({ windowId: 1 })),
+  } = vi.hoisted(() => {
+    const client = {
+      Browser: {
+      getWindowForTarget: vi.fn(async (_input: { targetId: string }) => ({ windowId: 1 })),
       setWindowBounds: vi.fn(async () => undefined),
     },
     Page: {
@@ -243,7 +243,7 @@ describe('chrome target reuse policy', () => {
       { id: 'keep-1', type: 'page', url: 'https://grok.com/project/c' },
       { id: 'selected', type: 'page', url: 'https://grok.com/project/d' },
     ]);
-    client.Browser.getWindowForTarget.mockImplementation(async ({ targetId }: { targetId: string }) => ({
+    client.Browser.getWindowForTarget.mockImplementation(async (_input: { targetId: string }) => ({
       windowId: 1,
     }));
 
@@ -280,7 +280,7 @@ describe('chrome target reuse policy', () => {
       { id: 'blank-2', type: 'page', url: 'about:blank' },
       { id: 'blank-3', type: 'page', url: 'about:blank' },
     ]);
-    client.Browser.getWindowForTarget.mockImplementation(async ({ targetId }: { targetId: string }) => ({
+    client.Browser.getWindowForTarget.mockImplementation(async (_input: { targetId: string }) => ({
       windowId: 1,
     }));
 
