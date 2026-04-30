@@ -23707,3 +23707,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed Gemini media preflight run
     `medgen_269ced977c3b4a919f7d3daa5e2af2aa` failed before provider submit
     with `gemini_identity_not_detected` and zero artifacts
+
+## 2026-04-29 - Gemini default-profile media smoke after sign-in handoff
+
+- Focus: finish the Gemini default-profile image smoke once the human Google
+  auth challenge was completed.
+- Findings:
+  - After the visible `Sign in` and Google `Next` handoff, doctor reported
+    `ecochran76@gmail.com` from `google-account-label`.
+  - Gemini media capability reporting showed image/music/video available.
+  - First image retries still failed preflight because the new disabled-row
+    guard treated `mat-mdc-tooltip-disabled` as tool-disabled evidence.
+- Progress:
+  - Disabled Gemini drawer-row detection now requires exact `disabled` or
+    `mdc-list-item--disabled` class tokens.
+  - Added unit coverage proving tooltip-disabled styling is not blocked tool
+    evidence.
+- Validation:
+  - `pnpm exec tsc --noEmit` passed
+  - focused Gemini/workbench/media tests passed with `--testTimeout 15000`
+  - installed capability report returned three available Gemini media
+    capabilities
+  - installed Gemini image smoke
+    `medgen_499f56b2a2004efc825f4368d0117833` succeeded, submitted to
+    conversation `6a131154e90f7362`, observed the generated image on artifact
+    poll 4, and materialized:
+    `/home/ecochran76/.auracall/runtime/media-generations/medgen_499f56b2a2004efc825f4368d0117833/artifacts/Generated image 1.png`

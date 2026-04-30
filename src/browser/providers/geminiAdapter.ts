@@ -199,6 +199,15 @@ function normalizeGeminiDiscoveryLabel(value: string | null | undefined): string
     .trim();
 }
 
+export function geminiClassNameHasDisabledToolToken(value: string | null | undefined): boolean {
+  const classTokens = new Set(
+    normalizeWhitespace(value ?? '')
+      .split(/\s+/)
+      .filter(Boolean),
+  );
+  return classTokens.has('disabled') || classTokens.has('mdc-list-item--disabled');
+}
+
 export function normalizeGeminiFeatureSignature(probe: GeminiFeatureProbe | null | undefined): string | null {
   if (!probe || typeof probe !== 'object') {
     return null;
@@ -1287,10 +1296,7 @@ async function readGeminiToolsDrawerProbe(Runtime: ChromeClient['Runtime']): Pro
   const disabledModes = Array.from(
     new Set(
       rowSearch.matched
-        .filter((match) => {
-          const className = normalizeGeminiDiscoveryLabel(match.className ?? '');
-          return className.includes('disabled') || className.includes('mdc list item disabled');
-        })
+        .filter((match) => geminiClassNameHasDisabledToolToken(match.className))
         .map((match) => normalizeGeminiDiscoveryLabel(match.text || match.ariaLabel || null))
         .filter(Boolean),
     ),

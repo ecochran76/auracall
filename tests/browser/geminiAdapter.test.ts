@@ -4,6 +4,7 @@ import {
   canReuseGeminiResolvedTabTarget,
   createGeminiAdapter,
   deriveGeminiFeatureProbeFromUiList,
+  geminiClassNameHasDisabledToolToken,
   geminiGeneratedImageDownloadButtonTagExpression,
   geminiGeneratedMediaVariantDownloadPointExpression,
   inferGeminiGeneratedArtifactMediaType,
@@ -556,6 +557,66 @@ describe('geminiAdapter id helpers', () => {
       toggles: {
         'personal intelligence': true,
       },
+      active_mode: null,
+    });
+  });
+
+  test('does not treat Gemini tooltip-disabled styling as disabled tool evidence', () => {
+    expect(geminiClassNameHasDisabledToolToken('toolbox-drawer-item-list-button mat-mdc-tooltip-disabled')).toBe(false);
+    expect(geminiClassNameHasDisabledToolToken('toolbox-drawer-item-list-button disabled')).toBe(true);
+    expect(geminiClassNameHasDisabledToolToken('toolbox-drawer-item-list-button mdc-list-item--disabled')).toBe(true);
+
+    expect(deriveGeminiFeatureProbeFromUiList({
+      url: 'https://gemini.google.com/app',
+      title: 'Gemini',
+      totalScanned: 1,
+      summary: {
+        buttons: 0,
+        menuItems: 1,
+        switches: 0,
+        inputs: 0,
+        links: 0,
+        dialogs: 0,
+        menus: 1,
+        fileInputs: 0,
+        uploadCandidates: 0,
+      },
+      sections: {
+        buttons: [],
+        menuItems: [
+          {
+            tag: 'button',
+            role: 'menuitemcheckbox',
+            text: 'Create image',
+            ariaLabel: null,
+            title: null,
+            dataTestId: null,
+            className: 'toolbox-drawer-item-list-button mat-mdc-tooltip-disabled',
+            href: null,
+            checked: false,
+            expanded: null,
+            disabled: false,
+            visible: true,
+            inputType: null,
+            widgetType: 'menu-item',
+            pathHint: null,
+            interactionHints: ['hard-click-preferred'],
+          },
+        ],
+        switches: [],
+        inputs: [],
+        links: [],
+        dialogs: [],
+        menus: [],
+        fileInputs: [],
+        uploadCandidates: [],
+      },
+    }) ?? null).toEqual({
+      detector: 'gemini-feature-probe-v1',
+      deep_research: false,
+      personal_intelligence: undefined,
+      modes: ['create image'],
+      toggles: {},
       active_mode: null,
     });
   });

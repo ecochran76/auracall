@@ -2196,7 +2196,8 @@
   - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/workbenchCapabilities.test.ts tests/workbenchBrowserDiscovery.test.ts tests/mediaGeneration.test.ts --maxWorkers 1 --testTimeout 15000`
   - proves Gemini feature signatures carry `signed_out` / `disabled_modes`
     evidence and that disabled tool drawer rows do not become available media
-    capabilities.
+    capabilities; also proves `mat-mdc-tooltip-disabled` is not treated as
+    disabled Gemini tool-row evidence.
 - Public prebuilt task-run-spec acceptance:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/mcp/teamRun.test.ts tests/cli/teamRunCommand.test.ts tests/teams.schema.test.ts --maxWorkers 1`
   - proves HTTP and MCP accept a prebuilt flattened `taskRunSpec`, reject

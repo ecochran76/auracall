@@ -15060,3 +15060,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `signed_out` / `disabled_modes` in the feature signature and derive blocked
   workbench capabilities instead of advertising media/research/canvas as
   available.
+- 2026-04-29: Gemini enabled tool rows can still include
+  `mat-mdc-tooltip-disabled`; that class means tooltip disabled, not tool
+  disabled. Only treat exact `disabled` or `mdc-list-item--disabled` class
+  tokens as disabled Gemini tool-row evidence.
