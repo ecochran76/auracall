@@ -10,7 +10,10 @@ import { scanRegisteredInstance } from '../../packages/browser-service/src/servi
 
 vi.mock('chrome-remote-interface', () => {
   const LIST = vi.fn();
-  const mock = Object.assign(() => ({}), { List: LIST });
+  const mock = Object.assign(() => ({}), {
+    // biome-ignore lint/style/useNamingConvention: chrome-remote-interface static API uses PascalCase.
+    List: LIST,
+  });
   return { default: mock };
 });
 
@@ -34,7 +37,10 @@ describe('instanceScanner (package)', () => {
       );
 
       const { default: cdp } = await import('chrome-remote-interface');
-      const cdpMock = cdp as unknown as { List: ReturnType<typeof vi.fn> };
+      const cdpMock = cdp as unknown as {
+        // biome-ignore lint/style/useNamingConvention: chrome-remote-interface static API uses PascalCase.
+        List: ReturnType<typeof vi.fn>;
+      };
       cdpMock.List.mockResolvedValue([
         { targetId: 'tab-1', type: 'page', url: 'https://grok.com', title: 'Grok' },
       ]);

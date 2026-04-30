@@ -15157,3 +15157,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `chrome-remote-interface` PascalCase keys and use local
   `useNamingConvention` justifications. Do not rename external API keys just to
   satisfy style rules.
+- 2026-04-30: Repeated live-service CDP client fixtures should be centralized
+  before suppressing naming warnings. A single helper with a justified
+  `Runtime` key is clearer than repeating the same external protocol exception
+  across every provider-state case.

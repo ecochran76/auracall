@@ -24103,3 +24103,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Biome warning count dropped from 230 to 225.
   - Remaining classes are `useNamingConvention` (90), `noExplicitAny` (83),
     and `noNonNullAssertion` (52).
+
+## 2026-04-30 - Live service-state CDP naming boundary
+
+- Focus: clear CDP naming warnings in live service-state and ChatGPT/browser
+  scanner tests without changing external protocol shapes.
+- Progress:
+  - Centralized the live service-state CDP client fixture behind
+    `createCdpClient(...)` and `createProbeDeps(...)`, leaving a single
+    justified `Runtime` protocol-domain key.
+  - Added local `useNamingConvention` justifications for
+    `chrome-remote-interface` `List` and ChatGPT DevTools `Runtime`/`Network`/
+    `Page` client mocks.
+- Validation:
+  - `pnpm exec biome lint tests/browser-service/instanceScanner.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/liveServiceState.test.ts --reporter=json`
+  - `pnpm vitest run tests/browser-service/instanceScanner.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/liveServiceState.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm run typecheck`
+  - `pnpm run lint`
+  - `pnpm run docs:list`
+  - Biome warning count dropped from 225 to 208.
+  - Remaining classes are `useNamingConvention` (73), `noExplicitAny` (83),
+    and `noNonNullAssertion` (52).

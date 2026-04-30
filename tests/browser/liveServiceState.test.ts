@@ -17,6 +17,28 @@ function createRuntime(values: Array<unknown>) {
   };
 }
 
+function createCdpClient(runtime: ReturnType<typeof createRuntime>) {
+  return {
+    // biome-ignore lint/style/useNamingConvention: mirrors the DevTools protocol domain name.
+    Runtime: runtime,
+    close: async () => undefined,
+  };
+}
+
+function createProbeDeps(runtime: ReturnType<typeof createRuntime>, targetId: string) {
+  return {
+    createBrowserService: () =>
+      ({
+        resolveServiceTarget: async () => ({
+          host: '127.0.0.1',
+          port: 9222,
+          tab: { targetId },
+        }),
+      }) as never,
+    connectToTarget: async () => createCdpClient(runtime) as never,
+  };
+}
+
 describe('probeChatgptBrowserServiceState', () => {
   it('returns thinking when the placeholder assistant turn is visible', async () => {
     const runtime = createRuntime([
@@ -32,21 +54,7 @@ describe('probeChatgptBrowserServiceState', () => {
           },
         },
       } as never,
-      {
-        createBrowserService: () =>
-          ({
-            resolveServiceTarget: async () => ({
-              host: '127.0.0.1',
-              port: 9222,
-              tab: { targetId: 'tab-1' },
-            }),
-          }) as never,
-        connectToTarget: async () =>
-          ({
-            Runtime: runtime,
-            close: async () => undefined,
-          }) as never,
-      },
+      createProbeDeps(runtime, 'tab-1'),
     );
 
     expect(result).toMatchObject({
@@ -73,21 +81,7 @@ describe('probeChatgptBrowserServiceState', () => {
           },
         },
       } as never,
-      {
-        createBrowserService: () =>
-          ({
-            resolveServiceTarget: async () => ({
-              host: '127.0.0.1',
-              port: 9222,
-              tab: { targetId: 'tab-1' },
-            }),
-          }) as never,
-        connectToTarget: async () =>
-          ({
-            Runtime: runtime,
-            close: async () => undefined,
-          }) as never,
-      },
+      createProbeDeps(runtime, 'tab-1'),
     );
 
     expect(result).toMatchObject({
@@ -109,21 +103,7 @@ describe('probeChatgptBrowserServiceState', () => {
           },
         },
       } as never,
-      {
-        createBrowserService: () =>
-          ({
-            resolveServiceTarget: async () => ({
-              host: '127.0.0.1',
-              port: 9222,
-              tab: { targetId: 'tab-1' },
-            }),
-          }) as never,
-        connectToTarget: async () =>
-          ({
-            Runtime: runtime,
-            close: async () => undefined,
-          }) as never,
-      },
+      createProbeDeps(runtime, 'tab-1'),
     );
 
     expect(result).toMatchObject({
@@ -158,21 +138,7 @@ describe('probeGeminiBrowserServiceState', () => {
         },
       } as never,
       { prompt: 'Compare merge sort and quicksort in 6 bullet points' },
-      {
-        createBrowserService: () =>
-          ({
-            resolveServiceTarget: async () => ({
-              host: '127.0.0.1',
-              port: 9222,
-              tab: { targetId: 'gemini-tab-1' },
-            }),
-          }) as never,
-        connectToTarget: async () =>
-          ({
-            Runtime: runtime,
-            close: async () => undefined,
-          }) as never,
-      },
+      createProbeDeps(runtime, 'gemini-tab-1'),
     );
 
     expect(result).toMatchObject({
@@ -209,21 +175,7 @@ describe('probeGeminiBrowserServiceState', () => {
         },
       } as never,
       { prompt: 'Generate an image of an asphalt secret agent' },
-      {
-        createBrowserService: () =>
-          ({
-            resolveServiceTarget: async () => ({
-              host: '127.0.0.1',
-              port: 9222,
-              tab: { targetId: 'gemini-tab-1' },
-            }),
-          }) as never,
-        connectToTarget: async () =>
-          ({
-            Runtime: runtime,
-            close: async () => undefined,
-          }) as never,
-      },
+      createProbeDeps(runtime, 'gemini-tab-1'),
     );
 
     expect(result).toMatchObject({
@@ -257,21 +209,7 @@ describe('probeGeminiBrowserServiceState', () => {
         },
       } as never,
       { prompt: 'Compare merge sort and quicksort in 6 bullet points' },
-      {
-        createBrowserService: () =>
-          ({
-            resolveServiceTarget: async () => ({
-              host: '127.0.0.1',
-              port: 9222,
-              tab: { targetId: 'gemini-tab-1' },
-            }),
-          }) as never,
-        connectToTarget: async () =>
-          ({
-            Runtime: runtime,
-            close: async () => undefined,
-          }) as never,
-      },
+      createProbeDeps(runtime, 'gemini-tab-1'),
     );
 
     expect(result).toMatchObject({
@@ -309,21 +247,7 @@ describe('probeGeminiBrowserServiceState', () => {
         },
       } as never,
       { prompt: 'Generate an image of an asphalt secret agent' },
-      {
-        createBrowserService: () =>
-          ({
-            resolveServiceTarget: async () => ({
-              host: '127.0.0.1',
-              port: 9222,
-              tab: { targetId: 'gemini-tab-1' },
-            }),
-          }) as never,
-        connectToTarget: async () =>
-          ({
-            Runtime: runtime,
-            close: async () => undefined,
-          }) as never,
-      },
+      createProbeDeps(runtime, 'gemini-tab-1'),
     );
 
     expect(result).toMatchObject({
@@ -357,21 +281,7 @@ describe('probeGeminiBrowserServiceState', () => {
         },
       } as never,
       { prompt: 'Compare merge sort and quicksort in 6 bullet points' },
-      {
-        createBrowserService: () =>
-          ({
-            resolveServiceTarget: async () => ({
-              host: '127.0.0.1',
-              port: 9222,
-              tab: { targetId: 'gemini-tab-1' },
-            }),
-          }) as never,
-        connectToTarget: async () =>
-          ({
-            Runtime: runtime,
-            close: async () => undefined,
-          }) as never,
-      },
+      createProbeDeps(runtime, 'gemini-tab-1'),
     );
 
     expect(result).toMatchObject({
@@ -395,21 +305,7 @@ describe('probeGeminiBrowserServiceState', () => {
         },
       } as never,
       { prompt: 'hello' },
-      {
-        createBrowserService: () =>
-          ({
-            resolveServiceTarget: async () => ({
-              host: '127.0.0.1',
-              port: 9222,
-              tab: { targetId: 'gemini-tab-1' },
-            }),
-          }) as never,
-        connectToTarget: async () =>
-          ({
-            Runtime: runtime,
-            close: async () => undefined,
-          }) as never,
-      },
+      createProbeDeps(runtime, 'gemini-tab-1'),
     );
 
     expect(result).toMatchObject({
@@ -443,21 +339,7 @@ describe('probeGrokBrowserServiceState', () => {
           },
         },
       } as never,
-      {
-        createBrowserService: () =>
-          ({
-            resolveServiceTarget: async () => ({
-              host: '127.0.0.1',
-              port: 9222,
-              tab: { targetId: 'grok-tab-1' },
-            }),
-          }) as never,
-        connectToTarget: async () =>
-          ({
-            Runtime: runtime,
-            close: async () => undefined,
-          }) as never,
-      },
+      createProbeDeps(runtime, 'grok-tab-1'),
     );
 
     expect(result).toMatchObject({
@@ -489,21 +371,7 @@ describe('probeGrokBrowserServiceState', () => {
           },
         },
       } as never,
-      {
-        createBrowserService: () =>
-          ({
-            resolveServiceTarget: async () => ({
-              host: '127.0.0.1',
-              port: 9222,
-              tab: { targetId: 'grok-tab-1' },
-            }),
-          }) as never,
-        connectToTarget: async () =>
-          ({
-            Runtime: runtime,
-            close: async () => undefined,
-          }) as never,
-      },
+      createProbeDeps(runtime, 'grok-tab-1'),
     );
 
     expect(result).toMatchObject({
@@ -526,21 +394,7 @@ describe('probeGrokBrowserServiceState', () => {
           },
         },
       } as never,
-      {
-        createBrowserService: () =>
-          ({
-            resolveServiceTarget: async () => ({
-              host: '127.0.0.1',
-              port: 9222,
-              tab: { targetId: 'grok-tab-1' },
-            }),
-          }) as never,
-        connectToTarget: async () =>
-          ({
-            Runtime: runtime,
-            close: async () => undefined,
-          }) as never,
-      },
+      createProbeDeps(runtime, 'grok-tab-1'),
     );
 
     expect(result).toMatchObject({

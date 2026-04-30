@@ -250,6 +250,7 @@ describe('isRetryableChatgptTransientMessage', () => {
 describe('readChatgptConversationPayloadWithClient', () => {
   test('does not reload the active ChatGPT tab when preserveActiveTab is set', async () => {
     const client = {
+      // biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
       Runtime: {
         evaluate: vi.fn(async () => ({
           result: {
@@ -261,12 +262,14 @@ describe('readChatgptConversationPayloadWithClient', () => {
           },
         })),
       },
+      // biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
       Network: {
         enable: vi.fn(),
         responseReceived: vi.fn(),
         loadingFinished: vi.fn(),
         getResponseBody: vi.fn(),
       },
+      // biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
       Page: {
         enable: vi.fn(),
         reload: vi.fn(),
