@@ -23857,3 +23857,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     release candidate.
 - Validation:
   - The 0.1.1 candidate needs fresh gates/artifacts/smoke before tagging.
+
+## 2026-04-30 - Lint debt runtime cleanup
+
+- Focus: reduce warning-level Biome debt where it touches runtime browser and
+  provider behavior.
+- Progress:
+  - Removed source-level non-null assertions from browser feature diffing and
+    ChatGPT/Gemini/Grok download-settlement helpers.
+  - Replaced raw `any` metadata parsing in ChatGPT and Grok acceptance scripts
+    with explicit session metadata shapes.
+  - Left schema/test naming-convention diagnostics as separate policy debt
+    because most are intentional provider payload or fixture shapes.
+- Validation:
+  - `pnpm run typecheck`
+  - `pnpm vitest run tests/browser/featureDiscovery.test.ts --maxWorkers 1 --testTimeout 15000`
+  - Biome warning count dropped from 574 to 563; source-level
+    `noNonNullAssertion` and script-level `noExplicitAny` are now zero.

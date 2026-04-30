@@ -15101,3 +15101,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   current release candidate has advanced. `v0.1.0` already points at
   `fe8aa851`, so the current post-0.1.0 work should cut as `0.1.1` with fresh
   artifacts instead of attaching current tarballs to the old tag.
+- 2026-04-30: Treat lint-warning cleanup as a behavioral-risk reducer, not just
+  style churn. Start with source-level unsafe assertions and script-level raw
+  metadata parsing before touching schema/test naming-convention warnings,
+  because provider payload casing and fixtures need a separate policy decision.

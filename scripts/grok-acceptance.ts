@@ -63,6 +63,24 @@ type CacheFilesListPayload = {
   }>;
 };
 
+type BrowserSessionMetadata = {
+  mode?: unknown;
+  browser?: {
+    context?: {
+      provider?: unknown;
+    };
+    runtime?: {
+      conversationId?: unknown;
+    };
+  };
+  options?: {
+    prompt?: unknown;
+  };
+  promptPreview?: unknown;
+  startedAt?: unknown;
+  createdAt?: unknown;
+};
+
 type RunOptions = {
   expectFailure?: boolean;
   timeoutMs?: number;
@@ -272,7 +290,7 @@ async function findRecentBrowserConversationIdByPrompt(prompt: string): Promise<
     } catch {
       continue;
     }
-    let parsed: any;
+    let parsed: BrowserSessionMetadata;
     try {
       parsed = JSON.parse(raw);
     } catch {

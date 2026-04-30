@@ -121,15 +121,17 @@ function diffToggleMaps(
     const hasBefore = Object.hasOwn(before, key);
     const hasAfter = Object.hasOwn(after, key);
     if (!hasBefore && hasAfter) {
-      added[key] = after[key]!;
+      added[key] = after[key] ?? false;
       continue;
     }
     if (hasBefore && !hasAfter) {
       removed.push(key);
       continue;
     }
-    if (before[key] !== after[key]) {
-      changed.push({ key, before: before[key]!, after: after[key]! });
+    const beforeValue = before[key];
+    const afterValue = after[key];
+    if (beforeValue !== undefined && afterValue !== undefined && beforeValue !== afterValue) {
+      changed.push({ key, before: beforeValue, after: afterValue });
     }
   }
   return { added, removed, changed };

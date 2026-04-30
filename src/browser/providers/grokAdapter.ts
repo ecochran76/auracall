@@ -2988,7 +2988,9 @@ async function waitForGrokDownloadedFile(destDir: string, timeoutMs: number): Pr
       .filter((name) => !name.startsWith('grok-imagine-visible-') && !name.endsWith('.crdownload') && !name.endsWith('.tmp'))
       .sort();
     if (candidates.length > 0) {
-      const candidatePath = path.join(destDir, candidates[0]!);
+      const candidateName = candidates[0];
+      if (!candidateName) continue;
+      const candidatePath = path.join(destDir, candidateName);
       const stat = await fs.stat(candidatePath).catch(() => null);
       if (stat) {
         if (candidatePath === lastPath && stat.size === lastSize) stableCount += 1;

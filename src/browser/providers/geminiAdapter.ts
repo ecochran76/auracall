@@ -2784,7 +2784,9 @@ async function waitForGeminiDownloadedFile(
       !options.excludeNames?.has(name)
     );
     if (completed.length > 0) {
-      const candidatePath = path.join(destDir, completed.sort()[0]!);
+      const candidateName = completed.sort()[0];
+      if (!candidateName) continue;
+      const candidatePath = path.join(destDir, candidateName);
       const stat = await fs.stat(candidatePath).catch(() => null);
       if (stat) {
         if (candidatePath === lastPath && stat.size === lastSize) {

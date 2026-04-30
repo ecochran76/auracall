@@ -38,6 +38,25 @@ type RecentBrowserSessionMatch = {
   composerTool: string | null;
 };
 
+type BrowserSessionMetadata = {
+  mode?: unknown;
+  browser?: {
+    context?: {
+      provider?: unknown;
+    };
+    runtime?: {
+      conversationId?: unknown;
+      composerTool?: unknown;
+    };
+  };
+  options?: {
+    prompt?: unknown;
+  };
+  promptPreview?: unknown;
+  startedAt?: unknown;
+  createdAt?: unknown;
+};
+
 type RunOptions = {
   expectFailure?: boolean;
   timeoutMs?: number;
@@ -544,7 +563,7 @@ async function findRecentBrowserSessionByPrompt(prompt: string): Promise<RecentB
     } catch {
       continue;
     }
-    let parsed: any;
+    let parsed: BrowserSessionMetadata;
     try {
       parsed = JSON.parse(raw);
     } catch {

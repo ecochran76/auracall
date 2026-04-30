@@ -1761,12 +1761,14 @@ function extractFilenameFromArtifactUri(uri: string | null | undefined): string 
   if (value.startsWith('sandbox:/')) {
     const cleaned = value.replace(/^sandbox:\/*/i, '');
     const parts = cleaned.split('/').filter(Boolean);
-    return parts.length > 0 ? sanitizeChatgptArtifactFileName(decodeURIComponent(parts.at(-1)!)) : null;
+    const fileName = parts.at(-1);
+    return fileName ? sanitizeChatgptArtifactFileName(decodeURIComponent(fileName)) : null;
   }
   try {
     const parsed = new URL(value);
     const parts = parsed.pathname.split('/').filter(Boolean);
-    return parts.length > 0 ? sanitizeChatgptArtifactFileName(decodeURIComponent(parts.at(-1)!)) : null;
+    const fileName = parts.at(-1);
+    return fileName ? sanitizeChatgptArtifactFileName(decodeURIComponent(fileName)) : null;
   } catch {
     return null;
   }
@@ -5473,8 +5475,8 @@ async function waitForChatgptDeleteConfirmationReady(
   let lastProbe: ChatgptDeleteConfirmationProbe | null = null;
   while (Date.now() < deadline) {
     lastProbe = await readChatgptDeleteConfirmationProbe(client);
-    if (matchesChatgptDeleteConfirmationProbe(lastProbe, expectedTitle)) {
-      return { ok: true, probe: lastProbe! };
+    if (lastProbe && matchesChatgptDeleteConfirmationProbe(lastProbe, expectedTitle)) {
+      return { ok: true, probe: lastProbe };
     }
     await sleep(200);
   }
@@ -6815,7 +6817,9 @@ async function waitForChatgptDownloadedFile(
     const fileNames = entries.filter((entry) => entry.isFile()).map((entry) => entry.name);
     const completed = fileNames.filter((name) => !name.endsWith('.crdownload') && !name.endsWith('.tmp'));
     if (completed.length > 0) {
-      const candidatePath = path.join(destDir, completed.sort()[0]!);
+      const candidateName = completed.sort()[0];
+      if (!candidateName) continue;
+      const candidatePath = path.join(destDir, candidateName);
       const stat = await fs.stat(candidatePath).catch(() => null);
       if (stat) {
         if (candidatePath === lastPath && stat.size === lastSize) {
