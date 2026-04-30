@@ -23918,3 +23918,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - The policy records when to keep external/provider casing, when local
     suppressions are acceptable, and when warnings should be converted into
     typed helper code.
+
+## 2026-04-30 - Schema boundary naming suppression
+
+- Focus: apply the new lint-warning policy to stable schema/API boundary
+  modules where exported PascalCase schema constants intentionally pair with
+  TypeScript type names.
+- Progress:
+  - Added a Biome override for `useNamingConvention` scoped to
+    `src/teams/schema.ts`, `src/runtime/schema.ts`,
+    `src/runtime/apiSchema.ts`, `src/media/schema.ts`, and
+    `src/workbench/schema.ts`.
+  - Kept the rule active elsewhere; this is not a global naming-convention
+    disable.
+- Validation:
+  - `pnpm run typecheck`
+  - Biome warning count dropped from 534 to 433.
+  - The five schema boundary files now report zero warnings.

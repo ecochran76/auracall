@@ -15117,3 +15117,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   more code churn. Provider/API casing, deliberately malformed fixtures, and
   fixture setup assertions should be locally justified or adapted at boundaries,
   not mechanically renamed or globally hidden without a repo decision.
+- 2026-04-30: Stable Zod schema boundary modules are a valid local
+  `useNamingConvention` exception when exported `PascalCaseSchema` constants
+  deliberately mirror TypeScript type names. Prefer a file-scoped Biome
+  override for those boundary modules over renaming schema exports or adding
+  repetitive per-declaration ignores.

@@ -119,5 +119,23 @@
       "!coverage/**/*",
       "!.bun-check/**/*"
     ]
-  }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "src/teams/schema.ts",
+        "src/runtime/schema.ts",
+        "src/runtime/apiSchema.ts",
+        "src/media/schema.ts",
+        "src/workbench/schema.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    }
+  ]
 }
