@@ -15288,3 +15288,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   install, and installed MCP status smokes into `pnpm run
   preflight:lazy-live-follow` so dogfood starts from a known control-plane
   baseline.
+- 2026-05-01: Pausing lazy-live-follow during an in-flight refresh must not
+  hide the completed pass. The completion service should record `passCount`,
+  `lastRefresh`, phase, and completeness before exiting the run loop for a
+  pause.

@@ -24446,6 +24446,39 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `./scripts/release.sh operator-smoke`
   - installed `~/.local/bin/auracall --version` reported `0.1.1`
 
+## Turn 92 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: dogfood the installed lazy-live-follow control plane with default
+  ChatGPT, then pause cleanly.
+- Live dogfood:
+  - started installed `auracall api serve --port 18095`
+  - baseline default ChatGPT status was eligible for `ecochran76@gmail.com`,
+    account level `Business`, with 291 conversations and 290 remaining detail
+    surfaces
+  - started live follow
+    `acctmirror_completion_e26007da-f0e6-4423-bc64-8352c1fdc5c5`
+  - API, MCP `api_status`, MCP `api_ops_browser_status`, and `/ops/browser`
+    saw one active live-follow completion
+  - paused through both `auracall api mirror-completion-control` and
+    `POST /status` with `accountMirrorCompletion`
+  - the in-flight refresh completed after the pause and moved the cache to 292
+    conversations, 393 artifacts, and 285 remaining detail surfaces
+- Change:
+  - fixed completion accounting so a refresh that completes after pause still
+    records `passCount`, `lastRefresh`, phase, and completeness before the run
+    loop exits
+- Validation:
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run smoke:completion-control`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+
 ## Turn 81 | 2026-05-01
 
 - Continued implementation plan:

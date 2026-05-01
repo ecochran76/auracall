@@ -255,7 +255,16 @@ describe('account mirror completion service', () => {
 
     resolveRefresh(createRefreshResult());
     await waitFor(() => service.read('acctmirror_control')?.status === 'paused');
-    expect(service.read('acctmirror_control')?.passCount).toBe(0);
+    expect(service.read('acctmirror_control')).toMatchObject({
+      status: 'paused',
+      passCount: 1,
+      phase: 'steady_follow',
+      mirrorCompleteness: completeMirror,
+      lastRefresh: {
+        requestId: 'acctmirror_refresh_1',
+        status: 'completed',
+      },
+    });
 
     expect(service.control({ id: 'acctmirror_control', action: 'resume' })).toMatchObject({
       status: 'queued',

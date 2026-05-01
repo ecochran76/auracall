@@ -474,6 +474,11 @@ Each status payload should include:
   surface. It runs completion-control, completion-hydration,
   live-follow-health, ops-browser-control, user-runtime install, and installed
   MCP status smokes in sequence.
+- Installed default-ChatGPT dogfood on port `18095` proved the start/status/
+  pause control plane through API, MCP `api_status`, MCP
+  `api_ops_browser_status`, and `/ops/browser`. It also found and fixed a
+  completion accounting gap: pause during an in-flight refresh must still
+  preserve the completed pass result.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -492,6 +497,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Run a low-churn live dogfood cycle from the installed runtime: start or resume
-one default-ChatGPT lazy-live-follow completion, verify status through API, MCP,
-and `/ops/browser`, then pause it cleanly before widening provider coverage.
+Add a small operator regression for the installed CLI completion-list filter
+path, then decide whether the next live dogfood should resume the paused
+default-ChatGPT completion or widen to one Pro ChatGPT profile.

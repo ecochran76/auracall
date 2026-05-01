@@ -2641,3 +2641,21 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run lint`
   - `git diff --check`
   - `./scripts/release.sh operator-smoke`
+
+## Turn 92 | 2026-05-01
+
+- Goal: live dogfood default ChatGPT lazy live follow from the installed
+  runtime.
+- Result:
+  - installed API ran on `127.0.0.1:18095`
+  - default ChatGPT binding confirmed `ecochran76@gmail.com`, Business
+  - completion `acctmirror_completion_e26007da-f0e6-4423-bc64-8352c1fdc5c5`
+    started and surfaced through API, MCP status tools, and `/ops/browser`
+  - refresh request `acctmirror_3650f309-f05c-4b84-b994-a323b87fcbaf` used
+    dispatcher operation `7f496bd1-9df5-47dc-926a-249a955aa510`
+  - cache advanced to 292 conversations, 393 artifacts, and 285 remaining
+    detail surfaces
+  - completion was paused cleanly
+- Follow-up fixed in repo:
+  - completion accounting now records a pass result even when pause happens
+    while the refresh is in flight

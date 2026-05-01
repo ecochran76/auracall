@@ -158,7 +158,6 @@ export function createAccountMirrorCompletionService(input: {
           }
           throw error;
         }
-        if (!shouldContinue(id)) return;
         const nextPassCount = pass + 1;
         pass = nextPassCount;
         update(id, {
@@ -169,6 +168,7 @@ export function createAccountMirrorCompletionService(input: {
           nextAttemptAt: null,
           error: null,
         });
+        if (!shouldContinue(id)) return;
         if (refresh.mirrorCompleteness.state === 'complete') {
           if (operation.maxPasses !== null) {
             update(id, {
