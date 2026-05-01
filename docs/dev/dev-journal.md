@@ -24382,7 +24382,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Added pause/resume/cancel controls for live-follow completion operations
     across API, CLI, MCP, and `/ops/browser`; controls mutate the service
     operation record by id without provider/browser access.
+  - Added `scripts/smoke-account-mirror-completion-control.ts` and
+    `pnpm run smoke:completion-control`; the smoke uses an injected completion
+    service to prove HTTP pause, CLI resume, MCP cancel, and `/status` metrics
+    without provider/browser dispatcher work.
 - Validation:
+  - `pnpm run smoke:completion-control`
   - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/http.responsesServer.test.ts tests/mcp.server.test.ts tests/browser/chatgptAdapter.test.ts`
   - `pnpm exec tsc --noEmit`
   - `pnpm run docs:list`
@@ -24390,5 +24395,6 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run lint`
   - `git diff --check`
   - `pnpm run install:user-runtime`
+  - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-completion-control.js`
   - installed `auracall api mirror-completion-control --help`
   - installed `auracall api mirror-completion-status --help`

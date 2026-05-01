@@ -408,6 +408,10 @@ Each status payload should include:
   and `/ops/browser`: pause keeps the operation active but stopped, resume
   relaunches the service-owned loop, and cancel records a terminal
   `cancelled` state without touching provider browsers.
+- `pnpm run smoke:completion-control` starts a short-lived local API server
+  with an injected completion service and proves HTTP pause, CLI resume, MCP
+  cancel, and `/status.accountMirrorCompletions` readback without acquiring
+  browser dispatcher or provider state.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -426,7 +430,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add a deterministic no-browser smoke for completion controls that starts a
-local API server with an injected completion service, exercises
-pause/resume/cancel through HTTP, CLI, MCP, and `/status`, and proves no
-provider/browser dispatcher work is acquired.
+Add a compact operator status projection for paused/cancelled completion
+operations in `auracall api status`, so CLI operators can see live-follow
+control posture without reading full `/status` JSON or the dashboard.

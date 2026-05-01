@@ -80,6 +80,10 @@
   verify the HTTP scheduler-history route, CLI scheduler-history reader, CLI
   status summarizer, MCP `account_mirror_scheduler_history`, and MCP
   `api_status` all report the queued work owner and resume cursor.
+- Deterministic completion-control smoke: run
+  `pnpm run smoke:completion-control` to start a short-lived local API server
+  with an injected completion service and verify HTTP, CLI helper, MCP control,
+  and `/status` readback without provider or browser dispatcher access.
 
 ### `account_mirror_scheduler_history`
 - Inputs: `port` for the local `auracall api serve` listener; optional `host`,
@@ -110,6 +114,9 @@
   terminal cancellation without launching or navigating provider pages.
 - Use this instead of long-running shell commands when an operator wants the
   service to own mirror backfill and steady follow.
+- Smoke: `pnpm run smoke:completion-control` proves
+  `account_mirror_completion_control` cancels through the MCP handler after
+  HTTP pause and CLI resume have both updated the same service operation.
 
 ### `runtime_inspect`
 - Inputs: one runtime lookup key, `runId`, `runtimeRunId`, `teamRunId`, or

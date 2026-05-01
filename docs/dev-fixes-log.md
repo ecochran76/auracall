@@ -15229,3 +15229,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-01: Live-follow completion needs operator controls that do not stop
   the AuraCall service. Pause/resume/cancel should mutate the persisted service
   operation by id and remain provider/browser-free.
+- 2026-05-01: Completion-control validation should not wake providers. Use a
+  short-lived local API server with an injected completion service to prove
+  HTTP, CLI, MCP, and `/status` behavior without dispatcher acquisition.

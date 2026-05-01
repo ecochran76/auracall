@@ -2323,6 +2323,9 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     `{"action":"pause|resume|cancel"}`,
     `auracall api mirror-completion-control <id> pause|resume|cancel`, MCP
     `account_mirror_completion_control`, and matching `/ops/browser` buttons
+  - added `pnpm run smoke:completion-control`, a no-browser local API smoke
+    that verifies HTTP pause, CLI resume, MCP cancel, and `/status` metrics
+    against an injected completion service
 - Verification target:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/completionService.test.ts`
   - `pnpm exec tsc --noEmit`

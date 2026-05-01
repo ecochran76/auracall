@@ -198,6 +198,10 @@
         `auracall api status --port 8080 --expect-account-mirror-backpressure routine-delayed`
       - local deterministic smoke for scheduler-history/API/MCP yield readback:
         `pnpm run smoke:scheduler-history`
+      - local deterministic smoke for mirror completion controls:
+        `pnpm run smoke:completion-control`; it uses an injected completion
+        service and proves HTTP, CLI helper, MCP control, and `/status`
+        readback without provider or browser dispatcher access
       - execute one pass only when the server was started with
         `--account-mirror-scheduler-execute`:
         `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"run-once","dryRun":false}}'`
