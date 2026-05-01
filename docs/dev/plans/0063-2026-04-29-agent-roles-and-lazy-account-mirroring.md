@@ -482,6 +482,12 @@ Each status payload should include:
 - `api mirror-completions --status active` now parses correctly from the real
   CLI entrypoint. Regression coverage verifies the spaced form and
   `--status=paused` both reach the completion-list endpoint as query filters.
+- Installed default-ChatGPT resume dogfood on port `18095` proved the patched
+  accounting on the persisted operation: completion
+  `acctmirror_completion_e26007da-f0e6-4423-bc64-8352c1fdc5c5` advanced to
+  `passCount: 1`, stored `lastRefresh`, remained in `backfill_history`, and
+  paused again with 279 remaining detail surfaces after refresh
+  `acctmirror_715a135d-8a8d-4339-9c2a-c4b75fd7e36f`.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.

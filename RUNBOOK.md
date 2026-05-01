@@ -2675,3 +2675,24 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - user runtime reinstalled
   - installed parse check now reaches fetch instead of failing with
     `too many arguments for 'mirror-completions'`
+
+## Turn 94 | 2026-05-01
+
+- Goal: verify patched lazy-live-follow pass accounting from the installed
+  runtime on the existing default ChatGPT completion.
+- Result:
+  - installed API ran on `127.0.0.1:18095`
+  - resumed completion
+    `acctmirror_completion_e26007da-f0e6-4423-bc64-8352c1fdc5c5`
+  - refresh request `acctmirror_715a135d-8a8d-4339-9c2a-c4b75fd7e36f`
+    completed through dispatcher operation
+    `57890d99-5d28-4be9-b7da-f103b2965bdc`
+  - completion accounting now persists `passCount: 1`, `lastRefresh`, phase
+    `backfill_history`, and completeness with 279 remaining detail surfaces
+  - cache advanced to 292 conversations, 416 artifacts, 24 files, and
+    Business identity `ecochran76@gmail.com`
+  - completion was paused cleanly at `nextAttemptAt`
+    `2026-05-01T23:30:47.156Z`
+  - API status, `/ops/browser`, MCP `api_status`, and MCP
+    `api_ops_browser_status` all reported live-follow severity `paused` with
+    one active paused completion

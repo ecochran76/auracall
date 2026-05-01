@@ -24786,6 +24786,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-ops-browser-mcp.js`
   - `./scripts/release.sh operator-smoke`
 
+## Turn 94 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: prove the installed runtime persists lazy-live-follow pass accounting
+  after resuming a paused default ChatGPT completion.
+- Result:
+  - resumed
+    `acctmirror_completion_e26007da-f0e6-4423-bc64-8352c1fdc5c5`
+    from installed `auracall api serve --port 18095`
+  - refresh `acctmirror_715a135d-8a8d-4339-9c2a-c4b75fd7e36f` completed
+    through dispatcher operation `57890d99-5d28-4be9-b7da-f103b2965bdc`
+  - completion readback now shows `passCount: 1`, persisted `lastRefresh`,
+    `phase: backfill_history`, 279 remaining detail surfaces, and no error
+  - cache advanced to 292 conversations, 416 artifacts, and 24 files for
+    `chatgpt/default` bound to `ecochran76@gmail.com` Business
+  - paused the completion again and verified API, `/ops/browser`, MCP
+    `api_status`, and MCP `api_ops_browser_status` all report paused
+    live-follow posture
+
 ## Turn 78 | 2026-05-01
 
 - Continued implementation plan:

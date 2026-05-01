@@ -69,6 +69,12 @@
   derived completeness field with plain states and remaining surface counts so
   API/MCP callers can decide whether a mirror is usable or still walking.
 
+- 2026-05-01: Lazy-live-follow accounting fixes need installed-runtime resume
+  proof, not only fixture coverage. Resuming the persisted default ChatGPT
+  completion proved `passCount`, `lastRefresh`, phase, identity, and remaining
+  detail surfaces survive the real refresh path and remain visible after a
+  clean pause.
+
 - 2026-04-29: Lazy mirror scheduler work must use opportunistic dispatcher
   acquisition. Routine mirror passes should use zero queue wait so real
   response/media/API browser work keeps priority; cooperative cancellation is
