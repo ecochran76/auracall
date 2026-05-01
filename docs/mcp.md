@@ -64,9 +64,10 @@
 - Behavior: reads the local API `/status` endpoint and returns the same compact
   scheduler summary used by `auracall api status`, including
   `scheduler.operatorStatus.posture`, wake reason, latest mirror backpressure,
-  and `scheduler.latestYield` when scheduler history contains a cooperative
-  yield. It does not launch browsers, touch CDP, submit provider work, or read
-  provider pages.
+  `scheduler.latestYield` when scheduler history contains a cooperative yield,
+  and `completions` metrics plus active/recent controlled live-follow
+  operations. It does not launch browsers, touch CDP, submit provider work, or
+  read provider pages.
 - Use this when an MCP operator needs to assert lazy mirror readiness or
   backpressure without shelling out to the CLI. `account_mirror_status` remains
   the cache-only per-target mirror status tool; `api_status` is specifically
@@ -83,7 +84,8 @@
 - Deterministic completion-control smoke: run
   `pnpm run smoke:completion-control` to start a short-lived local API server
   with an injected completion service and verify HTTP, CLI helper, MCP control,
-  and `/status` readback without provider or browser dispatcher access.
+  `/status` readback, and compact `api_status` completion posture without
+  provider or browser dispatcher access.
 
 ### `account_mirror_scheduler_history`
 - Inputs: `port` for the local `auracall api serve` listener; optional `host`,

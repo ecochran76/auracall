@@ -56,11 +56,45 @@ export interface ApiStatusSchedulerSummary {
   latestYield: ApiStatusSchedulerYieldSummary | null;
 }
 
+export interface ApiStatusCompletionMetricsSummary {
+  total: number | null;
+  active: number | null;
+  queued: number | null;
+  running: number | null;
+  paused: number | null;
+  completed: number | null;
+  blocked: number | null;
+  failed: number | null;
+  cancelled: number | null;
+}
+
+export interface ApiStatusCompletionOperationSummary {
+  id: string | null;
+  provider: string | null;
+  runtimeProfileId: string | null;
+  mode: string | null;
+  phase: string | null;
+  status: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  nextAttemptAt: string | null;
+  passCount: number | null;
+  errorMessage: string | null;
+}
+
+export interface ApiStatusCompletionControlSummary {
+  generatedAt: string | null;
+  metrics: ApiStatusCompletionMetricsSummary;
+  active: ApiStatusCompletionOperationSummary[];
+  recentControlled: ApiStatusCompletionOperationSummary[];
+}
+
 export interface ApiStatusCliSummary {
   ok: boolean | null;
   host: string;
   port: number;
   scheduler: ApiStatusSchedulerSummary;
+  completions: ApiStatusCompletionControlSummary;
   raw: unknown;
 }
 
@@ -107,6 +141,7 @@ export function summarizeApiStatusPayload(
   const operatorStatus = isRecord(scheduler.operatorStatus) ? scheduler.operatorStatus : {};
   const backpressure = isRecord(lastPass.backpressure) ? lastPass.backpressure : {};
   const latestYield = summarizeLatestYield(scheduler, lastPass);
+  const completions = summarizeAccountMirrorCompletions(record.accountMirrorCompletions);
   return {
     ok: typeof record.ok === 'boolean' ? record.ok : null,
     host: source.host,
@@ -129,6 +164,7 @@ export function summarizeApiStatusPayload(
       },
       latestYield,
     },
+    completions,
     raw,
   };
 }
@@ -180,6 +216,15 @@ export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string 
     lines.push(
       `Latest lazy mirror yield: ${yieldSummary.provider ?? 'unknown'}/${yieldSummary.runtimeProfileId ?? 'unknown'} at ${yieldSummary.completedAt ?? 'unknown'} queued=${yieldSummary.queuedOwnerCommand ?? 'unknown'} remaining=${yieldSummary.remainingDetailSurfaces ?? 'unknown'}`,
     );
+  }
+  lines.push(formatCompletionControlLine(summary.completions));
+  const activeLine = formatCompletionOperationLine('Active mirror completion', summary.completions.active);
+  if (activeLine) {
+    lines.push(activeLine);
+  }
+  const recentLine = formatCompletionOperationLine('Recent controlled mirror completion', summary.completions.recentControlled);
+  if (recentLine) {
+    lines.push(recentLine);
   }
   return lines.join('\n');
 }
@@ -279,6 +324,87 @@ function summarizeLatestYield(
   };
 }
 
+function summarizeAccountMirrorCompletions(value: unknown): ApiStatusCompletionControlSummary {
+  const completions = isRecord(value) ? value : {};
+  const metrics = isRecord(completions.metrics) ? completions.metrics : {};
+  const active = Array.isArray(completions.active)
+    ? completions.active.map(summarizeCompletionOperation).filter((operation) => operation.id)
+    : [];
+  const recent = Array.isArray(completions.recent)
+    ? completions.recent.map(summarizeCompletionOperation).filter((operation) => operation.id)
+    : [];
+  return {
+    generatedAt: readString(completions.generatedAt),
+    metrics: {
+      total: readNumber(metrics.total),
+      active: readNumber(metrics.active),
+      queued: readNumber(metrics.queued),
+      running: readNumber(metrics.running),
+      paused: readNumber(metrics.paused),
+      completed: readNumber(metrics.completed),
+      blocked: readNumber(metrics.blocked),
+      failed: readNumber(metrics.failed),
+      cancelled: readNumber(metrics.cancelled),
+    },
+    active,
+    recentControlled: recent.filter((operation) => isControlledCompletionStatus(operation.status)).slice(0, 5),
+  };
+}
+
+function summarizeCompletionOperation(value: unknown): ApiStatusCompletionOperationSummary {
+  const operation = isRecord(value) ? value : {};
+  const error = isRecord(operation.error) ? operation.error : {};
+  return {
+    id: readString(operation.id),
+    provider: readString(operation.provider),
+    runtimeProfileId: readString(operation.runtimeProfileId),
+    mode: readString(operation.mode),
+    phase: readString(operation.phase),
+    status: readString(operation.status),
+    startedAt: readString(operation.startedAt),
+    completedAt: readString(operation.completedAt),
+    nextAttemptAt: readString(operation.nextAttemptAt),
+    passCount: readNumber(operation.passCount),
+    errorMessage: readString(error.message),
+  };
+}
+
+function isControlledCompletionStatus(status: string | null): boolean {
+  return status === 'paused' || status === 'cancelled' || status === 'failed' || status === 'blocked';
+}
+
+function formatCompletionControlLine(summary: ApiStatusCompletionControlSummary): string {
+  const metrics = summary.metrics;
+  return [
+    'Account mirror completions:',
+    `active=${formatNullableNumber(metrics.active)}`,
+    `queued=${formatNullableNumber(metrics.queued)}`,
+    `running=${formatNullableNumber(metrics.running)}`,
+    `paused=${formatNullableNumber(metrics.paused)}`,
+    `failed=${formatNullableNumber(metrics.failed)}`,
+    `cancelled=${formatNullableNumber(metrics.cancelled)}`,
+    `total=${formatNullableNumber(metrics.total)}`,
+  ].join(' ');
+}
+
+function formatCompletionOperationLine(
+  label: string,
+  operations: ApiStatusCompletionOperationSummary[],
+): string | null {
+  if (operations.length === 0) {
+    return null;
+  }
+  const formatted = operations.slice(0, 3).map((operation) => {
+    const target = `${operation.provider ?? 'unknown'}/${operation.runtimeProfileId ?? 'unknown'}`;
+    const phase = operation.phase ? ` phase=${operation.phase}` : '';
+    const next = operation.nextAttemptAt ? ` next=${operation.nextAttemptAt}` : '';
+    const error = operation.errorMessage ? ` error=${operation.errorMessage}` : '';
+    return `${operation.id ?? 'unknown'} ${target} status=${operation.status ?? 'unknown'}${phase}${next}${error}`;
+  });
+  const suffix = operations.length > formatted.length ? ` (+${operations.length - formatted.length} more)` : '';
+  return `${label}: ${formatted.join('; ')}${suffix}`;
+}
+
 function isYieldPass(value: unknown): value is Record<string, unknown> {
   if (!isRecord(value)) {
     return false;
@@ -289,6 +415,10 @@ function isYieldPass(value: unknown): value is Record<string, unknown> {
 
 function readNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function formatNullableNumber(value: number | null): string {
+  return value === null ? 'unknown' : String(value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -24398,3 +24398,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-completion-control.js`
   - installed `auracall api mirror-completion-control --help`
   - installed `auracall api mirror-completion-status --help`
+
+## Turn 78 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make live-follow completion-control posture visible in the regular API
+  status command, not only raw `/status` JSON or `/ops/browser`.
+- Change:
+  - `auracall api status` now summarizes
+    `/status.accountMirrorCompletions` as compact completion-control posture:
+    aggregate active/queued/running/paused/failed/cancelled/total counts,
+    active operations, and recent controlled terminal operations
+  - MCP `api_status` returns the same `completions` projection in structured
+    content
+  - `pnpm run smoke:completion-control` now verifies the new CLI status
+    projection after pause and MCP `api_status` projection after cancel without
+    starting provider/browser work
+- Validation:
+  - `pnpm run smoke:completion-control`
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-completion-control.js`

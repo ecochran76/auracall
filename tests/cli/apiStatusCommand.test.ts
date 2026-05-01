@@ -58,6 +58,64 @@ const statusPayload = {
       ],
     },
   },
+  accountMirrorCompletions: {
+    object: 'account_mirror_completion_summary',
+    generatedAt: '2026-04-29T12:00:02.000Z',
+    metrics: {
+      total: 3,
+      active: 1,
+      queued: 0,
+      running: 0,
+      paused: 1,
+      completed: 1,
+      blocked: 0,
+      failed: 0,
+      cancelled: 1,
+    },
+    active: [
+      {
+        id: 'acctmirror_paused',
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        mode: 'live_follow',
+        phase: 'steady_follow',
+        status: 'paused',
+        startedAt: '2026-04-29T11:00:00.000Z',
+        completedAt: null,
+        nextAttemptAt: '2026-04-29T12:05:00.000Z',
+        passCount: 7,
+        error: null,
+      },
+    ],
+    recent: [
+      {
+        id: 'acctmirror_cancelled',
+        provider: 'gemini',
+        runtimeProfileId: 'default',
+        mode: 'live_follow',
+        phase: 'backfill_history',
+        status: 'cancelled',
+        startedAt: '2026-04-29T10:00:00.000Z',
+        completedAt: '2026-04-29T10:30:00.000Z',
+        nextAttemptAt: null,
+        passCount: 3,
+        error: null,
+      },
+      {
+        id: 'acctmirror_done',
+        provider: 'grok',
+        runtimeProfileId: 'default',
+        mode: 'bounded',
+        phase: 'steady_follow',
+        status: 'completed',
+        startedAt: '2026-04-29T09:00:00.000Z',
+        completedAt: '2026-04-29T09:10:00.000Z',
+        nextAttemptAt: null,
+        passCount: 1,
+        error: null,
+      },
+    ],
+  },
 };
 
 describe('api status CLI helpers', () => {
@@ -95,6 +153,37 @@ describe('api status CLI helpers', () => {
           remainingDetailSurfaces: 4,
         },
       },
+      completions: {
+        generatedAt: '2026-04-29T12:00:02.000Z',
+        metrics: {
+          total: 3,
+          active: 1,
+          queued: 0,
+          running: 0,
+          paused: 1,
+          completed: 1,
+          blocked: 0,
+          failed: 0,
+          cancelled: 1,
+        },
+        active: [
+          {
+            id: 'acctmirror_paused',
+            provider: 'chatgpt',
+            runtimeProfileId: 'default',
+            status: 'paused',
+            nextAttemptAt: '2026-04-29T12:05:00.000Z',
+          },
+        ],
+        recentControlled: [
+          {
+            id: 'acctmirror_cancelled',
+            provider: 'gemini',
+            runtimeProfileId: 'default',
+            status: 'cancelled',
+          },
+        ],
+      },
     });
     expect(formatApiStatusCliSummary(summary)).toContain(
       'Latest lazy mirror backpressure: routine-delayed - minimum interval has not elapsed',
@@ -107,6 +196,15 @@ describe('api status CLI helpers', () => {
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
       'Latest lazy mirror yield: chatgpt/default at 2026-04-29T11:55:00.000Z queued=media-generation:chatgpt:image remaining=4',
+    );
+    expect(formatApiStatusCliSummary(summary)).toContain(
+      'Account mirror completions: active=1 queued=0 running=0 paused=1 failed=0 cancelled=1 total=3',
+    );
+    expect(formatApiStatusCliSummary(summary)).toContain(
+      'Active mirror completion: acctmirror_paused chatgpt/default status=paused phase=steady_follow next=2026-04-29T12:05:00.000Z',
+    );
+    expect(formatApiStatusCliSummary(summary)).toContain(
+      'Recent controlled mirror completion: acctmirror_cancelled gemini/default status=cancelled phase=backfill_history',
     );
   });
 

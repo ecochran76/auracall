@@ -35,6 +35,20 @@ const apiStatusLatestYieldShape = z.object({
   remainingDetailSurfaces: z.number().nullable(),
 });
 
+const apiStatusCompletionOperationShape = z.object({
+  id: z.string().nullable(),
+  provider: z.string().nullable(),
+  runtimeProfileId: z.string().nullable(),
+  mode: z.string().nullable(),
+  phase: z.string().nullable(),
+  status: z.string().nullable(),
+  startedAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  nextAttemptAt: z.string().nullable(),
+  passCount: z.number().nullable(),
+  errorMessage: z.string().nullable(),
+});
+
 const apiStatusOutputShape = {
   ok: z.boolean().nullable(),
   host: z.string(),
@@ -49,6 +63,22 @@ const apiStatusOutputShape = {
     operatorStatus: apiStatusOperatorStatusShape,
     backpressure: apiStatusBackpressureShape,
     latestYield: apiStatusLatestYieldShape.nullable(),
+  }),
+  completions: z.object({
+    generatedAt: z.string().nullable(),
+    metrics: z.object({
+      total: z.number().nullable(),
+      active: z.number().nullable(),
+      queued: z.number().nullable(),
+      running: z.number().nullable(),
+      paused: z.number().nullable(),
+      completed: z.number().nullable(),
+      blocked: z.number().nullable(),
+      failed: z.number().nullable(),
+      cancelled: z.number().nullable(),
+    }),
+    active: z.array(apiStatusCompletionOperationShape),
+    recentControlled: z.array(apiStatusCompletionOperationShape),
   }),
   raw: z.unknown(),
 } satisfies z.ZodRawShape;

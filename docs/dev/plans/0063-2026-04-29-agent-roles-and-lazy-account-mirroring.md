@@ -200,6 +200,11 @@ Current implementation-facing politeness contract:
   `expectedAccountMirrorPosture` / `expectedAccountMirrorBackpressure` so
   agents can assert the running scheduler posture without shelling out to the
   CLI.
+- `auracall api status` and MCP `api_status` now project
+  `/status.accountMirrorCompletions` into compact completion-control posture:
+  aggregate live-follow counts, active operations, and recent paused/cancelled
+  or failed operations are visible without raw `/status` JSON or the
+  `/ops/browser` dashboard.
 - Installed-runtime execute dogfood started `api serve` with
   `--account-mirror-scheduler-interval-ms 600000` and
   `--account-mirror-scheduler-execute`, then triggered one manual
@@ -404,6 +409,9 @@ Each status payload should include:
 - `/status.accountMirrorCompletions` summarizes persisted completion metrics
   plus active and recent operations, and `/ops/browser` renders the same
   "Mirror Live Follow" posture for local operators.
+- `auracall api status` and MCP `api_status` summarize the same completion
+  posture so operators can see paused/cancelled live-follow state from the
+  regular status command.
 - Live-follow completion controls are available by id through API, CLI, MCP,
   and `/ops/browser`: pause keeps the operation active but stopped, resume
   relaunches the service-owned loop, and cancel records a terminal
@@ -430,6 +438,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add a compact operator status projection for paused/cancelled completion
-operations in `auracall api status`, so CLI operators can see live-follow
-control posture without reading full `/status` JSON or the dashboard.
+Add compact expectation flags for completion-control posture, starting with
+paused/cancelled counts, so API/MCP smoke checks can fail fast when live-follow
+controls do not settle into the intended state.

@@ -262,6 +262,9 @@
       - `/status.accountMirrorCompletions` reports
         `object = account_mirror_completion_summary`, aggregate metrics, and
         active/recent operation arrays for operator readback
+      - `auracall api status --port <port>` projects the same completion
+        posture into compact CLI output: aggregate counts plus active paused or
+        running operations and recent controlled terminal operations
       - `/ops/browser` includes the "Mirror Live Follow" panel and renders the
         same active/recent completion posture from `/status`
       - operator control is available with

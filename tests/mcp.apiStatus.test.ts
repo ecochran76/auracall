@@ -50,6 +50,51 @@ const statusPayload = {
       ],
     },
   },
+  accountMirrorCompletions: {
+    object: 'account_mirror_completion_summary',
+    generatedAt: '2026-04-30T12:00:02.000Z',
+    metrics: {
+      total: 2,
+      active: 1,
+      queued: 0,
+      running: 1,
+      paused: 0,
+      completed: 0,
+      blocked: 0,
+      failed: 0,
+      cancelled: 1,
+    },
+    active: [
+      {
+        id: 'acctmirror_running',
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        mode: 'live_follow',
+        phase: 'backfill_history',
+        status: 'running',
+        startedAt: '2026-04-30T11:50:00.000Z',
+        completedAt: null,
+        nextAttemptAt: null,
+        passCount: 2,
+        error: null,
+      },
+    ],
+    recent: [
+      {
+        id: 'acctmirror_cancelled',
+        provider: 'gemini',
+        runtimeProfileId: 'default',
+        mode: 'live_follow',
+        phase: 'steady_follow',
+        status: 'cancelled',
+        startedAt: '2026-04-30T11:00:00.000Z',
+        completedAt: '2026-04-30T11:30:00.000Z',
+        nextAttemptAt: null,
+        passCount: 4,
+        error: null,
+      },
+    ],
+  },
 };
 
 describe('mcp api_status tool', () => {
@@ -104,6 +149,31 @@ describe('mcp api_status tool', () => {
             queuedOwnerCommand: 'media-generation:chatgpt:image',
             remainingDetailSurfaces: 4,
           },
+        },
+        completions: {
+          generatedAt: '2026-04-30T12:00:02.000Z',
+          metrics: {
+            total: 2,
+            active: 1,
+            running: 1,
+            cancelled: 1,
+          },
+          active: [
+            {
+              id: 'acctmirror_running',
+              provider: 'chatgpt',
+              runtimeProfileId: 'default',
+              status: 'running',
+            },
+          ],
+          recentControlled: [
+            {
+              id: 'acctmirror_cancelled',
+              provider: 'gemini',
+              runtimeProfileId: 'default',
+              status: 'cancelled',
+            },
+          ],
         },
       },
     });

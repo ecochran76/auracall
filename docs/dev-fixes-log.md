@@ -15232,3 +15232,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-01: Completion-control validation should not wake providers. Use a
   short-lived local API server with an injected completion service to prove
   HTTP, CLI, MCP, and `/status` behavior without dispatcher acquisition.
+- 2026-05-01: Completion-control posture should be visible from the regular
+  status command. `auracall api status` and MCP `api_status` should project
+  paused/cancelled live-follow operations from `/status.accountMirrorCompletions`
+  so operators do not have to inspect raw JSON or open the dashboard.
