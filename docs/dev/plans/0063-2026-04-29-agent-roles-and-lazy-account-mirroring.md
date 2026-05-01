@@ -470,6 +470,10 @@ Each status payload should include:
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.
+- `pnpm run preflight:lazy-live-follow` is the compact operator gate for this
+  surface. It runs completion-control, completion-hydration,
+  live-follow-health, ops-browser-control, user-runtime install, and installed
+  MCP status smokes in sequence.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -488,6 +492,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add a compact release preflight rollup for the lazy-live-follow operator
-surface, so API, CLI, MCP, dashboard, and installed-runtime checks can run as
-one command before live dogfood.
+Run a low-churn live dogfood cycle from the installed runtime: start or resume
+one default-ChatGPT lazy-live-follow completion, verify status through API, MCP,
+and `/ops/browser`, then pause it cleanly before widening provider coverage.

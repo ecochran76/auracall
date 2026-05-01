@@ -15283,3 +15283,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `pnpm run smoke:mcp-ops-browser` should connect to the installed
   `auracall-mcp`, require `api_ops_browser_status` in `listTools`, and call it
   against a paused fixture API server without provider/browser work.
+- 2026-05-01: Lazy-live-follow needs one compact operator preflight. Combine
+  completion controls, hydration, health parity, `/ops/browser`, user-runtime
+  install, and installed MCP status smokes into `pnpm run
+  preflight:lazy-live-follow` so dogfood starts from a known control-plane
+  baseline.

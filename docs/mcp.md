@@ -115,6 +115,10 @@
 - Installed MCP dashboard-control smoke: run `pnpm run smoke:mcp-ops-browser`
   to verify the packaged `auracall-mcp` binary lists `api_ops_browser_status`
   and can call it against a fixture local API server.
+- Lazy-live-follow operator preflight: run
+  `pnpm run preflight:lazy-live-follow` to execute the no-browser completion,
+  hydration, health, dashboard, user-runtime install, and installed MCP status
+  checks as one release gate before live dogfood.
 
 ### `api_ops_browser_status`
 - Inputs: `port` for the local `auracall api serve` listener; optional `host`,

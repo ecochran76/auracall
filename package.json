@@ -23,6 +23,7 @@
     "test:mcp": "pnpm run build && pnpm run test:mcp:unit && pnpm run test:mcp:mcporter",
     "test:mcp:unit": "vitest run tests/mcp*.test.ts tests/mcp/**/*.test.ts",
     "test:mcp:mcporter": "npx -y mcporter list auracall-local --schema --config config/mcporter.json && npx -y mcporter call auracall-local.sessions limit:1 --config config/mcporter.json",
+    "preflight:lazy-live-follow": "tsx scripts/preflight-lazy-live-follow.ts",
     "smoke:mcp-api-status": "tsx scripts/smoke-api-status-mcp.ts --mode both --port 18081",
     "smoke:mcp-ops-browser": "tsx scripts/smoke-ops-browser-mcp.ts",
     "smoke:scheduler-history": "tsx scripts/smoke-account-mirror-scheduler-history.ts",

@@ -118,6 +118,11 @@ through `/status`, connects to the installed `auracall-mcp` binary over stdio,
 lists tools, and calls `api_ops_browser_status` with paused completion
 expectations. It does not launch provider browsers.
 
+For a release-ready lazy-live-follow gate, run
+`pnpm run preflight:lazy-live-follow`. It includes this installed MCP smoke
+after the no-browser completion-control, hydration, health parity, dashboard,
+and user-runtime install checks.
+
 ## Claude Code smoke (tmux + cli)
 
 Use this to verify Claude Code can reach the Aura-Call MCP server end-to-end.

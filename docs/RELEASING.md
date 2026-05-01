@@ -37,12 +37,11 @@
    - [ ] `pnpm run lint` (error-level lint diagnostics block release; warning-level Biome diagnostics follow `docs/dev/policies/0020-lint-warning-debt.md`)
    - [ ] Optional live smoke (with real `OPENAI_API_KEY`): `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/openai-live.test.ts`
    - [ ] MCP sanity check: with `config/mcporter.json` pointed at the local stdio server (`auracall-local`), run `mcporter list auracall-local --schema --config config/mcporter.json` after building (`pnpm build`) to ensure tools/resources are discoverable.
-   - [ ] Installed MCP API status smoke: after refreshing the user runtime, run `pnpm run smoke:mcp-api-status` and confirm `disabled` plus `scheduled` account-mirror scheduler postures.
-   - [ ] Installed MCP ops-browser status smoke: run `pnpm run smoke:mcp-ops-browser` and confirm `api_ops_browser_status` is listed and reports paused fixture live-follow posture.
+   - [ ] Lazy-live-follow operator preflight: run `pnpm run preflight:lazy-live-follow` to verify completion controls, hydration, live-follow health parity, `/ops/browser`, user-runtime install, and installed MCP status tools.
 5. **Publish / distribute**
    - [ ] Ensure git status is clean; commit and push any pending changes.
    - [ ] Run `./scripts/release.sh smoke` to verify the local tarball executes from an empty directory.
-   - [ ] Run `./scripts/release.sh operator-smoke` to refresh the operator runtime, verify installed MCP `api_status` plus `api_ops_browser_status`, and print the installed version.
+   - [ ] Run `./scripts/release.sh operator-smoke` to execute the lazy-live-follow preflight and print the installed version.
    - [ ] Verify installed runtime with one dry-run command when the release changes CLI execution behavior.
    - [ ] Keep npm publish disabled unless the project deliberately opens that channel. The helper requires `AURACALL_ENABLE_NPM_PUBLISH=1` before the `publish` phase will run.
 6. **Post-release**

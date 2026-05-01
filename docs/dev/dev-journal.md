@@ -24423,6 +24423,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run install:user-runtime`
   - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-completion-control.js`
 
+## Turn 91 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make the lazy-live-follow operator surface preflightable as one command
+  before live dogfood.
+- Change:
+  - added `pnpm run preflight:lazy-live-follow`
+  - the preflight runs completion-control, completion-hydration,
+    live-follow-health, ops-browser-control, user-runtime install, and installed
+    MCP API/dashboard status smokes in sequence
+  - `./scripts/release.sh operator-smoke` now delegates to that compact
+    preflight and then prints the installed version
+- Validation:
+  - `pnpm run preflight:lazy-live-follow`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `./scripts/release.sh operator-smoke`
+  - installed `~/.local/bin/auracall --version` reported `0.1.1`
+
 ## Turn 81 | 2026-05-01
 
 - Continued implementation plan:

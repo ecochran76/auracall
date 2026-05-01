@@ -2625,3 +2625,19 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run docs:list`
   - `pnpm run plans:audit -- --keep 63`
   - `git diff --check`
+
+## Turn 91 | 2026-05-01
+
+- Goal: make lazy-live-follow dogfood start with one compact operator preflight.
+- Change:
+  - added `pnpm run preflight:lazy-live-follow`
+  - wired `./scripts/release.sh operator-smoke` through the preflight
+  - documented the rollup in release, MCP, testing, and plan surfaces
+- Verification target:
+  - `pnpm run preflight:lazy-live-follow`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `./scripts/release.sh operator-smoke`

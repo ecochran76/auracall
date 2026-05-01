@@ -93,10 +93,8 @@ phase_smoke() {
 }
 
 phase_operator_smoke() {
-  banner "Operator runtime + MCP API/ops-browser status smoke"
-  run "$RUNNER" pnpm run install:user-runtime
-  run "$RUNNER" pnpm run smoke:mcp-api-status
-  run "$RUNNER" pnpm run smoke:mcp-ops-browser
+  banner "Operator lazy-live-follow preflight"
+  run "$RUNNER" pnpm run preflight:lazy-live-follow
   run "$RUNNER" "$HOME/.local/bin/auracall" --version
 }
 
@@ -115,7 +113,7 @@ Phases (run individually or all):
   artifacts  npm pack + sha1/sha256
   smoke      empty-dir smoke from local auracall-<version>.tgz
   operator-smoke
-             refresh user runtime and verify installed MCP status tools
+             run lazy-live-follow preflight and print installed version
   tag        git tag v<version> && push tags
   publish    deferred npm publish; requires AURACALL_ENABLE_NPM_PUBLISH=1
   all        run gates, artifacts, smoke, operator-smoke, and tag
