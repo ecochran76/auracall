@@ -479,6 +479,9 @@ Each status payload should include:
   `api_ops_browser_status`, and `/ops/browser`. It also found and fixed a
   completion accounting gap: pause during an in-flight refresh must still
   preserve the completed pass result.
+- `api mirror-completions --status active` now parses correctly from the real
+  CLI entrypoint. Regression coverage verifies the spaced form and
+  `--status=paused` both reach the completion-list endpoint as query filters.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -497,6 +500,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add a small operator regression for the installed CLI completion-list filter
-path, then decide whether the next live dogfood should resume the paused
-default-ChatGPT completion or widen to one Pro ChatGPT profile.
+Resume the paused default-ChatGPT lazy-live-follow completion from the installed
+runtime and verify the patched pass accounting on a real refresh, then pause it
+again before widening to a Pro ChatGPT profile.

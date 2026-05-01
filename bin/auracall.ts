@@ -476,6 +476,7 @@ const DEFAULT_CACHE_HISTORY_LIMIT = 2000;
 const DEFAULT_CACHE_CLEANUP_DAYS = 365;
 
 const program = new Command();
+program.enablePositionalOptions();
 let introPrinted = false;
 program.hook('preAction', () => {
   if (suppressIntroBanner) return;

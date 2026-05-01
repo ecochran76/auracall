@@ -2659,3 +2659,19 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Follow-up fixed in repo:
   - completion accounting now records a pass result even when pause happens
     while the refresh is in flight
+
+## Turn 93 | 2026-05-01
+
+- Goal: remove the installed CLI parser trap for completion-list filters.
+- Change:
+  - enabled positional option scoping at the root CLI command
+  - added CLI-entrypoint coverage for
+    `api mirror-completions --status active` and `--status=paused`
+- Verification:
+  - focused CLI parser/root alias tests passed
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run smoke:completion-control`
+  - docs/plan/lint gates passed
+  - user runtime reinstalled
+  - installed parse check now reaches fetch instead of failing with
+    `too many arguments for 'mirror-completions'`

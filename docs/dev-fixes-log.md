@@ -15292,3 +15292,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   hide the completed pass. The completion service should record `passCount`,
   `lastRefresh`, phase, and completeness before exiting the run loop for a
   pause.
+- 2026-05-01: The hidden root `--status` alias must not steal
+  `api mirror-completions --status active`. CLI option scoping should make
+  subcommand options after the subcommand name belong to that subcommand, and
+  coverage should exercise both spaced and equals forms.

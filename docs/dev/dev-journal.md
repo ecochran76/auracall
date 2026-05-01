@@ -24479,6 +24479,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run install:user-runtime`
 
+## Turn 93 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: fix the installed CLI parser regression found during lazy-live-follow
+  dogfood.
+- Change:
+  - root CLI parsing now uses positional option scoping so the hidden root
+    `--status` alias does not consume subcommand options after
+    `api mirror-completions`
+  - added a real CLI-entrypoint regression test proving both
+    `--status active` and `--status=paused` reach the completion-list endpoint
+    as query filters
+- Validation:
+  - `pnpm vitest run tests/cli/apiMirrorCompletionCommand.test.ts tests/cli/rootAlias.test.ts tests/cli/promptRequirement.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run smoke:completion-control`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `auracall api mirror-completions --port 9 --status active --json`
+    reached fetch and failed with `ECONNREFUSED`, confirming argument parsing
+    no longer fails before the request
+
 ## Turn 81 | 2026-05-01
 
 - Continued implementation plan:
