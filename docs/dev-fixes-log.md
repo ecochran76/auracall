@@ -15219,3 +15219,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-01: Live-follow completion must survive process churn. Persist
   completion records under the account-mirror cache, hydrate them on API/MCP
   startup, and honor a persisted `nextAttemptAt` before resuming refresh work.
+- 2026-05-01: Operators should not need a completion id to discover live-follow
+  posture. Add cache/service-state list readback for persisted completion
+  operations and keep it browser-free.

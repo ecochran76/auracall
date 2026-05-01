@@ -17,6 +17,14 @@ export interface AccountMirrorCompletionStartRequest {
   maxPasses?: number | null;
 }
 
+export interface AccountMirrorCompletionListRequest {
+  provider?: AccountMirrorProvider | null;
+  runtimeProfileId?: string | null;
+  status?: AccountMirrorCompletionOperation['status'] | 'active' | null;
+  activeOnly?: boolean | null;
+  limit?: number | null;
+}
+
 export interface AccountMirrorCompletionOperation {
   object: 'account_mirror_completion';
   id: string;
@@ -41,6 +49,7 @@ export interface AccountMirrorCompletionOperation {
 export interface AccountMirrorCompletionService {
   start(request?: AccountMirrorCompletionStartRequest): AccountMirrorCompletionOperation;
   read(id: string): AccountMirrorCompletionOperation | null;
+  list(request?: AccountMirrorCompletionListRequest): AccountMirrorCompletionOperation[];
 }
 
 export function createAccountMirrorCompletionService(input: {
@@ -211,6 +220,19 @@ export function createAccountMirrorCompletionService(input: {
     read(id: string) {
       return operations.get(id) ?? null;
     },
+    list(request = {}) {
+      const limit = normalizeListLimit(request.limit);
+      const runtimeProfileId = request.runtimeProfileId ? normalizeRuntimeProfile(request.runtimeProfileId) : null;
+      const activeOnly = request.activeOnly === true || request.status === 'active';
+      const status = readCompletionStatus(request.status);
+      const results = Array.from(operations.values())
+        .filter((operation) => !request.provider || operation.provider === request.provider)
+        .filter((operation) => !runtimeProfileId || operation.runtimeProfileId === runtimeProfileId)
+        .filter((operation) => !activeOnly || isActiveOperation(operation))
+        .filter((operation) => !status || operation.status === status)
+        .sort((left, right) => right.startedAt.localeCompare(left.startedAt));
+      return limit === null ? results : results.slice(0, limit);
+    },
   };
   return service;
 
@@ -249,6 +271,19 @@ function normalizeRuntimeProfile(value: string | null | undefined): string {
 function normalizeMaxPasses(value: number | null | undefined): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
   return Math.max(1, Math.min(500, Math.floor(value)));
+}
+
+function normalizeListLimit(value: number | null | undefined): number | null {
+  if (value === null) return null;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 50;
+  return Math.max(1, Math.min(500, Math.floor(value)));
+}
+
+function readCompletionStatus(value: AccountMirrorCompletionListRequest['status']): AccountMirrorCompletionOperation['status'] | null {
+  if (value === 'queued' || value === 'running' || value === 'completed' || value === 'blocked' || value === 'failed') {
+    return value;
+  }
+  return null;
 }
 
 function readErrorCode(error: unknown): string | null {

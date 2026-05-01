@@ -169,6 +169,62 @@ describe('account mirror completion service', () => {
     expect(requestRefresh).not.toHaveBeenCalled();
   });
 
+  test('lists persisted and active operations with filters', async () => {
+    const active = {
+      object: 'account_mirror_completion' as const,
+      id: 'acctmirror_active',
+      provider: 'chatgpt' as const,
+      runtimeProfileId: 'default',
+      mode: 'live_follow' as const,
+      phase: 'steady_follow' as const,
+      status: 'running' as const,
+      startedAt: '2026-04-30T12:10:00.000Z',
+      completedAt: null,
+      nextAttemptAt: '2026-04-30T12:20:00.000Z',
+      maxPasses: null,
+      passCount: 1,
+      lastRefresh: createRefreshResult(),
+      mirrorCompleteness: completeMirror,
+      error: null,
+    };
+    const completed = {
+      ...active,
+      id: 'acctmirror_completed',
+      status: 'completed' as const,
+      startedAt: '2026-04-30T12:00:00.000Z',
+      completedAt: '2026-04-30T12:01:00.000Z',
+      nextAttemptAt: null,
+      maxPasses: 3,
+      mode: 'bounded' as const,
+    };
+    const sleep = vi.fn(() => new Promise<void>(() => {}));
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date('2026-04-30T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh: vi.fn(async () => createRefreshResult()),
+      },
+      initialOperations: [completed, active],
+      resumeActiveOperations: false,
+      sleep,
+    });
+
+    expect(service.list().map((operation) => operation.id)).toEqual([
+      'acctmirror_active',
+      'acctmirror_completed',
+    ]);
+    expect(service.list({ status: 'active' }).map((operation) => operation.id)).toEqual([
+      'acctmirror_active',
+    ]);
+    expect(service.list({ status: 'completed' }).map((operation) => operation.id)).toEqual([
+      'acctmirror_completed',
+    ]);
+    expect(service.list({ provider: 'gemini' })).toEqual([]);
+    expect(service.list({ limit: 1 })).toHaveLength(1);
+  });
+
   test('defaults to live follow and keeps running after a complete refresh', async () => {
     const requestRefresh = vi.fn()
       .mockResolvedValueOnce(createRefreshResult())

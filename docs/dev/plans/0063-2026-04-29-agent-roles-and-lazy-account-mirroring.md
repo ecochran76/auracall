@@ -398,6 +398,9 @@ Each status payload should include:
   cache and hydrated on API/MCP startup. Active records resume automatically,
   and persisted `nextAttemptAt` cooldowns are honored before another refresh
   request is issued.
+- Persisted completion operations are listable through API/CLI/MCP filters for
+  `status`, `provider`, `runtimeProfile`, and `limit`; list readback is
+  service/cache-only and must not touch provider browsers.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -416,6 +419,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add operator list/readback for persisted live-follow operations so dashboards
-can show recent and active completions without requiring the operator to know a
-specific completion id.
+Surface active and recent mirror completions in the operator dashboard/status
+summary so humans can see live-follow posture without switching to raw API,
+CLI, or MCP calls.

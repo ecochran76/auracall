@@ -109,7 +109,9 @@ import {
   readApiSchedulerHistoryForCli,
 } from '../src/cli/apiSchedulerHistoryCommand.js';
 import {
+  formatApiMirrorCompletionListCliSummary,
   formatApiMirrorCompletionCliSummary,
+  listApiMirrorCompletionsForCli,
   readApiMirrorCompletionForCli,
   startApiMirrorCompletionForCli,
 } from '../src/cli/apiMirrorCompletionCommand.js';
@@ -1061,6 +1063,36 @@ apiCommand
       return;
     }
     console.log(formatApiMirrorCompletionCliSummary(operation));
+  });
+
+apiCommand
+  .command('mirror-completions')
+  .description('List persisted account mirror completion operations from the local API.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .requiredOption('--port <number>', 'Local API port to query.', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--provider <provider>', 'Filter by provider.')
+  .option('--runtime-profile <profile>', 'Filter by runtime profile.')
+  .option('--status <status>', 'Filter by status: active, queued, running, completed, blocked, failed.')
+  .option('--active-only', 'Show only queued/running completions.', false)
+  .option('--limit <count>', 'Maximum completion records to read.', parseIntOption, 50)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const result = await listApiMirrorCompletionsForCli({
+      host: commandOptions.host,
+      port: commandOptions.port,
+      timeoutMs: commandOptions.timeoutMs,
+      provider: commandOptions.provider,
+      runtimeProfile: commandOptions.runtimeProfile,
+      status: commandOptions.status,
+      activeOnly: commandOptions.activeOnly,
+      limit: commandOptions.limit,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiMirrorCompletionListCliSummary(result));
   });
 
 apiCommand

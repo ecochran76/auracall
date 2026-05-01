@@ -243,6 +243,8 @@ Terminology note:
   mode, phase, next attempt, counts, and latest refresh. Completion operation
   records are persisted under the account-mirror cache and hydrated on API/MCP
   startup, so operators can keep polling the same id after service restarts.
+  `auracall api mirror-completions --port <port> --status active` lists recent
+  and active persisted completion operations without touching provider pages.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

@@ -61,10 +61,10 @@ Current State:
   - mirror completion is now a nonblocking service operation exposed through
     API, CLI, and MCP; by default it runs as unbounded live follow, backfilling
     history and then staying in steady follow; operation records are persisted
-    under the account-mirror cache and hydrated on API/MCP startup, while
-    ChatGPT conversation inventory must scroll the infinite left rail when
-    `includeHistory` and `historyLimit` are requested before claiming mirror
-    completeness
+    under the account-mirror cache, hydrated on API/MCP startup, and listable
+    for operator dashboards without knowing the id; ChatGPT conversation
+    inventory must scroll the infinite left rail when `includeHistory` and
+    `historyLimit` are requested before claiming mirror completeness
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local

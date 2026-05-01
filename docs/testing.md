@@ -240,8 +240,12 @@
         immature conversation ids
     - nonblocking mirror completion route:
       - `POST /v1/account-mirrors/completions`
+      - `GET /v1/account-mirrors/completions`
       - `GET /v1/account-mirrors/completions/{completion_id}`
       - start returns an operation id immediately
+      - list readback supports `status=active|queued|running|completed|blocked|failed`,
+        `provider`, `runtimeProfile`, and `limit` filters without touching
+        provider browsers
       - status readback reports queued/running/completed/blocked/failed,
         `mode = live_follow|bounded`, `phase =
         backfill_history|steady_follow`, pass count, next eligible attempt,

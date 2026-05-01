@@ -14,6 +14,17 @@ export interface ApiMirrorCompletionStatusCliOptions {
   id: string;
 }
 
+export interface ApiMirrorCompletionListCliOptions {
+  host?: string | null;
+  port?: number | null;
+  timeoutMs?: number | null;
+  provider?: string | null;
+  runtimeProfile?: string | null;
+  status?: string | null;
+  activeOnly?: boolean | null;
+  limit?: number | null;
+}
+
 export async function startApiMirrorCompletionForCli(
   options: ApiMirrorCompletionCliOptions = {},
   fetchImpl: typeof fetch = fetch,
@@ -66,6 +77,39 @@ export async function readApiMirrorCompletionForCli(
   }
 }
 
+export async function listApiMirrorCompletionsForCli(
+  options: ApiMirrorCompletionListCliOptions = {},
+  fetchImpl: typeof fetch = fetch,
+): Promise<unknown> {
+  const host = normalizeHost(options.host);
+  const port = normalizePort(options.port);
+  const timeoutMs = normalizeTimeoutMs(options.timeoutMs);
+  const url = new URL(`http://${host}:${port}/v1/account-mirrors/completions`);
+  appendOptionalSearchParam(url, 'provider', options.provider);
+  appendOptionalSearchParam(url, 'runtimeProfile', options.runtimeProfile);
+  appendOptionalSearchParam(url, 'status', options.status);
+  if (options.activeOnly === true) {
+    url.searchParams.set('activeOnly', 'true');
+  }
+  const limit = normalizeOptionalNumber(options.limit);
+  if (typeof limit === 'number') {
+    url.searchParams.set('limit', String(limit));
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchImpl(url, {
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`AuraCall API mirror completion list returned HTTP ${response.status}.`);
+    }
+    return response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export function formatApiMirrorCompletionCliSummary(operation: unknown): string {
   const record = isRecord(operation) ? operation : {};
   const lines = [
@@ -87,6 +131,29 @@ export function formatApiMirrorCompletionCliSummary(operation: unknown): string 
   const error = isRecord(record.error) ? record.error : null;
   if (error) {
     lines.push(`Error: ${readString(error.code) ?? 'unknown'} ${readString(error.message) ?? ''}`.trim());
+  }
+  return lines.join('\n');
+}
+
+export function formatApiMirrorCompletionListCliSummary(payload: unknown): string {
+  const record = isRecord(payload) ? payload : {};
+  const data = Array.isArray(record.data) ? record.data : [];
+  if (data.length === 0) {
+    return 'Account mirror completions: none';
+  }
+  const lines = [`Account mirror completions: ${data.length}`];
+  for (const item of data) {
+    const operation = isRecord(item) ? item : {};
+    const id = readString(operation.id) ?? 'unknown';
+    const status = readString(operation.status) ?? 'unknown';
+    const mode = readString(operation.mode) ?? 'unknown';
+    const phase = readString(operation.phase) ?? 'unknown';
+    const provider = readString(operation.provider) ?? 'unknown';
+    const runtimeProfileId = readString(operation.runtimeProfileId) ?? 'unknown';
+    const passCount = readNumber(operation.passCount) ?? 0;
+    const maxPasses = readNumber(operation.maxPasses) ?? 'unbounded';
+    const nextAttemptAt = readString(operation.nextAttemptAt);
+    lines.push(`- ${id}: ${status} ${mode}/${phase} ${provider}/${runtimeProfileId} passes=${passCount}/${maxPasses}${nextAttemptAt ? ` next=${nextAttemptAt}` : ''}`);
   }
   return lines.join('\n');
 }
@@ -113,6 +180,13 @@ function normalizeTimeoutMs(value: number | null | undefined): number {
 function normalizeOptionalString(value: string | null | undefined): string | undefined {
   const trimmed = String(value ?? '').trim();
   return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function appendOptionalSearchParam(url: URL, name: string, value: string | null | undefined): void {
+  const normalized = normalizeOptionalString(value);
+  if (normalized) {
+    url.searchParams.set(name, normalized);
+  }
 }
 
 function normalizeOptionalNumber(value: number | null | undefined): number | undefined {

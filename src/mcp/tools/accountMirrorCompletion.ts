@@ -17,6 +17,14 @@ const accountMirrorCompletionStatusInputShape = {
   id: z.string().min(1),
 } satisfies z.ZodRawShape;
 
+const accountMirrorCompletionListInputShape = {
+  provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
+  runtimeProfile: z.string().min(1).optional(),
+  status: z.enum(['active', 'queued', 'running', 'completed', 'blocked', 'failed']).optional(),
+  activeOnly: z.boolean().optional(),
+  limit: z.number().int().positive().max(500).optional(),
+} satisfies z.ZodRawShape;
+
 const accountMirrorCompletionOutputShape = {
   object: z.literal('account_mirror_completion'),
   id: z.string(),
@@ -36,6 +44,12 @@ const accountMirrorCompletionOutputShape = {
     message: z.string(),
     code: z.string().nullable(),
   }).nullable(),
+} satisfies z.ZodRawShape;
+
+const accountMirrorCompletionListOutputShape = {
+  object: z.literal('list'),
+  data: z.array(z.object(accountMirrorCompletionOutputShape)),
+  count: z.number(),
 } satisfies z.ZodRawShape;
 
 export interface RegisterAccountMirrorCompletionToolDeps {
@@ -77,6 +91,40 @@ export function registerAccountMirrorCompletionTools(
           },
         ],
         structuredContent: result as typeof result & Record<string, unknown>,
+      };
+    },
+  );
+  server.registerTool(
+    'account_mirror_completion_list',
+    {
+      title: 'List account mirror completions',
+      description:
+        'List persisted Aura-Call account mirror completion operations without touching provider browsers.',
+      inputSchema: accountMirrorCompletionListInputShape,
+      outputSchema: accountMirrorCompletionListOutputShape,
+    },
+    async (rawInput: unknown) => {
+      const payload = z.object(accountMirrorCompletionListInputShape).parse(rawInput);
+      const data = service.list({
+        provider: payload.provider,
+        runtimeProfileId: payload.runtimeProfile,
+        status: payload.status,
+        activeOnly: payload.activeOnly,
+        limit: payload.limit,
+      });
+      return {
+        isError: false,
+        content: [
+          {
+            type: 'text' as const,
+            text: `Account mirror completions: ${data.length}.`,
+          },
+        ],
+        structuredContent: {
+          object: 'list',
+          data,
+          count: data.length,
+        },
       };
     },
   );

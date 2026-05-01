@@ -237,6 +237,11 @@ interface HttpAccountMirrorRefreshResponse extends AccountMirrorRefreshResult {}
 interface HttpAccountMirrorCatalogResponse extends AccountMirrorCatalogResult {}
 interface HttpAccountMirrorSchedulerHistoryResponse extends AccountMirrorSchedulerCompactHistory {}
 interface HttpAccountMirrorCompletionResponse extends AccountMirrorCompletionOperation {}
+interface HttpAccountMirrorCompletionListResponse {
+  object: 'list';
+  data: AccountMirrorCompletionOperation[];
+  count: number;
+}
 
 type AccountMirrorSchedulerWakeReason =
   | 'startup-cadence'
@@ -289,6 +294,7 @@ interface HttpStatusResponse {
     accountMirrorCatalog: string;
     accountMirrorRefresh: string;
     accountMirrorCompletionsCreate: string;
+    accountMirrorCompletionsList: string;
     accountMirrorCompletionsGetTemplate: string;
     accountMirrorSchedulerHistory: string;
     workbenchCapabilitiesList: string;
@@ -726,6 +732,17 @@ export async function createResponsesHttpServer(
           maxPasses: payload.maxPasses,
         });
         sendJson(res, 202, result satisfies HttpAccountMirrorCompletionResponse);
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/account-mirrors/completions') {
+        const query = parseAccountMirrorCompletionListQuery(url.searchParams);
+        const data = accountMirrorCompletionService.list(query);
+        sendJson(res, 200, {
+          object: 'list',
+          data,
+          count: data.length,
+        } satisfies HttpAccountMirrorCompletionListResponse);
         return;
       }
 
@@ -1675,6 +1692,7 @@ function createHttpStatusResponse(input: {
       accountMirrorCatalog: '/v1/account-mirrors/catalog[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&kind=projects|conversations|artifacts|files|media|all][&limit=50]',
       accountMirrorRefresh: '/v1/account-mirrors/refresh',
       accountMirrorCompletionsCreate: '/v1/account-mirrors/completions',
+      accountMirrorCompletionsList: '/v1/account-mirrors/completions[?status=active|queued|running|completed|blocked|failed][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&limit=50]',
       accountMirrorCompletionsGetTemplate: '/v1/account-mirrors/completions/{completion_id}',
       accountMirrorSchedulerHistory: '/v1/account-mirrors/scheduler/history[?limit=10]',
       workbenchCapabilitiesList:
@@ -2055,6 +2073,14 @@ interface ParsedAccountMirrorCatalogQuery {
   limit?: number;
 }
 
+interface ParsedAccountMirrorCompletionListQuery {
+  provider?: AccountMirrorProvider;
+  runtimeProfileId?: string;
+  status?: AccountMirrorCompletionOperation['status'] | 'active';
+  activeOnly?: boolean;
+  limit?: number;
+}
+
 interface ParsedMediaGenerationCreateQuery {
   wait?: boolean;
 }
@@ -2236,6 +2262,42 @@ function parseAccountMirrorCatalogQuery(searchParams: URLSearchParams): ParsedAc
     provider: parsed.provider,
     runtimeProfileId: parsed.runtimeProfile,
     kind: parsed.kind,
+    limit: parsed.limit,
+  };
+}
+
+function parseAccountMirrorCompletionListQuery(searchParams: URLSearchParams): ParsedAccountMirrorCompletionListQuery {
+  const raw: Record<string, unknown> = {};
+  if (searchParams.has('provider')) {
+    raw.provider = searchParams.get('provider');
+  }
+  if (searchParams.has('runtimeProfile')) {
+    raw.runtimeProfile = searchParams.get('runtimeProfile');
+  }
+  if (searchParams.has('status')) {
+    raw.status = searchParams.get('status');
+  }
+  if (searchParams.has('activeOnly')) {
+    raw.activeOnly = searchParams.get('activeOnly');
+  }
+  if (searchParams.has('limit')) {
+    raw.limit = searchParams.get('limit');
+  }
+  const parsed = z.object({
+    provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
+    runtimeProfile: z.string().trim().min(1).optional(),
+    status: z.enum(['active', 'queued', 'running', 'completed', 'blocked', 'failed']).optional(),
+    activeOnly: z
+      .enum(['0', '1', 'true', 'false'])
+      .transform((value) => value === '1' || value.toLowerCase() === 'true')
+      .optional(),
+    limit: z.coerce.number().int().positive().optional(),
+  }).parse(raw);
+  return {
+    provider: parsed.provider,
+    runtimeProfileId: parsed.runtimeProfile,
+    status: parsed.status,
+    activeOnly: parsed.activeOnly,
     limit: parsed.limit,
   };
 }

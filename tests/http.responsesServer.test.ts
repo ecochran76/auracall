@@ -12,6 +12,7 @@ import {
 } from '../src/http/responsesServer.js';
 import type { AccountMirrorStatusSummary } from '../src/accountMirror/statusRegistry.js';
 import type { AccountMirrorCatalogResult } from '../src/accountMirror/catalogService.js';
+import type { AccountMirrorCompletionOperation } from '../src/accountMirror/completionService.js';
 import type { AccountMirrorSchedulerPassResult } from '../src/accountMirror/schedulerService.js';
 import type { AccountMirrorSchedulerPassLedger } from '../src/accountMirror/schedulerLedger.js';
 import { resetLiveRuntimeRunServiceStateRegistryForTests } from '../src/runtime/liveServiceStateRegistry.js';
@@ -1538,6 +1539,76 @@ describe('http responses adapter', () => {
         kind: 'conversations',
         limit: 2,
       });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('lists account mirror completion operations through the API surface', async () => {
+    const operation: AccountMirrorCompletionOperation = {
+      object: 'account_mirror_completion',
+      id: 'acctmirror_http_list',
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      mode: 'live_follow',
+      phase: 'steady_follow',
+      status: 'running',
+      startedAt: '2026-04-30T12:00:00.000Z',
+      completedAt: null,
+      nextAttemptAt: '2026-04-30T12:10:00.000Z',
+      maxPasses: null,
+      passCount: 1,
+      lastRefresh: null,
+      mirrorCompleteness: completeAccountMirror,
+      error: null,
+    };
+    const list = vi.fn(() => [operation]);
+    const read = vi.fn(() => operation);
+    const start = vi.fn(() => operation);
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        accountMirrorCompletionService: {
+          start,
+          read,
+          list,
+        },
+      },
+    );
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/account-mirrors/completions?status=active&provider=chatgpt&runtimeProfile=default&limit=5`,
+      );
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        object: 'list',
+        count: 1,
+        data: [
+          {
+            id: 'acctmirror_http_list',
+            status: 'running',
+            mode: 'live_follow',
+            phase: 'steady_follow',
+          },
+        ],
+      });
+      expect(list).toHaveBeenCalledWith({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        status: 'active',
+        activeOnly: undefined,
+        limit: 5,
+      });
+
+      const statusResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/account-mirrors/completions/acctmirror_http_list`,
+      );
+      expect(statusResponse.status).toBe(200);
+      expect(await statusResponse.json()).toMatchObject({
+        id: 'acctmirror_http_list',
+      });
+      expect(read).toHaveBeenCalledWith('acctmirror_http_list');
     } finally {
       await server.close();
     }

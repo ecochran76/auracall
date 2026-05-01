@@ -2289,10 +2289,13 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     history limit is reached or the rail stops loading older rows
   - added nonblocking account-mirror completion operations:
     `POST /v1/account-mirrors/completions`,
+    `GET /v1/account-mirrors/completions`,
     `GET /v1/account-mirrors/completions/{id}`,
     `auracall api mirror-complete`, and
+    `auracall api mirror-completions`,
     `auracall api mirror-completion-status`
   - added MCP `account_mirror_completion_start` and
+    `account_mirror_completion_list` and
     `account_mirror_completion_status`
   - live dogfood showed the first completion expanded ChatGPT conversations
     from 76 to 291; completion now forces one verification refresh and waits
@@ -2310,6 +2313,8 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     hydrated on API/MCP startup; a restarted service keeps the operation id,
     phase, `nextAttemptAt`, latest refresh/error, and resumes active jobs
     without refreshing before an existing cooldown expires
+  - completion list readback is cache/service-state only and must not launch a
+    browser, acquire the dispatcher, or touch provider pages
 - Verification target:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/completionService.test.ts`
   - `pnpm exec tsc --noEmit`

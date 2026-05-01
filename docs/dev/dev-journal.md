@@ -24373,6 +24373,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     startup hydration. Persisted active records resume automatically, and
     records with a future `nextAttemptAt` sleep until that cooldown expires
     before issuing another refresh request.
+  - Added list readback for persisted completion operations across API, CLI,
+    and MCP so operators can discover active/recent live-follow posture without
+    knowing the completion id.
 - Validation:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/completionService.test.ts`
   - `pnpm exec tsc --noEmit`
