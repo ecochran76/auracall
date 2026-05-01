@@ -15176,3 +15176,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   release an active routine mirror for response/media browser work, while a
   second routine mirror refresh should not force the active mirror to preempt
   itself.
+- 2026-04-30: Cooperative-yield readback should not require parsing the full
+  `/status` payload or replaying browser observations. Persist the queued-work
+  cause on the yielded attachment cursor, then project a compact scheduler
+  history with the latest yield, resume cursor, and remaining detail surfaces.

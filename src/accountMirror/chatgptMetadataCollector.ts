@@ -34,6 +34,12 @@ export interface AttachmentInventoryCursor {
   scannedProjects: number;
   scannedConversations: number;
   yielded?: boolean;
+  yieldCause?: {
+    observedAt: string | null;
+    ownerCommand: string | null;
+    kind: string | null;
+    operationClass: string | null;
+  } | null;
 }
 
 export interface AccountMirrorMetadataCollectorResult {

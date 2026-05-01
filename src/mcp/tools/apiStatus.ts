@@ -27,6 +27,14 @@ const apiStatusOperatorStatusShape = z.object({
   backpressureReason: z.string().nullable(),
 });
 
+const apiStatusLatestYieldShape = z.object({
+  completedAt: z.string().nullable(),
+  provider: z.string().nullable(),
+  runtimeProfileId: z.string().nullable(),
+  queuedOwnerCommand: z.string().nullable(),
+  remainingDetailSurfaces: z.number().nullable(),
+});
+
 const apiStatusOutputShape = {
   ok: z.boolean().nullable(),
   host: z.string(),
@@ -40,6 +48,7 @@ const apiStatusOutputShape = {
     lastAction: z.string().nullable(),
     operatorStatus: apiStatusOperatorStatusShape,
     backpressure: apiStatusBackpressureShape,
+    latestYield: apiStatusLatestYieldShape.nullable(),
   }),
   raw: z.unknown(),
 } satisfies z.ZodRawShape;

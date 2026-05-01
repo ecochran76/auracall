@@ -116,6 +116,10 @@ import {
   type AccountMirrorSchedulerPassHistory,
   type AccountMirrorSchedulerPassLedger,
 } from '../accountMirror/schedulerLedger.js';
+import {
+  summarizeAccountMirrorSchedulerHistory,
+  type AccountMirrorSchedulerCompactHistory,
+} from '../accountMirror/schedulerHistorySummary.js';
 import type { AccountMirrorProvider } from '../accountMirror/politePolicy.js';
 
 export interface ResponsesHttpServerOptions {
@@ -224,6 +228,7 @@ interface HttpRuntimeRunInspectionResponse {
 
 interface HttpAccountMirrorRefreshResponse extends AccountMirrorRefreshResult {}
 interface HttpAccountMirrorCatalogResponse extends AccountMirrorCatalogResult {}
+interface HttpAccountMirrorSchedulerHistoryResponse extends AccountMirrorSchedulerCompactHistory {}
 
 type AccountMirrorSchedulerWakeReason =
   | 'startup-cadence'
@@ -275,6 +280,7 @@ interface HttpStatusResponse {
     accountMirrorStatus: string;
     accountMirrorCatalog: string;
     accountMirrorRefresh: string;
+    accountMirrorSchedulerHistory: string;
     workbenchCapabilitiesList: string;
     operatorBrowserDashboard: string;
   };
@@ -669,6 +675,18 @@ export async function createResponsesHttpServer(
         const query = parseAccountMirrorCatalogQuery(url.searchParams);
         const result: HttpAccountMirrorCatalogResponse = await accountMirrorCatalogService.readCatalog(query);
         sendJson(res, 200, result);
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/account-mirrors/scheduler/history') {
+        const limit = parsePositiveIntegerQuery(url.searchParams.get('limit'));
+        const history = await accountMirrorSchedulerLedger.readHistory();
+        accountMirrorSchedulerState.history = history;
+        sendJson(
+          res,
+          200,
+          summarizeAccountMirrorSchedulerHistory(history, { limit }) satisfies HttpAccountMirrorSchedulerHistoryResponse,
+        );
         return;
       }
 
@@ -1601,6 +1619,7 @@ function createHttpStatusResponse(input: {
       accountMirrorStatus: '/v1/account-mirrors/status[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&explicitRefresh=true]',
       accountMirrorCatalog: '/v1/account-mirrors/catalog[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&kind=projects|conversations|artifacts|files|media|all][&limit=50]',
       accountMirrorRefresh: '/v1/account-mirrors/refresh',
+      accountMirrorSchedulerHistory: '/v1/account-mirrors/scheduler/history[?limit=10]',
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
       operatorBrowserDashboard: '/ops/browser',
@@ -2156,6 +2175,13 @@ function parseAccountMirrorCatalogQuery(searchParams: URLSearchParams): ParsedAc
     kind: parsed.kind,
     limit: parsed.limit,
   };
+}
+
+function parsePositiveIntegerQuery(value: string | null): number | null {
+  if (value === null) {
+    return null;
+  }
+  return z.coerce.number().int().positive().parse(value);
 }
 
 function parseMediaGenerationCreateQuery(searchParams: URLSearchParams): ParsedMediaGenerationCreateQuery {

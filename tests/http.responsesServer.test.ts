@@ -1655,6 +1655,157 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('reports compact lazy mirror scheduler yield history through the API surface', async () => {
+    const yieldedPass: AccountMirrorSchedulerPassResult = {
+      object: 'account_mirror_scheduler_pass',
+      mode: 'execute',
+      action: 'refresh-completed',
+      startedAt: '2026-04-29T12:00:00.000Z',
+      completedAt: '2026-04-29T12:00:05.000Z',
+      selectedTarget: {
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        status: 'eligible',
+        reason: 'eligible',
+        eligibleAt: '2026-04-29T12:00:00.000Z',
+        mirrorCompleteness: completeAccountMirror,
+      },
+      backpressure: {
+        reason: 'yielded-to-queued-work',
+        message: 'Mirror refresh yielded between detail reads because browser work queued behind it.',
+      },
+      metrics: {
+        totalTargets: 1,
+        eligibleTargets: 1,
+        delayedTargets: 0,
+        blockedTargets: 0,
+        defaultChatgptEligibleTargets: 1,
+        defaultChatgptDelayedTargets: 0,
+        inProgressEligibleTargets: 1,
+      },
+      refresh: {
+        object: 'account_mirror_refresh',
+        requestId: 'acctmirror_yield_1',
+        status: 'completed',
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        startedAt: '2026-04-29T12:00:00.000Z',
+        completedAt: '2026-04-29T12:00:05.000Z',
+        dispatcher: {
+          key: 'managed-profile:/tmp/auracall-default-chatgpt::service:chatgpt',
+          operationId: 'op_mirror_1',
+          blockedBy: null,
+        },
+        metadataCounts: {
+          projects: 2,
+          conversations: 6,
+          artifacts: 0,
+          files: 1,
+          media: 0,
+        },
+        metadataEvidence: {
+          identitySource: 'profile-menu',
+          projectSampleIds: [],
+          conversationSampleIds: [],
+          attachmentInventory: {
+            nextProjectIndex: 1,
+            nextConversationIndex: 3,
+            detailReadLimit: 6,
+            scannedProjects: 1,
+            scannedConversations: 3,
+            yielded: true,
+            yieldCause: {
+              observedAt: '2026-04-29T12:00:04.500Z',
+              ownerCommand: 'media-generation:chatgpt:image',
+              kind: 'media-generation',
+              operationClass: 'exclusive-mutating',
+            },
+          },
+          truncated: {
+            projects: false,
+            conversations: false,
+            artifacts: true,
+          },
+        },
+        mirrorCompleteness: {
+          state: 'in_progress',
+          summary: 'Attachment inventory has 4 detail surfaces remaining.',
+          remainingDetailSurfaces: {
+            projects: 1,
+            conversations: 3,
+            total: 4,
+          },
+          signals: {
+            projectsTruncated: false,
+            conversationsTruncated: false,
+            attachmentInventoryTruncated: true,
+            attachmentCursorPresent: true,
+          },
+        },
+        detectedIdentityKey: 'ecochran76@gmail.com',
+        detectedAccountLevel: 'Business',
+        mirrorStatus: {
+          object: 'account_mirror_status',
+          generatedAt: '2026-04-29T12:00:05.000Z',
+          metrics: {
+            total: 1,
+            eligible: 1,
+            delayed: 0,
+            blocked: 0,
+          },
+          entries: [],
+        },
+      },
+      error: null,
+    };
+    const ledger = createMemorySchedulerLedger();
+    await ledger.appendPass(yieldedPass);
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      { accountMirrorSchedulerLedger: ledger },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/account-mirrors/scheduler/history?limit=5`);
+      expect(response.status).toBe(200);
+      const payload = await response.json();
+      expect(payload).toMatchObject({
+        object: 'account_mirror_scheduler_history',
+        updatedAt: '2026-04-29T12:00:05.000Z',
+        latestYield: {
+          completedAt: '2026-04-29T12:00:05.000Z',
+          provider: 'chatgpt',
+          runtimeProfileId: 'default',
+          queuedWork: {
+            observedAt: '2026-04-29T12:00:04.500Z',
+            ownerCommand: 'media-generation:chatgpt:image',
+            kind: 'media-generation',
+            operationClass: 'exclusive-mutating',
+          },
+          resumeCursor: {
+            nextProjectIndex: 1,
+            nextConversationIndex: 3,
+          },
+          remainingDetailSurfaces: {
+            total: 4,
+          },
+        },
+        entries: [
+          expect.objectContaining({
+            action: 'refresh-completed',
+            backpressureReason: 'yielded-to-queued-work',
+            yielded: true,
+            remainingDetailSurfaces: 4,
+          }),
+        ],
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('pauses, resumes, and manually triggers lazy account mirror scheduler through POST /status', async () => {
     const runOnce = vi.fn(async (input: { dryRun: boolean }): Promise<AccountMirrorSchedulerPassResult> => ({
       object: 'account_mirror_scheduler_pass',

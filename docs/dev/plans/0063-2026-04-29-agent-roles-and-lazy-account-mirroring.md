@@ -168,6 +168,10 @@ Current implementation-facing politeness contract:
   seam. It stores a bounded scheduler-pass history in the AuraCall cache and
   `/status.accountMirrorScheduler.history` exposes recent entries so cadence
   and failure evidence survives process restart.
+- `GET /v1/account-mirrors/scheduler/history` exposes a compact readback of
+  the same persisted scheduler pass history. It summarizes recent passes and
+  highlights the latest cooperative-yield event without requiring operators or
+  MCP callers to parse the full `/status` payload.
 - Installed-runtime restart dogfood verified that a dry-run pass history entry
   persisted after stopping the scheduler-enabled server and starting a second
   scheduler-disabled server: `lastPass` reset to `null`, while
@@ -271,6 +275,10 @@ Lazy mirroring must remain lower priority than API-requested work:
 - Browser media generation now writes to the shared queue-observation ledger,
   so lazy live follow can detect media work waiting behind an already-running
   mirror pass instead of relying only on response browser-execution events.
+- When a routine mirror yields, the attachment continuation cursor now records
+  a bounded `yieldCause` with the queued work owner command, kind, operation
+  class, and observation time. Compact scheduler history projects that cause
+  together with the resume cursor and remaining detail surfaces.
 - This first cooperative-yield contract is intentionally boundary-scoped: it
   yields between detail surfaces, not in the middle of a provider DOM read.
 - default routine intervals:

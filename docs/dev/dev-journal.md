@@ -24206,3 +24206,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run lint` still reports the pre-existing 188 warnings; this slice
     did not resume lint-warning drain work.
+
+## 2026-04-30 - Lazy live follow yield readback
+
+- Focus: make cooperative-yield evidence compactly discoverable for operators,
+  API callers, and MCP callers.
+- Progress:
+  - Added `yieldCause` to yielded attachment continuation cursors.
+  - Added compact scheduler-history projection with recent passes,
+    `latestYield`, queued work cause, resume cursor, and remaining detail
+    surfaces.
+  - Exposed the projection at
+    `GET /v1/account-mirrors/scheduler/history`.
+  - Added latest-yield summary to `api status` helpers and MCP `api_status`.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/refreshService.test.ts tests/accountMirror/schedulerService.test.ts tests/accountMirror/schedulerLedger.test.ts tests/http.responsesServer.test.ts tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm run typecheck`
+  - `pnpm run lint`
+  - `pnpm run lint` still reports the pre-existing 188 warnings.

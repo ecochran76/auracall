@@ -21,6 +21,34 @@ const statusPayload = {
         message: 'minimum interval has not elapsed',
       },
     },
+    history: {
+      entries: [
+        {
+          completedAt: '2026-04-30T11:55:00.000Z',
+          selectedTarget: {
+            provider: 'chatgpt',
+            runtimeProfileId: 'default',
+          },
+          backpressure: {
+            reason: 'yielded-to-queued-work',
+          },
+          refresh: {
+            mirrorCompleteness: {
+              remainingDetailSurfaces: {
+                total: 4,
+              },
+            },
+            metadataEvidence: {
+              attachmentInventory: {
+                yieldCause: {
+                  ownerCommand: 'media-generation:chatgpt:image',
+                },
+              },
+            },
+          },
+        },
+      ],
+    },
   },
 };
 
@@ -68,6 +96,13 @@ describe('mcp api_status tool', () => {
           backpressure: {
             reason: 'routine-delayed',
             message: 'minimum interval has not elapsed',
+          },
+          latestYield: {
+            completedAt: '2026-04-30T11:55:00.000Z',
+            provider: 'chatgpt',
+            runtimeProfileId: 'default',
+            queuedOwnerCommand: 'media-generation:chatgpt:image',
+            remainingDetailSurfaces: 4,
           },
         },
       },

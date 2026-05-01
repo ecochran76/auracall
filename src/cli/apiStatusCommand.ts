@@ -53,6 +53,7 @@ export interface ApiStatusSchedulerSummary {
   lastAction: string | null;
   operatorStatus: ApiStatusSchedulerOperatorSummary;
   backpressure: ApiStatusBackpressureSummary;
+  latestYield: ApiStatusSchedulerYieldSummary | null;
 }
 
 export interface ApiStatusCliSummary {
@@ -61,6 +62,14 @@ export interface ApiStatusCliSummary {
   port: number;
   scheduler: ApiStatusSchedulerSummary;
   raw: unknown;
+}
+
+export interface ApiStatusSchedulerYieldSummary {
+  completedAt: string | null;
+  provider: string | null;
+  runtimeProfileId: string | null;
+  queuedOwnerCommand: string | null;
+  remainingDetailSurfaces: number | null;
 }
 
 export async function readApiStatusForCli(
@@ -97,6 +106,7 @@ export function summarizeApiStatusPayload(
   const lastPass = isRecord(scheduler.lastPass) ? scheduler.lastPass : {};
   const operatorStatus = isRecord(scheduler.operatorStatus) ? scheduler.operatorStatus : {};
   const backpressure = isRecord(lastPass.backpressure) ? lastPass.backpressure : {};
+  const latestYield = summarizeLatestYield(scheduler, lastPass);
   return {
     ok: typeof record.ok === 'boolean' ? record.ok : null,
     host: source.host,
@@ -117,6 +127,7 @@ export function summarizeApiStatusPayload(
         reason: normalizeApiStatusBackpressureReason(backpressure.reason),
         message: readString(backpressure.message),
       },
+      latestYield,
     },
     raw,
   };
@@ -163,6 +174,12 @@ export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string 
   ];
   if (scheduler.lastAction) {
     lines.push(`Latest lazy mirror action: ${scheduler.lastAction}`);
+  }
+  if (scheduler.latestYield) {
+    const yieldSummary = scheduler.latestYield;
+    lines.push(
+      `Latest lazy mirror yield: ${yieldSummary.provider ?? 'unknown'}/${yieldSummary.runtimeProfileId ?? 'unknown'} at ${yieldSummary.completedAt ?? 'unknown'} queued=${yieldSummary.queuedOwnerCommand ?? 'unknown'} remaining=${yieldSummary.remainingDetailSurfaces ?? 'unknown'}`,
+    );
   }
   return lines.join('\n');
 }
@@ -230,6 +247,48 @@ function formatNullableBoolean(value: boolean | null): string {
 
 function readString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function summarizeLatestYield(
+  scheduler: Record<string, unknown>,
+  lastPass: Record<string, unknown>,
+): ApiStatusSchedulerYieldSummary | null {
+  const history = isRecord(scheduler.history) ? scheduler.history : {};
+  const entries = Array.isArray(history.entries) ? history.entries : [];
+  const yieldEntry = entries.find(isYieldPass) ?? (isYieldPass(lastPass) ? lastPass : null);
+  if (!yieldEntry || !isRecord(yieldEntry)) {
+    return null;
+  }
+  const refresh = isRecord(yieldEntry.refresh) ? yieldEntry.refresh : {};
+  const selectedTarget = isRecord(yieldEntry.selectedTarget) ? yieldEntry.selectedTarget : {};
+  const metadataEvidence = isRecord(refresh.metadataEvidence) ? refresh.metadataEvidence : {};
+  const attachmentInventory = isRecord(metadataEvidence.attachmentInventory)
+    ? metadataEvidence.attachmentInventory
+    : {};
+  const yieldCause = isRecord(attachmentInventory.yieldCause) ? attachmentInventory.yieldCause : {};
+  const mirrorCompleteness = isRecord(refresh.mirrorCompleteness) ? refresh.mirrorCompleteness : {};
+  const remainingDetailSurfaces = isRecord(mirrorCompleteness.remainingDetailSurfaces)
+    ? mirrorCompleteness.remainingDetailSurfaces
+    : {};
+  return {
+    completedAt: readString(yieldEntry.completedAt),
+    provider: readString(selectedTarget.provider) ?? readString(refresh.provider),
+    runtimeProfileId: readString(selectedTarget.runtimeProfileId) ?? readString(refresh.runtimeProfileId),
+    queuedOwnerCommand: readString(yieldCause.ownerCommand),
+    remainingDetailSurfaces: readNumber(remainingDetailSurfaces.total),
+  };
+}
+
+function isYieldPass(value: unknown): value is Record<string, unknown> {
+  if (!isRecord(value)) {
+    return false;
+  }
+  const backpressure = isRecord(value.backpressure) ? value.backpressure : {};
+  return backpressure.reason === 'yielded-to-queued-work';
+}
+
+function readNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

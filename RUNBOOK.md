@@ -2116,3 +2116,22 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run lint`
   - `pnpm run docs:list`
   - `git diff --check`
+
+## Turn 71 | 2026-04-30
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make lazy-live cooperative-yield evidence directly discoverable by
+  operators without parsing the full `/status` payload.
+- Change:
+  - added `yieldCause` to yielded attachment continuation cursors
+  - added compact scheduler-history projection with latest yield, queued work
+    cause, resume cursor, and remaining detail surfaces
+  - exposed the projection at
+    `GET /v1/account-mirrors/scheduler/history`
+  - projected latest yield summary through `auracall api status` helpers and
+    MCP `api_status`
+- Verification target:
+  - `pnpm vitest run tests/accountMirror/refreshService.test.ts tests/accountMirror/schedulerService.test.ts tests/accountMirror/schedulerLedger.test.ts tests/http.responsesServer.test.ts tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm run typecheck`
+  - `pnpm run lint`

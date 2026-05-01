@@ -16,6 +16,7 @@ import {
 } from '../../packages/browser-service/src/service/operationDispatcher.js';
 import {
   recordBrowserOperationQueueObservation,
+  type BrowserOperationQueueObservation,
   summarizeBrowserOperationQueueObservationsByKey,
 } from '../browser/operationQueueObservations.js';
 import type { AccountMirrorProvider } from './politePolicy.js';
@@ -83,6 +84,10 @@ export class AccountMirrorRefreshError extends Error {
 export interface AccountMirrorRefreshService {
   requestRefresh(request?: AccountMirrorRefreshRequest): Promise<AccountMirrorRefreshResult>;
 }
+
+type AccountMirrorYieldCause = NonNullable<
+  NonNullable<AccountMirrorMetadataEvidence['attachmentInventory']>['yieldCause']
+>;
 
 export function createAccountMirrorRefreshService(input: {
   config: Record<string, unknown> | null | undefined;
@@ -231,6 +236,7 @@ export function createAccountMirrorRefreshService(input: {
       });
 
       let collection: AccountMirrorMetadataCollectorResult;
+      let latestYieldCause: AccountMirrorYieldCause | null = null;
       try {
         collection = await metadataCollector.collect({
           provider,
@@ -242,8 +248,16 @@ export function createAccountMirrorRefreshService(input: {
             maxArtifactRowsPerCycle: target.limits.maxArtifactRowsPerCycle,
           },
           previousEvidence: target.metadataEvidence,
-          shouldYield: () => shouldYieldAccountMirrorRefresh(acquired),
+          shouldYield: () => {
+            const cause = getAccountMirrorYieldCause(acquired);
+            if (cause) {
+              latestYieldCause = cause;
+              return true;
+            }
+            return false;
+          },
         });
+        collection = withYieldCause(collection, latestYieldCause);
         const collectionWithPriorManifests = await mergeCollectionWithPersistedCatalog({
           persistence,
           provider,
@@ -341,9 +355,27 @@ export function createAccountMirrorRefreshService(input: {
   };
 }
 
-function shouldYieldAccountMirrorRefresh(acquired: BrowserOperationAcquiredResult): boolean {
+function getAccountMirrorYieldCause(acquired: BrowserOperationAcquiredResult): AccountMirrorYieldCause | null {
   const observations = summarizeBrowserOperationQueueObservationsByKey(acquired.operation.key, 10);
-  return observations.items.some((observation) =>
+  const observation = [...observations.items].reverse().find((item) =>
+    isYieldTriggerObservation(item, acquired)
+  );
+  if (!observation) {
+    return null;
+  }
+  return {
+    observedAt: observation.at,
+    ownerCommand: observation.requested?.ownerCommand ?? null,
+    kind: observation.requested?.kind ?? null,
+    operationClass: observation.requested?.operationClass ?? null,
+  };
+}
+
+function isYieldTriggerObservation(
+  observation: BrowserOperationQueueObservation,
+  acquired: BrowserOperationAcquiredResult,
+): boolean {
+  return (
     observation.event === 'queued' &&
     observation.blockedBy?.id === acquired.operation.id &&
     observation.blockedBy.ownerCommand === acquired.operation.ownerCommand &&
@@ -362,6 +394,26 @@ function isHigherPriorityQueuedOperation(observationAt: string, operationStarted
   return Number.isFinite(observationMs) &&
     Number.isFinite(operationStartedMs) &&
     observationMs >= operationStartedMs;
+}
+
+function withYieldCause(
+  collection: AccountMirrorMetadataCollectorResult,
+  yieldCause: AccountMirrorYieldCause | null,
+): AccountMirrorMetadataCollectorResult {
+  const inventory = collection.evidence.attachmentInventory;
+  if (!yieldCause || inventory?.yielded !== true) {
+    return collection;
+  }
+  return {
+    ...collection,
+    evidence: {
+      ...collection.evidence,
+      attachmentInventory: {
+        ...inventory,
+        yieldCause,
+      },
+    },
+  };
 }
 
 async function mergeCollectionWithPersistedCatalog(input: {

@@ -29,6 +29,34 @@ const statusPayload = {
         message: 'minimum interval has not elapsed',
       },
     },
+    history: {
+      entries: [
+        {
+          completedAt: '2026-04-29T11:55:00.000Z',
+          selectedTarget: {
+            provider: 'chatgpt',
+            runtimeProfileId: 'default',
+          },
+          backpressure: {
+            reason: 'yielded-to-queued-work',
+          },
+          refresh: {
+            mirrorCompleteness: {
+              remainingDetailSurfaces: {
+                total: 4,
+              },
+            },
+            metadataEvidence: {
+              attachmentInventory: {
+                yieldCause: {
+                  ownerCommand: 'media-generation:chatgpt:image',
+                },
+              },
+            },
+          },
+        },
+      ],
+    },
   },
 };
 
@@ -59,6 +87,13 @@ describe('api status CLI helpers', () => {
           reason: 'routine-delayed',
           message: 'minimum interval has not elapsed',
         },
+        latestYield: {
+          completedAt: '2026-04-29T11:55:00.000Z',
+          provider: 'chatgpt',
+          runtimeProfileId: 'default',
+          queuedOwnerCommand: 'media-generation:chatgpt:image',
+          remainingDetailSurfaces: 4,
+        },
       },
     });
     expect(formatApiStatusCliSummary(summary)).toContain(
@@ -69,6 +104,9 @@ describe('api status CLI helpers', () => {
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
       'Account mirror posture: backpressured - minimum interval has not elapsed',
+    );
+    expect(formatApiStatusCliSummary(summary)).toContain(
+      'Latest lazy mirror yield: chatgpt/default at 2026-04-29T11:55:00.000Z queued=media-generation:chatgpt:image remaining=4',
     );
   });
 

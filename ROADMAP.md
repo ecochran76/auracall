@@ -55,6 +55,9 @@ Current State:
   - cooperative yield now classifies queued browser work by owner command, so
     routine mirrors yield to response/media browser work without preempting
     themselves for another routine mirror refresh
+  - compact scheduler history is available at
+    `/v1/account-mirrors/scheduler/history`; `api_status` also reports the
+    latest lazy-yield summary from `/status`
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local

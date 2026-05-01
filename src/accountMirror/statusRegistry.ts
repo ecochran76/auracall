@@ -50,6 +50,12 @@ export type AccountMirrorMetadataEvidence = {
     scannedProjects: number;
     scannedConversations: number;
     yielded?: boolean;
+    yieldCause?: {
+      observedAt: string | null;
+      ownerCommand: string | null;
+      kind: string | null;
+      operationClass: string | null;
+    } | null;
   } | null;
   truncated: {
     projects: boolean;
@@ -465,6 +471,19 @@ function normalizeAttachmentInventoryEvidence(
     scannedProjects: normalizeCount(value.scannedProjects),
     scannedConversations: normalizeCount(value.scannedConversations),
     yielded: value.yielded === true,
+    yieldCause: normalizeAttachmentInventoryYieldCause(value.yieldCause),
+  };
+}
+
+function normalizeAttachmentInventoryYieldCause(
+  value: NonNullable<AccountMirrorMetadataEvidence['attachmentInventory']>['yieldCause'] | undefined,
+): NonNullable<AccountMirrorMetadataEvidence['attachmentInventory']>['yieldCause'] {
+  if (!value || !isRecord(value)) return null;
+  return {
+    observedAt: readString(value.observedAt),
+    ownerCommand: readString(value.ownerCommand),
+    kind: readString(value.kind),
+    operationClass: readString(value.operationClass),
   };
 }
 
