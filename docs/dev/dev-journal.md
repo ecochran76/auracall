@@ -24224,3 +24224,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run typecheck`
   - `pnpm run lint`
   - `pnpm run lint` still reports the pre-existing 188 warnings.
+
+## 2026-04-30 - Scheduler history smoke
+
+- Focus: dogfood compact lazy-yield readback through a short-lived local API
+  server without launching browsers.
+- Progress:
+  - Added `scripts/smoke-account-mirror-scheduler-history.ts`.
+  - Added `pnpm run smoke:scheduler-history`.
+  - The smoke verifies the HTTP scheduler-history route, CLI status summary,
+    and MCP `api_status` all see the same induced yield evidence.
+- Validation:
+  - `pnpm run smoke:scheduler-history`
+  - `pnpm run typecheck`
+  - `pnpm run lint`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - observed `latestYield.owner=media-generation:chatgpt:image`,
+    `latestYield.remaining=4`, and `latestYield.nextConversationIndex=3`.

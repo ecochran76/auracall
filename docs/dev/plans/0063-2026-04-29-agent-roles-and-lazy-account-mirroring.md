@@ -279,6 +279,12 @@ Lazy mirroring must remain lower priority than API-requested work:
   a bounded `yieldCause` with the queued work owner command, kind, operation
   class, and observation time. Compact scheduler history projects that cause
   together with the resume cursor and remaining detail surfaces.
+- Deterministic local API dogfood uses `pnpm run smoke:scheduler-history`. The
+  smoke starts a short-lived in-process API server with an injected yielded
+  scheduler pass and verifies `GET /v1/account-mirrors/scheduler/history`,
+  `readApiStatusForCli`, and MCP `api_status` all report
+  `media-generation:chatgpt:image`, four remaining detail surfaces, and the
+  expected resume cursor without launching browsers.
 - This first cooperative-yield contract is intentionally boundary-scoped: it
   yields between detail surfaces, not in the middle of a provider DOM read.
 - default routine intervals:

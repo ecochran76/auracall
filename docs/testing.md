@@ -156,6 +156,10 @@
       - `accountMirrorScheduler.operatorStatus.backpressureReason`
       - `accountMirrorScheduler.history.object = account_mirror_scheduler_pass_history`
       - `accountMirrorScheduler.history.entries[]`
+      - compact scheduler history is available at
+        `GET /v1/account-mirrors/scheduler/history[?limit=10]`
+      - compact history reports `latestYield`, `yieldEvents[]`,
+        queued-work owner/kind, resume cursor, and remaining detail surfaces
       - `accountMirrorScheduler.lastPass.selectedTarget.mirrorCompleteness`
       - `accountMirrorScheduler.lastPass.backpressure.reason = none|routine-delayed|blocked-by-browser-work|yielded-to-queued-work`
       - `accountMirrorScheduler.lastPass.metrics.inProgressEligibleTargets`
@@ -181,6 +185,8 @@
         - dry-run one pass: `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"run-once"}}'`
       - installed-runtime smoke readback can assert the compact operator field:
         `auracall api status --port 8080 --expect-account-mirror-backpressure routine-delayed`
+      - local deterministic smoke for scheduler-history/API/MCP yield readback:
+        `pnpm run smoke:scheduler-history`
       - execute one pass only when the server was started with
         `--account-mirror-scheduler-execute`:
         `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"run-once","dryRun":false}}'`

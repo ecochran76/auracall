@@ -63,9 +63,10 @@
   `expectedAccountMirrorBackpressure`.
 - Behavior: reads the local API `/status` endpoint and returns the same compact
   scheduler summary used by `auracall api status`, including
-  `scheduler.operatorStatus.posture`, wake reason, and latest mirror
-  backpressure. It does not launch browsers, touch CDP, submit provider work,
-  or read provider pages.
+  `scheduler.operatorStatus.posture`, wake reason, latest mirror backpressure,
+  and `scheduler.latestYield` when scheduler history contains a cooperative
+  yield. It does not launch browsers, touch CDP, submit provider work, or read
+  provider pages.
 - Use this when an MCP operator needs to assert lazy mirror readiness or
   backpressure without shelling out to the CLI. `account_mirror_status` remains
   the cache-only per-target mirror status tool; `api_status` is specifically
@@ -74,6 +75,10 @@
   `pnpm run smoke:mcp-api-status` to start short-lived local API servers and
   verify installed MCP `api_status` reports `disabled` and `scheduled` mirror
   scheduler postures.
+- Deterministic repo smoke: run `pnpm run smoke:scheduler-history` to start a
+  short-lived local API server with an injected yielded scheduler pass and
+  verify the HTTP scheduler-history route, CLI status summarizer, and MCP
+  `api_status` all report the queued work owner and resume cursor.
 
 ### `runtime_inspect`
 - Inputs: one runtime lookup key, `runId`, `runtimeRunId`, `teamRunId`, or

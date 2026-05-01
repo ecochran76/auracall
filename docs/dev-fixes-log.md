@@ -15180,3 +15180,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `/status` payload or replaying browser observations. Persist the queued-work
   cause on the yielded attachment cursor, then project a compact scheduler
   history with the latest yield, resume cursor, and remaining detail surfaces.
+- 2026-04-30: Scheduler-history dogfood should be deterministic and
+  browser-free unless the slice specifically needs live provider behavior. A
+  short-lived local API server with an injected yielded pass proves the HTTP
+  route, CLI summarizer, and MCP `api_status` shape without waking anti-bot
+  surfaces.

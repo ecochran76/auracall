@@ -24,6 +24,7 @@
     "test:mcp:unit": "vitest run tests/mcp*.test.ts tests/mcp/**/*.test.ts",
     "test:mcp:mcporter": "npx -y mcporter list auracall-local --schema --config config/mcporter.json && npx -y mcporter call auracall-local.sessions limit:1 --config config/mcporter.json",
     "smoke:mcp-api-status": "tsx scripts/smoke-api-status-mcp.ts --mode both --port 18081",
+    "smoke:scheduler-history": "tsx scripts/smoke-account-mirror-scheduler-history.ts",
     "test:browser": "pnpm run build && tsx scripts/browser-service/test-browser.ts && ./scripts/browser-smoke.sh",
     "test:grok-smoke": "AURACALL_ALLOW_RAW_CDP=1 tsx scripts/browser-service/grok-dom-smoke.ts",
     "test:grok-acceptance": "tsx scripts/grok-acceptance.ts",

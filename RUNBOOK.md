@@ -2135,3 +2135,27 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/accountMirror/refreshService.test.ts tests/accountMirror/schedulerService.test.ts tests/accountMirror/schedulerLedger.test.ts tests/http.responsesServer.test.ts tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts --maxWorkers 1 --testTimeout 15000`
   - `pnpm run typecheck`
   - `pnpm run lint`
+
+## Turn 72 | 2026-04-30
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: dogfood the compact lazy-yield readback through a local API runtime
+  without provider/browser churn.
+- Change:
+  - added `scripts/smoke-account-mirror-scheduler-history.ts`
+  - added `pnpm run smoke:scheduler-history`
+  - documented the smoke in `docs/testing.md`, `docs/mcp.md`, and Plan 0063
+- Proof:
+  - `pnpm run smoke:scheduler-history`
+  - output included:
+    - `latestYield.owner=media-generation:chatgpt:image`
+    - `latestYield.remaining=4`
+    - `latestYield.nextConversationIndex=3`
+- Verification target:
+  - `pnpm run smoke:scheduler-history`
+  - `pnpm run typecheck`
+  - `pnpm run lint`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
