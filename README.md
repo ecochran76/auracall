@@ -240,7 +240,9 @@ Terminology note:
   history until no more history is detected, then stays in steady follow and
   periodically crawls for new content. `--max-passes` is a debug cap, not the
   default. `auracall api mirror-completion-status <id> --port <port>` polls
-  mode, phase, next attempt, counts, and latest refresh.
+  mode, phase, next attempt, counts, and latest refresh. Completion operation
+  records are persisted under the account-mirror cache and hydrated on API/MCP
+  startup, so operators can keep polling the same id after service restarts.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

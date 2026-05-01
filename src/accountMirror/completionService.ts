@@ -9,6 +9,7 @@ import type {
   AccountMirrorStatusEntry,
   AccountMirrorStatusRegistry,
 } from './statusRegistry.js';
+import type { AccountMirrorCompletionStore } from './completionStore.js';
 
 export interface AccountMirrorCompletionStartRequest {
   provider?: AccountMirrorProvider | null;
@@ -45,20 +46,30 @@ export interface AccountMirrorCompletionService {
 export function createAccountMirrorCompletionService(input: {
   registry: AccountMirrorStatusRegistry;
   refreshService: AccountMirrorRefreshService;
+  store?: AccountMirrorCompletionStore | null;
+  initialOperations?: AccountMirrorCompletionOperation[] | null;
+  resumeActiveOperations?: boolean;
   now?: () => Date;
   generateId?: () => string;
   sleep?: (ms: number) => Promise<void>;
+  onPersistError?: (error: unknown, operation: AccountMirrorCompletionOperation) => void;
 }): AccountMirrorCompletionService {
   const now = input.now ?? (() => new Date());
   const generateId = input.generateId ?? (() => `acctmirror_completion_${randomUUID()}`);
   const sleepImpl = input.sleep ?? sleep;
   const operations = new Map<string, AccountMirrorCompletionOperation>();
+  const persistQueues = new Map<string, Promise<void>>();
+
+  for (const operation of input.initialOperations ?? []) {
+    operations.set(operation.id, operation);
+  }
 
   const update = (id: string, patch: Partial<AccountMirrorCompletionOperation>) => {
     const current = operations.get(id);
     if (!current) return null;
     const next = { ...current, ...patch };
     operations.set(id, next);
+    persist(next);
     return next;
   };
 
@@ -67,7 +78,11 @@ export function createAccountMirrorCompletionService(input: {
     try {
       const operation = operations.get(id);
       if (!operation) return;
-      let pass = 0;
+      if (operation.nextAttemptAt) {
+        await sleepImpl(resolveDelayMs(operation.nextAttemptAt, now()));
+        update(id, { nextAttemptAt: null });
+      }
+      let pass = operation.passCount;
       while (operation.maxPasses === null || pass < operation.maxPasses) {
         if (pass > 0) {
           await input.registry.refreshPersistentState?.();
@@ -160,7 +175,15 @@ export function createAccountMirrorCompletionService(input: {
     }
   };
 
-  return {
+  if (input.resumeActiveOperations) {
+    for (const operation of operations.values()) {
+      if (isActiveOperation(operation)) {
+        void run(operation.id);
+      }
+    }
+  }
+
+  const service: AccountMirrorCompletionService = {
     start(request = {}) {
       const id = generateId();
       const operation: AccountMirrorCompletionOperation = {
@@ -181,6 +204,7 @@ export function createAccountMirrorCompletionService(input: {
         error: null,
       };
       operations.set(id, operation);
+      persist(operation);
       void run(id);
       return operation;
     },
@@ -188,6 +212,21 @@ export function createAccountMirrorCompletionService(input: {
       return operations.get(id) ?? null;
     },
   };
+  return service;
+
+  function persist(operation: AccountMirrorCompletionOperation): void {
+    if (!input.store) return;
+    const previous = persistQueues.get(operation.id) ?? Promise.resolve();
+    const next = previous
+      .catch(() => undefined)
+      .then(() => input.store?.writeOperation(operation).then(() => undefined))
+      .catch((error) => input.onPersistError?.(error, operation));
+    persistQueues.set(operation.id, next);
+  }
+}
+
+function isActiveOperation(operation: AccountMirrorCompletionOperation): boolean {
+  return operation.status === 'queued' || operation.status === 'running';
 }
 
 function findTargetEntry(

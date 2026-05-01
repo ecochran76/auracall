@@ -100,7 +100,9 @@
   history until no more history is detected, then stay in `steady_follow` and
   periodically crawl for new content. Status reports queued/running/completed/
   blocked/failed, mode, phase, pass count, next eligible attempt, latest
-  refresh, and mirror completeness.
+  refresh, and mirror completeness. Operation records are file-backed under the
+  account-mirror cache and hydrated when the MCP service starts, so status
+  readback survives process restarts.
 - Use this instead of long-running shell commands when an operator wants the
   service to own mirror backfill and steady follow.
 

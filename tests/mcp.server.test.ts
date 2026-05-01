@@ -3,7 +3,7 @@ import type { ResolvedUserConfig } from '../src/config.js';
 import { createMcpServicesFromConfig } from '../src/mcp/server.js';
 
 describe('mcp server service wiring', () => {
-  it('shares configured browser media and workbench services across MCP tools', () => {
+  it('shares configured browser media and workbench services across MCP tools', async () => {
     const config = {
       auracallProfile: 'default',
     } as ResolvedUserConfig;
@@ -29,7 +29,7 @@ describe('mcp server service wiring', () => {
     const createMediaGenerationService = vi.fn(() => mediaGenerationService);
     const createExecutionResponsesService = vi.fn(() => responsesService);
 
-    const services = createMcpServicesFromConfig(config, {
+    const services = await createMcpServicesFromConfig(config, {
       createBrowserMediaGenerationExecutor,
       createBrowserWorkbenchCapabilityDiscovery,
       createBrowserWorkbenchCapabilityDiagnostics,
@@ -69,6 +69,10 @@ describe('mcp server service wiring', () => {
       }),
       accountMirrorCatalogService: expect.objectContaining({
         readCatalog: expect.any(Function),
+      }),
+      accountMirrorCompletionService: expect.objectContaining({
+        start: expect.any(Function),
+        read: expect.any(Function),
       }),
     });
   });

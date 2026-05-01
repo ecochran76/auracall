@@ -1,10 +1,14 @@
 import { describe, expect, test, vi } from 'vitest';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { createAccountMirrorCompletionService } from '../../src/accountMirror/completionService.js';
 import {
   AccountMirrorRefreshError,
   type AccountMirrorRefreshResult,
 } from '../../src/accountMirror/refreshService.js';
 import { createAccountMirrorStatusRegistry } from '../../src/accountMirror/statusRegistry.js';
+import { createAccountMirrorCompletionStore } from '../../src/accountMirror/completionStore.js';
 
 const config = {
   runtimeProfiles: {
@@ -75,6 +79,96 @@ function createRefreshResult(): AccountMirrorRefreshResult {
 }
 
 describe('account mirror completion service', () => {
+  test('persists operation state for restart readback', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-completion-store-'));
+    try {
+      const store = createAccountMirrorCompletionStore({
+        config: {
+          browser: {
+            cache: {
+              rootDir: tmp,
+            },
+          },
+        },
+      });
+      const requestRefresh = vi.fn(async () => createRefreshResult());
+      const service = createAccountMirrorCompletionService({
+        registry: createAccountMirrorStatusRegistry({
+          config,
+          now: () => new Date('2026-04-30T12:00:00.000Z'),
+        }),
+        refreshService: {
+          requestRefresh,
+        },
+        store,
+        now: () => new Date('2026-04-30T12:00:00.000Z'),
+        generateId: () => 'acctmirror_persisted',
+      });
+
+      service.start({ maxPasses: 3 });
+
+      await waitFor(async () => (await store.readOperation('acctmirror_persisted'))?.status === 'completed');
+
+      expect(await store.readOperation('acctmirror_persisted')).toMatchObject({
+        id: 'acctmirror_persisted',
+        status: 'completed',
+        mode: 'bounded',
+        passCount: 1,
+      });
+      expect(await store.listOperations({ activeOnly: false, limit: null })).toHaveLength(1);
+      expect(await store.listOperations({ activeOnly: true, limit: null })).toHaveLength(0);
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test('hydrates active cooldown operations without refreshing before eligible time', async () => {
+    const initial = {
+      object: 'account_mirror_completion' as const,
+      id: 'acctmirror_hydrated',
+      provider: 'chatgpt' as const,
+      runtimeProfileId: 'default',
+      mode: 'live_follow' as const,
+      phase: 'steady_follow' as const,
+      status: 'running' as const,
+      startedAt: '2026-04-30T12:00:00.000Z',
+      completedAt: null,
+      nextAttemptAt: '2026-04-30T12:10:00.000Z',
+      maxPasses: null,
+      passCount: 1,
+      lastRefresh: createRefreshResult(),
+      mirrorCompleteness: completeMirror,
+      error: null,
+    };
+    const requestRefresh = vi.fn(async () => createRefreshResult());
+    const sleep = vi.fn(() => new Promise<void>(() => {}));
+
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date('2026-04-30T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      initialOperations: [initial],
+      resumeActiveOperations: true,
+      now: () => new Date('2026-04-30T12:00:00.000Z'),
+      sleep,
+    });
+
+    await waitFor(() => sleep.mock.calls.length > 0);
+
+    expect(service.read('acctmirror_hydrated')).toMatchObject({
+      status: 'running',
+      phase: 'steady_follow',
+      nextAttemptAt: '2026-04-30T12:10:00.000Z',
+      passCount: 1,
+    });
+    expect(sleep).toHaveBeenCalledWith(600_000);
+    expect(requestRefresh).not.toHaveBeenCalled();
+  });
+
   test('defaults to live follow and keeps running after a complete refresh', async () => {
     const requestRefresh = vi.fn()
       .mockResolvedValueOnce(createRefreshResult())
@@ -261,10 +355,10 @@ describe('account mirror completion service', () => {
   });
 });
 
-async function waitFor(predicate: () => boolean, timeoutMs = 1000): Promise<void> {
+async function waitFor(predicate: () => boolean | Promise<boolean>, timeoutMs = 1000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    if (predicate()) return;
+    if (await predicate()) return;
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
   throw new Error('Timed out waiting for predicate');

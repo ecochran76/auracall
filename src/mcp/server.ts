@@ -34,6 +34,7 @@ import { createAccountMirrorRefreshService } from '../accountMirror/refreshServi
 import { createAccountMirrorPersistence } from '../accountMirror/cachePersistence.js';
 import { createAccountMirrorCatalogService } from '../accountMirror/catalogService.js';
 import { createAccountMirrorCompletionService } from '../accountMirror/completionService.js';
+import { createAccountMirrorCompletionStore } from '../accountMirror/completionStore.js';
 
 export interface McpServiceBundle {
   responsesService: ReturnType<typeof createExecutionResponsesService>;
@@ -121,10 +122,10 @@ export async function createDefaultMcpServices(): Promise<McpServiceBundle> {
   return createMcpServicesFromConfig(resolvedUserConfig as ResolvedUserConfig);
 }
 
-export function createMcpServicesFromConfig(
+export async function createMcpServicesFromConfig(
   resolvedUserConfig: ResolvedUserConfig,
   deps: CreateMcpServicesDeps = {},
-): McpServiceBundle {
+): Promise<McpServiceBundle> {
   const createWorkbenchService =
     deps.createWorkbenchCapabilityService ?? createWorkbenchCapabilityService;
   const createDiscovery =
@@ -177,9 +178,15 @@ export function createMcpServicesFromConfig(
     registry: accountMirrorStatusRegistry,
     persistence: accountMirrorPersistence,
   });
+  const accountMirrorCompletionStore = createAccountMirrorCompletionStore({
+    config: resolvedUserConfig as Record<string, unknown>,
+  });
   const accountMirrorCompletionService = createAccountMirrorCompletionService({
     registry: accountMirrorStatusRegistry,
     refreshService: accountMirrorRefreshService,
+    store: accountMirrorCompletionStore,
+    initialOperations: await accountMirrorCompletionStore.listOperations({ activeOnly: false, limit: null }),
+    resumeActiveOperations: true,
   });
   return {
     responsesService,

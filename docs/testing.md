@@ -248,6 +248,9 @@
         latest refresh, and mirror completeness
       - live-follow mode must not finish simply because history backfill is
         complete; it stays running and periodically crawls for new content
+      - operation records persist under the account-mirror cache and are
+        hydrated on API/MCP startup; active records resume, and a persisted
+        `nextAttemptAt` must be honored before the next refresh request
       - ChatGPT completion uses `includeHistory` plus `historyLimit`, which
         must scroll the left rail to load older conversations before claiming
         inventory completeness

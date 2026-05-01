@@ -15216,3 +15216,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   job. The default should be unbounded, report backfill vs steady-follow phase,
   and keep crawling periodically after history is complete. Keep `maxPasses`
   only as an explicit debug cap.
+- 2026-05-01: Live-follow completion must survive process churn. Persist
+  completion records under the account-mirror cache, hydrate them on API/MCP
+  startup, and honor a persisted `nextAttemptAt` before resuming refresh work.

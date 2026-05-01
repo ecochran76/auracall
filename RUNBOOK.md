@@ -2306,6 +2306,10 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - live-follow completion reports `phase = backfill_history|steady_follow`
     and stays running after backfill completes so steady follow can crawl for
     new content on the polite cadence
+  - completion records are persisted under the account-mirror cache and
+    hydrated on API/MCP startup; a restarted service keeps the operation id,
+    phase, `nextAttemptAt`, latest refresh/error, and resumes active jobs
+    without refreshing before an existing cooldown expires
 - Verification target:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/completionService.test.ts`
   - `pnpm exec tsc --noEmit`

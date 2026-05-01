@@ -125,6 +125,7 @@ import {
   type AccountMirrorCompletionOperation,
   type AccountMirrorCompletionService,
 } from '../accountMirror/completionService.js';
+import { createAccountMirrorCompletionStore } from '../accountMirror/completionStore.js';
 import type { AccountMirrorProvider } from '../accountMirror/politePolicy.js';
 
 export interface ResponsesHttpServerOptions {
@@ -397,10 +398,22 @@ export async function createResponsesHttpServer(
   const accountMirrorSchedulerLedger = deps.accountMirrorSchedulerLedger ?? createAccountMirrorSchedulerPassLedger({
     config: configuredRuntimeConfig,
   });
+  const accountMirrorCompletionStore = createAccountMirrorCompletionStore({
+    config: configuredRuntimeConfig,
+  });
+  const initialAccountMirrorCompletions = deps.accountMirrorCompletionService
+    ? []
+    : await accountMirrorCompletionStore.listOperations({ activeOnly: false, limit: null });
   const accountMirrorCompletionService = deps.accountMirrorCompletionService ?? createAccountMirrorCompletionService({
     registry: accountMirrorStatusRegistry,
     refreshService: accountMirrorRefreshService,
+    store: accountMirrorCompletionStore,
+    initialOperations: initialAccountMirrorCompletions,
+    resumeActiveOperations: true,
     now,
+    onPersistError: (error, operation) => {
+      logger(`Account mirror completion ${operation.id} persist failed: ${error instanceof Error ? error.message : String(error)}`);
+    },
   });
   const workbenchCapabilityService = createWorkbenchCapabilityService({
     now,

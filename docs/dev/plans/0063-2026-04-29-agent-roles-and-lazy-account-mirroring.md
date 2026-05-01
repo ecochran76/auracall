@@ -394,6 +394,10 @@ Each status payload should include:
   until the provider reports no more history, then remains running in a steady
   follow phase that periodically crawls for new content. `maxPasses` is only a
   debug cap.
+- Completion operation records are now file-backed under the account-mirror
+  cache and hydrated on API/MCP startup. Active records resume automatically,
+  and persisted `nextAttemptAt` cooldowns are honored before another refresh
+  request is issued.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -412,6 +416,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Persist live-follow job records across API restarts so `running`,
-`backfill_history`, `steady_follow`, `nextAttemptAt`, and latest error/status
-survive process churn instead of living only in the current server process.
+Add operator list/readback for persisted live-follow operations so dashboards
+can show recent and active completions without requiring the operator to know a
+specific completion id.

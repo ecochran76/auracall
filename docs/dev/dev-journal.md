@@ -24369,6 +24369,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     history/detail inventory is incomplete, switches to `steady_follow` when
     the mirror is complete, and remains running so it can periodically crawl
     for new content.
+  - Added a file-backed account-mirror completion store and wired HTTP/MCP
+    startup hydration. Persisted active records resume automatically, and
+    records with a future `nextAttemptAt` sleep until that cooldown expires
+    before issuing another refresh request.
 - Validation:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/completionService.test.ts`
   - `pnpm exec tsc --noEmit`
