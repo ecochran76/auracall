@@ -381,6 +381,12 @@ interface HttpStatusResponse {
         action: 'pause' | 'resume' | 'run-once';
         dryRun: boolean;
       }
+    | {
+        kind: 'account-mirror-completion';
+        action: 'pause' | 'resume' | 'cancel';
+        id: string;
+        status: AccountMirrorCompletionOperation['status'];
+      }
     | ExecutionServiceHostOperatorControlResult;
 }
 
@@ -1017,6 +1023,24 @@ export async function createResponsesHttpServer(
               dryRun,
             };
           }
+        } else if ('accountMirrorCompletion' in payload) {
+          const { id, action } = payload.accountMirrorCompletion;
+          const operation = accountMirrorCompletionService.control({ id, action });
+          if (!operation) {
+            sendJson(res, 404, {
+              error: {
+                message: `account mirror completion not found: ${id}`,
+                type: 'not_found_error',
+              },
+            } satisfies HttpErrorPayload);
+            return;
+          }
+          controlResult = {
+            kind: 'account-mirror-completion',
+            action,
+            id,
+            status: operation.status,
+          };
         } else {
           const result = await host.controlOperatorAction(createServiceHostOperatorControlInput(payload));
           if (!isSuccessfulServiceHostOperatorControlResult(result)) {
@@ -2059,6 +2083,12 @@ const STATUS_CONTROL_REQUEST_SCHEMA = z.union([
     }),
   }),
   z.object({
+    accountMirrorCompletion: z.object({
+      action: z.enum(['pause', 'resume', 'cancel']),
+      id: z.string().min(1),
+    }),
+  }),
+  z.object({
     localActionControl: z.object({
       action: z.literal('resolve-request'),
       runId: z.string().min(1),
@@ -2112,7 +2142,7 @@ type StatusControlRequest = z.infer<typeof STATUS_CONTROL_REQUEST_SCHEMA>;
 
 type ServiceHostStatusControlRequest = Exclude<
   StatusControlRequest,
-  { backgroundDrain: unknown } | { accountMirrorScheduler: unknown }
+  { backgroundDrain: unknown } | { accountMirrorScheduler: unknown } | { accountMirrorCompletion: unknown }
 >;
 
 function createServiceHostOperatorControlInput(payload: ServiceHostStatusControlRequest): ExecutionServiceHostOperatorControlInput {
@@ -2886,16 +2916,16 @@ function createOperatorBrowserDashboardHtml(): string {
         $(buttonId).disabled = true;
       }
       try {
-        const result = await fetch('/v1/account-mirrors/completions/' + encodeURIComponent(id), {
+        const result = await fetch('/status', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ action }),
+          body: JSON.stringify({ accountMirrorCompletion: { id, action } }),
         });
         const payload = await result.json();
         if (!result.ok) {
           throw new Error(asJson({ status: result.status, payload }));
         }
-        $('mirrorCompletions').textContent = asJson({ controlled: payload });
+        $('mirrorCompletions').textContent = asJson({ controlled: payload.controlResult || payload });
         await refreshStatus();
       } catch (error) {
         $('mirrorCompletions').textContent = String(error.message || error);

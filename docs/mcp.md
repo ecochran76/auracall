@@ -91,9 +91,9 @@
   `api_status` all report the queued work owner and resume cursor.
 - Deterministic completion-control smoke: run
   `pnpm run smoke:completion-control` to start a short-lived local API server
-  with an injected completion service and verify HTTP, CLI helper, MCP control,
-  `/status` readback, and compact `api_status` completion posture without
-  provider or browser dispatcher access.
+  with an injected completion service and verify `POST /status` pause, CLI
+  helper resume, MCP cancel, `/status` readback, and compact `api_status`
+  completion posture without provider or browser dispatcher access.
 - Deterministic health parity smoke: run `pnpm run smoke:live-follow-health`
   to start one fixture-backed local API server and compare `/status.liveFollow`,
   CLI `api status`, MCP `api_status`, and `/ops/browser` against the same
@@ -134,7 +134,8 @@
   service to own mirror backfill and steady follow.
 - Smoke: `pnpm run smoke:completion-control` proves
   `account_mirror_completion_control` cancels through the MCP handler after
-  HTTP pause and CLI resume have both updated the same service operation.
+  `POST /status` pause and CLI resume have both updated the same service
+  operation.
 
 ### `runtime_inspect`
 - Inputs: one runtime lookup key, `runId`, `runtimeRunId`, `teamRunId`, or

@@ -1664,6 +1664,107 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('controls account mirror completions through the status preflight path', async () => {
+    let operation: AccountMirrorCompletionOperation = {
+      object: 'account_mirror_completion',
+      id: 'acctmirror_status_control',
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      mode: 'live_follow',
+      phase: 'steady_follow',
+      status: 'running',
+      startedAt: '2026-04-30T12:00:00.000Z',
+      completedAt: null,
+      nextAttemptAt: '2026-04-30T12:10:00.000Z',
+      maxPasses: null,
+      passCount: 2,
+      lastRefresh: null,
+      mirrorCompleteness: completeAccountMirror,
+      error: null,
+    };
+    const control = vi.fn((request: { id: string; action: 'pause' | 'resume' | 'cancel' }) => {
+      if (request.id !== operation.id) return null;
+      operation = {
+        ...operation,
+        status: request.action === 'cancel' ? 'cancelled' : request.action === 'pause' ? 'paused' : 'running',
+        completedAt: request.action === 'cancel' ? '2026-04-30T12:05:00.000Z' : null,
+      };
+      return operation;
+    });
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        accountMirrorCompletionService: {
+          start: vi.fn(() => operation),
+          read: vi.fn((id: string) => (id === operation.id ? operation : null)),
+          list: vi.fn(() => [operation]),
+          control,
+        },
+      },
+    );
+
+    try {
+      const pauseResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          accountMirrorCompletion: {
+            id: 'acctmirror_status_control',
+            action: 'pause',
+          },
+        }),
+      });
+      expect(pauseResponse.status).toBe(200);
+      expect(await pauseResponse.json()).toMatchObject({
+        controlResult: {
+          kind: 'account-mirror-completion',
+          id: 'acctmirror_status_control',
+          action: 'pause',
+          status: 'paused',
+        },
+        accountMirrorCompletions: {
+          metrics: {
+            active: 1,
+            paused: 1,
+          },
+          active: [
+            {
+              id: 'acctmirror_status_control',
+              status: 'paused',
+            },
+          ],
+        },
+        liveFollow: {
+          severity: 'paused',
+          pausedCompletions: 1,
+        },
+      });
+      expect(control).toHaveBeenCalledWith({
+        id: 'acctmirror_status_control',
+        action: 'pause',
+      });
+
+      const missingResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          accountMirrorCompletion: {
+            id: 'missing_completion',
+            action: 'cancel',
+          },
+        }),
+      });
+      expect(missingResponse.status).toBe(404);
+      expect(await missingResponse.json()).toMatchObject({
+        error: {
+          type: 'not_found_error',
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('reports dry-run lazy account mirror scheduler passes through /status', async () => {
     const pass: AccountMirrorSchedulerPassResult = {
       object: 'account_mirror_scheduler_pass',
@@ -14026,6 +14127,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('severity-attention-needed');
       expect(html).toContain('mirrorCompletionId');
       expect(html).toContain('pauseMirrorCompletion');
+      expect(html).toContain("fetch('/status'");
+      expect(html).toContain('accountMirrorCompletion: { id, action }');
     } finally {
       await server.close();
     }

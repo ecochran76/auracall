@@ -15264,3 +15264,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   Seed paused completion records into a temp cache and restart the API over the
   same cache so `/status`, CLI, and MCP prove hydrated active state survives
   process churn.
+- 2026-05-01: Live-follow control should share the status preflight path.
+  Accept `accountMirrorCompletion` control bodies on `POST /status` and have
+  `/ops/browser` use that path so inspection and pause/resume/cancel refresh
+  the same status projection.

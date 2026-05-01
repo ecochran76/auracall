@@ -443,9 +443,12 @@ Each status payload should include:
   relaunches the service-owned loop, and cancel records a terminal
   `cancelled` state without touching provider browsers.
 - `pnpm run smoke:completion-control` starts a short-lived local API server
-  with an injected completion service and proves HTTP pause, CLI resume, MCP
-  cancel, and `/status.accountMirrorCompletions` readback without acquiring
-  browser dispatcher or provider state.
+  with an injected completion service and proves `POST /status` pause, CLI
+  resume, MCP cancel, and `/status.accountMirrorCompletions` readback without
+  acquiring browser dispatcher or provider state.
+- `POST /status` now accepts `accountMirrorCompletion` controls for
+  `pause|resume|cancel`, and `/ops/browser` uses that regular status preflight
+  path for the Mirror Live Follow control buttons.
 - `pnpm run smoke:live-follow-health` starts one fixture-backed local API
   server and proves `/status.liveFollow`, CLI `api status`, MCP `api_status`,
   and `/ops/browser` all report the same shared live-follow health projection
@@ -472,6 +475,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add dashboard/API controls for live-follow pause/resume/cancel operator actions
-to the regular status preflight path, so operators can inspect and change the
-same persisted completion state from one surface.
+Add a deterministic dashboard-control smoke that verifies the `/ops/browser`
+button wiring against the `POST /status` completion-control path without
+provider or browser dispatcher access.

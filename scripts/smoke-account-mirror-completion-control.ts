@@ -145,15 +145,28 @@ async function main(): Promise<void> {
   try {
     const baseUrl = `http://127.0.0.1:${server.port}`;
 
-    const httpPause = await fetchJson<AccountMirrorCompletionOperation>(
-      `${baseUrl}/v1/account-mirrors/completions/acctmirror_control_smoke`,
+    const httpPause = await fetchJson<{
+      controlResult?: {
+        kind?: string;
+        id?: string;
+        action?: string;
+        status?: string;
+      };
+    }>(
+      `${baseUrl}/status`,
       {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'pause' }),
+        body: JSON.stringify({
+          accountMirrorCompletion: {
+            id: 'acctmirror_control_smoke',
+            action: 'pause',
+          },
+        }),
       },
     );
-    assertEqual(httpPause.status, 'paused', 'HTTP pause status');
+    assertEqual(httpPause.controlResult?.kind, 'account-mirror-completion', 'HTTP status pause control kind');
+    assertEqual(httpPause.controlResult?.status, 'paused', 'HTTP status pause control status');
 
     const statusAfterPause = await fetchJson<{
       accountMirrorCompletions?: {
@@ -238,7 +251,7 @@ async function main(): Promise<void> {
     assertEqual(service.controlCalls.length, 3, 'control call count');
     console.log([
       `completion-control smoke: pass port=${server.port}`,
-      `http.pause=${httpPause.status}`,
+      `status.pause=${httpPause.controlResult?.status ?? 'unknown'}`,
       `cli.resume=${cliResume.status}`,
       `mcp.cancel=${(mcpCancel.structuredContent as AccountMirrorCompletionOperation).status}`,
       `status.cancelled=${finalStatus.accountMirrorCompletions?.metrics?.cancelled ?? 'unknown'}`,

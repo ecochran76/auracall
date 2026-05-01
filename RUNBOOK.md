@@ -2307,6 +2307,30 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `git diff --check`
   - `pnpm run install:user-runtime`
 
+## Turn 86 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: put live-follow completion controls on the regular status preflight
+  path.
+- Change:
+  - added `accountMirrorCompletion` pause/resume/cancel support to
+    `POST /status`
+  - changed `/ops/browser` Mirror Live Follow controls to post to `/status`
+  - updated `pnpm run smoke:completion-control` to prove status-path pause,
+    CLI resume, MCP cancel, and status readback without provider/browser work
+- Verification target:
+  - `pnpm run smoke:completion-control`
+  - `pnpm run smoke:completion-hydration`
+  - `pnpm run smoke:live-follow-health`
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+
 ## Turn 79 | 2026-05-01
 
 - Continued implementation plan:

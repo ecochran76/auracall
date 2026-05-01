@@ -200,8 +200,8 @@
         `pnpm run smoke:scheduler-history`
       - local deterministic smoke for mirror completion controls:
         `pnpm run smoke:completion-control`; it uses an injected completion
-        service and proves HTTP, CLI helper, MCP control, and `/status`
-        readback without provider or browser dispatcher access
+        service and proves `POST /status` pause, CLI helper resume, MCP cancel,
+        and `/status` readback without provider or browser dispatcher access
       - local deterministic smoke for persisted completion hydration:
         `pnpm run smoke:completion-hydration`; it seeds a paused live-follow
         completion into a temp cache, restarts the API over the same cache,
@@ -296,6 +296,11 @@
         `{"action":"pause|resume|cancel"}`; paused operations stay discoverable
         in active readback, resume relaunches the service-owned loop, and cancel
         records terminal `cancelled` without touching provider browsers
+      - the regular status preflight path accepts
+        `POST /status` body
+        `{"accountMirrorCompletion":{"id":"<completion_id>","action":"pause|resume|cancel"}}`
+        and returns the updated `controlResult` plus refreshed status
+        projections
       - ChatGPT completion uses `includeHistory` plus `historyLimit`, which
         must scroll the left rail to load older conversations before claiming
         inventory completeness

@@ -24570,6 +24570,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run install:user-runtime`
   - installed `smoke-account-mirror-completion-hydration.js`
 
+## Turn 86 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: route live-follow pause/resume/cancel through the regular operator
+  status preflight path.
+- Change:
+  - `POST /status` now accepts
+    `accountMirrorCompletion: { id, action: "pause"|"resume"|"cancel" }`
+  - status-control responses include an `account-mirror-completion`
+    `controlResult` plus refreshed completion and live-follow status
+    projections
+  - `/ops/browser` Mirror Live Follow buttons now use `POST /status` instead
+    of the dedicated completion endpoint
+  - `pnpm run smoke:completion-control` now validates status-path pause before
+    CLI resume and MCP cancel
+- Validation:
+  - `pnpm run smoke:completion-control`
+  - `pnpm run smoke:completion-hydration`
+  - `pnpm run smoke:live-follow-health`
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `smoke-account-mirror-completion-control.js`
+
 ## Turn 78 | 2026-05-01
 
 - Continued implementation plan:
