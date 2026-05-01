@@ -446,6 +446,10 @@ Each status payload should include:
   with an injected completion service and proves HTTP pause, CLI resume, MCP
   cancel, and `/status.accountMirrorCompletions` readback without acquiring
   browser dispatcher or provider state.
+- `pnpm run smoke:live-follow-health` starts one fixture-backed local API
+  server and proves `/status.liveFollow`, CLI `api status`, MCP `api_status`,
+  and `/ops/browser` all report the same shared live-follow health projection
+  without acquiring browser dispatcher or provider state.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -464,6 +468,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add a deterministic parity smoke that compares `/status.liveFollow`,
-`auracall api status`, MCP `api_status`, and `/ops/browser` against the same
-fixture-backed local API server.
+Add status-level validation for hydrated live-follow completion records after
+API restart, so the shared health projection proves persisted active/paused
+operations remain visible across process churn.

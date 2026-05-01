@@ -15256,3 +15256,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   Project the shared helper into `/status.liveFollow`, then have CLI, MCP, and
   `/ops/browser` consume that status projection instead of reimplementing
   severity rules in each surface.
+- 2026-05-01: Shared live-follow health needs a fixture-backed parity smoke.
+  Compare `/status.liveFollow`, CLI `api status`, MCP `api_status`, and
+  `/ops/browser` against the same local API server so future surface changes
+  cannot silently drift.

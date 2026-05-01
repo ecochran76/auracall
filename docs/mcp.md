@@ -94,6 +94,10 @@
   with an injected completion service and verify HTTP, CLI helper, MCP control,
   `/status` readback, and compact `api_status` completion posture without
   provider or browser dispatcher access.
+- Deterministic health parity smoke: run `pnpm run smoke:live-follow-health`
+  to start one fixture-backed local API server and compare `/status.liveFollow`,
+  CLI `api status`, MCP `api_status`, and `/ops/browser` against the same
+  live-follow health projection without provider or browser dispatcher access.
 
 ### `account_mirror_scheduler_history`
 - Inputs: `port` for the local `auracall api serve` listener; optional `host`,

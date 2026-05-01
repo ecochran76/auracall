@@ -202,6 +202,11 @@
         `pnpm run smoke:completion-control`; it uses an injected completion
         service and proves HTTP, CLI helper, MCP control, and `/status`
         readback without provider or browser dispatcher access
+      - local deterministic smoke for live-follow health parity:
+        `pnpm run smoke:live-follow-health`; it compares `/status.liveFollow`,
+        CLI `api status`, MCP `api_status`, and `/ops/browser` against one
+        fixture-backed local API server without provider or browser dispatcher
+        access
       - execute one pass only when the server was started with
         `--account-mirror-scheduler-execute`:
         `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"run-once","dryRun":false}}'`

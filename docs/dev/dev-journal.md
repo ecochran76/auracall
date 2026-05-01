@@ -24516,6 +24516,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run install:user-runtime`
   - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-completion-control.js`
+
+## Turn 84 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: prove all operator live-follow health surfaces agree on one shared
+  projection.
+- Change:
+  - added `pnpm run smoke:live-follow-health`
+  - the smoke starts a fixture-backed local API server with yielded scheduler
+    history and a paused live-follow completion
+  - it compares `/status.liveFollow`, CLI `api status`, MCP `api_status`, and
+    `/ops/browser` for severity, paused count, and latest yield evidence
+  - it performs no provider work and does not acquire the browser dispatcher
+- Validation:
+  - `pnpm run smoke:live-follow-health`
+  - `pnpm run smoke:completion-control`
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `smoke-live-follow-health-parity.js`
   - installed `auracall api mirror-completion-control --help`
   - installed `auracall api mirror-completion-status --help`
 

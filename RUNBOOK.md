@@ -2259,6 +2259,29 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `git diff --check`
   - `pnpm run install:user-runtime`
 
+## Turn 84 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: add deterministic parity coverage for shared live-follow health.
+- Change:
+  - added `scripts/smoke-live-follow-health-parity.ts`
+  - added `pnpm run smoke:live-follow-health`
+  - the smoke compares HTTP `/status.liveFollow`, CLI status, MCP
+    `api_status`, and `/ops/browser` from one fixture-backed local API server
+  - the fixture includes both yielded scheduler history and a paused
+    live-follow completion, with no provider or browser dispatcher access
+- Verification target:
+  - `pnpm run smoke:live-follow-health`
+  - `pnpm run smoke:completion-control`
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+
 ## Turn 79 | 2026-05-01
 
 - Continued implementation plan:
