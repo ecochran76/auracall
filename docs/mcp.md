@@ -106,8 +106,20 @@
   `pnpm run smoke:ops-browser-control` to verify `/ops/browser` completion
   buttons are wired to `POST /status` with `accountMirrorCompletion`, then
   exercise that path against a fixture live-follow completion. The smoke also
-  checks `auracall api ops-browser-status`, which fails fast when packaged
-  dashboard control wiring drifts from linked `/status` readback.
+  checks `auracall api ops-browser-status` and MCP `api_ops_browser_status`,
+  which fail fast when packaged dashboard control wiring drifts from linked
+  `/status` readback.
+
+### `api_ops_browser_status`
+- Inputs: `port` for the local `auracall api serve` listener; optional `host`,
+  `timeoutMs`, `expectedLiveFollowSeverity`, `expectedCompletionPaused`, and
+  `expectedCompletionActive`.
+- Behavior: reads `/ops/browser`, asserts the Mirror Live Follow controls use
+  `POST /status` with an `accountMirrorCompletion` payload, reads linked
+  `/status`, and applies live-follow/completion-count expectations without
+  launching browsers or provider work.
+- Output: dashboard contract booleans plus the same structured status summary
+  returned by `auracall api status`.
 
 ### `account_mirror_scheduler_history`
 - Inputs: `port` for the local `auracall api serve` listener; optional `host`,

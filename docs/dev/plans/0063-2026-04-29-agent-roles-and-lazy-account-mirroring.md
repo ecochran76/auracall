@@ -464,6 +464,9 @@ Each status payload should include:
 - `auracall api ops-browser-status` reads `/ops/browser` and linked `/status`,
   asserts the dashboard completion-control contract, and supports the same
   live-follow severity and completion-count expectations as `api status`.
+- MCP `api_ops_browser_status` exposes the same dashboard/status contract
+  readback for remote operators, and `pnpm run smoke:ops-browser-control`
+  verifies it against the fixture server without browser/provider work.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -482,5 +485,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add MCP parity for `/ops/browser` dashboard/status contract readback, so remote
-operators can fail fast on dashboard control drift without shell access.
+Add installed-runtime MCP schema/tool-call smoke coverage for
+`api_ops_browser_status`, so packaging drift in remote operator surfaces fails
+before live dogfood.

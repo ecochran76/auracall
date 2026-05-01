@@ -13,6 +13,7 @@ import { registerMediaGenerationTool } from './tools/mediaGeneration.js';
 import { registerWorkbenchCapabilitiesTool } from './tools/workbenchCapabilities.js';
 import { registerRunStatusTool } from './tools/runStatus.js';
 import { registerApiStatusTool } from './tools/apiStatus.js';
+import { registerApiOpsBrowserStatusTool } from './tools/apiOpsBrowserStatus.js';
 import { registerRuntimeInspectTool } from './tools/runtimeInspect.js';
 import { registerAccountMirrorStatusTool } from './tools/accountMirrorStatus.js';
 import { registerAccountMirrorRefreshTool } from './tools/accountMirrorRefresh.js';
@@ -79,6 +80,7 @@ export async function startMcpServer(): Promise<void> {
     mediaGenerationService: services.mediaGenerationService,
   });
   registerApiStatusTool(server);
+  registerApiOpsBrowserStatusTool(server);
   registerRuntimeInspectTool(server);
   registerMediaGenerationTool(server, {
     service: services.mediaGenerationService,

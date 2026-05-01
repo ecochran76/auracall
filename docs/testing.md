@@ -215,7 +215,8 @@
         `pnpm run smoke:ops-browser-control`; it verifies `/ops/browser` button
         wiring uses `POST /status` with `accountMirrorCompletion`, then pauses
         a fixture live-follow completion through that path and asserts the same
-        contract through `auracall api ops-browser-status`
+        contract through `auracall api ops-browser-status` and MCP
+        `api_ops_browser_status`
       - installed-runtime dashboard/status contract readback:
         `auracall api ops-browser-status --port 8080 --expect-live-follow-severity paused --expect-completion-paused 1`
       - execute one pass only when the server was started with

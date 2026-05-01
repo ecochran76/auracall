@@ -24655,6 +24655,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-ops-browser-completion-control.js`
   - installed `~/.local/bin/auracall api ops-browser-status --help`
 
+## Turn 89 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: give remote operators the same `/ops/browser` dashboard/status contract
+  preflight as the installed CLI.
+- Change:
+  - added MCP `api_ops_browser_status`
+  - the tool reads `/ops/browser`, verifies Mirror Live Follow controls use
+    `POST /status` with `accountMirrorCompletion`, reads linked `/status`, and
+    applies live-follow/completion-count expectations
+  - `pnpm run smoke:ops-browser-control` now checks API, CLI, and MCP
+    dashboard/status contract paths against the same fixture server
+- Validation:
+  - `pnpm vitest run tests/mcp.apiOpsBrowserStatus.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiStatus.test.ts tests/mcp.schema.test.ts`
+  - `pnpm run smoke:ops-browser-control`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-ops-browser-completion-control.js`
+
 ## Turn 78 | 2026-05-01
 
 - Continued implementation plan:

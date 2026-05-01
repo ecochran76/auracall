@@ -2381,6 +2381,28 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `git diff --check`
   - `pnpm run install:user-runtime`
 
+## Turn 89 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: add MCP parity for `/ops/browser` dashboard/status contract
+  expectation support.
+- Change:
+  - added MCP `api_ops_browser_status`
+  - the tool shares the CLI helper path for `/ops/browser` dashboard contract
+    assertions and linked `/status` live-follow/completion-count expectations
+  - the browser-ops deterministic smoke now exercises API, CLI, and MCP
+    dashboard/status contract paths against its fixture server
+- Verification target:
+  - `pnpm vitest run tests/mcp.apiOpsBrowserStatus.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiStatus.test.ts tests/mcp.schema.test.ts`
+  - `pnpm run smoke:ops-browser-control`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+
 ## Turn 79 | 2026-05-01
 
 - Continued implementation plan:

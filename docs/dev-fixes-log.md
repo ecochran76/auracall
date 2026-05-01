@@ -15276,3 +15276,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `auracall api ops-browser-status` should read `/ops/browser` plus linked
   `/status`, assert completion-control wiring, and support live-follow
   severity/completion-count expectations.
+- 2026-05-01: Dashboard contract drift should also fail for remote operators.
+  MCP `api_ops_browser_status` should reuse the same `/ops/browser` plus
+  `/status` assertions as the CLI helper and stay provider/browser-free.

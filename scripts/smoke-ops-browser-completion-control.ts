@@ -11,6 +11,7 @@ import {
   readApiOpsBrowserStatusForCli,
 } from '../src/cli/apiOpsBrowserCommand.js';
 import { createResponsesHttpServer } from '../src/http/responsesServer.js';
+import { createApiOpsBrowserStatusToolHandler } from '../src/mcp/tools/apiOpsBrowserStatus.js';
 
 const operation: AccountMirrorCompletionOperation = {
   object: 'account_mirror_completion',
@@ -175,6 +176,16 @@ async function main(): Promise<void> {
       expectedPaused: 1,
     });
 
+    const mcpResult = await createApiOpsBrowserStatusToolHandler()({
+      port: server.port,
+      expectedLiveFollowSeverity: 'paused',
+      expectedCompletionActive: 1,
+      expectedCompletionPaused: 1,
+    });
+    if (mcpResult.isError) {
+      throw new Error('MCP api_ops_browser_status returned an error result.');
+    }
+
     console.log([
       `ops-browser completion-control smoke: pass port=${server.port}`,
       'dashboardControl=/status',
@@ -182,6 +193,7 @@ async function main(): Promise<void> {
       `status.pause=${pause.controlResult?.status ?? 'unknown'}`,
       `liveFollow=${pause.liveFollow?.severity ?? 'unknown'}`,
       'opsBrowserStatus=ok',
+      'mcpOpsBrowserStatus=ok',
       'providerWork=none',
     ].join('\n'));
   } finally {
