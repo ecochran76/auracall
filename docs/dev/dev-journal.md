@@ -24283,3 +24283,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/cli/apiSchedulerHistoryCommand.test.ts tests/mcp.accountMirrorSchedulerHistory.test.ts --maxWorkers 1 --testTimeout 15000`
   - `pnpm run typecheck`
+
+## 2026-04-30 - Installed scheduler history dogfood
+
+- Focus: prove the new scheduler-history operator surfaces work from the
+  user-scoped installed runtime, not just the repo checkout.
+- Progress:
+  - `pnpm run install:user-runtime` refreshed `~/.auracall/user-runtime`.
+  - Installed `auracall api scheduler-history --help` exposed the new command.
+  - Installed `api serve` on port `18093` loaded the persisted scheduler
+    history and reported scheduler posture `scheduled`.
+  - Installed CLI `auracall api scheduler-history --port 18093 --limit 5`
+    returned five compact entries with `latestYield: null`; the top entry was
+    `refresh-completed` for `chatgpt/default`, `backpressure=none`,
+    `yielded=false`, and 67 remaining detail surfaces.
+  - Installed MCP `account_mirror_scheduler_history` returned the same top
+    entry through structured content.
+  - Dogfood exposed a small startup-banner gap: the API route worked and was in
+    root metadata, but the `api serve` endpoint banner did not list it. The
+    banner now includes `GET /v1/account-mirrors/scheduler/history`.
+- Validation:
+  - `~/.local/bin/auracall api scheduler-history --port 18093 --limit 5`
+  - installed MCP `account_mirror_scheduler_history` on port `18093`

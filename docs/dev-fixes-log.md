@@ -15193,3 +15193,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   as the source of truth. CLI and MCP history readers should fetch the compact
   `/v1/account-mirrors/scheduler/history` projection rather than reading cache
   files directly or re-summarizing `/status`.
+- 2026-04-30: Startup banners should list newly added operator routes. Installed
+  scheduler-history dogfood proved the route and MCP tool worked, but the
+  `api serve` endpoint banner still omitted
+  `/v1/account-mirrors/scheduler/history`; keep the banner in sync with root
+  API metadata.

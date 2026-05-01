@@ -176,6 +176,11 @@ Current implementation-facing politeness contract:
   `account_mirror_scheduler_history` read the same compact route from the
   running API service, so operators can inspect recent passes and yield/no-yield
   proof without raw HTTP.
+- Installed-runtime dogfood after refreshing `~/.auracall/user-runtime`
+  verified both surfaces against an installed API server on port `18093`.
+  Installed CLI and MCP both returned the persisted live no-yield pass:
+  `refresh-completed` for `chatgpt/default`, `backpressure=none`,
+  `yielded=false`, and 67 remaining detail surfaces.
 - Installed-runtime restart dogfood verified that a dry-run pass history entry
   persisted after stopping the scheduler-enabled server and starting a second
   scheduler-disabled server: `lastPass` reset to `null`, while

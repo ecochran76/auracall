@@ -2208,3 +2208,34 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run docs:list`
   - `pnpm run plans:audit -- --keep 63`
   - `git diff --check`
+
+## Turn 75 | 2026-04-30
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: dogfood the new scheduler-history operator surfaces from the
+  user-scoped installed runtime.
+- Proof:
+  - `pnpm run install:user-runtime` refreshed `~/.auracall/user-runtime` and
+    wrappers under `~/.local/bin`
+  - installed `~/.local/bin/auracall --version` reported `0.1.1`
+  - installed `auracall api scheduler-history --help` exposed the new command
+  - installed `api serve` on port `18093` loaded the persisted scheduler
+    history with scheduler posture `scheduled`
+  - installed `auracall api scheduler-history --port 18093 --limit 5` returned
+    five entries, `latestYield: null`, and top entry
+    `refresh-completed chatgpt/default backpressure=none yielded=false`
+  - installed MCP `account_mirror_scheduler_history` returned the same top
+    entry and remaining detail surfaces `67`
+  - no browser-operation locks were present after shutdown
+- Change:
+  - added the scheduler-history route to the API startup endpoint banner after
+    installed dogfood showed the route worked but was not listed there
+- Verification target:
+  - targeted CLI/MCP/API tests
+  - `pnpm run smoke:scheduler-history`
+  - `pnpm run typecheck`
+  - `pnpm run lint`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
