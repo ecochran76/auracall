@@ -15248,3 +15248,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   that operators and MCP callers can assert directly. Use
   `healthy|backpressured|paused|attention-needed` instead of requiring each
   caller to infer health from scheduler posture and completion counts.
+- 2026-05-01: The browser operator dashboard should show the same live-follow
+  severity as CLI/MCP status. Operators should not need to mentally combine
+  active, paused, failed, cancelled, scheduler posture, and backpressure fields
+  when they are looking at `/ops/browser`.

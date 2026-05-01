@@ -2216,7 +2216,26 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run lint`
   - `git diff --check`
   - `pnpm run install:user-runtime`
+  - `pnpm run install:user-runtime`
   - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-completion-control.js`
+
+## Turn 82 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: bring the CLI/MCP live-follow severity signal into `/ops/browser`.
+- Change:
+  - added dashboard-side live-follow health derivation from `/status`
+  - rendered `Live Follow Severity` in the Server panel
+  - included `health.severity` in the Mirror Live Follow JSON projection
+  - recorded a follow-up to centralize the derivation in shared status code
+- Verification target:
+  - `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "browser operator dashboard"`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
 
 ## Turn 79 | 2026-05-01
 

@@ -2672,6 +2672,9 @@ function createOperatorBrowserDashboardHtml(): string {
     .warn { color: var(--warn); }
     .bad { color: var(--bad); }
     .muted { color: var(--muted); }
+    .severity-healthy { color: var(--accent); }
+    .severity-backpressured, .severity-paused { color: var(--warn); }
+    .severity-attention-needed { color: var(--bad); }
   </style>
 </head>
 <body>
@@ -2790,6 +2793,7 @@ function createOperatorBrowserDashboardHtml(): string {
       const scheduler = status.accountMirrorScheduler || {};
       const completions = status.accountMirrorCompletions || {};
       const completionMetrics = completions.metrics || {};
+      const liveFollow = deriveLiveFollowHealth(status);
       const dashboard = status.routes && status.routes.operatorBrowserDashboard;
       $('serverSummary').innerHTML = [
         ['Status', status.ok ? '<span class="ok">ok</span>' : '<span class="bad">not ok</span>'],
@@ -2800,6 +2804,7 @@ function createOperatorBrowserDashboardHtml(): string {
         ['Runner ID', runner.id || 'none'],
         ['Mirror Scheduler', scheduler.state || 'unknown'],
         ['Mirror Posture', scheduler.operatorStatus ? scheduler.operatorStatus.posture : 'unknown'],
+        ['Live Follow Severity', renderSeverity(liveFollow.severity)],
         ['Mirror Wake', scheduler.lastWakeReason || 'none'],
         ['Mirror Wake At', scheduler.lastWakeAt || 'never'],
         ['Live Follow Active', String(completionMetrics.active || 0)],
@@ -2814,10 +2819,67 @@ function createOperatorBrowserDashboardHtml(): string {
       const active = Array.isArray(summary.active) ? summary.active : [];
       const recent = Array.isArray(summary.recent) ? summary.recent : [];
       $('mirrorCompletions').textContent = asJson({
+        health: deriveLiveFollowHealth(status),
         metrics,
         active: active.map(compactCompletion),
         recent: recent.map(compactCompletion),
       });
+    }
+
+    function renderSeverity(severity) {
+      return '<span class="severity-' + severity + '">' + severity + '</span>';
+    }
+
+    function deriveLiveFollowHealth(status) {
+      const scheduler = status.accountMirrorScheduler || {};
+      const operatorStatus = scheduler.operatorStatus || {};
+      const lastPass = scheduler.lastPass || {};
+      const backpressure = lastPass.backpressure || {};
+      const completions = status.accountMirrorCompletions || {};
+      const metrics = completions.metrics || {};
+      const schedulerPosture = operatorStatus.posture || 'unknown';
+      const backpressureReason = backpressure.reason || 'unknown';
+      const activeCompletions = readMetric(metrics.active);
+      const pausedCompletions = readMetric(metrics.paused);
+      const failedCompletions = readMetric(metrics.failed);
+      const cancelledCompletions = readMetric(metrics.cancelled);
+      const severity = deriveLiveFollowSeverity({
+        schedulerPosture,
+        backpressureReason,
+        pausedCompletions,
+        failedCompletions,
+        cancelledCompletions,
+      });
+      return {
+        severity,
+        schedulerPosture,
+        schedulerState: scheduler.state || 'unknown',
+        backpressureReason,
+        activeCompletions,
+        pausedCompletions,
+        failedCompletions,
+        cancelledCompletions,
+      };
+    }
+
+    function deriveLiveFollowSeverity(input) {
+      if (input.failedCompletions > 0 || input.cancelledCompletions > 0) {
+        return 'attention-needed';
+      }
+      if (input.pausedCompletions > 0 || input.schedulerPosture === 'paused') {
+        return 'paused';
+      }
+      if (input.schedulerPosture === 'unknown' || input.backpressureReason === 'unknown') {
+        return 'attention-needed';
+      }
+      if (input.schedulerPosture === 'backpressured' || input.backpressureReason !== 'none') {
+        return 'backpressured';
+      }
+      return 'healthy';
+    }
+
+    function readMetric(value) {
+      return typeof value === 'number' && Number.isFinite(value) ? value : 0;
     }
 
     function compactCompletion(operation) {

@@ -65,7 +65,8 @@ Current State:
     for operator dashboards without knowing the id; `/status` and
     `/ops/browser` now surface active/recent live-follow posture directly, and
     CLI/MCP status can assert derived live-follow severity (`healthy`,
-    `backpressured`, `paused`, or `attention-needed`); API/CLI/MCP/dashboard
+    `backpressured`, `paused`, or `attention-needed`), and `/ops/browser`
+    displays the same severity for dashboard operators; API/CLI/MCP/dashboard
     controls can pause, resume, or cancel a live-follow operation by id;
     ChatGPT conversation inventory must scroll the infinite left rail when
     `includeHistory` and `historyLimit` are requested before claiming mirror

@@ -277,7 +277,9 @@
         `--expect-completion-cancelled <count>`, and
         `--expect-completion-failed <count>`
       - `/ops/browser` includes the "Mirror Live Follow" panel and renders the
-        same active/recent completion posture from `/status`
+        same active/recent completion posture from `/status`, including the
+        derived severity shown in the server summary and mirror live-follow
+        health payload
       - operator control is available with
         `POST /v1/account-mirrors/completions/{completion_id}` body
         `{"action":"pause|resume|cancel"}`; paused operations stay discoverable

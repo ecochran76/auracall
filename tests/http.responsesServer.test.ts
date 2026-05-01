@@ -14013,6 +14013,9 @@ describe('http responses adapter', () => {
       expect(html).toContain('Probe Browser State');
       expect(html).toContain('Mirror Live Follow');
       expect(html).toContain('mirrorCompletions');
+      expect(html).toContain('Live Follow Severity');
+      expect(html).toContain('deriveLiveFollowHealth');
+      expect(html).toContain('severity-attention-needed');
       expect(html).toContain('mirrorCompletionId');
       expect(html).toContain('pauseMirrorCompletion');
     } finally {

@@ -24395,6 +24395,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run lint`
   - `git diff --check`
   - `pnpm run install:user-runtime`
+  - `pnpm run install:user-runtime`
   - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-completion-control.js`
 
 ## Turn 80 | 2026-05-01
@@ -24444,6 +24445,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run install:user-runtime`
   - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-completion-control.js`
+
+## Turn 82 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make live-follow severity visible in the browser operator dashboard.
+- Change:
+  - `/ops/browser` now derives live-follow health from `/status` and shows
+    severity in the Server summary
+  - the Mirror Live Follow panel now includes a `health` object alongside
+    metrics, active operations, and recent operations
+  - added dashboard route coverage for the new severity affordance
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "browser operator dashboard"`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
 
 ## Turn 79 | 2026-05-01
 
