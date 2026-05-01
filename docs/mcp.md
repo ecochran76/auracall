@@ -77,8 +77,20 @@
   scheduler postures.
 - Deterministic repo smoke: run `pnpm run smoke:scheduler-history` to start a
   short-lived local API server with an injected yielded scheduler pass and
-  verify the HTTP scheduler-history route, CLI status summarizer, and MCP
+  verify the HTTP scheduler-history route, CLI scheduler-history reader, CLI
+  status summarizer, MCP `account_mirror_scheduler_history`, and MCP
   `api_status` all report the queued work owner and resume cursor.
+
+### `account_mirror_scheduler_history`
+- Inputs: `port` for the local `auracall api serve` listener; optional `host`,
+  `timeoutMs`, and `limit`.
+- Behavior: reads
+  `GET /v1/account-mirrors/scheduler/history[?limit=10]` from the running API
+  service and returns the compact scheduler-history payload. It does not launch
+  browsers, touch CDP, submit provider work, or read provider pages.
+- Use this when an MCP operator needs recent lazy mirror pass history, the
+  latest cooperative-yield event, resume cursor, or no-yield proof without
+  parsing `/status`.
 
 ### `runtime_inspect`
 - Inputs: one runtime lookup key, `runId`, `runtimeRunId`, `teamRunId`, or

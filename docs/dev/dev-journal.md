@@ -24266,3 +24266,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `GET /v1/account-mirrors/scheduler/history?limit=5`
   - `pnpm tsx bin/auracall.ts api status --port 18092`
+
+## 2026-04-30 - Scheduler history operator surfaces
+
+- Focus: make full compact lazy mirror scheduler history available through
+  regular operator surfaces, not only raw HTTP or the latest `api status`
+  summary.
+- Progress:
+  - Added shared `readApiSchedulerHistoryForCli`.
+  - Added `auracall api scheduler-history --port <port> [--limit <count>]`.
+  - Added MCP `account_mirror_scheduler_history`, which reads the running API
+    route without browser or provider work.
+  - Extended `pnpm run smoke:scheduler-history` so the deterministic yielded
+    pass is checked through HTTP, CLI scheduler-history, CLI status, MCP
+    scheduler-history, and MCP `api_status`.
+- Validation:
+  - `pnpm vitest run tests/cli/apiSchedulerHistoryCommand.test.ts tests/mcp.accountMirrorSchedulerHistory.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm run typecheck`

@@ -15189,3 +15189,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   no-yield path. A completed pass with `latestYield: null`, `yielded: false`,
   and no browser-operation locks means the mirror had the lane to itself; keep
   deterministic smoke coverage for the queued-yield path.
+- 2026-04-30: Operator scheduler-history readback should use the running API
+  as the source of truth. CLI and MCP history readers should fetch the compact
+  `/v1/account-mirrors/scheduler/history` projection rather than reading cache
+  files directly or re-summarizing `/status`.

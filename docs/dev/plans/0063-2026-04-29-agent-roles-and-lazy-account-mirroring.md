@@ -172,6 +172,10 @@ Current implementation-facing politeness contract:
   the same persisted scheduler pass history. It summarizes recent passes and
   highlights the latest cooperative-yield event without requiring operators or
   MCP callers to parse the full `/status` payload.
+- `auracall api scheduler-history --port <port>` and MCP
+  `account_mirror_scheduler_history` read the same compact route from the
+  running API service, so operators can inspect recent passes and yield/no-yield
+  proof without raw HTTP.
 - Installed-runtime restart dogfood verified that a dry-run pass history entry
   persisted after stopping the scheduler-enabled server and starting a second
   scheduler-disabled server: `lastPass` reset to `null`, while
@@ -282,7 +286,8 @@ Lazy mirroring must remain lower priority than API-requested work:
 - Deterministic local API dogfood uses `pnpm run smoke:scheduler-history`. The
   smoke starts a short-lived in-process API server with an injected yielded
   scheduler pass and verifies `GET /v1/account-mirrors/scheduler/history`,
-  `readApiStatusForCli`, and MCP `api_status` all report
+  `readApiSchedulerHistoryForCli`, `readApiStatusForCli`, MCP
+  `account_mirror_scheduler_history`, and MCP `api_status` all report
   `media-generation:chatgpt:image`, four remaining detail surfaces, and the
   expected resume cursor without launching browsers.
 - Low-churn live follow dogfood on 2026-05-01T00:34-00:37Z ran one

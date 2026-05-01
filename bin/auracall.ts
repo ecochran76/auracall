@@ -105,6 +105,10 @@ import {
   readApiStatusForCli,
 } from '../src/cli/apiStatusCommand.js';
 import {
+  formatApiSchedulerHistoryCliSummary,
+  readApiSchedulerHistoryForCli,
+} from '../src/cli/apiSchedulerHistoryCommand.js';
+import {
   assertRunStatusForCli,
   formatRunStatusCli,
   readRunStatusForCli,
@@ -1026,6 +1030,28 @@ apiCommand
       return;
     }
     console.log(formatApiStatusCliSummary(summary));
+  });
+
+apiCommand
+  .command('scheduler-history')
+  .description('Read compact lazy account mirror scheduler history from the local API.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .requiredOption('--port <number>', 'Local API port to query.', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--limit <count>', 'Maximum compact history entries to read.', parseIntOption, 10)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const summary = await readApiSchedulerHistoryForCli({
+      host: commandOptions.host,
+      port: commandOptions.port,
+      timeoutMs: commandOptions.timeoutMs,
+      limit: commandOptions.limit,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(summary.history, null, 2));
+      return;
+    }
+    console.log(formatApiSchedulerHistoryCliSummary(summary));
   });
 
 apiCommand

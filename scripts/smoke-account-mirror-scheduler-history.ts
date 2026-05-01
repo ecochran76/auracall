@@ -6,7 +6,11 @@ import type {
 } from '../src/accountMirror/schedulerLedger.js';
 import type { AccountMirrorSchedulerPassResult } from '../src/accountMirror/schedulerService.js';
 import { readApiStatusForCli } from '../src/cli/apiStatusCommand.js';
+import { readApiSchedulerHistoryForCli } from '../src/cli/apiSchedulerHistoryCommand.js';
 import { createApiStatusToolHandler } from '../src/mcp/tools/apiStatus.js';
+import {
+  createAccountMirrorSchedulerHistoryToolHandler,
+} from '../src/mcp/tools/accountMirrorSchedulerHistory.js';
 
 const yieldedPass: AccountMirrorSchedulerPassResult = {
   object: 'account_mirror_scheduler_pass',
@@ -180,6 +184,24 @@ async function main(): Promise<void> {
     assertEqual(cliSummary.scheduler.latestYield?.queuedOwnerCommand, 'media-generation:chatgpt:image', 'CLI latest yield owner');
     assertEqual(cliSummary.scheduler.latestYield?.remainingDetailSurfaces, 4, 'CLI latest yield remaining surfaces');
 
+    const cliHistory = await readApiSchedulerHistoryForCli({ port: server.port, limit: 5 });
+    const cliHistoryPayload = cliHistory.history as {
+      latestYield?: {
+        queuedWork?: { ownerCommand?: string | null };
+        remainingDetailSurfaces?: { total?: number | null };
+      } | null;
+    };
+    assertEqual(
+      cliHistoryPayload.latestYield?.queuedWork?.ownerCommand,
+      'media-generation:chatgpt:image',
+      'CLI scheduler-history latest yield owner',
+    );
+    assertEqual(
+      cliHistoryPayload.latestYield?.remainingDetailSurfaces?.total,
+      4,
+      'CLI scheduler-history latest yield remaining surfaces',
+    );
+
     const mcpResult = await createApiStatusToolHandler()({
       port: server.port,
       expectedAccountMirrorPosture: 'disabled',
@@ -198,6 +220,29 @@ async function main(): Promise<void> {
       'MCP latest yield owner',
     );
     assertEqual(structured.scheduler?.latestYield?.remainingDetailSurfaces, 4, 'MCP latest yield remaining surfaces');
+
+    const mcpHistoryResult = await createAccountMirrorSchedulerHistoryToolHandler()({
+      port: server.port,
+      limit: 5,
+    });
+    const mcpHistoryStructured = mcpHistoryResult.structuredContent as {
+      history?: {
+        latestYield?: {
+          queuedWork?: { ownerCommand?: string | null };
+          remainingDetailSurfaces?: { total?: number | null };
+        } | null;
+      };
+    };
+    assertEqual(
+      mcpHistoryStructured.history?.latestYield?.queuedWork?.ownerCommand,
+      'media-generation:chatgpt:image',
+      'MCP scheduler-history latest yield owner',
+    );
+    assertEqual(
+      mcpHistoryStructured.history?.latestYield?.remainingDetailSurfaces?.total,
+      4,
+      'MCP scheduler-history latest yield remaining surfaces',
+    );
 
     console.log([
       `scheduler-history smoke: pass port=${server.port}`,

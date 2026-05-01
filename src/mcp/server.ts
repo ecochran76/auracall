@@ -17,6 +17,7 @@ import { registerRuntimeInspectTool } from './tools/runtimeInspect.js';
 import { registerAccountMirrorStatusTool } from './tools/accountMirrorStatus.js';
 import { registerAccountMirrorRefreshTool } from './tools/accountMirrorRefresh.js';
 import { registerAccountMirrorCatalogTool } from './tools/accountMirrorCatalog.js';
+import { registerAccountMirrorSchedulerHistoryTool } from './tools/accountMirrorSchedulerHistory.js';
 import { resolveConfig } from '../schema/resolver.js';
 import type { ResolvedUserConfig } from '../config.js';
 import { createMediaGenerationService } from '../media/service.js';
@@ -90,6 +91,7 @@ export async function startMcpServer(): Promise<void> {
   registerAccountMirrorCatalogTool(server, {
     service: services.accountMirrorCatalogService,
   });
+  registerAccountMirrorSchedulerHistoryTool(server);
   registerSessionsTool(server);
   registerSessionResources(server);
 

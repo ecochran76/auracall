@@ -2187,3 +2187,24 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run docs:list`
   - `pnpm run plans:audit -- --keep 63`
   - `git diff --check`
+
+## Turn 74 | 2026-04-30
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: expose full compact lazy mirror scheduler history through regular
+  operator surfaces, not only raw HTTP or the latest `api status` summary.
+- Change:
+  - added shared `readApiSchedulerHistoryForCli`
+  - added `auracall api scheduler-history --port <port> [--limit <count>]`
+  - added MCP `account_mirror_scheduler_history`
+  - extended `pnpm run smoke:scheduler-history` to verify the new CLI helper
+    and MCP tool alongside the existing HTTP route and `api_status` summary
+- Verification target:
+  - `pnpm vitest run tests/cli/apiSchedulerHistoryCommand.test.ts tests/mcp.accountMirrorSchedulerHistory.test.ts --maxWorkers 1 --testTimeout 15000`
+  - `pnpm run smoke:scheduler-history`
+  - `pnpm run typecheck`
+  - `pnpm run lint`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`

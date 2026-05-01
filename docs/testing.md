@@ -158,6 +158,9 @@
       - `accountMirrorScheduler.history.entries[]`
       - compact scheduler history is available at
         `GET /v1/account-mirrors/scheduler/history[?limit=10]`
+      - CLI parity is available with
+        `auracall api scheduler-history --port 8080 --limit 10`
+      - MCP parity is available with `account_mirror_scheduler_history`
       - compact history reports `latestYield`, `yieldEvents[]`,
         queued-work owner/kind, resume cursor, and remaining detail surfaces
       - `accountMirrorScheduler.lastPass.selectedTarget.mirrorCompleteness`
