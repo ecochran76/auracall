@@ -461,6 +461,9 @@ Each status payload should include:
   points to `POST /status` with `accountMirrorCompletion`, then pauses a
   fixture live-follow completion through that status-control path without
   acquiring browser dispatcher or provider state.
+- `auracall api ops-browser-status` reads `/ops/browser` and linked `/status`,
+  asserts the dashboard completion-control contract, and supports the same
+  live-follow severity and completion-count expectations as `api status`.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -479,6 +482,5 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add status/control expectation support for `/ops/browser` dashboard readback in
-the installed runtime, so operators can fail fast when dashboard completion
-control wiring drifts after packaging.
+Add MCP parity for `/ops/browser` dashboard/status contract readback, so remote
+operators can fail fast on dashboard control drift without shell access.

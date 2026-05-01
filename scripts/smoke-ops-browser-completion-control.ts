@@ -6,6 +6,10 @@ import type {
   AccountMirrorCompletionService,
   AccountMirrorCompletionStartRequest,
 } from '../src/accountMirror/completionService.js';
+import {
+  assertApiOpsBrowserStatus,
+  readApiOpsBrowserStatusForCli,
+} from '../src/cli/apiOpsBrowserCommand.js';
 import { createResponsesHttpServer } from '../src/http/responsesServer.js';
 
 const operation: AccountMirrorCompletionOperation = {
@@ -162,12 +166,22 @@ async function main(): Promise<void> {
     assertEqual(service.controlCalls.length, 1, 'control call count');
     assertEqual(service.controlCalls[0]?.action, 'pause', 'control call action');
 
+    const opsBrowserStatus = await readApiOpsBrowserStatusForCli({
+      port: server.port,
+    });
+    assertApiOpsBrowserStatus(opsBrowserStatus, {
+      expectedSeverity: 'paused',
+      expectedActive: 1,
+      expectedPaused: 1,
+    });
+
     console.log([
       `ops-browser completion-control smoke: pass port=${server.port}`,
       'dashboardControl=/status',
       `operation=${operation.id}`,
       `status.pause=${pause.controlResult?.status ?? 'unknown'}`,
       `liveFollow=${pause.liveFollow?.severity ?? 'unknown'}`,
+      'opsBrowserStatus=ok',
       'providerWork=none',
     ].join('\n'));
   } finally {

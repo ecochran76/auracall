@@ -108,6 +108,11 @@ import {
   readApiStatusForCli,
 } from '../src/cli/apiStatusCommand.js';
 import {
+  assertApiOpsBrowserStatus,
+  formatApiOpsBrowserStatusCliSummary,
+  readApiOpsBrowserStatusForCli,
+} from '../src/cli/apiOpsBrowserCommand.js';
+import {
   formatApiSchedulerHistoryCliSummary,
   readApiSchedulerHistoryForCli,
 } from '../src/cli/apiSchedulerHistoryCommand.js';
@@ -1075,6 +1080,46 @@ apiCommand
       return;
     }
     console.log(formatApiStatusCliSummary(summary));
+  });
+
+apiCommand
+  .command('ops-browser-status')
+  .description('Read /ops/browser and assert its dashboard/status control contract.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .requiredOption('--port <number>', 'Local API port to query.', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option(
+    '--expect-live-follow-severity <severity>',
+    'Fail unless linked /status liveFollow.severity matches.',
+    parseApiStatusLiveFollowSeverity,
+  )
+  .option(
+    '--expect-completion-paused <count>',
+    'Fail unless linked /status accountMirrorCompletions.metrics.paused matches.',
+    parseIntOption,
+  )
+  .option(
+    '--expect-completion-active <count>',
+    'Fail unless linked /status accountMirrorCompletions.metrics.active matches.',
+    parseIntOption,
+  )
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const summary = await readApiOpsBrowserStatusForCli({
+      host: commandOptions.host,
+      port: commandOptions.port,
+      timeoutMs: commandOptions.timeoutMs,
+    });
+    assertApiOpsBrowserStatus(summary, {
+      expectedSeverity: commandOptions.expectLiveFollowSeverity,
+      expectedPaused: commandOptions.expectCompletionPaused,
+      expectedActive: commandOptions.expectCompletionActive,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(summary, null, 2));
+      return;
+    }
+    console.log(formatApiOpsBrowserStatusCliSummary(summary));
   });
 
 apiCommand

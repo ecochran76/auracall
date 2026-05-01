@@ -15272,3 +15272,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   Fetch `/ops/browser`, assert the button script posts
   `accountMirrorCompletion` to `/status`, and exercise that same path against a
   fixture completion service without provider/browser work.
+- 2026-05-01: Dashboard contract drift should fail from the installed runtime.
+  `auracall api ops-browser-status` should read `/ops/browser` plus linked
+  `/status`, assert completion-control wiring, and support live-follow
+  severity/completion-count expectations.

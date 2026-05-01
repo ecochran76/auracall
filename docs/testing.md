@@ -214,7 +214,10 @@
       - local deterministic smoke for browser-ops dashboard completion control:
         `pnpm run smoke:ops-browser-control`; it verifies `/ops/browser` button
         wiring uses `POST /status` with `accountMirrorCompletion`, then pauses
-        a fixture live-follow completion through that path
+        a fixture live-follow completion through that path and asserts the same
+        contract through `auracall api ops-browser-status`
+      - installed-runtime dashboard/status contract readback:
+        `auracall api ops-browser-status --port 8080 --expect-live-follow-severity paused --expect-completion-paused 1`
       - execute one pass only when the server was started with
         `--account-mirror-scheduler-execute`:
         `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"run-once","dryRun":false}}'`

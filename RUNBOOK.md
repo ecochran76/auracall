@@ -2355,6 +2355,32 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `git diff --check`
   - `pnpm run install:user-runtime`
 
+## Turn 88 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: add installed-runtime `/ops/browser` dashboard/status contract
+  expectation support.
+- Change:
+  - added `auracall api ops-browser-status`
+  - the command reads `/ops/browser`, verifies Mirror Live Follow control
+    wiring uses `POST /status` with `accountMirrorCompletion`, reads linked
+    `/status`, and applies live-follow/completion-count expectations
+  - the browser-ops deterministic smoke now exercises that helper against its
+    fixture server
+- Verification target:
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/http.responsesServer.test.ts tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts`
+  - `pnpm run smoke:ops-browser-control`
+  - `pnpm run smoke:completion-control`
+  - `pnpm run smoke:completion-hydration`
+  - `pnpm run smoke:live-follow-health`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+
 ## Turn 79 | 2026-05-01
 
 - Continued implementation plan:

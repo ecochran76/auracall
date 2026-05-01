@@ -24625,6 +24625,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run install:user-runtime`
   - installed `smoke-ops-browser-completion-control.js`
 
+## Turn 88 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make packaged `/ops/browser` dashboard/status contract drift fail fast
+  from the installed CLI.
+- Change:
+  - added `auracall api ops-browser-status`
+  - the command fetches `/ops/browser`, asserts the Mirror Live Follow controls
+    use `POST /status` with `accountMirrorCompletion`, then reads linked
+    `/status`
+  - it supports live-follow severity and completion-count expectations, sharing
+    the same assertion rules as `auracall api status`
+  - `pnpm run smoke:ops-browser-control` now validates the new helper after
+    pausing the fixture live-follow completion
+- Validation:
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/http.responsesServer.test.ts tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts`
+  - `pnpm run smoke:ops-browser-control`
+  - `pnpm run smoke:completion-control`
+  - `pnpm run smoke:completion-hydration`
+  - `pnpm run smoke:live-follow-health`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-ops-browser-completion-control.js`
+  - installed `~/.local/bin/auracall api ops-browser-status --help`
+
 ## Turn 78 | 2026-05-01
 
 - Continued implementation plan:

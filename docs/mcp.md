@@ -105,7 +105,9 @@
 - Deterministic dashboard-control smoke: run
   `pnpm run smoke:ops-browser-control` to verify `/ops/browser` completion
   buttons are wired to `POST /status` with `accountMirrorCompletion`, then
-  exercise that path against a fixture live-follow completion.
+  exercise that path against a fixture live-follow completion. The smoke also
+  checks `auracall api ops-browser-status`, which fails fast when packaged
+  dashboard control wiring drifts from linked `/status` readback.
 
 ### `account_mirror_scheduler_history`
 - Inputs: `port` for the local `auracall api serve` listener; optional `host`,
