@@ -2301,6 +2301,11 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     reported `nextAttemptAt: 2026-05-01T03:55:21.121Z`, preserved 290
     remaining detail surfaces, and left no browser-operation lock while
     waiting
+  - default completion mode is now unbounded `live_follow`; `--max-passes`
+    remains available only as a debug cap
+  - live-follow completion reports `phase = backfill_history|steady_follow`
+    and stays running after backfill completes so steady follow can crawl for
+    new content on the polite cadence
 - Verification target:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/completionService.test.ts`
   - `pnpm exec tsc --noEmit`

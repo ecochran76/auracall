@@ -71,8 +71,10 @@ export function formatApiMirrorCompletionCliSummary(operation: unknown): string 
   const lines = [
     `Account mirror completion: ${readString(record.id) ?? 'unknown'}`,
     `Status: ${readString(record.status) ?? 'unknown'}`,
+    `Mode: ${readString(record.mode) ?? 'unknown'}`,
+    `Phase: ${readString(record.phase) ?? 'unknown'}`,
     `Target: ${readString(record.provider) ?? 'unknown'}/${readString(record.runtimeProfileId) ?? 'unknown'}`,
-    `Passes: ${readNumber(record.passCount) ?? 0}/${readNumber(record.maxPasses) ?? 'unknown'}`,
+    `Passes: ${readNumber(record.passCount) ?? 0}/${readNumber(record.maxPasses) ?? 'unbounded'}`,
   ];
   const completeness = isRecord(record.mirrorCompleteness) ? record.mirrorCompleteness : null;
   if (completeness) {

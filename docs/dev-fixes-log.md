@@ -15212,3 +15212,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-04-30: Nonblocking mirror completion should force at least one
   verification refresh even when persisted status says complete, then wait for
   polite cooldown windows instead of ending blocked on its own next pass.
+- 2026-04-30: Mirror completion is really live follow, not a finite CLI-style
+  job. The default should be unbounded, report backfill vs steady-follow phase,
+  and keep crawling periodically after history is complete. Keep `maxPasses`
+  only as an explicit debug cap.

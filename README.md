@@ -235,10 +235,12 @@ Terminology note:
   dogfood, prefer a long interval plus one manual `run-once` request so the
   scheduler proves the refresh path without repeatedly touching bot-sensitive
   provider pages.
-  Use `auracall api mirror-complete --port <port>` when an operator wants the
-  service to keep refreshing until the mirror reports complete; the command
-  returns a completion id immediately, and
-  `auracall api mirror-completion-status <id> --port <port>` polls progress.
+  Use `auracall api mirror-complete --port <port>` to start live follow for a
+  mirror target. The command returns an id immediately; the service backfills
+  history until no more history is detected, then stays in steady follow and
+  periodically crawls for new content. `--max-passes` is a debug cap, not the
+  default. `auracall api mirror-completion-status <id> --port <port>` polls
+  mode, phase, next attempt, counts, and latest refresh.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

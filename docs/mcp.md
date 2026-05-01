@@ -93,14 +93,16 @@
   parsing `/status`.
 
 ### `account_mirror_completion_start` and `account_mirror_completion_status`
-- Inputs: start accepts optional `provider`, `runtimeProfile`, and
+- Inputs: start accepts optional `provider`, `runtimeProfile`, and debug-only
   `maxPasses`; status accepts a completion `id`.
-- Behavior: start returns an `account_mirror_completion` operation immediately
-  while the MCP service continues refresh passes in the background. Status
-  reports queued/running/completed/blocked/failed, pass count, next eligible
-  attempt, latest refresh, and mirror completeness.
+- Behavior: start returns an `account_mirror_completion` operation immediately.
+  Without `maxPasses`, the operation runs as `mode = live_follow`: backfill
+  history until no more history is detected, then stay in `steady_follow` and
+  periodically crawl for new content. Status reports queued/running/completed/
+  blocked/failed, mode, phase, pass count, next eligible attempt, latest
+  refresh, and mirror completeness.
 - Use this instead of long-running shell commands when an operator wants the
-  service to finish a mirror through repeated refresh passes.
+  service to own mirror backfill and steady follow.
 
 ### `runtime_inspect`
 - Inputs: one runtime lookup key, `runId`, `runtimeRunId`, `teamRunId`, or

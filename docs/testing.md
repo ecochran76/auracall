@@ -169,6 +169,8 @@
       - CLI parity is available with
         `auracall api mirror-complete --port 8080` and
         `auracall api mirror-completion-status <id> --port 8080`
+      - omitted `--max-passes` means unbounded live follow; `--max-passes`
+        is only a debug/test cap
       - `accountMirrorScheduler.lastPass.selectedTarget.mirrorCompleteness`
       - `accountMirrorScheduler.lastPass.backpressure.reason = none|routine-delayed|blocked-by-browser-work|yielded-to-queued-work`
       - `accountMirrorScheduler.lastPass.metrics.inProgressEligibleTargets`
@@ -241,8 +243,11 @@
       - `GET /v1/account-mirrors/completions/{completion_id}`
       - start returns an operation id immediately
       - status readback reports queued/running/completed/blocked/failed,
-        pass count, next eligible attempt, latest refresh, and mirror
-        completeness
+        `mode = live_follow|bounded`, `phase =
+        backfill_history|steady_follow`, pass count, next eligible attempt,
+        latest refresh, and mirror completeness
+      - live-follow mode must not finish simply because history backfill is
+        complete; it stays running and periodically crawls for new content
       - ChatGPT completion uses `includeHistory` plus `historyLimit`, which
         must scroll the left rail to load older conversations before claiming
         inventory completeness

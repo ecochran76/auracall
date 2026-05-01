@@ -390,6 +390,10 @@ Each status payload should include:
 - Nonblocking mirror completion is available as a service operation:
   callers start completion through the API/CLI/MCP, receive an operation id
   immediately, and poll status instead of holding a long shell command open.
+- The default completion mode is unbounded live follow. It backfills history
+  until the provider reports no more history, then remains running in a steady
+  follow phase that periodically crawls for new content. `maxPasses` is only a
+  debug cap.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -408,6 +412,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Live-test the nonblocking completion operation against default ChatGPT after
-the left-rail history scroll fix, then confirm the API, CLI, and MCP status
-surfaces all observe the same completion operation state.
+Persist live-follow job records across API restarts so `running`,
+`backfill_history`, `steady_follow`, `nextAttemptAt`, and latest error/status
+survive process churn instead of living only in the current server process.

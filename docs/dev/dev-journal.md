@@ -24364,6 +24364,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     completion and confirmed it remained `running` with
     `nextAttemptAt: 2026-05-01T03:55:21.121Z`, `passCount: 0`, no error, and
     290 remaining detail surfaces while leaving no browser-operation lock.
+  - Changed default completion mode to unbounded `live_follow`; `maxPasses` is
+    now only a debug/test cap. Live follow reports `backfill_history` while
+    history/detail inventory is incomplete, switches to `steady_follow` when
+    the mirror is complete, and remains running so it can periodically crawl
+    for new content.
 - Validation:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/completionService.test.ts`
   - `pnpm exec tsc --noEmit`

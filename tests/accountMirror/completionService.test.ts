@@ -75,6 +75,56 @@ function createRefreshResult(): AccountMirrorRefreshResult {
 }
 
 describe('account mirror completion service', () => {
+  test('defaults to live follow and keeps running after a complete refresh', async () => {
+    const requestRefresh = vi.fn()
+      .mockResolvedValueOnce(createRefreshResult())
+      .mockRejectedValueOnce(new AccountMirrorRefreshError(
+        409,
+        'account_mirror_not_eligible',
+        'Account mirror chatgpt/default is delayed: minimum-interval.',
+        {
+          provider: 'chatgpt',
+          runtimeProfileId: 'default',
+          reason: 'minimum-interval',
+          eligibleAt: '2026-04-30T12:10:00.000Z',
+        },
+      ));
+    const sleep = vi.fn(() => new Promise<void>(() => {}));
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date('2026-04-30T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      now: () => new Date('2026-04-30T12:00:00.000Z'),
+      generateId: () => 'acctmirror_live_follow',
+      sleep,
+    });
+
+    const started = service.start();
+
+    expect(started).toMatchObject({
+      mode: 'live_follow',
+      phase: 'backfill_history',
+      maxPasses: null,
+    });
+
+    await waitFor(() => service.read('acctmirror_live_follow')?.nextAttemptAt === '2026-04-30T12:10:00.000Z');
+
+    expect(requestRefresh).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalledWith(600_000);
+    expect(service.read('acctmirror_live_follow')).toMatchObject({
+      status: 'running',
+      mode: 'live_follow',
+      phase: 'steady_follow',
+      passCount: 1,
+      completedAt: null,
+      nextAttemptAt: '2026-04-30T12:10:00.000Z',
+    });
+  });
+
   test('waits through polite cooldown instead of blocking the operation', async () => {
     const requestRefresh = vi.fn()
       .mockRejectedValueOnce(new AccountMirrorRefreshError(
@@ -189,6 +239,7 @@ describe('account mirror completion service', () => {
     expect(started).toMatchObject({
       id: 'acctmirror_completion_test',
       status: 'queued',
+      mode: 'bounded',
       maxPasses: 3,
     });
 

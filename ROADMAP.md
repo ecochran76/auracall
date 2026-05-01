@@ -59,9 +59,10 @@ Current State:
     `/v1/account-mirrors/scheduler/history`; `api_status` also reports the
     latest lazy-yield summary from `/status`
   - mirror completion is now a nonblocking service operation exposed through
-    API, CLI, and MCP; ChatGPT conversation inventory must scroll the
-    infinite left rail when `includeHistory` and `historyLimit` are requested
-    before claiming mirror completeness
+    API, CLI, and MCP; by default it runs as unbounded live follow, backfilling
+    history and then staying in steady follow, while ChatGPT conversation
+    inventory must scroll the infinite left rail when `includeHistory` and
+    `historyLimit` are requested before claiming mirror completeness
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local

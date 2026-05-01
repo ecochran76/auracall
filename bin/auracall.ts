@@ -1045,7 +1045,7 @@ apiCommand
   .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
   .option('--provider <provider>', 'Provider to complete (default chatgpt).')
   .option('--runtime-profile <profile>', 'Runtime profile to complete (default default).')
-  .option('--max-passes <count>', 'Maximum refresh passes for the background operation.', parseIntOption, 100)
+  .option('--max-passes <count>', 'Debug cap for refresh passes; omitted means unbounded live follow.', parseIntOption)
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
     const operation = await startApiMirrorCompletionForCli({

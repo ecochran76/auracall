@@ -21,11 +21,13 @@ export interface AccountMirrorCompletionOperation {
   id: string;
   provider: AccountMirrorProvider;
   runtimeProfileId: string;
+  mode: 'live_follow' | 'bounded';
+  phase: 'backfill_history' | 'steady_follow';
   status: 'queued' | 'running' | 'completed' | 'blocked' | 'failed';
   startedAt: string;
   completedAt: string | null;
   nextAttemptAt: string | null;
-  maxPasses: number;
+  maxPasses: number | null;
   passCount: number;
   lastRefresh: AccountMirrorRefreshResult | null;
   mirrorCompleteness: AccountMirrorStatusEntry['mirrorCompleteness'] | null;
@@ -66,17 +68,24 @@ export function createAccountMirrorCompletionService(input: {
       const operation = operations.get(id);
       if (!operation) return;
       let pass = 0;
-      while (pass < operation.maxPasses) {
+      while (operation.maxPasses === null || pass < operation.maxPasses) {
         if (pass > 0) {
           await input.registry.refreshPersistentState?.();
           const entry = findTargetEntry(input.registry, operation.provider, operation.runtimeProfileId);
           if (entry?.mirrorCompleteness.state === 'complete') {
+            if (operation.maxPasses !== null) {
+              update(id, {
+                status: 'completed',
+                completedAt: now().toISOString(),
+                mirrorCompleteness: entry.mirrorCompleteness,
+                phase: 'steady_follow',
+              });
+              return;
+            }
             update(id, {
-              status: 'completed',
-              completedAt: now().toISOString(),
+              phase: 'steady_follow',
               mirrorCompleteness: entry.mirrorCompleteness,
             });
-            return;
           }
         }
         let refresh: AccountMirrorRefreshResult;
@@ -109,15 +118,18 @@ export function createAccountMirrorCompletionService(input: {
           passCount: nextPassCount,
           lastRefresh: refresh,
           mirrorCompleteness: refresh.mirrorCompleteness,
+          phase: refresh.mirrorCompleteness.state === 'complete' ? 'steady_follow' : 'backfill_history',
           nextAttemptAt: null,
           error: null,
         });
         if (refresh.mirrorCompleteness.state === 'complete') {
-          update(id, {
-            status: 'completed',
-            completedAt: now().toISOString(),
-          });
-          return;
+          if (operation.maxPasses !== null) {
+            update(id, {
+              status: 'completed',
+              completedAt: now().toISOString(),
+            });
+            return;
+          }
         }
       }
       const latest = operations.get(id);
@@ -156,6 +168,8 @@ export function createAccountMirrorCompletionService(input: {
         id,
         provider: request.provider ?? 'chatgpt',
         runtimeProfileId: normalizeRuntimeProfile(request.runtimeProfileId),
+        mode: request.maxPasses == null ? 'live_follow' : 'bounded',
+        phase: 'backfill_history',
         status: 'queued',
         startedAt: now().toISOString(),
         completedAt: null,
@@ -193,8 +207,8 @@ function normalizeRuntimeProfile(value: string | null | undefined): string {
   return trimmed.length > 0 ? trimmed : 'default';
 }
 
-function normalizeMaxPasses(value: number | null | undefined): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return 100;
+function normalizeMaxPasses(value: number | null | undefined): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
   return Math.max(1, Math.min(500, Math.floor(value)));
 }
 
