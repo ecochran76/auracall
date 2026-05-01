@@ -22694,6 +22694,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm exec tsc --noEmit`
   - `git diff --check`
   - `pnpm run install:user-runtime`
+  - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-completion-control.js`
   - `/home/ecochran76/.local/bin/auracall --profile auracall-grok-auto media materialize medgen_ada664ba3db24de4821cac245ec74714 --count 1 --json`
 
 ## 2026-04-27 - Grok fresh-run plus resumed materialize lifecycle
@@ -24485,6 +24486,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm run smoke:completion-control`
   - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+
+## Turn 83 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: remove duplicate live-follow severity logic across operator surfaces.
+- Change:
+  - added shared `src/status/liveFollowHealth.ts` for severity derivation and
+    compact health-line formatting
+  - `auracall api status` now uses the shared helper for `liveFollow`
+  - `/status.liveFollow` now exposes the same shared projection for HTTP and
+    dashboard callers
+  - `/ops/browser` reads `status.liveFollow` instead of re-deriving severity in
+    page JavaScript
+- Validation:
+  - `pnpm run smoke:completion-control`
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts tests/http.responsesServer.test.ts`
   - `pnpm exec tsc --noEmit`
   - `pnpm run docs:list`
   - `pnpm run plans:audit -- --keep 63`

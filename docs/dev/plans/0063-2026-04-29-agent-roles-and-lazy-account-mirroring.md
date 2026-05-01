@@ -433,6 +433,8 @@ Each status payload should include:
 - `auracall api status` and MCP `api_status` expose and assert derived
   live-follow severity: `healthy`, `backpressured`, `paused`, or
   `attention-needed`.
+- `/status.liveFollow` exposes the same shared live-follow health projection
+  used by CLI status, MCP `api_status`, and `/ops/browser`.
 - `/ops/browser` shows the same derived live-follow severity in the Server
   summary and Mirror Live Follow panel, so dashboard operators can see the
   health state without reading raw completion counts.
@@ -462,6 +464,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Move live-follow health derivation into a shared status helper used by CLI,
-MCP, HTTP status payloads, and `/ops/browser`, eliminating the temporary
-dashboard-side duplicate severity logic.
+Add a deterministic parity smoke that compares `/status.liveFollow`,
+`auracall api status`, MCP `api_status`, and `/ops/browser` against the same
+fixture-backed local API server.

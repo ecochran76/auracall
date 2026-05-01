@@ -262,6 +262,9 @@
       - `/status.accountMirrorCompletions` reports
         `object = account_mirror_completion_summary`, aggregate metrics, and
         active/recent operation arrays for operator readback
+      - `/status.liveFollow` reports the shared live-follow health projection:
+        derived severity, scheduler posture/state, completion counts,
+        backpressure reason, and latest cooperative-yield evidence
       - `auracall api status --port <port>` projects the same completion
         posture into compact CLI output: aggregate counts plus active paused or
         running operations and recent controlled terminal operations
@@ -277,9 +280,8 @@
         `--expect-completion-cancelled <count>`, and
         `--expect-completion-failed <count>`
       - `/ops/browser` includes the "Mirror Live Follow" panel and renders the
-        same active/recent completion posture from `/status`, including the
-        derived severity shown in the server summary and mirror live-follow
-        health payload
+        same active/recent completion posture from `/status.liveFollow` and
+        `/status.accountMirrorCompletions`
       - operator control is available with
         `POST /v1/account-mirrors/completions/{completion_id}` body
         `{"action":"pause|resume|cancel"}`; paused operations stay discoverable

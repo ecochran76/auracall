@@ -127,6 +127,10 @@ import {
 } from '../accountMirror/completionService.js';
 import { createAccountMirrorCompletionStore } from '../accountMirror/completionStore.js';
 import type { AccountMirrorProvider } from '../accountMirror/politePolicy.js';
+import {
+  summarizeLiveFollowHealth,
+  type LiveFollowHealthSummary,
+} from '../status/liveFollowHealth.js';
 
 export interface ResponsesHttpServerOptions {
   host?: string;
@@ -362,6 +366,7 @@ interface HttpStatusResponse {
   };
   accountMirrorStatus: AccountMirrorStatusSummary;
   accountMirrorCompletions: AccountMirrorCompletionStatusSummary;
+  liveFollow: LiveFollowHealthSummary;
   executionHints: {
     headerNames: string[];
     bodyObject: 'auracall';
@@ -1705,6 +1710,10 @@ function createHttpStatusResponse(input: {
   accountMirrorCompletions: AccountMirrorCompletionStatusSummary;
   controlResult?: HttpStatusResponse['controlResult'];
 }): HttpStatusResponse {
+  const accountMirrorScheduler = {
+    ...input.accountMirrorScheduler,
+    operatorStatus: createAccountMirrorSchedulerOperatorStatus(input.accountMirrorScheduler),
+  };
   return {
     object: 'status',
     ok: true,
@@ -1754,12 +1763,10 @@ function createHttpStatusResponse(input: {
     runnerTopology: input.runnerTopology,
     runner: input.runner,
     backgroundDrain: input.backgroundDrain,
-    accountMirrorScheduler: {
-      ...input.accountMirrorScheduler,
-      operatorStatus: createAccountMirrorSchedulerOperatorStatus(input.accountMirrorScheduler),
-    },
+    accountMirrorScheduler,
     accountMirrorStatus: input.accountMirrorStatus,
     accountMirrorCompletions: input.accountMirrorCompletions,
+    liveFollow: createLiveFollowHealthSummary(accountMirrorScheduler, input.accountMirrorCompletions),
     executionHints: {
       headerNames: [
         'X-AuraCall-Runtime-Profile',
@@ -1771,6 +1778,32 @@ function createHttpStatusResponse(input: {
     },
     controlResult: input.controlResult,
   };
+}
+
+function createLiveFollowHealthSummary(
+  scheduler: HttpStatusResponse['accountMirrorScheduler'],
+  completions: AccountMirrorCompletionStatusSummary,
+): LiveFollowHealthSummary {
+  const backpressureReason = scheduler.lastPass?.backpressure.reason ?? scheduler.operatorStatus.backpressureReason;
+  const latestYield = summarizeAccountMirrorSchedulerHistory(scheduler.history, { limit: 10 }).latestYield;
+  return summarizeLiveFollowHealth({
+    schedulerPosture: scheduler.operatorStatus.posture,
+    schedulerState: scheduler.state,
+    backpressureReason: backpressureReason ?? 'unknown',
+    activeCompletions: completions.metrics.active,
+    pausedCompletions: completions.metrics.paused,
+    failedCompletions: completions.metrics.failed,
+    cancelledCompletions: completions.metrics.cancelled,
+    latestYield: latestYield
+      ? {
+          completedAt: latestYield.completedAt,
+          provider: latestYield.provider,
+          runtimeProfileId: latestYield.runtimeProfileId,
+          queuedOwnerCommand: latestYield.queuedWork.ownerCommand,
+          remainingDetailSurfaces: latestYield.remainingDetailSurfaces?.total ?? null,
+        }
+      : null,
+  });
 }
 
 function createAccountMirrorCompletionStatusSummary(
@@ -2793,7 +2826,7 @@ function createOperatorBrowserDashboardHtml(): string {
       const scheduler = status.accountMirrorScheduler || {};
       const completions = status.accountMirrorCompletions || {};
       const completionMetrics = completions.metrics || {};
-      const liveFollow = deriveLiveFollowHealth(status);
+      const liveFollow = status.liveFollow || {};
       const dashboard = status.routes && status.routes.operatorBrowserDashboard;
       $('serverSummary').innerHTML = [
         ['Status', status.ok ? '<span class="ok">ok</span>' : '<span class="bad">not ok</span>'],
@@ -2819,7 +2852,7 @@ function createOperatorBrowserDashboardHtml(): string {
       const active = Array.isArray(summary.active) ? summary.active : [];
       const recent = Array.isArray(summary.recent) ? summary.recent : [];
       $('mirrorCompletions').textContent = asJson({
-        health: deriveLiveFollowHealth(status),
+        health: status.liveFollow || null,
         metrics,
         active: active.map(compactCompletion),
         recent: recent.map(compactCompletion),
@@ -2828,58 +2861,6 @@ function createOperatorBrowserDashboardHtml(): string {
 
     function renderSeverity(severity) {
       return '<span class="severity-' + severity + '">' + severity + '</span>';
-    }
-
-    function deriveLiveFollowHealth(status) {
-      const scheduler = status.accountMirrorScheduler || {};
-      const operatorStatus = scheduler.operatorStatus || {};
-      const lastPass = scheduler.lastPass || {};
-      const backpressure = lastPass.backpressure || {};
-      const completions = status.accountMirrorCompletions || {};
-      const metrics = completions.metrics || {};
-      const schedulerPosture = operatorStatus.posture || 'unknown';
-      const backpressureReason = backpressure.reason || 'unknown';
-      const activeCompletions = readMetric(metrics.active);
-      const pausedCompletions = readMetric(metrics.paused);
-      const failedCompletions = readMetric(metrics.failed);
-      const cancelledCompletions = readMetric(metrics.cancelled);
-      const severity = deriveLiveFollowSeverity({
-        schedulerPosture,
-        backpressureReason,
-        pausedCompletions,
-        failedCompletions,
-        cancelledCompletions,
-      });
-      return {
-        severity,
-        schedulerPosture,
-        schedulerState: scheduler.state || 'unknown',
-        backpressureReason,
-        activeCompletions,
-        pausedCompletions,
-        failedCompletions,
-        cancelledCompletions,
-      };
-    }
-
-    function deriveLiveFollowSeverity(input) {
-      if (input.failedCompletions > 0 || input.cancelledCompletions > 0) {
-        return 'attention-needed';
-      }
-      if (input.pausedCompletions > 0 || input.schedulerPosture === 'paused') {
-        return 'paused';
-      }
-      if (input.schedulerPosture === 'unknown' || input.backpressureReason === 'unknown') {
-        return 'attention-needed';
-      }
-      if (input.schedulerPosture === 'backpressured' || input.backpressureReason !== 'none') {
-        return 'backpressured';
-      }
-      return 'healthy';
-    }
-
-    function readMetric(value) {
-      return typeof value === 'number' && Number.isFinite(value) ? value : 0;
     }
 
     function compactCompletion(operation) {

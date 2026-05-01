@@ -1654,6 +1654,10 @@ describe('http responses adapter', () => {
             },
           ],
         },
+        liveFollow: {
+          severity: 'attention-needed',
+          activeCompletions: 1,
+        },
       });
     } finally {
       await server.close();
@@ -13990,6 +13994,10 @@ describe('http responses adapter', () => {
         executionHints: {
           bodyObject: 'auracall',
         },
+        liveFollow: {
+          severity: 'attention-needed',
+          schedulerPosture: 'disabled',
+        },
       });
       expect((payload.routes as Record<string, unknown>).operatorBrowserDashboard).toBe('/ops/browser');
     } finally {
@@ -14014,7 +14022,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('Mirror Live Follow');
       expect(html).toContain('mirrorCompletions');
       expect(html).toContain('Live Follow Severity');
-      expect(html).toContain('deriveLiveFollowHealth');
+      expect(html).toContain('status.liveFollow');
       expect(html).toContain('severity-attention-needed');
       expect(html).toContain('mirrorCompletionId');
       expect(html).toContain('pauseMirrorCompletion');

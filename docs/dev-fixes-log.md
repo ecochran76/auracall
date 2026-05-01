@@ -15252,3 +15252,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   severity as CLI/MCP status. Operators should not need to mentally combine
   active, paused, failed, cancelled, scheduler posture, and backpressure fields
   when they are looking at `/ops/browser`.
+- 2026-05-01: Live-follow health derivation should have one source of truth.
+  Project the shared helper into `/status.liveFollow`, then have CLI, MCP, and
+  `/ops/browser` consume that status projection instead of reimplementing
+  severity rules in each surface.

@@ -1,3 +1,10 @@
+import {
+  LIVE_FOLLOW_SEVERITIES,
+  summarizeLiveFollowHealth as summarizeSharedLiveFollowHealth,
+  type LiveFollowHealthSummary,
+  type LiveFollowSeverity,
+} from '../status/liveFollowHealth.js';
+
 export const API_STATUS_BACKPRESSURE_REASONS = [
   'none',
   'routine-delayed',
@@ -19,14 +26,9 @@ export const API_STATUS_ACCOUNT_MIRROR_POSTURES = [
 
 export type ApiStatusAccountMirrorPosture = typeof API_STATUS_ACCOUNT_MIRROR_POSTURES[number];
 
-export const API_STATUS_LIVE_FOLLOW_SEVERITIES = [
-  'healthy',
-  'backpressured',
-  'paused',
-  'attention-needed',
-] as const;
+export const API_STATUS_LIVE_FOLLOW_SEVERITIES = LIVE_FOLLOW_SEVERITIES;
 
-export type ApiStatusLiveFollowSeverity = typeof API_STATUS_LIVE_FOLLOW_SEVERITIES[number];
+export type ApiStatusLiveFollowSeverity = LiveFollowSeverity;
 
 export interface ApiStatusCliOptions {
   host?: string | null;
@@ -109,18 +111,7 @@ export interface ApiStatusCompletionControlSummary {
   recentControlled: ApiStatusCompletionOperationSummary[];
 }
 
-export interface ApiStatusLiveFollowHealthSummary {
-  line: string;
-  severity: ApiStatusLiveFollowSeverity;
-  schedulerPosture: ApiStatusSchedulerOperatorSummary['posture'];
-  schedulerState: string | null;
-  backpressureReason: ApiStatusBackpressureSummary['reason'];
-  activeCompletions: number | null;
-  pausedCompletions: number | null;
-  failedCompletions: number | null;
-  cancelledCompletions: number | null;
-  latestYield: ApiStatusSchedulerYieldSummary | null;
-}
+export type ApiStatusLiveFollowHealthSummary = LiveFollowHealthSummary;
 
 export interface ApiStatusCliSummary {
   ok: boolean | null;
@@ -439,13 +430,7 @@ function summarizeLiveFollowHealth(
   completions: ApiStatusCompletionControlSummary,
 ): ApiStatusLiveFollowHealthSummary {
   const metrics = completions.metrics;
-  const latestYield = scheduler.latestYield;
-  const severity = deriveLiveFollowSeverity(scheduler, completions);
-  const yieldText = latestYield
-    ? `${latestYield.provider ?? 'unknown'}/${latestYield.runtimeProfileId ?? 'unknown'} remaining=${latestYield.remainingDetailSurfaces ?? 'unknown'} queued=${latestYield.queuedOwnerCommand ?? 'unknown'}`
-    : 'none';
-  const summary: Omit<ApiStatusLiveFollowHealthSummary, 'line'> = {
-    severity,
+  return summarizeSharedLiveFollowHealth({
     schedulerPosture: scheduler.operatorStatus.posture,
     schedulerState: scheduler.state,
     backpressureReason: scheduler.backpressure.reason,
@@ -453,51 +438,8 @@ function summarizeLiveFollowHealth(
     pausedCompletions: metrics.paused,
     failedCompletions: metrics.failed,
     cancelledCompletions: metrics.cancelled,
-    latestYield,
-  };
-  return {
-    ...summary,
-    line: [
-      'Live follow health:',
-      `severity=${summary.severity}`,
-      `posture=${summary.schedulerPosture}`,
-      `state=${summary.schedulerState ?? 'unknown'}`,
-      `active=${formatNullableNumber(summary.activeCompletions)}`,
-      `paused=${formatNullableNumber(summary.pausedCompletions)}`,
-      `failed=${formatNullableNumber(summary.failedCompletions)}`,
-      `cancelled=${formatNullableNumber(summary.cancelledCompletions)}`,
-      `backpressure=${summary.backpressureReason}`,
-      `latestYield=${yieldText}`,
-    ].join(' '),
-  };
-}
-
-function deriveLiveFollowSeverity(
-  scheduler: ApiStatusSchedulerSummary,
-  completions: ApiStatusCompletionControlSummary,
-): ApiStatusLiveFollowSeverity {
-  const metrics = completions.metrics;
-  const failedCompletions = metrics.failed ?? 0;
-  const cancelledCompletions = metrics.cancelled ?? 0;
-  const pausedCompletions = metrics.paused ?? 0;
-  const schedulerPosture = scheduler.operatorStatus.posture;
-  const backpressureReason = scheduler.backpressure.reason;
-  if (
-    failedCompletions > 0
-    || cancelledCompletions > 0
-  ) {
-    return 'attention-needed';
-  }
-  if (pausedCompletions > 0 || schedulerPosture === 'paused') {
-    return 'paused';
-  }
-  if (schedulerPosture === 'unknown' || backpressureReason === 'unknown') {
-    return 'attention-needed';
-  }
-  if (schedulerPosture === 'backpressured' || backpressureReason !== 'none') {
-    return 'backpressured';
-  }
-  return 'healthy';
+    latestYield: scheduler.latestYield,
+  });
 }
 
 function summarizeCompletionOperation(value: unknown): ApiStatusCompletionOperationSummary {
