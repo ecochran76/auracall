@@ -265,6 +265,9 @@
       - `auracall api status --port <port>` projects the same completion
         posture into compact CLI output: aggregate counts plus active paused or
         running operations and recent controlled terminal operations
+      - the same output includes one `Live follow health:` line combining
+        scheduler posture, scheduler state, completion counts, backpressure,
+        and latest cooperative-yield evidence
       - status expectations can fail fast on completion-control counts:
         `--expect-completion-active <count>`,
         `--expect-completion-paused <count>`,

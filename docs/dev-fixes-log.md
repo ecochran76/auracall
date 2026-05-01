@@ -15240,3 +15240,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   control state, not only print it. Use `auracall api status` completion count
   expectations or matching MCP `api_status` inputs to fail fast on paused,
   cancelled, failed, or active count drift.
+- 2026-05-01: Operators need one live-follow line before drilling into fields.
+  `auracall api status` should print `Live follow health:` with scheduler
+  posture, completion counts, backpressure, and latest yield evidence; MCP
+  `api_status` should expose the same fields as structured content.

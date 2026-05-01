@@ -96,12 +96,25 @@ export interface ApiStatusCompletionControlSummary {
   recentControlled: ApiStatusCompletionOperationSummary[];
 }
 
+export interface ApiStatusLiveFollowHealthSummary {
+  line: string;
+  schedulerPosture: ApiStatusSchedulerOperatorSummary['posture'];
+  schedulerState: string | null;
+  backpressureReason: ApiStatusBackpressureSummary['reason'];
+  activeCompletions: number | null;
+  pausedCompletions: number | null;
+  failedCompletions: number | null;
+  cancelledCompletions: number | null;
+  latestYield: ApiStatusSchedulerYieldSummary | null;
+}
+
 export interface ApiStatusCliSummary {
   ok: boolean | null;
   host: string;
   port: number;
   scheduler: ApiStatusSchedulerSummary;
   completions: ApiStatusCompletionControlSummary;
+  liveFollow: ApiStatusLiveFollowHealthSummary;
   raw: unknown;
 }
 
@@ -149,29 +162,31 @@ export function summarizeApiStatusPayload(
   const backpressure = isRecord(lastPass.backpressure) ? lastPass.backpressure : {};
   const latestYield = summarizeLatestYield(scheduler, lastPass);
   const completions = summarizeAccountMirrorCompletions(record.accountMirrorCompletions);
+  const schedulerSummary: ApiStatusSchedulerSummary = {
+    enabled: typeof scheduler.enabled === 'boolean' ? scheduler.enabled : null,
+    state: readString(scheduler.state),
+    dryRun: typeof scheduler.dryRun === 'boolean' ? scheduler.dryRun : null,
+    lastWakeReason: readString(scheduler.lastWakeReason),
+    lastWakeAt: readString(scheduler.lastWakeAt),
+    lastAction: readString(lastPass.action),
+    operatorStatus: {
+      posture: normalizeApiStatusAccountMirrorPosture(operatorStatus.posture),
+      reason: readString(operatorStatus.reason),
+      backpressureReason: readString(operatorStatus.backpressureReason),
+    },
+    backpressure: {
+      reason: normalizeApiStatusBackpressureReason(backpressure.reason),
+      message: readString(backpressure.message),
+    },
+    latestYield,
+  };
   return {
     ok: typeof record.ok === 'boolean' ? record.ok : null,
     host: source.host,
     port: source.port,
-    scheduler: {
-      enabled: typeof scheduler.enabled === 'boolean' ? scheduler.enabled : null,
-      state: readString(scheduler.state),
-      dryRun: typeof scheduler.dryRun === 'boolean' ? scheduler.dryRun : null,
-      lastWakeReason: readString(scheduler.lastWakeReason),
-      lastWakeAt: readString(scheduler.lastWakeAt),
-      lastAction: readString(lastPass.action),
-      operatorStatus: {
-        posture: normalizeApiStatusAccountMirrorPosture(operatorStatus.posture),
-        reason: readString(operatorStatus.reason),
-        backpressureReason: readString(operatorStatus.backpressureReason),
-      },
-      backpressure: {
-        reason: normalizeApiStatusBackpressureReason(backpressure.reason),
-        message: readString(backpressure.message),
-      },
-      latestYield,
-    },
+    scheduler: schedulerSummary,
     completions,
+    liveFollow: summarizeLiveFollowHealth(schedulerSummary, completions),
     raw,
   };
 }
@@ -231,6 +246,7 @@ export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string 
   const operatorStatus = scheduler.operatorStatus;
   const lines = [
     `AuraCall API status: ${summary.ok === null ? 'unknown' : summary.ok ? 'ok' : 'not-ok'} (${summary.host}:${summary.port})`,
+    summary.liveFollow.line,
     `Account mirror scheduler: state=${scheduler.state ?? 'unknown'} enabled=${formatNullableBoolean(scheduler.enabled)} dryRun=${formatNullableBoolean(scheduler.dryRun)}`,
     `Account mirror posture: ${operatorStatus.posture}${operatorStatus.reason ? ` - ${operatorStatus.reason}` : ''}`,
     `Latest lazy mirror wake: ${scheduler.lastWakeReason ?? 'unknown'}${scheduler.lastWakeAt ? ` at ${scheduler.lastWakeAt}` : ''}`,
@@ -376,6 +392,41 @@ function summarizeAccountMirrorCompletions(value: unknown): ApiStatusCompletionC
     },
     active,
     recentControlled: recent.filter((operation) => isControlledCompletionStatus(operation.status)).slice(0, 5),
+  };
+}
+
+function summarizeLiveFollowHealth(
+  scheduler: ApiStatusSchedulerSummary,
+  completions: ApiStatusCompletionControlSummary,
+): ApiStatusLiveFollowHealthSummary {
+  const metrics = completions.metrics;
+  const latestYield = scheduler.latestYield;
+  const yieldText = latestYield
+    ? `${latestYield.provider ?? 'unknown'}/${latestYield.runtimeProfileId ?? 'unknown'} remaining=${latestYield.remainingDetailSurfaces ?? 'unknown'} queued=${latestYield.queuedOwnerCommand ?? 'unknown'}`
+    : 'none';
+  const summary: Omit<ApiStatusLiveFollowHealthSummary, 'line'> = {
+    schedulerPosture: scheduler.operatorStatus.posture,
+    schedulerState: scheduler.state,
+    backpressureReason: scheduler.backpressure.reason,
+    activeCompletions: metrics.active,
+    pausedCompletions: metrics.paused,
+    failedCompletions: metrics.failed,
+    cancelledCompletions: metrics.cancelled,
+    latestYield,
+  };
+  return {
+    ...summary,
+    line: [
+      'Live follow health:',
+      `posture=${summary.schedulerPosture}`,
+      `state=${summary.schedulerState ?? 'unknown'}`,
+      `active=${formatNullableNumber(summary.activeCompletions)}`,
+      `paused=${formatNullableNumber(summary.pausedCompletions)}`,
+      `failed=${formatNullableNumber(summary.failedCompletions)}`,
+      `cancelled=${formatNullableNumber(summary.cancelledCompletions)}`,
+      `backpressure=${summary.backpressureReason}`,
+      `latestYield=${yieldText}`,
+    ].join(' '),
   };
 }
 

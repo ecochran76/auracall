@@ -68,8 +68,10 @@
   `scheduler.operatorStatus.posture`, wake reason, latest mirror backpressure,
   `scheduler.latestYield` when scheduler history contains a cooperative yield,
   and `completions` metrics plus active/recent controlled live-follow
-  operations. It does not launch browsers, touch CDP, submit provider work, or
-  read provider pages.
+  operations. Structured output also includes `liveFollow.line`, a compact
+  operator summary combining scheduler posture, completion counts, backpressure,
+  and latest cooperative-yield evidence. It does not launch browsers, touch CDP,
+  submit provider work, or read provider pages.
 - Use this when an MCP operator needs to assert lazy mirror readiness or
   backpressure, or fail fast on live-follow control posture, without shelling
   out to the CLI. `account_mirror_status` remains the cache-only per-target

@@ -85,6 +85,17 @@ const apiStatusOutputShape = {
     active: z.array(apiStatusCompletionOperationShape),
     recentControlled: z.array(apiStatusCompletionOperationShape),
   }),
+  liveFollow: z.object({
+    line: z.string(),
+    schedulerPosture: z.enum([...API_STATUS_ACCOUNT_MIRROR_POSTURES, 'unknown']),
+    schedulerState: z.string().nullable(),
+    backpressureReason: z.enum([...API_STATUS_BACKPRESSURE_REASONS, 'unknown']),
+    activeCompletions: z.number().nullable(),
+    pausedCompletions: z.number().nullable(),
+    failedCompletions: z.number().nullable(),
+    cancelledCompletions: z.number().nullable(),
+    latestYield: apiStatusLatestYieldShape.nullable(),
+  }),
   raw: z.unknown(),
 } satisfies z.ZodRawShape;
 
@@ -136,7 +147,7 @@ export function createApiStatusToolHandler(deps: RegisterApiStatusToolDeps = {})
       content: [
         {
           type: 'text' as const,
-          text: `AuraCall API ${summary.host}:${summary.port} is ${summary.ok === false ? 'not-ok' : summary.ok === true ? 'ok' : 'unknown'}; mirror posture ${posture}; scheduler state ${state}.`,
+          text: `AuraCall API ${summary.host}:${summary.port} is ${summary.ok === false ? 'not-ok' : summary.ok === true ? 'ok' : 'unknown'}; mirror posture ${posture}; scheduler state ${state}; ${summary.liveFollow.line}`,
         },
       ],
       structuredContent: summary as typeof summary & Record<string, unknown>,

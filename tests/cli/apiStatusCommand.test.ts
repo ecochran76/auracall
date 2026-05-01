@@ -185,7 +185,26 @@ describe('api status CLI helpers', () => {
           },
         ],
       },
+      liveFollow: {
+        line: 'Live follow health: posture=backpressured state=idle active=1 paused=1 failed=0 cancelled=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
+        schedulerPosture: 'backpressured',
+        schedulerState: 'idle',
+        backpressureReason: 'routine-delayed',
+        activeCompletions: 1,
+        pausedCompletions: 1,
+        failedCompletions: 0,
+        cancelledCompletions: 1,
+        latestYield: {
+          provider: 'chatgpt',
+          runtimeProfileId: 'default',
+          queuedOwnerCommand: 'media-generation:chatgpt:image',
+          remainingDetailSurfaces: 4,
+        },
+      },
     });
+    expect(formatApiStatusCliSummary(summary)).toContain(
+      'Live follow health: posture=backpressured state=idle active=1 paused=1 failed=0 cancelled=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
+    );
     expect(formatApiStatusCliSummary(summary)).toContain(
       'Latest lazy mirror backpressure: routine-delayed - minimum interval has not elapsed',
     );

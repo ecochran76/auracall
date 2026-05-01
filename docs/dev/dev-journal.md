@@ -24397,6 +24397,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run install:user-runtime`
   - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-completion-control.js`
 
+## Turn 80 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make live-follow service posture scannable without reading multiple
+  status sections.
+- Change:
+  - added structured `liveFollow` status content derived from scheduler posture,
+    scheduler state, completion metrics, backpressure, and latest yield evidence
+  - `auracall api status` now prints one `Live follow health:` line before the
+    detailed scheduler/completion lines
+  - MCP `api_status` now includes the same compact health line in text output
+    and exposes the structured `liveFollow` object
+- Validation:
+  - `pnpm run smoke:completion-control`
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-completion-control.js`
+
 ## Turn 79 | 2026-05-01
 
 - Continued implementation plan:

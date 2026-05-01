@@ -123,7 +123,7 @@ describe('mcp api_status tool', () => {
       content: [
         {
           type: 'text',
-          text: 'AuraCall API 127.0.0.1:18080 is ok; mirror posture backpressured; scheduler state idle.',
+          text: 'AuraCall API 127.0.0.1:18080 is ok; mirror posture backpressured; scheduler state idle; Live follow health: posture=backpressured state=idle active=1 paused=0 failed=0 cancelled=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
         },
       ],
       structuredContent: {
@@ -178,6 +178,22 @@ describe('mcp api_status tool', () => {
               status: 'cancelled',
             },
           ],
+        },
+        liveFollow: {
+          line: 'Live follow health: posture=backpressured state=idle active=1 paused=0 failed=0 cancelled=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
+          schedulerPosture: 'backpressured',
+          schedulerState: 'idle',
+          backpressureReason: 'routine-delayed',
+          activeCompletions: 1,
+          pausedCompletions: 0,
+          failedCompletions: 0,
+          cancelledCompletions: 1,
+          latestYield: {
+            provider: 'chatgpt',
+            runtimeProfileId: 'default',
+            queuedOwnerCommand: 'media-generation:chatgpt:image',
+            remainingDetailSurfaces: 4,
+          },
         },
       },
     });

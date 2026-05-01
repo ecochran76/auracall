@@ -2210,6 +2210,26 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run lint`
   - `git diff --check`
 
+## Turn 80 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Change:
+  - added a structured `liveFollow` summary to API status CLI/MCP projections
+  - `auracall api status` now prints one `Live follow health:` line combining
+    scheduler posture, state, completion counts, backpressure, and latest yield
+    evidence
+  - MCP `api_status` includes the same live-follow health line in text output
+    and structured content
+- Verification target:
+  - `pnpm run smoke:completion-control`
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+
 ## Turn 78 | 2026-05-01
 
 - Continued implementation plan:
