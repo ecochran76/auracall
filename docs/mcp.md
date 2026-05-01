@@ -92,6 +92,16 @@
   latest cooperative-yield event, resume cursor, or no-yield proof without
   parsing `/status`.
 
+### `account_mirror_completion_start` and `account_mirror_completion_status`
+- Inputs: start accepts optional `provider`, `runtimeProfile`, and
+  `maxPasses`; status accepts a completion `id`.
+- Behavior: start returns an `account_mirror_completion` operation immediately
+  while the MCP service continues refresh passes in the background. Status
+  reports queued/running/completed/blocked/failed, pass count, latest refresh,
+  and mirror completeness.
+- Use this instead of long-running shell commands when an operator wants the
+  service to finish a mirror through repeated refresh passes.
+
 ### `runtime_inspect`
 - Inputs: one runtime lookup key, `runId`, `runtimeRunId`, `teamRunId`, or
   `taskRunSpecId`; optional `runnerId`; optional `probe: "service-state"`;

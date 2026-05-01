@@ -18,6 +18,7 @@ import { registerAccountMirrorStatusTool } from './tools/accountMirrorStatus.js'
 import { registerAccountMirrorRefreshTool } from './tools/accountMirrorRefresh.js';
 import { registerAccountMirrorCatalogTool } from './tools/accountMirrorCatalog.js';
 import { registerAccountMirrorSchedulerHistoryTool } from './tools/accountMirrorSchedulerHistory.js';
+import { registerAccountMirrorCompletionTools } from './tools/accountMirrorCompletion.js';
 import { resolveConfig } from '../schema/resolver.js';
 import type { ResolvedUserConfig } from '../config.js';
 import { createMediaGenerationService } from '../media/service.js';
@@ -32,6 +33,7 @@ import { createAccountMirrorStatusRegistry } from '../accountMirror/statusRegist
 import { createAccountMirrorRefreshService } from '../accountMirror/refreshService.js';
 import { createAccountMirrorPersistence } from '../accountMirror/cachePersistence.js';
 import { createAccountMirrorCatalogService } from '../accountMirror/catalogService.js';
+import { createAccountMirrorCompletionService } from '../accountMirror/completionService.js';
 
 export interface McpServiceBundle {
   responsesService: ReturnType<typeof createExecutionResponsesService>;
@@ -40,6 +42,7 @@ export interface McpServiceBundle {
   accountMirrorStatusRegistry: ReturnType<typeof createAccountMirrorStatusRegistry>;
   accountMirrorRefreshService: ReturnType<typeof createAccountMirrorRefreshService>;
   accountMirrorCatalogService: ReturnType<typeof createAccountMirrorCatalogService>;
+  accountMirrorCompletionService: ReturnType<typeof createAccountMirrorCompletionService>;
 }
 
 export interface CreateMcpServicesDeps {
@@ -92,6 +95,9 @@ export async function startMcpServer(): Promise<void> {
     service: services.accountMirrorCatalogService,
   });
   registerAccountMirrorSchedulerHistoryTool(server);
+  registerAccountMirrorCompletionTools(server, {
+    service: services.accountMirrorCompletionService,
+  });
   registerSessionsTool(server);
   registerSessionResources(server);
 
@@ -171,6 +177,10 @@ export function createMcpServicesFromConfig(
     registry: accountMirrorStatusRegistry,
     persistence: accountMirrorPersistence,
   });
+  const accountMirrorCompletionService = createAccountMirrorCompletionService({
+    registry: accountMirrorStatusRegistry,
+    refreshService: accountMirrorRefreshService,
+  });
   return {
     responsesService,
     mediaGenerationService,
@@ -178,6 +188,7 @@ export function createMcpServicesFromConfig(
     accountMirrorStatusRegistry,
     accountMirrorRefreshService,
     accountMirrorCatalogService,
+    accountMirrorCompletionService,
   };
 }
 

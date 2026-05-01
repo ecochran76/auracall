@@ -2158,6 +2158,9 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run lint`
   - `pnpm run docs:list`
   - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run install:user-runtime`
+  - installed `auracall api mirror-complete --help`
+  - installed `auracall api mirror-completion-status --help`
   - `git diff --check`
 
 ## Turn 73 | 2026-04-30
@@ -2269,6 +2272,32 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - final `GET /v1/account-mirrors/status?provider=chatgpt&runtimeProfile=default&explicitRefresh=true`
   - final `GET /v1/account-mirrors/catalog?provider=chatgpt&runtimeProfile=default&kind=all&limit=500`
   - `find ~/.auracall/browser-operations -maxdepth 1 -type f -name '*.json'`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+
+## Turn 77 | 2026-04-30
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: correct the default ChatGPT mirror assumptions after live dogfood
+  showed the account has more than the bounded visible rail snapshot.
+- Change:
+  - ChatGPT `listConversations(..., { includeHistory, historyLimit })` now
+    passes options into the provider scraper instead of ignoring them
+  - the provider politely scrolls the ChatGPT left rail until the requested
+    history limit is reached or the rail stops loading older rows
+  - added nonblocking account-mirror completion operations:
+    `POST /v1/account-mirrors/completions`,
+    `GET /v1/account-mirrors/completions/{id}`,
+    `auracall api mirror-complete`, and
+    `auracall api mirror-completion-status`
+  - added MCP `account_mirror_completion_start` and
+    `account_mirror_completion_status`
+- Verification target:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/completionService.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run lint`
   - `pnpm run docs:list`
   - `pnpm run plans:audit -- --keep 63`
   - `git diff --check`

@@ -15202,3 +15202,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   it is detail-read-limited. The saved cursor still advances correctly, but
   artifact-heavy conversations may reduce fewer than six remaining detail
   surfaces in a pass because the artifact row budget fills first.
+- 2026-04-30: ChatGPT conversation inventory must honor the left rail as an
+  infinite history surface. Passing `includeHistory` and `historyLimit` into
+  the provider is not enough unless the scraper scrolls older rail rows before
+  deciding the mirror inventory is complete.
+- 2026-04-30: Account mirror completion should be modeled as a nonblocking
+  service operation. Operators should start completion, get an id immediately,
+  and poll API/CLI status instead of holding a long-running shell command open.

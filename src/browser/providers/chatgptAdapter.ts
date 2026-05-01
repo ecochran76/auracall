@@ -4497,10 +4497,12 @@ async function navigateToChatgptConversation(
 async function scrapeChatgptConversations(
   client: ChromeClient,
   projectId?: string | null,
+  options?: BrowserProviderListOptions,
   debugContext?: ChatgptRecoveryDebugContext,
 ): Promise<Conversation[]> {
   return withChatgptBlockingSurfaceRecovery(client, `scrapeChatgptConversations:${projectId ?? 'root'}`, async () => {
     const normalizedProjectId = normalizeChatgptProjectId(projectId);
+    const historyLimit = normalizeChatgptConversationHistoryLimit(options?.historyLimit);
     if (normalizedProjectId) {
       await navigateToChatgptUrl(client, resolveChatgptProjectUrl(normalizedProjectId), normalizedProjectId);
       const ready = await waitForPredicate(
@@ -4700,16 +4702,131 @@ async function scrapeChatgptConversations(
     while (Date.now() < deadline) {
       const conversations = await readConversations();
       if (conversations.length > 0) {
-        return conversations;
+        if (options?.includeHistory === true && historyLimit > conversations.length) {
+          return await readChatgptConversationHistory(client, normalizedProjectId, historyLimit, readConversations);
+        }
+        return historyLimit > 0 ? conversations.slice(0, historyLimit) : conversations;
       }
       last = conversations;
       await sleep(600);
     }
-    return last;
+    return historyLimit > 0 ? last.slice(0, historyLimit) : last;
   }, {
     debugContext,
     reopen: buildChatgptListReopen(client, projectId),
   });
+}
+
+export function normalizeChatgptConversationHistoryLimit(value: number | null | undefined): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.floor(Number(value)));
+}
+
+async function readChatgptConversationHistory(
+  client: ChromeClient,
+  projectId: string | null,
+  limit: number,
+  readConversations: () => Promise<Conversation[]>,
+): Promise<Conversation[]> {
+  const maxScrolls = Math.min(160, Math.max(8, Math.ceil(limit / 8) + 12));
+  let conversations = await readConversations();
+  let stableReads = 0;
+  for (let attempt = 0; attempt < maxScrolls && conversations.length < limit && stableReads < 5; attempt += 1) {
+    const beforeCount = conversations.length;
+    const scroll = await scrollChatgptConversationHistoryRail(client, projectId);
+    await sleep(650 + Math.floor(Math.random() * 350));
+    conversations = await readConversations();
+    if (conversations.length > beforeCount) {
+      stableReads = 0;
+      continue;
+    }
+    stableReads += scroll.moved || scroll.canScroll ? 1 : 2;
+  }
+  return conversations.slice(0, limit);
+}
+
+async function scrollChatgptConversationHistoryRail(
+  client: ChromeClient,
+  projectId: string | null,
+): Promise<{ moved: boolean; canScroll: boolean; anchorCount: number; reason?: string }> {
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const expectedProjectId = ${JSON.stringify(projectId)};
+      const normalizeProjectId = (value) => {
+        const trimmed = String(value || '').trim();
+        const match = trimmed.match(/^(g-p-[a-z0-9]+)/i);
+        return match ? match[1] : null;
+      };
+      const parse = (href) => {
+        try {
+          const parsed = new URL(href, location.origin);
+          const match = parsed.pathname.match(/^\\/(?:g\\/([^/]+)\\/)?c\\/([a-zA-Z0-9-]+)\\/?$/);
+          if (!match) return null;
+          return { id: String(match[2] || '').trim(), projectId: normalizeProjectId(match[1]) };
+        } catch {
+          return null;
+        }
+      };
+      const anchors = Array.from(document.querySelectorAll('a[href*="/c/"]'))
+        .filter((anchor) => {
+          const info = parse(anchor.getAttribute('href') || '');
+          if (!info) return false;
+          return expectedProjectId ? info.projectId === expectedProjectId : true;
+        });
+      if (anchors.length === 0) {
+        return { moved: false, canScroll: false, anchorCount: 0, reason: 'no-conversation-anchors' };
+      }
+      const candidates = new Map();
+      const addCandidate = (node) => {
+        if (!(node instanceof Element) && node !== document.scrollingElement) return;
+        const element = node;
+        const scrollHeight = Number(element.scrollHeight || 0);
+        const clientHeight = Number(element.clientHeight || 0);
+        if (scrollHeight <= clientHeight + 24) return;
+        let anchorCount = 0;
+        for (const anchor of anchors) {
+          if (element === document.scrollingElement || element.contains(anchor)) anchorCount += 1;
+        }
+        if (anchorCount <= 0) return;
+        const room = Math.max(0, scrollHeight - clientHeight - Number(element.scrollTop || 0));
+        const score = anchorCount * 100000 + room;
+        candidates.set(element, { element, anchorCount, room, score, scrollHeight, clientHeight });
+      };
+      for (const selector of ['[role="tabpanel"]', 'nav', 'aside', '[role="navigation"]', 'main', 'body']) {
+        for (const node of Array.from(document.querySelectorAll(selector))) addCandidate(node);
+      }
+      addCandidate(document.scrollingElement);
+      for (const anchor of anchors) {
+        let current = anchor.parentElement;
+        while (current && current !== document.body) {
+          addCandidate(current);
+          current = current.parentElement;
+        }
+      }
+      const best = Array.from(candidates.values()).sort((left, right) => right.score - left.score)[0];
+      if (!best) {
+        return { moved: false, canScroll: false, anchorCount: anchors.length, reason: 'no-scroll-container' };
+      }
+      const before = Number(best.element.scrollTop || 0);
+      const delta = Math.max(520, Math.floor(best.clientHeight * 0.85));
+      best.element.scrollTop = Math.min(best.scrollHeight - best.clientHeight, before + delta);
+      best.element.dispatchEvent(new Event('scroll', { bubbles: true }));
+      const after = Number(best.element.scrollTop || 0);
+      return {
+        moved: after > before,
+        canScroll: after < best.scrollHeight - best.clientHeight - 4,
+        anchorCount: anchors.length,
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const value = result?.value as { moved?: boolean; canScroll?: boolean; anchorCount?: number; reason?: string } | undefined;
+  return {
+    moved: value?.moved === true,
+    canScroll: value?.canScroll === true,
+    anchorCount: Number.isFinite(value?.anchorCount) ? Number(value?.anchorCount) : 0,
+    reason: typeof value?.reason === 'string' ? value.reason : undefined,
+  };
 }
 
 async function _tagChatgptConversationRow(
@@ -7292,7 +7409,7 @@ export function createChatgptAdapter(): Pick<
         const { client } = await connectToChatgptTab(currentOptions, targetUrl);
         try {
           await assertChatgptExpectedIdentity(client, currentOptions);
-          return await scrapeChatgptConversations(client, normalizedProjectId, debugContext);
+          return await scrapeChatgptConversations(client, normalizedProjectId, currentOptions, debugContext);
         } finally {
           await client.close().catch(() => undefined);
         }

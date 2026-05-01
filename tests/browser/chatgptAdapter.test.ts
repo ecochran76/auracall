@@ -21,6 +21,7 @@ import {
   matchesChatgptProjectSettingsSnapshot,
   matchesChatgptRenameEditorProbe,
   normalizeChatgptAuthSessionIdentity,
+  normalizeChatgptConversationHistoryLimit,
   normalizeChatgptConversationId,
   normalizeChatgptConversationDownloadArtifactProbes,
   normalizeChatgptConversationFileProbes,
@@ -1612,6 +1613,16 @@ describe('resolveChatgptConversationUrl', () => {
         'g-p-69c851be8cc88191afe109bea1b2a28d-oracle',
       ),
     ).toBe('https://chatgpt.com/g/g-p-69c851be8cc88191afe109bea1b2a28d/c/69c93212-f180-8330-815b-5f831fc395e6');
+  });
+});
+
+describe('normalizeChatgptConversationHistoryLimit', () => {
+  test('normalizes bounded history requests', () => {
+    expect(normalizeChatgptConversationHistoryLimit(250.9)).toBe(250);
+    expect(normalizeChatgptConversationHistoryLimit(0)).toBe(0);
+    expect(normalizeChatgptConversationHistoryLimit(-10)).toBe(0);
+    expect(normalizeChatgptConversationHistoryLimit(Number.NaN)).toBe(0);
+    expect(normalizeChatgptConversationHistoryLimit(undefined)).toBe(0);
   });
 });
 

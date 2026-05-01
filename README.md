@@ -201,6 +201,8 @@ Terminology note:
   - `GET /v1/account-mirrors/status`
   - `GET /v1/account-mirrors/catalog`
   - `POST /v1/account-mirrors/refresh`
+  - `POST /v1/account-mirrors/completions`
+  - `GET /v1/account-mirrors/completions/{completion_id}`
 - Account mirror refreshes are metadata-first and identity-gated. Successful
   refreshes persist the mirror snapshot in the existing provider cache under
   `provider + boundIdentity`; runtime/browser profile ids are retained as
@@ -233,6 +235,10 @@ Terminology note:
   dogfood, prefer a long interval plus one manual `run-once` request so the
   scheduler proves the refresh path without repeatedly touching bot-sensitive
   provider pages.
+  Use `auracall api mirror-complete --port <port>` when an operator wants the
+  service to keep refreshing until the mirror reports complete; the command
+  returns a completion id immediately, and
+  `auracall api mirror-completion-status <id> --port <port>` polls progress.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

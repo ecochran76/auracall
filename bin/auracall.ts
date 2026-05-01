@@ -109,6 +109,11 @@ import {
   readApiSchedulerHistoryForCli,
 } from '../src/cli/apiSchedulerHistoryCommand.js';
 import {
+  formatApiMirrorCompletionCliSummary,
+  readApiMirrorCompletionForCli,
+  startApiMirrorCompletionForCli,
+} from '../src/cli/apiMirrorCompletionCommand.js';
+import {
   assertRunStatusForCli,
   formatRunStatusCli,
   readRunStatusForCli,
@@ -1030,6 +1035,54 @@ apiCommand
       return;
     }
     console.log(formatApiStatusCliSummary(summary));
+  });
+
+apiCommand
+  .command('mirror-complete')
+  .description('Start a nonblocking account mirror completion operation on the local API.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .requiredOption('--port <number>', 'Local API port to query.', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--provider <provider>', 'Provider to complete (default chatgpt).')
+  .option('--runtime-profile <profile>', 'Runtime profile to complete (default default).')
+  .option('--max-passes <count>', 'Maximum refresh passes for the background operation.', parseIntOption, 100)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const operation = await startApiMirrorCompletionForCli({
+      host: commandOptions.host,
+      port: commandOptions.port,
+      timeoutMs: commandOptions.timeoutMs,
+      provider: commandOptions.provider,
+      runtimeProfile: commandOptions.runtimeProfile,
+      maxPasses: commandOptions.maxPasses,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(operation, null, 2));
+      return;
+    }
+    console.log(formatApiMirrorCompletionCliSummary(operation));
+  });
+
+apiCommand
+  .command('mirror-completion-status')
+  .description('Read a nonblocking account mirror completion operation from the local API.')
+  .argument('<id>', 'Account mirror completion id.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .requiredOption('--port <number>', 'Local API port to query.', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const operation = await readApiMirrorCompletionForCli({
+      id,
+      host: commandOptions.host,
+      port: commandOptions.port,
+      timeoutMs: commandOptions.timeoutMs,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(operation, null, 2));
+      return;
+    }
+    console.log(formatApiMirrorCompletionCliSummary(operation));
   });
 
 apiCommand

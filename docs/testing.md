@@ -163,6 +163,12 @@
       - MCP parity is available with `account_mirror_scheduler_history`
       - compact history reports `latestYield`, `yieldEvents[]`,
         queued-work owner/kind, resume cursor, and remaining detail surfaces
+      - nonblocking completion is available with
+        `POST /v1/account-mirrors/completions` and
+        `GET /v1/account-mirrors/completions/{completion_id}`
+      - CLI parity is available with
+        `auracall api mirror-complete --port 8080` and
+        `auracall api mirror-completion-status <id> --port 8080`
       - `accountMirrorScheduler.lastPass.selectedTarget.mirrorCompleteness`
       - `accountMirrorScheduler.lastPass.backpressure.reason = none|routine-delayed|blocked-by-browser-work|yielded-to-queued-work`
       - `accountMirrorScheduler.lastPass.metrics.inProgressEligibleTargets`
@@ -230,6 +236,15 @@
         not fetch full conversation bodies or binary artifacts
       - it must not submit prompts, fetch full conversation bodies, or load
         immature conversation ids
+    - nonblocking mirror completion route:
+      - `POST /v1/account-mirrors/completions`
+      - `GET /v1/account-mirrors/completions/{completion_id}`
+      - start returns an operation id immediately
+      - status readback reports queued/running/completed/blocked/failed,
+        pass count, latest refresh, and mirror completeness
+      - ChatGPT completion uses `includeHistory` plus `historyLimit`, which
+        must scroll the left rail to load older conversations before claiming
+        inventory completeness
     - MCP parity:
       - `api_status` reads local API `/status` and exposes
         `scheduler.operatorStatus.posture`

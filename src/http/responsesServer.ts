@@ -120,6 +120,11 @@ import {
   summarizeAccountMirrorSchedulerHistory,
   type AccountMirrorSchedulerCompactHistory,
 } from '../accountMirror/schedulerHistorySummary.js';
+import {
+  createAccountMirrorCompletionService,
+  type AccountMirrorCompletionOperation,
+  type AccountMirrorCompletionService,
+} from '../accountMirror/completionService.js';
 import type { AccountMirrorProvider } from '../accountMirror/politePolicy.js';
 
 export interface ResponsesHttpServerOptions {
@@ -159,6 +164,7 @@ export interface ResponsesHttpServerDeps {
   accountMirrorCatalogService?: AccountMirrorCatalogService;
   accountMirrorSchedulerService?: AccountMirrorSchedulerPassService;
   accountMirrorSchedulerLedger?: AccountMirrorSchedulerPassLedger;
+  accountMirrorCompletionService?: AccountMirrorCompletionService;
 }
 
 export interface ResponsesHttpServerInstance {
@@ -229,6 +235,7 @@ interface HttpRuntimeRunInspectionResponse {
 interface HttpAccountMirrorRefreshResponse extends AccountMirrorRefreshResult {}
 interface HttpAccountMirrorCatalogResponse extends AccountMirrorCatalogResult {}
 interface HttpAccountMirrorSchedulerHistoryResponse extends AccountMirrorSchedulerCompactHistory {}
+interface HttpAccountMirrorCompletionResponse extends AccountMirrorCompletionOperation {}
 
 type AccountMirrorSchedulerWakeReason =
   | 'startup-cadence'
@@ -280,6 +287,8 @@ interface HttpStatusResponse {
     accountMirrorStatus: string;
     accountMirrorCatalog: string;
     accountMirrorRefresh: string;
+    accountMirrorCompletionsCreate: string;
+    accountMirrorCompletionsGetTemplate: string;
     accountMirrorSchedulerHistory: string;
     workbenchCapabilitiesList: string;
     operatorBrowserDashboard: string;
@@ -387,6 +396,11 @@ export async function createResponsesHttpServer(
   });
   const accountMirrorSchedulerLedger = deps.accountMirrorSchedulerLedger ?? createAccountMirrorSchedulerPassLedger({
     config: configuredRuntimeConfig,
+  });
+  const accountMirrorCompletionService = deps.accountMirrorCompletionService ?? createAccountMirrorCompletionService({
+    registry: accountMirrorStatusRegistry,
+    refreshService: accountMirrorRefreshService,
+    now,
   });
   const workbenchCapabilityService = createWorkbenchCapabilityService({
     now,
@@ -687,6 +701,34 @@ export async function createResponsesHttpServer(
           200,
           summarizeAccountMirrorSchedulerHistory(history, { limit }) satisfies HttpAccountMirrorSchedulerHistoryResponse,
         );
+        return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/v1/account-mirrors/completions') {
+        const body = await readRequestBody(req);
+        const payload = ACCOUNT_MIRROR_COMPLETION_REQUEST_SCHEMA.parse(JSON.parse(body || '{}'));
+        const result = accountMirrorCompletionService.start({
+          provider: payload.provider,
+          runtimeProfileId: payload.runtimeProfile,
+          maxPasses: payload.maxPasses,
+        });
+        sendJson(res, 202, result satisfies HttpAccountMirrorCompletionResponse);
+        return;
+      }
+
+      const accountMirrorCompletionId = matchAccountMirrorCompletionRoute(url.pathname);
+      if (req.method === 'GET' && accountMirrorCompletionId) {
+        const result = accountMirrorCompletionService.read(accountMirrorCompletionId);
+        if (!result) {
+          sendJson(res, 404, {
+            error: {
+              message: `Account mirror completion ${accountMirrorCompletionId} was not found.`,
+              type: 'not_found_error',
+            },
+          });
+          return;
+        }
+        sendJson(res, 200, result satisfies HttpAccountMirrorCompletionResponse);
         return;
       }
 
@@ -1404,7 +1446,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   }
   logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
-    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/refresh',
+    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions/{completion_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   logger('Leave this terminal running; press Ctrl+C to stop auracall api serve.');
@@ -1619,6 +1661,8 @@ function createHttpStatusResponse(input: {
       accountMirrorStatus: '/v1/account-mirrors/status[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&explicitRefresh=true]',
       accountMirrorCatalog: '/v1/account-mirrors/catalog[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&kind=projects|conversations|artifacts|files|media|all][&limit=50]',
       accountMirrorRefresh: '/v1/account-mirrors/refresh',
+      accountMirrorCompletionsCreate: '/v1/account-mirrors/completions',
+      accountMirrorCompletionsGetTemplate: '/v1/account-mirrors/completions/{completion_id}',
       accountMirrorSchedulerHistory: '/v1/account-mirrors/scheduler/history[?limit=10]',
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
@@ -1845,6 +1889,12 @@ const ACCOUNT_MIRROR_REFRESH_REQUEST_SCHEMA = z.object({
   explicitRefresh: z.boolean().optional(),
   queueTimeoutMs: z.number().int().nonnegative().optional(),
   queuePollMs: z.number().int().positive().optional(),
+});
+
+const ACCOUNT_MIRROR_COMPLETION_REQUEST_SCHEMA = z.object({
+  provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
+  runtimeProfile: z.string().trim().min(1).optional(),
+  maxPasses: z.number().int().positive().max(500).optional(),
 });
 
 const STATUS_CONTROL_REQUEST_SCHEMA = z.union([
@@ -2350,6 +2400,11 @@ function matchMediaGenerationStatusRoute(pathname: string): string | null {
 
 function matchRunStatusRoute(pathname: string): string | null {
   const match = /^\/v1\/runs\/([^/]+)\/status$/.exec(pathname);
+  return match?.[1] ?? null;
+}
+
+function matchAccountMirrorCompletionRoute(pathname: string): string | null {
+  const match = /^\/v1\/account-mirrors\/completions\/([^/]+)$/.exec(pathname);
   return match?.[1] ?? null;
 }
 

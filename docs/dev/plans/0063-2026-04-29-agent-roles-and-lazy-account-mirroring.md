@@ -387,6 +387,12 @@ Each status payload should include:
   explicit server execute mode.
 - Scheduler pass history is persisted in a bounded cache ledger and projected
   into `/status.accountMirrorScheduler.history`.
+- Nonblocking mirror completion is available as a service operation:
+  callers start completion through the API/CLI/MCP, receive an operation id
+  immediately, and poll status instead of holding a long shell command open.
+- ChatGPT conversation mirroring treats the left rail as an infinite history
+  surface. `includeHistory` plus `historyLimit` must scroll older rows before
+  claiming conversation inventory is complete.
 - Tests cover config projection, mirror scheduling state, identity hard stops,
   and dispatcher queue evidence before live provider dogfood.
 - The first scheduling tests prove self-imposed jitter, minimum intervals,
@@ -402,7 +408,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add an explicit compact scheduler-history readback endpoint if `/status`
-remains too large for operator workflows; otherwise add resumable attachment
-inventory cursors so later mirror cycles continue beyond the first small
-detail-read sample.
+Live-test the nonblocking completion operation against default ChatGPT after
+the left-rail history scroll fix, then confirm the API, CLI, and MCP status
+surfaces all observe the same completion operation state.

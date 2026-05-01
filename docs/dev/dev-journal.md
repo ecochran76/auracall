@@ -24333,3 +24333,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - final account mirror status on port `18094`
   - final account mirror catalog on port `18094` with `limit=500`
+
+## 2026-04-30 - Nonblocking mirror completion and ChatGPT history scroll
+
+- Focus: correct the product shape after live dogfood showed two gaps: mirror
+  completion should be a service operation, and default ChatGPT has more
+  conversations than the visible loaded rail snapshot.
+- Progress:
+  - ChatGPT `listConversations` now forwards `includeHistory` and
+    `historyLimit` into the provider scraper.
+  - The ChatGPT scraper politely scrolls the left rail to load older
+    conversations until the requested history limit is met or the rail stops
+    producing rows.
+  - Added `POST /v1/account-mirrors/completions` and
+    `GET /v1/account-mirrors/completions/{id}` for nonblocking completion.
+  - Added `auracall api mirror-complete` and
+    `auracall api mirror-completion-status` so operators get an id and poll
+    progress instead of keeping a long command open.
+  - Added MCP `account_mirror_completion_start` and
+    `account_mirror_completion_status` for the same nonblocking operation
+    model.
+- Validation:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/completionService.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run install:user-runtime`
+  - installed `auracall api mirror-complete --help`
+  - installed `auracall api mirror-completion-status --help`
