@@ -2282,6 +2282,31 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `git diff --check`
   - `pnpm run install:user-runtime`
 
+## Turn 85 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: add deterministic restart coverage for hydrated live-follow completion
+  status.
+- Change:
+  - added `scripts/smoke-account-mirror-completion-hydration.ts`
+  - added `pnpm run smoke:completion-hydration`
+  - the smoke seeds a paused live-follow completion into a temp cache, starts
+    the API twice over the same cache, and verifies `/status`, CLI status, and
+    MCP `api_status` after restart
+  - the fixture uses no provider or browser dispatcher access
+- Verification target:
+  - `pnpm run smoke:completion-hydration`
+  - `pnpm run smoke:live-follow-health`
+  - `pnpm run smoke:completion-control`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+
 ## Turn 79 | 2026-05-01
 
 - Continued implementation plan:

@@ -98,6 +98,10 @@
   to start one fixture-backed local API server and compare `/status.liveFollow`,
   CLI `api status`, MCP `api_status`, and `/ops/browser` against the same
   live-follow health projection without provider or browser dispatcher access.
+- Deterministic hydration smoke: run `pnpm run smoke:completion-hydration` to
+  seed a paused live-follow completion in a temp cache, restart the API over the
+  same cache, and verify `/status`, CLI status, and MCP `api_status` preserve
+  active paused posture without provider or browser dispatcher access.
 
 ### `account_mirror_scheduler_history`
 - Inputs: `port` for the local `auracall api serve` listener; optional `host`,

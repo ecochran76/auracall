@@ -24544,6 +24544,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed `auracall api mirror-completion-control --help`
   - installed `auracall api mirror-completion-status --help`
 
+## Turn 85 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: prove persisted live-follow completion status hydrates into the regular
+  operator status surfaces after API process churn.
+- Change:
+  - added `pnpm run smoke:completion-hydration`
+  - the smoke seeds a paused live-follow completion into a temp account-mirror
+    cache, starts the API, verifies `/status`, CLI `api status`, and MCP
+    `api_status`, then restarts the API over the same cache and verifies the
+    same projections again
+  - it performs no provider work and does not acquire the browser dispatcher
+- Validation:
+  - `pnpm run smoke:completion-hydration`
+  - `pnpm run smoke:live-follow-health`
+  - `pnpm run smoke:completion-control`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `smoke-account-mirror-completion-hydration.js`
+
 ## Turn 78 | 2026-05-01
 
 - Continued implementation plan:

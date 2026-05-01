@@ -450,6 +450,10 @@ Each status payload should include:
   server and proves `/status.liveFollow`, CLI `api status`, MCP `api_status`,
   and `/ops/browser` all report the same shared live-follow health projection
   without acquiring browser dispatcher or provider state.
+- `pnpm run smoke:completion-hydration` seeds a paused live-follow completion
+  into a temp cache, restarts the API over the same cache, and proves `/status`,
+  CLI `api status`, and MCP `api_status` preserve active paused posture without
+  acquiring browser dispatcher or provider state.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -468,6 +472,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add status-level validation for hydrated live-follow completion records after
-API restart, so the shared health projection proves persisted active/paused
-operations remain visible across process churn.
+Add dashboard/API controls for live-follow pause/resume/cancel operator actions
+to the regular status preflight path, so operators can inspect and change the
+same persisted completion state from one surface.

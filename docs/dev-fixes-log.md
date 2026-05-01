@@ -15260,3 +15260,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   Compare `/status.liveFollow`, CLI `api status`, MCP `api_status`, and
   `/ops/browser` against the same local API server so future surface changes
   cannot silently drift.
+- 2026-05-01: Persisted live-follow completion posture needs restart coverage.
+  Seed paused completion records into a temp cache and restart the API over the
+  same cache so `/status`, CLI, and MCP prove hydrated active state survives
+  process churn.

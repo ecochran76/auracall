@@ -26,6 +26,7 @@
     "smoke:mcp-api-status": "tsx scripts/smoke-api-status-mcp.ts --mode both --port 18081",
     "smoke:scheduler-history": "tsx scripts/smoke-account-mirror-scheduler-history.ts",
     "smoke:completion-control": "tsx scripts/smoke-account-mirror-completion-control.ts",
+    "smoke:completion-hydration": "tsx scripts/smoke-account-mirror-completion-hydration.ts",
     "smoke:live-follow-health": "tsx scripts/smoke-live-follow-health-parity.ts",
     "test:browser": "pnpm run build && tsx scripts/browser-service/test-browser.ts && ./scripts/browser-smoke.sh",
     "test:grok-smoke": "AURACALL_ALLOW_RAW_CDP=1 tsx scripts/browser-service/grok-dom-smoke.ts",

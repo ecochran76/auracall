@@ -202,6 +202,10 @@
         `pnpm run smoke:completion-control`; it uses an injected completion
         service and proves HTTP, CLI helper, MCP control, and `/status`
         readback without provider or browser dispatcher access
+      - local deterministic smoke for persisted completion hydration:
+        `pnpm run smoke:completion-hydration`; it seeds a paused live-follow
+        completion into a temp cache, restarts the API over the same cache,
+        and verifies `/status`, CLI status, and MCP `api_status`
       - local deterministic smoke for live-follow health parity:
         `pnpm run smoke:live-follow-health`; it compares `/status.liveFollow`,
         CLI `api status`, MCP `api_status`, and `/ops/browser` against one
