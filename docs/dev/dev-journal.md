@@ -24305,3 +24305,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `~/.local/bin/auracall api scheduler-history --port 18093 --limit 5`
   - installed MCP `account_mirror_scheduler_history` on port `18093`
+
+## 2026-04-30 - Default ChatGPT mirror cursor completion
+
+- Focus: resume the default ChatGPT account mirror from its saved attachment
+  cursor and prove the completeness state can reach zero remaining detail
+  surfaces under the existing politeness policy.
+- Progress:
+  - Started installed `api serve` on port `18094` with execute mode enabled.
+  - Used explicit operator refreshes with `queueTimeoutMs: 0` and respected the
+    explicit-refresh cooldown between passes.
+  - The first explicit pass in this turn moved from 67 to 63 remaining detail
+    surfaces; subsequent passes moved 63 -> 57 -> 51 -> 45 -> 39 -> 33 -> 31
+    -> 25 -> 0.
+  - Final status reported identity `ecochran76@gmail.com`, account level
+    `Business`, `mirrorCompleteness.state: complete`, and zero remaining
+    detail surfaces.
+  - Final high-limit catalog metrics were 5 projects, 76 conversations, 374
+    artifacts, 24 files, and 0 media.
+  - Browser-operation locks were empty after the API server shut down.
+- Observation:
+  - Cursor resume is working across provider restarts and cooldown-spaced
+    explicit refreshes.
+  - Artifact-heavy conversations can hit the artifact row budget before the
+    six-detail-read cap; one pass scanned only two conversations but added 80
+    artifacts.
+- Validation:
+  - final account mirror status on port `18094`
+  - final account mirror catalog on port `18094` with `limit=500`

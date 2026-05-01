@@ -15198,3 +15198,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `api serve` endpoint banner still omitted
   `/v1/account-mirrors/scheduler/history`; keep the banner in sync with root
   API metadata.
+- 2026-04-30: Account mirror completion can be artifact-budget-limited before
+  it is detail-read-limited. The saved cursor still advances correctly, but
+  artifact-heavy conversations may reduce fewer than six remaining detail
+  surfaces in a pass because the artifact row budget fills first.

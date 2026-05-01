@@ -181,6 +181,11 @@ Current implementation-facing politeness contract:
   Installed CLI and MCP both returned the persisted live no-yield pass:
   `refresh-completed` for `chatgpt/default`, `backpressure=none`,
   `yielded=false`, and 67 remaining detail surfaces.
+- Default ChatGPT cursor-completion dogfood on installed port `18094` resumed
+  the saved attachment cursor through cooldown-spaced explicit refreshes until
+  `mirrorCompleteness.state` reached `complete`. Final high-limit catalog
+  metrics were 5 projects, 76 conversations, 374 artifacts, 24 files, 0 media,
+  and zero remaining detail surfaces.
 - Installed-runtime restart dogfood verified that a dry-run pass history entry
   persisted after stopping the scheduler-enabled server and starting a second
   scheduler-disabled server: `lastPass` reset to `null`, while
