@@ -15209,3 +15209,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-04-30: Account mirror completion should be modeled as a nonblocking
   service operation. Operators should start completion, get an id immediately,
   and poll API/CLI status instead of holding a long-running shell command open.
+- 2026-04-30: Nonblocking mirror completion should force at least one
+  verification refresh even when persisted status says complete, then wait for
+  polite cooldown windows instead of ending blocked on its own next pass.

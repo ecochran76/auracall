@@ -24353,6 +24353,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Added MCP `account_mirror_completion_start` and
     `account_mirror_completion_status` for the same nonblocking operation
     model.
+  - Installed-runtime dogfood exposed two service-operation fixes:
+    completion must force at least one verification refresh even when
+    persisted status says complete, and it must wait through its own polite
+    cooldown rather than ending blocked on pass 2.
+  - The first verification refresh expanded default ChatGPT from 76 to 291
+    conversations for `ecochran76@gmail.com`, proving the left-rail history
+    scroll is materially broader than the old visible snapshot.
+  - After reinstalling, a cooldown smoke on port `18107` started another
+    completion and confirmed it remained `running` with
+    `nextAttemptAt: 2026-05-01T03:55:21.121Z`, `passCount: 0`, no error, and
+    290 remaining detail surfaces while leaving no browser-operation lock.
 - Validation:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/completionService.test.ts`
   - `pnpm exec tsc --noEmit`

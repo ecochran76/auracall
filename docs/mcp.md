@@ -97,8 +97,8 @@
   `maxPasses`; status accepts a completion `id`.
 - Behavior: start returns an `account_mirror_completion` operation immediately
   while the MCP service continues refresh passes in the background. Status
-  reports queued/running/completed/blocked/failed, pass count, latest refresh,
-  and mirror completeness.
+  reports queued/running/completed/blocked/failed, pass count, next eligible
+  attempt, latest refresh, and mirror completeness.
 - Use this instead of long-running shell commands when an operator wants the
   service to finish a mirror through repeated refresh passes.
 

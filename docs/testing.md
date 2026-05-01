@@ -241,7 +241,8 @@
       - `GET /v1/account-mirrors/completions/{completion_id}`
       - start returns an operation id immediately
       - status readback reports queued/running/completed/blocked/failed,
-        pass count, latest refresh, and mirror completeness
+        pass count, next eligible attempt, latest refresh, and mirror
+        completeness
       - ChatGPT completion uses `includeHistory` plus `historyLimit`, which
         must scroll the left rail to load older conversations before claiming
         inventory completeness

@@ -25,6 +25,7 @@ const accountMirrorCompletionOutputShape = {
   status: z.enum(['queued', 'running', 'completed', 'blocked', 'failed']),
   startedAt: z.string(),
   completedAt: z.string().nullable(),
+  nextAttemptAt: z.string().nullable(),
   maxPasses: z.number(),
   passCount: z.number(),
   lastRefresh: z.unknown().nullable(),

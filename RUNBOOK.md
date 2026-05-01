@@ -2294,6 +2294,13 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     `auracall api mirror-completion-status`
   - added MCP `account_mirror_completion_start` and
     `account_mirror_completion_status`
+  - live dogfood showed the first completion expanded ChatGPT conversations
+    from 76 to 291; completion now forces one verification refresh and waits
+    through polite cooldown windows before continuing later passes
+  - installed cooldown smoke showed a subsequent completion stayed `running`,
+    reported `nextAttemptAt: 2026-05-01T03:55:21.121Z`, preserved 290
+    remaining detail surfaces, and left no browser-operation lock while
+    waiting
 - Verification target:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/completionService.test.ts`
   - `pnpm exec tsc --noEmit`

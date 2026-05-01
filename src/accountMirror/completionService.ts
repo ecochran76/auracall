@@ -24,6 +24,7 @@ export interface AccountMirrorCompletionOperation {
   status: 'queued' | 'running' | 'completed' | 'blocked' | 'failed';
   startedAt: string;
   completedAt: string | null;
+  nextAttemptAt: string | null;
   maxPasses: number;
   passCount: number;
   lastRefresh: AccountMirrorRefreshResult | null;
@@ -44,9 +45,11 @@ export function createAccountMirrorCompletionService(input: {
   refreshService: AccountMirrorRefreshService;
   now?: () => Date;
   generateId?: () => string;
+  sleep?: (ms: number) => Promise<void>;
 }): AccountMirrorCompletionService {
   const now = input.now ?? (() => new Date());
   const generateId = input.generateId ?? (() => `acctmirror_completion_${randomUUID()}`);
+  const sleepImpl = input.sleep ?? sleep;
   const operations = new Map<string, AccountMirrorCompletionOperation>();
 
   const update = (id: string, patch: Partial<AccountMirrorCompletionOperation>) => {
@@ -62,28 +65,52 @@ export function createAccountMirrorCompletionService(input: {
     try {
       const operation = operations.get(id);
       if (!operation) return;
-      for (let pass = 0; pass < operation.maxPasses; pass += 1) {
-        await input.registry.refreshPersistentState?.();
-        const entry = findTargetEntry(input.registry, operation.provider, operation.runtimeProfileId);
-        if (entry?.mirrorCompleteness.state === 'complete') {
-          update(id, {
-            status: 'completed',
-            completedAt: now().toISOString(),
-            mirrorCompleteness: entry.mirrorCompleteness,
-          });
-          return;
+      let pass = 0;
+      while (pass < operation.maxPasses) {
+        if (pass > 0) {
+          await input.registry.refreshPersistentState?.();
+          const entry = findTargetEntry(input.registry, operation.provider, operation.runtimeProfileId);
+          if (entry?.mirrorCompleteness.state === 'complete') {
+            update(id, {
+              status: 'completed',
+              completedAt: now().toISOString(),
+              mirrorCompleteness: entry.mirrorCompleteness,
+            });
+            return;
+          }
         }
-        const refresh = await input.refreshService.requestRefresh({
-          provider: operation.provider,
-          runtimeProfileId: operation.runtimeProfileId,
-          explicitRefresh: true,
-          queueTimeoutMs: 0,
-        });
+        let refresh: AccountMirrorRefreshResult;
+        try {
+          refresh = await input.refreshService.requestRefresh({
+            provider: operation.provider,
+            runtimeProfileId: operation.runtimeProfileId,
+            explicitRefresh: true,
+            queueTimeoutMs: 0,
+          });
+        } catch (error) {
+          const eligibleAt = readEligibleAt(error);
+          if (eligibleAt) {
+            await input.registry.refreshPersistentState?.();
+            const entry = findTargetEntry(input.registry, operation.provider, operation.runtimeProfileId);
+            update(id, {
+              status: 'running',
+              nextAttemptAt: eligibleAt,
+              mirrorCompleteness: entry?.mirrorCompleteness ?? operations.get(id)?.mirrorCompleteness ?? null,
+              error: null,
+            });
+            await sleepImpl(resolveDelayMs(eligibleAt, now()));
+            continue;
+          }
+          throw error;
+        }
         const nextPassCount = pass + 1;
+        pass = nextPassCount;
         update(id, {
           passCount: nextPassCount,
           lastRefresh: refresh,
           mirrorCompleteness: refresh.mirrorCompleteness,
+          nextAttemptAt: null,
+          error: null,
         });
         if (refresh.mirrorCompleteness.state === 'complete') {
           update(id, {
@@ -132,6 +159,7 @@ export function createAccountMirrorCompletionService(input: {
         status: 'queued',
         startedAt: now().toISOString(),
         completedAt: null,
+        nextAttemptAt: null,
         maxPasses: normalizeMaxPasses(request.maxPasses),
         passCount: 0,
         lastRefresh: null,
@@ -174,4 +202,19 @@ function readErrorCode(error: unknown): string | null {
   if (!error || typeof error !== 'object') return null;
   const code = (error as { code?: unknown }).code;
   return typeof code === 'string' && code.length > 0 ? code : null;
+}
+
+function readEligibleAt(error: unknown): string | null {
+  if (!(error instanceof AccountMirrorRefreshError)) return null;
+  if (error.code !== 'account_mirror_not_eligible') return null;
+  const eligibleAt = error.details.eligibleAt;
+  return typeof eligibleAt === 'string' && !Number.isNaN(Date.parse(eligibleAt)) ? eligibleAt : null;
+}
+
+function resolveDelayMs(eligibleAt: string, now: Date): number {
+  return Math.max(0, Date.parse(eligibleAt) - now.getTime());
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

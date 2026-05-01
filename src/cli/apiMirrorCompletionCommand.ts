@@ -78,6 +78,10 @@ export function formatApiMirrorCompletionCliSummary(operation: unknown): string 
   if (completeness) {
     lines.push(`Completeness: ${readString(completeness.state) ?? 'unknown'}`);
   }
+  const nextAttemptAt = readString(record.nextAttemptAt);
+  if (nextAttemptAt) {
+    lines.push(`Next attempt: ${nextAttemptAt}`);
+  }
   const error = isRecord(record.error) ? record.error : null;
   if (error) {
     lines.push(`Error: ${readString(error.code) ?? 'unknown'} ${readString(error.message) ?? ''}`.trim());
