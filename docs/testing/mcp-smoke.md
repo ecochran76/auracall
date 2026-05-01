@@ -88,6 +88,36 @@ The enabled smoke starts `auracall api serve` with
 does not enable `--account-mirror-scheduler-execute`, does not launch browsers,
 and stops each temporary API server before exiting.
 
+## MCP `api_ops_browser_status` Against Fixture API
+
+Use this to verify the installed MCP server exposes the ops-browser dashboard
+contract preflight through the actual MCP protocol.
+
+1) Refresh the installed user runtime:
+   ```bash
+   pnpm run install:user-runtime
+   ```
+
+2) Run the fixture ops-browser MCP smoke:
+   ```bash
+   pnpm run smoke:mcp-ops-browser
+   ```
+
+Expected output:
+```text
+ops-browser MCP smoke: pass port=<dynamic>
+tool=api_ops_browser_status
+listed=ok
+dashboardControl=/status
+liveFollow=paused
+providerWork=none
+```
+
+The smoke starts an injected local API fixture, pauses a live-follow completion
+through `/status`, connects to the installed `auracall-mcp` binary over stdio,
+lists tools, and calls `api_ops_browser_status` with paused completion
+expectations. It does not launch provider browsers.
+
 ## Claude Code smoke (tmux + cli)
 
 Use this to verify Claude Code can reach the Aura-Call MCP server end-to-end.

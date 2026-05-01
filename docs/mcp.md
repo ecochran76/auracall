@@ -84,6 +84,9 @@
   `pnpm run smoke:mcp-api-status` to start short-lived local API servers and
   verify installed MCP `api_status` reports `disabled` and `scheduled` mirror
   scheduler postures.
+- Installed ops-browser smoke: after `pnpm run install:user-runtime`, run
+  `pnpm run smoke:mcp-ops-browser` to start a fixture local API server and
+  verify installed MCP lists and calls `api_ops_browser_status`.
 - Deterministic repo smoke: run `pnpm run smoke:scheduler-history` to start a
   short-lived local API server with an injected yielded scheduler pass and
   verify the HTTP scheduler-history route, CLI scheduler-history reader, CLI
@@ -109,6 +112,9 @@
   checks `auracall api ops-browser-status` and MCP `api_ops_browser_status`,
   which fail fast when packaged dashboard control wiring drifts from linked
   `/status` readback.
+- Installed MCP dashboard-control smoke: run `pnpm run smoke:mcp-ops-browser`
+  to verify the packaged `auracall-mcp` binary lists `api_ops_browser_status`
+  and can call it against a fixture local API server.
 
 ### `api_ops_browser_status`
 - Inputs: `port` for the local `auracall api serve` listener; optional `host`,

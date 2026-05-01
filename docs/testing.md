@@ -219,6 +219,10 @@
         `api_ops_browser_status`
       - installed-runtime dashboard/status contract readback:
         `auracall api ops-browser-status --port 8080 --expect-live-follow-severity paused --expect-completion-paused 1`
+      - installed-runtime MCP dashboard/status contract readback:
+        `pnpm run smoke:mcp-ops-browser`; it starts a fixture local API server,
+        verifies packaged `auracall-mcp` lists `api_ops_browser_status`, and
+        calls it with paused live-follow expectations
       - execute one pass only when the server was started with
         `--account-mirror-scheduler-execute`:
         `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"run-once","dryRun":false}}'`

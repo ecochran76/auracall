@@ -467,6 +467,9 @@ Each status payload should include:
 - MCP `api_ops_browser_status` exposes the same dashboard/status contract
   readback for remote operators, and `pnpm run smoke:ops-browser-control`
   verifies it against the fixture server without browser/provider work.
+- `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
+  binary lists and calls `api_ops_browser_status` against a paused live-follow
+  fixture API server without browser/provider work.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -485,6 +488,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add installed-runtime MCP schema/tool-call smoke coverage for
-`api_ops_browser_status`, so packaging drift in remote operator surfaces fails
-before live dogfood.
+Add a compact release preflight rollup for the lazy-live-follow operator
+surface, so API, CLI, MCP, dashboard, and installed-runtime checks can run as
+one command before live dogfood.

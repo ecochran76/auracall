@@ -24,6 +24,7 @@
     "test:mcp:unit": "vitest run tests/mcp*.test.ts tests/mcp/**/*.test.ts",
     "test:mcp:mcporter": "npx -y mcporter list auracall-local --schema --config config/mcporter.json && npx -y mcporter call auracall-local.sessions limit:1 --config config/mcporter.json",
     "smoke:mcp-api-status": "tsx scripts/smoke-api-status-mcp.ts --mode both --port 18081",
+    "smoke:mcp-ops-browser": "tsx scripts/smoke-ops-browser-mcp.ts",
     "smoke:scheduler-history": "tsx scripts/smoke-account-mirror-scheduler-history.ts",
     "smoke:completion-control": "tsx scripts/smoke-account-mirror-completion-control.ts",
     "smoke:completion-hydration": "tsx scripts/smoke-account-mirror-completion-hydration.ts",

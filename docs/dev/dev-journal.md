@@ -24679,6 +24679,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run install:user-runtime`
   - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-ops-browser-completion-control.js`
 
+## Turn 90 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: catch installed MCP packaging drift for `api_ops_browser_status`
+  through the actual MCP protocol.
+- Change:
+  - added `pnpm run smoke:mcp-ops-browser`
+  - the smoke starts a fixture local API server, pauses a live-follow
+    completion through `/status`, connects to installed `auracall-mcp`, checks
+    `listTools` for `api_ops_browser_status`, and calls it with paused
+    live-follow expectations
+  - added the smoke to release operator-smoke and documented it in MCP/testing
+    release notes
+- Validation:
+  - `pnpm run smoke:mcp-ops-browser`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-ops-browser-mcp.js`
+  - `./scripts/release.sh operator-smoke`
+
 ## Turn 78 | 2026-05-01
 
 - Continued implementation plan:

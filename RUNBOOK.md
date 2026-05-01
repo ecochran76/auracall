@@ -2403,6 +2403,29 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `git diff --check`
   - `pnpm run install:user-runtime`
 
+## Turn 90 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: add installed-runtime MCP protocol smoke coverage for
+  `api_ops_browser_status`.
+- Change:
+  - added `scripts/smoke-ops-browser-mcp.ts`
+  - added `pnpm run smoke:mcp-ops-browser`
+  - the smoke starts an injected local API fixture, pauses live follow through
+    `/status`, connects to installed `auracall-mcp`, verifies tool discovery,
+    and calls `api_ops_browser_status`
+  - release `operator-smoke` now runs both MCP status smokes
+- Verification target:
+  - `pnpm run smoke:mcp-ops-browser`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-ops-browser-mcp.js`
+
 ## Turn 79 | 2026-05-01
 
 - Continued implementation plan:

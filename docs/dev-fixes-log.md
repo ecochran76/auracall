@@ -15279,3 +15279,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-01: Dashboard contract drift should also fail for remote operators.
   MCP `api_ops_browser_status` should reuse the same `/ops/browser` plus
   `/status` assertions as the CLI helper and stay provider/browser-free.
+- 2026-05-01: Remote-operator packaging drift needs a protocol-level smoke.
+  `pnpm run smoke:mcp-ops-browser` should connect to the installed
+  `auracall-mcp`, require `api_ops_browser_status` in `listTools`, and call it
+  against a paused fixture API server without provider/browser work.
