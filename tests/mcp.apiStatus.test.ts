@@ -112,6 +112,10 @@ describe('mcp api_status tool', () => {
       port: 18080,
       expectedAccountMirrorPosture: 'backpressured',
       expectedAccountMirrorBackpressure: 'routine-delayed',
+      expectedCompletionActive: 1,
+      expectedCompletionCancelled: 1,
+      expectedCompletionPaused: 0,
+      expectedCompletionFailed: 0,
     });
 
     expect(result).toMatchObject({
@@ -192,6 +196,22 @@ describe('mcp api_status tool', () => {
       expectedAccountMirrorPosture: 'healthy',
     })).rejects.toThrow(
       'Expected accountMirrorScheduler.operatorStatus.posture to be healthy, got backpressured.',
+    );
+  });
+
+  it('fails when an expected completion metric does not match', async () => {
+    const handler = createApiStatusToolHandler({
+      fetchImpl: async () => new Response(JSON.stringify(statusPayload), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+
+    await expect(handler({
+      port: 18080,
+      expectedCompletionCancelled: 0,
+    })).rejects.toThrow(
+      'Expected accountMirrorCompletions.metrics.cancelled to be 0, got 1.',
     );
   });
 });

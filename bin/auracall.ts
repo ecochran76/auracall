@@ -98,6 +98,7 @@ import {
 } from '../src/cli/runtimeInspectionCommand.js';
 import {
   assertApiStatusBackpressure,
+  assertApiStatusCompletionMetrics,
   assertApiStatusSchedulerPosture,
   formatApiStatusCliSummary,
   parseApiStatusAccountMirrorPosture,
@@ -1020,6 +1021,26 @@ apiCommand
     'Fail unless accountMirrorScheduler.operatorStatus.posture matches.',
     parseApiStatusAccountMirrorPosture,
   )
+  .option(
+    '--expect-completion-paused <count>',
+    'Fail unless accountMirrorCompletions.metrics.paused matches.',
+    parseIntOption,
+  )
+  .option(
+    '--expect-completion-cancelled <count>',
+    'Fail unless accountMirrorCompletions.metrics.cancelled matches.',
+    parseIntOption,
+  )
+  .option(
+    '--expect-completion-failed <count>',
+    'Fail unless accountMirrorCompletions.metrics.failed matches.',
+    parseIntOption,
+  )
+  .option(
+    '--expect-completion-active <count>',
+    'Fail unless accountMirrorCompletions.metrics.active matches.',
+    parseIntOption,
+  )
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
     const summary = await readApiStatusForCli({
@@ -1032,6 +1053,12 @@ apiCommand
     });
     assertApiStatusSchedulerPosture(summary, {
       expectedPosture: commandOptions.expectAccountMirrorPosture,
+    });
+    assertApiStatusCompletionMetrics(summary, {
+      expectedPaused: commandOptions.expectCompletionPaused,
+      expectedCancelled: commandOptions.expectCompletionCancelled,
+      expectedFailed: commandOptions.expectCompletionFailed,
+      expectedActive: commandOptions.expectCompletionActive,
     });
     if (commandOptions.json) {
       console.log(JSON.stringify(summary, null, 2));

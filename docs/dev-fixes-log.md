@@ -15236,3 +15236,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   status command. `auracall api status` and MCP `api_status` should project
   paused/cancelled live-follow operations from `/status.accountMirrorCompletions`
   so operators do not have to inspect raw JSON or open the dashboard.
+- 2026-05-01: Completion-control smoke checks should assert the intended
+  control state, not only print it. Use `auracall api status` completion count
+  expectations or matching MCP `api_status` inputs to fail fast on paused,
+  cancelled, failed, or active count drift.

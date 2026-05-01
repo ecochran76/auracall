@@ -265,6 +265,11 @@
       - `auracall api status --port <port>` projects the same completion
         posture into compact CLI output: aggregate counts plus active paused or
         running operations and recent controlled terminal operations
+      - status expectations can fail fast on completion-control counts:
+        `--expect-completion-active <count>`,
+        `--expect-completion-paused <count>`,
+        `--expect-completion-cancelled <count>`, and
+        `--expect-completion-failed <count>`
       - `/ops/browser` includes the "Mirror Live Follow" panel and renders the
         same active/recent completion posture from `/status`
       - operator control is available with

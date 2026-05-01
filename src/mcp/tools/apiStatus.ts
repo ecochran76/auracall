@@ -4,6 +4,7 @@ import {
   API_STATUS_ACCOUNT_MIRROR_POSTURES,
   API_STATUS_BACKPRESSURE_REASONS,
   assertApiStatusBackpressure,
+  assertApiStatusCompletionMetrics,
   assertApiStatusSchedulerPosture,
   readApiStatusForCli,
 } from '../../cli/apiStatusCommand.js';
@@ -14,6 +15,10 @@ const apiStatusInputShape = {
   timeoutMs: z.number().int().positive().optional(),
   expectedAccountMirrorPosture: z.enum(API_STATUS_ACCOUNT_MIRROR_POSTURES).optional(),
   expectedAccountMirrorBackpressure: z.enum(API_STATUS_BACKPRESSURE_REASONS).optional(),
+  expectedCompletionPaused: z.number().int().nonnegative().optional(),
+  expectedCompletionCancelled: z.number().int().nonnegative().optional(),
+  expectedCompletionFailed: z.number().int().nonnegative().optional(),
+  expectedCompletionActive: z.number().int().nonnegative().optional(),
 } satisfies z.ZodRawShape;
 
 const apiStatusBackpressureShape = z.object({
@@ -117,6 +122,12 @@ export function createApiStatusToolHandler(deps: RegisterApiStatusToolDeps = {})
     });
     assertApiStatusSchedulerPosture(summary, {
       expectedPosture: payload.expectedAccountMirrorPosture,
+    });
+    assertApiStatusCompletionMetrics(summary, {
+      expectedPaused: payload.expectedCompletionPaused,
+      expectedCancelled: payload.expectedCompletionCancelled,
+      expectedFailed: payload.expectedCompletionFailed,
+      expectedActive: payload.expectedCompletionActive,
     });
     const posture = summary.scheduler.operatorStatus.posture;
     const state = summary.scheduler.state ?? 'unknown';

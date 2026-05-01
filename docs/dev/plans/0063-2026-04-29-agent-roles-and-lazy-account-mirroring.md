@@ -205,6 +205,10 @@ Current implementation-facing politeness contract:
   aggregate live-follow counts, active operations, and recent paused/cancelled
   or failed operations are visible without raw `/status` JSON or the
   `/ops/browser` dashboard.
+- The same status path now supports count expectations for completion-control
+  posture: CLI flags `--expect-completion-active`,
+  `--expect-completion-paused`, `--expect-completion-cancelled`, and
+  `--expect-completion-failed`, plus matching MCP `api_status` inputs.
 - Installed-runtime execute dogfood started `api serve` with
   `--account-mirror-scheduler-interval-ms 600000` and
   `--account-mirror-scheduler-execute`, then triggered one manual
@@ -412,6 +416,8 @@ Each status payload should include:
 - `auracall api status` and MCP `api_status` summarize the same completion
   posture so operators can see paused/cancelled live-follow state from the
   regular status command.
+- `auracall api status` and MCP `api_status` can assert active/paused/cancelled
+  and failed completion counts for deterministic control-state smokes.
 - Live-follow completion controls are available by id through API, CLI, MCP,
   and `/ops/browser`: pause keeps the operation active but stopped, resume
   relaunches the service-owned loop, and cancel records a terminal
@@ -438,6 +444,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add compact expectation flags for completion-control posture, starting with
-paused/cancelled counts, so API/MCP smoke checks can fail fast when live-follow
-controls do not settle into the intended state.
+Add a compact live-follow service-health summary that combines scheduler
+posture, completion-control counts, and latest cooperative-yield evidence into
+one operator line for `auracall api status`.

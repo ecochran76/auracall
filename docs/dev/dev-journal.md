@@ -24396,6 +24396,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run install:user-runtime`
   - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-completion-control.js`
+
+## Turn 79 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: let API/MCP/operator smokes fail fast when live-follow completion
+  controls do not settle into the intended counts.
+- Change:
+  - added `assertApiStatusCompletionMetrics(...)` for active, paused,
+    cancelled, and failed completion counts
+  - added `auracall api status` flags:
+    `--expect-completion-active`, `--expect-completion-paused`,
+    `--expect-completion-cancelled`, and `--expect-completion-failed`
+  - added matching MCP `api_status` inputs:
+    `expectedCompletionActive`, `expectedCompletionPaused`,
+    `expectedCompletionCancelled`, and `expectedCompletionFailed`
+  - extended `pnpm run smoke:completion-control` to assert paused count after
+    pause and cancelled count after MCP cancel through the compact status path
+- Validation:
+  - `pnpm run smoke:completion-control`
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-completion-control.js`
   - installed `auracall api mirror-completion-control --help`
   - installed `auracall api mirror-completion-status --help`
 

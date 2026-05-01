@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   assertApiStatusBackpressure,
+  assertApiStatusCompletionMetrics,
   assertApiStatusSchedulerPosture,
   formatApiStatusCliSummary,
   parseApiStatusAccountMirrorPosture,
@@ -237,6 +238,25 @@ describe('api status CLI helpers', () => {
       expectedPosture: 'disabled',
     })).toThrow(
       'Expected accountMirrorScheduler.operatorStatus.posture to be disabled, got backpressured.',
+    );
+  });
+
+  it('asserts expected account mirror completion metrics', () => {
+    const summary = summarizeApiStatusPayload(statusPayload, {
+      host: '127.0.0.1',
+      port: 18080,
+    });
+
+    expect(() => assertApiStatusCompletionMetrics(summary, {
+      expectedActive: 1,
+      expectedPaused: 1,
+      expectedCancelled: 1,
+      expectedFailed: 0,
+    })).not.toThrow();
+    expect(() => assertApiStatusCompletionMetrics(summary, {
+      expectedCancelled: 0,
+    })).toThrow(
+      'Expected accountMirrorCompletions.metrics.cancelled to be 0, got 1.',
     );
   });
 

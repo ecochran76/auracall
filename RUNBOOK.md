@@ -2191,6 +2191,25 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run plans:audit -- --keep 63`
   - `git diff --check`
 
+## Turn 79 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Change:
+  - added completion count expectation support to `auracall api status`
+  - added matching MCP `api_status` inputs for active, paused, cancelled, and
+    failed completion counts
+  - extended the no-browser completion-control smoke to assert paused and
+    cancelled counts through the compact status path
+- Verification target:
+  - `pnpm run smoke:completion-control`
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+
 ## Turn 78 | 2026-05-01
 
 - Continued implementation plan:

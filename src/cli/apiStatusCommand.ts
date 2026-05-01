@@ -33,6 +33,13 @@ export interface ApiStatusSchedulerPostureExpectation {
   expectedPosture?: ApiStatusAccountMirrorPosture | null;
 }
 
+export interface ApiStatusCompletionMetricsExpectation {
+  expectedPaused?: number | null;
+  expectedCancelled?: number | null;
+  expectedFailed?: number | null;
+  expectedActive?: number | null;
+}
+
 export interface ApiStatusBackpressureSummary {
   reason: ApiStatusBackpressureReason | 'unknown';
   message: string | null;
@@ -194,6 +201,27 @@ export function assertApiStatusBackpressure(
     throw new Error(
       `Expected accountMirrorScheduler.lastPass.backpressure.reason to be ${expectedReason}, got ${actualReason}.`,
     );
+  }
+}
+
+export function assertApiStatusCompletionMetrics(
+  summary: ApiStatusCliSummary,
+  expectation: ApiStatusCompletionMetricsExpectation = {},
+): void {
+  const checks: Array<[keyof ApiStatusCompletionMetricsSummary, number | null | undefined, string]> = [
+    ['paused', expectation.expectedPaused, 'paused'],
+    ['cancelled', expectation.expectedCancelled, 'cancelled'],
+    ['failed', expectation.expectedFailed, 'failed'],
+    ['active', expectation.expectedActive, 'active'],
+  ];
+  for (const [metricKey, expected, label] of checks) {
+    if (expected == null) continue;
+    const actual = summary.completions.metrics[metricKey];
+    if (actual !== expected) {
+      throw new Error(
+        `Expected accountMirrorCompletions.metrics.${label} to be ${expected}, got ${actual ?? 'unknown'}.`,
+      );
+    }
   }
 }
 
