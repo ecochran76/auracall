@@ -63,8 +63,9 @@ Current State:
     history and then staying in steady follow; operation records are persisted
     under the account-mirror cache, hydrated on API/MCP startup, and listable
     for operator dashboards without knowing the id; `/status` and
-    `/ops/browser` now surface active/recent live-follow posture directly;
-    ChatGPT conversation inventory must scroll the infinite left rail when
+    `/ops/browser` now surface active/recent live-follow posture directly, and
+    API/CLI/MCP/dashboard controls can pause, resume, or cancel a live-follow
+    operation by id; ChatGPT conversation inventory must scroll the infinite left rail when
     `includeHistory` and `historyLimit` are requested before claiming mirror
     completeness
 - open provider-capability follow-through:

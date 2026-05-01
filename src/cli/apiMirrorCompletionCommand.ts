@@ -25,6 +25,14 @@ export interface ApiMirrorCompletionListCliOptions {
   limit?: number | null;
 }
 
+export interface ApiMirrorCompletionControlCliOptions {
+  host?: string | null;
+  port?: number | null;
+  timeoutMs?: number | null;
+  id: string;
+  action: 'pause' | 'resume' | 'cancel';
+}
+
 export async function startApiMirrorCompletionForCli(
   options: ApiMirrorCompletionCliOptions = {},
   fetchImpl: typeof fetch = fetch,
@@ -103,6 +111,32 @@ export async function listApiMirrorCompletionsForCli(
     });
     if (!response.ok) {
       throw new Error(`AuraCall API mirror completion list returned HTTP ${response.status}.`);
+    }
+    return response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function controlApiMirrorCompletionForCli(
+  options: ApiMirrorCompletionControlCliOptions,
+  fetchImpl: typeof fetch = fetch,
+): Promise<unknown> {
+  const host = normalizeHost(options.host);
+  const port = normalizePort(options.port);
+  const id = normalizeId(options.id);
+  const timeoutMs = normalizeTimeoutMs(options.timeoutMs);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchImpl(new URL(`http://${host}:${port}/v1/account-mirrors/completions/${encodeURIComponent(id)}`), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: normalizeAction(options.action) }),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`AuraCall API mirror completion control returned HTTP ${response.status}.`);
     }
     return response.json();
   } finally {
@@ -198,6 +232,11 @@ function normalizeId(value: string): string {
   const trimmed = String(value || '').trim();
   if (!trimmed) throw new Error('Use a completion id.');
   return trimmed;
+}
+
+function normalizeAction(value: string): ApiMirrorCompletionControlCliOptions['action'] {
+  if (value === 'pause' || value === 'resume' || value === 'cancel') return value;
+  throw new Error('Use a completion control action: pause, resume, or cancel.');
 }
 
 function readString(value: unknown): string | null {

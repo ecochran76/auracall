@@ -20,9 +20,14 @@ const accountMirrorCompletionStatusInputShape = {
 const accountMirrorCompletionListInputShape = {
   provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
   runtimeProfile: z.string().min(1).optional(),
-  status: z.enum(['active', 'queued', 'running', 'completed', 'blocked', 'failed']).optional(),
+  status: z.enum(['active', 'queued', 'running', 'paused', 'completed', 'blocked', 'failed', 'cancelled']).optional(),
   activeOnly: z.boolean().optional(),
   limit: z.number().int().positive().max(500).optional(),
+} satisfies z.ZodRawShape;
+
+const accountMirrorCompletionControlInputShape = {
+  id: z.string().min(1),
+  action: z.enum(['pause', 'resume', 'cancel']),
 } satisfies z.ZodRawShape;
 
 const accountMirrorCompletionOutputShape = {
@@ -32,7 +37,7 @@ const accountMirrorCompletionOutputShape = {
   runtimeProfileId: z.string(),
   mode: z.enum(['live_follow', 'bounded']),
   phase: z.enum(['backfill_history', 'steady_follow']),
-  status: z.enum(['queued', 'running', 'completed', 'blocked', 'failed']),
+  status: z.enum(['queued', 'running', 'paused', 'completed', 'blocked', 'failed', 'cancelled']),
   startedAt: z.string(),
   completedAt: z.string().nullable(),
   nextAttemptAt: z.string().nullable(),
@@ -125,6 +130,48 @@ export function registerAccountMirrorCompletionTools(
           data,
           count: data.length,
         },
+      };
+    },
+  );
+  server.registerTool(
+    'account_mirror_completion_control',
+    {
+      title: 'Control account mirror completion',
+      description:
+        'Pause, resume, or cancel an Aura-Call account mirror completion operation without touching provider browsers.',
+      inputSchema: accountMirrorCompletionControlInputShape,
+      outputSchema: accountMirrorCompletionOutputShape,
+    },
+    async (rawInput: unknown) => {
+      const payload = z.object(accountMirrorCompletionControlInputShape).parse(rawInput);
+      const result = service.control({
+        id: payload.id,
+        action: payload.action,
+      });
+      if (!result) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text' as const,
+              text: `Account mirror completion ${payload.id} was not found.`,
+            },
+          ],
+          structuredContent: {
+            object: 'account_mirror_completion_error',
+            code: 'account_mirror_completion_not_found',
+          },
+        };
+      }
+      return {
+        isError: false,
+        content: [
+          {
+            type: 'text' as const,
+            text: `Account mirror completion ${result.id}: ${result.status}.`,
+          },
+        ],
+        structuredContent: result as typeof result & Record<string, unknown>,
       };
     },
   );

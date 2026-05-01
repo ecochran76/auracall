@@ -73,6 +73,7 @@ describe('mcp server service wiring', () => {
       accountMirrorCompletionService: expect.objectContaining({
         start: expect.any(Function),
         read: expect.any(Function),
+        control: expect.any(Function),
       }),
     });
   });

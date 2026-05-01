@@ -92,19 +92,22 @@
   latest cooperative-yield event, resume cursor, or no-yield proof without
   parsing `/status`.
 
-### `account_mirror_completion_start`, `account_mirror_completion_list`, and `account_mirror_completion_status`
+### `account_mirror_completion_start`, `account_mirror_completion_list`, `account_mirror_completion_status`, and `account_mirror_completion_control`
 - Inputs: start accepts optional `provider`, `runtimeProfile`, and debug-only
   `maxPasses`; list accepts optional `provider`, `runtimeProfile`, `status`,
-  `activeOnly`, and `limit`; status accepts a completion `id`.
+  `activeOnly`, and `limit`; status accepts a completion `id`; control accepts
+  `id` plus `action = pause|resume|cancel`.
 - Behavior: start returns an `account_mirror_completion` operation immediately.
   Without `maxPasses`, the operation runs as `mode = live_follow`: backfill
   history until no more history is detected, then stay in `steady_follow` and
-  periodically crawl for new content. Status reports queued/running/completed/
-  blocked/failed, mode, phase, pass count, next eligible attempt, latest
-  refresh, and mirror completeness. Operation records are file-backed under the
-  account-mirror cache and hydrated when the MCP service starts, so status
-  readback survives process restarts. List readback returns recent or active
-  persisted operations without touching provider browsers.
+  periodically crawl for new content. Status reports
+  queued/running/paused/completed/blocked/failed/cancelled, mode, phase, pass
+  count, next eligible attempt, latest refresh, and mirror completeness.
+  Operation records are file-backed under the account-mirror cache and hydrated
+  when the MCP service starts, so status readback survives process restarts.
+  List readback returns recent or active persisted operations without touching
+  provider browsers. Control pauses the service loop, resumes it, or records a
+  terminal cancellation without launching or navigating provider pages.
 - Use this instead of long-running shell commands when an operator wants the
   service to own mirror backfill and steady follow.
 

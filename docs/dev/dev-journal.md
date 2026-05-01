@@ -24379,9 +24379,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Added `/status.accountMirrorCompletions` and an `/ops/browser` "Mirror
     Live Follow" panel so active/recent completion posture is visible from the
     regular operator status surfaces.
+  - Added pause/resume/cancel controls for live-follow completion operations
+    across API, CLI, MCP, and `/ops/browser`; controls mutate the service
+    operation record by id without provider/browser access.
 - Validation:
-  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/completionService.test.ts`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/http.responsesServer.test.ts tests/mcp.server.test.ts tests/browser/chatgptAdapter.test.ts`
   - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
   - `pnpm run install:user-runtime`
-  - installed `auracall api mirror-complete --help`
+  - installed `auracall api mirror-completion-control --help`
   - installed `auracall api mirror-completion-status --help`

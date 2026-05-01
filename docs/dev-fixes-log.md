@@ -15226,3 +15226,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   surface. `/status.accountMirrorCompletions` and the `/ops/browser` mirror
   panel should expose active/recent completion operations without provider or
   browser access.
+- 2026-05-01: Live-follow completion needs operator controls that do not stop
+  the AuraCall service. Pause/resume/cancel should mutate the persisted service
+  operation by id and remain provider/browser-free.

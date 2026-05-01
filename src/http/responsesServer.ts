@@ -274,9 +274,11 @@ interface AccountMirrorCompletionStatusSummary {
     active: number;
     queued: number;
     running: number;
+    paused: number;
     completed: number;
     blocked: number;
     failed: number;
+    cancelled: number;
   };
   active: AccountMirrorCompletionOperation[];
   recent: AccountMirrorCompletionOperation[];
@@ -312,6 +314,7 @@ interface HttpStatusResponse {
     accountMirrorCompletionsCreate: string;
     accountMirrorCompletionsList: string;
     accountMirrorCompletionsGetTemplate: string;
+    accountMirrorCompletionsControlTemplate: string;
     accountMirrorSchedulerHistory: string;
     workbenchCapabilitiesList: string;
     operatorBrowserDashboard: string;
@@ -767,6 +770,26 @@ export async function createResponsesHttpServer(
       const accountMirrorCompletionId = matchAccountMirrorCompletionRoute(url.pathname);
       if (req.method === 'GET' && accountMirrorCompletionId) {
         const result = accountMirrorCompletionService.read(accountMirrorCompletionId);
+        if (!result) {
+          sendJson(res, 404, {
+            error: {
+              message: `Account mirror completion ${accountMirrorCompletionId} was not found.`,
+              type: 'not_found_error',
+            },
+          });
+          return;
+        }
+        sendJson(res, 200, result satisfies HttpAccountMirrorCompletionResponse);
+        return;
+      }
+
+      if (req.method === 'POST' && accountMirrorCompletionId) {
+        const body = await readRequestBody(req);
+        const payload = ACCOUNT_MIRROR_COMPLETION_CONTROL_REQUEST_SCHEMA.parse(JSON.parse(body || '{}'));
+        const result = accountMirrorCompletionService.control({
+          id: accountMirrorCompletionId,
+          action: payload.action,
+        });
         if (!result) {
           sendJson(res, 404, {
             error: {
@@ -1495,7 +1518,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   }
   logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
-    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET /v1/account-mirrors/completions/{completion_id}',
+    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   logger('Leave this terminal running; press Ctrl+C to stop auracall api serve.');
@@ -1712,8 +1735,9 @@ function createHttpStatusResponse(input: {
       accountMirrorCatalog: '/v1/account-mirrors/catalog[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&kind=projects|conversations|artifacts|files|media|all][&limit=50]',
       accountMirrorRefresh: '/v1/account-mirrors/refresh',
       accountMirrorCompletionsCreate: '/v1/account-mirrors/completions',
-      accountMirrorCompletionsList: '/v1/account-mirrors/completions[?status=active|queued|running|completed|blocked|failed][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&limit=50]',
+      accountMirrorCompletionsList: '/v1/account-mirrors/completions[?status=active|queued|running|paused|completed|blocked|failed|cancelled][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&limit=50]',
       accountMirrorCompletionsGetTemplate: '/v1/account-mirrors/completions/{completion_id}',
+      accountMirrorCompletionsControlTemplate: 'POST /v1/account-mirrors/completions/{completion_id} {"action":"pause|resume|cancel"}',
       accountMirrorSchedulerHistory: '/v1/account-mirrors/scheduler/history[?limit=10]',
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
@@ -1759,7 +1783,7 @@ function createAccountMirrorCompletionStatusSummary(
     (acc, operation) => {
       acc.total += 1;
       acc[operation.status] += 1;
-      if (operation.status === 'queued' || operation.status === 'running') {
+      if (operation.status === 'queued' || operation.status === 'running' || operation.status === 'paused') {
         acc.active += 1;
       }
       return acc;
@@ -1769,9 +1793,11 @@ function createAccountMirrorCompletionStatusSummary(
       active: 0,
       queued: 0,
       running: 0,
+      paused: 0,
       completed: 0,
       blocked: 0,
       failed: 0,
+      cancelled: 0,
     },
   );
   return {
@@ -1981,6 +2007,10 @@ const ACCOUNT_MIRROR_COMPLETION_REQUEST_SCHEMA = z.object({
   provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
   runtimeProfile: z.string().trim().min(1).optional(),
   maxPasses: z.number().int().positive().max(500).optional(),
+});
+
+const ACCOUNT_MIRROR_COMPLETION_CONTROL_REQUEST_SCHEMA = z.object({
+  action: z.enum(['pause', 'resume', 'cancel']),
 });
 
 const STATUS_CONTROL_REQUEST_SCHEMA = z.union([
@@ -2341,7 +2371,7 @@ function parseAccountMirrorCompletionListQuery(searchParams: URLSearchParams): P
   const parsed = z.object({
     provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
     runtimeProfile: z.string().trim().min(1).optional(),
-    status: z.enum(['active', 'queued', 'running', 'completed', 'blocked', 'failed']).optional(),
+    status: z.enum(['active', 'queued', 'running', 'paused', 'completed', 'blocked', 'failed', 'cancelled']).optional(),
     activeOnly: z
       .enum(['0', '1', 'true', 'false'])
       .transform((value) => value === '1' || value.toLowerCase() === 'true')
@@ -2669,6 +2699,14 @@ function createOperatorBrowserDashboardHtml(): string {
 
       <section class="panel half">
         <h2>Mirror Live Follow</h2>
+        <div class="row" style="margin-bottom: 10px;">
+          <label>Completion ID
+            <input id="mirrorCompletionId" placeholder="acctmirror_completion_id">
+          </label>
+          <button id="pauseMirrorCompletion">Pause</button>
+          <button id="resumeMirrorCompletion">Resume</button>
+          <button id="cancelMirrorCompletion">Cancel</button>
+        </div>
         <pre id="mirrorCompletions">Loading...</pre>
       </section>
 
@@ -2795,6 +2833,36 @@ function createOperatorBrowserDashboardHtml(): string {
       };
     }
 
+    async function controlMirrorCompletion(action) {
+      const id = $('mirrorCompletionId').value.trim();
+      if (!id) {
+        $('mirrorCompletions').textContent = 'Enter a completion id.';
+        return;
+      }
+      for (const buttonId of ['pauseMirrorCompletion', 'resumeMirrorCompletion', 'cancelMirrorCompletion']) {
+        $(buttonId).disabled = true;
+      }
+      try {
+        const result = await fetch('/v1/account-mirrors/completions/' + encodeURIComponent(id), {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ action }),
+        });
+        const payload = await result.json();
+        if (!result.ok) {
+          throw new Error(asJson({ status: result.status, payload }));
+        }
+        $('mirrorCompletions').textContent = asJson({ controlled: payload });
+        await refreshStatus();
+      } catch (error) {
+        $('mirrorCompletions').textContent = String(error.message || error);
+      } finally {
+        for (const buttonId of ['pauseMirrorCompletion', 'resumeMirrorCompletion', 'cancelMirrorCompletion']) {
+          $(buttonId).disabled = false;
+        }
+      }
+    }
+
     async function refreshStatus() {
       $('serverSummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
       $('mirrorStatus').textContent = 'Loading...';
@@ -2853,6 +2921,9 @@ function createOperatorBrowserDashboardHtml(): string {
     }
 
     $('refreshStatus').addEventListener('click', refreshStatus);
+    $('pauseMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('pause'));
+    $('resumeMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('resume'));
+    $('cancelMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('cancel'));
     $('probeWorkbench').addEventListener('click', probeWorkbench);
     $('probeRun').addEventListener('click', probeRun);
     refreshStatus();

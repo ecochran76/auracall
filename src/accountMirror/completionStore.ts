@@ -154,7 +154,14 @@ function readProvider(value: unknown): AccountMirrorCompletionOperation['provide
 }
 
 function readStatus(value: unknown): AccountMirrorCompletionOperation['status'] {
-  if (value === 'running' || value === 'completed' || value === 'blocked' || value === 'failed') return value;
+  if (
+    value === 'running'
+    || value === 'paused'
+    || value === 'completed'
+    || value === 'blocked'
+    || value === 'failed'
+    || value === 'cancelled'
+  ) return value;
   return 'queued';
 }
 
@@ -191,7 +198,7 @@ function normalizeLimit(value: number | null | undefined): number | null {
 }
 
 function isActiveOperation(operation: AccountMirrorCompletionOperation): boolean {
-  return operation.status === 'queued' || operation.status === 'running';
+  return operation.status === 'queued' || operation.status === 'running' || operation.status === 'paused';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

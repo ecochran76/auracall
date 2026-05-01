@@ -2318,6 +2318,11 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `/status.accountMirrorCompletions` now reports completion metrics plus
     active/recent operations, and `/ops/browser` renders the same "Mirror Live
     Follow" posture for local operators
+  - added live-follow completion controls:
+    `POST /v1/account-mirrors/completions/{id}` with
+    `{"action":"pause|resume|cancel"}`,
+    `auracall api mirror-completion-control <id> pause|resume|cancel`, MCP
+    `account_mirror_completion_control`, and matching `/ops/browser` buttons
 - Verification target:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/completionService.test.ts`
   - `pnpm exec tsc --noEmit`

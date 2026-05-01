@@ -404,6 +404,10 @@ Each status payload should include:
 - `/status.accountMirrorCompletions` summarizes persisted completion metrics
   plus active and recent operations, and `/ops/browser` renders the same
   "Mirror Live Follow" posture for local operators.
+- Live-follow completion controls are available by id through API, CLI, MCP,
+  and `/ops/browser`: pause keeps the operation active but stopped, resume
+  relaunches the service-owned loop, and cancel records a terminal
+  `cancelled` state without touching provider browsers.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -422,7 +426,7 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add explicit operator controls for live-follow completion operations:
-pause/resume/cancel by completion id through API, CLI, MCP, and the local
-operator dashboard. This lets operators defer a background crawler without
-killing the AuraCall service or touching provider browser state.
+Add a deterministic no-browser smoke for completion controls that starts a
+local API server with an injected completion service, exercises
+pause/resume/cancel through HTTP, CLI, MCP, and `/status`, and proves no
+provider/browser dispatcher work is acquired.

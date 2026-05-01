@@ -1565,6 +1565,10 @@ describe('http responses adapter', () => {
     const list = vi.fn(() => [operation]);
     const read = vi.fn(() => operation);
     const start = vi.fn(() => operation);
+    const control = vi.fn(() => ({
+      ...operation,
+      status: 'paused' as const,
+    }));
     const server = await createResponsesHttpServer(
       { host: '127.0.0.1', port: 0 },
       {
@@ -1572,6 +1576,7 @@ describe('http responses adapter', () => {
           start,
           read,
           list,
+          control,
         },
       },
     );
@@ -1609,6 +1614,24 @@ describe('http responses adapter', () => {
         id: 'acctmirror_http_list',
       });
       expect(read).toHaveBeenCalledWith('acctmirror_http_list');
+
+      const controlResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/account-mirrors/completions/acctmirror_http_list`,
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ action: 'pause' }),
+        },
+      );
+      expect(controlResponse.status).toBe(200);
+      expect(await controlResponse.json()).toMatchObject({
+        id: 'acctmirror_http_list',
+        status: 'paused',
+      });
+      expect(control).toHaveBeenCalledWith({
+        id: 'acctmirror_http_list',
+        action: 'pause',
+      });
 
       const serverStatusResponse = await fetch(`http://127.0.0.1:${server.port}/status`);
       expect(serverStatusResponse.status).toBe(200);
@@ -13990,6 +14013,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('Probe Browser State');
       expect(html).toContain('Mirror Live Follow');
       expect(html).toContain('mirrorCompletions');
+      expect(html).toContain('mirrorCompletionId');
+      expect(html).toContain('pauseMirrorCompletion');
     } finally {
       await server.close();
     }

@@ -246,9 +246,12 @@ Terminology note:
   startup, so operators can keep polling the same id after service restarts.
   `auracall api mirror-completions --port <port> --status active` lists recent
   and active persisted completion operations without touching provider pages.
+  `auracall api mirror-completion-control <id> pause|resume|cancel --port
+  <port>` controls a live-follow operation without killing the API service or
+  touching provider browser state.
   `/status.accountMirrorCompletions` reports completion metrics plus active and
-  recent records, and `/ops/browser` renders the same live-follow posture in
-  the local operator dashboard.
+  recent records, and `/ops/browser` renders the same live-follow posture plus
+  pause/resume/cancel controls in the local operator dashboard.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

@@ -260,6 +260,11 @@
         active/recent operation arrays for operator readback
       - `/ops/browser` includes the "Mirror Live Follow" panel and renders the
         same active/recent completion posture from `/status`
+      - operator control is available with
+        `POST /v1/account-mirrors/completions/{completion_id}` body
+        `{"action":"pause|resume|cancel"}`; paused operations stay discoverable
+        in active readback, resume relaunches the service-owned loop, and cancel
+        records terminal `cancelled` without touching provider browsers
       - ChatGPT completion uses `includeHistory` plus `historyLimit`, which
         must scroll the left rail to load older conversations before claiming
         inventory completeness

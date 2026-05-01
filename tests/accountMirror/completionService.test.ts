@@ -225,6 +225,51 @@ describe('account mirror completion service', () => {
     expect(service.list({ limit: 1 })).toHaveLength(1);
   });
 
+  test('pauses, resumes, and cancels live-follow operations', async () => {
+    let resolveRefresh: (value: AccountMirrorRefreshResult) => void = () => undefined;
+    const requestRefresh = vi.fn(() => new Promise<AccountMirrorRefreshResult>((resolve) => {
+      resolveRefresh = resolve;
+    }));
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date('2026-04-30T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      now: () => new Date('2026-04-30T12:00:00.000Z'),
+      generateId: () => 'acctmirror_control',
+    });
+
+    service.start();
+    await waitFor(() => service.read('acctmirror_control')?.status === 'running');
+
+    expect(service.control({ id: 'acctmirror_control', action: 'pause' })).toMatchObject({
+      id: 'acctmirror_control',
+      status: 'paused',
+    });
+    expect(service.list({ status: 'active' }).map((operation) => operation.id)).toEqual([
+      'acctmirror_control',
+    ]);
+
+    resolveRefresh(createRefreshResult());
+    await waitFor(() => service.read('acctmirror_control')?.status === 'paused');
+    expect(service.read('acctmirror_control')?.passCount).toBe(0);
+
+    expect(service.control({ id: 'acctmirror_control', action: 'resume' })).toMatchObject({
+      status: 'queued',
+    });
+    await waitFor(() => service.read('acctmirror_control')?.status === 'running');
+    expect(requestRefresh).toHaveBeenCalledTimes(2);
+
+    expect(service.control({ id: 'acctmirror_control', action: 'cancel' })).toMatchObject({
+      status: 'cancelled',
+      completedAt: '2026-04-30T12:00:00.000Z',
+    });
+    expect(service.control({ id: 'missing', action: 'pause' })).toBeNull();
+  });
+
   test('defaults to live follow and keeps running after a complete refresh', async () => {
     const requestRefresh = vi.fn()
       .mockResolvedValueOnce(createRefreshResult())

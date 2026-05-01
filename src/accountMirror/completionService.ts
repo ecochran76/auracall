@@ -25,6 +25,11 @@ export interface AccountMirrorCompletionListRequest {
   limit?: number | null;
 }
 
+export interface AccountMirrorCompletionControlRequest {
+  id: string;
+  action: 'pause' | 'resume' | 'cancel';
+}
+
 export interface AccountMirrorCompletionOperation {
   object: 'account_mirror_completion';
   id: string;
@@ -32,7 +37,7 @@ export interface AccountMirrorCompletionOperation {
   runtimeProfileId: string;
   mode: 'live_follow' | 'bounded';
   phase: 'backfill_history' | 'steady_follow';
-  status: 'queued' | 'running' | 'completed' | 'blocked' | 'failed';
+  status: 'queued' | 'running' | 'paused' | 'completed' | 'blocked' | 'failed' | 'cancelled';
   startedAt: string;
   completedAt: string | null;
   nextAttemptAt: string | null;
@@ -50,6 +55,7 @@ export interface AccountMirrorCompletionService {
   start(request?: AccountMirrorCompletionStartRequest): AccountMirrorCompletionOperation;
   read(id: string): AccountMirrorCompletionOperation | null;
   list(request?: AccountMirrorCompletionListRequest): AccountMirrorCompletionOperation[];
+  control(request: AccountMirrorCompletionControlRequest): AccountMirrorCompletionOperation | null;
 }
 
 export function createAccountMirrorCompletionService(input: {
@@ -68,6 +74,7 @@ export function createAccountMirrorCompletionService(input: {
   const sleepImpl = input.sleep ?? sleep;
   const operations = new Map<string, AccountMirrorCompletionOperation>();
   const persistQueues = new Map<string, Promise<void>>();
+  const activeRuns = new Set<string>();
 
   for (const operation of input.initialOperations ?? []) {
     operations.set(operation.id, operation);
@@ -82,19 +89,32 @@ export function createAccountMirrorCompletionService(input: {
     return next;
   };
 
+  const shouldContinue = (id: string): boolean => operations.get(id)?.status === 'running';
+
+  const launch = (id: string) => {
+    if (activeRuns.has(id)) return;
+    activeRuns.add(id);
+    void run(id).finally(() => {
+      activeRuns.delete(id);
+    });
+  };
+
   const run = async (id: string) => {
-    update(id, { status: 'running' });
+    update(id, { status: 'running', completedAt: null });
     try {
       const operation = operations.get(id);
       if (!operation) return;
       if (operation.nextAttemptAt) {
         await sleepImpl(resolveDelayMs(operation.nextAttemptAt, now()));
+        if (!shouldContinue(id)) return;
         update(id, { nextAttemptAt: null });
       }
       let pass = operation.passCount;
       while (operation.maxPasses === null || pass < operation.maxPasses) {
+        if (!shouldContinue(id)) return;
         if (pass > 0) {
           await input.registry.refreshPersistentState?.();
+          if (!shouldContinue(id)) return;
           const entry = findTargetEntry(input.registry, operation.provider, operation.runtimeProfileId);
           if (entry?.mirrorCompleteness.state === 'complete') {
             if (operation.maxPasses !== null) {
@@ -114,6 +134,7 @@ export function createAccountMirrorCompletionService(input: {
         }
         let refresh: AccountMirrorRefreshResult;
         try {
+          if (!shouldContinue(id)) return;
           refresh = await input.refreshService.requestRefresh({
             provider: operation.provider,
             runtimeProfileId: operation.runtimeProfileId,
@@ -132,10 +153,12 @@ export function createAccountMirrorCompletionService(input: {
               error: null,
             });
             await sleepImpl(resolveDelayMs(eligibleAt, now()));
+            if (!shouldContinue(id)) return;
             continue;
           }
           throw error;
         }
+        if (!shouldContinue(id)) return;
         const nextPassCount = pass + 1;
         pass = nextPassCount;
         update(id, {
@@ -162,6 +185,7 @@ export function createAccountMirrorCompletionService(input: {
         completedAt: now().toISOString(),
       });
     } catch (error) {
+      if (!shouldContinue(id)) return;
       if (error instanceof AccountMirrorRefreshError) {
         update(id, {
           status: 'blocked',
@@ -186,8 +210,8 @@ export function createAccountMirrorCompletionService(input: {
 
   if (input.resumeActiveOperations) {
     for (const operation of operations.values()) {
-      if (isActiveOperation(operation)) {
-        void run(operation.id);
+      if (isRunnableOperation(operation)) {
+        launch(operation.id);
       }
     }
   }
@@ -214,7 +238,7 @@ export function createAccountMirrorCompletionService(input: {
       };
       operations.set(id, operation);
       persist(operation);
-      void run(id);
+      launch(id);
       return operation;
     },
     read(id: string) {
@@ -233,6 +257,37 @@ export function createAccountMirrorCompletionService(input: {
         .sort((left, right) => right.startedAt.localeCompare(left.startedAt));
       return limit === null ? results : results.slice(0, limit);
     },
+    control(request) {
+      const operation = operations.get(request.id);
+      if (!operation) return null;
+      if (request.action === 'pause') {
+        if (!isActiveOperation(operation)) return operation;
+        return update(operation.id, {
+          status: 'paused',
+          error: null,
+        });
+      }
+      if (request.action === 'resume') {
+        if (operation.status !== 'paused') return operation;
+        const resumed = update(operation.id, {
+          status: 'queued',
+          completedAt: null,
+          error: null,
+        });
+        launch(operation.id);
+        return resumed;
+      }
+      if (request.action === 'cancel') {
+        if (isTerminalOperation(operation)) return operation;
+        return update(operation.id, {
+          status: 'cancelled',
+          completedAt: now().toISOString(),
+          nextAttemptAt: null,
+          error: null,
+        });
+      }
+      return operation;
+    },
   };
   return service;
 
@@ -248,7 +303,15 @@ export function createAccountMirrorCompletionService(input: {
 }
 
 function isActiveOperation(operation: AccountMirrorCompletionOperation): boolean {
+  return operation.status === 'queued' || operation.status === 'running' || operation.status === 'paused';
+}
+
+function isRunnableOperation(operation: AccountMirrorCompletionOperation): boolean {
   return operation.status === 'queued' || operation.status === 'running';
+}
+
+function isTerminalOperation(operation: AccountMirrorCompletionOperation): boolean {
+  return operation.status === 'completed' || operation.status === 'blocked' || operation.status === 'failed' || operation.status === 'cancelled';
 }
 
 function findTargetEntry(
@@ -280,7 +343,15 @@ function normalizeListLimit(value: number | null | undefined): number | null {
 }
 
 function readCompletionStatus(value: AccountMirrorCompletionListRequest['status']): AccountMirrorCompletionOperation['status'] | null {
-  if (value === 'queued' || value === 'running' || value === 'completed' || value === 'blocked' || value === 'failed') {
+  if (
+    value === 'queued'
+    || value === 'running'
+    || value === 'paused'
+    || value === 'completed'
+    || value === 'blocked'
+    || value === 'failed'
+    || value === 'cancelled'
+  ) {
     return value;
   }
   return null;

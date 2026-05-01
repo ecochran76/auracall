@@ -109,6 +109,7 @@ import {
   readApiSchedulerHistoryForCli,
 } from '../src/cli/apiSchedulerHistoryCommand.js';
 import {
+  controlApiMirrorCompletionForCli,
   formatApiMirrorCompletionListCliSummary,
   formatApiMirrorCompletionCliSummary,
   listApiMirrorCompletionsForCli,
@@ -1073,7 +1074,7 @@ apiCommand
   .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
   .option('--provider <provider>', 'Filter by provider.')
   .option('--runtime-profile <profile>', 'Filter by runtime profile.')
-  .option('--status <status>', 'Filter by status: active, queued, running, completed, blocked, failed.')
+  .option('--status <status>', 'Filter by status: active, queued, running, paused, completed, blocked, failed, cancelled.')
   .option('--active-only', 'Show only queued/running completions.', false)
   .option('--limit <count>', 'Maximum completion records to read.', parseIntOption, 50)
   .option('--json', 'Emit machine-readable JSON output.', false)
@@ -1093,6 +1094,30 @@ apiCommand
       return;
     }
     console.log(formatApiMirrorCompletionListCliSummary(result));
+  });
+
+apiCommand
+  .command('mirror-completion-control')
+  .description('Pause, resume, or cancel a nonblocking account mirror completion operation.')
+  .argument('<id>', 'Account mirror completion id.')
+  .argument('<action>', 'Control action: pause, resume, or cancel.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .requiredOption('--port <number>', 'Local API port to query.', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, action: 'pause' | 'resume' | 'cancel', commandOptions) => {
+    const operation = await controlApiMirrorCompletionForCli({
+      id,
+      action,
+      host: commandOptions.host,
+      port: commandOptions.port,
+      timeoutMs: commandOptions.timeoutMs,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(operation, null, 2));
+      return;
+    }
+    console.log(formatApiMirrorCompletionCliSummary(operation));
   });
 
 apiCommand
