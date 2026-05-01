@@ -285,6 +285,12 @@ Lazy mirroring must remain lower priority than API-requested work:
   `readApiStatusForCli`, and MCP `api_status` all report
   `media-generation:chatgpt:image`, four remaining detail surfaces, and the
   expected resume cursor without launching browsers.
+- Low-churn live follow dogfood on 2026-05-01T00:34-00:37Z ran one
+  execute-enabled `run-once` against the bound default ChatGPT profile. The
+  pass completed without backpressure, advanced the attachment cursor to
+  `nextConversationIndex: 7`, reduced remaining detail surfaces from 68 to 67,
+  and left `latestYield` null because no response or media browser work queued
+  behind the mirror.
 - This first cooperative-yield contract is intentionally boundary-scoped: it
   yields between detail surfaces, not in the middle of a provider DOM read.
 - default routine intervals:

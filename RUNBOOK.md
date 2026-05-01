@@ -2159,3 +2159,31 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run docs:list`
   - `pnpm run plans:audit -- --keep 63`
   - `git diff --check`
+
+## Turn 73 | 2026-04-30
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: dogfood one low-churn live lazy-follow pass against the bound default
+  ChatGPT profile, then verify scheduler history and operator status reflect
+  the completed pass.
+- Proof:
+  - dry-run preflight on port `18091` showed default ChatGPT
+    `eligible`, `in_progress`, and 68 remaining detail surfaces
+  - execute-enabled `api serve` on port `18092` plus one `run-once` completed
+    from `2026-05-01T00:34:10.644Z` to `2026-05-01T00:37:19.705Z`
+  - refresh completed for `chatgpt/default`, detected identity
+    `ecochran76@gmail.com`, detected account level `Business`
+  - metadata counts after the pass were projects `5`, conversations `74`,
+    artifacts `39`, files `24`, media `0`
+  - attachment inventory advanced to `nextConversationIndex: 7`, scanned 6
+    conversations, and left 67 remaining detail surfaces
+  - scheduler history reported `refresh-completed`, `yielded: false`,
+    `backpressureReason: none`, and `latestYield: null`
+  - `auracall api status --port 18092` reported scheduler `idle`,
+    posture `healthy`, and latest lazy mirror action `refresh-completed`
+  - browser-operation locks were empty before and after the pass
+- Verification target:
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`

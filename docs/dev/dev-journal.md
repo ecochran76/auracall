@@ -24243,3 +24243,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - observed `latestYield.owner=media-generation:chatgpt:image`,
     `latestYield.remaining=4`, and `latestYield.nextConversationIndex=3`.
+
+## 2026-04-30 - Live lazy follow pass
+
+- Focus: dogfood the low-churn lazy follow path on the bound default ChatGPT
+  browser profile without submitting prompts or competing with other browser
+  work.
+- Progress:
+  - Dry-run preflight showed default ChatGPT eligible with 68 remaining
+    conversation detail surfaces.
+  - One execute-enabled `run-once` completed in about 189 seconds:
+    `2026-05-01T00:34:10.644Z` through `2026-05-01T00:37:19.705Z`.
+  - The refresh detected `ecochran76@gmail.com` on a `Business` account and
+    updated counts to projects `5`, conversations `74`, artifacts `39`, files
+    `24`, media `0`.
+  - The attachment cursor advanced to `nextConversationIndex: 7`; remaining
+    detail surfaces dropped from 68 to 67.
+  - Scheduler history showed `refresh-completed`, `yielded: false`,
+    `backpressureReason: none`, and `latestYield: null` because no response or
+    media browser work queued behind the mirror while it was running.
+  - Browser-operation locks were empty after shutdown.
+- Validation:
+  - `GET /v1/account-mirrors/scheduler/history?limit=5`
+  - `pnpm tsx bin/auracall.ts api status --port 18092`

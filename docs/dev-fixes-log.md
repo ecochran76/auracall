@@ -15185,3 +15185,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   short-lived local API server with an injected yielded pass proves the HTTP
   route, CLI summarizer, and MCP `api_status` shape without waking anti-bot
   surfaces.
+- 2026-04-30: Live lazy-follow dogfood should separately prove the healthy
+  no-yield path. A completed pass with `latestYield: null`, `yielded: false`,
+  and no browser-operation locks means the mirror had the lane to itself; keep
+  deterministic smoke coverage for the queued-yield path.
