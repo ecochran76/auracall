@@ -457,6 +457,10 @@ Each status payload should include:
   into a temp cache, restarts the API over the same cache, and proves `/status`,
   CLI `api status`, and MCP `api_status` preserve active paused posture without
   acquiring browser dispatcher or provider state.
+- `pnpm run smoke:ops-browser-control` verifies `/ops/browser` button wiring
+  points to `POST /status` with `accountMirrorCompletion`, then pauses a
+  fixture live-follow completion through that status-control path without
+  acquiring browser dispatcher or provider state.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -475,6 +479,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add a deterministic dashboard-control smoke that verifies the `/ops/browser`
-button wiring against the `POST /status` completion-control path without
-provider or browser dispatcher access.
+Add status/control expectation support for `/ops/browser` dashboard readback in
+the installed runtime, so operators can fail fast when dashboard completion
+control wiring drifts after packaging.

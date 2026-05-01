@@ -15268,3 +15268,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   Accept `accountMirrorCompletion` control bodies on `POST /status` and have
   `/ops/browser` use that path so inspection and pause/resume/cancel refresh
   the same status projection.
+- 2026-05-01: Dashboard live-follow controls need deterministic coverage.
+  Fetch `/ops/browser`, assert the button script posts
+  `accountMirrorCompletion` to `/status`, and exercise that same path against a
+  fixture completion service without provider/browser work.

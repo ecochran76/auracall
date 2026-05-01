@@ -102,6 +102,10 @@
   seed a paused live-follow completion in a temp cache, restart the API over the
   same cache, and verify `/status`, CLI status, and MCP `api_status` preserve
   active paused posture without provider or browser dispatcher access.
+- Deterministic dashboard-control smoke: run
+  `pnpm run smoke:ops-browser-control` to verify `/ops/browser` completion
+  buttons are wired to `POST /status` with `accountMirrorCompletion`, then
+  exercise that path against a fixture live-follow completion.
 
 ### `account_mirror_scheduler_history`
 - Inputs: `port` for the local `auracall api serve` listener; optional `host`,

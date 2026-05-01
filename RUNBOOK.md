@@ -2331,6 +2331,30 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `git diff --check`
   - `pnpm run install:user-runtime`
 
+## Turn 87 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: add deterministic `/ops/browser` completion-control coverage.
+- Change:
+  - added `scripts/smoke-ops-browser-completion-control.ts`
+  - added `pnpm run smoke:ops-browser-control`
+  - the smoke verifies dashboard button wiring and the `POST /status`
+    `accountMirrorCompletion` control path against a fixture completion service
+  - the fixture uses no provider or browser dispatcher access
+- Verification target:
+  - `pnpm run smoke:ops-browser-control`
+  - `pnpm run smoke:completion-control`
+  - `pnpm run smoke:completion-hydration`
+  - `pnpm run smoke:live-follow-health`
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+
 ## Turn 79 | 2026-05-01
 
 - Continued implementation plan:

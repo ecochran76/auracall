@@ -24599,6 +24599,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run install:user-runtime`
   - installed `smoke-account-mirror-completion-control.js`
 
+## Turn 87 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make `/ops/browser` live-follow control wiring deterministically
+  testable without opening a browser.
+- Change:
+  - added `pnpm run smoke:ops-browser-control`
+  - the smoke fetches `/ops/browser`, asserts the Mirror Live Follow buttons
+    are wired to `POST /status` with `accountMirrorCompletion`, then pauses a
+    fixture live-follow completion through that same status-control path
+  - it performs no provider work and does not acquire the browser dispatcher
+- Validation:
+  - `pnpm run smoke:ops-browser-control`
+  - `pnpm run smoke:completion-control`
+  - `pnpm run smoke:completion-hydration`
+  - `pnpm run smoke:live-follow-health`
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `smoke-ops-browser-completion-control.js`
+
 ## Turn 78 | 2026-05-01
 
 - Continued implementation plan:

@@ -28,6 +28,7 @@
     "smoke:completion-control": "tsx scripts/smoke-account-mirror-completion-control.ts",
     "smoke:completion-hydration": "tsx scripts/smoke-account-mirror-completion-hydration.ts",
     "smoke:live-follow-health": "tsx scripts/smoke-live-follow-health-parity.ts",
+    "smoke:ops-browser-control": "tsx scripts/smoke-ops-browser-completion-control.ts",
     "test:browser": "pnpm run build && tsx scripts/browser-service/test-browser.ts && ./scripts/browser-smoke.sh",
     "test:grok-smoke": "AURACALL_ALLOW_RAW_CDP=1 tsx scripts/browser-service/grok-dom-smoke.ts",
     "test:grok-acceptance": "tsx scripts/grok-acceptance.ts",
