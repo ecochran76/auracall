@@ -266,6 +266,22 @@ interface AccountMirrorSchedulerOperatorStatus {
   backpressureReason: string | null;
 }
 
+interface AccountMirrorCompletionStatusSummary {
+  object: 'account_mirror_completion_summary';
+  generatedAt: string;
+  metrics: {
+    total: number;
+    active: number;
+    queued: number;
+    running: number;
+    completed: number;
+    blocked: number;
+    failed: number;
+  };
+  active: AccountMirrorCompletionOperation[];
+  recent: AccountMirrorCompletionOperation[];
+}
+
 interface HttpStatusResponse {
   object: 'status';
   ok: true;
@@ -342,6 +358,7 @@ interface HttpStatusResponse {
     history: AccountMirrorSchedulerPassHistory;
   };
   accountMirrorStatus: AccountMirrorStatusSummary;
+  accountMirrorCompletions: AccountMirrorCompletionStatusSummary;
   executionHints: {
     headerNames: string[];
     bodyObject: 'auracall';
@@ -692,6 +709,7 @@ export async function createResponsesHttpServer(
           backgroundDrain: backgroundDrainState,
           accountMirrorScheduler: accountMirrorSchedulerState,
           accountMirrorStatus: accountMirrorStatusRegistry.readStatus(),
+          accountMirrorCompletions: createAccountMirrorCompletionStatusSummary(accountMirrorCompletionService, now),
         });
         sendJson(res, 200, statusResponse);
         return;
@@ -996,6 +1014,7 @@ export async function createResponsesHttpServer(
           backgroundDrain: backgroundDrainState,
           accountMirrorScheduler: accountMirrorSchedulerState,
           accountMirrorStatus: accountMirrorStatusRegistry.readStatus(),
+          accountMirrorCompletions: createAccountMirrorCompletionStatusSummary(accountMirrorCompletionService, now),
           controlResult,
         });
         sendJson(res, 200, statusResponse);
@@ -1476,7 +1495,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   }
   logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
-    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions/{completion_id}',
+    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET /v1/account-mirrors/completions/{completion_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   logger('Leave this terminal running; press Ctrl+C to stop auracall api serve.');
@@ -1660,6 +1679,7 @@ function createHttpStatusResponse(input: {
   backgroundDrain: HttpStatusResponse['backgroundDrain'];
   accountMirrorScheduler: HttpStatusResponse['accountMirrorScheduler'];
   accountMirrorStatus: AccountMirrorStatusSummary;
+  accountMirrorCompletions: AccountMirrorCompletionStatusSummary;
   controlResult?: HttpStatusResponse['controlResult'];
 }): HttpStatusResponse {
   return {
@@ -1715,6 +1735,7 @@ function createHttpStatusResponse(input: {
       operatorStatus: createAccountMirrorSchedulerOperatorStatus(input.accountMirrorScheduler),
     },
     accountMirrorStatus: input.accountMirrorStatus,
+    accountMirrorCompletions: input.accountMirrorCompletions,
     executionHints: {
       headerNames: [
         'X-AuraCall-Runtime-Profile',
@@ -1725,6 +1746,40 @@ function createHttpStatusResponse(input: {
       bodyObject: 'auracall',
     },
     controlResult: input.controlResult,
+  };
+}
+
+function createAccountMirrorCompletionStatusSummary(
+  service: AccountMirrorCompletionService,
+  now: () => Date,
+): AccountMirrorCompletionStatusSummary {
+  const all = service.list({ limit: 50 });
+  const active = service.list({ status: 'active', limit: 10 });
+  const metrics = all.reduce<AccountMirrorCompletionStatusSummary['metrics']>(
+    (acc, operation) => {
+      acc.total += 1;
+      acc[operation.status] += 1;
+      if (operation.status === 'queued' || operation.status === 'running') {
+        acc.active += 1;
+      }
+      return acc;
+    },
+    {
+      total: 0,
+      active: 0,
+      queued: 0,
+      running: 0,
+      completed: 0,
+      blocked: 0,
+      failed: 0,
+    },
+  );
+  return {
+    object: 'account_mirror_completion_summary',
+    generatedAt: now().toISOString(),
+    metrics,
+    active,
+    recent: all.slice(0, 10),
   };
 }
 
@@ -2612,6 +2667,11 @@ function createOperatorBrowserDashboardHtml(): string {
         <pre id="mirrorStatus">Loading...</pre>
       </section>
 
+      <section class="panel half">
+        <h2>Mirror Live Follow</h2>
+        <pre id="mirrorCompletions">Loading...</pre>
+      </section>
+
       <section class="panel wide">
         <h2>Browser Workbench Probe</h2>
         <div class="row" style="margin-bottom: 10px;">
@@ -2690,6 +2750,8 @@ function createOperatorBrowserDashboardHtml(): string {
       const binding = status.binding || {};
       const runner = status.runner || {};
       const scheduler = status.accountMirrorScheduler || {};
+      const completions = status.accountMirrorCompletions || {};
+      const completionMetrics = completions.metrics || {};
       const dashboard = status.routes && status.routes.operatorBrowserDashboard;
       $('serverSummary').innerHTML = [
         ['Status', status.ok ? '<span class="ok">ok</span>' : '<span class="bad">not ok</span>'],
@@ -2702,18 +2764,48 @@ function createOperatorBrowserDashboardHtml(): string {
         ['Mirror Posture', scheduler.operatorStatus ? scheduler.operatorStatus.posture : 'unknown'],
         ['Mirror Wake', scheduler.lastWakeReason || 'none'],
         ['Mirror Wake At', scheduler.lastWakeAt || 'never'],
+        ['Live Follow Active', String(completionMetrics.active || 0)],
+        ['Live Follow Recent', String(completionMetrics.total || 0)],
         ['Dashboard Route', dashboard || '/ops/browser'],
       ].map(([key, value]) => '<dt>' + key + '</dt><dd>' + value + '</dd>').join('');
+    }
+
+    function renderMirrorCompletions(status) {
+      const summary = status.accountMirrorCompletions || {};
+      const metrics = summary.metrics || {};
+      const active = Array.isArray(summary.active) ? summary.active : [];
+      const recent = Array.isArray(summary.recent) ? summary.recent : [];
+      $('mirrorCompletions').textContent = asJson({
+        metrics,
+        active: active.map(compactCompletion),
+        recent: recent.map(compactCompletion),
+      });
+    }
+
+    function compactCompletion(operation) {
+      return {
+        id: operation.id,
+        target: [operation.provider, operation.runtimeProfileId].filter(Boolean).join('/'),
+        status: operation.status,
+        mode: operation.mode,
+        phase: operation.phase,
+        passes: String(operation.passCount || 0) + '/' + (operation.maxPasses || 'unbounded'),
+        nextAttemptAt: operation.nextAttemptAt || null,
+        completedAt: operation.completedAt || null,
+      };
     }
 
     async function refreshStatus() {
       $('serverSummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
       $('mirrorStatus').textContent = 'Loading...';
+      $('mirrorCompletions').textContent = 'Loading...';
       try {
         const status = await fetchJson('/status');
         renderServerSummary(status);
+        renderMirrorCompletions(status);
       } catch (error) {
         $('serverSummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
+        $('mirrorCompletions').textContent = String(error.message || error);
       }
       try {
         $('mirrorStatus').textContent = asJson(await fetchJson('/v1/account-mirrors/status'));

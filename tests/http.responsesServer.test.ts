@@ -1609,6 +1609,29 @@ describe('http responses adapter', () => {
         id: 'acctmirror_http_list',
       });
       expect(read).toHaveBeenCalledWith('acctmirror_http_list');
+
+      const serverStatusResponse = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(serverStatusResponse.status).toBe(200);
+      expect(await serverStatusResponse.json()).toMatchObject({
+        accountMirrorCompletions: {
+          object: 'account_mirror_completion_summary',
+          metrics: {
+            total: 1,
+            active: 1,
+            running: 1,
+          },
+          active: [
+            {
+              id: 'acctmirror_http_list',
+            },
+          ],
+          recent: [
+            {
+              id: 'acctmirror_http_list',
+            },
+          ],
+        },
+      });
     } finally {
       await server.close();
     }
@@ -13965,6 +13988,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('diagnostics=browser-state');
       expect(html).toContain('/v1/runs/{run_id}/status');
       expect(html).toContain('Probe Browser State');
+      expect(html).toContain('Mirror Live Follow');
+      expect(html).toContain('mirrorCompletions');
     } finally {
       await server.close();
     }

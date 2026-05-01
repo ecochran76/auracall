@@ -24376,6 +24376,9 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Added list readback for persisted completion operations across API, CLI,
     and MCP so operators can discover active/recent live-follow posture without
     knowing the completion id.
+  - Added `/status.accountMirrorCompletions` and an `/ops/browser` "Mirror
+    Live Follow" panel so active/recent completion posture is visible from the
+    regular operator status surfaces.
 - Validation:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/completionService.test.ts`
   - `pnpm exec tsc --noEmit`

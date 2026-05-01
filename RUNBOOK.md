@@ -2315,6 +2315,9 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     without refreshing before an existing cooldown expires
   - completion list readback is cache/service-state only and must not launch a
     browser, acquire the dispatcher, or touch provider pages
+  - `/status.accountMirrorCompletions` now reports completion metrics plus
+    active/recent operations, and `/ops/browser` renders the same "Mirror Live
+    Follow" posture for local operators
 - Verification target:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/accountMirror/completionService.test.ts`
   - `pnpm exec tsc --noEmit`

@@ -255,6 +255,11 @@
       - operation records persist under the account-mirror cache and are
         hydrated on API/MCP startup; active records resume, and a persisted
         `nextAttemptAt` must be honored before the next refresh request
+      - `/status.accountMirrorCompletions` reports
+        `object = account_mirror_completion_summary`, aggregate metrics, and
+        active/recent operation arrays for operator readback
+      - `/ops/browser` includes the "Mirror Live Follow" panel and renders the
+        same active/recent completion posture from `/status`
       - ChatGPT completion uses `includeHistory` plus `historyLimit`, which
         must scroll the left rail to load older conversations before claiming
         inventory completeness

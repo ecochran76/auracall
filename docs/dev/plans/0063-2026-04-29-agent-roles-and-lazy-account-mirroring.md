@@ -401,6 +401,9 @@ Each status payload should include:
 - Persisted completion operations are listable through API/CLI/MCP filters for
   `status`, `provider`, `runtimeProfile`, and `limit`; list readback is
   service/cache-only and must not touch provider browsers.
+- `/status.accountMirrorCompletions` summarizes persisted completion metrics
+  plus active and recent operations, and `/ops/browser` renders the same
+  "Mirror Live Follow" posture for local operators.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -419,6 +422,7 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Surface active and recent mirror completions in the operator dashboard/status
-summary so humans can see live-follow posture without switching to raw API,
-CLI, or MCP calls.
+Add explicit operator controls for live-follow completion operations:
+pause/resume/cancel by completion id through API, CLI, MCP, and the local
+operator dashboard. This lets operators defer a background crawler without
+killing the AuraCall service or touching provider browser state.

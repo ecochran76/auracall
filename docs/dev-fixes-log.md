@@ -15222,3 +15222,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-01: Operators should not need a completion id to discover live-follow
   posture. Add cache/service-state list readback for persisted completion
   operations and keep it browser-free.
+- 2026-05-01: Live-follow posture belongs in the regular operator status
+  surface. `/status.accountMirrorCompletions` and the `/ops/browser` mirror
+  panel should expose active/recent completion operations without provider or
+  browser access.
