@@ -3,8 +3,10 @@ import { z } from 'zod';
 import {
   API_STATUS_ACCOUNT_MIRROR_POSTURES,
   API_STATUS_BACKPRESSURE_REASONS,
+  API_STATUS_LIVE_FOLLOW_SEVERITIES,
   assertApiStatusBackpressure,
   assertApiStatusCompletionMetrics,
+  assertApiStatusLiveFollowSeverity,
   assertApiStatusSchedulerPosture,
   readApiStatusForCli,
 } from '../../cli/apiStatusCommand.js';
@@ -15,6 +17,7 @@ const apiStatusInputShape = {
   timeoutMs: z.number().int().positive().optional(),
   expectedAccountMirrorPosture: z.enum(API_STATUS_ACCOUNT_MIRROR_POSTURES).optional(),
   expectedAccountMirrorBackpressure: z.enum(API_STATUS_BACKPRESSURE_REASONS).optional(),
+  expectedLiveFollowSeverity: z.enum(API_STATUS_LIVE_FOLLOW_SEVERITIES).optional(),
   expectedCompletionPaused: z.number().int().nonnegative().optional(),
   expectedCompletionCancelled: z.number().int().nonnegative().optional(),
   expectedCompletionFailed: z.number().int().nonnegative().optional(),
@@ -87,6 +90,7 @@ const apiStatusOutputShape = {
   }),
   liveFollow: z.object({
     line: z.string(),
+    severity: z.enum(API_STATUS_LIVE_FOLLOW_SEVERITIES),
     schedulerPosture: z.enum([...API_STATUS_ACCOUNT_MIRROR_POSTURES, 'unknown']),
     schedulerState: z.string().nullable(),
     backpressureReason: z.enum([...API_STATUS_BACKPRESSURE_REASONS, 'unknown']),
@@ -133,6 +137,9 @@ export function createApiStatusToolHandler(deps: RegisterApiStatusToolDeps = {})
     });
     assertApiStatusSchedulerPosture(summary, {
       expectedPosture: payload.expectedAccountMirrorPosture,
+    });
+    assertApiStatusLiveFollowSeverity(summary, {
+      expectedSeverity: payload.expectedLiveFollowSeverity,
     });
     assertApiStatusCompletionMetrics(summary, {
       expectedPaused: payload.expectedCompletionPaused,

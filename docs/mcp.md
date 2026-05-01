@@ -60,18 +60,21 @@
 ### `api_status`
 - Inputs: `port` for the local `auracall api serve` listener; optional `host`,
   `timeoutMs`, `expectedAccountMirrorPosture`, and
-  `expectedAccountMirrorBackpressure`. Completion-control assertions are also
-  available with `expectedCompletionActive`, `expectedCompletionPaused`,
+  `expectedAccountMirrorBackpressure`. Live-follow severity can be asserted
+  with `expectedLiveFollowSeverity` (`healthy`, `backpressured`, `paused`, or
+  `attention-needed`). Completion-control assertions are also available with
+  `expectedCompletionActive`, `expectedCompletionPaused`,
   `expectedCompletionCancelled`, and `expectedCompletionFailed`.
 - Behavior: reads the local API `/status` endpoint and returns the same compact
   scheduler summary used by `auracall api status`, including
   `scheduler.operatorStatus.posture`, wake reason, latest mirror backpressure,
   `scheduler.latestYield` when scheduler history contains a cooperative yield,
   and `completions` metrics plus active/recent controlled live-follow
-  operations. Structured output also includes `liveFollow.line`, a compact
-  operator summary combining scheduler posture, completion counts, backpressure,
-  and latest cooperative-yield evidence. It does not launch browsers, touch CDP,
-  submit provider work, or read provider pages.
+  operations. Structured output also includes `liveFollow.severity` and
+  `liveFollow.line`, a compact operator summary combining scheduler posture,
+  completion counts, backpressure, and latest cooperative-yield evidence. It
+  does not launch browsers, touch CDP, submit provider work, or read provider
+  pages.
 - Use this when an MCP operator needs to assert lazy mirror readiness or
   backpressure, or fail fast on live-follow control posture, without shelling
   out to the CLI. `account_mirror_status` remains the cache-only per-target

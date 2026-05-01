@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   assertApiStatusBackpressure,
   assertApiStatusCompletionMetrics,
+  assertApiStatusLiveFollowSeverity,
   assertApiStatusSchedulerPosture,
   formatApiStatusCliSummary,
   parseApiStatusAccountMirrorPosture,
   parseApiStatusBackpressureReason,
+  parseApiStatusLiveFollowSeverity,
   readApiStatusForCli,
   summarizeApiStatusPayload,
 } from '../../src/cli/apiStatusCommand.js';
@@ -186,7 +188,8 @@ describe('api status CLI helpers', () => {
         ],
       },
       liveFollow: {
-        line: 'Live follow health: posture=backpressured state=idle active=1 paused=1 failed=0 cancelled=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
+        line: 'Live follow health: severity=attention-needed posture=backpressured state=idle active=1 paused=1 failed=0 cancelled=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
+        severity: 'attention-needed',
         schedulerPosture: 'backpressured',
         schedulerState: 'idle',
         backpressureReason: 'routine-delayed',
@@ -203,7 +206,7 @@ describe('api status CLI helpers', () => {
       },
     });
     expect(formatApiStatusCliSummary(summary)).toContain(
-      'Live follow health: posture=backpressured state=idle active=1 paused=1 failed=0 cancelled=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
+      'Live follow health: severity=attention-needed posture=backpressured state=idle active=1 paused=1 failed=0 cancelled=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
       'Latest lazy mirror backpressure: routine-delayed - minimum interval has not elapsed',
@@ -279,6 +282,80 @@ describe('api status CLI helpers', () => {
     );
   });
 
+  it('asserts expected live-follow severity', () => {
+    const summary = summarizeApiStatusPayload(statusPayload, {
+      host: '127.0.0.1',
+      port: 18080,
+    });
+
+    expect(() => assertApiStatusLiveFollowSeverity(summary, {
+      expectedSeverity: 'attention-needed',
+    })).not.toThrow();
+    expect(() => assertApiStatusLiveFollowSeverity(summary, {
+      expectedSeverity: 'healthy',
+    })).toThrow(
+      'Expected liveFollow.severity to be healthy, got attention-needed.',
+    );
+  });
+
+  it('derives live-follow severity from scheduler and completion posture', () => {
+    const buildPayload = (
+      overrides: {
+        posture?: string;
+        backpressure?: string;
+        paused?: number;
+        failed?: number;
+        cancelled?: number;
+      },
+    ) => ({
+      ok: true,
+      accountMirrorScheduler: {
+        state: 'idle',
+        operatorStatus: {
+          posture: overrides.posture ?? 'healthy',
+        },
+        lastPass: {
+          backpressure: {
+            reason: overrides.backpressure ?? 'none',
+          },
+        },
+      },
+      accountMirrorCompletions: {
+        metrics: {
+          active: 0,
+          paused: overrides.paused ?? 0,
+          failed: overrides.failed ?? 0,
+          cancelled: overrides.cancelled ?? 0,
+        },
+      },
+    });
+
+    expect(summarizeApiStatusPayload(buildPayload({}), {
+      host: '127.0.0.1',
+      port: 18080,
+    }).liveFollow.severity).toBe('healthy');
+    expect(summarizeApiStatusPayload(buildPayload({
+      posture: 'backpressured',
+      backpressure: 'routine-delayed',
+    }), {
+      host: '127.0.0.1',
+      port: 18080,
+    }).liveFollow.severity).toBe('backpressured');
+    expect(summarizeApiStatusPayload(buildPayload({
+      posture: 'paused',
+      paused: 1,
+    }), {
+      host: '127.0.0.1',
+      port: 18080,
+    }).liveFollow.severity).toBe('paused');
+    expect(summarizeApiStatusPayload(buildPayload({
+      failed: 1,
+    }), {
+      host: '127.0.0.1',
+      port: 18080,
+    }).liveFollow.severity).toBe('attention-needed');
+  });
+
   it('reads /status through fetch for installed-runtime smoke use', async () => {
     const fetchImpl = async (url: string | URL | Request) => {
       expect(String(url)).toBe('http://127.0.0.1:18080/status');
@@ -312,6 +389,14 @@ describe('api status CLI helpers', () => {
     expect(parseApiStatusAccountMirrorPosture('backpressured')).toBe('backpressured');
     expect(() => parseApiStatusAccountMirrorPosture('blocked')).toThrow(
       'Invalid account mirror posture "blocked". Use one of:',
+    );
+  });
+
+  it('validates expected live-follow severity names', () => {
+    expect(parseApiStatusLiveFollowSeverity('healthy')).toBe('healthy');
+    expect(parseApiStatusLiveFollowSeverity('attention-needed')).toBe('attention-needed');
+    expect(() => parseApiStatusLiveFollowSeverity('blocked')).toThrow(
+      'Invalid live-follow severity "blocked". Use one of:',
     );
   });
 });

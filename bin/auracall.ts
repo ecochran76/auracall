@@ -99,10 +99,12 @@ import {
 import {
   assertApiStatusBackpressure,
   assertApiStatusCompletionMetrics,
+  assertApiStatusLiveFollowSeverity,
   assertApiStatusSchedulerPosture,
   formatApiStatusCliSummary,
   parseApiStatusAccountMirrorPosture,
   parseApiStatusBackpressureReason,
+  parseApiStatusLiveFollowSeverity,
   readApiStatusForCli,
 } from '../src/cli/apiStatusCommand.js';
 import {
@@ -1022,6 +1024,11 @@ apiCommand
     parseApiStatusAccountMirrorPosture,
   )
   .option(
+    '--expect-live-follow-severity <severity>',
+    'Fail unless liveFollow.severity matches.',
+    parseApiStatusLiveFollowSeverity,
+  )
+  .option(
     '--expect-completion-paused <count>',
     'Fail unless accountMirrorCompletions.metrics.paused matches.',
     parseIntOption,
@@ -1053,6 +1060,9 @@ apiCommand
     });
     assertApiStatusSchedulerPosture(summary, {
       expectedPosture: commandOptions.expectAccountMirrorPosture,
+    });
+    assertApiStatusLiveFollowSeverity(summary, {
+      expectedSeverity: commandOptions.expectLiveFollowSeverity,
     });
     assertApiStatusCompletionMetrics(summary, {
       expectedPaused: commandOptions.expectCompletionPaused,

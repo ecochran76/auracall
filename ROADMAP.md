@@ -64,8 +64,10 @@ Current State:
     under the account-mirror cache, hydrated on API/MCP startup, and listable
     for operator dashboards without knowing the id; `/status` and
     `/ops/browser` now surface active/recent live-follow posture directly, and
-    API/CLI/MCP/dashboard controls can pause, resume, or cancel a live-follow
-    operation by id; ChatGPT conversation inventory must scroll the infinite left rail when
+    CLI/MCP status can assert derived live-follow severity (`healthy`,
+    `backpressured`, `paused`, or `attention-needed`); API/CLI/MCP/dashboard
+    controls can pause, resume, or cancel a live-follow operation by id;
+    ChatGPT conversation inventory must scroll the infinite left rail when
     `includeHistory` and `historyLimit` are requested before claiming mirror
     completeness
 - open provider-capability follow-through:

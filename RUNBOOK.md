@@ -2191,6 +2191,33 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run plans:audit -- --keep 63`
   - `git diff --check`
 
+## Turn 81 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make live-follow health directly assertable by operators and MCP
+  callers.
+- Change:
+  - added derived `liveFollow.severity` with values `healthy`,
+    `backpressured`, `paused`, and `attention-needed`
+  - `auracall api status` now includes `severity=<value>` in the
+    `Live follow health:` line and supports
+    `--expect-live-follow-severity`
+  - MCP `api_status` exposes `liveFollow.severity` and supports
+    `expectedLiveFollowSeverity`
+  - the no-browser completion-control smoke now asserts `paused` severity
+    after pause and `attention-needed` severity after cancel
+- Verification target:
+  - `pnpm run smoke:completion-control`
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-completion-control.js`
+
 ## Turn 79 | 2026-05-01
 
 - Continued implementation plan:

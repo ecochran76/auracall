@@ -24421,6 +24421,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run install:user-runtime`
   - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-completion-control.js`
 
+## Turn 81 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make the compact live-follow health line actionable instead of only
+  descriptive.
+- Change:
+  - added derived `liveFollow.severity` values: `healthy`, `backpressured`,
+    `paused`, and `attention-needed`
+  - added `auracall api status --expect-live-follow-severity`
+  - added MCP `api_status.expectedLiveFollowSeverity`
+  - extended completion-control smoke coverage to assert severity after pause
+    and cancel without provider or browser work
+- Validation:
+  - `pnpm run smoke:completion-control`
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-completion-control.js`
+
 ## Turn 79 | 2026-05-01
 
 - Continued implementation plan:

@@ -19,6 +19,15 @@ export const API_STATUS_ACCOUNT_MIRROR_POSTURES = [
 
 export type ApiStatusAccountMirrorPosture = typeof API_STATUS_ACCOUNT_MIRROR_POSTURES[number];
 
+export const API_STATUS_LIVE_FOLLOW_SEVERITIES = [
+  'healthy',
+  'backpressured',
+  'paused',
+  'attention-needed',
+] as const;
+
+export type ApiStatusLiveFollowSeverity = typeof API_STATUS_LIVE_FOLLOW_SEVERITIES[number];
+
 export interface ApiStatusCliOptions {
   host?: string | null;
   port?: number | null;
@@ -38,6 +47,10 @@ export interface ApiStatusCompletionMetricsExpectation {
   expectedCancelled?: number | null;
   expectedFailed?: number | null;
   expectedActive?: number | null;
+}
+
+export interface ApiStatusLiveFollowSeverityExpectation {
+  expectedSeverity?: ApiStatusLiveFollowSeverity | null;
 }
 
 export interface ApiStatusBackpressureSummary {
@@ -98,6 +111,7 @@ export interface ApiStatusCompletionControlSummary {
 
 export interface ApiStatusLiveFollowHealthSummary {
   line: string;
+  severity: ApiStatusLiveFollowSeverity;
   schedulerPosture: ApiStatusSchedulerOperatorSummary['posture'];
   schedulerState: string | null;
   backpressureReason: ApiStatusBackpressureSummary['reason'];
@@ -240,6 +254,18 @@ export function assertApiStatusCompletionMetrics(
   }
 }
 
+export function assertApiStatusLiveFollowSeverity(
+  summary: ApiStatusCliSummary,
+  expectation: ApiStatusLiveFollowSeverityExpectation = {},
+): void {
+  const expectedSeverity = expectation.expectedSeverity ?? null;
+  if (!expectedSeverity) return;
+  const actualSeverity = summary.liveFollow.severity;
+  if (actualSeverity !== expectedSeverity) {
+    throw new Error(`Expected liveFollow.severity to be ${expectedSeverity}, got ${actualSeverity}.`);
+  }
+}
+
 export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string {
   const scheduler = summary.scheduler;
   const backpressure = scheduler.backpressure;
@@ -308,6 +334,19 @@ export function parseApiStatusBackpressureReason(value: string | undefined): Api
   }
   throw new Error(
     `Invalid backpressure reason "${value}". Use one of: ${API_STATUS_BACKPRESSURE_REASONS.join(', ')}.`,
+  );
+}
+
+export function parseApiStatusLiveFollowSeverity(
+  value: string | undefined,
+): ApiStatusLiveFollowSeverity | undefined {
+  if (value == null) return undefined;
+  const normalized = value.trim();
+  if (API_STATUS_LIVE_FOLLOW_SEVERITIES.includes(normalized as ApiStatusLiveFollowSeverity)) {
+    return normalized as ApiStatusLiveFollowSeverity;
+  }
+  throw new Error(
+    `Invalid live-follow severity "${value}". Use one of: ${API_STATUS_LIVE_FOLLOW_SEVERITIES.join(', ')}.`,
   );
 }
 
@@ -401,10 +440,12 @@ function summarizeLiveFollowHealth(
 ): ApiStatusLiveFollowHealthSummary {
   const metrics = completions.metrics;
   const latestYield = scheduler.latestYield;
+  const severity = deriveLiveFollowSeverity(scheduler, completions);
   const yieldText = latestYield
     ? `${latestYield.provider ?? 'unknown'}/${latestYield.runtimeProfileId ?? 'unknown'} remaining=${latestYield.remainingDetailSurfaces ?? 'unknown'} queued=${latestYield.queuedOwnerCommand ?? 'unknown'}`
     : 'none';
   const summary: Omit<ApiStatusLiveFollowHealthSummary, 'line'> = {
+    severity,
     schedulerPosture: scheduler.operatorStatus.posture,
     schedulerState: scheduler.state,
     backpressureReason: scheduler.backpressure.reason,
@@ -418,6 +459,7 @@ function summarizeLiveFollowHealth(
     ...summary,
     line: [
       'Live follow health:',
+      `severity=${summary.severity}`,
       `posture=${summary.schedulerPosture}`,
       `state=${summary.schedulerState ?? 'unknown'}`,
       `active=${formatNullableNumber(summary.activeCompletions)}`,
@@ -428,6 +470,34 @@ function summarizeLiveFollowHealth(
       `latestYield=${yieldText}`,
     ].join(' '),
   };
+}
+
+function deriveLiveFollowSeverity(
+  scheduler: ApiStatusSchedulerSummary,
+  completions: ApiStatusCompletionControlSummary,
+): ApiStatusLiveFollowSeverity {
+  const metrics = completions.metrics;
+  const failedCompletions = metrics.failed ?? 0;
+  const cancelledCompletions = metrics.cancelled ?? 0;
+  const pausedCompletions = metrics.paused ?? 0;
+  const schedulerPosture = scheduler.operatorStatus.posture;
+  const backpressureReason = scheduler.backpressure.reason;
+  if (
+    failedCompletions > 0
+    || cancelledCompletions > 0
+  ) {
+    return 'attention-needed';
+  }
+  if (pausedCompletions > 0 || schedulerPosture === 'paused') {
+    return 'paused';
+  }
+  if (schedulerPosture === 'unknown' || backpressureReason === 'unknown') {
+    return 'attention-needed';
+  }
+  if (schedulerPosture === 'backpressured' || backpressureReason !== 'none') {
+    return 'backpressured';
+  }
+  return 'healthy';
 }
 
 function summarizeCompletionOperation(value: unknown): ApiStatusCompletionOperationSummary {

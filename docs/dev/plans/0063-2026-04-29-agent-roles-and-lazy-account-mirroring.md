@@ -210,9 +210,14 @@ Current implementation-facing politeness contract:
   `--expect-completion-paused`, `--expect-completion-cancelled`, and
   `--expect-completion-failed`, plus matching MCP `api_status` inputs.
 - `auracall api status` now prints a `Live follow health:` line that combines
-  scheduler posture, scheduler state, completion-control counts, backpressure,
-  and latest cooperative-yield evidence. MCP `api_status` exposes the same
-  data in structured `liveFollow` content.
+  derived severity, scheduler posture, scheduler state, completion-control
+  counts, backpressure, and latest cooperative-yield evidence. MCP
+  `api_status` exposes the same data in structured `liveFollow` content.
+- The derived `liveFollow.severity` is now assertable through
+  `auracall api status --expect-live-follow-severity` and MCP
+  `api_status.expectedLiveFollowSeverity`, so operators can check `healthy`,
+  `backpressured`, `paused`, or `attention-needed` without rebuilding that
+  decision from raw scheduler and completion counts.
 - Installed-runtime execute dogfood started `api serve` with
   `--account-mirror-scheduler-interval-ms 600000` and
   `--account-mirror-scheduler-execute`, then triggered one manual
@@ -425,6 +430,9 @@ Each status payload should include:
 - `auracall api status` and MCP `api_status` expose compact live-follow health
   as a first-class summary instead of requiring operators to mentally combine
   scheduler, completion, and yield fields.
+- `auracall api status` and MCP `api_status` expose and assert derived
+  live-follow severity: `healthy`, `backpressured`, `paused`, or
+  `attention-needed`.
 - Live-follow completion controls are available by id through API, CLI, MCP,
   and `/ops/browser`: pause keeps the operation active but stopped, resume
   relaunches the service-owned loop, and cancel records a terminal
@@ -451,6 +459,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Add an expectation for live-follow health severity once the compact health
-summary has enough signal to distinguish healthy, backpressured, paused, and
-attention-needed states.
+Surface `liveFollow.severity` in the `/ops/browser` Mirror Live Follow panel so
+dashboard operators see the same `healthy`, `backpressured`, `paused`, and
+`attention-needed` state that CLI and MCP callers can assert.

@@ -7,6 +7,7 @@ import {
 } from '../src/cli/apiMirrorCompletionCommand.js';
 import {
   assertApiStatusCompletionMetrics,
+  assertApiStatusLiveFollowSeverity,
   readApiStatusForCli,
 } from '../src/cli/apiStatusCommand.js';
 import type {
@@ -171,6 +172,9 @@ async function main(): Promise<void> {
       expectedCancelled: 0,
       expectedFailed: 0,
     });
+    assertApiStatusLiveFollowSeverity(cliApiStatusAfterPause, {
+      expectedSeverity: 'paused',
+    });
     assertEqual(cliApiStatusAfterPause.completions.metrics.paused, 1, 'CLI api status paused count after pause');
     assertEqual(cliApiStatusAfterPause.completions.active[0]?.status, 'paused', 'CLI api status active operation paused');
 
@@ -210,6 +214,7 @@ async function main(): Promise<void> {
       expectedCompletionPaused: 0,
       expectedCompletionCancelled: 1,
       expectedCompletionFailed: 0,
+      expectedLiveFollowSeverity: 'attention-needed',
     });
     if (mcpApiStatusAfterCancel.isError) throw new Error('MCP api_status returned an error result.');
     const apiStatusStructured = mcpApiStatusAfterCancel.structuredContent as Awaited<ReturnType<typeof readApiStatusForCli>>;
@@ -238,6 +243,7 @@ async function main(): Promise<void> {
       `mcp.cancel=${(mcpCancel.structuredContent as AccountMirrorCompletionOperation).status}`,
       `status.cancelled=${finalStatus.accountMirrorCompletions?.metrics?.cancelled ?? 'unknown'}`,
       `api_status.cancelled=${apiStatusStructured.completions.metrics.cancelled ?? 'unknown'}`,
+      `api_status.severity=${apiStatusStructured.liveFollow.severity}`,
       'providerWork=none',
     ].join('\n'));
   } finally {

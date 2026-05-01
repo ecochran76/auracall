@@ -15244,3 +15244,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `auracall api status` should print `Live follow health:` with scheduler
   posture, completion counts, backpressure, and latest yield evidence; MCP
   `api_status` should expose the same fields as structured content.
+- 2026-05-01: The live-follow health line should include a derived severity
+  that operators and MCP callers can assert directly. Use
+  `healthy|backpressured|paused|attention-needed` instead of requiring each
+  caller to infer health from scheduler posture and completion counts.

@@ -112,6 +112,7 @@ describe('mcp api_status tool', () => {
       port: 18080,
       expectedAccountMirrorPosture: 'backpressured',
       expectedAccountMirrorBackpressure: 'routine-delayed',
+      expectedLiveFollowSeverity: 'attention-needed',
       expectedCompletionActive: 1,
       expectedCompletionCancelled: 1,
       expectedCompletionPaused: 0,
@@ -123,7 +124,7 @@ describe('mcp api_status tool', () => {
       content: [
         {
           type: 'text',
-          text: 'AuraCall API 127.0.0.1:18080 is ok; mirror posture backpressured; scheduler state idle; Live follow health: posture=backpressured state=idle active=1 paused=0 failed=0 cancelled=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
+          text: 'AuraCall API 127.0.0.1:18080 is ok; mirror posture backpressured; scheduler state idle; Live follow health: severity=attention-needed posture=backpressured state=idle active=1 paused=0 failed=0 cancelled=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
         },
       ],
       structuredContent: {
@@ -180,7 +181,8 @@ describe('mcp api_status tool', () => {
           ],
         },
         liveFollow: {
-          line: 'Live follow health: posture=backpressured state=idle active=1 paused=0 failed=0 cancelled=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
+          line: 'Live follow health: severity=attention-needed posture=backpressured state=idle active=1 paused=0 failed=0 cancelled=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
+          severity: 'attention-needed',
           schedulerPosture: 'backpressured',
           schedulerState: 'idle',
           backpressureReason: 'routine-delayed',
@@ -228,6 +230,22 @@ describe('mcp api_status tool', () => {
       expectedCompletionCancelled: 0,
     })).rejects.toThrow(
       'Expected accountMirrorCompletions.metrics.cancelled to be 0, got 1.',
+    );
+  });
+
+  it('fails when an expected live-follow severity does not match', async () => {
+    const handler = createApiStatusToolHandler({
+      fetchImpl: async () => new Response(JSON.stringify(statusPayload), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    });
+
+    await expect(handler({
+      port: 18080,
+      expectedLiveFollowSeverity: 'healthy',
+    })).rejects.toThrow(
+      'Expected liveFollow.severity to be healthy, got attention-needed.',
     );
   });
 });
