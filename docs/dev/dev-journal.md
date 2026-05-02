@@ -24890,6 +24890,37 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `Instant`, `Thinking - Extended`, `Pro - Extended`, and `Configure...`
     with `model-switcher-gpt-5-5-pro` checked
 
+## Turn 99 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md`
+- Goal: make ChatGPT capability discovery report Standard Thinking and
+  Standard Pro even though Standard is exposed through the Configure modal's
+  depth combobox rather than the top-level model lane.
+- Change:
+  - ChatGPT feature probing now performs a bounded transient selector
+    discovery: open the prompt-workbench model pill, inspect the model lane,
+    open Configure, inspect model radios, open the depth combobox, then close
+    transient UI with Escape
+  - feature signatures now carry `model_options`, `depth_options`,
+    `synthesized_options`, `selected_model`, and `selected_depth`
+  - workbench capability discovery now reports synthesized capabilities:
+    `chatgpt.model.thinking.standard`,
+    `chatgpt.model.thinking.extended`, `chatgpt.model.pro.standard`, and
+    `chatgpt.model.pro.extended`
+- Validation:
+  - `pnpm vitest run tests/workbenchCapabilities.test.ts tests/browser/modelSelection.test.ts tests/browser/thinkingTime.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run lint` (exit 0 with existing warning baseline)
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - source and installed `wsl-chrome-3` capability smokes both reported
+    `Thinking Standard`, `Thinking Extended`, `Pro Standard`, and
+    `Pro Extended` from `button.__composer-pill`; current selected state
+    remained `Pro Extended`
+
 ## Turn 78 | 2026-05-01
 
 - Continued implementation plan:

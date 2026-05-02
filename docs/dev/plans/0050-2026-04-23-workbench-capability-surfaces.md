@@ -59,6 +59,11 @@ a stable first-class adapter.
   prompt-workbench model control at `button.__composer-pill` with label
   `Instant`, while response actions still expose a separate
   `aria-label="Switch model"` button that should remain only a fallback.
+- ChatGPT model discovery now treats the model row and depth row as separate
+  controls. Capability reporting synthesizes `Thinking Standard`,
+  `Thinking Extended`, `Pro Standard`, and `Pro Extended` from live
+  `model_options` plus `depth_options` evidence instead of requiring all four
+  variants to be visible as top-level menu rows.
 - Grok browser-backed discovery now maps read-only Imagine feature evidence
   into `grok.media.imagine_image` and `grok.media.imagine_video` capability
   reports. Static Grok Imagine entries remain conservative until the managed
@@ -136,6 +141,9 @@ a stable first-class adapter.
   completion, and artifact/readback behavior.
 - [x] ChatGPT apps/connectors and business-plan skills are represented as
   account-gated capabilities when visible, not hard-coded universal tools.
+- [x] ChatGPT Thinking/Pro Standard/Extended combinations are represented from
+  discovered model/depth controls, with current selection metadata when the
+  provider exposes it.
 - [x] Tests cover schema normalization, provider-label aliasing, availability
   states, and one fake-provider API/MCP list path.
 

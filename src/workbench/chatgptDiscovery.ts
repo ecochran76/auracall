@@ -162,7 +162,7 @@ export function deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(
     capabilities.push({
       id: 'chatgpt.model.selector',
       provider: 'chatgpt',
-      providerLabels: labels.length > 0 ? labels : ['Model selector'],
+      providerLabels: mergeLabels(labels.length > 0 ? labels : ['Model selector'], signals.modelControls.synthesizedOptions),
       category: 'other',
       invocationMode: 'pre_prompt_toggle',
       surfaces: ['browser_service', 'cli', 'local_api', 'mcp'],
@@ -184,8 +184,44 @@ export function deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(
         ariaLabel: signals.modelControls.ariaLabel,
         location: signals.modelControls.location,
         selector: signals.modelControls.selector,
+        modelOptions: signals.modelControls.modelOptions,
+        depthOptions: signals.modelControls.depthOptions,
+        synthesizedOptions: signals.modelControls.synthesizedOptions,
+        selectedModel: signals.modelControls.selectedModel,
+        selectedDepth: signals.modelControls.selectedDepth,
       },
     });
+    for (const option of signals.modelControls.synthesizedOptions) {
+      const parsedOption = parseSynthesizedModelDepthOption(option);
+      if (!parsedOption) continue;
+      capabilities.push({
+        id: `chatgpt.model.${parsedOption.model}.${parsedOption.depth}`,
+        provider: 'chatgpt',
+        providerLabels: [option],
+        category: 'other',
+        invocationMode: 'pre_prompt_toggle',
+        surfaces: ['browser_service', 'cli', 'local_api', 'mcp'],
+        availability: 'available',
+        stability: 'observed',
+        requiredInputs: [],
+        output: {
+          artifactTypes: ['generated'],
+          description: `Selects ChatGPT ${option} before prompt submission.`,
+        },
+        safety: {
+          notes: ['ChatGPT exposes model and depth as separate controls; verify both before prompt submission.'],
+        },
+        observedAt,
+        source: 'browser_discovery',
+        metadata: {
+          featureSignatureSignal: 'model_controls',
+          model: parsedOption.model,
+          depth: parsedOption.depth,
+          selector: signals.modelControls.selector,
+          selected: signals.modelControls.selectedModel === parsedOption.labelModel && signals.modelControls.selectedDepth === parsedOption.labelDepth,
+        },
+      });
+    }
   }
 
   return capabilities.sort((left, right) => left.id.localeCompare(right.id));
@@ -213,6 +249,11 @@ function collectChatgptSignals(root: ChatgptFeatureObject): {
     ariaLabel?: string;
     location?: string;
     selector?: string;
+    modelOptions: string[];
+    depthOptions: string[];
+    synthesizedOptions: string[];
+    selectedModel?: string;
+    selectedDepth?: string;
   };
 } {
   const signals = {
@@ -223,6 +264,9 @@ function collectChatgptSignals(root: ChatgptFeatureObject): {
     skills: new Set<string>(),
     modelControls: {
       visible: false,
+      modelOptions: [],
+      depthOptions: [],
+      synthesizedOptions: [],
     },
   };
   collectFromObject(root, signals);
@@ -256,6 +300,11 @@ function collectFromObject(
       ariaLabel?: string;
       location?: string;
       selector?: string;
+      modelOptions: string[];
+      depthOptions: string[];
+      synthesizedOptions: string[];
+      selectedModel?: string;
+      selectedDepth?: string;
     };
   },
 ): void {
@@ -276,17 +325,35 @@ function normalizeModelControls(value: unknown): {
   ariaLabel?: string;
   location?: string;
   selector?: string;
+  modelOptions: string[];
+  depthOptions: string[];
+  synthesizedOptions: string[];
+  selectedModel?: string;
+  selectedDepth?: string;
 } {
   if (!value || typeof value !== 'object') {
-    return { visible: false };
+    return {
+      visible: false,
+      modelOptions: [],
+      depthOptions: [],
+      synthesizedOptions: [],
+    };
   }
   const record = value as Record<string, unknown>;
+  const modelOptions = normalizeDisplayStringArray(record.model_options ?? record.modelOptions);
+  const depthOptions = normalizeDisplayStringArray(record.depth_options ?? record.depthOptions);
+  const synthesizedOptions = normalizeDisplayStringArray(record.synthesized_options ?? record.synthesizedOptions);
   return {
     visible: record.visible === true,
     label: normalizeDisplayString(record.label),
     ariaLabel: normalizeDisplayString(record.aria_label ?? record.ariaLabel),
     location: normalizeDisplayString(record.location),
     selector: normalizeDisplayString(record.selector),
+    modelOptions,
+    depthOptions,
+    synthesizedOptions: synthesizedOptions.length > 0 ? synthesizedOptions : synthesizeModelDepthOptions(modelOptions, depthOptions),
+    selectedModel: normalizeDisplayString(record.selected_model ?? record.selectedModel),
+    selectedDepth: normalizeDisplayString(record.selected_depth ?? record.selectedDepth),
   };
 }
 
@@ -296,6 +363,49 @@ function normalizeDisplayString(value: unknown): string | undefined {
   }
   const normalized = value.replace(/\s+/g, ' ').trim();
   return normalized || undefined;
+}
+
+function normalizeDisplayStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return Array.from(new Set(value.map(normalizeDisplayString).filter((entry): entry is string => Boolean(entry))));
+}
+
+function synthesizeModelDepthOptions(modelOptions: string[], depthOptions: string[]): string[] {
+  const options: string[] = [];
+  for (const model of modelOptions) {
+    if (!/^(Thinking|Pro)$/i.test(model)) continue;
+    const modelLabel = model.slice(0, 1).toUpperCase() + model.slice(1).toLowerCase();
+    for (const depth of depthOptions) {
+      if (!/^(Standard|Extended)$/i.test(depth)) continue;
+      const depthLabel = depth.slice(0, 1).toUpperCase() + depth.slice(1).toLowerCase();
+      options.push(`${modelLabel} ${depthLabel}`);
+    }
+  }
+  return Array.from(new Set(options));
+}
+
+function parseSynthesizedModelDepthOption(value: string): {
+  model: 'thinking' | 'pro';
+  depth: 'standard' | 'extended';
+  labelModel: 'Thinking' | 'Pro';
+  labelDepth: 'Standard' | 'Extended';
+} | null {
+  const normalized = value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const model = normalized.includes('thinking') ? 'thinking' : normalized.includes('pro') ? 'pro' : null;
+  const depth = normalized.includes('standard') ? 'standard' : normalized.includes('extended') ? 'extended' : null;
+  if (!model || !depth) return null;
+  return {
+    model,
+    depth,
+    labelModel: model === 'thinking' ? 'Thinking' : 'Pro',
+    labelDepth: depth === 'standard' ? 'Standard' : 'Extended',
+  };
+}
+
+function mergeLabels(primary: string[], secondary: string[]): string[] {
+  return Array.from(new Set([...primary, ...secondary].filter(Boolean)));
 }
 
 function collectStringArray(value: unknown, sink: Set<string>): void {

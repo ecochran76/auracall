@@ -662,6 +662,11 @@ type ChatgptFeatureProbe = {
     aria_label?: string | null;
     location?: string | null;
     selector?: string | null;
+    model_options?: string[] | null;
+    depth_options?: string[] | null;
+    synthesized_options?: string[] | null;
+    selected_model?: string | null;
+    selected_depth?: string | null;
   } | null;
 };
 
@@ -3766,7 +3771,7 @@ function buildChatgptFeatureProbeExpression(): string {
   const flagTokens = JSON.stringify(CHATGPT_FEATURE_FLAG_TOKENS);
   const appTokens = JSON.stringify(CHATGPT_APP_TOKENS);
   const modelButtonSelectors = JSON.stringify(CHATGPT_PROVIDER.selectors.modelButton);
-  return `(() => {
+  return `(async () => {
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
     const lower = (value) => normalize(value).toLowerCase();
     const isVisible = (node) => {
@@ -3778,6 +3783,136 @@ function buildChatgptFeatureProbeExpression(): string {
     const addText = (sink, value) => {
       const normalized = lower(value);
       if (normalized) sink.push(normalized);
+    };
+    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const unique = (values) => Array.from(new Set(values.map((value) => normalize(value)).filter(Boolean)));
+    const click = (node) => {
+      if (!(node instanceof HTMLElement)) return false;
+      try {
+        node.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true }));
+      } catch {}
+      node.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window }));
+      try {
+        node.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerId: 1, pointerType: 'mouse', isPrimary: true }));
+      } catch {}
+      node.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, view: window }));
+      node.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+      return true;
+    };
+    const escapeOpenSurfaces = async () => {
+      for (let index = 0; index < 3; index += 1) {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }));
+        await wait(80);
+      }
+    };
+    const readOptionEntries = (root = document) => Array.from(root.querySelectorAll('button, [role="radio"], [role="option"], [role="combobox"], [role="menuitem"], [role="menuitemradio"]'))
+      .filter(isVisible)
+      .map((node) => ({
+        text: normalize(node.textContent || ''),
+        aria: normalize(node.getAttribute?.('aria-label') || ''),
+        role: normalize(node.getAttribute?.('role') || ''),
+        testid: normalize(node.getAttribute?.('data-testid') || ''),
+        checked: normalize(node.getAttribute?.('aria-checked') || node.getAttribute?.('data-state') || ''),
+      }))
+      .filter((entry) => entry.text || entry.aria || entry.testid);
+    const classifyModel = (entry) => {
+      const text = lower([entry.text, entry.aria, entry.testid].filter(Boolean).join(' '));
+      if (text.includes('model switcher') && text.includes('pro')) return 'Pro';
+      if (/\\bpro\\b/.test(text)) return 'Pro';
+      if (/\\bthinking\\b/.test(text)) return 'Thinking';
+      if (/\\binstant\\b/.test(text)) return 'Instant';
+      return null;
+    };
+    const classifyDepth = (entry) => {
+      const text = lower([entry.text, entry.aria].filter(Boolean).join(' '));
+      if (/\\bstandard\\b/.test(text)) return 'Standard';
+      if (/\\bextended\\b/.test(text)) return 'Extended';
+      return null;
+    };
+    const checked = (entry) => entry.checked === 'true' || entry.checked === 'checked' || entry.checked === 'selected';
+    const collectModelControlDetails = async (button) => {
+      const modelOptions = [];
+      const depthOptions = [];
+      let selectedModel = null;
+      let selectedDepth = null;
+      if (!button) {
+        return { model_options: modelOptions, depth_options: depthOptions, synthesized_options: [], selected_model: selectedModel, selected_depth: selectedDepth };
+      }
+      await escapeOpenSurfaces();
+      click(button);
+      await wait(500);
+      const menuEntries = readOptionEntries();
+      for (const entry of menuEntries) {
+        const model = classifyModel(entry);
+        if (model) {
+          modelOptions.push(model);
+          if (checked(entry)) selectedModel = model;
+        }
+        const depth = classifyDepth(entry);
+        if (depth) {
+          depthOptions.push(depth);
+          if (checked(entry)) selectedDepth = depth;
+        }
+      }
+      const configureNode = Array.from(document.querySelectorAll('[role="menu"] button, [role="menuitem"], button'))
+        .filter(isVisible)
+        .find((node) => lower([node.textContent || '', node.getAttribute?.('aria-label') || ''].join(' ')).includes('configure'));
+      if (configureNode) {
+        click(configureNode);
+        await wait(650);
+        const dialog = Array.from(document.querySelectorAll('[role="dialog"], [data-radix-dialog-content], div[aria-modal="true"]'))
+          .filter(isVisible)
+          .at(-1);
+        if (dialog) {
+          const dialogEntries = readOptionEntries(dialog);
+          for (const entry of dialogEntries) {
+            const model = classifyModel(entry);
+            if (model) {
+              modelOptions.push(model);
+              if (checked(entry)) selectedModel = model;
+            }
+            const depth = classifyDepth(entry);
+            if (depth) {
+              depthOptions.push(depth);
+              if (checked(entry)) selectedDepth = depth;
+            }
+          }
+          const depthCombo = Array.from(dialog.querySelectorAll('[role="combobox"], button'))
+            .filter(isVisible)
+            .find((node) => {
+              const text = lower([node.textContent || '', node.getAttribute?.('aria-label') || ''].join(' '));
+              return /\\bstandard\\b|\\bextended\\b|thinking time|effort|mode/.test(text);
+            });
+          if (depthCombo) {
+            click(depthCombo);
+            await wait(500);
+            for (const entry of readOptionEntries()) {
+              const depth = classifyDepth(entry);
+              if (depth) {
+                depthOptions.push(depth);
+                if (checked(entry)) selectedDepth = depth;
+              }
+            }
+          }
+        }
+      }
+      await escapeOpenSurfaces();
+      const normalizedModels = unique(modelOptions);
+      const normalizedDepths = unique(depthOptions);
+      const synthesized = [];
+      for (const model of normalizedModels) {
+        if (model !== 'Thinking' && model !== 'Pro') continue;
+        for (const depth of normalizedDepths) {
+          synthesized.push(model + ' ' + depth);
+        }
+      }
+      return {
+        model_options: normalizedModels,
+        depth_options: normalizedDepths,
+        synthesized_options: unique(synthesized),
+        selected_model: selectedModel,
+        selected_depth: selectedDepth,
+      };
     };
     const detector = ${detector};
     const flagTokens = ${flagTokens};
@@ -3832,6 +3967,7 @@ function buildChatgptFeatureProbeExpression(): string {
     }
     const modelButton = modelButtons[0] || null;
     const composerRoot = modelButton?.closest?.('[data-testid*="composer"], form, [contenteditable="true"], .__composer-pill, [class*="composer"]') || null;
+    const modelControlDetails = await collectModelControlDetails(modelButton);
     const model_controls = modelButton
       ? {
           visible: true,
@@ -3841,6 +3977,7 @@ function buildChatgptFeatureProbeExpression(): string {
           selector: modelButton.getAttribute?.('data-testid') === 'model-switcher-dropdown-button'
             ? '[data-testid="model-switcher-dropdown-button"]'
             : (modelButton.matches?.('button.__composer-pill') ? 'button.__composer-pill' : (lower(modelButton.getAttribute?.('aria-label') || '').includes('switch model') ? 'button[aria-label="Switch model"]' : null)),
+          ...modelControlDetails,
         }
       : { visible: false };
     return {
@@ -3902,7 +4039,23 @@ function normalizeChatgptModelControlProbe(
   const ariaLabel = normalizeUiText(value.aria_label);
   const location = normalizeUiText(value.location);
   const selector = normalizeUiText(value.selector);
-  if (visible === undefined && !label && !ariaLabel && !location && !selector) {
+  const modelOptions = normalizeUiTextList(value.model_options);
+  const depthOptions = normalizeUiTextList(value.depth_options);
+  const synthesizedOptions = normalizeUiTextList(value.synthesized_options);
+  const selectedModel = normalizeUiText(value.selected_model);
+  const selectedDepth = normalizeUiText(value.selected_depth);
+  if (
+    visible === undefined &&
+    !label &&
+    !ariaLabel &&
+    !location &&
+    !selector &&
+    modelOptions.length === 0 &&
+    depthOptions.length === 0 &&
+    synthesizedOptions.length === 0 &&
+    !selectedModel &&
+    !selectedDepth
+  ) {
     return undefined;
   }
   return {
@@ -3911,12 +4064,25 @@ function normalizeChatgptModelControlProbe(
     aria_label: ariaLabel || undefined,
     location: location || undefined,
     selector: selector || undefined,
+    model_options: modelOptions.length > 0 ? modelOptions : undefined,
+    depth_options: depthOptions.length > 0 ? depthOptions : undefined,
+    synthesized_options: synthesizedOptions.length > 0 ? synthesizedOptions : undefined,
+    selected_model: selectedModel || undefined,
+    selected_depth: selectedDepth || undefined,
   };
+}
+
+function normalizeUiTextList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return Array.from(new Set(value.map((entry) => normalizeUiText(typeof entry === 'string' ? entry : null)).filter(Boolean)));
 }
 
 async function readChatgptFeatureSignature(client: ChromeClient): Promise<string | null> {
   const result = await client.Runtime.evaluate({
     expression: buildChatgptFeatureProbeExpression(),
+    awaitPromise: true,
     returnByValue: true,
   });
   return normalizeChatgptFeatureSignature(

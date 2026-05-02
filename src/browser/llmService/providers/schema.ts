@@ -15,6 +15,11 @@ export const ChatgptFeatureSchema = z.object({
     aria_label: z.string().optional(),
     location: z.string().optional(),
     selector: z.string().optional(),
+    model_options: z.array(z.string()).optional(),
+    depth_options: z.array(z.string()).optional(),
+    synthesized_options: z.array(z.string()).optional(),
+    selected_model: z.string().optional(),
+    selected_depth: z.string().optional(),
   }).optional(),
 });
 

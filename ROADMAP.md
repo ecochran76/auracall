@@ -998,6 +998,10 @@ Safety note:
     now reports `chatgpt.model.selector` with label `Extended Pro`, location
     `prompt_workbench`, and selector `button.__composer-pill`; concurrent
     feature probes are correctly fenced by the dispatcher
+  - ChatGPT capability discovery now synthesizes `Thinking Standard`,
+    `Thinking Extended`, `Pro Standard`, and `Pro Extended` from separate
+    model/depth controls, so callers can discover Standard Pro/Thinking even
+    when the top-level picker only shows the active depth
   - the next bounded implementation target is Grok Imagine materialization
     hardening under Plan 0061
 
