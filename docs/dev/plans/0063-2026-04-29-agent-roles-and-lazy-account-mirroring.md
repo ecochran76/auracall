@@ -644,5 +644,7 @@ then let default Gemini/Grok complete one routine pass. The first restarted
 status poll now shows both enabled default targets running with
 `attentionNeeded: 0`. The browser dashboard now renders
 `status.liveFollow.targets` in the Mirror Live Follow panel; after the default
-Gemini/Grok pass completes cleanly, add provider-specific detail collectors
-only where stable detail surfaces are proven.
+Gemini/Grok pass completed cleanly, live-follow severity was adjusted so
+healthy enabled targets are not masked by stale terminal completion history.
+Next, add provider-specific detail collectors only where stable detail surfaces
+are proven.

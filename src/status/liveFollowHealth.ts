@@ -90,6 +90,7 @@ export function summarizeLiveFollowHealth(input: LiveFollowHealthInput): LiveFol
       pausedCompletions: input.pausedCompletions,
       failedCompletions: input.failedCompletions,
       cancelledCompletions: input.cancelledCompletions,
+      targets: input.targets ?? null,
     }),
     schedulerPosture,
     schedulerState: input.schedulerState,
@@ -128,6 +129,7 @@ export function deriveLiveFollowSeverity(input: {
   pausedCompletions: number | null;
   failedCompletions: number | null;
   cancelledCompletions: number | null;
+  targets?: LiveFollowTargetRollup | null;
 }): LiveFollowSeverity {
   const failedCompletions = input.failedCompletions ?? 0;
   const cancelledCompletions = input.cancelledCompletions ?? 0;
@@ -135,6 +137,17 @@ export function deriveLiveFollowSeverity(input: {
   const activeCompletions = input.activeCompletions ?? 0;
   const schedulerPosture = normalizeLabel(input.schedulerPosture);
   const backpressureReason = normalizeLabel(input.backpressureReason);
+  if (input.targets && input.targets.enabled > 0) {
+    if (input.targets.attentionNeeded > 0 || input.targets.missingIdentity > 0) {
+      return 'attention-needed';
+    }
+    if (input.targets.paused > 0 || schedulerPosture === 'paused') {
+      return 'paused';
+    }
+    if (input.targets.active > 0 || input.targets.complete + input.targets.inProgress >= input.targets.enabled) {
+      return 'healthy';
+    }
+  }
   if (
     failedCompletions > 0
     || cancelledCompletions > 0

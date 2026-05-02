@@ -25416,3 +25416,40 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     dashboard contract
   - direct `/ops/browser` HTML proof confirmed `mirrorTargets` and
     `status.liveFollow.targets` are present
+
+## Turn 85 | 2026-05-02
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: remove the false top-level live-follow alert after default Gemini/Grok
+  recovered and reached steady follow.
+- Dogfood finding:
+  - installed `18095` status showed default `gemini/default` and `grok/default`
+    both in `steady_follow`, `passCount: 2`, `mirrorCompleteness: complete`,
+    and enabled-target `attentionNeeded: 0`
+  - top-level `liveFollow.severity` still reported `attention-needed` because
+    old terminal completion records were counted globally
+- Change:
+  - live-follow severity now lets configured target health take precedence when
+    `status.liveFollow.targets` is present
+  - stale failed/cancelled completion history remains visible, but no longer
+    forces an alert when enabled targets are active or complete with no target
+    attention needed
+- Validation:
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts --maxWorkers 1`
+  - `pnpm exec biome lint src/status/liveFollowHealth.ts tests/cli/apiStatusCommand.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - restarted the `127.0.0.1:18095` service on the patched installed runtime;
+    final PID is `124878`
+  - installed `auracall api status --port 18095` now reports
+    `Live follow health: severity=healthy` while still showing three historical
+    failed completions
+  - `Live follow targets` reports `enabled=2`, `active=2`, `complete=2`, and
+    `attention=0`
+  - installed `auracall api ops-browser-status --port 18095` also reports
+    `severity=healthy`

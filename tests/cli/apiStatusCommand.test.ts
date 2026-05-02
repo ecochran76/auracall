@@ -424,6 +424,36 @@ describe('api status CLI helpers', () => {
       host: '127.0.0.1',
       port: 18080,
     }).liveFollow.severity).toBe('attention-needed');
+
+    expect(summarizeApiStatusPayload({
+      ...buildPayload({
+        active: 2,
+        failed: 3,
+      }),
+      liveFollow: {
+        targets: {
+          total: 9,
+          enabled: 2,
+          disabled: 0,
+          unconfigured: 7,
+          missingIdentity: 0,
+          unsupported: 0,
+          active: 2,
+          queued: 0,
+          running: 2,
+          paused: 0,
+          attentionNeeded: 0,
+          complete: 2,
+          inProgress: 0,
+          none: 0,
+          unknown: 0,
+          accounts: [],
+        },
+      },
+    }, {
+      host: '127.0.0.1',
+      port: 18080,
+    }).liveFollow.severity).toBe('healthy');
   });
 
   it('treats a recovered running live-follow completion as healthy while scheduler backpressure is not yet known', () => {

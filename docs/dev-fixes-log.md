@@ -15398,3 +15398,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `status.liveFollow.targets` so operators can distinguish enabled, active,
   disabled, unconfigured, complete, in-progress, and attention-needed accounts
   without opening raw `/status`.
+- 2026-05-02: Top-level live-follow severity should not stay red because of
+  stale terminal completion history after configured targets have recovered.
+  When `status.liveFollow.targets` exists, enabled target attention/completeness
+  should drive severity first; old failures remain visible as history.
