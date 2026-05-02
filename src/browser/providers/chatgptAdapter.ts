@@ -860,6 +860,14 @@ async function recoverVisibleChatgptBlockingSurfaceWithClient(
   }
 }
 
+export async function recoverVisibleChatgptBlockingSurfaceWithClientForTest(
+  client: ChromeClient,
+  match: ChatgptBlockingSurfaceMatch,
+  options?: BrowserProviderListOptions,
+): Promise<ChatgptRecoveryActionResult | null> {
+  return recoverVisibleChatgptBlockingSurfaceWithClient(client, match, options);
+}
+
 async function withChatgptBlockingSurfaceRecovery<T>(
   client: ChromeClient,
   action: string,

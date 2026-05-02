@@ -24,6 +24,11 @@ rules learned from Gemini and Grok.
 - The ChatGPT adapter now treats `preserveActiveTab` as authoritative for that
   payload-capture path: direct backend fetch may run, but reload/network-capture
   fallback is skipped and blocking-surface recovery reload is skipped.
+- 2026-05-02 source follow-up added focused coverage proving blocking-surface
+  reload recovery returns a skipped `navigation-forbidden` action and does not
+  call DevTools `Page.reload` when `preserveActiveTab` is set. Existing ChatGPT
+  media executor coverage already proves readback and materialization pass
+  `preserveActiveTab` on the submitted tab.
 
 ## Target Contract
 
@@ -59,7 +64,7 @@ rules learned from Gemini and Grok.
   media-generation artifact directory.
 - [x] Unit coverage proves `preserveActiveTab` forbids ChatGPT payload reload
   during readback.
-- [ ] Unit coverage proves `preserveActiveTab` forbids blocking-surface reload
+- [x] Unit coverage proves `preserveActiveTab` forbids blocking-surface reload
   recovery during readback/materialization.
 - [ ] One supervised live smoke proves the end-to-end path only after the
   no-navigation unit path is green.

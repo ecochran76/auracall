@@ -24945,6 +24945,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     dogfood state: one active completion, zero paused/failed/cancelled
     completions, ordinary `routine-delayed` cooldown, and healthy status
 
+## Turn 102 | 2026-05-02
+
+- Continued implementation plan:
+  `docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md`
+- Goal: finish the deterministic no-navigation guardrail before any supervised
+  ChatGPT image live smoke.
+- Change:
+  - added focused coverage for ChatGPT blocking-surface recovery under
+    `preserveActiveTab`
+  - the test proves reload recovery returns a skipped
+    `navigation-forbidden` result and does not call DevTools `Page.reload`
+  - paired with existing media executor coverage proving ChatGPT image
+    readback and materialization pass `preserveActiveTab` with the submitted
+    tab target id
+- Validation:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts
+    tests/mediaGenerationChatgptBrowserExecutor.test.ts --maxWorkers 1`
+
 ## Turn 100 | 2026-05-01
 
 - Continued implementation plan:

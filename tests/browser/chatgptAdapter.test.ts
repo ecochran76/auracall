@@ -28,6 +28,7 @@ import {
   normalizeChatgptConversationLinkProbes,
   normalizeChatgptProjectSourceProbes,
   normalizeChatgptProjectId,
+  recoverVisibleChatgptBlockingSurfaceWithClientForTest,
   readChatgptConversationPayloadWithClient,
   resolveChatgptCanvasArtifactContentText,
   isRetryableChatgptTransientMessage,
@@ -290,6 +291,42 @@ describe('readChatgptConversationPayloadWithClient', () => {
     expect(client.Network.enable).not.toHaveBeenCalled();
     expect(client.Page.enable).not.toHaveBeenCalled();
     expect(client.Page.reload).not.toHaveBeenCalled();
+  });
+});
+
+describe('recoverVisibleChatgptBlockingSurfaceWithClient', () => {
+  test('skips reload recovery when preserveActiveTab is set', async () => {
+    const client = {
+      // biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
+      Page: {
+        enable: vi.fn(),
+        reload: vi.fn(),
+      },
+      // biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names.
+      Runtime: {
+        evaluate: vi.fn(),
+      },
+    };
+
+    await expect(
+      recoverVisibleChatgptBlockingSurfaceWithClientForTest(
+        client as never,
+        {
+          kind: 'transient-error',
+          summary: 'Something went wrong while generating the response.',
+          selector: null,
+        },
+        { preserveActiveTab: true },
+      ),
+    ).resolves.toEqual({
+      action: 'reload-page',
+      outcome: 'skipped',
+      summary: 'Something went wrong while generating the response.:navigation-forbidden',
+    });
+
+    expect(client.Page.enable).not.toHaveBeenCalled();
+    expect(client.Page.reload).not.toHaveBeenCalled();
+    expect(client.Runtime.evaluate).not.toHaveBeenCalled();
   });
 });
 
