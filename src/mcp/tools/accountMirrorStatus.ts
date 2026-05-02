@@ -80,6 +80,14 @@ const accountMirrorStatusEntryShape = z.object({
     }),
   }).nullable(),
   mirrorCompleteness: mirrorCompletenessShape,
+  liveFollow: z.object({
+    configured: z.boolean(),
+    enabled: z.boolean(),
+    state: z.enum(['enabled', 'disabled', 'unconfigured', 'missing_identity', 'unsupported']),
+    reason: z.string(),
+    mode: z.string().nullable(),
+    priority: z.string().nullable(),
+  }),
   limits: z.object({
     minIntervalMs: z.number(),
     explicitRefreshMinIntervalMs: z.number(),

@@ -25209,3 +25209,47 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run install:user-runtime`
   - installed `node ~/.auracall/user-runtime/node_modules/auracall/dist/scripts/smoke-account-mirror-completion-control.js`
+
+## Turn 79 | 2026-05-02
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make live-follow account selection config-owned instead of relying on
+  manually started completions.
+- Live state check:
+  - installed service on `127.0.0.1:18095` is healthy and intentionally still
+    running
+  - `chatgpt/wsl-chrome-2` remains at `passCount: 4`, `backfill_history`, with
+    34 remaining detail surfaces and next polite attempt
+    `2026-05-02T18:50:25.145Z`
+- Change:
+  - account mirror status entries now expose `liveFollow` desired state from
+    `runtimeProfiles.<profile>.services.<provider>.liveFollow`
+  - desired states distinguish enabled, disabled, unconfigured,
+    missing-identity, and unsupported provider accounts
+  - MCP `account_mirror_status` schema now carries the same desired-state
+    projection
+  - `api serve` now reconciles enabled ChatGPT accounts into one durable
+    live-follow completion and skips existing active live-follow completions
+    instead of duplicating them
+- Validation:
+  - `pnpm vitest run tests/accountMirror/statusRegistry.test.ts tests/accountMirror/liveFollowReconciler.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm vitest run tests/accountMirror/statusRegistry.test.ts tests/accountMirror/liveFollowReconciler.test.ts tests/mcp.accountMirrorStatus.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run lint` (existing warning baseline only)
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - restarted the `127.0.0.1:18095` service on the patched installed runtime;
+    final PID is `3476786`
+  - the old PID `2756850` survived the first termination signal without the
+    listener, held the in-flight `wsl-chrome-2` dispatcher operation, and had
+    to be explicitly terminated
+  - the previous `wsl-chrome-2` completion became terminal `blocked`, so a
+    replacement live-follow completion was started:
+    `acctmirror_completion_6a0feaa3-0b69-4027-b6d1-b53b2a69c3a6`
+  - raw `/status` now reports `activeCompletions: 2`: `wsl-chrome-2` in
+    `backfill_history` with 34 remaining detail surfaces and next attempt
+    `2026-05-02T19:20:52.817Z`, plus `wsl-chrome-3` in `steady_follow`

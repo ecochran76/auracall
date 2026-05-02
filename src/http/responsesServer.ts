@@ -125,6 +125,7 @@ import {
   type AccountMirrorCompletionOperation,
   type AccountMirrorCompletionService,
 } from '../accountMirror/completionService.js';
+import { reconcileConfiguredAccountMirrorLiveFollow } from '../accountMirror/liveFollowReconciler.js';
 import { createAccountMirrorCompletionStore } from '../accountMirror/completionStore.js';
 import type { AccountMirrorProvider } from '../accountMirror/politePolicy.js';
 import {
@@ -453,6 +454,12 @@ export async function createResponsesHttpServer(
     onPersistError: (error, operation) => {
       logger(`Account mirror completion ${operation.id} persist failed: ${error instanceof Error ? error.message : String(error)}`);
     },
+  });
+  await reconcileConfiguredAccountMirrorLiveFollow({
+    registry: accountMirrorStatusRegistry,
+    completionService: accountMirrorCompletionService,
+  }).catch((error) => {
+    logger(`Account mirror live-follow reconcile failed: ${error instanceof Error ? error.message : String(error)}`);
   });
   const workbenchCapabilityService = createWorkbenchCapabilityService({
     now,

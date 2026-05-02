@@ -15,10 +15,18 @@ const config = {
             email: 'ecochran76@gmail.com',
             accountLevel: 'Business',
           },
+          liveFollow: {
+            enabled: true,
+            mode: 'metadata-first',
+            priority: 'background',
+          },
         },
         gemini: {
           identity: {
             email: 'ecochran76@gmail.com',
+          },
+          liveFollow: {
+            enabled: true,
           },
         },
       },
@@ -87,15 +95,73 @@ describe('account mirror status registry', () => {
             state: 'none',
             remainingDetailSurfaces: null,
           }),
+          liveFollow: {
+            configured: true,
+            enabled: true,
+            state: 'enabled',
+            reason: 'liveFollow.enabled is true',
+            mode: 'metadata-first',
+            priority: 'background',
+          },
+        }),
+        expect.objectContaining({
+          provider: 'gemini',
+          runtimeProfileId: 'default',
+          liveFollow: expect.objectContaining({
+            configured: true,
+            enabled: false,
+            state: 'unsupported',
+            reason: 'gemini live follow is not implemented yet',
+          }),
         }),
         expect.objectContaining({
           provider: 'grok',
           runtimeProfileId: 'unbound',
           status: 'blocked',
           reason: 'expected-identity-missing',
+          liveFollow: expect.objectContaining({
+            configured: false,
+            enabled: false,
+            state: 'unconfigured',
+          }),
         }),
       ]),
     );
+  });
+
+  test('reports missing identity when live follow is enabled without a bound account', () => {
+    const status = createAccountMirrorStatusSummary({
+      config: {
+        runtimeProfiles: {
+          unbound: {
+            browserProfile: 'default',
+            services: {
+              chatgpt: {
+                liveFollow: {
+                  enabled: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      now: new Date('2026-04-29T12:00:00.000Z'),
+    });
+
+    expect(status.entries[0]).toMatchObject({
+      provider: 'chatgpt',
+      runtimeProfileId: 'unbound',
+      status: 'blocked',
+      reason: 'expected-identity-missing',
+      liveFollow: {
+        configured: true,
+        enabled: false,
+        state: 'missing_identity',
+        reason: 'liveFollow.enabled is true but the service has no bound identity',
+        mode: null,
+        priority: null,
+      },
+    });
   });
 
   test('filters by provider and runtime profile', () => {

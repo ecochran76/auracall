@@ -90,11 +90,20 @@ Current State:
     detail surfaces from 52 to 46, then woke again without manual resume to
     `passCount: 3` and reduced remaining detail surfaces to 40, then reached
     `passCount: 4` and reduced remaining detail surfaces to 34
-  - next live-follow service-mode slice should make config desired state the
-    source of truth: `runtimeProfiles.<profile>.services.<provider>.liveFollow`
-    should declare whether each bound account is watched, while API/MCP and
-    `/ops/browser` report desired state plus actual operation progress for all
-    configured accounts
+  - live-follow desired state now starts from
+    `runtimeProfiles.<profile>.services.<provider>.liveFollow`: status entries
+    report enabled, disabled, unconfigured, missing-identity, and unsupported
+    accounts, MCP `account_mirror_status` carries the same projection, and
+    `api serve` reconciles enabled ChatGPT targets into one durable live-follow
+    completion without duplicating existing active operations
+  - next live-follow service-mode slice should add operator-facing desired vs.
+    actual rollups in `/status.liveFollow`, CLI `api status`, MCP
+    `api_status`, and `/ops/browser` so the dashboard shows every configured
+    account without requiring raw status entry inspection
+  - service restart dogfood exposed a shutdown cleanup gap: the old API process
+    can lose its listener while still holding a browser-operation lease, so the
+    live-follow service should drain/cancel owned mirror operations on shutdown
+    before this moves from dogfood to unattended service mode
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local

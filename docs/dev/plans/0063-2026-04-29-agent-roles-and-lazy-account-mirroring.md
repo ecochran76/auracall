@@ -205,14 +205,14 @@ Current implementation-facing politeness contract:
   aggregate live-follow counts, active operations, and recent paused/cancelled
   or failed operations are visible without raw `/status` JSON or the
   `/ops/browser` dashboard.
-- Live follow should now move from explicit one-off completion starts toward a
-  config reconciler. The durable desired-state unit is
+- Live follow has moved from explicit one-off completion starts toward a config
+  reconciler. The durable desired-state unit is
   `runtimeProfiles.<profile>.services.<provider>.liveFollow`: if the service
   entry has a bound identity and `liveFollow.enabled: true`, `api serve`
-  should ensure exactly one durable live-follow completion exists for that
+  now ensures exactly one durable live-follow completion exists for that
   provider/runtime-profile pair. If `liveFollow.enabled: false`, the reconciler
-  must leave the account stopped even when identity is configured. Omitted
-  `liveFollow` should remain non-surprising until an explicit migration chooses
+  leaves the account stopped even when identity is configured. Omitted
+  `liveFollow` remains non-surprising until an explicit migration chooses
   whether identity-bound accounts default to `auto`.
 - Root-level live-follow config should own fleet defaults only: service-wide
   enablement, cadence, provider budgets, backoff caps, dashboard visibility,
@@ -609,7 +609,8 @@ Each status payload should include:
 
 Let `chatgpt/wsl-chrome-2` continue on the long-lived `18095` service through
 cooldown-spaced passes until its remaining 34 detail surfaces reach
-completeness. In parallel, design the next code slice for config-owned
-live-follow reconciliation: read `runtimeProfiles.*.services.*.liveFollow`,
-project desired state through API/MCP/dashboard, and ensure `api serve`
-creates or resumes exactly one completion per enabled eligible account.
+completeness. In parallel, extend the config-owned live-follow projection into
+operator rollups: `/status.liveFollow`, CLI `api status`, MCP `api_status`, and
+`/ops/browser` should show desired state plus actual operation progress for
+every configured provider account without requiring raw status entry
+inspection.

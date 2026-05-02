@@ -109,7 +109,17 @@ export type AccountMirrorStatusEntry = {
   metadataCounts: AccountMirrorMetadataCounts;
   metadataEvidence: AccountMirrorMetadataEvidence | null;
   mirrorCompleteness: AccountMirrorCompleteness;
+  liveFollow: AccountMirrorLiveFollowDesiredState;
   limits: AccountMirrorPolitenessDecision['limits'];
+};
+
+export type AccountMirrorLiveFollowDesiredState = {
+  configured: boolean;
+  enabled: boolean;
+  state: 'enabled' | 'disabled' | 'unconfigured' | 'missing_identity' | 'unsupported';
+  reason: string;
+  mode: string | null;
+  priority: string | null;
 };
 
 export type AccountMirrorStatusSummary = {
@@ -263,7 +273,7 @@ export function createAccountMirrorStatusSummary(input: {
   };
 }
 
-function discoverConfiguredAccountMirrorTargets(
+export function discoverConfiguredAccountMirrorTargets(
   config: Record<string, unknown> | null | undefined,
 ): Array<{
   provider: AccountMirrorProvider;
@@ -271,6 +281,7 @@ function discoverConfiguredAccountMirrorTargets(
   browserProfileId: string | null;
   expectedIdentityKey: string | null;
   accountLevel: string | null;
+  liveFollow: AccountMirrorLiveFollowDesiredState;
 }> {
   if (!config) return [];
   const runtimeProfiles = getCurrentRuntimeProfiles(config);
@@ -286,6 +297,7 @@ function discoverConfiguredAccountMirrorTargets(
         browserProfileId,
         expectedIdentityKey: readIdentityKey(service),
         accountLevel: readAccountLevel(service),
+        liveFollow: readLiveFollowDesiredState(provider, service),
       }];
     });
   });
@@ -298,6 +310,7 @@ function createStatusEntry(
     browserProfileId: string | null;
     expectedIdentityKey: string | null;
     accountLevel: string | null;
+    liveFollow: AccountMirrorLiveFollowDesiredState;
   },
   state: AccountMirrorStatusState,
   decision: AccountMirrorPolitenessDecision,
@@ -333,6 +346,16 @@ function createStatusEntry(
     metadataCounts,
     metadataEvidence,
     mirrorCompleteness: deriveMirrorCompleteness(metadataCounts, metadataEvidence),
+    liveFollow: {
+      ...target.liveFollow,
+      ...(target.liveFollow.state === 'enabled' && !target.expectedIdentityKey
+        ? {
+            enabled: false,
+            state: 'missing_identity' as const,
+            reason: 'liveFollow.enabled is true but the service has no bound identity',
+          }
+        : {}),
+    },
     limits: decision.limits,
   };
 }
@@ -362,6 +385,54 @@ function readAccountLevel(service: MutableRecord): string | null {
     readString(identity.capabilityProfile) ??
     readString(identity.proAccess)
   );
+}
+
+function readLiveFollowDesiredState(
+  provider: AccountMirrorProvider,
+  service: MutableRecord,
+): AccountMirrorLiveFollowDesiredState {
+  const liveFollow = isRecord(service.liveFollow) ? service.liveFollow : null;
+  const enabled = liveFollow?.enabled;
+  const mode = liveFollow ? readString(liveFollow.mode) : null;
+  const priority = liveFollow ? readString(liveFollow.priority) : null;
+  if (enabled === false) {
+    return {
+      configured: true,
+      enabled: false,
+      state: 'disabled',
+      reason: 'liveFollow.enabled is false',
+      mode,
+      priority,
+    };
+  }
+  if (enabled !== true) {
+    return {
+      configured: liveFollow !== null,
+      enabled: false,
+      state: 'unconfigured',
+      reason: 'liveFollow.enabled is not configured',
+      mode,
+      priority,
+    };
+  }
+  if (provider !== 'chatgpt') {
+    return {
+      configured: true,
+      enabled: false,
+      state: 'unsupported',
+      reason: `${provider} live follow is not implemented yet`,
+      mode,
+      priority,
+    };
+  }
+  return {
+    configured: true,
+    enabled: true,
+    state: 'enabled',
+    reason: 'liveFollow.enabled is true',
+    mode,
+    priority,
+  };
 }
 
 function normalizeMetadataCounts(value: AccountMirrorMetadataCounts | null | undefined): AccountMirrorMetadataCounts {

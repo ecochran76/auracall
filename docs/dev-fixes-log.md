@@ -15360,3 +15360,14 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   the prompt-workbench `button.__composer-pill` model pill before the
   response-action `aria-label="Switch model"` fallback, and expose the detected
   selector, label, and location as `chatgpt.model.selector`.
+- 2026-05-02: Live-follow desired state should be reconciled from config, not
+  operator memory. Read
+  `runtimeProfiles.<profile>.services.<provider>.liveFollow`, project enabled,
+  disabled, unconfigured, missing-identity, and unsupported states through API
+  and MCP status, and have `api serve` start exactly one live-follow completion
+  for each enabled ChatGPT account with a bound identity.
+- 2026-05-02: API shutdown can leave a background mirror operation alive after
+  the listener stops. The `18095` restart proved PID `2756850` still held a
+  `wsl-chrome-2` dispatcher operation after losing the port; add a shutdown
+  drain/cancel path so service restarts do not strand browser-operation leases
+  or force a replacement live-follow completion.
