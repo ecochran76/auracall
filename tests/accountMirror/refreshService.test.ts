@@ -7,6 +7,7 @@ import {
 import {
   AccountMirrorIdentityMismatchError,
   type AccountMirrorMetadataCollectorInput,
+  type AccountMirrorMetadataCollectorResult,
 } from '../../src/accountMirror/chatgptMetadataCollector.js';
 import { createAccountMirrorStatusRegistry } from '../../src/accountMirror/statusRegistry.js';
 import type { AccountMirrorPersistence } from '../../src/accountMirror/cachePersistence.js';
@@ -467,22 +468,88 @@ describe('account mirror refresh service', () => {
     }));
   });
 
-  test('fails fast before queueing unsupported providers in the first refresh slice', async () => {
+  test('runs a read-only Gemini refresh through the browser operation dispatcher', async () => {
+    const geminiConfig = {
+      ...config,
+      runtimeProfiles: {
+        ...config.runtimeProfiles,
+        default: {
+          ...config.runtimeProfiles.default,
+          defaultService: 'gemini',
+          services: {
+            ...config.runtimeProfiles.default.services,
+            gemini: {
+              identity: {
+                email: 'ecochran76@gmail.com',
+              },
+            },
+          },
+        },
+      },
+    };
+    const metadataCollector = {
+      collect: vi.fn(async () => ({
+        detectedIdentityKey: 'ecochran76@gmail.com',
+        detectedAccountLevel: null,
+        metadataCounts: {
+          projects: 0,
+          conversations: 1,
+          artifacts: 0,
+          files: 0,
+          media: 0,
+        },
+        manifests: {
+          projects: [],
+          conversations: [
+            { id: 'gemini_conv_1', title: 'Gemini conversation', provider: 'gemini' as const },
+          ],
+          artifacts: [],
+          files: [],
+          media: [],
+        },
+        evidence: {
+          identitySource: 'profile-menu',
+          projectSampleIds: [],
+          conversationSampleIds: ['gemini_conv_1'],
+          truncated: {
+            projects: false,
+            conversations: false,
+            artifacts: false,
+          },
+        },
+      })),
+    };
     const service = createAccountMirrorRefreshService({
-      config,
+      config: geminiConfig,
       dispatcher: createBrowserOperationDispatcher(),
+      metadataCollector,
       persistence: createNoopPersistence(),
+      generateRequestId: () => 'acctmirror_gemini',
     });
 
-    await expect(
-      service.requestRefresh({
-        provider: 'gemini',
-        runtimeProfileId: 'default',
-      }),
-    ).rejects.toMatchObject({
-      statusCode: 400,
-      code: 'account_mirror_refresh_scope_unsupported',
-    } satisfies Partial<AccountMirrorRefreshError>);
+    const result = await service.requestRefresh({
+      provider: 'gemini',
+      runtimeProfileId: 'default',
+      explicitRefresh: true,
+    });
+
+    expect(result).toMatchObject({
+      requestId: 'acctmirror_gemini',
+      provider: 'gemini',
+      runtimeProfileId: 'default',
+      detectedIdentityKey: 'ecochran76@gmail.com',
+      metadataCounts: {
+        conversations: 1,
+      },
+      dispatcher: {
+        key: expect.stringContaining('service:gemini'),
+      },
+    });
+    expect(metadataCollector.collect).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'gemini',
+      runtimeProfileId: 'default',
+      expectedIdentityKey: 'ecochran76@gmail.com',
+    }));
   });
 
   test('reports dispatcher busy instead of bypassing the browser control plane', async () => {
@@ -543,6 +610,53 @@ describe('account mirror refresh service', () => {
     await active.release();
   });
 
+  test('times out a stuck metadata collector and releases the browser operation', async () => {
+    const dispatcher = createBrowserOperationDispatcher({
+      now: () => new Date('2026-05-02T20:05:00.000Z'),
+    });
+    const registry = createAccountMirrorStatusRegistry({
+      config,
+      now: () => new Date('2026-05-02T20:05:00.000Z'),
+    });
+    const service = createAccountMirrorRefreshService({
+      config,
+      registry,
+      dispatcher,
+      metadataCollector: {
+        collect: vi.fn(
+          (_input: AccountMirrorMetadataCollectorInput) =>
+            new Promise<AccountMirrorMetadataCollectorResult>(() => {}),
+        ),
+      },
+      persistence: createNoopPersistence(),
+      now: () => new Date('2026-05-02T20:05:00.000Z'),
+    });
+
+    await expect(
+      service.requestRefresh({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        explicitRefresh: true,
+        collectorTimeoutMs: 5,
+      }),
+    ).rejects.toThrow('Account mirror metadata collector timed out for chatgpt/default.');
+
+    const entry = registry.readStatus({
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      explicitRefresh: true,
+    }).entries[0];
+    expect(entry).toMatchObject({
+      mirrorState: expect.objectContaining({
+        queued: false,
+        running: false,
+      }),
+    });
+
+    const dispatcherKey = entry?.mirrorState.lastDispatcherKey ?? 'missing-dispatcher-key';
+    await expect(dispatcher.getActive(dispatcherKey)).resolves.toBeNull();
+  });
+
   test('fails fast when the collector detects the wrong ChatGPT identity', async () => {
     const registry = createAccountMirrorStatusRegistry({
       config,
@@ -557,6 +671,7 @@ describe('account mirror refresh service', () => {
       metadataCollector: {
         collect: vi.fn(async () => {
           throw new AccountMirrorIdentityMismatchError(
+            'chatgpt',
             'ecochran76@gmail.com',
             'wrong@example.com',
           );

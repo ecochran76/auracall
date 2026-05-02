@@ -15376,3 +15376,12 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `services.*.liveFollow` / `profiles.*.services.*.liveFollow`; otherwise
   user config shows an enabled account while `/status.accountMirrorStatus`
   reports `unconfigured`.
+- 2026-05-02: Non-ChatGPT live-follow should not be treated as unsupported
+  when identity/project/conversation metadata surfaces already exist. Route
+  Gemini and Grok through the same account mirror refresh service and provider
+  dispatcher, but keep attachment/artifact/media detail inventory ChatGPT-only
+  until provider-specific detail surfaces are proven.
+- 2026-05-02: Account mirror provider collectors need a hard timeout at the
+  refresh-service layer. If a provider DOM helper hangs, the dispatcher lease
+  must be released and status should show a failed pass instead of leaving the
+  account stuck as `already-running`.

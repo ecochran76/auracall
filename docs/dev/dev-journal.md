@@ -25286,3 +25286,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm exec tsc --noEmit`
   - `git diff --check`
   - `pnpm run install:user-runtime`
+
+## Turn 81 | 2026-05-02
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: move default Gemini and Grok from live-follow desired state into
+  read-only provider metadata collection.
+- Change:
+  - account mirror refresh no longer hard-blocks non-ChatGPT providers
+  - the metadata collector resolves the requested provider/runtime profile and
+    validates the bound identity before listing provider projects and
+    conversations
+  - Gemini and Grok skip ChatGPT-only attachment/artifact detail inventory
+    until provider-specific detail surfaces are proven
+  - refresh now wraps the metadata collector with a default two-minute timeout
+    so provider DOM hangs release the browser-operation dispatcher lease
+- Installed dogfood:
+  - installed the user runtime and restarted `127.0.0.1:18095`; final PID is
+    `3705379`
+  - `/status` reports default Gemini and Grok as `liveFollow.state: enabled`
+    with provider-specific dispatcher keys
+  - `gemini/default` cached 12 projects and 54 conversations, marked
+    `in_progress` because conversation rows are still truncated
+  - `grok/default` cached 9 projects and 43 conversations, marked `complete`
+    within current metadata surfaces
+- Validation:
+  - `pnpm vitest run tests/accountMirror/statusRegistry.test.ts tests/accountMirror/liveFollowReconciler.test.ts tests/accountMirror/refreshService.test.ts tests/schema/resolver.test.ts tests/mcp.accountMirrorStatus.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run install:user-runtime`

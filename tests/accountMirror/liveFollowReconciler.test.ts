@@ -22,7 +22,7 @@ const baseOperation: AccountMirrorCompletionOperation = {
 };
 
 describe('account mirror live-follow reconciler', () => {
-  test('starts one live-follow completion for each enabled configured ChatGPT account', async () => {
+  test('starts one live-follow completion for each enabled configured account', async () => {
     const registry = createAccountMirrorStatusRegistry({
       config: {
         runtimeProfiles: {
@@ -70,10 +70,10 @@ describe('account mirror live-follow reconciler', () => {
     });
 
     expect(result.metrics).toMatchObject({
-      enabledTargets: 2,
-      started: 2,
+      enabledTargets: 3,
+      started: 3,
       existing: 0,
-      skipped: 1,
+      skipped: 0,
     });
     expect(start).toHaveBeenCalledWith({
       provider: 'chatgpt',
@@ -82,6 +82,11 @@ describe('account mirror live-follow reconciler', () => {
     });
     expect(start).toHaveBeenCalledWith({
       provider: 'chatgpt',
+      runtimeProfileId: 'consult',
+      maxPasses: null,
+    });
+    expect(start).toHaveBeenCalledWith({
+      provider: 'gemini',
       runtimeProfileId: 'consult',
       maxPasses: null,
     });

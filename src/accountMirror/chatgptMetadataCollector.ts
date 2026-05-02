@@ -74,13 +74,14 @@ export interface AccountMirrorMetadataCollector {
 
 export class AccountMirrorIdentityMismatchError extends Error {
   constructor(
+    readonly provider: AccountMirrorProvider,
     readonly expectedIdentityKey: string,
     readonly detectedIdentityKey: string | null,
   ) {
     super(
       detectedIdentityKey
-        ? `Detected ChatGPT identity ${detectedIdentityKey} does not match expected ${expectedIdentityKey}.`
-        : `ChatGPT identity could not be detected for expected ${expectedIdentityKey}.`,
+        ? `Detected ${provider} identity ${detectedIdentityKey} does not match expected ${expectedIdentityKey}.`
+        : `${provider} identity could not be detected for expected ${expectedIdentityKey}.`,
     );
     this.name = 'AccountMirrorIdentityMismatchError';
   }
@@ -91,16 +92,13 @@ export function createChatgptAccountMirrorMetadataCollector(
 ): AccountMirrorMetadataCollector {
   return {
     async collect(input) {
-      if (input.provider !== 'chatgpt') {
-        throw new Error(`Account mirror metadata collection is not implemented for ${input.provider}.`);
-      }
-      const clientConfig = resolveRuntimeProfileUserConfig(userConfig, input.runtimeProfileId, 'chatgpt');
-      const client = await BrowserAutomationClient.fromConfig(clientConfig, { target: 'chatgpt' });
+      const clientConfig = resolveRuntimeProfileUserConfig(userConfig, input.runtimeProfileId, input.provider);
+      const client = await BrowserAutomationClient.fromConfig(clientConfig, { target: input.provider });
       const identity = await client.getUserIdentity();
       const detectedIdentityKey = readIdentityKey(identity);
       const expectedIdentityKey = normalizeIdentityKey(input.expectedIdentityKey);
       if (!expectedIdentityKey || detectedIdentityKey !== expectedIdentityKey) {
-        throw new AccountMirrorIdentityMismatchError(expectedIdentityKey ?? '', detectedIdentityKey);
+        throw new AccountMirrorIdentityMismatchError(input.provider, expectedIdentityKey ?? '', detectedIdentityKey);
       }
 
       const projects = await readBoundedProjects(client, input.limits.maxPageReadsPerCycle);
@@ -116,17 +114,24 @@ export function createChatgptAccountMirrorMetadataCollector(
         if (result.truncated) break;
       }
       const conversations = [...rootConversations.items, ...projectConversations];
-      const inventory = await readBoundedAttachmentInventory(
-        client,
-        projects.items,
-        conversations,
-        input.limits.maxArtifactRowsPerCycle,
-        {
-          maxDetailReads: input.limits.maxPageReadsPerCycle,
-          cursor: input.previousEvidence?.attachmentInventory ?? null,
-          shouldYield: input.shouldYield,
-        },
-      );
+      const inventory = input.provider === 'chatgpt'
+        ? await readBoundedAttachmentInventory(
+            client,
+            projects.items,
+            conversations,
+            input.limits.maxArtifactRowsPerCycle,
+            {
+              maxDetailReads: input.limits.maxPageReadsPerCycle,
+              cursor: input.previousEvidence?.attachmentInventory ?? null,
+              shouldYield: input.shouldYield,
+            },
+          )
+        : {
+            artifacts: [],
+            files: [],
+            truncated: false,
+            cursor: null,
+          };
       return {
         detectedIdentityKey,
         detectedAccountLevel: readAccountLevel(identity),

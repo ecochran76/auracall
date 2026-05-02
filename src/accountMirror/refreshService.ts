@@ -45,6 +45,7 @@ export interface AccountMirrorRefreshRequest {
   explicitRefresh?: boolean;
   queueTimeoutMs?: number;
   queuePollMs?: number;
+  collectorTimeoutMs?: number;
 }
 
 export interface AccountMirrorRefreshResult {
@@ -121,14 +122,6 @@ export function createAccountMirrorRefreshService(input: {
       const provider = request.provider ?? 'chatgpt';
       const runtimeProfileId = request.runtimeProfileId ?? 'default';
       const requestId = generateRequestId();
-      if (provider !== 'chatgpt') {
-        throw new AccountMirrorRefreshError(
-          400,
-          'account_mirror_refresh_scope_unsupported',
-          'Account mirror refresh currently supports ChatGPT runtime profiles only.',
-          { provider, runtimeProfileId },
-        );
-      }
 
       await registry.refreshPersistentState?.();
       const target = readSingleMirrorTarget({
@@ -238,25 +231,29 @@ export function createAccountMirrorRefreshService(input: {
       let collection: AccountMirrorMetadataCollectorResult;
       let latestYieldCause: AccountMirrorYieldCause | null = null;
       try {
-        collection = await metadataCollector.collect({
-          provider,
-          runtimeProfileId,
-          expectedIdentityKey: target.expectedIdentityKey ?? '',
-          limits: {
-            maxPageReadsPerCycle: target.limits.maxPageReadsPerCycle,
-            maxConversationRowsPerCycle: target.limits.maxConversationRowsPerCycle,
-            maxArtifactRowsPerCycle: target.limits.maxArtifactRowsPerCycle,
-          },
-          previousEvidence: target.metadataEvidence,
-          shouldYield: () => {
-            const cause = getAccountMirrorYieldCause(acquired);
-            if (cause) {
-              latestYieldCause = cause;
-              return true;
-            }
-            return false;
-          },
-        });
+        collection = await withTimeout(
+          metadataCollector.collect({
+            provider,
+            runtimeProfileId,
+            expectedIdentityKey: target.expectedIdentityKey ?? '',
+            limits: {
+              maxPageReadsPerCycle: target.limits.maxPageReadsPerCycle,
+              maxConversationRowsPerCycle: target.limits.maxConversationRowsPerCycle,
+              maxArtifactRowsPerCycle: target.limits.maxArtifactRowsPerCycle,
+            },
+            previousEvidence: target.metadataEvidence,
+            shouldYield: () => {
+              const cause = getAccountMirrorYieldCause(acquired);
+              if (cause) {
+                latestYieldCause = cause;
+                return true;
+              }
+              return false;
+            },
+          }),
+          normalizePositiveInteger(request.collectorTimeoutMs, 120_000),
+          `Account mirror metadata collector timed out for ${provider}/${runtimeProfileId}.`,
+        );
         collection = withYieldCause(collection, latestYieldCause);
         const collectionWithPriorManifests = await mergeCollectionWithPersistedCatalog({
           persistence,
@@ -342,6 +339,7 @@ export function createAccountMirrorRefreshService(input: {
             {
               provider,
               runtimeProfileId,
+              detectedProvider: error.provider,
               expectedIdentityKey: error.expectedIdentityKey,
               detectedIdentityKey: error.detectedIdentityKey,
             },
@@ -353,6 +351,23 @@ export function createAccountMirrorRefreshService(input: {
       }
     },
   };
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeout: NodeJS.Timeout | null = null;
+  return new Promise<T>((resolve, reject) => {
+    timeout = setTimeout(() => reject(new Error(message)), timeoutMs);
+    promise.then(
+      (value) => {
+        if (timeout) clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        if (timeout) clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
 }
 
 function getAccountMirrorYieldCause(acquired: BrowserOperationAcquiredResult): AccountMirrorYieldCause | null {

@@ -388,7 +388,7 @@ function readAccountLevel(service: MutableRecord): string | null {
 }
 
 function readLiveFollowDesiredState(
-  provider: AccountMirrorProvider,
+  _provider: AccountMirrorProvider,
   service: MutableRecord,
 ): AccountMirrorLiveFollowDesiredState {
   const liveFollow = isRecord(service.liveFollow) ? service.liveFollow : null;
@@ -411,16 +411,6 @@ function readLiveFollowDesiredState(
       enabled: false,
       state: 'unconfigured',
       reason: 'liveFollow.enabled is not configured',
-      mode,
-      priority,
-    };
-  }
-  if (provider !== 'chatgpt') {
-    return {
-      configured: true,
-      enabled: false,
-      state: 'unsupported',
-      reason: `${provider} live follow is not implemented yet`,
       mode,
       priority,
     };

@@ -453,6 +453,11 @@ Each status payload should include:
 - Provider/runtime-profile pairs that are configured but unsupported, missing
   identity, identity-mismatched, or operator-disabled are visible as
   non-running accounts with a specific reason.
+- Configured Gemini and Grok accounts now use the same browser-backed refresh
+  service and provider dispatcher path as ChatGPT for read-only identity,
+  project, and conversation metadata. ChatGPT remains the only provider with
+  attachment/artifact detail inventory until Gemini/Grok detail surfaces are
+  proven.
 - `/status.accountMirrorCompletions` summarizes persisted completion metrics
   plus active and recent operations, and `/ops/browser` renders the same
   "Mirror Live Follow" posture for local operators.
@@ -589,6 +594,16 @@ Each status payload should include:
   `2026-05-02T18:21:14.464Z`, completed at
   `2026-05-02T18:24:38.401Z`, and reduced remaining detail surfaces from
   40 to 34.
+- Default Gemini and Grok live-follow dogfood on the long-lived `18095`
+  service now starts provider completions instead of reporting `unsupported`.
+  After installing and restarting on PID `3705379`, `/status` showed
+  `gemini/default` cached 12 projects and 54 conversations with conversation
+  truncation still in progress, and `grok/default` cached 9 projects and
+  43 conversations with mirror completeness `complete`.
+- Account mirror refresh now wraps the metadata collector with a default
+  two-minute timeout so a provider DOM drift or helper hang releases the
+  browser-operation lease and reports a failed pass instead of leaving the
+  target permanently `already-running`.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -607,10 +622,10 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Let `chatgpt/wsl-chrome-2` continue on the long-lived `18095` service through
-cooldown-spaced passes until its remaining 34 detail surfaces reach
-completeness. In parallel, extend the config-owned live-follow projection into
-operator rollups: `/status.liveFollow`, CLI `api status`, MCP `api_status`, and
-`/ops/browser` should show desired state plus actual operation progress for
-every configured provider account without requiring raw status entry
-inspection.
+Let the enabled default Gemini/Grok completions continue on the long-lived
+`18095` service long enough to observe cooldown wakeups and any provider drift.
+The next implementation slice should add provider-specific detail collectors
+only where there is a proven stable surface; otherwise keep non-ChatGPT live
+follow at identity/project/conversation metadata and focus on operator rollups
+that show desired state plus actual operation progress for every configured
+provider account.

@@ -109,9 +109,9 @@ describe('account mirror status registry', () => {
           runtimeProfileId: 'default',
           liveFollow: expect.objectContaining({
             configured: true,
-            enabled: false,
-            state: 'unsupported',
-            reason: 'gemini live follow is not implemented yet',
+            enabled: true,
+            state: 'enabled',
+            reason: 'liveFollow.enabled is true',
           }),
         }),
         expect.objectContaining({
