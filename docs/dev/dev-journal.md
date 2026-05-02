@@ -24999,6 +24999,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - follow-up status fix: active live-follow completions in ordinary
     `routine-delayed` cooldown now report live-follow health as `healthy`
     instead of surfacing scheduler cooldown as operator backpressure
+  - overnight dogfood proof: the installed service continued without operator
+    intervention from pass 9 to pass 55; pass 55
+    `acctmirror_c6284e2f-debd-48b0-b28e-e4913eb1b929` started
+    `2026-05-02T14:49:43.169Z`, completed `2026-05-02T14:52:36.156Z`,
+    and left 237 remaining detail surfaces with no completion error
+  - `/status` after pass 55 reports `liveFollow.severity=healthy` with one
+    running completion and zero paused/failed/cancelled completions while the
+    scheduler is in ordinary `routine-delayed` cooldown
+  - observed service CPU stayed around 2.1% during cooldown and active refresh
+    polling in the pass-55 proof window
 
 ## Turn 78 | 2026-05-01
 
