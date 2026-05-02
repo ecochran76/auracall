@@ -24806,6 +24806,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `api_status`, and MCP `api_ops_browser_status` all report paused
     live-follow posture
 
+## Turn 95 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: close the remaining proof gap for nonblocking live-follow cadence.
+- Change:
+  - added `live follow wakes from cooldown and continues without operator
+    resume` coverage in `tests/accountMirror/completionService.test.ts`
+  - the proof shows the service-owned loop handles `nextAttemptAt`, wakes
+    after cooldown, runs the next refresh, and records the following cooldown
+    while staying `running`
+- Validation:
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts`
+
 ## Turn 78 | 2026-05-01
 
 - Continued implementation plan:

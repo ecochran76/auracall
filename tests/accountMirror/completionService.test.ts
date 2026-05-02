@@ -370,6 +370,69 @@ describe('account mirror completion service', () => {
     });
   });
 
+  test('live follow wakes from cooldown and continues without operator resume', async () => {
+    const firstEligibleAt = '2026-04-30T12:01:00.000Z';
+    const secondEligibleAt = '2026-04-30T12:11:00.000Z';
+    let sleepCount = 0;
+    const requestRefresh = vi.fn()
+      .mockRejectedValueOnce(new AccountMirrorRefreshError(
+        409,
+        'account_mirror_not_eligible',
+        'Account mirror chatgpt/default is delayed: minimum-interval.',
+        {
+          provider: 'chatgpt',
+          runtimeProfileId: 'default',
+          reason: 'minimum-interval',
+          eligibleAt: firstEligibleAt,
+        },
+      ))
+      .mockResolvedValueOnce(createRefreshResult())
+      .mockRejectedValueOnce(new AccountMirrorRefreshError(
+        409,
+        'account_mirror_not_eligible',
+        'Account mirror chatgpt/default is delayed: minimum-interval.',
+        {
+          provider: 'chatgpt',
+          runtimeProfileId: 'default',
+          reason: 'minimum-interval',
+          eligibleAt: secondEligibleAt,
+        },
+      ));
+    const sleep = vi.fn(() => {
+      sleepCount += 1;
+      return sleepCount === 1 ? Promise.resolve() : new Promise<void>(() => {});
+    });
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date('2026-04-30T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      now: () => new Date('2026-04-30T12:00:00.000Z'),
+      generateId: () => 'acctmirror_live_follow_cadence',
+      sleep,
+    });
+
+    service.start();
+
+    await waitFor(() => service.read('acctmirror_live_follow_cadence')?.passCount === 1);
+    await waitFor(() => service.read('acctmirror_live_follow_cadence')?.nextAttemptAt === secondEligibleAt);
+
+    expect(requestRefresh).toHaveBeenCalledTimes(3);
+    expect(sleep).toHaveBeenNthCalledWith(1, 60_000);
+    expect(service.read('acctmirror_live_follow_cadence')).toMatchObject({
+      status: 'running',
+      mode: 'live_follow',
+      passCount: 1,
+      lastRefresh: {
+        requestId: 'acctmirror_refresh_1',
+      },
+      nextAttemptAt: secondEligibleAt,
+    });
+  });
+
   test('forces a verification refresh even when persisted status already says complete', async () => {
     const requestRefresh = vi.fn(async () => createRefreshResult());
     const registry = createAccountMirrorStatusRegistry({

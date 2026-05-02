@@ -488,6 +488,9 @@ Each status payload should include:
   `passCount: 1`, stored `lastRefresh`, remained in `backfill_history`, and
   paused again with 279 remaining detail surfaces after refresh
   `acctmirror_715a135d-8a8d-4339-9c2a-c4b75fd7e36f`.
+- Focused completion-service coverage now proves the unbounded `live_follow`
+  loop wakes from `nextAttemptAt` on its own, runs the next refresh, and records
+  the following cooldown without an operator issuing another resume.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.

@@ -2696,3 +2696,17 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - API status, `/ops/browser`, MCP `api_status`, and MCP
     `api_ops_browser_status` all reported live-follow severity `paused` with
     one active paused completion
+
+## Turn 95 | 2026-05-01
+
+- Goal: prove live-follow completion cadence does not need an operator resume
+  after each cooldown.
+- Change:
+  - added focused completion-service coverage for the service-owned cadence
+    loop
+  - the test starts unbounded `live_follow`, receives a polite cooldown,
+    resolves the scheduled sleep, verifies the next refresh runs
+    automatically, and confirms the operation schedules the following
+    `nextAttemptAt` without another control call
+- Verification:
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts`

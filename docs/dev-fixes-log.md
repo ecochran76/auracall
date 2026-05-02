@@ -75,6 +75,12 @@
   detail surfaces survive the real refresh path and remain visible after a
   clean pause.
 
+- 2026-05-01: Unbounded live-follow cadence should be proven as a
+  service-owned loop, not inferred from status readback. Coverage now verifies
+  that a running completion waits through `nextAttemptAt`, wakes on its own,
+  runs the next refresh, and records the next cooldown without another
+  operator resume.
+
 - 2026-04-29: Lazy mirror scheduler work must use opportunistic dispatcher
   acquisition. Routine mirror passes should use zero queue wait so real
   response/media/API browser work keeps priority; cooperative cancellation is
