@@ -9,6 +9,13 @@ export const ChatgptFeatureSchema = z.object({
   deep_research: FeatureFlagSchema,
   company_knowledge: FeatureFlagSchema,
   apps: z.array(z.string()).optional(),
+  model_controls: z.object({
+    visible: z.boolean().optional(),
+    label: z.string().optional(),
+    aria_label: z.string().optional(),
+    location: z.string().optional(),
+    selector: z.string().optional(),
+  }).optional(),
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.

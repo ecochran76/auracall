@@ -2735,3 +2735,24 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     and 267 remaining detail surfaces
   - completion was paused cleanly; API status and `/ops/browser` both reported
     live-follow severity `paused` with one active paused completion
+
+## Turn 97 | 2026-05-01
+
+- Goal: dogfood ChatGPT DOM-drift detection after the model selector moved
+  into the prompt workbench.
+- Finding:
+  - live `auracall capabilities --target chatgpt --json` detected apps, Deep
+    Research, web search, and Company Knowledge, but did not report model
+    selector evidence
+  - live `browser-tools` DOM inspection found the prompt-workbench model pill
+    as `button.__composer-pill` with label `Instant`; a separate response
+    action still uses `aria-label="Switch model"`, so selector order matters
+- Change:
+  - added `button.__composer-pill` and `button[aria-label="Switch model"]`
+    fallbacks to ChatGPT model-button selectors
+  - extended the ChatGPT feature signature and workbench capability mapper to
+    report `chatgpt.model.selector`
+- Verification:
+  - source live probe now reports `chatgpt.model.selector` as `available` with
+    `label: Instant`, `location: prompt_workbench`, and
+    `selector: button.__composer-pill`

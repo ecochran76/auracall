@@ -6,6 +6,7 @@ interface ChatgptFeatureObject {
   company_knowledge?: unknown;
   apps?: unknown;
   skills?: unknown;
+  model_controls?: unknown;
   detected?: unknown;
   configured?: unknown;
 }
@@ -152,6 +153,41 @@ export function deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(
     });
   }
 
+  if (signals.modelControls.visible) {
+    const labels = Array.from(new Set([
+      signals.modelControls.ariaLabel,
+      signals.modelControls.label,
+      'Model selector',
+    ].filter((label): label is string => Boolean(label))));
+    capabilities.push({
+      id: 'chatgpt.model.selector',
+      provider: 'chatgpt',
+      providerLabels: labels.length > 0 ? labels : ['Model selector'],
+      category: 'other',
+      invocationMode: 'pre_prompt_toggle',
+      surfaces: ['browser_service', 'cli', 'local_api', 'mcp'],
+      availability: 'available',
+      stability: 'observed',
+      requiredInputs: [],
+      output: {
+        artifactTypes: ['generated'],
+        description: 'Controls the ChatGPT model lane before prompt submission.',
+      },
+      safety: {
+        notes: ['Model selector labels and placement are volatile; discover before selecting Pro or Thinking modes.'],
+      },
+      observedAt,
+      source: 'browser_discovery',
+      metadata: {
+        featureSignatureSignal: 'model_controls',
+        label: signals.modelControls.label,
+        ariaLabel: signals.modelControls.ariaLabel,
+        location: signals.modelControls.location,
+        selector: signals.modelControls.selector,
+      },
+    });
+  }
+
   return capabilities.sort((left, right) => left.id.localeCompare(right.id));
 }
 
@@ -171,6 +207,13 @@ function collectChatgptSignals(root: ChatgptFeatureObject): {
   companyKnowledge: boolean;
   apps: string[];
   skills: string[];
+  modelControls: {
+    visible: boolean;
+    label?: string;
+    ariaLabel?: string;
+    location?: string;
+    selector?: string;
+  };
 } {
   const signals = {
     webSearch: false,
@@ -178,6 +221,9 @@ function collectChatgptSignals(root: ChatgptFeatureObject): {
     companyKnowledge: false,
     apps: new Set<string>(),
     skills: new Set<string>(),
+    modelControls: {
+      visible: false,
+    },
   };
   collectFromObject(root, signals);
   if (root.configured && typeof root.configured === 'object') {
@@ -192,6 +238,7 @@ function collectChatgptSignals(root: ChatgptFeatureObject): {
     companyKnowledge: signals.companyKnowledge,
     apps: Array.from(signals.apps).sort(),
     skills: Array.from(signals.skills).sort(),
+    modelControls: signals.modelControls,
   };
 }
 
@@ -203,6 +250,13 @@ function collectFromObject(
     companyKnowledge: boolean;
     apps: Set<string>;
     skills: Set<string>;
+    modelControls: {
+      visible: boolean;
+      label?: string;
+      ariaLabel?: string;
+      location?: string;
+      selector?: string;
+    };
   },
 ): void {
   if (source.web_search === true) signals.webSearch = true;
@@ -210,6 +264,38 @@ function collectFromObject(
   if (source.company_knowledge === true) signals.companyKnowledge = true;
   collectStringArray(source.apps, signals.apps);
   collectStringArray(source.skills, signals.skills);
+  const modelControls = normalizeModelControls(source.model_controls);
+  if (modelControls.visible) {
+    signals.modelControls = modelControls;
+  }
+}
+
+function normalizeModelControls(value: unknown): {
+  visible: boolean;
+  label?: string;
+  ariaLabel?: string;
+  location?: string;
+  selector?: string;
+} {
+  if (!value || typeof value !== 'object') {
+    return { visible: false };
+  }
+  const record = value as Record<string, unknown>;
+  return {
+    visible: record.visible === true,
+    label: normalizeDisplayString(record.label),
+    ariaLabel: normalizeDisplayString(record.aria_label ?? record.ariaLabel),
+    location: normalizeDisplayString(record.location),
+    selector: normalizeDisplayString(record.selector),
+  };
+}
+
+function normalizeDisplayString(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  return normalized || undefined;
 }
 
 function collectStringArray(value: unknown, sink: Set<string>): void {

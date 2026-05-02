@@ -24844,6 +24844,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `auracall api ops-browser-status` both reported live-follow severity
     `paused` with one active paused completion
 
+## Turn 97 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md`
+- Goal: use the live ChatGPT model-selector move as a drift-detection check.
+- Finding:
+  - installed `auracall capabilities --target chatgpt --json` did not expose
+    model selector evidence before the patch
+  - `browser-tools` found two relevant controls on the live ChatGPT page:
+    prompt-workbench `button.__composer-pill` labeled `Instant`, plus a
+    response-action `aria-label="Switch model"` button
+- Change:
+  - ChatGPT model-button selectors now prefer `button.__composer-pill` before
+    response-action fallbacks
+  - ChatGPT feature signatures now include `model_controls`
+  - workbench capability discovery now reports `chatgpt.model.selector` with
+    live selector, label, and location metadata
+- Validation:
+  - `pnpm vitest run tests/browser/modelSelection.test.ts tests/workbenchCapabilities.test.ts tests/workbenchBrowserDiscovery.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - live source command reported `chatgpt.model.selector` as available with
+    `label: Instant`, `location: prompt_workbench`, and
+    `selector: button.__composer-pill`
+
 ## Turn 78 | 2026-05-01
 
 - Continued implementation plan:

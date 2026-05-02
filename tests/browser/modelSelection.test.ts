@@ -12,6 +12,8 @@ describe('browser model selection matchers', () => {
   it('targets the current ChatGPT model picker button', () => {
     const expression = buildModelSelectionExpressionForTest('gpt-5.2-pro');
     expect(expression).toContain('[data-testid=\\"model-switcher-dropdown-button\\"]');
+    expect(expression).toContain('button.__composer-pill');
+    expect(expression).toContain('button[aria-label=\\"Switch model\\"]');
     expect(expression).toContain('button[aria-label*=\\"Model\\"]');
   });
 

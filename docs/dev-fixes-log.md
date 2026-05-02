@@ -15312,3 +15312,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   running across `nextAttemptAt`. A real-service proof needs before/after
   status showing no second resume/control call, automatic refresh start,
   completed refresh, advanced `passCount`, and clean operator pause.
+- 2026-05-01: ChatGPT model-selector drift should be reported through
+  workbench capability discovery, not only fixed in prompt execution. Prefer
+  the prompt-workbench `button.__composer-pill` model pill before the
+  response-action `aria-label="Switch model"` fallback, and expose the detected
+  selector, label, and location as `chatgpt.model.selector`.

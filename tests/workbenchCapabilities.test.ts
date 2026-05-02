@@ -149,6 +149,13 @@ describe('workbench capability service', () => {
         company_knowledge: true,
         apps: ['github', 'google drive'],
         skills: ['study and learn'],
+        model_controls: {
+          visible: true,
+          label: 'Instant',
+          aria_label: 'Switch model',
+          location: 'prompt_workbench',
+          selector: 'button[aria-label="Switch model"]',
+        },
       }),
       '2026-04-23T12:00:00.000Z',
     );
@@ -188,7 +195,34 @@ describe('workbench capability service', () => {
         category: 'skill',
         providerLabels: ['Study And Learn'],
       }),
+      expect.objectContaining({
+        id: 'chatgpt.model.selector',
+        category: 'other',
+        availability: 'available',
+        providerLabels: ['Switch model', 'Instant', 'Model selector'],
+        metadata: expect.objectContaining({
+          featureSignatureSignal: 'model_controls',
+          location: 'prompt_workbench',
+          selector: 'button[aria-label="Switch model"]',
+        }),
+      }),
     ]));
+  });
+
+  it('keeps ChatGPT model selector visible as an unknown static capability until live discovery confirms it', async () => {
+    const service = createWorkbenchCapabilityService({
+      now: () => new Date('2026-04-23T12:00:00.000Z'),
+    });
+
+    const report = await service.listCapabilities({ provider: 'chatgpt', category: 'other' });
+
+    expect(report.capabilities).toEqual([
+      expect.objectContaining({
+        id: 'chatgpt.model.selector',
+        availability: 'unknown',
+        source: 'static_catalog',
+      }),
+    ]);
   });
 
   it('merges discovered ChatGPT app visibility without losing account-gated catalog entries', async () => {

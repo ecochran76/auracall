@@ -160,6 +160,25 @@ export const STATIC_WORKBENCH_CAPABILITY_CATALOG: WorkbenchCapability[] = [
     source: 'static_catalog',
   },
   {
+    id: 'chatgpt.model.selector',
+    provider: 'chatgpt',
+    providerLabels: ['Model selector', 'Switch model'],
+    category: 'other',
+    invocationMode: 'pre_prompt_toggle',
+    surfaces: ['browser_service', 'cli', 'local_api', 'mcp'],
+    availability: 'unknown',
+    stability: 'observed',
+    requiredInputs: [],
+    output: {
+      artifactTypes: ['generated'],
+      description: 'Controls the ChatGPT model lane before prompt submission.',
+    },
+    safety: {
+      notes: ['Model selector labels and placement are volatile; discover before selecting Pro or Thinking modes.'],
+    },
+    source: 'static_catalog',
+  },
+  {
     id: 'chatgpt.skills',
     provider: 'chatgpt',
     providerLabels: ['Skills'],

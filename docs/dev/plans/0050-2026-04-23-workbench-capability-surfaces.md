@@ -54,6 +54,11 @@ a stable first-class adapter.
   Knowledge, visible apps/connectors, and visible skills. Static ChatGPT apps,
   Company Knowledge, and skills remain conservative `account_gated` entries
   until current-account discovery reports an available concrete capability.
+- ChatGPT browser-backed discovery now also reports the volatile model selector
+  as `chatgpt.model.selector`. The May 2026 live drift check found the current
+  prompt-workbench model control at `button.__composer-pill` with label
+  `Instant`, while response actions still expose a separate
+  `aria-label="Switch model"` button that should remain only a fallback.
 - Grok browser-backed discovery now maps read-only Imagine feature evidence
   into `grok.media.imagine_image` and `grok.media.imagine_video` capability
   reports. Static Grok Imagine entries remain conservative until the managed

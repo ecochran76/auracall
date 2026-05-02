@@ -5,6 +5,7 @@ import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../package
 import type { ChromeClient } from '../types.js';
 import { ChatgptFeatureSchema } from '../llmService/providers/schema.js';
 import { transferAttachmentViaDataTransfer } from '../actions/attachmentDataTransfer.js';
+import { CHATGPT_PROVIDER } from './chatgpt.js';
 import { providerNavigationAllowed } from './navigationPolicy.js';
 import { annotateClientMutationContext, resolveMutationAudit, resolveMutationSource } from './mutationAudit.js';
 import type {
@@ -655,6 +656,13 @@ type ChatgptFeatureProbe = {
   deep_research?: boolean | null;
   company_knowledge?: boolean | null;
   apps?: string[] | null;
+  model_controls?: {
+    visible?: boolean | null;
+    label?: string | null;
+    aria_label?: string | null;
+    location?: string | null;
+    selector?: string | null;
+  } | null;
 };
 
 export function normalizeChatgptProjectId(value: string | null | undefined): string | null {
@@ -3757,9 +3765,16 @@ function buildChatgptFeatureProbeExpression(): string {
   const detector = JSON.stringify(CHATGPT_FEATURE_DETECTOR);
   const flagTokens = JSON.stringify(CHATGPT_FEATURE_FLAG_TOKENS);
   const appTokens = JSON.stringify(CHATGPT_APP_TOKENS);
+  const modelButtonSelectors = JSON.stringify(CHATGPT_PROVIDER.selectors.modelButton);
   return `(() => {
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
     const lower = (value) => normalize(value).toLowerCase();
+    const isVisible = (node) => {
+      if (!(node instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return style.visibility !== 'hidden' && style.display !== 'none' && rect.width > 0 && rect.height > 0;
+    };
     const addText = (sink, value) => {
       const normalized = lower(value);
       if (normalized) sink.push(normalized);
@@ -3767,6 +3782,7 @@ function buildChatgptFeatureProbeExpression(): string {
     const detector = ${detector};
     const flagTokens = ${flagTokens};
     const appTokens = ${appTokens};
+    const modelButtonSelectors = ${modelButtonSelectors};
     const corpus = [];
     addText(corpus, document.body?.innerText || '');
     for (const node of Array.from(document.querySelectorAll('button, [role="button"], a, [aria-label], [title]')).slice(0, 500)) {
@@ -3796,12 +3812,44 @@ function buildChatgptFeatureProbeExpression(): string {
     for (const [name, tokens] of Object.entries(flagTokens)) {
       flags[name] = tokens.some((token) => haystack.includes(token));
     }
+    const modelButtons = [];
+    for (const selector of modelButtonSelectors) {
+      for (const node of Array.from(document.querySelectorAll(selector))) {
+        if (!isVisible(node) || modelButtons.includes(node)) continue;
+        modelButtons.push(node);
+      }
+    }
+    if (modelButtons.length === 0) {
+      for (const node of Array.from(document.querySelectorAll('button[aria-haspopup="menu"], [role="button"][aria-haspopup="menu"]'))) {
+        if (!isVisible(node)) continue;
+        const text = lower(node.textContent || '');
+        const aria = lower(node.getAttribute?.('aria-label') || '');
+        const testid = lower(node.getAttribute?.('data-testid') || '');
+        if (text.includes('chatgpt') || text.includes('instant') || text.includes('thinking') || text.includes('pro') || aria.includes('switch model') || testid.includes('model-switcher')) {
+          modelButtons.push(node);
+        }
+      }
+    }
+    const modelButton = modelButtons[0] || null;
+    const composerRoot = modelButton?.closest?.('[data-testid*="composer"], form, [contenteditable="true"], .__composer-pill, [class*="composer"]') || null;
+    const model_controls = modelButton
+      ? {
+          visible: true,
+          label: normalize(modelButton.textContent || ''),
+          aria_label: normalize(modelButton.getAttribute?.('aria-label') || ''),
+          location: composerRoot ? 'prompt_workbench' : 'header_or_unknown',
+          selector: modelButton.getAttribute?.('data-testid') === 'model-switcher-dropdown-button'
+            ? '[data-testid="model-switcher-dropdown-button"]'
+            : (modelButton.matches?.('button.__composer-pill') ? 'button.__composer-pill' : (lower(modelButton.getAttribute?.('aria-label') || '').includes('switch model') ? 'button[aria-label="Switch model"]' : null)),
+        }
+      : { visible: false };
     return {
       detector,
       web_search: Boolean(flags.web_search),
       deep_research: Boolean(flags.deep_research),
       company_knowledge: Boolean(flags.company_knowledge),
       apps,
+      model_controls,
     };
   })()`;
 }
@@ -3815,6 +3863,7 @@ function normalizeChatgptFeatureSignature(probe: ChatgptFeatureProbe | null | un
     deep_research: probe.deep_research,
     company_knowledge: probe.company_knowledge,
     apps: probe.apps,
+    model_controls: probe.model_controls ?? undefined,
   });
   if (!parsed.success) {
     return null;
@@ -3828,16 +3877,41 @@ function normalizeChatgptFeatureSignature(probe: ChatgptFeatureProbe | null | un
     deep_research: typeof probe.deep_research === 'boolean' ? probe.deep_research : undefined,
     company_knowledge: typeof probe.company_knowledge === 'boolean' ? probe.company_knowledge : undefined,
     apps,
+    model_controls: normalizeChatgptModelControlProbe(probe.model_controls),
   };
   const hasAnySignal =
     normalized.web_search !== undefined ||
     normalized.deep_research !== undefined ||
     normalized.company_knowledge !== undefined ||
-    normalized.apps.length > 0;
+    normalized.apps.length > 0 ||
+    normalized.model_controls !== undefined;
   if (!hasAnySignal) {
     return null;
   }
   return JSON.stringify(normalized);
+}
+
+function normalizeChatgptModelControlProbe(
+  value: ChatgptFeatureProbe['model_controls'],
+): NonNullable<ChatgptFeatureProbe['model_controls']> | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+  const visible = typeof value.visible === 'boolean' ? value.visible : undefined;
+  const label = normalizeUiText(value.label);
+  const ariaLabel = normalizeUiText(value.aria_label);
+  const location = normalizeUiText(value.location);
+  const selector = normalizeUiText(value.selector);
+  if (visible === undefined && !label && !ariaLabel && !location && !selector) {
+    return undefined;
+  }
+  return {
+    visible,
+    label: label || undefined,
+    aria_label: ariaLabel || undefined,
+    location: location || undefined,
+    selector: selector || undefined,
+  };
 }
 
 async function readChatgptFeatureSignature(client: ChromeClient): Promise<string | null> {
