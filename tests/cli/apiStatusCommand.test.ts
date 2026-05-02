@@ -356,6 +356,38 @@ describe('api status CLI helpers', () => {
     }).liveFollow.severity).toBe('attention-needed');
   });
 
+  it('treats a recovered running live-follow completion as healthy while scheduler backpressure is not yet known', () => {
+    const summary = summarizeApiStatusPayload({
+      ok: true,
+      accountMirrorScheduler: {
+        state: 'scheduled',
+        operatorStatus: {
+          posture: 'scheduled',
+        },
+        lastPass: null,
+      },
+      accountMirrorCompletions: {
+        metrics: {
+          active: 1,
+          running: 1,
+          paused: 0,
+          failed: 0,
+          cancelled: 0,
+        },
+      },
+    }, {
+      host: '127.0.0.1',
+      port: 18080,
+    });
+
+    expect(summary.liveFollow).toMatchObject({
+      severity: 'healthy',
+      schedulerPosture: 'scheduled',
+      backpressureReason: 'unknown',
+      activeCompletions: 1,
+    });
+  });
+
   it('reads /status through fetch for installed-runtime smoke use', async () => {
     const fetchImpl = async (url: string | URL | Request) => {
       expect(String(url)).toBe('http://127.0.0.1:18080/status');

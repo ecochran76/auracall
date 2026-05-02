@@ -46,6 +46,7 @@ export function summarizeLiveFollowHealth(input: LiveFollowHealthInput): LiveFol
     severity: deriveLiveFollowSeverity({
       schedulerPosture,
       backpressureReason,
+      activeCompletions: input.activeCompletions,
       pausedCompletions: input.pausedCompletions,
       failedCompletions: input.failedCompletions,
       cancelledCompletions: input.cancelledCompletions,
@@ -82,6 +83,7 @@ export function summarizeLiveFollowHealth(input: LiveFollowHealthInput): LiveFol
 export function deriveLiveFollowSeverity(input: {
   schedulerPosture: string | null;
   backpressureReason: string | null;
+  activeCompletions?: number | null;
   pausedCompletions: number | null;
   failedCompletions: number | null;
   cancelledCompletions: number | null;
@@ -89,6 +91,7 @@ export function deriveLiveFollowSeverity(input: {
   const failedCompletions = input.failedCompletions ?? 0;
   const cancelledCompletions = input.cancelledCompletions ?? 0;
   const pausedCompletions = input.pausedCompletions ?? 0;
+  const activeCompletions = input.activeCompletions ?? 0;
   const schedulerPosture = normalizeLabel(input.schedulerPosture);
   const backpressureReason = normalizeLabel(input.backpressureReason);
   if (
@@ -99,6 +102,9 @@ export function deriveLiveFollowSeverity(input: {
   }
   if (pausedCompletions > 0 || schedulerPosture === 'paused') {
     return 'paused';
+  }
+  if (activeCompletions > 0 && schedulerPosture === 'scheduled' && backpressureReason === 'unknown') {
+    return 'healthy';
   }
   if (schedulerPosture === 'unknown' || backpressureReason === 'unknown') {
     return 'attention-needed';

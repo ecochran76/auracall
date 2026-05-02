@@ -986,6 +986,11 @@ Safety note:
   runner topology readable in long-lived dogfood environments while preserving
   `?runnerTopology=full` for forensic debugging; defer publish/release work
   until the installed copy has carried normal use for a short period
+- Current lazy-live-follow checkpoint: installed API service on port `18095`
+  recovered and resumed the default ChatGPT live-follow completion
+  `acctmirror_completion_e26007da-f0e6-4423-bc64-8352c1fdc5c5`; pass count is
+  4, remaining detail surfaces are 261, and the status surface now reports the
+  recovered running completion as `healthy`
 - Current provider-drift checkpoint:
   - plain `grok` now resolves to current `grok-4.20` text support
   - first-class media generation across CLI, local API, and MCP is closed in

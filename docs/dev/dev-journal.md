@@ -24921,6 +24921,41 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `Pro Extended` from `button.__composer-pill`; current selected state
     remained `Pro Extended`
 
+## Turn 100 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: resume the installed default-ChatGPT lazy live-follow completion and
+  prove one additional nonblocking pass advances cache state.
+- Result:
+  - started installed `api serve` on port `18095` with
+    `--account-mirror-scheduler-interval-ms 600000` and
+    `--account-mirror-scheduler-execute`
+  - recovered existing completion
+    `acctmirror_completion_e26007da-f0e6-4423-bc64-8352c1fdc5c5`, which was
+    paused at `passCount: 3` with 267 remaining detail surfaces
+  - resumed that completion instead of starting a duplicate
+  - refresh `acctmirror_b875e369-5bf3-4e02-b01d-16155d7fbbbf` completed and
+    advanced `passCount` to 4
+  - cache evidence moved from 292 conversations, 416 artifacts, 24 files, and
+    267 remaining detail surfaces to 292 conversations, 431 artifacts,
+    24 files, and 261 remaining detail surfaces
+  - completion stayed `running` with `nextAttemptAt:
+    2026-05-02T02:35:37.275Z`, preserving the intended nonblocking cooldown
+    live-follow posture
+- Change:
+  - live-follow severity now treats a recovered running completion with no
+    paused/failed/cancelled work as `healthy` while scheduler backpressure is
+    still unknown after restart
+- Validation:
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run install:user-runtime`
+  - restarted detached installed API service on port `18095`; installed
+    `auracall api status --port 18095 --json` reports
+    `liveFollow.severity = healthy`, one active/running completion, and zero
+    paused/failed/cancelled completions
+
 ## Turn 78 | 2026-05-01
 
 - Continued implementation plan:
