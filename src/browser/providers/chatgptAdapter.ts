@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import CDP from 'chrome-remote-interface';
 import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../packages/browser-service/src/chromeLifecycle.js';
 import type { ChromeClient } from '../types.js';
@@ -72,6 +73,7 @@ import {
 } from '../../services/registry.js';
 
 const CHATGPT_HOME_URL = requireBundledServiceBaseUrl('chatgpt');
+const CHATGPT_LIBRARY_URL = requireBundledServiceRouteTemplate('chatgpt', 'library');
 const CHATGPT_PROJECT_DIALOG_ROOT_SELECTORS = resolveBundledServiceDomSelectorSet('chatgpt', 'project_dialog_roots', [
   '[data-testid="modal-new-project-enhanced"]',
   'dialog[open]',
@@ -386,6 +388,17 @@ type ChatgptConversationDownloadButtonProbe = {
   messageIndex?: number | null;
   buttonIndex?: number | null;
   title?: string | null;
+};
+
+type ChatgptLibraryItemProbe = {
+  title?: string | null;
+  href?: string | null;
+  src?: string | null;
+  kind?: string | null;
+  subtitle?: string | null;
+  text?: string | null;
+  testId?: string | null;
+  ariaLabel?: string | null;
 };
 
 type ChatgptConversationRowTagCandidateProbe = {
@@ -1106,6 +1119,123 @@ function normalizeChatgptDocumentTitle(value: string | null | undefined): string
     .toLowerCase();
 }
 
+function normalizeLibraryTitle(value: string | null | undefined): string {
+  return decodeLibraryText(normalizeUiText(value))
+    .replace(/\b(download|open|preview|copy link|share)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function decodeLibraryText(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function isChatgptLibraryChromeProbe(probe: ChatgptLibraryItemProbe, title: string): boolean {
+  const normalizedTitle = normalizeUiText(title).toLowerCase();
+  const testId = normalizeUiText(probe.testId).toLowerCase();
+  const href = normalizeUiText(probe.href).toLowerCase();
+  const ariaLabel = normalizeUiText(probe.ariaLabel).toLowerCase();
+  if (!normalizedTitle) return true;
+  if (['skip to content', 'library', 'images', 'files', 'allimagesfiles'].includes(normalizedTitle)) return true;
+  if (
+    testId.includes('sidebar') ||
+    testId.includes('profile') ||
+    testId.includes('top-controls') ||
+    testId.includes('filter') ||
+    ariaLabel.includes('profile')
+  ) {
+    return true;
+  }
+  if (href === 'https://chatgpt.com/library' || href === 'https://chatgpt.com/library#main') {
+    return true;
+  }
+  return false;
+}
+
+function resolveChatgptLibraryIdentity(
+  probe: ChatgptLibraryItemProbe,
+  title: string,
+): { uuid: string; identity: string; source: string } | null {
+  const candidates = [
+    probe.href,
+    probe.src,
+    probe.testId,
+    probe.ariaLabel,
+    probe.text,
+    title,
+  ]
+    .map((value) => normalizeUiText(value))
+    .filter(Boolean);
+  for (const candidate of candidates) {
+    const uuid = extractUuid(candidate);
+    if (uuid) {
+      return { uuid, identity: candidate, source: 'provider-uuid' };
+    }
+  }
+  const identity = [
+    normalizeUiText(probe.href),
+    normalizeUiText(probe.src),
+    normalizeUiText(probe.kind),
+    normalizeUiText(probe.subtitle),
+    title,
+  ]
+    .filter(Boolean)
+    .join('|')
+    .toLowerCase();
+  if (!identity) return null;
+  return {
+    uuid: stableUuidFromText(`chatgpt-library:${identity}`),
+    identity,
+    source: 'stable-hash',
+  };
+}
+
+function extractUuid(value: string | null | undefined): string | null {
+  const match = normalizeUiText(value).match(
+    /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i,
+  );
+  return match?.[0]?.toLowerCase() ?? null;
+}
+
+function stableUuidFromText(value: string): string {
+  const hex = createHash('sha256').update(value).digest('hex');
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    `5${hex.slice(13, 16)}`,
+    `${((Number.parseInt(hex.slice(16, 18), 16) & 0x3f) | 0x80).toString(16).padStart(2, '0')}${hex.slice(18, 20)}`,
+    hex.slice(20, 32),
+  ].join('-');
+}
+
+function inferChatgptLibraryArtifactKind(
+  probe: ChatgptLibraryItemProbe,
+  title: string,
+  uri: string | undefined,
+): ConversationArtifact['kind'] {
+  const haystack = [
+    probe.kind,
+    probe.subtitle,
+    probe.text,
+    probe.testId,
+    probe.ariaLabel,
+    title,
+    uri,
+  ]
+    .map((value) => normalizeUiText(value))
+    .join(' ')
+    .toLowerCase();
+  if (/\b(canvas|canmore|textdoc)\b/.test(haystack)) return 'canvas';
+  if (/\b(spreadsheet|xlsx|xls|csv|ods)\b/.test(haystack)) return 'spreadsheet';
+  if (/\b(image|png|jpe?g|webp|gif|avif)\b/.test(haystack)) return 'image';
+  if (/\b(download|file|pdf|docx?|pptx?|zip|sandbox)\b/.test(haystack)) return 'download';
+  return 'document';
+}
+
 export function matchesChatgptDeleteConfirmationProbe(
   probe: ChatgptDeleteConfirmationProbe | null | undefined,
   expectedTitle?: string | null,
@@ -1553,6 +1683,57 @@ export function normalizeChatgptConversationFileProbes(
     });
   }
   return files;
+}
+
+export function normalizeChatgptLibraryItemProbes(
+  probes: readonly ChatgptLibraryItemProbe[],
+): { files: FileRef[]; artifacts: ConversationArtifact[] } {
+  const files = new Map<string, FileRef>();
+  const artifacts = new Map<string, ConversationArtifact>();
+  for (const probe of probes) {
+    const title =
+      normalizeLibraryTitle(probe.title) ||
+      normalizeLibraryTitle(probe.ariaLabel) ||
+      normalizeLibraryTitle(probe.text);
+    const href = normalizeUiText(probe.href);
+    const src = normalizeUiText(probe.src);
+    const uri = href || src || undefined;
+    const identity = resolveChatgptLibraryIdentity(probe, title);
+    if (isChatgptLibraryChromeProbe(probe, title)) continue;
+    if (!title || !identity) continue;
+    const kind = inferChatgptLibraryArtifactKind(probe, title, uri);
+    const metadata = {
+      source: 'chatgpt-library',
+      libraryIdentity: identity.identity,
+      libraryIdentitySource: identity.source,
+      artifactId: `chatgpt-library:${identity.uuid}`,
+      artifactKind: kind,
+      ...(normalizeUiText(probe.subtitle) ? { subtitle: normalizeUiText(probe.subtitle) } : {}),
+      ...(normalizeUiText(probe.kind) ? { kindLabel: normalizeUiText(probe.kind) } : {}),
+      ...(normalizeUiText(probe.testId) ? { testId: normalizeUiText(probe.testId) } : {}),
+    };
+    const file: FileRef = {
+      id: identity.uuid,
+      name: title,
+      provider: 'chatgpt',
+      source: 'account',
+      remoteUrl: uri,
+      mimeType: inferMimeTypeFromArtifactName(title),
+      metadata,
+    };
+    files.set(file.id, { ...(files.get(file.id) ?? {}), ...file });
+    artifacts.set(file.id, {
+      id: `chatgpt-library:${file.id}`,
+      title,
+      kind,
+      uri,
+      metadata,
+    });
+  }
+  return {
+    files: [...files.values()],
+    artifacts: [...artifacts.values()],
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -6537,6 +6718,93 @@ async function readVisibleChatgptConversationFilesWithClient(
   return normalizeChatgptConversationFileProbes(conversationId, rawItems);
 }
 
+async function readChatgptLibraryItemsWithClient(
+  client: ChromeClient,
+): Promise<{ files: FileRef[]; artifacts: ConversationArtifact[] }> {
+  const { result } = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const isVisible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        const style = window.getComputedStyle(node);
+        return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+      };
+      const textTitle = (node) => {
+        const labels = [
+          node.getAttribute?.('aria-label') || '',
+          node.querySelector?.('[data-testid*="title" i], h1, h2, h3, [role="heading"]')?.textContent || '',
+          node.querySelector?.('img[alt]')?.getAttribute('alt') || '',
+          node.textContent || '',
+        ].map(normalize).filter(Boolean);
+        const text = labels.find((value) => value.length > 0 && value.length <= 180) || '';
+        return text
+          .split(/\\b(?:Download|Open|Preview|Copy link|Share)\\b/i)[0]
+          .replace(/\\s+/g, ' ')
+          .trim();
+      };
+      const collect = () => {
+        const candidates = [];
+        const nodes = Array.from(document.querySelectorAll([
+          'a[href]',
+          'button',
+          '[role="link"]',
+          '[role="button"]',
+          '[data-testid*="library" i]',
+          '[data-testid*="file" i]',
+          '[data-testid*="artifact" i]',
+          'img[src]',
+        ].join(','))).filter(isVisible);
+        for (const node of nodes) {
+          const card = node.closest?.('article, li, [role="listitem"], [data-testid*="card" i], [data-testid*="tile" i], [class*="card" i], [class*="tile" i]') || node;
+          const href = node.href || node.getAttribute?.('href') || card.querySelector?.('a[href]')?.href || '';
+          const image = node.matches?.('img[src]') ? node : card.querySelector?.('img[src]');
+          const src = image?.src || '';
+          const title = textTitle(card) || textTitle(node);
+          const text = normalize(card.textContent || node.textContent || '');
+          const testId = normalize(node.getAttribute?.('data-testid') || card.getAttribute?.('data-testid') || '');
+          const ariaLabel = normalize(node.getAttribute?.('aria-label') || card.getAttribute?.('aria-label') || '');
+          const signal = [href, src, title, text, testId, ariaLabel].join(' ').toLowerCase();
+          if (!title && !href && !src) continue;
+          if (!/(library|file|artifact|download|sandbox|image|canvas|spreadsheet|\\.pdf|\\.docx?|\\.xlsx?|\\.csv|\\.png|\\.jpe?g|\\.webp|\\.zip)/i.test(signal)) {
+            continue;
+          }
+          candidates.push({
+            title: title || null,
+            href: href || null,
+            src: src || null,
+            kind: testId || null,
+            subtitle: normalize(card.querySelector?.('time, [datetime], small, [class*="subtitle" i], [class*="description" i]')?.textContent || '') || null,
+            text: text || null,
+            testId: testId || null,
+            ariaLabel: ariaLabel || null,
+          });
+        }
+        const seen = new Set();
+        return candidates.filter((item) => {
+          const key = [item.href, item.src, item.title, item.text].filter(Boolean).join('|').toLowerCase();
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      };
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        const items = collect();
+        if (items.length > 0) return items;
+        await sleep(250);
+      }
+      return collect();
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+  const rawItems = Array.isArray(result?.value)
+    ? (result.value as ChatgptLibraryItemProbe[])
+    : [];
+  return normalizeChatgptLibraryItemProbes(rawItems);
+}
+
 async function renameChatgptConversationWithClient(
   client: ChromeClient,
   conversationId: string,
@@ -7594,6 +7862,7 @@ export function createChatgptAdapter(): Pick<
   | 'listConversations'
   | 'readConversationContext'
   | 'readActiveConversationArtifacts'
+  | 'listAccountFiles'
   | 'listConversationFiles'
   | 'materializeConversationArtifact'
   | 'renameConversation'
@@ -7770,6 +8039,17 @@ export function createChatgptAdapter(): Pick<
             providerOptions: options,
           },
         );
+      } finally {
+        await client.close().catch(() => undefined);
+      }
+    },
+    async listAccountFiles(options?: BrowserProviderListOptions): Promise<FileRef[]> {
+      const { client } = await connectToChatgptTab(options, CHATGPT_LIBRARY_URL);
+      try {
+        await assertChatgptExpectedIdentity(client, options);
+        await navigateToChatgptUrl(client, CHATGPT_LIBRARY_URL);
+        const inventory = await readChatgptLibraryItemsWithClient(client);
+        return inventory.files;
       } finally {
         await client.close().catch(() => undefined);
       }

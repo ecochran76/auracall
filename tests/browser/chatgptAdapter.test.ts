@@ -25,6 +25,7 @@ import {
   normalizeChatgptConversationId,
   normalizeChatgptConversationDownloadArtifactProbes,
   normalizeChatgptConversationFileProbes,
+  normalizeChatgptLibraryItemProbes,
   normalizeChatgptConversationLinkProbes,
   normalizeChatgptProjectSourceProbes,
   normalizeChatgptProjectId,
@@ -39,6 +40,108 @@ import {
   resolveChatgptProjectSourceUploadActionLabelsForTest,
   serializeChatgptGridRowsToCsv,
 } from '../../src/browser/providers/chatgptAdapter.js';
+
+describe('normalizeChatgptLibraryItemProbes', () => {
+  test('uses provider UUIDs and dedupes duplicated library entries', () => {
+    const inventory = normalizeChatgptLibraryItemProbes([
+      {
+        title: 'Research appendix.pdf',
+        href: 'https://chatgpt.com/library/files/123e4567-e89b-12d3-a456-426614174000',
+        kind: 'file',
+        text: 'Research appendix.pdf PDF',
+      },
+      {
+        title: 'Research appendix.pdf',
+        href: 'https://chatgpt.com/library/files/123e4567-e89b-12d3-a456-426614174000',
+        kind: 'download',
+        text: 'Research appendix.pdf Download',
+      },
+      {
+        title: 'Market model.xlsx',
+        href: 'https://chatgpt.com/library/artifacts/223e4567-e89b-12d3-a456-426614174111',
+        kind: 'spreadsheet',
+        text: 'Market model.xlsx Spreadsheet',
+      },
+    ]);
+
+    expect(inventory.files.map((file) => file.id)).toEqual([
+      '123e4567-e89b-12d3-a456-426614174000',
+      '223e4567-e89b-12d3-a456-426614174111',
+    ]);
+    expect(inventory.files[0]).toMatchObject({
+      name: 'Research appendix.pdf',
+      provider: 'chatgpt',
+      source: 'account',
+      mimeType: 'application/pdf',
+      metadata: {
+        source: 'chatgpt-library',
+        libraryIdentitySource: 'provider-uuid',
+        artifactId: 'chatgpt-library:123e4567-e89b-12d3-a456-426614174000',
+        artifactKind: 'download',
+      },
+    });
+    expect(inventory.artifacts).toMatchObject([
+      {
+        id: 'chatgpt-library:123e4567-e89b-12d3-a456-426614174000',
+        title: 'Research appendix.pdf',
+        kind: 'download',
+      },
+      {
+        id: 'chatgpt-library:223e4567-e89b-12d3-a456-426614174111',
+        title: 'Market model.xlsx',
+        kind: 'spreadsheet',
+      },
+    ]);
+  });
+
+  test('creates stable UUID-shaped IDs when the library item has no provider UUID', () => {
+    const first = normalizeChatgptLibraryItemProbes([
+      {
+        title: 'Untitled canvas',
+        href: 'https://chatgpt.com/library/canvas/local-route',
+        kind: 'canvas',
+      },
+    ]);
+    const second = normalizeChatgptLibraryItemProbes([
+      {
+        title: 'Untitled canvas',
+        href: 'https://chatgpt.com/library/canvas/local-route',
+        kind: 'canvas',
+      },
+    ]);
+
+    expect(first.files[0]?.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(second.files[0]?.id).toBe(first.files[0]?.id);
+    expect(first.artifacts[0]).toMatchObject({
+      id: `chatgpt-library:${first.files[0]?.id}`,
+      kind: 'canvas',
+    });
+  });
+
+  test('drops library page chrome while preserving decoded file titles', () => {
+    const inventory = normalizeChatgptLibraryItemProbes([
+      {
+        title: 'Skip to content',
+        href: 'https://chatgpt.com/library#main',
+      },
+      {
+        title: 'Library',
+        href: 'https://chatgpt.com/library',
+        testId: 'sidebar-item-recall',
+      },
+      {
+        title: 'ChE%204470%20Exam.docx',
+        kind: 'file',
+      },
+    ]);
+
+    expect(inventory.files).toHaveLength(1);
+    expect(inventory.files[0]).toMatchObject({
+      name: 'ChE 4470 Exam.docx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    });
+  });
+});
 
 describe('extractChatgptProjectIdFromUrl', () => {
   test('returns the project id for concrete project URLs', () => {

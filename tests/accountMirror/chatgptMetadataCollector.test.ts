@@ -1,11 +1,141 @@
 import { describe, expect, test, vi } from 'vitest';
 import {
+  mapChatgptLibraryFilesToArtifacts,
   mapGrokAccountFilesToMediaManifest,
   readBoundedAttachmentInventory,
+  readBoundedChatgptDetailInventory,
+  readBoundedChatgptLibraryInventory,
   readBoundedGrokAccountFileInventory,
 } from '../../src/accountMirror/chatgptMetadataCollector.js';
 
 describe('ChatGPT account mirror metadata collector', () => {
+  test('reads ChatGPT library files as account files and artifacts', async () => {
+    const client = {
+      listAccountFiles: vi.fn(async () => [
+        {
+          id: '123e4567-e89b-12d3-a456-426614174000',
+          name: 'Library report.pdf',
+          provider: 'chatgpt' as const,
+          source: 'account' as const,
+          remoteUrl: 'https://chatgpt.com/library/files/123e4567-e89b-12d3-a456-426614174000',
+          metadata: {
+            source: 'chatgpt-library',
+            artifactId: 'chatgpt-library:123e4567-e89b-12d3-a456-426614174000',
+            artifactKind: 'download',
+          },
+        },
+      ]),
+    };
+
+    const inventory = await readBoundedChatgptLibraryInventory(client, 8);
+
+    expect(inventory).toMatchObject({
+      truncated: false,
+      files: [
+        {
+          id: '123e4567-e89b-12d3-a456-426614174000',
+          source: 'account',
+        },
+      ],
+      artifacts: [
+        {
+          id: 'chatgpt-library:123e4567-e89b-12d3-a456-426614174000',
+          title: 'Library report.pdf',
+          kind: 'download',
+          metadata: {
+            fileId: '123e4567-e89b-12d3-a456-426614174000',
+            fileSource: 'account',
+          },
+        },
+      ],
+    });
+  });
+
+  test('combines ChatGPT library inventory with bounded conversation attachment inventory', async () => {
+    const client = {
+      listAccountFiles: vi.fn(async () => [
+        {
+          id: '223e4567-e89b-12d3-a456-426614174111',
+          name: 'Library sheet.xlsx',
+          provider: 'chatgpt' as const,
+          source: 'account' as const,
+          metadata: {
+            source: 'chatgpt-library',
+            artifactKind: 'spreadsheet',
+          },
+        },
+      ]),
+      listProjectFiles: vi.fn(async () => []),
+      listConversationFiles: vi.fn(async (conversationId: string) => [
+        {
+          id: `conversation-file-${conversationId}`,
+          name: 'User upload.png',
+          provider: 'chatgpt' as const,
+          source: 'conversation' as const,
+        },
+      ]),
+      getConversationContext: vi.fn(async () => ({
+        provider: 'chatgpt' as const,
+        conversationId: 'conv_1',
+        messages: [],
+        artifacts: [],
+      })),
+    };
+
+    const inventory = await readBoundedChatgptDetailInventory(
+      client,
+      [],
+      [{ id: 'conv_1', title: 'Conversation 1', provider: 'chatgpt' }],
+      4,
+      2,
+    );
+
+    expect(inventory.files.map((file) => file.id)).toEqual([
+      '223e4567-e89b-12d3-a456-426614174111',
+      'conversation-file-conv_1',
+    ]);
+    expect(inventory.artifacts.map((artifact) => artifact.id)).toEqual([
+      'chatgpt-library:223e4567-e89b-12d3-a456-426614174111',
+    ]);
+    expect(inventory.truncated).toBe(false);
+  });
+
+  test('maps only ChatGPT library files into account artifacts', () => {
+    const artifacts = mapChatgptLibraryFilesToArtifacts([
+      {
+        id: 'library-file',
+        name: 'Library canvas',
+        provider: 'chatgpt',
+        source: 'account',
+        metadata: {
+          source: 'chatgpt-library',
+          artifactKind: 'canvas',
+        },
+      },
+      {
+        id: 'conversation-file',
+        name: 'Conversation upload',
+        provider: 'chatgpt',
+        source: 'conversation',
+      },
+    ]);
+
+    expect(artifacts).toEqual([
+      {
+        id: 'chatgpt-library:library-file',
+        title: 'Library canvas',
+        kind: 'canvas',
+        uri: undefined,
+        metadata: {
+          source: 'chatgpt-library',
+          artifactKind: 'canvas',
+          fileId: 'library-file',
+          fileSource: 'account',
+        },
+      },
+    ]);
+  });
+
   test('builds a bounded file and artifact inventory from project and conversation indexes', async () => {
     const client = {
       listProjectFiles: vi.fn(async (projectId: string) => [

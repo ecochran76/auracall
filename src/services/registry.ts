@@ -19,6 +19,7 @@ export interface ServiceRouteRegistry {
   baseUrl?: string;
   app?: string;
   files?: string;
+  library?: string;
   projectIndex?: string;
   compatibleHosts?: string[];
   cookieOrigins?: string[];

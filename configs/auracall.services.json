@@ -52,6 +52,7 @@
           "https://chat.openai.com",
           "https://atlas.openai.com"
         ],
+        "library": "https://chatgpt.com/library",
         "project": "https://chatgpt.com/g/{projectId}/project",
         "projectSources": "https://chatgpt.com/g/{projectId}/project?tab=sources",
         "conversation": "https://chatgpt.com/c/{conversationId}",

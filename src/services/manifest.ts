@@ -14,6 +14,7 @@ const SERVICE_ROUTE_REGISTRY_SCHEMA = z
     baseUrl: z.string().optional(),
     app: z.string().optional(),
     files: z.string().optional(),
+    library: z.string().optional(),
     projectIndex: z.string().optional(),
     compatibleHosts: STRING_LIST_SCHEMA.optional(),
     cookieOrigins: STRING_LIST_SCHEMA.optional(),

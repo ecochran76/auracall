@@ -651,3 +651,8 @@ uses the existing `listAccountFiles()` surface, caps the read with the artifact
 row budget, writes account file manifests, and derives media manifests for
 recognized image/video/audio assets. Saved/Imagine gallery scraping remains
 deferred until that surface is proven as a stable read-only index.
+ChatGPT now has a matching account-level detail surface through
+`https://chatgpt.com/library`: the provider adapter exposes it as
+`listAccountFiles()`, normalizes visible files/artifacts to UUID-backed account
+file IDs, and the live-follow collector merges those library files/artifacts
+with the existing bounded project/conversation attachment walk.

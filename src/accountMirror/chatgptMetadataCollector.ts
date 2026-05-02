@@ -115,7 +115,7 @@ export function createChatgptAccountMirrorMetadataCollector(
       }
       const conversations = [...rootConversations.items, ...projectConversations];
       const inventory = input.provider === 'chatgpt'
-        ? await readBoundedAttachmentInventory(
+        ? await readBoundedChatgptDetailInventory(
             client,
             projects.items,
             conversations,
@@ -374,6 +374,70 @@ export async function readBoundedAttachmentInventory(
   };
 }
 
+export async function readBoundedChatgptDetailInventory(
+  client: Pick<
+    BrowserAutomationClient,
+    'listAccountFiles' | 'listProjectFiles' | 'listConversationFiles' | 'getConversationContext'
+  >,
+  projects: readonly Project[],
+  conversations: readonly Conversation[],
+  maxRows: number,
+  options: number | {
+    maxDetailReads?: number;
+    cursor?: AttachmentInventoryCursor | null;
+    shouldYield?: () => Promise<boolean> | boolean;
+  } = 6,
+): Promise<{
+  artifacts: ConversationArtifact[];
+  files: FileRef[];
+  media: AccountMirrorMediaManifestEntry[];
+  truncated: boolean;
+  cursor: AttachmentInventoryCursor;
+}> {
+  const limit = Math.max(0, Math.floor(maxRows));
+  const library = await readBoundedChatgptLibraryInventory(client, limit);
+  const remainingRows = Math.max(0, limit - library.files.length);
+  const attachmentInventory = await readBoundedAttachmentInventory(
+    client,
+    projects,
+    conversations,
+    remainingRows,
+    options,
+  );
+  return {
+    artifacts: mergeConversationArtifacts(library.artifacts, attachmentInventory.artifacts),
+    files: mergeFileRefs(library.files, attachmentInventory.files),
+    media: [],
+    truncated: library.truncated || attachmentInventory.truncated,
+    cursor: attachmentInventory.cursor,
+  };
+}
+
+export async function readBoundedChatgptLibraryInventory(
+  client: Pick<BrowserAutomationClient, 'listAccountFiles'>,
+  maxRows: number,
+): Promise<{
+  artifacts: ConversationArtifact[];
+  files: FileRef[];
+  truncated: boolean;
+}> {
+  const limit = Math.max(0, Math.floor(maxRows));
+  if (limit <= 0) {
+    return {
+      artifacts: [],
+      files: [],
+      truncated: true,
+    };
+  }
+  const files = await safeReadAccountFiles(client);
+  const boundedFiles = files.slice(0, limit);
+  return {
+    artifacts: mapChatgptLibraryFilesToArtifacts(boundedFiles),
+    files: boundedFiles,
+    truncated: files.length > limit,
+  };
+}
+
 export async function readBoundedGrokAccountFileInventory(
   client: Pick<BrowserAutomationClient, 'listAccountFiles'>,
   maxRows: number,
@@ -517,6 +581,73 @@ function addArtifact(
       projectId: artifact.metadata?.projectId ?? conversation.projectId,
     },
   });
+}
+
+function mergeFileRefs(left: readonly FileRef[], right: readonly FileRef[]): FileRef[] {
+  const merged = new Map<string, FileRef>();
+  for (const file of [...left, ...right]) {
+    if (!file?.id) continue;
+    const key = `${file.provider}:${file.source}:${file.id}`;
+    merged.set(key, { ...(merged.get(key) ?? {}), ...file });
+  }
+  return [...merged.values()];
+}
+
+function mergeConversationArtifacts(
+  left: readonly ConversationArtifact[],
+  right: readonly ConversationArtifact[],
+): ConversationArtifact[] {
+  const merged = new Map<string, ConversationArtifact>();
+  for (const artifact of [...left, ...right]) {
+    if (!artifact?.id) continue;
+    const conversationId = isRecord(artifact.metadata) && typeof artifact.metadata.conversationId === 'string'
+      ? artifact.metadata.conversationId
+      : '';
+    const key = `${conversationId}:${artifact.id}`;
+    merged.set(key, { ...(merged.get(key) ?? {}), ...artifact });
+  }
+  return [...merged.values()];
+}
+
+export function mapChatgptLibraryFilesToArtifacts(
+  files: readonly FileRef[],
+): ConversationArtifact[] {
+  return files
+    .filter((file) => isRecord(file.metadata) && file.metadata.source === 'chatgpt-library')
+    .map((file) => {
+      const metadata = isRecord(file.metadata) ? file.metadata : {};
+      const artifactKind = typeof metadata.artifactKind === 'string'
+        ? metadata.artifactKind
+        : 'download';
+      const artifactId = typeof metadata.artifactId === 'string'
+        ? metadata.artifactId
+        : `chatgpt-library:${file.id}`;
+      return {
+        id: artifactId,
+        title: file.name,
+        kind: normalizeArtifactKind(artifactKind),
+        uri: file.remoteUrl,
+        metadata: {
+          ...metadata,
+          fileId: file.id,
+          fileSource: file.source,
+        },
+      };
+    });
+}
+
+function normalizeArtifactKind(value: string): ConversationArtifact['kind'] {
+  if (
+    value === 'document' ||
+    value === 'download' ||
+    value === 'canvas' ||
+    value === 'generated' ||
+    value === 'image' ||
+    value === 'spreadsheet'
+  ) {
+    return value;
+  }
+  return 'download';
 }
 
 export function mapGrokAccountFilesToMediaManifest(
