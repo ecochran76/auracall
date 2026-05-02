@@ -132,6 +132,8 @@ import {
   type LiveFollowHealthSummary,
 } from '../status/liveFollowHealth.js';
 
+export const DEFAULT_BACKGROUND_DRAIN_INTERVAL_MS = 60_000;
+
 export interface ResponsesHttpServerOptions {
   host?: string;
   port?: number;
@@ -1509,7 +1511,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
       ...serverOptions,
       recoverRunsOnStart: serverOptions.recoverRunsOnStart ?? true,
       recoverRunsOnStartSourceKind: serverOptions.recoverRunsOnStartSourceKind,
-      backgroundDrainIntervalMs: serverOptions.backgroundDrainIntervalMs ?? 250,
+      backgroundDrainIntervalMs: serverOptions.backgroundDrainIntervalMs ?? DEFAULT_BACKGROUND_DRAIN_INTERVAL_MS,
       accountMirrorSchedulerIntervalMs: serverOptions.accountMirrorSchedulerIntervalMs ?? 0,
       accountMirrorSchedulerDryRun: serverOptions.accountMirrorSchedulerDryRun ?? true,
     },

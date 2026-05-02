@@ -78,6 +78,9 @@ Current limits:
     - `team-run`: only team-mode executions
     - `all`: both direct and team-run
 - tune startup recovery scan cap with `--recover-runs-on-start-max <count>`
+- background drain defaults to a 60-second cadence. Tune it with
+  `--background-drain-interval-ms <ms>` or set `0` to disable timer-driven
+  drain when the operator wants request-scoped execution only.
 - `/status` reports explicit development posture, route surface, and
   unauthenticated/local-only state, including the current AuraCall version
   - `/status.runner` now reports the live persisted local runner owned by

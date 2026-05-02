@@ -14071,7 +14071,17 @@ describe('http responses adapter', () => {
   });
 
   it('reports development-only posture through the status endpoint', async () => {
-    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        accountMirrorCompletionService: {
+          start: vi.fn(),
+          read: vi.fn(() => null),
+          list: vi.fn(() => []),
+          control: vi.fn(() => null),
+        },
+      },
+    );
 
     try {
       const response = await fetch(`http://127.0.0.1:${server.port}/status`);

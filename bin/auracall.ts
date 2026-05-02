@@ -988,6 +988,11 @@ apiCommand
     'direct',
   )
   .option(
+    '--background-drain-interval-ms <ms>',
+    'Background runtime drain cadence in milliseconds; 0 disables timer-driven drain. Default is 60000.',
+    parseIntOption,
+  )
+  .option(
     '--account-mirror-scheduler-interval-ms <ms>',
     'Enable lazy account mirror scheduler passes at this interval. Defaults disabled.',
     parseIntOption,
@@ -1008,6 +1013,7 @@ apiCommand
       recoverRunsOnStart: Boolean(commandOptions.recoverRunsOnStart),
       recoverRunsOnStartMaxRuns: commandOptions.recoverRunsOnStartMax,
       recoverRunsOnStartSourceKind: commandOptions.recoverRunsOnStartSource,
+      backgroundDrainIntervalMs: commandOptions.backgroundDrainIntervalMs,
       accountMirrorSchedulerIntervalMs: commandOptions.accountMirrorSchedulerIntervalMs,
       accountMirrorSchedulerDryRun: !commandOptions.accountMirrorSchedulerExecute,
     });

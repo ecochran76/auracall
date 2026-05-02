@@ -646,6 +646,9 @@ Terminology note:
     - `lastTrigger`
     - `lastStartedAt`
     - `lastCompletedAt`
+    - `api serve` defaults timer-driven drain to a 60-second cadence; use
+      `--background-drain-interval-ms <ms>` to tune it, or `0` to disable the
+      timer
   - `/status` now also reports the live persisted local runner identity for
     `api serve` under `runner`:
     - `id`

@@ -24955,6 +24955,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `auracall api status --port 18095 --json` reports
     `liveFollow.severity = healthy`, one active/running completion, and zero
     paused/failed/cancelled completions
+- Follow-up CPU investigation:
+  - observed detached installed `api serve` PID `3304932` consuming about one
+    core while the live-follow completion was waiting for its next eligible
+    mirror pass
+  - paused the completion, then stopped the process to relieve CPU pressure
+  - isolated the same CPU pattern with scheduler disabled and the completion
+    paused, so the hot path was not browser scraping or live-follow cooldown
+  - attached a Node CPU profile to a local server and found the hot samples in
+    background runtime drain store scans:
+    `readExecutionRunStoredRecord`, `inspectHostDrainCandidates`, and
+    `drainRunsOnce`
+  - root cause: `api serve` defaulted the generic background drain cadence to
+    `250` ms, which repeatedly scanned accumulated persisted run history
+  - changed the default background drain cadence to `60000` ms and exposed
+    `--background-drain-interval-ms <ms>` so operators can tune it or set `0`
+    to disable timer-driven drain
 
 ## Turn 78 | 2026-05-01
 

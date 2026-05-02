@@ -76,6 +76,8 @@
     - cap startup recovery: `pnpm tsx bin/auracall.ts api serve --port 8080 --recover-runs-on-start-max 25`
     - recover only team source runs: `pnpm tsx bin/auracall.ts api serve --port 8080 --recover-runs-on-start-source team-run`
     - recover both sources: `pnpm tsx bin/auracall.ts api serve --port 8080 --recover-runs-on-start-source all`
+    - tune background drain cadence: `pnpm tsx bin/auracall.ts api serve --port 8080 --background-drain-interval-ms 60000`
+    - disable timer-driven background drain: `pnpm tsx bin/auracall.ts api serve --port 8080 --background-drain-interval-ms 0`
     - wrapper contract:
       - default startup recovery scope remains `direct`
       - `team-run` recovers only team runs
