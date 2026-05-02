@@ -31,6 +31,8 @@
 - 2026-05-02: Consult Pro mirror backfill also wakes on persisted cooldown.
   After the resumed pass, `wsl-chrome-2` woke again without a manual control
   call, completed pass 3, and reduced remaining detail surfaces from 46 to 40.
+  The following pass also woke without manual control and reduced remaining
+  detail surfaces from 40 to 34.
 
 - 2026-05-02: Live follow desired state belongs on the provider account config,
   not on agents or browser profiles. Use

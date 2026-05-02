@@ -25168,6 +25168,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `2026-05-02T17:51:56.268Z` to `2026-05-02T17:55:28.452Z`
   - remaining detail surfaces dropped from 46 to 40; next polite attempt is
     `2026-05-02T18:21:14.453Z`
+  - pass 4 woke without manual control and completed refresh
+    `acctmirror_dee52066-cf79-4dab-84d0-ff46d6f250e8` from
+    `2026-05-02T18:21:14.464Z` to `2026-05-02T18:24:38.401Z`
+  - remaining detail surfaces dropped from 40 to 34; next polite attempt is
+    `2026-05-02T18:50:25.145Z`
 - Config design note:
   - live follow should become config desired state, not only explicit
     operation starts

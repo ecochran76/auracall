@@ -584,6 +584,11 @@ Each status payload should include:
   `2026-05-02T17:51:56.268Z`, completed at
   `2026-05-02T17:55:28.452Z`, and reduced remaining detail surfaces from
   46 to 40.
+- Pass 4 for `wsl-chrome-2` also woke autonomously. Refresh
+  `acctmirror_dee52066-cf79-4dab-84d0-ff46d6f250e8` started at
+  `2026-05-02T18:21:14.464Z`, completed at
+  `2026-05-02T18:24:38.401Z`, and reduced remaining detail surfaces from
+  40 to 34.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -603,7 +608,7 @@ Each status payload should include:
 ## Next Implementation Slice
 
 Let `chatgpt/wsl-chrome-2` continue on the long-lived `18095` service through
-cooldown-spaced passes until its remaining 40 detail surfaces reach
+cooldown-spaced passes until its remaining 34 detail surfaces reach
 completeness. In parallel, design the next code slice for config-owned
 live-follow reconciliation: read `runtimeProfiles.*.services.*.liveFollow`,
 project desired state through API/MCP/dashboard, and ensure `api serve`
