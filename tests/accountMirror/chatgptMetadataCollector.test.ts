@@ -51,7 +51,7 @@ describe('ChatGPT account mirror metadata collector', () => {
     });
   });
 
-  test('combines ChatGPT library inventory with bounded conversation attachment inventory', async () => {
+  test('uses ChatGPT library inventory instead of slower conversation attachment inventory when available', async () => {
     const client = {
       listAccountFiles: vi.fn(async () => [
         {
@@ -90,14 +90,12 @@ describe('ChatGPT account mirror metadata collector', () => {
       2,
     );
 
-    expect(inventory.files.map((file) => file.id)).toEqual([
-      '223e4567-e89b-12d3-a456-426614174111',
-      'conversation-file-conv_1',
-    ]);
+    expect(inventory.files.map((file) => file.id)).toEqual(['223e4567-e89b-12d3-a456-426614174111']);
     expect(inventory.artifacts.map((artifact) => artifact.id)).toEqual([
       'chatgpt-library:223e4567-e89b-12d3-a456-426614174111',
     ]);
     expect(inventory.truncated).toBe(false);
+    expect(client.listConversationFiles).not.toHaveBeenCalled();
   });
 
   test('maps only ChatGPT library files into account artifacts', () => {

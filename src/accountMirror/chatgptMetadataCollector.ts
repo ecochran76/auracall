@@ -396,6 +396,24 @@ export async function readBoundedChatgptDetailInventory(
 }> {
   const limit = Math.max(0, Math.floor(maxRows));
   const library = await readBoundedChatgptLibraryInventory(client, limit);
+  if (library.files.length > 0 || library.artifacts.length > 0) {
+    return {
+      artifacts: library.artifacts,
+      files: library.files,
+      media: [],
+      truncated: library.truncated,
+      cursor: createAttachmentInventoryCursor(
+        typeof options === 'number' ? null : options.cursor ?? null,
+        {
+          projectsLength: projects.length,
+          conversationsLength: conversations.length,
+          detailReadLimit: normalizeDetailReadLimit(options),
+          scannedProjects: 0,
+          scannedConversations: 0,
+        },
+      ),
+    };
+  }
   const remainingRows = Math.max(0, limit - library.files.length);
   const attachmentInventory = await readBoundedAttachmentInventory(
     client,
@@ -411,6 +429,17 @@ export async function readBoundedChatgptDetailInventory(
     truncated: library.truncated || attachmentInventory.truncated,
     cursor: attachmentInventory.cursor,
   };
+}
+
+function normalizeDetailReadLimit(
+  options: number | {
+    maxDetailReads?: number;
+  },
+): number {
+  const maxDetailReads = typeof options === 'number'
+    ? options
+    : options.maxDetailReads ?? 6;
+  return Math.max(1, Math.min(6, Math.floor(maxDetailReads)));
 }
 
 export async function readBoundedChatgptLibraryInventory(
