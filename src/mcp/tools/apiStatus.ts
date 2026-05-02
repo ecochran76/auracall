@@ -57,6 +57,44 @@ const apiStatusCompletionOperationShape = z.object({
   errorMessage: z.string().nullable(),
 });
 
+const apiStatusLiveFollowTargetAccountShape = z.object({
+  provider: z.string(),
+  runtimeProfileId: z.string(),
+  desiredState: z.string(),
+  desiredEnabled: z.boolean(),
+  actualStatus: z.string().nullable(),
+  phase: z.string().nullable(),
+  passCount: z.number().nullable(),
+  nextAttemptAt: z.string().nullable(),
+  mirrorCompleteness: z.string().nullable(),
+  metadataCounts: z.object({
+    projects: z.number(),
+    conversations: z.number(),
+    artifacts: z.number(),
+    files: z.number(),
+    media: z.number(),
+  }).nullable(),
+});
+
+const apiStatusLiveFollowTargetsShape = z.object({
+  total: z.number(),
+  enabled: z.number(),
+  disabled: z.number(),
+  unconfigured: z.number(),
+  missingIdentity: z.number(),
+  unsupported: z.number(),
+  active: z.number(),
+  queued: z.number(),
+  running: z.number(),
+  paused: z.number(),
+  attentionNeeded: z.number(),
+  complete: z.number(),
+  inProgress: z.number(),
+  none: z.number(),
+  unknown: z.number(),
+  accounts: z.array(apiStatusLiveFollowTargetAccountShape),
+});
+
 const apiStatusOutputShape = {
   ok: z.boolean().nullable(),
   host: z.string(),
@@ -99,6 +137,7 @@ const apiStatusOutputShape = {
     failedCompletions: z.number().nullable(),
     cancelledCompletions: z.number().nullable(),
     latestYield: apiStatusLatestYieldShape.nullable(),
+    targets: apiStatusLiveFollowTargetsShape.nullable(),
   }),
   raw: z.unknown(),
 } satisfies z.ZodRawShape;

@@ -25315,3 +25315,33 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/accountMirror/statusRegistry.test.ts tests/accountMirror/liveFollowReconciler.test.ts tests/accountMirror/refreshService.test.ts tests/schema/resolver.test.ts tests/mcp.accountMirrorStatus.test.ts`
   - `pnpm exec tsc --noEmit`
   - `pnpm run install:user-runtime`
+
+## Turn 82 | 2026-05-02
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make configured live-follow accounts observable as a rollup, not only
+  as raw `accountMirrorStatus` entries.
+- Change:
+  - `/status.liveFollow.targets` now carries desired/actual configured-account
+    rollups: desired-state counts, active/running/paused/attention counts,
+    completeness counts, and compact per-account status
+  - CLI `auracall api status` prints a `Live follow targets:` line
+  - MCP `api_status` exposes the same structured target rollup
+  - the projection is read-only and derives from existing status/completion
+    state without browser dispatcher or provider work
+- Validation:
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts --maxWorkers 1`
+  - `pnpm exec biome lint src/status/liveFollowHealth.ts src/http/responsesServer.ts src/cli/apiStatusCommand.ts src/mcp/tools/apiStatus.ts tests/cli/apiStatusCommand.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - broad `tests/http.responsesServer.test.ts` was attempted with the focused
+    status tests but unrelated startup-recovery cases timed out at the existing
+    10s cap; the CLI/MCP status tests passed inside that run
+- Installed dogfood:
+  - installed the user runtime and restarted `127.0.0.1:18095`; final PID is
+    `3843590`
+  - `/status.liveFollow.targets` reported `total: 9`, `enabled: 2`,
+    `active: 2`, `complete: 1`, `inProgress: 1`, and `attentionNeeded: 0`
+    for enabled targets
+  - installed CLI `auracall api status --port 18095` printed
+    `Live follow targets: total=9 enabled=2 active=2 complete=1 in_progress=1 attention=0`

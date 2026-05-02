@@ -474,6 +474,11 @@ Each status payload should include:
   `attention-needed`.
 - `/status.liveFollow` exposes the same shared live-follow health projection
   used by CLI status, MCP `api_status`, and `/ops/browser`.
+- `/status.liveFollow.targets` now exposes configured-account desired/actual
+  rollups: enabled/disabled/unconfigured/missing-identity/unsupported counts,
+  active/queued/running/paused/attention counts, completeness counts, and a
+  compact account list with provider/runtime profile, desired state, operation
+  status, phase, pass count, next attempt, completeness, and metadata counts.
 - `/ops/browser` shows the same derived live-follow severity in the Server
   summary and Mirror Live Follow panel, so dashboard operators can see the
   health state without reading raw completion counts.
@@ -604,6 +609,10 @@ Each status payload should include:
   two-minute timeout so a provider DOM drift or helper hang releases the
   browser-operation lease and reports a failed pass instead of leaving the
   target permanently `already-running`.
+- Operator status now includes a live-follow target rollup. `/status` exposes
+  `liveFollow.targets`, CLI `auracall api status` prints `Live follow
+  targets:`, and MCP `api_status` includes the same structured target rollup
+  without acquiring browser dispatcher or provider state.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -624,8 +633,6 @@ Each status payload should include:
 
 Let the enabled default Gemini/Grok completions continue on the long-lived
 `18095` service long enough to observe cooldown wakeups and any provider drift.
-The next implementation slice should add provider-specific detail collectors
-only where there is a proven stable surface; otherwise keep non-ChatGPT live
-follow at identity/project/conversation metadata and focus on operator rollups
-that show desired state plus actual operation progress for every configured
-provider account.
+The next implementation slice should surface `liveFollow.targets` in the
+browser dashboard's Mirror Live Follow panel, then add provider-specific detail
+collectors only where there is a proven stable surface.

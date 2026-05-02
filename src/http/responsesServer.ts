@@ -131,6 +131,8 @@ import type { AccountMirrorProvider } from '../accountMirror/politePolicy.js';
 import {
   summarizeLiveFollowHealth,
   type LiveFollowHealthSummary,
+  type LiveFollowTargetAccountSummary,
+  type LiveFollowTargetRollup,
 } from '../status/liveFollowHealth.js';
 
 export const DEFAULT_BACKGROUND_DRAIN_INTERVAL_MS = 60_000;
@@ -1799,7 +1801,11 @@ function createHttpStatusResponse(input: {
     accountMirrorScheduler,
     accountMirrorStatus: input.accountMirrorStatus,
     accountMirrorCompletions: input.accountMirrorCompletions,
-    liveFollow: createLiveFollowHealthSummary(accountMirrorScheduler, input.accountMirrorCompletions),
+    liveFollow: createLiveFollowHealthSummary(
+      accountMirrorScheduler,
+      input.accountMirrorCompletions,
+      input.accountMirrorStatus,
+    ),
     executionHints: {
       headerNames: [
         'X-AuraCall-Runtime-Profile',
@@ -1816,6 +1822,7 @@ function createHttpStatusResponse(input: {
 function createLiveFollowHealthSummary(
   scheduler: HttpStatusResponse['accountMirrorScheduler'],
   completions: AccountMirrorCompletionStatusSummary,
+  status: AccountMirrorStatusSummary,
 ): LiveFollowHealthSummary {
   const backpressureReason = scheduler.lastPass?.backpressure.reason ?? scheduler.operatorStatus.backpressureReason;
   const latestYield = summarizeAccountMirrorSchedulerHistory(scheduler.history, { limit: 10 }).latestYield;
@@ -1836,7 +1843,91 @@ function createLiveFollowHealthSummary(
           remainingDetailSurfaces: latestYield.remainingDetailSurfaces?.total ?? null,
         }
       : null,
+    targets: createLiveFollowTargetRollup(status, completions),
   });
+}
+
+function createLiveFollowTargetRollup(
+  status: AccountMirrorStatusSummary,
+  completions: AccountMirrorCompletionStatusSummary,
+): LiveFollowTargetRollup {
+  const operations = [...completions.active, ...completions.recent];
+  const accounts = status.entries.map((entry): LiveFollowTargetAccountSummary => {
+    const operation = operations.find((candidate) =>
+      candidate.provider === entry.provider && candidate.runtimeProfileId === entry.runtimeProfileId
+    ) ?? null;
+    return {
+      provider: entry.provider,
+      runtimeProfileId: entry.runtimeProfileId,
+      desiredState: entry.liveFollow.state,
+      desiredEnabled: entry.liveFollow.enabled,
+      actualStatus: operation?.status ?? (entry.mirrorState.running ? 'refreshing' : entry.status),
+      phase: operation?.phase ?? null,
+      passCount: operation?.passCount ?? null,
+      nextAttemptAt: operation?.nextAttemptAt ?? entry.eligibleAt,
+      mirrorCompleteness: entry.mirrorCompleteness.state,
+      metadataCounts: entry.metadataCounts,
+    };
+  });
+  return accounts.reduce<LiveFollowTargetRollup>(
+    (acc, account) => {
+      acc.total += 1;
+      if (account.desiredState === 'enabled') acc.enabled += 1;
+      else if (account.desiredState === 'disabled') acc.disabled += 1;
+      else if (account.desiredState === 'unconfigured') acc.unconfigured += 1;
+      else if (account.desiredState === 'missing_identity') acc.missingIdentity += 1;
+      else if (account.desiredState === 'unsupported') acc.unsupported += 1;
+
+      if (!account.desiredEnabled) {
+        acc.accounts.push(account);
+        return acc;
+      }
+
+      if (account.actualStatus === 'queued') acc.queued += 1;
+      if (account.actualStatus === 'running' || account.actualStatus === 'refreshing') acc.running += 1;
+      if (account.actualStatus === 'paused') acc.paused += 1;
+      if (
+        account.actualStatus === 'queued' ||
+        account.actualStatus === 'running' ||
+        account.actualStatus === 'refreshing' ||
+        account.actualStatus === 'paused'
+      ) {
+        acc.active += 1;
+      }
+      if (
+        account.actualStatus === 'blocked' ||
+        account.actualStatus === 'failed' ||
+        account.actualStatus === 'cancelled'
+      ) {
+        acc.attentionNeeded += 1;
+      }
+
+      if (account.mirrorCompleteness === 'complete') acc.complete += 1;
+      else if (account.mirrorCompleteness === 'in_progress') acc.inProgress += 1;
+      else if (account.mirrorCompleteness === 'none') acc.none += 1;
+      else acc.unknown += 1;
+      acc.accounts.push(account);
+      return acc;
+    },
+    {
+      total: 0,
+      enabled: 0,
+      disabled: 0,
+      unconfigured: 0,
+      missingIdentity: 0,
+      unsupported: 0,
+      active: 0,
+      queued: 0,
+      running: 0,
+      paused: 0,
+      attentionNeeded: 0,
+      complete: 0,
+      inProgress: 0,
+      none: 0,
+      unknown: 0,
+      accounts: [],
+    },
+  );
 }
 
 function createAccountMirrorCompletionStatusSummary(

@@ -167,6 +167,8 @@ export function summarizeApiStatusPayload(
   const backpressure = isRecord(lastPass.backpressure) ? lastPass.backpressure : {};
   const latestYield = summarizeLatestYield(scheduler, lastPass);
   const completions = summarizeAccountMirrorCompletions(record.accountMirrorCompletions);
+  const rawLiveFollow = isRecord(record.liveFollow) ? record.liveFollow : {};
+  const targets = summarizeLiveFollowTargets(rawLiveFollow.targets);
   const schedulerSummary: ApiStatusSchedulerSummary = {
     enabled: typeof scheduler.enabled === 'boolean' ? scheduler.enabled : null,
     state: readString(scheduler.state),
@@ -191,7 +193,7 @@ export function summarizeApiStatusPayload(
     port: source.port,
     scheduler: schedulerSummary,
     completions,
-    liveFollow: summarizeLiveFollowHealth(schedulerSummary, completions),
+    liveFollow: summarizeLiveFollowHealth(schedulerSummary, completions, targets),
     raw,
   };
 }
@@ -279,6 +281,10 @@ export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string 
     );
   }
   lines.push(formatCompletionControlLine(summary.completions));
+  const targetLine = formatLiveFollowTargetLine(summary.liveFollow.targets);
+  if (targetLine) {
+    lines.push(targetLine);
+  }
   const activeLine = formatCompletionOperationLine('Active mirror completion', summary.completions.active);
   if (activeLine) {
     lines.push(activeLine);
@@ -288,6 +294,19 @@ export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string 
     lines.push(recentLine);
   }
   return lines.join('\n');
+}
+
+function formatLiveFollowTargetLine(targets: ApiStatusLiveFollowHealthSummary['targets']): string | null {
+  if (!targets) return null;
+  return [
+    'Live follow targets:',
+    `total=${targets.total}`,
+    `enabled=${targets.enabled}`,
+    `active=${targets.active}`,
+    `complete=${targets.complete}`,
+    `in_progress=${targets.inProgress}`,
+    `attention=${targets.attentionNeeded}`,
+  ].join(' ');
 }
 
 export function normalizeApiStatusAccountMirrorPosture(value: unknown): ApiStatusSchedulerOperatorSummary['posture'] {
@@ -428,6 +447,7 @@ function summarizeAccountMirrorCompletions(value: unknown): ApiStatusCompletionC
 function summarizeLiveFollowHealth(
   scheduler: ApiStatusSchedulerSummary,
   completions: ApiStatusCompletionControlSummary,
+  targets: ApiStatusLiveFollowHealthSummary['targets'] = null,
 ): ApiStatusLiveFollowHealthSummary {
   const metrics = completions.metrics;
   return summarizeSharedLiveFollowHealth({
@@ -439,7 +459,58 @@ function summarizeLiveFollowHealth(
     failedCompletions: metrics.failed,
     cancelledCompletions: metrics.cancelled,
     latestYield: scheduler.latestYield,
+    targets,
   });
+}
+
+function summarizeLiveFollowTargets(value: unknown): ApiStatusLiveFollowHealthSummary['targets'] {
+  if (!isRecord(value)) return null;
+  const accounts = Array.isArray(value.accounts)
+    ? value.accounts.map(summarizeLiveFollowTargetAccount).filter((account) => account.provider && account.runtimeProfileId)
+    : [];
+  return {
+    total: readNumber(value.total) ?? accounts.length,
+    enabled: readNumber(value.enabled) ?? 0,
+    disabled: readNumber(value.disabled) ?? 0,
+    unconfigured: readNumber(value.unconfigured) ?? 0,
+    missingIdentity: readNumber(value.missingIdentity) ?? 0,
+    unsupported: readNumber(value.unsupported) ?? 0,
+    active: readNumber(value.active) ?? 0,
+    queued: readNumber(value.queued) ?? 0,
+    running: readNumber(value.running) ?? 0,
+    paused: readNumber(value.paused) ?? 0,
+    attentionNeeded: readNumber(value.attentionNeeded) ?? 0,
+    complete: readNumber(value.complete) ?? 0,
+    inProgress: readNumber(value.inProgress) ?? 0,
+    none: readNumber(value.none) ?? 0,
+    unknown: readNumber(value.unknown) ?? 0,
+    accounts,
+  };
+}
+
+function summarizeLiveFollowTargetAccount(value: unknown) {
+  const account = isRecord(value) ? value : {};
+  const metadataCounts = isRecord(account.metadataCounts) ? account.metadataCounts : null;
+  return {
+    provider: readString(account.provider) ?? '',
+    runtimeProfileId: readString(account.runtimeProfileId) ?? '',
+    desiredState: readString(account.desiredState) ?? 'unknown',
+    desiredEnabled: account.desiredEnabled === true,
+    actualStatus: readString(account.actualStatus),
+    phase: readString(account.phase),
+    passCount: readNumber(account.passCount),
+    nextAttemptAt: readString(account.nextAttemptAt),
+    mirrorCompleteness: readString(account.mirrorCompleteness),
+    metadataCounts: metadataCounts
+      ? {
+          projects: readNumber(metadataCounts.projects) ?? 0,
+          conversations: readNumber(metadataCounts.conversations) ?? 0,
+          artifacts: readNumber(metadataCounts.artifacts) ?? 0,
+          files: readNumber(metadataCounts.files) ?? 0,
+          media: readNumber(metadataCounts.media) ?? 0,
+        }
+      : null,
+  };
 }
 
 function summarizeCompletionOperation(value: unknown): ApiStatusCompletionOperationSummary {

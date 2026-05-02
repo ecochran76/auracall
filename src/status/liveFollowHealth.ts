@@ -24,6 +24,7 @@ export interface LiveFollowHealthInput {
   failedCompletions: number | null;
   cancelledCompletions: number | null;
   latestYield?: LiveFollowLatestYieldSummary | null;
+  targets?: LiveFollowTargetRollup | null;
 }
 
 export interface LiveFollowHealthSummary {
@@ -37,6 +38,45 @@ export interface LiveFollowHealthSummary {
   failedCompletions: number | null;
   cancelledCompletions: number | null;
   latestYield: LiveFollowLatestYieldSummary | null;
+  targets: LiveFollowTargetRollup | null;
+}
+
+export interface LiveFollowTargetRollup {
+  total: number;
+  enabled: number;
+  disabled: number;
+  unconfigured: number;
+  missingIdentity: number;
+  unsupported: number;
+  active: number;
+  queued: number;
+  running: number;
+  paused: number;
+  attentionNeeded: number;
+  complete: number;
+  inProgress: number;
+  none: number;
+  unknown: number;
+  accounts: LiveFollowTargetAccountSummary[];
+}
+
+export interface LiveFollowTargetAccountSummary {
+  provider: string;
+  runtimeProfileId: string;
+  desiredState: string;
+  desiredEnabled: boolean;
+  actualStatus: string | null;
+  phase: string | null;
+  passCount: number | null;
+  nextAttemptAt: string | null;
+  mirrorCompleteness: string | null;
+  metadataCounts: {
+    projects: number;
+    conversations: number;
+    artifacts: number;
+    files: number;
+    media: number;
+  } | null;
 }
 
 export function summarizeLiveFollowHealth(input: LiveFollowHealthInput): LiveFollowHealthSummary {
@@ -59,6 +99,7 @@ export function summarizeLiveFollowHealth(input: LiveFollowHealthInput): LiveFol
     failedCompletions: input.failedCompletions,
     cancelledCompletions: input.cancelledCompletions,
     latestYield: input.latestYield ?? null,
+    targets: input.targets ?? null,
   };
   const yieldText = summary.latestYield
     ? `${summary.latestYield.provider ?? 'unknown'}/${summary.latestYield.runtimeProfileId ?? 'unknown'} remaining=${summary.latestYield.remainingDetailSurfaces ?? 'unknown'} queued=${summary.latestYield.queuedOwnerCommand ?? 'unknown'}`

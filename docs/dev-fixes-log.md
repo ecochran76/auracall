@@ -15385,3 +15385,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   refresh-service layer. If a provider DOM helper hangs, the dispatcher lease
   must be released and status should show a failed pass instead of leaving the
   account stuck as `already-running`.
+- 2026-05-02: Live-follow health needs a configured-account rollup, not only
+  aggregate completion counts. `/status.liveFollow.targets`, CLI status, and
+  MCP `api_status` should show desired state plus actual operation progress
+  for every configured provider account without launching browsers.
