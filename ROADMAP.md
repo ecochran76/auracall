@@ -15,8 +15,8 @@ Current State:
 - planning-authority migration is complete
 - the current product sequence is now pruned to one primary active
   implementation lane:
-  - Grok Imagine materialization hardening after the browser-service
-    control-plane live proof
+  - ChatGPT image-generation follow-through after Grok Imagine materialization
+    hardening reached closure
 - supporting maintenance work is allowed only when it directly protects that
   lane or fixes a newly reproduced mismatch
 - closed browser reliability exception:
@@ -35,7 +35,7 @@ Current State:
   - service-state/passive monitoring is maintenance-only unless a new
     provider-owned evidence seam appears
   - config/browser/provider work stays bounded maintenance or side-track work
-    unless explicitly selected as the primary lane; Plan 0061 is the current
+    unless explicitly selected as the primary lane; Plan 0062 is the current
     selected provider slice
 - account-aware agents and lazy account mirroring are now scoped in
   [docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md](docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md)
@@ -87,12 +87,15 @@ Current State:
     - xAI API image/video execution and Grok edit/reference workflows remain
       deferred until selected by a separate bounded plan
   - [docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md)
-    is open as the next browser-first provider slice after the browser-service
-    control-plane fixes
-    - focus: harden Grok Imagine multi-image visible-tile materialization,
-      default visible capture count `8`, preview-vs-full-quality download
-      comparison evidence, and installed-runtime dogfood
-    - non-goal: xAI API media execution and Grok edit/reference workflows
+    is closed for the browser-first Grok Imagine materialization hardening
+    slice
+    - closed proof: installed runtime can capture multiple visible generated
+      tiles, resume full-quality discovery through Grok Files, expose
+      checksum/preview/full-quality metadata through CLI/API/MCP status, and
+      pass a low-churn Grok Imagine capability preflight without auth/account
+      gating
+    - non-goal remains deferred: xAI API media execution and Grok
+      edit/reference workflows
   - [docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md)
     is open as the ChatGPT image-generation follow-up
     - focus: promote the proven ChatGPT generated-image artifact extraction
@@ -974,9 +977,10 @@ Safety note:
   paused after the current single-host bounded local-runner bridge reached a
   coherent ownership checkpoint
 - Immediate next action: execute
-  [docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md)
-  against the installed `auracall-grok-auto` runtime now that Grok profile,
-  fixed-port, queued-dispatch, and status-diagnostics behavior are live-proven
+  [docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md)
+  against the installed ChatGPT browser runtime now that the Grok
+  materialization hardening lane is closed and the same post-submit
+  no-navigation rules can be applied to ChatGPT image generation
 - Supporting maintenance: bounded config/team-service corrections only when
   they are required to preserve the primary lane's existing semantics
 - Supporting maintenance: roadmap, runbook, and validation hygiene that keeps
@@ -988,9 +992,10 @@ Safety note:
   until the installed copy has carried normal use for a short period
 - Current lazy-live-follow checkpoint: installed API service on port `18095`
   recovered and resumed the default ChatGPT live-follow completion
-  `acctmirror_completion_e26007da-f0e6-4423-bc64-8352c1fdc5c5`; pass count is
-  4, remaining detail surfaces are 261, and the status surface now reports the
-  recovered running completion as `healthy`
+  `acctmirror_completion_e26007da-f0e6-4423-bc64-8352c1fdc5c5`; overnight
+  dogfood advanced through pass 55 with one active completion, zero
+  paused/failed/cancelled completions, ordinary `routine-delayed` cooldown,
+  and `/status.liveFollow.severity = healthy`
 - Current provider-drift checkpoint:
   - plain `grok` now resolves to current `grok-4.20` text support
   - first-class media generation across CLI, local API, and MCP is closed in
@@ -1007,8 +1012,8 @@ Safety note:
     `Thinking Extended`, `Pro Standard`, and `Pro Extended` from separate
     model/depth controls, so callers can discover Standard Pro/Thinking even
     when the top-level picker only shows the active depth
-  - the next bounded implementation target is Grok Imagine materialization
-    hardening under Plan 0061
+  - the next bounded implementation target is ChatGPT image generation under
+    Plan 0062
 
 ### Soon
 
@@ -1078,7 +1083,7 @@ Current focused reliability slice:
 - [docs/dev/plans/0048-2026-04-22-grok-model-drift-checkpoint.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0048-2026-04-22-grok-model-drift-checkpoint.md) (closed)
 - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md) (closed)
 - [docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md) (closed)
-- [docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md) (open)
+- [docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md) (closed)
 
 ### Browser Automation Drift Repairs
 See [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md).

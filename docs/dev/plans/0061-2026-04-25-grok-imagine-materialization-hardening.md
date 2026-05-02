@@ -1,6 +1,6 @@
 # Plan 0061 | Grok Imagine Materialization Hardening
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Purpose
@@ -294,6 +294,13 @@ profile, queued dispatcher, and registry-first DevTools authority.
   `medgen_fde3e1e604f24a95a2162e6ed1a58c59` still reads back as succeeded with
   `artifactCount = 5`; its `filesDetail*` fields are null because the
   materialization predated this diagnostic capture.
+- Closure gate on 2026-05-02: installed read-only Grok Imagine capability
+  preflight with `auracall-grok-auto` attached to
+  `https://grok.com/imagine`, reported Image/Video controls, `account_gated =
+  false`, `run_state = terminal_image`, and no blocked/rate-limited/auth
+  posture. Combined with the routine full lifecycle proof above, this satisfies
+  the browser-first materialization hardening acceptance bar without spending
+  another provider generation.
 
 ## Scope
 

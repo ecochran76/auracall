@@ -24921,6 +24921,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `Pro Extended` from `button.__composer-pill`; current selected state
     remained `Pro Extended`
 
+## Turn 101 | 2026-05-02
+
+- Continued implementation plan:
+  `docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md`
+- Goal: close the Grok Imagine hardening lane only if the installed runtime
+  can still observe the managed Grok Imagine workbench without auth/account
+  churn.
+- Proof:
+  - installed read-only preflight:
+    `auracall --profile auracall-grok-auto capabilities --target grok
+    --entrypoint grok-imagine --diagnostics browser-state --json`
+  - attached to `https://grok.com/imagine`, title `Imagine - Grok`, with
+    `probeStatus = observed`
+  - provider evidence reported Image and Video modes, `account_gated = false`,
+    `blocked = false`, `rate_limited = false`, and `run_state =
+    terminal_image`
+  - no media prompt was submitted and no generation quota was spent
+- Result:
+  - closed Plan 0061 and moved the roadmap's immediate provider lane to Plan
+    0062, the ChatGPT image-generation follow-up
+  - refreshed the roadmap lazy-live-follow checkpoint to the pass-55 overnight
+    dogfood state: one active completion, zero paused/failed/cancelled
+    completions, ordinary `routine-delayed` cooldown, and healthy status
+
 ## Turn 100 | 2026-05-01
 
 - Continued implementation plan:
