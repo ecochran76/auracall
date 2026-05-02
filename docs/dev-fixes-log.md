@@ -15308,3 +15308,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `api mirror-completions --status active`. CLI option scoping should make
   subcommand options after the subcommand name belong to that subcommand, and
   coverage should exercise both spaced and equals forms.
+- 2026-05-01: Installed live-follow cadence proof should leave the completion
+  running across `nextAttemptAt`. A real-service proof needs before/after
+  status showing no second resume/control call, automatic refresh start,
+  completed refresh, advanced `passCount`, and clean operator pause.

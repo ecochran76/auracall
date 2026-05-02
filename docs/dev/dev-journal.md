@@ -24820,6 +24820,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/accountMirror/completionService.test.ts`
 
+## Turn 96 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: dogfood the service-owned lazy-live-follow cadence in the installed
+  runtime, not only in fixture coverage.
+- Result:
+  - resumed installed default-ChatGPT completion
+    `acctmirror_completion_e26007da-f0e6-4423-bc64-8352c1fdc5c5` on port
+    `18095`
+  - refresh `acctmirror_c3173aa3-0164-41e3-b577-d07bdbcdc75b` completed and
+    advanced `passCount` to 2
+  - no second resume/control call was issued before the operation woke at
+    `2026-05-02T00:47:01.994Z` and started refresh
+    `acctmirror_e84dd5df-2fca-4271-bff9-dea4b33ef9c2`
+  - the second refresh completed at `2026-05-02T00:50:28.152Z`, advanced
+    `passCount` to 3, and preserved the default ChatGPT Business identity
+    `ecochran76@gmail.com`
+  - cache readback showed 292 conversations, 416 artifacts, 24 files, and 267
+    remaining conversation detail surfaces
+  - paused the completion again and verified `auracall api status` and
+    `auracall api ops-browser-status` both reported live-follow severity
+    `paused` with one active paused completion
+
 ## Turn 78 | 2026-05-01
 
 - Continued implementation plan:

@@ -491,6 +491,13 @@ Each status payload should include:
 - Focused completion-service coverage now proves the unbounded `live_follow`
   loop wakes from `nextAttemptAt` on its own, runs the next refresh, and records
   the following cooldown without an operator issuing another resume.
+- Installed default-ChatGPT dogfood proved that cadence against the real
+  service/cache on port `18095`: completion
+  `acctmirror_completion_e26007da-f0e6-4423-bc64-8352c1fdc5c5` advanced from
+  `passCount: 2` to `passCount: 3` when it woke itself at
+  `nextAttemptAt` and completed refresh
+  `acctmirror_e84dd5df-2fca-4271-bff9-dea4b33ef9c2` without a second operator
+  resume.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -509,6 +516,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Resume the paused default-ChatGPT lazy-live-follow completion from the installed
-runtime and verify the patched pass accounting on a real refresh, then pause it
-again before widening to a Pro ChatGPT profile.
+Start a bounded Pro ChatGPT live-follow dogfood using the same installed
+runtime/operator preflight, then pause it after the first verified pass before
+allowing any longer background completion.

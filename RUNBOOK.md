@@ -2710,3 +2710,28 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     `nextAttemptAt` without another control call
 - Verification:
   - `pnpm vitest run tests/accountMirror/completionService.test.ts`
+
+## Turn 96 | 2026-05-01
+
+- Goal: prove the same service-owned lazy-live-follow cadence in the installed
+  runtime against the real default ChatGPT cache.
+- Result:
+  - installed API ran on `127.0.0.1:18095`
+  - resumed completion
+    `acctmirror_completion_e26007da-f0e6-4423-bc64-8352c1fdc5c5`
+  - first resumed refresh
+    `acctmirror_c3173aa3-0164-41e3-b577-d07bdbcdc75b` completed through
+    dispatcher operation `1ff34c95-3de8-4df6-9481-872afebd97df`, advancing
+    the operation to `passCount: 2`
+  - the operation stayed `running` and, without another control call, woke at
+    `nextAttemptAt` `2026-05-02T00:47:01.989Z`
+  - second refresh
+    `acctmirror_e84dd5df-2fca-4271-bff9-dea4b33ef9c2` started at
+    `2026-05-02T00:47:01.998Z`, completed at
+    `2026-05-02T00:50:28.152Z`, and used dispatcher operation
+    `24d85542-01fc-437e-99cb-98c7ed6aafba`
+  - completion readback showed `passCount: 3`, `nextAttemptAt`
+    `2026-05-02T01:02:22.458Z`, 292 conversations, 416 artifacts, 24 files,
+    and 267 remaining detail surfaces
+  - completion was paused cleanly; API status and `/ops/browser` both reported
+    live-follow severity `paused` with one active paused completion
