@@ -106,6 +106,9 @@ export function deriveLiveFollowSeverity(input: {
   if (activeCompletions > 0 && schedulerPosture === 'scheduled' && backpressureReason === 'unknown') {
     return 'healthy';
   }
+  if (activeCompletions > 0 && backpressureReason === 'routine-delayed') {
+    return 'healthy';
+  }
   if (schedulerPosture === 'unknown' || backpressureReason === 'unknown') {
     return 'attention-needed';
   }

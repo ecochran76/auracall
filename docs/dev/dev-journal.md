@@ -24990,6 +24990,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `2026-05-02T03:32:40.354Z`, completed `2026-05-02T03:36:03.456Z`,
     and advanced the mirror to 292 conversations, 555 artifacts, 30 files,
     and 237 remaining detail surfaces
+  - second runtime proof: pass 9 woke on its next eligible attempt without
+    manual intervention; `acctmirror_a7503d70-3545-429f-a634-63552863d957`
+    started `2026-05-02T03:47:59.579Z`, completed
+    `2026-05-02T03:51:45.884Z`, and advanced the mirror to
+    292 conversations, 580 artifacts, 30 files, and 231 remaining detail
+    surfaces while service CPU stayed below 3%
+  - follow-up status fix: active live-follow completions in ordinary
+    `routine-delayed` cooldown now report live-follow health as `healthy`
+    instead of surfacing scheduler cooldown as operator backpressure
 
 ## Turn 78 | 2026-05-01
 

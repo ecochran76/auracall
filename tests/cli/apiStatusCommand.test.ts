@@ -303,6 +303,7 @@ describe('api status CLI helpers', () => {
       overrides: {
         posture?: string;
         backpressure?: string;
+        active?: number;
         paused?: number;
         failed?: number;
         cancelled?: number;
@@ -322,7 +323,7 @@ describe('api status CLI helpers', () => {
       },
       accountMirrorCompletions: {
         metrics: {
-          active: 0,
+          active: overrides.active ?? 0,
           paused: overrides.paused ?? 0,
           failed: overrides.failed ?? 0,
           cancelled: overrides.cancelled ?? 0,
@@ -341,6 +342,14 @@ describe('api status CLI helpers', () => {
       host: '127.0.0.1',
       port: 18080,
     }).liveFollow.severity).toBe('backpressured');
+    expect(summarizeApiStatusPayload(buildPayload({
+      posture: 'backpressured',
+      backpressure: 'routine-delayed',
+      active: 1,
+    }), {
+      host: '127.0.0.1',
+      port: 18080,
+    }).liveFollow.severity).toBe('healthy');
     expect(summarizeApiStatusPayload(buildPayload({
       posture: 'paused',
       paused: 1,
