@@ -24868,6 +24868,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `label: Instant`, `location: prompt_workbench`, and
     `selector: button.__composer-pill`
 
+## Turn 98 | 2026-05-01
+
+- Continued implementation plan:
+  `docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md`
+- Goal: prove the repaired ChatGPT prompt-workbench selector can distinguish
+  Pro from Thinking on a Pro-bound runtime profile without submitting a prompt.
+- Result:
+  - installed identity smoke passed for `wsl-chrome-3/chatgpt` with provider
+    identity `eric.cochran@soylei.com`, account level `Pro`, account plan type
+    `pro`, and expected-identity negative proof
+  - a concurrent identity-smoke plus capability probe correctly failed fast
+    through the browser-operation dispatcher with `Browser operation busy`
+    instead of allowing two exclusive profile operations
+  - the same installed capabilities command passed when rerun serially and
+    reported `chatgpt.model.selector` with label `Extended Pro`, location
+    `prompt_workbench`, and selector `button.__composer-pill`
+  - the passive browser-tools selector smoke on the active ChatGPT tab found
+    prompt-workbench `button.__composer-pill` labeled `Extended Pro`
+  - opening that selector lane reported distinct rows:
+    `Instant`, `Thinking - Extended`, `Pro - Extended`, and `Configure...`
+    with `model-switcher-gpt-5-5-pro` checked
+
 ## Turn 78 | 2026-05-01
 
 - Continued implementation plan:

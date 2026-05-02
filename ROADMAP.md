@@ -990,6 +990,14 @@ Safety note:
   - plain `grok` now resolves to current `grok-4.20` text support
   - first-class media generation across CLI, local API, and MCP is closed in
     [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
+  - ChatGPT model-selector drift has been repaired for the prompt workbench:
+    `wsl-chrome-3` live smoke found `Extended Pro` at
+    `button.__composer-pill` and distinguished `Pro - Extended` from
+    `Thinking - Extended` without prompt submission
+  - installed `auracall --profile wsl-chrome-3 capabilities --target chatgpt`
+    now reports `chatgpt.model.selector` with label `Extended Pro`, location
+    `prompt_workbench`, and selector `button.__composer-pill`; concurrent
+    feature probes are correctly fenced by the dispatcher
   - the next bounded implementation target is Grok Imagine materialization
     hardening under Plan 0061
 
