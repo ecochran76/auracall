@@ -22,6 +22,12 @@
   reached mirror completeness, proving the persisted live-follow loop can wake,
   refresh, and enter `steady_follow` on the installed runtime.
 
+- 2026-05-02: The larger Pro mirror should be resumed only after the smaller
+  Pro mirror reaches completeness. With `wsl-chrome-3` in `steady_follow`,
+  resuming `wsl-chrome-2` on the same long-lived service completed the next
+  pass and reduced remaining detail surfaces from 52 to 46 without browser
+  operation contention.
+
 - 2026-04-29: Lazy account mirroring must be metadata-first, identity-gated,
   and routed through the browser operation dispatcher. The default ChatGPT
   tenant is the first mirror source because it has the richest account history,

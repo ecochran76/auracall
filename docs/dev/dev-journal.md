@@ -25153,6 +25153,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next:
   - resume `chatgpt/wsl-chrome-2` on the same long-lived service and let it
     walk its 52 remaining detail surfaces through cooldown-spaced passes
+- `wsl-chrome-2` follow-up:
+  - resumed completion
+    `acctmirror_completion_115e1b32-30f5-444c-9109-e8f1f45939ba`
+  - pass 2 completed refresh `acctmirror_2547daec-8e8b-4610-b5d7-f52dfbdc87c0`
+    from `2026-05-02T17:22:34.056Z` to
+    `2026-05-02T17:26:10.349Z`
+  - remaining detail surfaces dropped from 52 to 46, with three projects,
+    55 conversations, nine files, zero artifacts, zero media, and no
+    completion error
+  - next polite attempt is `2026-05-02T17:51:56.258Z`
 
 ## Turn 78 | 2026-05-01
 
