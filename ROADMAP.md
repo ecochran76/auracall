@@ -100,6 +100,9 @@ Current State:
     accounts instead of the original `chatgpt/default` bootstrap target; the
     scheduler still uses politeness gates and in-progress mirror priority before
     attempting any browser work
+  - every scheduler pass now re-runs configured-account live-follow
+    reconciliation, so terminal enabled completions can be recreated on a
+    cadence without restarting the API service
   - default Gemini and Grok dogfood now runs browser-backed, read-only
     live-follow collectors through the same provider dispatcher path:
     `gemini/default` cached 12 projects and 54 conversations, while

@@ -665,3 +665,7 @@ The lazy scheduler has also been de-biased from its original `chatgpt/default`
 bootstrap path: routine passes now choose among all enabled live-follow accounts,
 while deprecated `defaultChatgpt*` metrics remain as compatibility aliases for
 older status consumers.
+Scheduler passes now also re-run live-follow reconciliation after the pass is
+recorded, so an enabled account whose durable completion reached a terminal
+failed/blocked/cancelled state can be recreated on the next scheduler wake
+without requiring an API process restart.

@@ -457,12 +457,15 @@ export async function createResponsesHttpServer(
       logger(`Account mirror completion ${operation.id} persist failed: ${error instanceof Error ? error.message : String(error)}`);
     },
   });
-  await reconcileConfiguredAccountMirrorLiveFollow({
-    registry: accountMirrorStatusRegistry,
-    completionService: accountMirrorCompletionService,
-  }).catch((error) => {
-    logger(`Account mirror live-follow reconcile failed: ${error instanceof Error ? error.message : String(error)}`);
-  });
+  const reconcileAccountMirrorLiveFollow = async () => {
+    await reconcileConfiguredAccountMirrorLiveFollow({
+      registry: accountMirrorStatusRegistry,
+      completionService: accountMirrorCompletionService,
+    }).catch((error) => {
+      logger(`Account mirror live-follow reconcile failed: ${error instanceof Error ? error.message : String(error)}`);
+    });
+  };
+  await reconcileAccountMirrorLiveFollow();
   const workbenchCapabilityService = createWorkbenchCapabilityService({
     now,
     catalog: deps.workbenchCapabilityCatalog,
@@ -631,6 +634,7 @@ export async function createResponsesHttpServer(
           logger(error instanceof Error ? error.message : String(error));
           return accountMirrorSchedulerState.history;
         });
+      await reconcileAccountMirrorLiveFollow();
     } catch (error) {
       logger(error instanceof Error ? error.message : String(error));
     } finally {
