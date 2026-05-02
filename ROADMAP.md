@@ -103,6 +103,10 @@ Current State:
   - every scheduler pass now re-runs configured-account live-follow
     reconciliation, so terminal enabled completions can be recreated on a
     cadence without restarting the API service
+  - `/status.liveFollow.targets.accounts[]` now separates
+    `routineEligibleAt` from `activeCompletionNextAttemptAt`; `nextAttemptAt`
+    is the effective operator wake and prefers the active completion when one is
+    running
   - Gemini live follow treats the `/gems/view` project index as opportunistic:
     transient Gem manager route-settle failures no longer fail the whole mirror
     pass or trigger a second `location.assign` re-navigation

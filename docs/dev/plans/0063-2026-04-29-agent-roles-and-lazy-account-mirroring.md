@@ -674,3 +674,7 @@ the collector tolerates transient Gem manager route failures, continues with
 conversation metadata, and merges the previously cached project manifest. The
 Gem manager navigation also no longer uses the `location.assign` fallback, so a
 failed route settle does not trigger a second re-navigation.
+Operator status now distinguishes routine mirror cadence from active live-follow
+backfill cadence: `/status.liveFollow.targets.accounts[]` includes
+`routineEligibleAt`, `activeCompletionNextAttemptAt`, and effective
+`nextAttemptAt`, with the effective value preferring the active completion wake.

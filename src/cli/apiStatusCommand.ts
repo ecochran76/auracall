@@ -499,6 +499,8 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
     actualStatus: readString(account.actualStatus),
     phase: readString(account.phase),
     passCount: readNumber(account.passCount),
+    routineEligibleAt: readString(account.routineEligibleAt),
+    activeCompletionNextAttemptAt: readString(account.activeCompletionNextAttemptAt),
     nextAttemptAt: readString(account.nextAttemptAt),
     mirrorCompleteness: readString(account.mirrorCompleteness),
     metadataCounts: metadataCounts

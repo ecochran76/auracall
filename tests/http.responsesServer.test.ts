@@ -10,7 +10,10 @@ import {
   createResponsesHttpServer,
   serveResponsesHttp,
 } from '../src/http/responsesServer.js';
-import type { AccountMirrorStatusSummary } from '../src/accountMirror/statusRegistry.js';
+import {
+  createAccountMirrorStatusRegistry,
+  type AccountMirrorStatusSummary,
+} from '../src/accountMirror/statusRegistry.js';
 import type { AccountMirrorCatalogResult } from '../src/accountMirror/catalogService.js';
 import type { AccountMirrorCompletionOperation } from '../src/accountMirror/completionService.js';
 import type { AccountMirrorSchedulerPassResult } from '../src/accountMirror/schedulerService.js';
@@ -1659,6 +1662,109 @@ describe('http responses adapter', () => {
           activeCompletions: 1,
         },
       });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('reports effective live-follow wake separately from routine mirror eligibility', async () => {
+    const config = {
+      model: 'gpt-5.2',
+      browser: {},
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+          services: {
+            chatgpt: {
+              identity: {
+                email: 'ecochran76@gmail.com',
+                accountLevel: 'Business',
+              },
+              liveFollow: {
+                enabled: true,
+                mode: 'metadata-first',
+                priority: 'background',
+              },
+            },
+          },
+        },
+      },
+    };
+    const registry = createAccountMirrorStatusRegistry({
+      config,
+      now: () => new Date('2026-04-30T12:00:00.000Z'),
+      initialState: {
+        'chatgpt:default': {
+          detectedIdentityKey: 'ecochran76@gmail.com',
+          lastAttemptAtMs: Date.parse('2026-04-30T11:50:00.000Z'),
+          lastSuccessAtMs: Date.parse('2026-04-30T11:50:00.000Z'),
+          metadataCounts: {
+            projects: 5,
+            conversations: 304,
+            artifacts: 532,
+            files: 65,
+            media: 0,
+          },
+        },
+      },
+    });
+    const operation: AccountMirrorCompletionOperation = {
+      object: 'account_mirror_completion',
+      id: 'acctmirror_effective_wake',
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      mode: 'live_follow',
+      phase: 'backfill_history',
+      status: 'running',
+      startedAt: '2026-04-30T11:55:00.000Z',
+      completedAt: null,
+      nextAttemptAt: '2026-04-30T12:10:00.000Z',
+      maxPasses: null,
+      passCount: 1,
+      lastRefresh: null,
+      mirrorCompleteness: completeAccountMirror,
+      error: null,
+    };
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        config,
+        accountMirrorStatusRegistry: registry,
+        accountMirrorCompletionService: {
+          start: vi.fn(() => operation),
+          read: vi.fn(() => operation),
+          list: vi.fn(() => [operation]),
+          control: vi.fn(() => operation),
+        },
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(response.status).toBe(200);
+      const payload = await response.json() as {
+        liveFollow: {
+          targets: {
+            accounts: Array<{
+              provider: string;
+              runtimeProfileId: string;
+              nextAttemptAt: string | null;
+              routineEligibleAt: string | null;
+              activeCompletionNextAttemptAt: string | null;
+            }>;
+          };
+        };
+      };
+      const account = payload.liveFollow.targets.accounts[0];
+      expect(account).toMatchObject({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        routineEligibleAt: expect.any(String),
+        activeCompletionNextAttemptAt: '2026-04-30T12:10:00.000Z',
+        nextAttemptAt: '2026-04-30T12:10:00.000Z',
+      });
+      expect(Date.parse(account.routineEligibleAt ?? '')).toBeGreaterThan(Date.parse(account.nextAttemptAt ?? ''));
     } finally {
       await server.close();
     }
