@@ -1571,7 +1571,7 @@ async function navigateToGeminiGemsViewPage(client: Pick<ChromeClient, 'Page' | 
     readyExpression: `Boolean(document.querySelector('button[data-test-id="open-bots-creation-window"]'))`,
     readyDescription: 'Gemini Gem manager surface',
     timeoutMs: 20_000,
-    fallbackToLocationAssign: true,
+    fallbackToLocationAssign: false,
     mutationAudit: resolveMutationAudit(client),
     mutationSource: resolveMutationSource(client, 'provider:gemini', 'navigate-gems-view-page'),
   });

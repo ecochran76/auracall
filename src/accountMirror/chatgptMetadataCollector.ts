@@ -101,7 +101,9 @@ export function createChatgptAccountMirrorMetadataCollector(
         throw new AccountMirrorIdentityMismatchError(input.provider, expectedIdentityKey ?? '', detectedIdentityKey);
       }
 
-      const projects = await readBoundedProjects(client, input.limits.maxPageReadsPerCycle);
+      const projects = await readBoundedProjects(client, input.limits.maxPageReadsPerCycle, {
+        tolerateReadFailure: input.provider === 'gemini',
+      });
       const conversationBudget = Math.max(0, Math.floor(input.limits.maxConversationRowsPerCycle));
       const rootConversations = await readBoundedConversations(client, null, conversationBudget);
       let remainingConversationBudget = Math.max(0, conversationBudget - rootConversations.items.length);
@@ -207,12 +209,23 @@ function cloneConfig(userConfig: ResolvedUserConfig): ResolvedUserConfig {
     : JSON.parse(JSON.stringify(userConfig))) as ResolvedUserConfig;
 }
 
-async function readBoundedProjects(
-  client: BrowserAutomationClient,
+export async function readBoundedProjects(
+  client: Pick<BrowserAutomationClient, 'listProjects'>,
   maxPageReads: number,
+  options: {
+    tolerateReadFailure?: boolean;
+  } = {},
 ): Promise<{ items: Project[]; truncated: boolean }> {
   const pageBudget = Math.max(1, Math.floor(maxPageReads));
-  const projects = (await client.listProjects()) as Project[];
+  let projects: Project[];
+  try {
+    projects = (await client.listProjects()) as Project[];
+  } catch (error) {
+    if (!options.tolerateReadFailure) {
+      throw error;
+    }
+    projects = [];
+  }
   const limit = pageBudget * 25;
   return {
     items: projects.slice(0, limit),

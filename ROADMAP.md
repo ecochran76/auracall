@@ -103,6 +103,9 @@ Current State:
   - every scheduler pass now re-runs configured-account live-follow
     reconciliation, so terminal enabled completions can be recreated on a
     cadence without restarting the API service
+  - Gemini live follow treats the `/gems/view` project index as opportunistic:
+    transient Gem manager route-settle failures no longer fail the whole mirror
+    pass or trigger a second `location.assign` re-navigation
   - default Gemini and Grok dogfood now runs browser-backed, read-only
     live-follow collectors through the same provider dispatcher path:
     `gemini/default` cached 12 projects and 54 conversations, while

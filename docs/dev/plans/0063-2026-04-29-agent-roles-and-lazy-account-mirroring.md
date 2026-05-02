@@ -669,3 +669,8 @@ Scheduler passes now also re-run live-follow reconciliation after the pass is
 recorded, so an enabled account whose durable completion reached a terminal
 failed/blocked/cancelled state can be recreated on the next scheduler wake
 without requiring an API process restart.
+Gemini live follow no longer treats the `/gems/view` project index as mandatory:
+the collector tolerates transient Gem manager route failures, continues with
+conversation metadata, and merges the previously cached project manifest. The
+Gem manager navigation also no longer uses the `location.assign` fallback, so a
+failed route settle does not trigger a second re-navigation.

@@ -5,10 +5,25 @@ import {
   readBoundedAttachmentInventory,
   readBoundedChatgptDetailInventory,
   readBoundedChatgptLibraryInventory,
+  readBoundedProjects,
   readBoundedGrokAccountFileInventory,
 } from '../../src/accountMirror/chatgptMetadataCollector.js';
 
 describe('ChatGPT account mirror metadata collector', () => {
+  test('can tolerate transient provider project route failures for Gemini live follow', async () => {
+    const client = {
+      listProjects: vi.fn(async () => {
+        throw new Error('Gemini Gem manager route did not settle');
+      }),
+    };
+
+    await expect(readBoundedProjects(client, 6, { tolerateReadFailure: true })).resolves.toEqual({
+      items: [],
+      truncated: false,
+    });
+    await expect(readBoundedProjects(client, 6)).rejects.toThrow('Gemini Gem manager route did not settle');
+  });
+
   test('reads ChatGPT library files as account files and artifacts', async () => {
     const client = {
       listAccountFiles: vi.fn(async () => [
