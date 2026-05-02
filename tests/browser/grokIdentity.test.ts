@@ -38,4 +38,14 @@ describe('normalizeGrokIdentityProbe', () => {
       }),
     ).toBeNull();
   });
+
+  test('drops cookie preference text from settings-dialog fallback', () => {
+    expect(
+      normalizeGrokIdentityProbe({
+        name: 'cookies settings, opens the preference center dialog',
+        source: 'settings-dialog',
+        guestAuthCta: false,
+      }),
+    ).toBeNull();
+  });
 });

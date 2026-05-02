@@ -1199,6 +1199,7 @@ async function assertGeminiExpectedIdentity(
   assertProviderIdentityPreflight({
     providerId: 'gemini',
     actualIdentity: await readGeminiUserIdentity(client),
+    fallbackIdentity: options?.identityPreflightFallbackIdentity,
     expectedIdentity: options?.expectedUserIdentity,
     expectedServiceAccountId: options?.expectedServiceAccountId,
   });
@@ -6459,6 +6460,7 @@ export function createGeminiAdapter(): Pick<
           ? checkProviderIdentityPreflight({
               providerId: 'gemini',
               actualIdentity: await readGeminiUserIdentity(client),
+              fallbackIdentity: options?.identityPreflightFallbackIdentity,
               expectedIdentity: options?.expectedUserIdentity,
               expectedServiceAccountId: options?.expectedServiceAccountId,
             })

@@ -15389,3 +15389,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   aggregate completion counts. `/status.liveFollow.targets`, CLI status, and
   MCP `api_status` should show desired state plus actual operation progress
   for every configured provider account without launching browsers.
+- 2026-05-02: Provider identity drift can produce false live-follow failures
+  even when the browser profile is correct. Gemini needs a managed Chrome
+  Google-account fallback when the in-page account label is absent; Grok must
+  reject cookie/preference-center dialog text as low-signal identity data.

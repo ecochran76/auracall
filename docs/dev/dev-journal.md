@@ -25345,3 +25345,43 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     for enabled targets
   - installed CLI `auracall api status --port 18095` printed
     `Live follow targets: total=9 enabled=2 active=2 complete=1 in_progress=1 attention=0`
+
+## Turn 83 | 2026-05-02
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: repair the provider identity-drift failures exposed by the installed
+  default Gemini/Grok cooldown proof.
+- Dogfood finding:
+  - after the cooldown wakeup at `2026-05-02T20:10:32.977Z`,
+    `/status.liveFollow.targets` correctly raised enabled-target attention:
+    `enabled: 2`, `active: 0`, `attentionNeeded: 2`, `complete: 1`,
+    `inProgress: 1`
+  - `gemini/default` failed identity preflight because the Gemini page did not
+    expose the in-page Google account label on the second pass
+  - `grok/default` false-mismatched because the settings fallback treated
+    cookie/preference dialog text as an account name
+- Change:
+  - provider identity preflight can now use a browser-profile fallback identity
+    only when the page identity is absent; an explicit page identity still wins
+    and can still mismatch/fail fast
+  - Gemini service list options supply the managed Chrome Google account as
+    that fallback for Gemini browser work
+  - Grok settings-dialog fallback now reuses the normalized identity sanitizer
+    and drops cookie/preference-center labels as low-signal text
+- Validation:
+  - `pnpm vitest run tests/browser/providerIdentityPreflight.test.ts tests/browser/grokIdentity.test.ts --maxWorkers 1`
+  - `pnpm exec biome lint src/browser/providers/types.ts src/browser/providers/identityPreflight.ts src/browser/providers/geminiAdapter.ts src/browser/providers/grokIdentity.ts src/browser/providers/grokAdapter.ts src/browser/llmService/providers/geminiService.ts tests/browser/providerIdentityPreflight.test.ts tests/browser/grokIdentity.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - restarted the `127.0.0.1:18095` service on the patched installed runtime;
+    final PID is `3965543`
+  - the restarted service reconciled fresh `gemini/default` and `grok/default`
+    completions
+  - after a short status poll, `/status.liveFollow.targets` reported enabled
+    target `attentionNeeded: 0`, with `gemini/default` running in
+    `backfill_history` and `grok/default` running in `steady_follow`

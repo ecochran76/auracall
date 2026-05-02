@@ -18,6 +18,7 @@ import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../package
 import {
   detectGrokSignedInIdentity,
   extractGrokIdentityFromSerializedScripts,
+  normalizeGrokIdentityProbe,
   readGrokSerializedIdentityScriptsWithRetry,
 } from './grokIdentity.js';
 import {
@@ -10396,13 +10397,14 @@ async function getIdentityFromSettingsMenu(client: ChromeClient): Promise<Provid
   } | null;
   if (!identity) return null;
   if (!identity.id && !identity.name && !identity.handle && !identity.email) return null;
-  return {
+  return normalizeGrokIdentityProbe({
     id: identity.id || undefined,
     name: identity.name || undefined,
     handle: identity.handle || undefined,
     email: identity.email || undefined,
     source: identity.source || undefined,
-  };
+    guestAuthCta: false,
+  });
 }
 
 async function ensureSidebarOpen(client: ChromeClient): Promise<void> {

@@ -103,12 +103,15 @@ export function describeProviderIdentity(identity: ProviderUserIdentity | null |
 export function checkProviderIdentityPreflight(input: {
   providerId: BrowserProviderConfig['id'];
   actualIdentity: ProviderUserIdentity | null | undefined;
+  fallbackIdentity?: ProviderUserIdentity | null;
   expectedIdentity?: ProviderUserIdentity | null;
   expectedServiceAccountId?: string | null;
 }): ProviderIdentityPreflightResult {
   const expectedIdentity = normalizeExpectedProviderIdentity(input.expectedIdentity);
   const expectedServiceAccountId = normalizeStringOrNull(input.expectedServiceAccountId);
-  const actualIdentity = normalizeExpectedProviderIdentity(input.actualIdentity);
+  const actualIdentity =
+    normalizeExpectedProviderIdentity(input.actualIdentity) ??
+    normalizeExpectedProviderIdentity(input.fallbackIdentity);
   const reason = (suffix: 'expected_identity_missing' | 'identity_not_detected' | 'identity_mismatch') =>
     `${input.providerId}_${suffix}` as ProviderIdentityPreflightReason;
 
@@ -155,6 +158,7 @@ export function checkProviderIdentityPreflight(input: {
 export function assertProviderIdentityPreflight(input: {
   providerId: BrowserProviderConfig['id'];
   actualIdentity: ProviderUserIdentity | null | undefined;
+  fallbackIdentity?: ProviderUserIdentity | null;
   expectedIdentity?: ProviderUserIdentity | null;
   expectedServiceAccountId?: string | null;
 }): ProviderIdentityPreflightResult {

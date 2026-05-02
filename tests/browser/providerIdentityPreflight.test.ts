@@ -42,6 +42,26 @@ describe('provider identity preflight', () => {
     })).toThrow(/chatgpt_identity_mismatch/);
   });
 
+  test('uses a browser-profile fallback only when page identity is absent', () => {
+    expect(checkProviderIdentityPreflight({
+      providerId: 'gemini',
+      actualIdentity: null,
+      fallbackIdentity: { email: 'ecochran76@gmail.com', source: 'managed-profile-google-account' },
+      expectedIdentity: { email: 'ecochran76@gmail.com', source: 'profile' },
+    })).toMatchObject({ ok: true, reason: null });
+
+    expect(checkProviderIdentityPreflight({
+      providerId: 'gemini',
+      actualIdentity: { email: 'wrong@example.com', source: 'google-account-label' },
+      fallbackIdentity: { email: 'ecochran76@gmail.com', source: 'managed-profile-google-account' },
+      expectedIdentity: { email: 'ecochran76@gmail.com', source: 'profile' },
+    })).toMatchObject({
+      ok: false,
+      reason: 'gemini_identity_mismatch',
+      actualIdentity: { email: 'wrong@example.com' },
+    });
+  });
+
   test('checks configured account level when provided', () => {
     expect(checkProviderIdentityPreflight({
       providerId: 'chatgpt',

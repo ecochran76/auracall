@@ -304,6 +304,14 @@ Current implementation-facing politeness contract:
   includes the new metrics. The pass skipped because default ChatGPT was
   routine-delayed, confirming the scheduler still respects politeness before
   attempting any browser work.
+- Installed-runtime default Gemini/Grok cooldown dogfood proved the
+  configured-account rollup correctly raises enabled-target attention, but also
+  exposed provider identity-detection drift. Gemini can temporarily lack an
+  in-page Google account label while the managed Chrome profile still exposes
+  the bound account; Grok settings fallback can see cookie/preference-center
+  UI text. Identity preflight now accepts a browser-profile fallback only when
+  page identity is absent, and Grok normalizes settings-dialog identity
+  candidates through the low-signal filter before reporting a match/mismatch.
 
 ## API Work Interaction Plan
 
@@ -631,8 +639,9 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Let the enabled default Gemini/Grok completions continue on the long-lived
-`18095` service long enough to observe cooldown wakeups and any provider drift.
-The next implementation slice should surface `liveFollow.targets` in the
-browser dashboard's Mirror Live Follow panel, then add provider-specific detail
-collectors only where there is a proven stable surface.
+Reinstall/restart the long-lived runtime with the provider identity hardening,
+then let default Gemini/Grok complete one routine pass. The first restarted
+status poll now shows both enabled default targets running with
+`attentionNeeded: 0`; after the pass completes cleanly, surface
+`liveFollow.targets` in the browser dashboard's Mirror Live Follow panel before
+adding provider-specific detail collectors.

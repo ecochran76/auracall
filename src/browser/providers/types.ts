@@ -48,6 +48,7 @@ export interface BrowserProviderListOptions {
   mutationSourcePrefix?: string;
   expectedUserIdentity?: ProviderUserIdentity | null;
   expectedServiceAccountId?: string | null;
+  identityPreflightFallbackIdentity?: ProviderUserIdentity | null;
 }
 
 export interface ProviderUserIdentity {

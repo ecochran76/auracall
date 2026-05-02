@@ -126,6 +126,7 @@ export function normalizeGrokIdentityProbe(
     'sign in',
     'sign up',
   ]);
+  const lowSignalNameFragments = ['cookies settings', 'preference center', 'privacy settings'];
   const lowSignalHandles = new Set(['@grok', '@xai-official']);
 
   const id = identity.id?.trim() || undefined;
@@ -136,6 +137,7 @@ export function normalizeGrokIdentityProbe(
 
   const lowSignalName =
     lowSignalNames.has(normalizedName) ||
+    lowSignalNameFragments.some((fragment) => normalizedName.includes(fragment)) ||
     ((identity.source === 'dom-avatar' || identity.source === 'dom-label') &&
       normalizedName.length > 0 &&
       normalizedName.length < 3);
