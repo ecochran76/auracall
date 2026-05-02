@@ -126,9 +126,12 @@ export function createChatgptAccountMirrorMetadataCollector(
               shouldYield: input.shouldYield,
             },
           )
+        : input.provider === 'grok'
+          ? await readBoundedGrokAccountFileInventory(client, input.limits.maxArtifactRowsPerCycle)
         : {
             artifacts: [],
             files: [],
+            media: [],
             truncated: false,
             cursor: null,
           };
@@ -140,14 +143,14 @@ export function createChatgptAccountMirrorMetadataCollector(
           conversations: conversations.length,
           artifacts: inventory.artifacts.length,
           files: inventory.files.length,
-          media: 0,
+          media: inventory.media.length,
         },
         manifests: {
           projects: projects.items,
           conversations,
           artifacts: inventory.artifacts,
           files: inventory.files,
-          media: [],
+          media: inventory.media,
         },
         evidence: {
           identitySource: identity?.source ?? null,
@@ -249,6 +252,7 @@ export async function readBoundedAttachmentInventory(
 ): Promise<{
   artifacts: ConversationArtifact[];
   files: FileRef[];
+  media: AccountMirrorMediaManifestEntry[];
   truncated: boolean;
   cursor: AttachmentInventoryCursor;
 }> {
@@ -263,6 +267,7 @@ export async function readBoundedAttachmentInventory(
     return {
       artifacts: [],
       files: [],
+      media: [],
       truncated: projects.length > 0 || conversations.length > 0,
       cursor: createAttachmentInventoryCursor(previousCursor, {
         projectsLength: projects.length,
@@ -352,6 +357,7 @@ export async function readBoundedAttachmentInventory(
   return {
     artifacts: [...artifacts.values()],
     files: [...files.values()],
+    media: [],
     truncated,
     cursor: createAttachmentInventoryCursor(previousCursor, {
       projectsLength: projects.length,
@@ -365,6 +371,37 @@ export async function readBoundedAttachmentInventory(
         projectIndex >= projects.length && conversationIndex >= conversations.length ? 0 : conversationIndex,
       yielded,
     }),
+  };
+}
+
+export async function readBoundedGrokAccountFileInventory(
+  client: Pick<BrowserAutomationClient, 'listAccountFiles'>,
+  maxRows: number,
+): Promise<{
+  artifacts: ConversationArtifact[];
+  files: FileRef[];
+  media: AccountMirrorMediaManifestEntry[];
+  truncated: boolean;
+  cursor: null;
+}> {
+  const limit = Math.max(0, Math.floor(maxRows));
+  if (limit <= 0) {
+    return {
+      artifacts: [],
+      files: [],
+      media: [],
+      truncated: true,
+      cursor: null,
+    };
+  }
+  const files = await safeReadAccountFiles(client);
+  const boundedFiles = files.slice(0, limit);
+  return {
+    artifacts: [],
+    files: boundedFiles,
+    media: mapGrokAccountFilesToMediaManifest(boundedFiles),
+    truncated: files.length > limit,
+    cursor: null,
   };
 }
 
@@ -406,6 +443,16 @@ async function safeReadProjectFiles(
 ): Promise<FileRef[]> {
   try {
     return await client.listProjectFiles(projectId);
+  } catch {
+    return [];
+  }
+}
+
+async function safeReadAccountFiles(
+  client: Pick<BrowserAutomationClient, 'listAccountFiles'>,
+): Promise<FileRef[]> {
+  try {
+    return await client.listAccountFiles();
   } catch {
     return [];
   }
@@ -470,6 +517,58 @@ function addArtifact(
       projectId: artifact.metadata?.projectId ?? conversation.projectId,
     },
   });
+}
+
+export function mapGrokAccountFilesToMediaManifest(
+  files: readonly FileRef[],
+): AccountMirrorMediaManifestEntry[] {
+  const media: AccountMirrorMediaManifestEntry[] = [];
+  for (const file of files) {
+    const mediaType = inferMediaTypeFromFile(file);
+    if (!mediaType) continue;
+    media.push({
+      id: `grok-account-file:${file.id}`,
+      title: file.name || file.id || null,
+      mediaType,
+      uri: file.remoteUrl ?? file.localPath,
+      provider: 'grok',
+      metadata: {
+        source: 'grok-account-files',
+        fileId: file.id,
+        fileName: file.name,
+        fileSource: file.source,
+        remoteUrl: file.remoteUrl,
+        localPath: file.localPath,
+        mimeType: file.mimeType,
+      },
+    });
+  }
+  return media;
+}
+
+function inferMediaTypeFromFile(
+  file: FileRef,
+): AccountMirrorMediaManifestEntry['mediaType'] | null {
+  const haystack = [
+    file.mimeType,
+    file.name,
+    file.remoteUrl,
+    file.localPath,
+  ]
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .join(' ')
+    .toLowerCase();
+  if (!haystack) return null;
+  if (/\bimage\//.test(haystack) || /\.(avif|gif|jpe?g|png|webp)(?:[?#\s]|$)/.test(haystack)) {
+    return 'image';
+  }
+  if (/\bvideo\//.test(haystack) || /\.(m4v|mov|mp4|webm)(?:[?#\s]|$)/.test(haystack)) {
+    return 'video';
+  }
+  if (/\baudio\//.test(haystack) || /\.(aac|flac|m4a|mp3|ogg|wav)(?:[?#\s]|$)/.test(haystack)) {
+    return 'audio';
+  }
+  return null;
 }
 
 function readIdentityKey(identity: ProviderUserIdentity | null): string | null {

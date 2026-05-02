@@ -1,5 +1,9 @@
 import { describe, expect, test, vi } from 'vitest';
-import { readBoundedAttachmentInventory } from '../../src/accountMirror/chatgptMetadataCollector.js';
+import {
+  mapGrokAccountFilesToMediaManifest,
+  readBoundedAttachmentInventory,
+  readBoundedGrokAccountFileInventory,
+} from '../../src/accountMirror/chatgptMetadataCollector.js';
 
 describe('ChatGPT account mirror metadata collector', () => {
   test('builds a bounded file and artifact inventory from project and conversation indexes', async () => {
@@ -265,5 +269,113 @@ describe('ChatGPT account mirror metadata collector', () => {
     expect(client.listProjectFiles).toHaveBeenCalledTimes(1);
     expect(client.listConversationFiles).not.toHaveBeenCalled();
     expect(client.getConversationContext).not.toHaveBeenCalled();
+  });
+
+  test('builds a bounded Grok account-file inventory with media manifests', async () => {
+    const client = {
+      listAccountFiles: vi.fn(async () => [
+        {
+          id: 'grok_image_1',
+          name: 'asphalt-agent.jpg',
+          provider: 'grok' as const,
+          source: 'account' as const,
+          remoteUrl: 'https://assets.grok.com/generated/asphalt-agent/image.jpg?cache=1',
+        },
+        {
+          id: 'grok_video_1',
+          name: 'handoff.mp4',
+          provider: 'grok' as const,
+          source: 'account' as const,
+          remoteUrl: 'https://assets.grok.com/generated/handoff/video.mp4?cache=1',
+        },
+        {
+          id: 'grok_doc_1',
+          name: 'notes.txt',
+          provider: 'grok' as const,
+          source: 'account' as const,
+        },
+      ]),
+    };
+
+    const inventory = await readBoundedGrokAccountFileInventory(client, 2);
+
+    expect(client.listAccountFiles).toHaveBeenCalledTimes(1);
+    expect(inventory).toMatchObject({
+      artifacts: [],
+      truncated: true,
+      cursor: null,
+      files: [
+        { id: 'grok_image_1', name: 'asphalt-agent.jpg', source: 'account' },
+        { id: 'grok_video_1', name: 'handoff.mp4', source: 'account' },
+      ],
+      media: [
+        {
+          id: 'grok-account-file:grok_image_1',
+          title: 'asphalt-agent.jpg',
+          mediaType: 'image',
+          uri: 'https://assets.grok.com/generated/asphalt-agent/image.jpg?cache=1',
+          provider: 'grok',
+          metadata: {
+            source: 'grok-account-files',
+            fileId: 'grok_image_1',
+            fileSource: 'account',
+          },
+        },
+        {
+          id: 'grok-account-file:grok_video_1',
+          title: 'handoff.mp4',
+          mediaType: 'video',
+          provider: 'grok',
+        },
+      ],
+    });
+  });
+
+  test('tolerates Grok account-files drift without failing metadata collection', async () => {
+    const client = {
+      listAccountFiles: vi.fn(async () => {
+        throw new Error('files page changed');
+      }),
+    };
+
+    const inventory = await readBoundedGrokAccountFileInventory(client, 8);
+
+    expect(inventory).toEqual({
+      artifacts: [],
+      files: [],
+      media: [],
+      truncated: false,
+      cursor: null,
+    });
+  });
+
+  test('infers Grok media type from URL and MIME type', () => {
+    const media = mapGrokAccountFilesToMediaManifest([
+      {
+        id: 'asset_png',
+        name: 'asset',
+        provider: 'grok',
+        source: 'account',
+        remoteUrl: 'https://assets.grok.com/generated/asset/image.png?cache=1',
+      },
+      {
+        id: 'asset_audio',
+        name: 'track',
+        provider: 'grok',
+        source: 'account',
+        mimeType: 'audio/mpeg',
+      },
+      {
+        id: 'asset_unknown',
+        name: 'prompt.json',
+        provider: 'grok',
+        source: 'account',
+      },
+    ]);
+
+    expect(media.map((entry) => [entry.id, entry.mediaType])).toEqual([
+      ['grok-account-file:asset_png', 'image'],
+      ['grok-account-file:asset_audio', 'audio'],
+    ]);
   });
 });

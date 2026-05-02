@@ -646,5 +646,8 @@ status poll now shows both enabled default targets running with
 `status.liveFollow.targets` in the Mirror Live Follow panel; after the default
 Gemini/Grok pass completed cleanly, live-follow severity was adjusted so
 healthy enabled targets are not masked by stale terminal completion history.
-Next, add provider-specific detail collectors only where stable detail surfaces
-are proven.
+The first provider-specific detail collector is Grok account files: live follow
+uses the existing `listAccountFiles()` surface, caps the read with the artifact
+row budget, writes account file manifests, and derives media manifests for
+recognized image/video/audio assets. Saved/Imagine gallery scraping remains
+deferred until that surface is proven as a stable read-only index.
