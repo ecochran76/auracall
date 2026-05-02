@@ -76,6 +76,10 @@ Current State:
     `consult@polymerconsultinggroup.com`, completed one mirror pass, cached
     three projects, 55 conversations, and nine files, then paused with 52
     remaining detail surfaces
+  - installed `wsl-chrome-3` Pro dogfood matched
+    `eric.cochran@soylei.com`, completed one mirror pass, cached one project,
+    17 conversations, and 12 artifacts, then paused with 12 remaining detail
+    surfaces
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local
@@ -986,9 +990,9 @@ Safety note:
   coherent ownership checkpoint
 - Immediate next action: continue
   [docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md](docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md)
-  by repeating the bounded Pro ChatGPT live-follow dogfood for
-  `chatgpt/wsl-chrome-3`, with provider-media work back to maintenance unless
-  a new concrete browser/provider drift appears
+  by resuming `chatgpt/wsl-chrome-3` for longer background completion first,
+  with provider-media work back to maintenance unless a new concrete
+  browser/provider drift appears
 - Supporting maintenance: bounded config/team-service corrections only when
   they are required to preserve the primary lane's existing semantics
 - Supporting maintenance: roadmap, runbook, and validation hygiene that keeps

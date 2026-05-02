@@ -6,6 +6,9 @@
   profile before browser collection. Installed dogfood then detected
   `consult@polymerconsultinggroup.com` on Pro, cached three projects,
   55 conversations, nine files, and paused after the first completed pass.
+  The same patched path then passed for `wsl-chrome-3` with
+  `eric.cochran@soylei.com` on Pro, one project, 17 conversations,
+  12 artifacts, and a clean pause after the first pass.
 
 - 2026-04-29: Lazy account mirroring must be metadata-first, identity-gated,
   and routed through the browser operation dispatcher. The default ChatGPT

@@ -517,6 +517,13 @@ Each status payload should include:
   pass through refresh `acctmirror_9a813ac9-a3f3-4d77-9665-4e68c8acf70d`,
   cached three projects, 55 conversations, zero artifacts, nine files, and
   zero media, then paused at `passCount: 1` with 52 remaining detail surfaces.
+- Installed-runtime Pro dogfood on port `18096` also verified
+  `chatgpt/wsl-chrome-3`: identity smoke matched
+  `eric.cochran@soylei.com` with account level `Pro`, completion
+  `acctmirror_completion_1c09faa0-84eb-4e80-911c-50767a45a368` completed one
+  pass through refresh `acctmirror_d409561a-43f3-4d86-bdca-0ad727658d69`,
+  cached one project, 17 conversations, 12 artifacts, zero files, and zero
+  media, then paused at `passCount: 1` with 12 remaining detail surfaces.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -535,6 +542,7 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Repeat the same bounded Pro ChatGPT live-follow dogfood for
-`chatgpt/wsl-chrome-3`, then pause it after the first verified pass before
-allowing either Pro account to run longer background completion.
+Resume `chatgpt/wsl-chrome-3` first for longer background completion because
+it has the smallest remaining detail surface count, then repeat with
+`chatgpt/wsl-chrome-2` after the smaller Pro mirror reaches completeness or a
+new provider backpressure signal appears.

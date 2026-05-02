@@ -30,6 +30,19 @@
   - operation `acctmirror_completion_115e1b32-30f5-444c-9109-e8f1f45939ba`
     was paused after `passCount: 1`; `api status --expect-completion-paused 1`
     reported live-follow severity `paused`
+- Follow-up dogfood:
+  - installed `--profile wsl-chrome-3 profile identity-smoke --target chatgpt`
+    matched `eric.cochran@soylei.com` with account level `Pro`
+  - installed `api mirror-complete --provider chatgpt --runtime-profile
+    wsl-chrome-3` on port `18096` completed pass
+    `acctmirror_d409561a-43f3-4d86-bdca-0ad727658d69` through dispatcher
+    operation `70f294be-a0af-406d-b5dd-7b626506aa0c`
+  - the first `wsl-chrome-3` pass detected `eric.cochran@soylei.com`, account
+    level `Pro`, and cached one project, 17 conversations, 12 artifacts, zero
+    files, and zero media with 12 remaining detail surfaces
+  - operation `acctmirror_completion_1c09faa0-84eb-4e80-911c-50767a45a368`
+    was paused after `passCount: 1`; `api status --expect-completion-paused 2`
+    reported both Pro live-follow operations paused
 
 ## 2026-04-29 - Agent roles and lazy account mirroring plan
 
