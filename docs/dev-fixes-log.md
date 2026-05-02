@@ -32,6 +32,13 @@
   After the resumed pass, `wsl-chrome-2` woke again without a manual control
   call, completed pass 3, and reduced remaining detail surfaces from 46 to 40.
 
+- 2026-05-02: Live follow desired state belongs on the provider account config,
+  not on agents or browser profiles. Use
+  `runtimeProfiles.<profile>.services.<provider>.liveFollow` to opt a bound
+  account in or out, and reserve root live-follow settings for fleet cadence,
+  budgets, and safety caps. API/MCP/dashboard status should report both
+  desired state and actual completion progress for every configured account.
+
 - 2026-04-29: Lazy account mirroring must be metadata-first, identity-gated,
   and routed through the browser operation dispatcher. The default ChatGPT
   tenant is the first mirror source because it has the richest account history,

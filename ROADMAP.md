@@ -89,6 +89,11 @@ Current State:
     `chatgpt/wsl-chrome-2` advanced to `passCount: 2` and reduced remaining
     detail surfaces from 52 to 46, then woke again without manual resume to
     `passCount: 3` and reduced remaining detail surfaces to 40
+  - next live-follow service-mode slice should make config desired state the
+    source of truth: `runtimeProfiles.<profile>.services.<provider>.liveFollow`
+    should declare whether each bound account is watched, while API/MCP and
+    `/ops/browser` report desired state plus actual operation progress for all
+    configured accounts
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local

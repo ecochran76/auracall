@@ -205,6 +205,28 @@ Current implementation-facing politeness contract:
   aggregate live-follow counts, active operations, and recent paused/cancelled
   or failed operations are visible without raw `/status` JSON or the
   `/ops/browser` dashboard.
+- Live follow should now move from explicit one-off completion starts toward a
+  config reconciler. The durable desired-state unit is
+  `runtimeProfiles.<profile>.services.<provider>.liveFollow`: if the service
+  entry has a bound identity and `liveFollow.enabled: true`, `api serve`
+  should ensure exactly one durable live-follow completion exists for that
+  provider/runtime-profile pair. If `liveFollow.enabled: false`, the reconciler
+  must leave the account stopped even when identity is configured. Omitted
+  `liveFollow` should remain non-surprising until an explicit migration chooses
+  whether identity-bound accounts default to `auto`.
+- Root-level live-follow config should own fleet defaults only: service-wide
+  enablement, cadence, provider budgets, backoff caps, dashboard visibility,
+  and maximum concurrent background browser operations. It should not own
+  account identity or replace the provider/runtime-profile key.
+- API, MCP, and `/ops/browser` should expose both desired state and actual
+  operation state for every configured account:
+  `desired=enabled|disabled|auto|unsupported`, provider/runtime profile,
+  browser profile, expected identity, detected identity, account level,
+  operation id, operation status, phase, pass count, next attempt, last refresh,
+  mirror completeness, remaining detail surfaces, last error, and latest
+  backpressure/yield signal. Operators should be able to see accounts that are
+  eligible but not yet running, disabled by config, unsupported by provider
+  design, blocked by identity mismatch, or actively backfilling.
 - The same status path now supports count expectations for completion-control
   posture: CLI flags `--expect-completion-active`,
   `--expect-completion-paused`, `--expect-completion-cancelled`, and
@@ -422,6 +444,15 @@ Each status payload should include:
 - Persisted completion operations are listable through API/CLI/MCP filters for
   `status`, `provider`, `runtimeProfile`, and `limit`; list readback is
   service/cache-only and must not touch provider browsers.
+- Configured live-follow desired state is discoverable without launching
+  browsers: every configured provider account with a bound identity appears in
+  API/MCP/dashboard readback with desired state, eligibility, and any linked
+  completion operation.
+- `api serve` can reconcile configured live-follow accounts into durable
+  completion operations without creating duplicates after restart.
+- Provider/runtime-profile pairs that are configured but unsupported, missing
+  identity, identity-mismatched, or operator-disabled are visible as
+  non-running accounts with a specific reason.
 - `/status.accountMirrorCompletions` summarizes persisted completion metrics
   plus active and recent operations, and `/ops/browser` renders the same
   "Mirror Live Follow" posture for local operators.
@@ -573,4 +604,7 @@ Each status payload should include:
 
 Let `chatgpt/wsl-chrome-2` continue on the long-lived `18095` service through
 cooldown-spaced passes until its remaining 40 detail surfaces reach
-completeness.
+completeness. In parallel, design the next code slice for config-owned
+live-follow reconciliation: read `runtimeProfiles.*.services.*.liveFollow`,
+project desired state through API/MCP/dashboard, and ensure `api serve`
+creates or resumes exactly one completion per enabled eligible account.

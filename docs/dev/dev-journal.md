@@ -25168,6 +25168,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `2026-05-02T17:51:56.268Z` to `2026-05-02T17:55:28.452Z`
   - remaining detail surfaces dropped from 46 to 40; next polite attempt is
     `2026-05-02T18:21:14.453Z`
+- Config design note:
+  - live follow should become config desired state, not only explicit
+    operation starts
+  - the account-level setting belongs under
+    `runtimeProfiles.<profile>.services.<provider>.liveFollow`
+  - API, MCP, and `/ops/browser` should show desired state and actual
+    completion progress for every configured provider account, including
+    disabled, unsupported, missing-identity, blocked, eligible, backfilling,
+    and steady-follow accounts
 
 ## Turn 78 | 2026-05-01
 

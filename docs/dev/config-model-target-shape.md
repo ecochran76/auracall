@@ -54,6 +54,7 @@ Typical concerns:
 - project/workspace defaults
 - cache defaults
 - service-scoped identities/settings
+- service-scoped mirror/live-follow policy
 
 Important rule:
 
@@ -130,7 +131,11 @@ Typical concerns:
       services: {
         chatgpt: {
           identity: { email: "ecochran76@gmail.com" },
-          model: "gpt-5.2-pro"
+          model: "gpt-5.2-pro",
+          liveFollow: {
+            enabled: true,
+            mode: "metadata-first"
+          }
         }
       },
       cache: {
@@ -144,7 +149,8 @@ Typical concerns:
       defaultService: "chatgpt",
       services: {
         chatgpt: {
-          identity: { email: "consult@polymerconsultinggroup.com" }
+          identity: { email: "consult@polymerconsultinggroup.com" },
+          liveFollow: { enabled: true }
         }
       }
     }
@@ -211,8 +217,54 @@ When deciding where a new setting belongs:
   profile layer
 - if it changes Aura-Call workflow defaults, it belongs under the runtime
   profile layer
+- if it changes whether a configured provider account is mirrored or watched,
+  it belongs under `runtimeProfiles.<name>.services.<service>.liveFollow`
 - if it changes future persona/task behavior, it belongs under the agent layer
 - if it coordinates multiple agents, it belongs under the team layer
 
 Do not use the current transitional structure as justification to place new
 browser-bearing state inside runtime-profile-owned code by default.
+
+## Live Follow Config Direction
+
+Each configured runtime-profile service account is the natural live-follow
+unit:
+
+```json5
+{
+  runtimeProfiles: {
+    default: {
+      services: {
+        chatgpt: {
+          identity: { email: "ecochran76@gmail.com" },
+          liveFollow: {
+            enabled: true,
+            mode: "metadata-first",
+            priority: "background"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Default behavior should be conservative and explicit:
+
+- an account is eligible only when a service identity is configured and the
+  runtime profile resolves to a managed browser profile
+- `liveFollow.enabled: true` means the service host should reconcile a durable
+  live-follow completion for that provider/runtime-profile pair
+- `liveFollow.enabled: false` opts the account out even when it has an
+  identity
+- omitted `liveFollow` may later default to `"auto"` for identity-bound
+  accounts, but that change should land with a migration note and status
+  visibility so operators are not surprised by background browser work
+- provider support remains capability-gated; unsupported providers report
+  configured-but-unsupported rather than silently starting work
+
+The account-level policy belongs on the service entry because account identity,
+provider capability, and cache key all live there. Root-level live-follow
+settings should be fleet defaults only: scheduler enabled/disabled, global
+polling cadence, per-provider default budgets, dashboard visibility, and
+operator safety caps.
