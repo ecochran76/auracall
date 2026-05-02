@@ -15393,3 +15393,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   even when the browser profile is correct. Gemini needs a managed Chrome
   Google-account fallback when the in-page account label is absent; Grok must
   reject cookie/preference-center dialog text as low-signal identity data.
+- 2026-05-02: The browser dashboard needs the configured-account target
+  rollup, not just active completion controls. Mirror Live Follow should render
+  `status.liveFollow.targets` so operators can distinguish enabled, active,
+  disabled, unconfigured, complete, in-progress, and attention-needed accounts
+  without opening raw `/status`.

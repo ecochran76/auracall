@@ -13,6 +13,7 @@ export interface ApiOpsBrowserStatusCliOptions extends ApiStatusCliOptions {}
 export interface ApiOpsBrowserDashboardSummary {
   route: '/ops/browser';
   hasMirrorLiveFollowPanel: boolean;
+  hasLiveFollowTargetsPanel: boolean;
   usesStatusControlPath: boolean;
   usesAccountMirrorCompletionPayload: boolean;
   hasPauseBinding: boolean;
@@ -69,6 +70,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
 function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
   const checks: Array<[boolean, string]> = [
     [summary.hasMirrorLiveFollowPanel, 'Expected /ops/browser to include the Mirror Live Follow panel.'],
+    [summary.hasLiveFollowTargetsPanel, 'Expected /ops/browser to render status.liveFollow.targets.'],
     [summary.usesStatusControlPath, 'Expected /ops/browser completion controls to call POST /status.'],
     [
       summary.usesAccountMirrorCompletionPayload,
@@ -106,6 +108,7 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
   return {
     route: '/ops/browser',
     hasMirrorLiveFollowPanel: html.includes('Mirror Live Follow'),
+    hasLiveFollowTargetsPanel: html.includes('mirrorTargets') && html.includes('status.liveFollow.targets'),
     usesStatusControlPath: html.includes("fetch('/status'"),
     usesAccountMirrorCompletionPayload: html.includes('accountMirrorCompletion: { id, action }'),
     hasPauseBinding: html.includes("$('pauseMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('pause'))"),

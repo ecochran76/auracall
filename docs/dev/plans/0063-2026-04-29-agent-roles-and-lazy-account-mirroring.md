@@ -642,6 +642,7 @@ Each status payload should include:
 Reinstall/restart the long-lived runtime with the provider identity hardening,
 then let default Gemini/Grok complete one routine pass. The first restarted
 status poll now shows both enabled default targets running with
-`attentionNeeded: 0`; after the pass completes cleanly, surface
-`liveFollow.targets` in the browser dashboard's Mirror Live Follow panel before
-adding provider-specific detail collectors.
+`attentionNeeded: 0`. The browser dashboard now renders
+`status.liveFollow.targets` in the Mirror Live Follow panel; after the default
+Gemini/Grok pass completes cleanly, add provider-specific detail collectors
+only where stable detail surfaces are proven.

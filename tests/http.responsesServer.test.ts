@@ -14131,9 +14131,11 @@ describe('http responses adapter', () => {
       expect(html).toContain('/v1/runs/{run_id}/status');
       expect(html).toContain('Probe Browser State');
       expect(html).toContain('Mirror Live Follow');
+      expect(html).toContain('mirrorTargets');
       expect(html).toContain('mirrorCompletions');
       expect(html).toContain('Live Follow Severity');
       expect(html).toContain('status.liveFollow');
+      expect(html).toContain('status.liveFollow.targets');
       expect(html).toContain('severity-attention-needed');
       expect(html).toContain('mirrorCompletionId');
       expect(html).toContain('pauseMirrorCompletion');

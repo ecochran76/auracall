@@ -2873,6 +2873,7 @@ function createOperatorBrowserDashboardHtml(): string {
           <button id="resumeMirrorCompletion">Resume</button>
           <button id="cancelMirrorCompletion">Cancel</button>
         </div>
+        <pre id="mirrorTargets">Loading...</pre>
         <pre id="mirrorCompletions">Loading...</pre>
       </section>
 
@@ -2981,6 +2982,11 @@ function createOperatorBrowserDashboardHtml(): string {
       const metrics = summary.metrics || {};
       const active = Array.isArray(summary.active) ? summary.active : [];
       const recent = Array.isArray(summary.recent) ? summary.recent : [];
+      const targets = status.liveFollow && status.liveFollow.targets ? status.liveFollow.targets : null;
+      $('mirrorTargets').textContent = asJson({
+        source: 'status.liveFollow.targets',
+        targets: targets ? compactLiveFollowTargets(targets) : null,
+      });
       $('mirrorCompletions').textContent = asJson({
         health: status.liveFollow || null,
         metrics,
@@ -2991,6 +2997,33 @@ function createOperatorBrowserDashboardHtml(): string {
 
     function renderSeverity(severity) {
       return '<span class="severity-' + severity + '">' + severity + '</span>';
+    }
+
+    function compactLiveFollowTargets(targets) {
+      return {
+        total: targets.total || 0,
+        enabled: targets.enabled || 0,
+        active: targets.active || 0,
+        running: targets.running || 0,
+        paused: targets.paused || 0,
+        attentionNeeded: targets.attentionNeeded || 0,
+        complete: targets.complete || 0,
+        inProgress: targets.inProgress || 0,
+        accounts: Array.isArray(targets.accounts) ? targets.accounts.map(compactLiveFollowTarget) : [],
+      };
+    }
+
+    function compactLiveFollowTarget(target) {
+      return {
+        target: [target.provider, target.runtimeProfileId].filter(Boolean).join('/'),
+        desiredState: target.desiredState || null,
+        status: target.actualStatus || null,
+        phase: target.phase || null,
+        passCount: target.passCount || null,
+        nextAttemptAt: target.nextAttemptAt || null,
+        completeness: target.mirrorCompleteness || null,
+        counts: target.metadataCounts || null,
+      };
     }
 
     function compactCompletion(operation) {
@@ -3039,6 +3072,7 @@ function createOperatorBrowserDashboardHtml(): string {
     async function refreshStatus() {
       $('serverSummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
       $('mirrorStatus').textContent = 'Loading...';
+      $('mirrorTargets').textContent = 'Loading...';
       $('mirrorCompletions').textContent = 'Loading...';
       try {
         const status = await fetchJson('/status');
@@ -3046,6 +3080,7 @@ function createOperatorBrowserDashboardHtml(): string {
         renderMirrorCompletions(status);
       } catch (error) {
         $('serverSummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
+        $('mirrorTargets').textContent = String(error.message || error);
         $('mirrorCompletions').textContent = String(error.message || error);
       }
       try {
