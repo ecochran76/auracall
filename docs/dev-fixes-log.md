@@ -28,6 +28,10 @@
   pass and reduced remaining detail surfaces from 52 to 46 without browser
   operation contention.
 
+- 2026-05-02: Consult Pro mirror backfill also wakes on persisted cooldown.
+  After the resumed pass, `wsl-chrome-2` woke again without a manual control
+  call, completed pass 3, and reduced remaining detail surfaces from 46 to 40.
+
 - 2026-04-29: Lazy account mirroring must be metadata-first, identity-gated,
   and routed through the browser operation dispatcher. The default ChatGPT
   tenant is the first mirror source because it has the richest account history,

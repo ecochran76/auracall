@@ -25163,6 +25163,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     55 conversations, nine files, zero artifacts, zero media, and no
     completion error
   - next polite attempt is `2026-05-02T17:51:56.258Z`
+  - pass 3 woke without another manual resume and completed refresh
+    `acctmirror_bf2c386d-c9a5-4de9-ad01-c6ba2a754592` from
+    `2026-05-02T17:51:56.268Z` to `2026-05-02T17:55:28.452Z`
+  - remaining detail surfaces dropped from 46 to 40; next polite attempt is
+    `2026-05-02T18:21:14.453Z`
 
 ## Turn 78 | 2026-05-01
 

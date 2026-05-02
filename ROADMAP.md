@@ -87,7 +87,8 @@ Current State:
     194 artifacts, and zero remaining detail surfaces
   - the long-lived `18095` service then resumed installed `wsl-chrome-2`;
     `chatgpt/wsl-chrome-2` advanced to `passCount: 2` and reduced remaining
-    detail surfaces from 52 to 46
+    detail surfaces from 52 to 46, then woke again without manual resume to
+    `passCount: 3` and reduced remaining detail surfaces to 40
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local
