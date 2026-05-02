@@ -10,6 +10,12 @@
   `eric.cochran@soylei.com` on Pro, one project, 17 conversations,
   12 artifacts, and a clean pause after the first pass.
 
+- 2026-05-02: Pro live-follow dogfood should return to the long-lived
+  installed service after temporary patch proof. Restarting port `18095` on the
+  patched runtime hydrated the persisted `wsl-chrome-2` and `wsl-chrome-3`
+  paused completions, and resuming `wsl-chrome-3` completed another
+  cooldown-spaced pass without an operator-held shell command.
+
 - 2026-04-29: Lazy account mirroring must be metadata-first, identity-gated,
   and routed through the browser operation dispatcher. The default ChatGPT
   tenant is the first mirror source because it has the richest account history,

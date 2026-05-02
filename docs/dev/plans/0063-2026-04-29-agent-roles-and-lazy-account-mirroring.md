@@ -524,6 +524,14 @@ Each status payload should include:
   pass through refresh `acctmirror_d409561a-43f3-4d86-bdca-0ad727658d69`,
   cached one project, 17 conversations, 12 artifacts, zero files, and zero
   media, then paused at `passCount: 1` with 12 remaining detail surfaces.
+- The long-lived installed API service on port `18095` was restarted on the
+  patched runtime and hydrated both paused Pro completion operations from the
+  cache. Resuming `chatgpt/wsl-chrome-3` advanced completion
+  `acctmirror_completion_1c09faa0-84eb-4e80-911c-50767a45a368` to
+  `passCount: 2` through refresh `acctmirror_68992df3-116a-4b61-bbc7-5a78f4d5d772`,
+  reduced remaining detail surfaces from 12 to 8, and scheduled the next
+  polite attempt for `2026-05-02T17:02:15.386Z` while the API stayed
+  responsive.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -542,7 +550,7 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Resume `chatgpt/wsl-chrome-3` first for longer background completion because
-it has the smallest remaining detail surface count, then repeat with
+Let the long-lived `18095` service continue `chatgpt/wsl-chrome-3` through
+the remaining cooldown-spaced passes until mirror completeness, then resume
 `chatgpt/wsl-chrome-2` after the smaller Pro mirror reaches completeness or a
 new provider backpressure signal appears.

@@ -25109,6 +25109,37 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - observed service CPU stayed around 2.1% during cooldown and active refresh
     polling in the pass-55 proof window
 
+## Turn 101 | 2026-05-02
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: move Pro ChatGPT live-follow dogfood from the temporary patched server
+  back onto the long-lived installed API service.
+- Result:
+  - replaced the prior port `18095` API process with the patched installed
+    runtime using `--account-mirror-scheduler-interval-ms 600000` and
+    `--account-mirror-scheduler-execute`
+  - verified the restarted service hydrated both paused Pro completions:
+    `acctmirror_completion_1c09faa0-84eb-4e80-911c-50767a45a368` for
+    `chatgpt/wsl-chrome-3` and
+    `acctmirror_completion_115e1b32-30f5-444c-9109-e8f1f45939ba` for
+    `chatgpt/wsl-chrome-2`
+  - resumed the smaller `wsl-chrome-3` completion; it ran another refresh,
+    advanced from `passCount: 1` to `passCount: 2`, and reduced remaining
+    detail surfaces from 12 to 8
+  - refresh evidence:
+    `acctmirror_68992df3-116a-4b61-bbc7-5a78f4d5d772` started
+    `2026-05-02T16:45:47.344Z`, completed
+    `2026-05-02T16:47:22.767Z`, kept identity
+    `eric.cochran@soylei.com`, and scheduled the next polite attempt for
+    `2026-05-02T17:02:15.386Z`
+- Current runtime state:
+  - installed API service remains running on port `18095`
+  - `chatgpt/wsl-chrome-3` is active/running with eight remaining detail
+    surfaces
+  - `chatgpt/wsl-chrome-2` remains paused at `passCount: 1` with 52 remaining
+    detail surfaces until the smaller Pro mirror is complete
+
 ## Turn 78 | 2026-05-01
 
 - Continued implementation plan:
