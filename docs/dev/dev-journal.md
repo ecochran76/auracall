@@ -24962,6 +24962,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts
     tests/mediaGenerationChatgptBrowserExecutor.test.ts --maxWorkers 1`
+  - installed live smoke
+    `auracall media generate --provider chatgpt --type image --count 1 --json
+    "Generate an image of an asphalt secret agent"` succeeded as
+    `medgen_c672c2a4bfa04bd4bdc8630482ee82ae`
+  - the run selected the ChatGPT Create image composer tool, recorded
+    submitted tab target `873EFF7926CCBCE29B081EC1D6E35ACB`, passively polled
+    twice, materialized one `Generated image.png`, and completed with
+    `status=succeeded`
+  - workbench capability reporting now includes `chatgpt.media.create_image`
+    in the static catalog and can mark it available from live feature
+    signatures
 
 ## Turn 100 | 2026-05-01
 

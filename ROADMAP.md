@@ -15,8 +15,8 @@ Current State:
 - planning-authority migration is complete
 - the current product sequence is now pruned to one primary active
   implementation lane:
-  - ChatGPT image-generation follow-through after Grok Imagine materialization
-    hardening reached closure
+  - lazy account mirror live-follow/service-mode dogfood after the browser-first
+    media provider slices reached closure
 - supporting maintenance work is allowed only when it directly protects that
   lane or fixes a newly reproduced mismatch
 - closed browser reliability exception:
@@ -35,8 +35,8 @@ Current State:
   - service-state/passive monitoring is maintenance-only unless a new
     provider-owned evidence seam appears
   - config/browser/provider work stays bounded maintenance or side-track work
-    unless explicitly selected as the primary lane; Plan 0062 is the current
-    selected provider slice
+    unless explicitly selected as the primary lane; Plans 0061 and 0062 closed
+    the current browser-first Grok/ChatGPT media provider slices
 - account-aware agents and lazy account mirroring are now scoped in
   [docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md](docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md)
   as a service-mode planning lane:
@@ -97,11 +97,14 @@ Current State:
     - non-goal remains deferred: xAI API media execution and Grok
       edit/reference workflows
   - [docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md)
-    is open as the ChatGPT image-generation follow-up
-    - focus: promote the proven ChatGPT generated-image artifact extraction
-      path into a first-class browser media-generation executor
-    - immediate guardrail: post-submit ChatGPT readback/materialization must
-      preserve the active tab and skip conversation reload/reopen recovery
+    is closed for the ChatGPT image-generation follow-up
+    - closed proof: installed runtime selected the ChatGPT Create image
+      composer tool, preserved the submitted tab target, passively polled until
+      one image was visible, and materialized the PNG artifact through the
+      durable media-generation contract
+    - capability reporting now includes `chatgpt.media.create_image` as a
+      static workbench capability and can mark it available from live feature
+      signatures
   - [docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md)
     is closed for the more general discovery/reporting model for rapidly changing
     chat-workbench capabilities such as Deep Research, ChatGPT apps,
@@ -976,11 +979,10 @@ Safety note:
 - Primary active lane checkpoint: service mode and runner orchestration remains
   paused after the current single-host bounded local-runner bridge reached a
   coherent ownership checkpoint
-- Immediate next action: execute
-  [docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md)
-  against the installed ChatGPT browser runtime now that the Grok
-  materialization hardening lane is closed and the same post-submit
-  no-navigation rules can be applied to ChatGPT image generation
+- Immediate next action: continue
+  [docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md](docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md)
+  against the installed API service on port `18095`, with provider-media work
+  back to maintenance unless a new concrete browser/provider drift appears
 - Supporting maintenance: bounded config/team-service corrections only when
   they are required to preserve the primary lane's existing semantics
 - Supporting maintenance: roadmap, runbook, and validation hygiene that keeps
@@ -1012,8 +1014,9 @@ Safety note:
     `Thinking Extended`, `Pro Standard`, and `Pro Extended` from separate
     model/depth controls, so callers can discover Standard Pro/Thinking even
     when the top-level picker only shows the active depth
-  - the next bounded implementation target is ChatGPT image generation under
-    Plan 0062
+  - ChatGPT image generation is closed under Plan 0062; the next bounded
+    implementation target is lazy-live-follow service-mode dogfood under Plan
+    0063
 
 ### Soon
 
@@ -1084,6 +1087,7 @@ Current focused reliability slice:
 - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md) (closed)
 - [docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0055-2026-04-25-media-generation-compatibility-follow-up.md) (closed)
 - [docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0061-2026-04-25-grok-imagine-materialization-hardening.md) (closed)
+- [docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0062-2026-04-27-chatgpt-image-generation.md) (closed)
 
 ### Browser Automation Drift Repairs
 See [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md).

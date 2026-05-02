@@ -83,6 +83,23 @@ export const STATIC_WORKBENCH_CAPABILITY_CATALOG: WorkbenchCapability[] = [
     source: 'static_catalog',
   },
   {
+    id: 'chatgpt.media.create_image',
+    provider: 'chatgpt',
+    providerLabels: ['Create image', 'Create Image'],
+    category: 'media',
+    invocationMode: 'tool_drawer_selection',
+    surfaces: ['browser_service', 'cli', 'local_api', 'mcp'],
+    availability: 'unknown',
+    stability: 'observed',
+    requiredInputs: commonPromptInput,
+    output: { artifactTypes: ['image'] },
+    safety: {
+      mayTakeMinutes: true,
+      notes: ['ChatGPT Create image availability is account, model, and rollout dependent; discover before invocation.'],
+    },
+    source: 'static_catalog',
+  },
+  {
     id: 'chatgpt.search.web_search',
     provider: 'chatgpt',
     providerLabels: ['Web search', 'Search the web'],

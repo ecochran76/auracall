@@ -1,6 +1,6 @@
 # ChatGPT Image Generation | 0062-2026-04-27
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Scope
@@ -15,8 +15,8 @@ rules learned from Gemini and Grok.
   conversations: conversation context can expose `image_asset_pointer`
   artifacts, and `conversations artifacts fetch` can materialize generated
   PNGs.
-- ChatGPT is not yet green as a first-class `POST /v1/media-generations` /
-  MCP media-generation provider.
+- ChatGPT is green as a first-class browser-backed image provider through the
+  durable media-generation contract.
 - The first code audit found one impatient re-navigation point in ChatGPT
   readback: backend payload capture retried by reloading the conversation tab
   after direct fetch failed. That is acceptable for mature read-only
@@ -29,6 +29,16 @@ rules learned from Gemini and Grok.
   call DevTools `Page.reload` when `preserveActiveTab` is set. Existing ChatGPT
   media executor coverage already proves readback and materialization pass
   `preserveActiveTab` on the submitted tab.
+- 2026-05-02 installed-runtime live smoke
+  `medgen_c672c2a4bfa04bd4bdc8630482ee82ae` selected the ChatGPT Create image
+  composer tool, submitted
+  `Generate an image of an asphalt secret agent`, recorded submitted tab target
+  `873EFF7926CCBCE29B081EC1D6E35ACB`, passively polled twice, detected one
+  generated image, and materialized `Generated image.png` through
+  `estuary-image-fetch`.
+- Capability reporting now includes `chatgpt.media.create_image` in the static
+  workbench catalog and can mark it available from a live feature signature
+  when the ChatGPT Create image signal is observed.
 
 ## Target Contract
 
@@ -66,7 +76,7 @@ rules learned from Gemini and Grok.
   during readback.
 - [x] Unit coverage proves `preserveActiveTab` forbids blocking-surface reload
   recovery during readback/materialization.
-- [ ] One supervised live smoke proves the end-to-end path only after the
+- [x] One supervised live smoke proves the end-to-end path only after the
   no-navigation unit path is green.
 
 ## Live Smoke Notes
@@ -93,3 +103,9 @@ rules learned from Gemini and Grok.
 - Manual/live:
   - one serialized browser smoke with `--browser-keep-browser --verbose`
   - status polling during the run to confirm patient active-tab readback
+
+## Closure
+
+Closed on 2026-05-02. Remaining ChatGPT media expansion such as video,
+editing, apps, skills, or Deep Research invocation still needs a new bounded
+plan before implementation.

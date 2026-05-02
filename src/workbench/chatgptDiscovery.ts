@@ -4,6 +4,9 @@ interface ChatgptFeatureObject {
   web_search?: unknown;
   deep_research?: unknown;
   company_knowledge?: unknown;
+  create_image?: unknown;
+  image_generation?: unknown;
+  image?: unknown;
   apps?: unknown;
   skills?: unknown;
   model_controls?: unknown;
@@ -97,6 +100,28 @@ export function deriveChatgptWorkbenchCapabilitiesFromFeatureSignature(
       observedAt,
       source: 'browser_discovery',
       metadata: { featureSignatureSignal: 'company_knowledge' },
+    });
+  }
+
+  if (signals.createImage) {
+    capabilities.push({
+      id: 'chatgpt.media.create_image',
+      provider: 'chatgpt',
+      providerLabels: ['Create image'],
+      category: 'media',
+      invocationMode: 'tool_drawer_selection',
+      surfaces: ['browser_service', 'cli', 'local_api', 'mcp'],
+      availability: 'available',
+      stability: 'observed',
+      requiredInputs: commonPromptInput,
+      output: { artifactTypes: ['image'] },
+      safety: {
+        mayTakeMinutes: true,
+        notes: ['ChatGPT Create image availability is account, model, and rollout dependent; discover before invocation.'],
+      },
+      observedAt,
+      source: 'browser_discovery',
+      metadata: { featureSignatureSignal: 'create_image' },
     });
   }
 
@@ -241,6 +266,7 @@ function collectChatgptSignals(root: ChatgptFeatureObject): {
   webSearch: boolean;
   deepResearch: boolean;
   companyKnowledge: boolean;
+  createImage: boolean;
   apps: string[];
   skills: string[];
   modelControls: {
@@ -260,6 +286,7 @@ function collectChatgptSignals(root: ChatgptFeatureObject): {
     webSearch: false,
     deepResearch: false,
     companyKnowledge: false,
+    createImage: false,
     apps: new Set<string>(),
     skills: new Set<string>(),
     modelControls: {
@@ -280,6 +307,7 @@ function collectChatgptSignals(root: ChatgptFeatureObject): {
     webSearch: signals.webSearch,
     deepResearch: signals.deepResearch,
     companyKnowledge: signals.companyKnowledge,
+    createImage: signals.createImage,
     apps: Array.from(signals.apps).sort(),
     skills: Array.from(signals.skills).sort(),
     modelControls: signals.modelControls,
@@ -292,6 +320,7 @@ function collectFromObject(
     webSearch: boolean;
     deepResearch: boolean;
     companyKnowledge: boolean;
+    createImage: boolean;
     apps: Set<string>;
     skills: Set<string>;
     modelControls: {
@@ -311,6 +340,9 @@ function collectFromObject(
   if (source.web_search === true) signals.webSearch = true;
   if (source.deep_research === true) signals.deepResearch = true;
   if (source.company_knowledge === true) signals.companyKnowledge = true;
+  if (source.create_image === true || source.image_generation === true || source.image === true) {
+    signals.createImage = true;
+  }
   collectStringArray(source.apps, signals.apps);
   collectStringArray(source.skills, signals.skills);
   const modelControls = normalizeModelControls(source.model_controls);

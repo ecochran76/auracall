@@ -70,6 +70,10 @@
           ],
           "company_knowledge": [
             "company knowledge"
+          ],
+          "create_image": [
+            "create image",
+            "image generation"
           ]
         },
         "appTokens": {

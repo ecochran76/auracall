@@ -147,6 +147,7 @@ describe('workbench capability service', () => {
         web_search: true,
         deep_research: true,
         company_knowledge: true,
+        create_image: true,
         apps: ['github', 'google drive'],
         skills: ['study and learn'],
         model_controls: {
@@ -182,6 +183,15 @@ describe('workbench capability service', () => {
         id: 'chatgpt.files.company_knowledge',
         category: 'file',
         availability: 'available',
+      }),
+      expect.objectContaining({
+        id: 'chatgpt.media.create_image',
+        category: 'media',
+        availability: 'available',
+        source: 'browser_discovery',
+        output: expect.objectContaining({
+          artifactTypes: ['image'],
+        }),
       }),
       expect.objectContaining({
         id: 'chatgpt.apps.github',
@@ -238,10 +248,19 @@ describe('workbench capability service', () => {
     ]));
   });
 
-  it('keeps ChatGPT model selector visible as an unknown static capability until live discovery confirms it', async () => {
+  it('keeps ChatGPT static browser-media and model capabilities visible until live discovery confirms them', async () => {
     const service = createWorkbenchCapabilityService({
       now: () => new Date('2026-04-23T12:00:00.000Z'),
     });
+
+    const mediaReport = await service.listCapabilities({ provider: 'chatgpt', category: 'media' });
+    expect(mediaReport.capabilities).toEqual([
+      expect.objectContaining({
+        id: 'chatgpt.media.create_image',
+        availability: 'unknown',
+        source: 'static_catalog',
+      }),
+    ]);
 
     const report = await service.listCapabilities({ provider: 'chatgpt', category: 'other' });
 
