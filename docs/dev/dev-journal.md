@@ -25139,6 +25139,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     surfaces
   - `chatgpt/wsl-chrome-2` remains paused at `passCount: 1` with 52 remaining
     detail surfaces until the smaller Pro mirror is complete
+- Follow-up result:
+  - the same long-lived `18095` service continued `wsl-chrome-3` without a
+    second manual resume
+  - pass 3 completed refresh `acctmirror_ba8a3aaa-e8bd-4fb5-a4b4-3cc76228a62a`
+    at `2026-05-02T17:03:38.239Z` and reduced remaining detail surfaces from
+    eight to five
+  - pass 4 completed refresh `acctmirror_41420d44-b67c-4593-984b-f9a5ebc2cc48`
+    at `2026-05-02T17:19:27.279Z`, moved the completion to `steady_follow`,
+    and marked mirror completeness `complete`
+  - final `wsl-chrome-3` mirror counts are one project, 17 conversations,
+    194 artifacts, zero files, zero media, and zero remaining detail surfaces
+- Next:
+  - resume `chatgpt/wsl-chrome-2` on the same long-lived service and let it
+    walk its 52 remaining detail surfaces through cooldown-spaced passes
 
 ## Turn 78 | 2026-05-01
 

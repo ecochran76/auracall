@@ -16,6 +16,12 @@
   paused completions, and resuming `wsl-chrome-3` completed another
   cooldown-spaced pass without an operator-held shell command.
 
+- 2026-05-02: Completion-loop wake proof should wait through at least one
+  full polite interval after restart. The long-lived `18095` service advanced
+  `wsl-chrome-3` from pass 2 to pass 4 without a second manual resume and
+  reached mirror completeness, proving the persisted live-follow loop can wake,
+  refresh, and enter `steady_follow` on the installed runtime.
+
 - 2026-04-29: Lazy account mirroring must be metadata-first, identity-gated,
   and routed through the browser operation dispatcher. The default ChatGPT
   tenant is the first mirror source because it has the richest account history,

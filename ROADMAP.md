@@ -81,7 +81,10 @@ Current State:
     17 conversations, and 12 artifacts, then paused with 12 remaining detail
     surfaces; after restarting the long-lived patched service on port `18095`,
     resuming the same completion advanced it to `passCount: 2` and reduced the
-    remaining detail surfaces to eight
+    remaining detail surfaces to eight; the same service then continued without
+    another manual resume to `passCount: 4`, entered `steady_follow`, and
+    marked the mirror complete with one project, 17 conversations,
+    194 artifacts, and zero remaining detail surfaces
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local
