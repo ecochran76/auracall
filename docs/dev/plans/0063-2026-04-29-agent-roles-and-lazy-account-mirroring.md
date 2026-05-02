@@ -656,3 +656,7 @@ ChatGPT now has a matching account-level detail surface through
 `listAccountFiles()`, normalizes visible files/artifacts to UUID-backed account
 file IDs, and the live-follow collector merges those library files/artifacts
 with the existing bounded project/conversation attachment walk.
+The default ChatGPT Business account is now explicitly opted into live follow
+with the same `metadata-first` / `background` desired state as default Gemini
+and Grok, so API startup reconciliation can keep Library/account metadata fresh
+without requiring manual refresh calls.

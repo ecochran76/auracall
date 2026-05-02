@@ -267,6 +267,14 @@ describe('Config Resolver', () => {
             browserFamily: 'default',
             defaultService: 'grok',
             services: {
+              chatgpt: {
+                identity: { email: 'operator@example.com' },
+                liveFollow: {
+                  enabled: true,
+                  mode: 'metadata-first',
+                  priority: 'background',
+                },
+              },
               gemini: {
                 identity: { email: 'operator@example.com' },
                 liveFollow: {
@@ -293,6 +301,11 @@ describe('Config Resolver', () => {
 
     const result = await resolveConfig({});
 
+    expect(result.profiles?.default?.services?.chatgpt?.liveFollow).toEqual({
+      enabled: true,
+      mode: 'metadata-first',
+      priority: 'background',
+    });
     expect(result.profiles?.default?.services?.gemini?.liveFollow).toEqual({
       enabled: true,
       mode: 'metadata-first',
