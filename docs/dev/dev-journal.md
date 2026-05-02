@@ -24971,6 +24971,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - changed the default background drain cadence to `60000` ms and exposed
     `--background-drain-interval-ms <ms>` so operators can tune it or set `0`
     to disable timer-driven drain
+  - resumed the installed service after the CPU fix and confirmed the generic
+    background drain idles at the new `60000` ms cadence
+  - live-follow pass 6 completed with 292 conversations, 474 artifacts,
+    29 files, and 249 remaining detail surfaces, but the recovered completion
+    stayed `running` after its `nextAttemptAt` elapsed
+  - follow-up fix: live-follow completion cooldown waits now recheck due time
+    in bounded `60000` ms slices instead of sleeping through one long timer,
+    so resumed/recovered completions are less likely to strand behind stale
+    timers or pause/resume timing
+  - added regression coverage for a persisted cooldown operation that wakes
+    across bounded slices after restart
+  - installed the patched runtime, replaced the stale high-CPU process, and
+    left one detached API service running on port `18095`
+  - runtime proof: the patched service woke at the next eligible attempt,
+    cleared `nextAttemptAt`, and completed pass 8:
+    `acctmirror_4e1620c8-46d5-4f95-b781-eac8b2bcdedb` started
+    `2026-05-02T03:32:40.354Z`, completed `2026-05-02T03:36:03.456Z`,
+    and advanced the mirror to 292 conversations, 555 artifacts, 30 files,
+    and 237 remaining detail surfaces
 
 ## Turn 78 | 2026-05-01
 

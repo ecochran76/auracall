@@ -165,7 +165,7 @@ describe('account mirror completion service', () => {
       nextAttemptAt: '2026-04-30T12:10:00.000Z',
       passCount: 1,
     });
-    expect(sleep).toHaveBeenCalledWith(600_000);
+    expect(sleep).toHaveBeenCalledWith(60_000);
     expect(requestRefresh).not.toHaveBeenCalled();
   });
 
@@ -282,7 +282,7 @@ describe('account mirror completion service', () => {
   test('defaults to live follow and keeps running after a complete refresh', async () => {
     const requestRefresh = vi.fn()
       .mockResolvedValueOnce(createRefreshResult())
-      .mockRejectedValueOnce(new AccountMirrorRefreshError(
+      .mockRejectedValue(new AccountMirrorRefreshError(
         409,
         'account_mirror_not_eligible',
         'Account mirror chatgpt/default is delayed: minimum-interval.',
@@ -318,7 +318,7 @@ describe('account mirror completion service', () => {
     await waitFor(() => service.read('acctmirror_live_follow')?.nextAttemptAt === '2026-04-30T12:10:00.000Z');
 
     expect(requestRefresh).toHaveBeenCalledTimes(2);
-    expect(sleep).toHaveBeenCalledWith(600_000);
+    expect(sleep).toHaveBeenCalledWith(60_000);
     expect(service.read('acctmirror_live_follow')).toMatchObject({
       status: 'running',
       mode: 'live_follow',
@@ -343,16 +343,21 @@ describe('account mirror completion service', () => {
         },
       ))
       .mockResolvedValueOnce(createRefreshResult());
-    const sleep = vi.fn(async () => {});
+    let nowMs = Date.parse('2026-04-30T12:00:00.000Z');
+    const sleep = vi.fn((ms: number) => {
+      if (sleep.mock.calls.length > 3) return new Promise<void>(() => {});
+      nowMs += ms;
+      return Promise.resolve();
+    });
     const service = createAccountMirrorCompletionService({
       registry: createAccountMirrorStatusRegistry({
         config,
-        now: () => new Date('2026-04-30T12:00:00.000Z'),
+        now: () => new Date(nowMs),
       }),
       refreshService: {
         requestRefresh,
       },
-      now: () => new Date('2026-04-30T12:00:00.000Z'),
+      now: () => new Date(nowMs),
       generateId: () => 'acctmirror_completion_delayed',
       sleep,
     });
@@ -374,6 +379,7 @@ describe('account mirror completion service', () => {
     const firstEligibleAt = '2026-04-30T12:01:00.000Z';
     const secondEligibleAt = '2026-04-30T12:11:00.000Z';
     let sleepCount = 0;
+    let nowMs = Date.parse('2026-04-30T12:00:00.000Z');
     const requestRefresh = vi.fn()
       .mockRejectedValueOnce(new AccountMirrorRefreshError(
         409,
@@ -398,19 +404,20 @@ describe('account mirror completion service', () => {
           eligibleAt: secondEligibleAt,
         },
       ));
-    const sleep = vi.fn(() => {
+    const sleep = vi.fn((ms: number) => {
       sleepCount += 1;
+      nowMs += ms;
       return sleepCount === 1 ? Promise.resolve() : new Promise<void>(() => {});
     });
     const service = createAccountMirrorCompletionService({
       registry: createAccountMirrorStatusRegistry({
         config,
-        now: () => new Date('2026-04-30T12:00:00.000Z'),
+        now: () => new Date(nowMs),
       }),
       refreshService: {
         requestRefresh,
       },
-      now: () => new Date('2026-04-30T12:00:00.000Z'),
+      now: () => new Date(nowMs),
       generateId: () => 'acctmirror_live_follow_cadence',
       sleep,
     });
@@ -430,6 +437,74 @@ describe('account mirror completion service', () => {
         requestId: 'acctmirror_refresh_1',
       },
       nextAttemptAt: secondEligibleAt,
+    });
+  });
+
+  test('rechecks persisted cooldowns in bounded slices after restart', async () => {
+    let nowMs = Date.parse('2026-04-30T12:00:00.000Z');
+    const initial = {
+      object: 'account_mirror_completion' as const,
+      id: 'acctmirror_restart_slice',
+      provider: 'chatgpt' as const,
+      runtimeProfileId: 'default',
+      mode: 'live_follow' as const,
+      phase: 'backfill_history' as const,
+      status: 'running' as const,
+      startedAt: '2026-04-30T11:55:00.000Z',
+      completedAt: null,
+      nextAttemptAt: '2026-04-30T12:03:00.000Z',
+      maxPasses: null,
+      passCount: 4,
+      lastRefresh: createRefreshResult(),
+      mirrorCompleteness: {
+        ...completeMirror,
+        state: 'in_progress' as const,
+        remainingDetailSurfaces: { projects: 0, conversations: 1, total: 1 },
+      },
+      error: null,
+    };
+    const requestRefresh = vi.fn()
+      .mockResolvedValueOnce(createRefreshResult())
+      .mockRejectedValue(new AccountMirrorRefreshError(
+        409,
+        'account_mirror_not_eligible',
+        'Account mirror chatgpt/default is delayed: minimum-interval.',
+        {
+          provider: 'chatgpt',
+          runtimeProfileId: 'default',
+          reason: 'minimum-interval',
+          eligibleAt: '2026-04-30T12:13:00.000Z',
+        },
+      ));
+    const sleep = vi.fn((ms: number) => {
+      if (sleep.mock.calls.length > 3) return new Promise<void>(() => {});
+      nowMs += ms;
+      return Promise.resolve();
+    });
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date(nowMs),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      initialOperations: [initial],
+      resumeActiveOperations: true,
+      now: () => new Date(nowMs),
+      sleep,
+    });
+
+    await waitFor(() => service.read('acctmirror_restart_slice')?.passCount === 5);
+
+    expect(sleep.mock.calls.slice(0, 3).map(([ms]) => ms)).toEqual([60_000, 60_000, 60_000]);
+    await waitFor(() => service.read('acctmirror_restart_slice')?.nextAttemptAt === '2026-04-30T12:13:00.000Z');
+    expect(requestRefresh.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(service.read('acctmirror_restart_slice')).toMatchObject({
+      status: 'running',
+      nextAttemptAt: '2026-04-30T12:13:00.000Z',
+      passCount: 5,
+      phase: 'steady_follow',
     });
   });
 

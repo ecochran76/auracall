@@ -75,6 +75,14 @@ export function createAccountMirrorCompletionService(input: {
   const operations = new Map<string, AccountMirrorCompletionOperation>();
   const persistQueues = new Map<string, Promise<void>>();
   const activeRuns = new Set<string>();
+  const sleepUntilAttempt = async (id: string, attemptAt: string): Promise<boolean> => {
+    while (shouldContinue(id)) {
+      const delayMs = resolveDelayMs(attemptAt, now());
+      if (delayMs <= 0) return true;
+      await sleepImpl(Math.min(delayMs, 60_000));
+    }
+    return false;
+  };
 
   for (const operation of input.initialOperations ?? []) {
     operations.set(operation.id, operation);
@@ -105,8 +113,7 @@ export function createAccountMirrorCompletionService(input: {
       const operation = operations.get(id);
       if (!operation) return;
       if (operation.nextAttemptAt) {
-        await sleepImpl(resolveDelayMs(operation.nextAttemptAt, now()));
-        if (!shouldContinue(id)) return;
+        if (!(await sleepUntilAttempt(id, operation.nextAttemptAt))) return;
         update(id, { nextAttemptAt: null });
       }
       let pass = operation.passCount;
@@ -152,8 +159,7 @@ export function createAccountMirrorCompletionService(input: {
               mirrorCompleteness: entry?.mirrorCompleteness ?? operations.get(id)?.mirrorCompleteness ?? null,
               error: null,
             });
-            await sleepImpl(resolveDelayMs(eligibleAt, now()));
-            if (!shouldContinue(id)) return;
+            if (!(await sleepUntilAttempt(id, eligibleAt))) return;
             continue;
           }
           throw error;
