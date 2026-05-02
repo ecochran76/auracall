@@ -17,6 +17,11 @@ const config = {
             email: 'ecochran76@gmail.com',
             accountLevel: 'Business',
           },
+          liveFollow: {
+            enabled: true,
+            mode: 'metadata-first',
+            priority: 'background',
+          },
         },
       },
     },
@@ -82,8 +87,47 @@ function createRefreshResult(): AccountMirrorRefreshResult {
   };
 }
 
+function createProviderConfig() {
+  return {
+    runtimeProfiles: {
+      default: {
+        browserProfile: 'default',
+        defaultService: 'chatgpt',
+        services: {
+          chatgpt: {
+            identity: {
+              email: 'ecochran76@gmail.com',
+            },
+            liveFollow: {
+              enabled: true,
+              mode: 'metadata-first',
+              priority: 'background',
+            },
+          },
+        },
+      },
+      geminiDefault: {
+        browserProfile: 'default',
+        defaultService: 'gemini',
+        services: {
+          gemini: {
+            identity: {
+              email: 'ecochran76@gmail.com',
+            },
+            liveFollow: {
+              enabled: true,
+              mode: 'metadata-first',
+              priority: 'background',
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
 describe('account mirror scheduler pass service', () => {
-  test('dry-run pass selects the first eligible default ChatGPT target without refreshing', async () => {
+  test('dry-run pass selects the first eligible live-follow target without refreshing', async () => {
     const requestRefresh = vi.fn(async () => createRefreshResult());
     const service = createAccountMirrorSchedulerPassService({
       registry: createAccountMirrorStatusRegistry({
@@ -114,12 +158,63 @@ describe('account mirror scheduler pass service', () => {
         eligibleTargets: 1,
         delayedTargets: 0,
         blockedTargets: 1,
+        liveFollowEnabledTargets: 1,
+        liveFollowEligibleTargets: 1,
+        liveFollowDelayedTargets: 0,
         defaultChatgptEligibleTargets: 1,
         defaultChatgptDelayedTargets: 0,
         inProgressEligibleTargets: 0,
       },
       backpressure: {
         reason: 'none',
+      },
+    });
+  });
+
+  test('selects non-ChatGPT live-follow targets when they are the eligible target', async () => {
+    const requestRefresh = vi.fn(async () => ({
+      ...createRefreshResult(),
+      provider: 'gemini' as const,
+      runtimeProfileId: 'geminiDefault',
+      browserProfileId: 'default',
+    }));
+    const service = createAccountMirrorSchedulerPassService({
+      registry: createAccountMirrorStatusRegistry({
+        config: createProviderConfig(),
+        initialState: {
+          'chatgpt:default': {
+            lastSuccessAtMs: Date.parse('2026-04-29T11:59:00.000Z'),
+            detectedIdentityKey: 'ecochran76@gmail.com',
+          },
+        },
+        now: () => new Date('2026-04-29T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+    });
+
+    const result = await service.runOnce({ dryRun: false });
+
+    expect(requestRefresh).toHaveBeenCalledWith({
+      provider: 'gemini',
+      runtimeProfileId: 'geminiDefault',
+      explicitRefresh: false,
+      queueTimeoutMs: 0,
+    });
+    expect(result).toMatchObject({
+      action: 'refresh-completed',
+      selectedTarget: {
+        provider: 'gemini',
+        runtimeProfileId: 'geminiDefault',
+      },
+      metrics: {
+        liveFollowEnabledTargets: 2,
+        liveFollowEligibleTargets: 1,
+        liveFollowDelayedTargets: 1,
+        defaultChatgptEligibleTargets: 1,
+        defaultChatgptDelayedTargets: 1,
       },
     });
   });
@@ -159,7 +254,7 @@ describe('account mirror scheduler pass service', () => {
     });
   });
 
-  test('prioritizes in-progress default ChatGPT mirrors for lazy passes', async () => {
+  test('prioritizes in-progress live-follow mirrors for lazy passes', async () => {
     const requestRefresh = vi.fn(async () => createRefreshResult());
     const service = createAccountMirrorSchedulerPassService({
       registry: createAccountMirrorStatusRegistry({
@@ -220,7 +315,7 @@ describe('account mirror scheduler pass service', () => {
     });
   });
 
-  test('reports routine-delayed backpressure when no default ChatGPT target is eligible', async () => {
+  test('reports routine-delayed backpressure when no live-follow target is eligible', async () => {
     const requestRefresh = vi.fn(async () => createRefreshResult());
     const service = createAccountMirrorSchedulerPassService({
       registry: createAccountMirrorStatusRegistry({
@@ -249,6 +344,8 @@ describe('account mirror scheduler pass service', () => {
         reason: 'routine-delayed',
       },
       metrics: {
+        liveFollowEligibleTargets: 0,
+        liveFollowDelayedTargets: 1,
         defaultChatgptEligibleTargets: 0,
         defaultChatgptDelayedTargets: 1,
       },

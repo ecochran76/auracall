@@ -47,7 +47,16 @@ export interface AccountMirrorSchedulerPassResult {
     eligibleTargets: number;
     delayedTargets: number;
     blockedTargets: number;
+    liveFollowEnabledTargets?: number;
+    liveFollowEligibleTargets?: number;
+    liveFollowDelayedTargets?: number;
+    /**
+     * @deprecated Use liveFollowEligibleTargets. Kept for existing status consumers.
+     */
     defaultChatgptEligibleTargets: number;
+    /**
+     * @deprecated Use liveFollowDelayedTargets. Kept for existing status consumers.
+     */
     defaultChatgptDelayedTargets: number;
     inProgressEligibleTargets: number;
   };
@@ -81,21 +90,21 @@ export function createAccountMirrorSchedulerPassService(input: {
       const eligibleTargets = status.entries.filter((entry) => entry.status === 'eligible');
       const delayedTargets = status.entries.filter((entry) => entry.status === 'delayed');
       const blockedTargets = status.entries.filter((entry) => entry.status === 'blocked');
-      const defaultChatgptTargets = status.entries.filter(
-        (entry) => entry.provider === 'chatgpt' && entry.runtimeProfileId === 'default',
-      );
-      const defaultChatgptEligibleTargets = eligibleTargets.filter(
-        (entry) => entry.provider === 'chatgpt' && entry.runtimeProfileId === 'default',
-      );
-      const selected = chooseSchedulerTarget(defaultChatgptEligibleTargets);
+      const liveFollowTargets = status.entries.filter((entry) => entry.liveFollow.state === 'enabled');
+      const liveFollowEligibleTargets = eligibleTargets.filter((entry) => entry.liveFollow.state === 'enabled');
+      const liveFollowDelayedTargets = delayedTargets.filter((entry) => entry.liveFollow.state === 'enabled');
+      const selected = chooseSchedulerTarget(liveFollowEligibleTargets);
       const metrics = {
         totalTargets: status.metrics.total,
         eligibleTargets: eligibleTargets.length,
         delayedTargets: delayedTargets.length,
         blockedTargets: blockedTargets.length,
-        defaultChatgptEligibleTargets: defaultChatgptEligibleTargets.length,
-        defaultChatgptDelayedTargets: defaultChatgptTargets.filter((entry) => entry.status === 'delayed').length,
-        inProgressEligibleTargets: eligibleTargets.filter(
+        liveFollowEnabledTargets: liveFollowTargets.length,
+        liveFollowEligibleTargets: liveFollowEligibleTargets.length,
+        liveFollowDelayedTargets: liveFollowDelayedTargets.length,
+        defaultChatgptEligibleTargets: liveFollowEligibleTargets.length,
+        defaultChatgptDelayedTargets: liveFollowDelayedTargets.length,
+        inProgressEligibleTargets: liveFollowEligibleTargets.filter(
           (entry) => entry.mirrorCompleteness.state === 'in_progress',
         ).length,
       };
@@ -107,7 +116,7 @@ export function createAccountMirrorSchedulerPassService(input: {
           startedAt: startedAt.toISOString(),
           completedAt: now().toISOString(),
           selectedTarget: null,
-          backpressure: deriveSkippedBackpressure(defaultChatgptTargets),
+          backpressure: deriveSkippedBackpressure(liveFollowTargets),
           metrics,
           refresh: null,
           error: null,

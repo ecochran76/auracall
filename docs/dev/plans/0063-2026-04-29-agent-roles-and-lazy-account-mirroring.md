@@ -282,9 +282,10 @@ Current implementation-facing politeness contract:
   `GET /v1/account-mirrors/status` and `GET /v1/account-mirrors/catalog`
   report the cached default ChatGPT mirror as `in_progress` with 68 remaining
   conversation detail surfaces.
-- Routine scheduler passes now prefer eligible mirrors whose
+- Routine scheduler passes now select across all configured live-follow targets,
+  not only `chatgpt/default`; they still prefer eligible mirrors whose
   `mirrorCompleteness.state` is `in_progress`, and scheduler pass metrics count
-  how many eligible mirrors are still walking details.
+  enabled, eligible, delayed, and in-progress live-follow targets.
 - Scheduler passes expose `backpressure.reason` so operators can distinguish
   routine politeness delay, dispatcher contention, cooperative yield, and no
   backpressure without parsing refresh errors or attachment cursors.
@@ -660,3 +661,7 @@ The default ChatGPT Business account is now explicitly opted into live follow
 with the same `metadata-first` / `background` desired state as default Gemini
 and Grok, so API startup reconciliation can keep Library/account metadata fresh
 without requiring manual refresh calls.
+The lazy scheduler has also been de-biased from its original `chatgpt/default`
+bootstrap path: routine passes now choose among all enabled live-follow accounts,
+while deprecated `defaultChatgpt*` metrics remain as compatibility aliases for
+older status consumers.

@@ -94,8 +94,12 @@ Current State:
     `runtimeProfiles.<profile>.services.<provider>.liveFollow`: status entries
     report enabled, disabled, unconfigured, missing-identity, and unsupported
     accounts, MCP `account_mirror_status` carries the same projection, and
-    `api serve` reconciles enabled ChatGPT targets into one durable live-follow
+    `api serve` reconciles enabled configured accounts into one durable live-follow
     completion without duplicating existing active operations
+  - routine lazy scheduler passes now choose among all enabled live-follow
+    accounts instead of the original `chatgpt/default` bootstrap target; the
+    scheduler still uses politeness gates and in-progress mirror priority before
+    attempting any browser work
   - default Gemini and Grok dogfood now runs browser-backed, read-only
     live-follow collectors through the same provider dispatcher path:
     `gemini/default` cached 12 projects and 54 conversations, while
