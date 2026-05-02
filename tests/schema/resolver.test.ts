@@ -251,6 +251,60 @@ describe('Config Resolver', () => {
     });
   });
 
+  it('should preserve live-follow service desired state through config resolution', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: {
+        version: 3,
+        defaultRuntimeProfile: 'default',
+        browser: {},
+        services: {
+          chatgpt: { url: 'https://chatgpt.com/' },
+          gemini: { url: 'https://gemini.google.com/app' },
+          grok: { url: 'https://grok.com/' },
+        },
+        profiles: {
+          default: {
+            browserFamily: 'default',
+            defaultService: 'grok',
+            services: {
+              gemini: {
+                identity: { email: 'operator@example.com' },
+                liveFollow: {
+                  enabled: true,
+                  mode: 'metadata-first',
+                  priority: 'background',
+                },
+              },
+              grok: {
+                identity: { email: 'operator@example.com' },
+                liveFollow: {
+                  enabled: true,
+                  mode: 'metadata-first',
+                  priority: 'background',
+                },
+              },
+            },
+          },
+        },
+      } as any,
+      path: '/tmp/config.json',
+      loaded: true,
+    });
+
+    const result = await resolveConfig({});
+
+    expect(result.profiles?.default?.services?.gemini?.liveFollow).toEqual({
+      enabled: true,
+      mode: 'metadata-first',
+      priority: 'background',
+    });
+    expect(result.profiles?.default?.services?.grok?.liveFollow).toEqual({
+      enabled: true,
+      mode: 'metadata-first',
+      priority: 'background',
+    });
+  });
+
   it('should also mirror cli conversation selectors into the selected runtime-profile service block', async () => {
     vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
       config: {

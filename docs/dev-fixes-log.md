@@ -15371,3 +15371,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `wsl-chrome-2` dispatcher operation after losing the port; add a shutdown
   drain/cancel path so service restarts do not strand browser-operation leases
   or force a replacement live-follow completion.
+- 2026-05-02: Config schema drift can silently erase new service desired-state
+  blocks. `ServiceConfigSchema` must preserve
+  `services.*.liveFollow` / `profiles.*.services.*.liveFollow`; otherwise
+  user config shows an enabled account while `/status.accountMirrorStatus`
+  reports `unconfigured`.

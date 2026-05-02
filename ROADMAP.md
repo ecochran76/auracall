@@ -96,6 +96,10 @@ Current State:
     accounts, MCP `account_mirror_status` carries the same projection, and
     `api serve` reconciles enabled ChatGPT targets into one durable live-follow
     completion without duplicating existing active operations
+  - default Gemini and Grok dogfood now proves the non-ChatGPT guard: their
+    user-config live-follow desired state survives config resolution, appears
+    as `unsupported` in `/status.accountMirrorStatus`, and does not create
+    Gemini/Grok completion or browser work
   - next live-follow service-mode slice should add operator-facing desired vs.
     actual rollups in `/status.liveFollow`, CLI `api status`, MCP
     `api_status`, and `/ops/browser` so the dashboard shows every configured

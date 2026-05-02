@@ -25253,3 +25253,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - raw `/status` now reports `activeCompletions: 2`: `wsl-chrome-2` in
     `backfill_history` with 34 remaining detail surfaces and next attempt
     `2026-05-02T19:20:52.817Z`, plus `wsl-chrome-3` in `steady_follow`
+
+## Turn 80 | 2026-05-02
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: prove default Gemini and Grok participate in the live-follow desired
+  state contract without launching unsupported provider browser work.
+- Finding:
+  - default Gemini and Grok identities were present, but adding
+    `liveFollow.enabled: true` under `profiles.default.services.gemini/grok`
+    initially still reported `unconfigured`
+  - root cause was config-schema stripping: `ServiceConfigSchema` did not allow
+    the new `liveFollow` service block, so `resolveConfig` removed it before
+    account mirror status saw the config
+- Change:
+  - `ServiceConfigSchema` now preserves `liveFollow.enabled`, `liveFollow.mode`,
+    and `liveFollow.priority`
+  - resolver regression coverage proves bridge-profile service live-follow
+    desired state survives config resolution
+  - user config `~/.auracall/config.json` now enables default Gemini and Grok
+    live-follow desired state with `metadata-first/background`
+- Installed dogfood:
+  - restarted the `127.0.0.1:18095` service on the patched installed runtime;
+    final PID is `3593874`
+  - raw `/status` reports default Gemini and Grok as identity-bound,
+    `liveFollow.configured: true`, `state: unsupported`, with no Gemini/Grok
+    queued/running mirror state and no Gemini/Grok completions
+  - active completions remain ChatGPT-only: `wsl-chrome-2` and `wsl-chrome-3`
+- Validation:
+  - `pnpm vitest run tests/schema/resolver.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/liveFollowReconciler.test.ts tests/mcp.accountMirrorStatus.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`

@@ -55,9 +55,17 @@ export const ServiceIdentitySchema = z.object({
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const ServiceLiveFollowSchema = z.object({
+  enabled: z.boolean().optional(),
+  mode: z.string().optional(),
+  priority: z.string().optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const ServiceConfigSchema = z.object({
   url: z.string().optional(),
   identity: ServiceIdentitySchema.optional(),
+  liveFollow: ServiceLiveFollowSchema.optional(),
   projectId: z.string().optional(),
   projectName: z.string().optional(),
   conversationId: z.string().optional(),
