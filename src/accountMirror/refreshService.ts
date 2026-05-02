@@ -121,11 +121,11 @@ export function createAccountMirrorRefreshService(input: {
       const provider = request.provider ?? 'chatgpt';
       const runtimeProfileId = request.runtimeProfileId ?? 'default';
       const requestId = generateRequestId();
-      if (provider !== 'chatgpt' || runtimeProfileId !== 'default') {
+      if (provider !== 'chatgpt') {
         throw new AccountMirrorRefreshError(
           400,
           'account_mirror_refresh_scope_unsupported',
-          'The first account mirror refresh slice only supports the default ChatGPT mirror.',
+          'Account mirror refresh currently supports ChatGPT runtime profiles only.',
           { provider, runtimeProfileId },
         );
       }

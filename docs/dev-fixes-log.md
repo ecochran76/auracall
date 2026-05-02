@@ -1,3 +1,12 @@
+- 2026-05-02: Account mirror refresh should be ChatGPT-runtime-profile
+  scoped, not hard-coded to the default ChatGPT runtime profile. The
+  `wsl-chrome-2` Pro live-follow dogfood proved the old default-only guard by
+  blocking with `account_mirror_refresh_scope_unsupported`; the fix keeps
+  provider scope ChatGPT-only while resolving the requested AuraCall runtime
+  profile before browser collection. Installed dogfood then detected
+  `consult@polymerconsultinggroup.com` on Pro, cached three projects,
+  55 conversations, nine files, and paused after the first completed pass.
+
 - 2026-04-29: Lazy account mirroring must be metadata-first, identity-gated,
   and routed through the browser operation dispatcher. The default ChatGPT
   tenant is the first mirror source because it has the richest account history,

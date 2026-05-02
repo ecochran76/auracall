@@ -71,6 +71,11 @@ Current State:
     ChatGPT conversation inventory must scroll the infinite left rail when
     `includeHistory` and `historyLimit` are requested before claiming mirror
     completeness
+  - ChatGPT live-follow refresh is no longer hard-coded to the default runtime
+    profile: installed `wsl-chrome-2` Pro dogfood matched
+    `consult@polymerconsultinggroup.com`, completed one mirror pass, cached
+    three projects, 55 conversations, and nine files, then paused with 52
+    remaining detail surfaces
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local
@@ -981,8 +986,9 @@ Safety note:
   coherent ownership checkpoint
 - Immediate next action: continue
   [docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md](docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md)
-  against the installed API service on port `18095`, with provider-media work
-  back to maintenance unless a new concrete browser/provider drift appears
+  by repeating the bounded Pro ChatGPT live-follow dogfood for
+  `chatgpt/wsl-chrome-3`, with provider-media work back to maintenance unless
+  a new concrete browser/provider drift appears
 - Supporting maintenance: bounded config/team-service corrections only when
   they are required to preserve the primary lane's existing semantics
 - Supporting maintenance: roadmap, runbook, and validation hygiene that keeps

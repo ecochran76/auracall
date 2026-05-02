@@ -99,7 +99,7 @@ export function registerAccountMirrorRefreshTool(
     {
       title: 'Request account mirror refresh',
       description:
-        'Request one explicit Aura-Call account mirror refresh through the browser operation dispatcher. Current implementation is default ChatGPT metadata-only.',
+        'Request one explicit Aura-Call account mirror refresh through the browser operation dispatcher. Current implementation is ChatGPT metadata-only for configured runtime profiles.',
       inputSchema: accountMirrorRefreshInputShape,
       outputSchema: accountMirrorRefreshOutputShape,
     },

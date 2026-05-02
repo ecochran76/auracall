@@ -1,3 +1,36 @@
+## 2026-05-02 - Pro ChatGPT live-follow dogfood
+
+- Focus: resume Plan 0063 after closing the browser-first media slices by
+  dogfooding a Pro ChatGPT mirror on `wsl-chrome-2`.
+- Finding: the first installed live-follow start for
+  `chatgpt/wsl-chrome-2` correctly created a nonblocking completion but
+  immediately blocked with `account_mirror_refresh_scope_unsupported` because
+  `src/accountMirror/refreshService.ts` still allowed only the original
+  default ChatGPT refresh slice.
+- Fix: kept provider scope ChatGPT-only, removed the default-runtime-profile
+  guard, and taught the ChatGPT metadata collector to resolve the requested
+  AuraCall runtime profile before opening the browser. This keeps identity and
+  cache provenance bound to the runtime profile while persisting mirror content
+  under provider plus bound identity.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/refreshService.test.ts
+    tests/accountMirror/completionService.test.ts
+    tests/mcp.accountMirrorRefresh.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run install:user-runtime`
+  - installed `--profile wsl-chrome-2 profile identity-smoke --target chatgpt`
+    matched `consult@polymerconsultinggroup.com` with account level `Pro`
+  - installed `api serve` on port `18096`, then
+    `api mirror-complete --provider chatgpt --runtime-profile wsl-chrome-2`
+    completed pass `acctmirror_9a813ac9-a3f3-4d77-9665-4e68c8acf70d`
+    through dispatcher operation `2d2acebb-9d86-4d9a-b2c1-2a297c45bc03`
+  - first Pro pass detected `consult@polymerconsultinggroup.com`, account
+    level `Pro`, and cached three projects, 55 conversations, zero artifacts,
+    nine files, and zero media with 52 remaining detail surfaces
+  - operation `acctmirror_completion_115e1b32-30f5-444c-9109-e8f1f45939ba`
+    was paused after `passCount: 1`; `api status --expect-completion-paused 1`
+    reported live-follow severity `paused`
+
 ## 2026-04-29 - Agent roles and lazy account mirroring plan
 
 - Focus: define account-aware agent roles and scope lazy account mirroring for

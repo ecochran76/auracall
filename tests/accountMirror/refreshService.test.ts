@@ -34,6 +34,18 @@ const config = {
         },
       },
     },
+    'wsl-chrome-2': {
+      browserProfile: 'wsl-chrome-2',
+      defaultService: 'chatgpt',
+      services: {
+        chatgpt: {
+          identity: {
+            email: 'consult@polymerconsultinggroup.com',
+            accountLevel: 'Pro',
+          },
+        },
+      },
+    },
   },
 };
 
@@ -371,6 +383,87 @@ describe('account mirror refresh service', () => {
           { id: 'file_2', name: 'Second upload.pdf', provider: 'chatgpt', source: 'conversation' },
         ],
       }),
+    }));
+  });
+
+  test('runs a configured non-default ChatGPT runtime profile refresh', async () => {
+    const metadataCollector = {
+      collect: vi.fn(async () => ({
+        detectedIdentityKey: 'consult@polymerconsultinggroup.com',
+        detectedAccountLevel: 'Pro',
+        metadataCounts: {
+          projects: 0,
+          conversations: 1,
+          artifacts: 0,
+          files: 0,
+          media: 0,
+        },
+        manifests: {
+          projects: [],
+          conversations: [{ id: 'consult_conv_1', title: 'Consult conversation', provider: 'chatgpt' as const }],
+          artifacts: [],
+          files: [],
+          media: [],
+        },
+        evidence: {
+          identitySource: 'auth-session',
+          projectSampleIds: [],
+          conversationSampleIds: ['consult_conv_1'],
+          truncated: {
+            projects: false,
+            conversations: false,
+            artifacts: false,
+          },
+        },
+      })),
+    };
+    const registry = createAccountMirrorStatusRegistry({
+      config,
+      now: () => new Date('2026-05-02T16:10:00.000Z'),
+    });
+    const persistence = createNoopPersistence();
+    const service = createAccountMirrorRefreshService({
+      config,
+      registry,
+      dispatcher: createBrowserOperationDispatcher({
+        now: () => new Date('2026-05-02T16:10:00.000Z'),
+      }),
+      metadataCollector,
+      persistence,
+      now: () => new Date('2026-05-02T16:10:00.000Z'),
+      generateRequestId: () => 'acctmirror_consult',
+    });
+
+    const result = await service.requestRefresh({
+      provider: 'chatgpt',
+      runtimeProfileId: 'wsl-chrome-2',
+      explicitRefresh: true,
+    });
+
+    expect(metadataCollector.collect).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'chatgpt',
+      runtimeProfileId: 'wsl-chrome-2',
+      expectedIdentityKey: 'consult@polymerconsultinggroup.com',
+    }));
+    expect(result).toMatchObject({
+      requestId: 'acctmirror_consult',
+      provider: 'chatgpt',
+      runtimeProfileId: 'wsl-chrome-2',
+      browserProfileId: 'wsl-chrome-2',
+      detectedIdentityKey: 'consult@polymerconsultinggroup.com',
+      detectedAccountLevel: 'Pro',
+      metadataCounts: {
+        conversations: 1,
+      },
+      dispatcher: {
+        key: expect.stringContaining('wsl-chrome-2/chatgpt::service:chatgpt'),
+      },
+    });
+    expect(persistence.writeSnapshot).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'chatgpt',
+      runtimeProfileId: 'wsl-chrome-2',
+      browserProfileId: 'wsl-chrome-2',
+      boundIdentityKey: 'consult@polymerconsultinggroup.com',
     }));
   });
 

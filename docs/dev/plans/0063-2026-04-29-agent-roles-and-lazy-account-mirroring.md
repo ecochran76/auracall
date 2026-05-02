@@ -381,6 +381,9 @@ Each status payload should include:
   queued/running/completed dispatcher evidence without background looping.
 - Explicit default ChatGPT refresh verifies the bound identity before reading
   bounded project/conversation metadata.
+- Configured Pro ChatGPT runtime-profile refreshes can be requested through the
+  same API/CLI/MCP completion path and verify the bound profile identity before
+  reading bounded metadata.
 - The first implementation slice targets default ChatGPT metadata-first
   mirroring only.
 - API and MCP mirror-status readback exist before any long-running background
@@ -498,6 +501,22 @@ Each status payload should include:
   `nextAttemptAt` and completed refresh
   `acctmirror_e84dd5df-2fca-4271-bff9-dea4b33ef9c2` without a second operator
   resume.
+- Pro ChatGPT live-follow dogfood found the first post-default expansion gap:
+  completions could target `chatgpt/wsl-chrome-2`, but refresh still blocked
+  with `account_mirror_refresh_scope_unsupported` because the first refresh
+  slice was hard-coded to the default ChatGPT runtime profile.
+- The refresh path now remains ChatGPT-only but supports any configured
+  ChatGPT AuraCall runtime profile. The ChatGPT metadata collector resolves the
+  requested runtime profile before opening the browser, so identity preflight,
+  dispatcher ownership, and cache provenance stay scoped to the profile while
+  mirror content remains keyed by provider plus bound identity.
+- Installed-runtime Pro dogfood on port `18096` verified
+  `chatgpt/wsl-chrome-2`: identity smoke matched
+  `consult@polymerconsultinggroup.com` with account level `Pro`, completion
+  `acctmirror_completion_115e1b32-30f5-444c-9109-e8f1f45939ba` completed one
+  pass through refresh `acctmirror_9a813ac9-a3f3-4d77-9665-4e68c8acf70d`,
+  cached three projects, 55 conversations, zero artifacts, nine files, and
+  zero media, then paused at `passCount: 1` with 52 remaining detail surfaces.
 - ChatGPT conversation mirroring treats the left rail as an infinite history
   surface. `includeHistory` plus `historyLimit` must scroll older rows before
   claiming conversation inventory is complete.
@@ -516,6 +535,6 @@ Each status payload should include:
 
 ## Next Implementation Slice
 
-Start a bounded Pro ChatGPT live-follow dogfood using the same installed
-runtime/operator preflight, then pause it after the first verified pass before
-allowing any longer background completion.
+Repeat the same bounded Pro ChatGPT live-follow dogfood for
+`chatgpt/wsl-chrome-3`, then pause it after the first verified pass before
+allowing either Pro account to run longer background completion.

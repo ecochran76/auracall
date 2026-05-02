@@ -1,4 +1,6 @@
 import type { ResolvedUserConfig } from '../config.js';
+import { resolveRuntimeSelection } from '../config/model.js';
+import { applyBrowserProfileOverrides } from '../browser/service/profileConfig.js';
 import { BrowserAutomationClient } from '../browser/client.js';
 import type {
   Conversation,
@@ -92,7 +94,8 @@ export function createChatgptAccountMirrorMetadataCollector(
       if (input.provider !== 'chatgpt') {
         throw new Error(`Account mirror metadata collection is not implemented for ${input.provider}.`);
       }
-      const client = await BrowserAutomationClient.fromConfig(userConfig, { target: 'chatgpt' });
+      const clientConfig = resolveRuntimeProfileUserConfig(userConfig, input.runtimeProfileId, 'chatgpt');
+      const client = await BrowserAutomationClient.fromConfig(clientConfig, { target: 'chatgpt' });
       const identity = await client.getUserIdentity();
       const detectedIdentityKey = readIdentityKey(identity);
       const expectedIdentityKey = normalizeIdentityKey(input.expectedIdentityKey);
@@ -158,6 +161,42 @@ export function createChatgptAccountMirrorMetadataCollector(
       };
     },
   };
+}
+
+function resolveRuntimeProfileUserConfig(
+  userConfig: ResolvedUserConfig,
+  runtimeProfileId: string,
+  provider: AccountMirrorProvider,
+): ResolvedUserConfig {
+  if (userConfig.auracallProfile === runtimeProfileId && userConfig.browser?.target === provider) {
+    return userConfig;
+  }
+  const next = cloneConfig(userConfig);
+  const selection = resolveRuntimeSelection(next, {
+    explicitProfileName: runtimeProfileId,
+  });
+  if (!selection.runtimeProfileId || !selection.runtimeProfile) {
+    return userConfig;
+  }
+  next.defaultRuntimeProfile = selection.runtimeProfileId;
+  next.auracallProfile = selection.runtimeProfileId;
+  if (typeof selection.runtimeProfile.engine === 'string') {
+    next.engine = selection.runtimeProfile.engine as ResolvedUserConfig['engine'];
+  }
+  next.browser = {
+    ...(isRecord(next.browser) ? next.browser : {}),
+  } as ResolvedUserConfig['browser'];
+  applyBrowserProfileOverrides(next as Record<string, unknown>, selection.runtimeProfile, next.browser, {
+    overrideExisting: true,
+  });
+  next.browser.target = provider;
+  return next;
+}
+
+function cloneConfig(userConfig: ResolvedUserConfig): ResolvedUserConfig {
+  return (typeof structuredClone === 'function'
+    ? structuredClone(userConfig)
+    : JSON.parse(JSON.stringify(userConfig))) as ResolvedUserConfig;
 }
 
 async function readBoundedProjects(
@@ -455,4 +494,8 @@ function normalizeIdentityKey(value: string | null | undefined): string | null {
 function readString(value: string | null | undefined): string | null {
   const trimmed = String(value ?? '').trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
