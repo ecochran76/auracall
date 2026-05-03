@@ -3190,6 +3190,7 @@ function createOperatorBrowserDashboardHtml(): string {
       const completions = status.accountMirrorCompletions || {};
       const completionMetrics = completions.metrics || {};
       const liveFollow = status.liveFollow || {};
+      const targets = liveFollow.targets || {};
       const dashboard = status.routes && status.routes.operatorBrowserDashboard;
       $('serverSummary').innerHTML = [
         ['Status', status.ok ? '<span class="ok">ok</span>' : '<span class="bad">not ok</span>'],
@@ -3201,10 +3202,10 @@ function createOperatorBrowserDashboardHtml(): string {
         ['Mirror Scheduler', scheduler.state || 'unknown'],
         ['Mirror Posture', scheduler.operatorStatus ? scheduler.operatorStatus.posture : 'unknown'],
         ['Live Follow Severity', renderSeverity(liveFollow.severity)],
+        ['Live Follow Targets', formatTargetHealth(targets)],
         ['Mirror Wake', scheduler.lastWakeReason || 'none'],
         ['Mirror Wake At', scheduler.lastWakeAt || 'never'],
-        ['Live Follow Active', String(completionMetrics.active || 0)],
-        ['Live Follow Recent', String(completionMetrics.total || 0)],
+        ['Completion History', formatCompletionHistory(completionMetrics)],
         ['Dashboard Route', dashboard || '/ops/browser'],
       ].map(([key, value]) => '<dt>' + key + '</dt><dd>' + value + '</dd>').join('');
     }
@@ -3229,6 +3230,25 @@ function createOperatorBrowserDashboardHtml(): string {
 
     function renderSeverity(severity) {
       return '<span class="severity-' + severity + '">' + severity + '</span>';
+    }
+
+    function formatTargetHealth(targets) {
+      if (!targets || !targets.total) return 'unknown';
+      return [
+        'enabled=' + (targets.enabled || 0),
+        'active=' + (targets.active || 0),
+        'paused=' + (targets.paused || 0),
+        'attention=' + (targets.attentionNeeded || 0),
+      ].join(' ');
+    }
+
+    function formatCompletionHistory(metrics) {
+      return [
+        'active=' + (metrics.active || 0),
+        'failed=' + (metrics.failed || 0),
+        'cancelled=' + (metrics.cancelled || 0),
+        'total=' + (metrics.total || 0),
+      ].join(' ');
     }
 
     function compactLiveFollowTargets(targets) {

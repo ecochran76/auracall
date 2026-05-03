@@ -14417,6 +14417,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('mirrorTargets');
       expect(html).toContain('mirrorCompletions');
       expect(html).toContain('Live Follow Severity');
+      expect(html).toContain('Live Follow Targets');
+      expect(html).toContain('Completion History');
+      expect(html).toContain('formatTargetHealth');
+      expect(html).toContain('formatCompletionHistory');
       expect(html).toContain('status.liveFollow');
       expect(html).toContain('status.liveFollow.targets');
       expect(html).toContain('severity-attention-needed');
