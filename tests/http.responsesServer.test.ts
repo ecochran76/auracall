@@ -14524,6 +14524,7 @@ describe('http responses adapter', () => {
         },
       });
       expect((payload.routes as Record<string, unknown>).operatorBrowserDashboard).toBe('/ops/browser');
+      expect((payload.routes as Record<string, unknown>).accountMirrorDashboard).toBe('/account-mirror');
       expect((payload.routes as Record<string, unknown>).operatorBrowserDashboardUrl).toBe(
         'http://auracall.localhost/ops/browser',
       );
@@ -14547,6 +14548,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('AuraCall Browser Ops');
       expect(html).toContain('aria-label="AuraCall sections"');
       expect(html).toContain('Account Mirror');
+      expect(html).toContain('href="/account-mirror"');
       expect(html).toContain('Agents / Teams');
       expect(html).toContain('<h2>Operations</h2>');
       expect(html).toContain('opsControls');
@@ -14578,13 +14580,20 @@ describe('http responses adapter', () => {
       expect(html).toContain('Search Cache');
       expect(html).toContain('mirrorCatalogSummary');
       expect(html).toContain('mirrorCatalogResults');
+      expect(html).toContain('mirrorCatalogDetail');
+      expect(html).toContain('mirrorCatalogDetailRaw');
       expect(html).toContain('mirrorCatalogRaw');
       expect(html).toContain('/v1/account-mirrors/catalog');
       expect(html).toContain('buildMirrorCatalogPath');
+      expect(html).toContain('initializeMirrorCatalogFiltersFromUrl');
+      expect(html).toContain('updateMirrorCatalogUrl');
+      expect(html).toContain('window.history.replaceState');
       expect(html).toContain('flattenMirrorCatalogEntries');
       expect(html).toContain('filterMirrorCatalogRows');
       expect(html).toContain('renderMirrorCatalogTable');
       expect(html).toContain('mirrorCatalogItems');
+      expect(html).toContain('data-catalog-row-index');
+      expect(html).toContain('showMirrorCatalogDetailByIndex');
       expect(html).toContain('Catalog reads are cache-only');
       expect(html).toContain('Mirror Live Follow');
       expect(html).toContain('mirrorTargetTable');
@@ -14650,6 +14659,27 @@ describe('http responses adapter', () => {
       expect(response.status).toBe(200);
       const html = await response.text();
       expect(html).toContain('AuraCall Browser Ops');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('serves a read-only account mirror dashboard page', async () => {
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/account-mirror?provider=chatgpt&search=library`);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('text/html');
+      expect(response.headers.get('cache-control')).toContain('no-store');
+      const html = await response.text();
+      expect(html).toContain('AuraCall Account Mirror');
+      expect(html).toContain('href="/account-mirror" aria-current="page"');
+      expect(html).toContain('href="/ops/browser"');
+      expect(html).toContain('mirrorCatalogProvider');
+      expect(html).toContain('initializeMirrorCatalogFiltersFromUrl');
+      expect(html).toContain('showMirrorCatalogDetailByIndex');
+      expect(html).toContain('/v1/account-mirrors/catalog');
     } finally {
       await server.close();
     }

@@ -334,6 +334,7 @@ interface HttpStatusResponse {
     accountMirrorSchedulerHistory: string;
     workbenchCapabilitiesList: string;
     operatorBrowserDashboard: string;
+    accountMirrorDashboard: string;
     operatorBrowserDashboardUrl?: string;
     publicOperatorBrowserDashboardUrl?: string;
   };
@@ -712,7 +713,12 @@ export async function createResponsesHttpServer(
       const url = new URL(req.url ?? '/', 'http://127.0.0.1');
 
       if (req.method === 'GET' && (url.pathname === '/ops/browser' || url.pathname === '/dashboard')) {
-        sendHtml(res, 200, createOperatorBrowserDashboardHtml());
+        sendHtml(res, 200, createOperatorBrowserDashboardHtml({ activePage: 'browser' }));
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/account-mirror') {
+        sendHtml(res, 200, createOperatorBrowserDashboardHtml({ activePage: 'account-mirror' }));
         return;
       }
 
@@ -2026,6 +2032,7 @@ function createHttpStatusResponse(input: {
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
       operatorBrowserDashboard: '/ops/browser',
+      accountMirrorDashboard: '/account-mirror',
       ...(input.dashboardUrl ? { operatorBrowserDashboardUrl: input.dashboardUrl } : {}),
       ...(input.publicDashboardUrl ? { publicOperatorBrowserDashboardUrl: input.publicDashboardUrl } : {}),
     },
@@ -3099,13 +3106,22 @@ function sendHtml(res: http.ServerResponse, statusCode: number, html: string): v
   res.end(html);
 }
 
-function createOperatorBrowserDashboardHtml(): string {
+function createOperatorBrowserDashboardHtml(input: {
+  activePage?: 'browser' | 'account-mirror';
+} = {}): string {
+  const activePage = input.activePage ?? 'browser';
+  const browserCurrent = activePage === 'browser' ? ' aria-current="page"' : '';
+  const accountMirrorCurrent = activePage === 'account-mirror' ? ' aria-current="page"' : '';
+  const pageTitle = activePage === 'account-mirror' ? 'AuraCall Account Mirror' : 'AuraCall Browser Ops';
+  const pageDescription = activePage === 'account-mirror'
+    ? 'Read-only account mirror navigation backed by cached provider indexes.'
+    : 'Local operator view. Browser diagnostics run only when requested.';
   return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AuraCall Browser Ops</title>
+  <title>${pageTitle}</title>
   <style>
     :root {
       color-scheme: dark light;
@@ -3155,6 +3171,11 @@ function createOperatorBrowserDashboardHtml(): string {
     .nav a[aria-current="page"] {
       border-color: var(--accent);
       color: var(--accent);
+    }
+    .catalog-detail {
+      margin-top: 10px;
+      display: grid;
+      gap: 8px;
     }
     .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; }
     .panel {
@@ -3274,14 +3295,14 @@ function createOperatorBrowserDashboardHtml(): string {
   <main>
     <div class="top">
       <div>
-        <h1>AuraCall Browser Ops</h1>
-        <p>Local operator view. Browser diagnostics run only when requested.</p>
+        <h1>${pageTitle}</h1>
+        <p>${pageDescription}</p>
       </div>
       <button id="refreshStatus">Refresh Status</button>
     </div>
     <nav class="nav" aria-label="AuraCall sections">
-      <a href="/ops/browser" aria-current="page">Browser Ops</a>
-      <span aria-disabled="true">Account Mirror</span>
+      <a href="/ops/browser"${browserCurrent}>Browser Ops</a>
+      <a href="/account-mirror"${accountMirrorCurrent}>Account Mirror</a>
       <span aria-disabled="true">Agents / Teams</span>
       <span aria-disabled="true">Config</span>
     </nav>
@@ -3334,6 +3355,10 @@ function createOperatorBrowserDashboardHtml(): string {
         </div>
         <div id="mirrorCatalogSummary" class="notice">Catalog reads are cache-only and do not enqueue browser work.</div>
         <div id="mirrorCatalogResults" class="muted" style="margin-bottom: 10px;">No catalog loaded.</div>
+        <div id="mirrorCatalogDetail" class="catalog-detail">
+          <div class="notice">Select a cached row to inspect its raw manifest entry.</div>
+          <pre id="mirrorCatalogDetailRaw">No row selected.</pre>
+        </div>
         <pre id="mirrorCatalogRaw">No catalog loaded.</pre>
         <h2 style="margin-top: 14px;">Mirror Status</h2>
         <pre id="mirrorStatus">Loading...</pre>
@@ -3417,6 +3442,8 @@ function createOperatorBrowserDashboardHtml(): string {
   <script>
     const $ = (id) => document.getElementById(id);
     const asJson = (value) => JSON.stringify(value, null, 2);
+    let mirrorCatalogRows = [];
+    let mirrorCatalogFilteredRows = [];
 
     async function fetchJson(path) {
       const response = await fetch(path, { cache: 'no-store' });
@@ -3890,6 +3917,42 @@ function createOperatorBrowserDashboardHtml(): string {
       return '/v1/account-mirrors/catalog?' + params.toString();
     }
 
+    function initializeMirrorCatalogFiltersFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      setSelectValue('mirrorCatalogProvider', params.get('provider') || '');
+      if (params.has('runtimeProfile')) $('mirrorCatalogRuntimeProfile').value = params.get('runtimeProfile') || '';
+      setSelectValue('mirrorCatalogKind', params.get('kind') || 'all');
+      if (params.has('search')) $('mirrorCatalogSearch').value = params.get('search') || '';
+      if (params.has('limit')) $('mirrorCatalogLimit').value = String(normalizeMirrorCatalogLimit(params.get('limit')));
+    }
+
+    function setSelectValue(id, value) {
+      const node = $(id);
+      const allowed = Array.from(node.options).some((option) => option.value === value);
+      node.value = allowed ? value : node.options[0].value;
+    }
+
+    function updateMirrorCatalogUrl() {
+      const params = new URLSearchParams(window.location.search);
+      setOptionalUrlParam(params, 'provider', $('mirrorCatalogProvider').value);
+      setOptionalUrlParam(params, 'runtimeProfile', $('mirrorCatalogRuntimeProfile').value.trim());
+      setOptionalUrlParam(params, 'kind', $('mirrorCatalogKind').value === 'all' ? '' : $('mirrorCatalogKind').value);
+      setOptionalUrlParam(params, 'search', $('mirrorCatalogSearch').value.trim());
+      const limit = normalizeMirrorCatalogLimit($('mirrorCatalogLimit').value);
+      setOptionalUrlParam(params, 'limit', limit === 50 ? '' : String(limit));
+      const query = params.toString();
+      const nextUrl = window.location.pathname + (query ? '?' + query : '');
+      window.history.replaceState(null, '', nextUrl);
+    }
+
+    function setOptionalUrlParam(params, key, value) {
+      if (value) {
+        params.set(key, value);
+      } else {
+        params.delete(key);
+      }
+    }
+
     function normalizeMirrorCatalogLimit(value) {
       const parsed = Number(value);
       if (!Number.isFinite(parsed)) return 50;
@@ -3903,12 +3966,14 @@ function createOperatorBrowserDashboardHtml(): string {
       $('mirrorCatalogSummary').textContent = 'Reading cached account mirror catalog...';
       $('mirrorCatalogResults').textContent = 'Loading cached indexes...';
       try {
+        updateMirrorCatalogUrl();
         const catalog = await fetchJson(buildMirrorCatalogPath());
-        const rows = flattenMirrorCatalogEntries(catalog);
-        const filteredRows = filterMirrorCatalogRows(rows, $('mirrorCatalogSearch').value);
+        mirrorCatalogRows = flattenMirrorCatalogEntries(catalog);
+        mirrorCatalogFilteredRows = filterMirrorCatalogRows(mirrorCatalogRows, $('mirrorCatalogSearch').value);
         $('mirrorCatalogSummary').className = 'notice notice-ok';
-        $('mirrorCatalogSummary').innerHTML = renderMirrorCatalogSummary(catalog, rows, filteredRows);
-        $('mirrorCatalogResults').innerHTML = renderMirrorCatalogTable(filteredRows);
+        $('mirrorCatalogSummary').innerHTML = renderMirrorCatalogSummary(catalog, mirrorCatalogRows, mirrorCatalogFilteredRows);
+        $('mirrorCatalogResults').innerHTML = renderMirrorCatalogTable(mirrorCatalogFilteredRows);
+        $('mirrorCatalogDetailRaw').textContent = 'No row selected.';
         $('mirrorCatalogRaw').textContent = asJson(catalog);
       } catch (error) {
         const message = String(error.message || error);
@@ -3929,7 +3994,9 @@ function createOperatorBrowserDashboardHtml(): string {
         for (const kind of ['projects', 'conversations', 'artifacts', 'files', 'media']) {
           const items = Array.isArray(manifests[kind]) ? manifests[kind] : [];
           for (const item of items) {
+            const rowIndex = rows.length;
             rows.push({
+              rowIndex,
               provider: entry.provider || 'unknown',
               runtimeProfileId: entry.runtimeProfileId || 'unknown',
               boundIdentityKey: entry.boundIdentityKey || 'unbound',
@@ -3986,12 +4053,14 @@ function createOperatorBrowserDashboardHtml(): string {
         'ID',
         'Updated',
         'Identity',
+        'Open',
         'Snippet',
       ].map((label) => '<th>' + label + '</th>').join('') + '</tr></thead><tbody>' + rows.map(renderMirrorCatalogRow).join('') + '</tbody></table></div>';
     }
 
     function renderMirrorCatalogRow(row) {
-      return '<tr>' + [
+      const rowIndex = String(row.rowIndex);
+      return '<tr data-catalog-row-index="' + escapeHtml(rowIndex) + '" onclick="showMirrorCatalogDetailByIndex(this.dataset.catalogRowIndex)">' + [
         '<td>' + escapeHtml(row.provider) + '</td>',
         '<td>' + escapeHtml(row.runtimeProfileId) + '</td>',
         '<td>' + escapeHtml(row.kind) + '</td>',
@@ -3999,8 +4068,29 @@ function createOperatorBrowserDashboardHtml(): string {
         '<td class="wrap">' + escapeHtml(row.itemId) + '</td>',
         '<td class="wrap">' + escapeHtml(row.timestamp) + '</td>',
         '<td class="wrap">' + escapeHtml(row.boundIdentityKey) + '</td>',
+        '<td><button type="button" data-catalog-row-index="' + escapeHtml(rowIndex) + '" onclick="event.stopPropagation(); showMirrorCatalogDetailByIndex(this.dataset.catalogRowIndex)">Details</button></td>',
         '<td class="wrap">' + escapeHtml(trimCatalogSnippet(row.searchable)) + '</td>',
       ].join('') + '</tr>';
+    }
+
+    function showMirrorCatalogDetailByIndex(index) {
+      const parsed = Number(index);
+      const row = mirrorCatalogRows.find((candidate) => candidate.rowIndex === parsed);
+      if (!row) {
+        $('mirrorCatalogDetailRaw').textContent = 'Cached row not found.';
+        return;
+      }
+      $('mirrorCatalogDetailRaw').textContent = asJson({
+        provider: row.provider,
+        runtimeProfileId: row.runtimeProfileId,
+        boundIdentityKey: row.boundIdentityKey,
+        status: row.status,
+        kind: row.kind,
+        label: row.label,
+        itemId: row.itemId,
+        timestamp: row.timestamp,
+        item: row.item,
+      });
     }
 
     function formatCatalogItemLabel(item) {
@@ -4248,6 +4338,7 @@ function createOperatorBrowserDashboardHtml(): string {
     });
     $('probeWorkbench').addEventListener('click', probeWorkbench);
     $('probeRun').addEventListener('click', probeRun);
+    initializeMirrorCatalogFiltersFromUrl();
     refreshStatus();
   </script>
 </body>

@@ -719,8 +719,10 @@ offer pause and cancel, while paused operations offer resume and cancel. The
 same panel includes an `aria-live` operator feedback notice so selection,
 in-flight control requests, successes, and failures are visible without
 reading the raw JSON block.
-The dashboard also now exposes a read-only account mirror catalog browser
-backed by `GET /v1/account-mirrors/catalog`, with provider, runtime profile,
-kind, search, and limit controls. Catalog browsing reads cached indexes only
-and does not enqueue browser work, giving operators a first account mirror
-navigation/search surface before broader account-mirror pages are added.
+The dashboard also now exposes a read-only account mirror catalog browser and a
+dedicated `/account-mirror` page backed by `GET /v1/account-mirrors/catalog`,
+with provider, runtime profile, kind, search, and limit controls. Catalog
+browsing reads cached indexes only and does not enqueue browser work. Filters
+are preserved in the page URL, and rows open cached manifest detail for the
+first account mirror navigation/search surface before broader account-mirror
+pages are added.

@@ -40,6 +40,9 @@ export interface ApiOpsBrowserDashboardSummary {
   hasAccountMirrorCatalogPanel: boolean;
   hasCatalogSearchControls: boolean;
   hasCatalogResultsTable: boolean;
+  hasAccountMirrorPageLink: boolean;
+  hasCatalogSavedFilterState: boolean;
+  hasCatalogDetailInspection: boolean;
   usesAccountMirrorCatalogPath: boolean;
 }
 
@@ -91,7 +94,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
     `AuraCall ops browser: ok (${summary.host}:${summary.port}${dashboard.route})`,
     `Dashboard URL: ${summary.dashboardUrl}`,
     `Dashboard service control: nav=${formatBoolean(dashboard.hasNavigationScaffold)} operations=${formatBoolean(dashboard.hasOperationsPanel)} backgroundDrain=${formatBoolean(dashboard.hasBackgroundDrainControls)} scheduler=${formatBoolean(dashboard.hasMirrorSchedulerControls)} runOnce=${formatBoolean(dashboard.hasRunOnceSchedulerControl)}`,
-    `Dashboard cache browse: catalog=${formatBoolean(dashboard.hasAccountMirrorCatalogPanel)} search=${formatBoolean(dashboard.hasCatalogSearchControls)} table=${formatBoolean(dashboard.hasCatalogResultsTable)} path=${dashboard.usesAccountMirrorCatalogPath ? '/v1/account-mirrors/catalog' : 'unknown'}`,
+    `Dashboard cache browse: catalog=${formatBoolean(dashboard.hasAccountMirrorCatalogPanel)} page=${formatBoolean(dashboard.hasAccountMirrorPageLink)} search=${formatBoolean(dashboard.hasCatalogSearchControls)} savedFilters=${formatBoolean(dashboard.hasCatalogSavedFilterState)} table=${formatBoolean(dashboard.hasCatalogResultsTable)} detail=${formatBoolean(dashboard.hasCatalogDetailInspection)} path=${dashboard.usesAccountMirrorCatalogPath ? '/v1/account-mirrors/catalog' : 'unknown'}`,
     `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} attention=${formatBoolean(dashboard.hasAttentionQueue)} activeTable=${formatBoolean(dashboard.hasActiveCompletionTable)} inspect=${formatBoolean(dashboard.hasCompletionInspectAction)} inputInspect=${formatBoolean(dashboard.hasCompletionInputInspectControl)} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} stateAware=${formatBoolean(dashboard.hasStateAwareCompletionActions)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
     summary.status.liveFollow.line,
     `Account mirror completions: active=${formatNullableNumber(summary.status.completions.metrics.active)} paused=${formatNullableNumber(summary.status.completions.metrics.paused)} failed=${formatNullableNumber(summary.status.completions.metrics.failed)} cancelled=${formatNullableNumber(summary.status.completions.metrics.cancelled)} total=${formatNullableNumber(summary.status.completions.metrics.total)}`,
@@ -127,8 +130,11 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
     [summary.hasResumeBinding, 'Expected /ops/browser to bind resumeMirrorCompletion.'],
     [summary.hasCancelBinding, 'Expected /ops/browser to bind cancelMirrorCompletion.'],
     [summary.hasAccountMirrorCatalogPanel, 'Expected /ops/browser to include cache-backed account mirror catalog browsing.'],
+    [summary.hasAccountMirrorPageLink, 'Expected /ops/browser to link the Account Mirror page route.'],
     [summary.hasCatalogSearchControls, 'Expected /ops/browser to include account mirror catalog search controls.'],
+    [summary.hasCatalogSavedFilterState, 'Expected /ops/browser to persist account mirror catalog filters in the URL.'],
     [summary.hasCatalogResultsTable, 'Expected /ops/browser to render cached account mirror catalog rows.'],
+    [summary.hasCatalogDetailInspection, 'Expected /ops/browser to inspect cached catalog row details.'],
     [summary.usesAccountMirrorCatalogPath, 'Expected /ops/browser to read /v1/account-mirrors/catalog.'],
   ];
   for (const [ok, message] of checks) {
@@ -217,10 +223,21 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('mirrorCatalogLimit')
       && html.includes('loadMirrorCatalog')
       && html.includes('Search Cache'),
+    hasAccountMirrorPageLink: html.includes('href="/account-mirror"') && html.includes('Account Mirror'),
+    hasCatalogSavedFilterState: html.includes('initializeMirrorCatalogFiltersFromUrl')
+      && html.includes('updateMirrorCatalogUrl')
+      && html.includes('window.history.replaceState')
+      && html.includes("params.get('provider')")
+      && html.includes("params.get('search')"),
     hasCatalogResultsTable: html.includes('renderMirrorCatalogTable')
       && html.includes('mirrorCatalogItems')
       && html.includes('flattenMirrorCatalogEntries')
       && html.includes('filterMirrorCatalogRows'),
+    hasCatalogDetailInspection: html.includes('mirrorCatalogDetail')
+      && html.includes('mirrorCatalogDetailRaw')
+      && html.includes('showMirrorCatalogDetailByIndex')
+      && html.includes('data-catalog-row-index')
+      && html.includes('Details'),
     usesAccountMirrorCatalogPath: html.includes('/v1/account-mirrors/catalog'),
   };
 }

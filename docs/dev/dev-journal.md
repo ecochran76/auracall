@@ -25602,3 +25602,41 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     contract with catalog/search/table/path all true
   - installed account mirror catalog read returned nine targets and cached
     projects, conversations, artifacts, files, and media without browser work
+
+## Turn 91 | 2026-05-03
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: promote account mirror browsing into the first dedicated dashboard
+  page.
+- Change:
+  - added `GET /account-mirror` as a read-only account mirror page route and
+    linked it from the AuraCall dashboard nav
+  - `/status.routes.accountMirrorDashboard` now advertises the page
+  - account mirror catalog filters hydrate from and persist to the page query
+    string, so operator searches are shareable/reloadable
+  - cached catalog rows can open raw manifest detail inline without starting
+    browser work
+  - CLI `api ops-browser-status` now checks the account-mirror page link,
+    saved-filter wiring, and row-detail inspection contract
+- Validation:
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/http.responsesServer.test.ts -t "browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "status endpoint" --maxWorkers 1`
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/http.responsesServer.test.ts -t "browser operator dashboard|account mirror dashboard|api ops browser CLI helpers|status endpoint" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/cli/apiOpsBrowserCommand.test.ts tests/http.responsesServer.test.ts`
+    reported existing warning debt only
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `3046760`; stale
+    PID `2851121` needed SIGKILL after not exiting on SIGTERM
+  - `http://auracall.localhost/account-mirror?provider=chatgpt&search=library&limit=3`
+    returned the Account Mirror page, active nav, saved-filter wiring, and row
+    detail inspection code
+  - installed `api status --json` advertises
+    `.raw.routes.accountMirrorDashboard: /account-mirror`
+  - installed `api ops-browser-status --json` passed the expanded contract with
+    account-mirror page, saved-filter, detail, and catalog checks true

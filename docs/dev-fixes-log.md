@@ -1,3 +1,10 @@
+- 2026-05-03: Account mirror browsing should be its own operator page, not
+  only a block inside browser ops. `GET /account-mirror` now serves the
+  read-only cache catalog browser, keeps filters in the URL, and opens raw
+  cached row details inline. `/status.routes.accountMirrorDashboard` advertises
+  the page, and CLI dashboard checks cover the link, saved-filter wiring, and
+  row-detail contract.
+
 - 2026-05-03: Account mirror navigation/search should be cache-only first.
   `/ops/browser` now reads `GET /v1/account-mirrors/catalog` for
   provider/profile/kind/search/limit browsing and renders cached projects,

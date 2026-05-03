@@ -187,6 +187,7 @@ Terminology note:
   relative dashboard path and any configured canonical dashboard URLs. Current
   endpoints are:
   - `GET /ops/browser`
+  - `GET /account-mirror`
   - `GET /dashboard` (alias)
   - `GET /status`
   - `GET /status/recovery/{run_id}`
@@ -256,10 +257,11 @@ Terminology note:
   recent records, and `/ops/browser` renders the same live-follow posture plus
   service controls for the background drain, mirror scheduler run-once,
   scheduler pause/resume, and live-follow completion pause/resume/cancel in the
-  local operator dashboard. The same dashboard includes a cache-only account
-  mirror catalog browser with provider/profile/kind/search/limit controls backed
-  by `GET /v1/account-mirrors/catalog`; using it does not start provider
-  browser work.
+  local operator dashboard. `/account-mirror` is the dedicated read-only account
+  mirror page; it includes the same cache-only catalog browser with
+  provider/profile/kind/search/limit controls backed by
+  `GET /v1/account-mirrors/catalog`, persists filters in the page URL, and
+  opens cached row details without starting provider browser work.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

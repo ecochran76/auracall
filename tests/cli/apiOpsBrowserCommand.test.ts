@@ -8,7 +8,7 @@ import {
 const dashboardHtml = `
 <nav aria-label="AuraCall sections">
   <a href="/ops/browser" aria-current="page">Browser Ops</a>
-  <span>Account Mirror</span>
+  <a href="/account-mirror">Account Mirror</a>
   <span>Agents / Teams</span>
   <span>Config</span>
 </nav>
@@ -22,6 +22,8 @@ const dashboardHtml = `
   <button id="loadMirrorCatalog">Search Cache</button>
   <div id="mirrorCatalogSummary"></div>
   <div id="mirrorCatalogResults"></div>
+  <div id="mirrorCatalogDetail"></div>
+  <pre id="mirrorCatalogDetailRaw"></pre>
   <pre id="mirrorCatalogRaw"></pre>
 </section>
 <section><h2>Mirror Live Follow</h2></section>
@@ -44,7 +46,17 @@ const dashboardHtml = `
   function flattenMirrorCatalogEntries() {}
   function filterMirrorCatalogRows() {}
   function renderMirrorCatalogTable() {
-    return '<table id="mirrorCatalogItems"></table>';
+    return '<table id="mirrorCatalogItems"><tr data-catalog-row-index="0"><td><button data-catalog-row-index="0">Details</button></td></tr></table>';
+  }
+  function initializeMirrorCatalogFiltersFromUrl() {
+    params.get('provider');
+    params.get('search');
+  }
+  function updateMirrorCatalogUrl() {
+    window.history.replaceState(null, '', '/account-mirror?provider=chatgpt&search=test');
+  }
+  function showMirrorCatalogDetailByIndex(index) {
+    $('mirrorCatalogDetailRaw').textContent = index;
   }
   async function loadMirrorCatalog() {
     await fetch('/v1/account-mirrors/catalog?kind=all&limit=50');
@@ -188,6 +200,9 @@ describe('api ops browser CLI helpers', () => {
       hasAccountMirrorCatalogPanel: true,
       hasCatalogSearchControls: true,
       hasCatalogResultsTable: true,
+      hasAccountMirrorPageLink: true,
+      hasCatalogSavedFilterState: true,
+      hasCatalogDetailInspection: true,
       usesAccountMirrorCatalogPath: true,
     });
     expect(summary.dashboardUrl).toBe('http://127.0.0.1:18080/ops/browser');
@@ -204,7 +219,7 @@ describe('api ops browser CLI helpers', () => {
       'Dashboard service control: nav=ok operations=ok backgroundDrain=ok scheduler=ok runOnce=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard cache browse: catalog=ok search=ok table=ok path=/v1/account-mirrors/catalog',
+      'Dashboard cache browse: catalog=ok page=ok search=ok savedFilters=ok table=ok detail=ok path=/v1/account-mirrors/catalog',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok inputInspect=ok input=ok rowActions=ok stateAware=ok feedback=ok pause=ok resume=ok cancel=ok',
