@@ -112,6 +112,19 @@ export function summarizeLiveFollowHealth(input: LiveFollowHealthInput): LiveFol
   const yieldText = summary.latestYield
     ? `${summary.latestYield.provider ?? 'unknown'}/${summary.latestYield.runtimeProfileId ?? 'unknown'} remaining=${summary.latestYield.remainingDetailSurfaces ?? 'unknown'} queued=${summary.latestYield.queuedOwnerCommand ?? 'unknown'}`
     : 'none';
+  const activityFields = summary.targets
+    ? [
+        `enabled=${summary.targets.enabled}`,
+        `active=${summary.targets.active}`,
+        `paused=${summary.targets.paused}`,
+        `attention=${summary.targets.attentionNeeded}`,
+      ]
+    : [
+        `active=${formatNullableNumber(summary.activeCompletions)}`,
+        `paused=${formatNullableNumber(summary.pausedCompletions)}`,
+        `failed=${formatNullableNumber(summary.failedCompletions)}`,
+        `cancelled=${formatNullableNumber(summary.cancelledCompletions)}`,
+      ];
   return {
     ...summary,
     line: [
@@ -119,10 +132,7 @@ export function summarizeLiveFollowHealth(input: LiveFollowHealthInput): LiveFol
       `severity=${summary.severity}`,
       `posture=${summary.schedulerPosture}`,
       `state=${summary.schedulerState ?? 'unknown'}`,
-      `active=${formatNullableNumber(summary.activeCompletions)}`,
-      `paused=${formatNullableNumber(summary.pausedCompletions)}`,
-      `failed=${formatNullableNumber(summary.failedCompletions)}`,
-      `cancelled=${formatNullableNumber(summary.cancelledCompletions)}`,
+      ...activityFields,
       `backpressure=${summary.backpressureReason}`,
       `latestYield=${yieldText}`,
     ].join(' '),

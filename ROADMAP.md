@@ -126,7 +126,10 @@ Current State:
     graceful shutdown; startup also prunes stale browser-operation locks so
     forced restart recovery does not leave live-follow targets blocked by dead
     owner PIDs, and completion records now carry a bounded lifecycle trail for
-    `parked_for_shutdown` / `resumed_after_restart` operator evidence
+    `parked_for_shutdown` / `resumed_after_restart` operator evidence; the
+    headline live-follow health line now reports current target counts instead
+    of historical failed/cancelled completion totals when target rollups are
+    available
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local

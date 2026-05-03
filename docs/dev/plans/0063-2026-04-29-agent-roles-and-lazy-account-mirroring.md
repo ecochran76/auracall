@@ -687,3 +687,7 @@ live-follow targets blocked by dead owner PIDs. Completion records now include
 a bounded `lifecycleEvents` trail, surfaced through API/MCP/CLI status paths,
 so operators can see `parked_for_shutdown` and `resumed_after_restart` handoff
 evidence without inspecting cache files.
+The headline live-follow health line now uses current target rollups
+(`enabled`, `active`, `paused`, `attention`) when available, leaving
+historical failed/cancelled completion totals in the separate completion
+metrics block.

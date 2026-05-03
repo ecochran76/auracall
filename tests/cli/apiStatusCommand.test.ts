@@ -227,7 +227,7 @@ describe('api status CLI helpers', () => {
         ],
       },
       liveFollow: {
-        line: 'Live follow health: severity=attention-needed posture=backpressured state=idle active=1 paused=1 failed=0 cancelled=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
+        line: 'Live follow health: severity=attention-needed posture=backpressured state=idle enabled=2 active=1 paused=1 attention=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
         severity: 'attention-needed',
         schedulerPosture: 'backpressured',
         schedulerState: 'idle',
@@ -264,7 +264,7 @@ describe('api status CLI helpers', () => {
       },
     });
     expect(formatApiStatusCliSummary(summary)).toContain(
-      'Live follow health: severity=attention-needed posture=backpressured state=idle active=1 paused=1 failed=0 cancelled=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
+      'Live follow health: severity=attention-needed posture=backpressured state=idle enabled=2 active=1 paused=1 attention=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
       'Latest lazy mirror backpressure: routine-delayed - minimum interval has not elapsed',
