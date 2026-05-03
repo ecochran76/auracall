@@ -25569,3 +25569,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     Eligible`, and `Next Completion Attempt`, with no `Next Wake`
   - installed `api ops-browser-status` reports live-follow `healthy` with
     three enabled targets and zero attention-needed targets
+
+## Turn 90 | 2026-05-03
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: add read-only account mirror navigation/search to the operator
+  dashboard.
+- Change:
+  - `/ops/browser` now includes an account mirror catalog browser backed by
+    `GET /v1/account-mirrors/catalog`
+  - operators can filter cached mirror indexes by provider, runtime profile,
+    kind, search text, and limit without starting browser work
+  - CLI `api ops-browser-status` now checks the catalog panel, search controls,
+    rendered results table, and catalog route so installed dashboard drift is
+    caught
+- Validation:
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/http.responsesServer.test.ts -t "browser operator dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/cli/apiOpsBrowserCommand.test.ts tests/http.responsesServer.test.ts`
+    reported existing warning debt only
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `2851121`; stale
+    PID `2659649` needed SIGKILL after not exiting on SIGTERM
+  - dashboard HTML at `http://auracall.localhost/ops/browser` contains the
+    mirror catalog controls and `/v1/account-mirrors/catalog` path
+  - installed `api ops-browser-status --json` passed the expanded dashboard
+    contract with catalog/search/table/path all true
+  - installed account mirror catalog read returned nine targets and cached
+    projects, conversations, artifacts, files, and media without browser work

@@ -13,6 +13,17 @@ const dashboardHtml = `
   <span>Config</span>
 </nav>
 <section><h2>Operations</h2><div id="opsControlNotice"></div><div id="opsControls"></div></section>
+<section><h2>Account Mirrors</h2>
+  <select id="mirrorCatalogProvider"></select>
+  <input id="mirrorCatalogRuntimeProfile">
+  <select id="mirrorCatalogKind"></select>
+  <input id="mirrorCatalogSearch">
+  <input id="mirrorCatalogLimit">
+  <button id="loadMirrorCatalog">Search Cache</button>
+  <div id="mirrorCatalogSummary"></div>
+  <div id="mirrorCatalogResults"></div>
+  <pre id="mirrorCatalogRaw"></pre>
+</section>
 <section><h2>Mirror Live Follow</h2></section>
 <div id="mirrorAttentionQueue"><table id="mirrorAttentionItems"></table></div>
 <div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div>
@@ -30,6 +41,14 @@ const dashboardHtml = `
   function renderOpsControls() {}
   function renderAttentionQueue() {}
   function collectAttentionRows() {}
+  function flattenMirrorCatalogEntries() {}
+  function filterMirrorCatalogRows() {}
+  function renderMirrorCatalogTable() {
+    return '<table id="mirrorCatalogItems"></table>';
+  }
+  async function loadMirrorCatalog() {
+    await fetch('/v1/account-mirrors/catalog?kind=all&limit=50');
+  }
   async function controlBackgroundDrain(action) {
     await fetch('/status', {
       method: 'POST',
@@ -166,6 +185,10 @@ describe('api ops browser CLI helpers', () => {
       hasPauseBinding: true,
       hasResumeBinding: true,
       hasCancelBinding: true,
+      hasAccountMirrorCatalogPanel: true,
+      hasCatalogSearchControls: true,
+      hasCatalogResultsTable: true,
+      usesAccountMirrorCatalogPath: true,
     });
     expect(summary.dashboardUrl).toBe('http://127.0.0.1:18080/ops/browser');
     expect(summary.status.liveFollow.severity).toBe('paused');
@@ -179,6 +202,9 @@ describe('api ops browser CLI helpers', () => {
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard service control: nav=ok operations=ok backgroundDrain=ok scheduler=ok runOnce=ok',
+    );
+    expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
+      'Dashboard cache browse: catalog=ok search=ok table=ok path=/v1/account-mirrors/catalog',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok inputInspect=ok input=ok rowActions=ok stateAware=ok feedback=ok pause=ok resume=ok cancel=ok',

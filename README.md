@@ -256,7 +256,10 @@ Terminology note:
   recent records, and `/ops/browser` renders the same live-follow posture plus
   service controls for the background drain, mirror scheduler run-once,
   scheduler pause/resume, and live-follow completion pause/resume/cancel in the
-  local operator dashboard.
+  local operator dashboard. The same dashboard includes a cache-only account
+  mirror catalog browser with provider/profile/kind/search/limit controls backed
+  by `GET /v1/account-mirrors/catalog`; using it does not start provider
+  browser work.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

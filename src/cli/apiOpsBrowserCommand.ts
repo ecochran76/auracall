@@ -37,6 +37,10 @@ export interface ApiOpsBrowserDashboardSummary {
   hasPauseBinding: boolean;
   hasResumeBinding: boolean;
   hasCancelBinding: boolean;
+  hasAccountMirrorCatalogPanel: boolean;
+  hasCatalogSearchControls: boolean;
+  hasCatalogResultsTable: boolean;
+  usesAccountMirrorCatalogPath: boolean;
 }
 
 export interface ApiOpsBrowserStatusSummary {
@@ -87,6 +91,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
     `AuraCall ops browser: ok (${summary.host}:${summary.port}${dashboard.route})`,
     `Dashboard URL: ${summary.dashboardUrl}`,
     `Dashboard service control: nav=${formatBoolean(dashboard.hasNavigationScaffold)} operations=${formatBoolean(dashboard.hasOperationsPanel)} backgroundDrain=${formatBoolean(dashboard.hasBackgroundDrainControls)} scheduler=${formatBoolean(dashboard.hasMirrorSchedulerControls)} runOnce=${formatBoolean(dashboard.hasRunOnceSchedulerControl)}`,
+    `Dashboard cache browse: catalog=${formatBoolean(dashboard.hasAccountMirrorCatalogPanel)} search=${formatBoolean(dashboard.hasCatalogSearchControls)} table=${formatBoolean(dashboard.hasCatalogResultsTable)} path=${dashboard.usesAccountMirrorCatalogPath ? '/v1/account-mirrors/catalog' : 'unknown'}`,
     `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} attention=${formatBoolean(dashboard.hasAttentionQueue)} activeTable=${formatBoolean(dashboard.hasActiveCompletionTable)} inspect=${formatBoolean(dashboard.hasCompletionInspectAction)} inputInspect=${formatBoolean(dashboard.hasCompletionInputInspectControl)} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} stateAware=${formatBoolean(dashboard.hasStateAwareCompletionActions)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
     summary.status.liveFollow.line,
     `Account mirror completions: active=${formatNullableNumber(summary.status.completions.metrics.active)} paused=${formatNullableNumber(summary.status.completions.metrics.paused)} failed=${formatNullableNumber(summary.status.completions.metrics.failed)} cancelled=${formatNullableNumber(summary.status.completions.metrics.cancelled)} total=${formatNullableNumber(summary.status.completions.metrics.total)}`,
@@ -121,6 +126,10 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
     [summary.hasPauseBinding, 'Expected /ops/browser to bind pauseMirrorCompletion.'],
     [summary.hasResumeBinding, 'Expected /ops/browser to bind resumeMirrorCompletion.'],
     [summary.hasCancelBinding, 'Expected /ops/browser to bind cancelMirrorCompletion.'],
+    [summary.hasAccountMirrorCatalogPanel, 'Expected /ops/browser to include cache-backed account mirror catalog browsing.'],
+    [summary.hasCatalogSearchControls, 'Expected /ops/browser to include account mirror catalog search controls.'],
+    [summary.hasCatalogResultsTable, 'Expected /ops/browser to render cached account mirror catalog rows.'],
+    [summary.usesAccountMirrorCatalogPath, 'Expected /ops/browser to read /v1/account-mirrors/catalog.'],
   ];
   for (const [ok, message] of checks) {
     if (!ok) throw new Error(message);
@@ -197,6 +206,22 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
     hasPauseBinding: html.includes("$('pauseMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('pause'))"),
     hasResumeBinding: html.includes("$('resumeMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('resume'))"),
     hasCancelBinding: html.includes("$('cancelMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('cancel'))"),
+    hasAccountMirrorCatalogPanel: html.includes('Account Mirrors')
+      && html.includes('mirrorCatalogSummary')
+      && html.includes('mirrorCatalogResults')
+      && html.includes('mirrorCatalogRaw'),
+    hasCatalogSearchControls: html.includes('mirrorCatalogProvider')
+      && html.includes('mirrorCatalogRuntimeProfile')
+      && html.includes('mirrorCatalogKind')
+      && html.includes('mirrorCatalogSearch')
+      && html.includes('mirrorCatalogLimit')
+      && html.includes('loadMirrorCatalog')
+      && html.includes('Search Cache'),
+    hasCatalogResultsTable: html.includes('renderMirrorCatalogTable')
+      && html.includes('mirrorCatalogItems')
+      && html.includes('flattenMirrorCatalogEntries')
+      && html.includes('filterMirrorCatalogRows'),
+    usesAccountMirrorCatalogPath: html.includes('/v1/account-mirrors/catalog'),
   };
 }
 

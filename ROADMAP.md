@@ -130,6 +130,10 @@ Current State:
     completion id, can inspect the persisted completion detail from either a
     row or a typed id, fill the shared control input, provide state-aware direct
     row actions, and show immediate operator feedback for each control request;
+    the same dashboard now includes a read-only account mirror catalog browser
+    backed by cache-only `/v1/account-mirrors/catalog`, with provider, runtime
+    profile, kind, search, and limit controls for cached projects,
+    conversations, artifacts, files, and media;
     CLI/MCP `api_ops_browser_status` surfaces the configured canonical
     dashboard URL for operator handoff, with `http://auracall.localhost/ops/browser`
     as the stable local dashboard endpoint

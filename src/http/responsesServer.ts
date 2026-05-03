@@ -3300,8 +3300,42 @@ function createOperatorBrowserDashboardHtml(): string {
         </dl>
       </section>
 
-      <section class="panel half">
+      <section class="panel">
         <h2>Account Mirrors</h2>
+        <div class="row" style="margin-bottom: 10px;">
+          <label>Provider
+            <select id="mirrorCatalogProvider">
+              <option value="">all</option>
+              <option value="chatgpt">chatgpt</option>
+              <option value="gemini">gemini</option>
+              <option value="grok">grok</option>
+            </select>
+          </label>
+          <label>Runtime Profile
+            <input id="mirrorCatalogRuntimeProfile" placeholder="default">
+          </label>
+          <label>Kind
+            <select id="mirrorCatalogKind">
+              <option value="all">all</option>
+              <option value="projects">projects</option>
+              <option value="conversations">conversations</option>
+              <option value="artifacts">artifacts</option>
+              <option value="files">files</option>
+              <option value="media">media</option>
+            </select>
+          </label>
+          <label>Search
+            <input id="mirrorCatalogSearch" placeholder="cached title, id, URL, or metadata">
+          </label>
+          <label>Limit
+            <input id="mirrorCatalogLimit" type="number" min="0" max="500" step="1" value="50">
+          </label>
+          <button id="loadMirrorCatalog" class="primary">Search Cache</button>
+        </div>
+        <div id="mirrorCatalogSummary" class="notice">Catalog reads are cache-only and do not enqueue browser work.</div>
+        <div id="mirrorCatalogResults" class="muted" style="margin-bottom: 10px;">No catalog loaded.</div>
+        <pre id="mirrorCatalogRaw">No catalog loaded.</pre>
+        <h2 style="margin-top: 14px;">Mirror Status</h2>
         <pre id="mirrorStatus">Loading...</pre>
       </section>
 
@@ -3371,6 +3405,7 @@ function createOperatorBrowserDashboardHtml(): string {
         <dl>
           <dt>Dashboard</dt><dd><a href="/ops/browser">/ops/browser</a></dd>
           <dt>Status</dt><dd><a href="/status">/status</a></dd>
+          <dt>Mirror Catalog</dt><dd>/v1/account-mirrors/catalog?kind=all&amp;limit=50</dd>
           <dt>Workbench</dt><dd>/v1/workbench-capabilities?provider=gemini&amp;diagnostics=browser-state</dd>
           <dt>Run Status</dt><dd>/v1/runs/{run_id}/status?diagnostics=browser-state</dd>
           <dt>Runtime Inspect</dt><dd>/v1/runtime-runs/inspect?runId={run_id}&amp;probe=service-state&amp;diagnostics=browser-state</dd>
@@ -3842,6 +3877,178 @@ function createOperatorBrowserDashboardHtml(): string {
       };
     }
 
+    function buildMirrorCatalogPath() {
+      const params = new URLSearchParams();
+      const provider = $('mirrorCatalogProvider').value;
+      const runtimeProfile = $('mirrorCatalogRuntimeProfile').value.trim();
+      const kind = $('mirrorCatalogKind').value || 'all';
+      const limit = normalizeMirrorCatalogLimit($('mirrorCatalogLimit').value);
+      if (provider) params.set('provider', provider);
+      if (runtimeProfile) params.set('runtimeProfile', runtimeProfile);
+      params.set('kind', kind);
+      params.set('limit', String(limit));
+      return '/v1/account-mirrors/catalog?' + params.toString();
+    }
+
+    function normalizeMirrorCatalogLimit(value) {
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed)) return 50;
+      return Math.max(0, Math.min(500, Math.floor(parsed)));
+    }
+
+    async function loadMirrorCatalog() {
+      const button = $('loadMirrorCatalog');
+      button.disabled = true;
+      $('mirrorCatalogSummary').className = 'notice notice-warn';
+      $('mirrorCatalogSummary').textContent = 'Reading cached account mirror catalog...';
+      $('mirrorCatalogResults').textContent = 'Loading cached indexes...';
+      try {
+        const catalog = await fetchJson(buildMirrorCatalogPath());
+        const rows = flattenMirrorCatalogEntries(catalog);
+        const filteredRows = filterMirrorCatalogRows(rows, $('mirrorCatalogSearch').value);
+        $('mirrorCatalogSummary').className = 'notice notice-ok';
+        $('mirrorCatalogSummary').innerHTML = renderMirrorCatalogSummary(catalog, rows, filteredRows);
+        $('mirrorCatalogResults').innerHTML = renderMirrorCatalogTable(filteredRows);
+        $('mirrorCatalogRaw').textContent = asJson(catalog);
+      } catch (error) {
+        const message = String(error.message || error);
+        $('mirrorCatalogSummary').className = 'notice notice-bad';
+        $('mirrorCatalogSummary').textContent = message;
+        $('mirrorCatalogResults').textContent = message;
+        $('mirrorCatalogRaw').textContent = message;
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    function flattenMirrorCatalogEntries(catalog) {
+      const rows = [];
+      const entries = Array.isArray(catalog && catalog.entries) ? catalog.entries : [];
+      for (const entry of entries) {
+        const manifests = entry && entry.manifests ? entry.manifests : {};
+        for (const kind of ['projects', 'conversations', 'artifacts', 'files', 'media']) {
+          const items = Array.isArray(manifests[kind]) ? manifests[kind] : [];
+          for (const item of items) {
+            rows.push({
+              provider: entry.provider || 'unknown',
+              runtimeProfileId: entry.runtimeProfileId || 'unknown',
+              boundIdentityKey: entry.boundIdentityKey || 'unbound',
+              status: entry.status || 'unknown',
+              kind,
+              label: formatCatalogItemLabel(item),
+              itemId: formatCatalogItemId(item),
+              timestamp: formatCatalogItemTimestamp(item),
+              item,
+              searchable: stringifyCatalogItem(item),
+            });
+          }
+        }
+      }
+      return rows;
+    }
+
+    function filterMirrorCatalogRows(rows, query) {
+      const needle = String(query || '').trim().toLowerCase();
+      if (!needle) return rows;
+      return rows.filter((row) => [
+        row.provider,
+        row.runtimeProfileId,
+        row.boundIdentityKey,
+        row.status,
+        row.kind,
+        row.label,
+        row.itemId,
+        row.timestamp,
+        row.searchable,
+      ].join(' ').toLowerCase().includes(needle));
+    }
+
+    function renderMirrorCatalogSummary(catalog, rows, filteredRows) {
+      const metrics = catalog && catalog.metrics ? catalog.metrics : {};
+      return '<span class="badges">' + [
+        renderBadge('targets', metrics.targets || 0, 'muted'),
+        renderBadge('projects', metrics.projects || 0, metrics.projects ? 'ok' : 'muted'),
+        renderBadge('conversations', metrics.conversations || 0, metrics.conversations ? 'ok' : 'muted'),
+        renderBadge('artifacts', metrics.artifacts || 0, metrics.artifacts ? 'ok' : 'muted'),
+        renderBadge('files', metrics.files || 0, metrics.files ? 'ok' : 'muted'),
+        renderBadge('media', metrics.media || 0, metrics.media ? 'ok' : 'muted'),
+        renderBadge('shown', filteredRows.length + '/' + rows.length, filteredRows.length ? 'ok' : 'warn'),
+      ].join('') + '</span>';
+    }
+
+    function renderMirrorCatalogTable(rows) {
+      if (!rows.length) return '<span class="muted">No cached mirror catalog rows matched the current filters.</span>';
+      return '<div class="table-wrap"><table id="mirrorCatalogItems"><thead><tr>' + [
+        'Provider',
+        'Profile',
+        'Kind',
+        'Title',
+        'ID',
+        'Updated',
+        'Identity',
+        'Snippet',
+      ].map((label) => '<th>' + label + '</th>').join('') + '</tr></thead><tbody>' + rows.map(renderMirrorCatalogRow).join('') + '</tbody></table></div>';
+    }
+
+    function renderMirrorCatalogRow(row) {
+      return '<tr>' + [
+        '<td>' + escapeHtml(row.provider) + '</td>',
+        '<td>' + escapeHtml(row.runtimeProfileId) + '</td>',
+        '<td>' + escapeHtml(row.kind) + '</td>',
+        '<td class="wrap"><strong>' + escapeHtml(row.label) + '</strong></td>',
+        '<td class="wrap">' + escapeHtml(row.itemId) + '</td>',
+        '<td class="wrap">' + escapeHtml(row.timestamp) + '</td>',
+        '<td class="wrap">' + escapeHtml(row.boundIdentityKey) + '</td>',
+        '<td class="wrap">' + escapeHtml(trimCatalogSnippet(row.searchable)) + '</td>',
+      ].join('') + '</tr>';
+    }
+
+    function formatCatalogItemLabel(item) {
+      return readStringField(item, ['title', 'name', 'filename', 'fileName', 'conversationTitle', 'projectName'])
+        || formatCatalogItemId(item)
+        || 'untitled';
+    }
+
+    function formatCatalogItemId(item) {
+      return readStringField(item, ['id', 'conversationId', 'projectId', 'artifactId', 'fileId', 'mediaId', 'url', 'href'])
+        || 'unknown';
+    }
+
+    function formatCatalogItemTimestamp(item) {
+      return readStringField(item, [
+        'updatedAt',
+        'createdAt',
+        'lastUpdatedAt',
+        'lastActivityAt',
+        'collectedAt',
+        'generatedAt',
+        'timestamp',
+      ]) || 'unknown';
+    }
+
+    function readStringField(value, fields) {
+      if (!value || typeof value !== 'object') return null;
+      for (const field of fields) {
+        const candidate = value[field];
+        if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+        if (typeof candidate === 'number' && Number.isFinite(candidate)) return String(candidate);
+      }
+      return null;
+    }
+
+    function stringifyCatalogItem(item) {
+      try {
+        return JSON.stringify(item);
+      } catch {
+        return String(item);
+      }
+    }
+
+    function trimCatalogSnippet(value) {
+      const text = String(value || '');
+      return text.length > 220 ? text.slice(0, 217) + '...' : text;
+    }
+
     async function controlMirrorCompletion(action) {
       const id = $('mirrorCompletionId').value.trim();
       if (!id) {
@@ -3940,6 +4147,7 @@ function createOperatorBrowserDashboardHtml(): string {
       } catch (error) {
         $('mirrorStatus').textContent = String(error.message || error);
       }
+      await loadMirrorCatalog();
     }
 
     async function postStatusControl(payload) {
@@ -4034,6 +4242,10 @@ function createOperatorBrowserDashboardHtml(): string {
     $('pauseMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('pause'));
     $('resumeMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('resume'));
     $('cancelMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('cancel'));
+    $('loadMirrorCatalog').addEventListener('click', loadMirrorCatalog);
+    $('mirrorCatalogSearch').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') loadMirrorCatalog();
+    });
     $('probeWorkbench').addEventListener('click', probeWorkbench);
     $('probeRun').addEventListener('click', probeRun);
     refreshStatus();

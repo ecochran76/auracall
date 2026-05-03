@@ -1,3 +1,10 @@
+- 2026-05-03: Account mirror navigation/search should be cache-only first.
+  `/ops/browser` now reads `GET /v1/account-mirrors/catalog` for
+  provider/profile/kind/search/limit browsing and renders cached projects,
+  conversations, artifacts, files, and media without enqueueing browser work.
+  CLI `api ops-browser-status` checks that dashboard catalog contract so
+  installed runtime drift fails before operators rely on the page.
+
 - 2026-05-02: Account mirror refresh should be ChatGPT-runtime-profile
   scoped, not hard-coded to the default ChatGPT runtime profile. The
   `wsl-chrome-2` Pro live-follow dogfood proved the old default-only guard by
