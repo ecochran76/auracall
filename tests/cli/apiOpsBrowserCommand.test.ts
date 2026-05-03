@@ -6,6 +6,13 @@ import {
 } from '../../src/cli/apiOpsBrowserCommand.js';
 
 const dashboardHtml = `
+<nav aria-label="AuraCall sections">
+  <a href="/ops/browser" aria-current="page">Browser Ops</a>
+  <span>Account Mirror</span>
+  <span>Agents / Teams</span>
+  <span>Config</span>
+</nav>
+<section><h2>Operations</h2><div id="opsControlNotice"></div><div id="opsControls"></div></section>
 <section><h2>Mirror Live Follow</h2></section>
 <div id="mirrorAttentionQueue"><table id="mirrorAttentionItems"></table></div>
 <div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div>
@@ -20,8 +27,26 @@ const dashboardHtml = `
 <pre id="mirrorTargets">status.liveFollow.targets</pre>
 <script>
   function setMirrorControlNotice(message, tone) {}
+  function renderOpsControls() {}
   function renderAttentionQueue() {}
   function collectAttentionRows() {}
+  async function controlBackgroundDrain(action) {
+    await fetch('/status', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ backgroundDrain: { action } }),
+    });
+  }
+  async function controlMirrorScheduler(action, dryRun) {
+    await fetch('/status', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ accountMirrorScheduler: { action } }),
+    });
+  }
+  '<div id="backgroundDrainControls"><button id="pauseBackgroundDrain">Pause</button><button id="resumeBackgroundDrain">Resume</button></div>';
+  '<div id="mirrorSchedulerControls"><button id="runMirrorScheduler">Run Now</button><button id="dryRunMirrorScheduler">Dry Run</button><button id="pauseMirrorScheduler">Pause</button><button id="resumeMirrorScheduler">Resume</button></div>';
+  controlMirrorScheduler('run-once', false);
   function completionActionsForStatus(status) {
     if (status === 'paused') return ['resume', 'cancel'];
     if (status === 'queued' || status === 'running' || status === 'refreshing') return ['pause', 'cancel'];
@@ -118,6 +143,13 @@ describe('api ops browser CLI helpers', () => {
     }, fetchImpl as typeof fetch);
 
     expect(summary.dashboard).toMatchObject({
+      hasNavigationScaffold: true,
+      hasOperationsPanel: true,
+      hasBackgroundDrainControls: true,
+      hasMirrorSchedulerControls: true,
+      hasRunOnceSchedulerControl: true,
+      usesBackgroundDrainPayload: true,
+      usesAccountMirrorSchedulerPayload: true,
       hasMirrorLiveFollowPanel: true,
       hasLiveFollowTargetsPanel: true,
       hasAttentionQueue: true,
@@ -144,6 +176,9 @@ describe('api ops browser CLI helpers', () => {
     })).not.toThrow();
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard URL: http://127.0.0.1:18080/ops/browser',
+    );
+    expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
+      'Dashboard service control: nav=ok operations=ok backgroundDrain=ok scheduler=ok runOnce=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok inputInspect=ok input=ok rowActions=ok stateAware=ok feedback=ok pause=ok resume=ok cancel=ok',
@@ -210,7 +245,7 @@ describe('api ops browser CLI helpers', () => {
     const fetchImpl = async (input: URL | RequestInfo) => {
       const url = String(input);
       if (url.endsWith('/ops/browser')) {
-        return new Response(`<h2>Mirror Live Follow</h2><div id="mirrorAttentionQueue"><table id="mirrorAttentionItems"></table></div><div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div><div id="mirrorActiveCompletionTable"><table id="mirrorActiveCompletions"></table></div><button id="inspectMirrorCompletionById">Inspect</button><button data-completion-id="acctmirror_paused" onclick="fillMirrorCompletionId(this.dataset.completionId)">Use ID</button><button data-completion-id="acctmirror_paused" onclick="inspectMirrorCompletion(this.dataset.completionId)">Inspect</button><button data-completion-id="acctmirror_paused" data-completion-action="pause" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Pause</button><button data-completion-id="acctmirror_paused" data-completion-action="resume" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Resume</button><button data-completion-id="acctmirror_paused" data-completion-action="cancel" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Cancel</button><div id="mirrorControlNotice" role="status" aria-live="polite"></div><script>function setMirrorControlNotice(message, tone) {} function renderAttentionQueue() {} function collectAttentionRows() {} function inspectMirrorCompletion(id) { return fetch('/v1/account-mirrors/completions/' + encodeURIComponent(id)); } function inspectSelectedMirrorCompletion() { return inspectMirrorCompletion('acctmirror_paused'); } $('inspectMirrorCompletionById').addEventListener('click', inspectSelectedMirrorCompletion); function completionActionsForStatus(status) { if (status === 'paused') return ['resume', 'cancel']; if (status === 'queued' || status === 'running' || status === 'refreshing') return ['pause', 'cancel']; return []; }</script><pre id="mirrorTargets">status.liveFollow.targets</pre>`, {
+        return new Response(dashboardHtml.replaceAll("fetch('/status'", "fetch('/wrong-status'"), {
           status: 200,
           headers: { 'content-type': 'text/html' },
         });

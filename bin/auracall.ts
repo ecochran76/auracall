@@ -1146,17 +1146,23 @@ apiCommand
 apiCommand
   .command('mirror-complete')
   .description('Start a nonblocking account mirror completion operation on the local API.')
-  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
-  .requiredOption('--port <number>', 'Local API port to query.', parseIntOption)
+  .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
   .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
   .option('--provider <provider>', 'Provider to complete (default chatgpt).')
   .option('--runtime-profile <profile>', 'Runtime profile to complete (default default).')
   .option('--max-passes <count>', 'Debug cap for refresh passes; omitted means unbounded live follow.', parseIntOption)
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
     const operation = await startApiMirrorCompletionForCli({
-      host: commandOptions.host,
-      port: commandOptions.port,
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
       timeoutMs: commandOptions.timeoutMs,
       provider: commandOptions.provider,
       runtimeProfile: commandOptions.runtimeProfile,
@@ -1172,8 +1178,8 @@ apiCommand
 apiCommand
   .command('mirror-completions')
   .description('List persisted account mirror completion operations from the local API.')
-  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
-  .requiredOption('--port <number>', 'Local API port to query.', parseIntOption)
+  .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
   .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
   .option('--provider <provider>', 'Filter by provider.')
   .option('--runtime-profile <profile>', 'Filter by runtime profile.')
@@ -1182,9 +1188,15 @@ apiCommand
   .option('--limit <count>', 'Maximum completion records to read.', parseIntOption, 50)
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
     const result = await listApiMirrorCompletionsForCli({
-      host: commandOptions.host,
-      port: commandOptions.port,
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
       timeoutMs: commandOptions.timeoutMs,
       provider: commandOptions.provider,
       runtimeProfile: commandOptions.runtimeProfile,
@@ -1204,16 +1216,22 @@ apiCommand
   .description('Pause, resume, or cancel a nonblocking account mirror completion operation.')
   .argument('<id>', 'Account mirror completion id.')
   .argument('<action>', 'Control action: pause, resume, or cancel.')
-  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
-  .requiredOption('--port <number>', 'Local API port to query.', parseIntOption)
+  .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
   .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (id: string, action: 'pause' | 'resume' | 'cancel', commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
     const operation = await controlApiMirrorCompletionForCli({
       id,
       action,
-      host: commandOptions.host,
-      port: commandOptions.port,
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
       timeoutMs: commandOptions.timeoutMs,
     });
     if (commandOptions.json) {
@@ -1227,15 +1245,21 @@ apiCommand
   .command('mirror-completion-status')
   .description('Read a nonblocking account mirror completion operation from the local API.')
   .argument('<id>', 'Account mirror completion id.')
-  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
-  .requiredOption('--port <number>', 'Local API port to query.', parseIntOption)
+  .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
   .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (id: string, commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
     const operation = await readApiMirrorCompletionForCli({
       id,
-      host: commandOptions.host,
-      port: commandOptions.port,
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
       timeoutMs: commandOptions.timeoutMs,
     });
     if (commandOptions.json) {
@@ -1248,15 +1272,21 @@ apiCommand
 apiCommand
   .command('scheduler-history')
   .description('Read compact lazy account mirror scheduler history from the local API.')
-  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
-  .requiredOption('--port <number>', 'Local API port to query.', parseIntOption)
+  .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
   .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
   .option('--limit <count>', 'Maximum compact history entries to read.', parseIntOption, 10)
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
     const summary = await readApiSchedulerHistoryForCli({
-      host: commandOptions.host,
-      port: commandOptions.port,
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
       timeoutMs: commandOptions.timeoutMs,
       limit: commandOptions.limit,
     });

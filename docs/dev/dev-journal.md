@@ -25485,3 +25485,39 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - unauthenticated
     `https://auracall.ecochran.dyndns.org/ops/browser` returned HTTP 302 to
     `auth.ecochran.dyndns.org`
+
+## Turn 87 | 2026-05-03
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: operationalize `/ops/browser` as the first one-page AuraCall UX surface.
+- Change:
+  - added a top navigation scaffold for Browser Ops, Account Mirror,
+    Agents / Teams, and Config
+  - added local dashboard controls for background drain pause/resume and mirror
+    scheduler run-now/dry-run/pause/resume through the existing `POST /status`
+    control plane
+  - kept live-follow completion pause/resume/cancel by id on the same status
+    path and expanded CLI dashboard contract checks to cover service controls
+  - changed mirror completion CLI helpers to use configured `api.host` and
+    `api.port` defaults when flags are omitted
+  - relabeled historical completion totals as records and muted failed/cancelled
+    history when current target health has no attention-needed accounts
+- Validation:
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/http.responsesServer.test.ts -t "browser operator dashboard|api ops browser CLI helpers|account mirror scheduler control|background drain control" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/cli/apiOpsBrowserCommand.test.ts tests/http.responsesServer.test.ts bin/auracall.ts`
+    reported existing warning debt only
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `1984609`
+  - installed `auracall api ops-browser-status --json` passed the expanded
+    dashboard contract and reported
+    `dashboardUrl: http://auracall.localhost/ops/browser`
+  - installed `auracall api mirror-completions --status active --json`
+    succeeded without `--port` and listed three active live-follow operations
+  - `curl http://auracall.localhost/ops/browser` confirmed the nav scaffold,
+    operations panel, scheduler controls, and completion-records label

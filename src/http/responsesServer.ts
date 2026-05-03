@@ -3128,6 +3128,30 @@ function createOperatorBrowserDashboardHtml(): string {
     p { margin: 0; color: var(--muted); }
     a { color: var(--accent); }
     .top { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 18px; }
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: -8px 0 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    .nav a,
+    .nav span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 5px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      text-decoration: none;
+      background: #11151a;
+    }
+    .nav a[aria-current="page"] {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
     .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; }
     .panel {
       grid-column: span 12;
@@ -3142,6 +3166,21 @@ function createOperatorBrowserDashboardHtml(): string {
       .wide { grid-column: span 8; }
     }
     .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .control-grid { display: grid; gap: 10px; }
+    @media (min-width: 720px) {
+      .control-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .control-card {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #11151a;
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+    }
+    .control-title { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .control-title strong { overflow-wrap: anywhere; }
     label { color: var(--muted); font-size: 12px; display: grid; gap: 4px; }
     select, input, button {
       border-radius: 6px;
@@ -3232,12 +3271,24 @@ function createOperatorBrowserDashboardHtml(): string {
     <div class="top">
       <div>
         <h1>AuraCall Browser Ops</h1>
-        <p>Read-only operator view. Browser diagnostics run only when requested.</p>
+        <p>Local operator view. Browser diagnostics run only when requested.</p>
       </div>
       <button id="refreshStatus">Refresh Status</button>
     </div>
+    <nav class="nav" aria-label="AuraCall sections">
+      <a href="/ops/browser" aria-current="page">Browser Ops</a>
+      <span aria-disabled="true">Account Mirror</span>
+      <span aria-disabled="true">Agents / Teams</span>
+      <span aria-disabled="true">Config</span>
+    </nav>
 
     <div class="grid">
+      <section class="panel half">
+        <h2>Operations</h2>
+        <div id="opsControlNotice" class="notice" role="status" aria-live="polite">No service control action yet.</div>
+        <div id="opsControls" class="control-grid">Loading controls...</div>
+      </section>
+
       <section class="panel half">
         <h2>Server</h2>
         <dl id="serverSummary">
@@ -3347,6 +3398,7 @@ function createOperatorBrowserDashboardHtml(): string {
       const binding = status.binding || {};
       const runner = status.runner || {};
       const scheduler = status.accountMirrorScheduler || {};
+      const backgroundDrain = status.backgroundDrain || {};
       const completions = status.accountMirrorCompletions || {};
       const completionMetrics = completions.metrics || {};
       const liveFollow = status.liveFollow || {};
@@ -3359,6 +3411,7 @@ function createOperatorBrowserDashboardHtml(): string {
         ['Local Only', binding.localOnly ? '<span class="ok">true</span>' : '<span class="warn">false</span>'],
         ['Runner', runner.status || 'unknown'],
         ['Runner ID', runner.id || 'none'],
+        ['Background Drain', backgroundDrain.state || 'unknown'],
         ['Mirror Scheduler', scheduler.state || 'unknown'],
         ['Mirror Posture', scheduler.operatorStatus ? scheduler.operatorStatus.posture : 'unknown'],
         ['Live Follow Severity', renderSeverity(liveFollow.severity)],
@@ -3366,7 +3419,7 @@ function createOperatorBrowserDashboardHtml(): string {
         ['Desired vs Actual', formatDesiredActualHealth(targets)],
         ['Mirror Wake', scheduler.lastWakeReason || 'none'],
         ['Mirror Wake At', scheduler.lastWakeAt || 'never'],
-        ['Completion History', formatCompletionHistory(completionMetrics)],
+        ['Completion Records', formatCompletionHistory(completionMetrics, targets)],
         ['Dashboard Route', dashboard || '/ops/browser'],
       ].map(([key, value]) => '<dt>' + key + '</dt><dd>' + value + '</dd>').join('');
     }
@@ -3392,6 +3445,60 @@ function createOperatorBrowserDashboardHtml(): string {
       });
     }
 
+    function renderOpsControls(status) {
+      const backgroundDrain = status.backgroundDrain || {};
+      const scheduler = status.accountMirrorScheduler || {};
+      const liveFollow = status.liveFollow || {};
+      $('opsControls').innerHTML = [
+        renderBackgroundDrainControl(backgroundDrain),
+        renderMirrorSchedulerControl(scheduler),
+        renderLiveFollowControlSummary(liveFollow),
+      ].join('');
+    }
+
+    function renderBackgroundDrainControl(backgroundDrain) {
+      const enabled = backgroundDrain.enabled === true;
+      const paused = backgroundDrain.paused === true || backgroundDrain.state === 'paused';
+      const running = backgroundDrain.state === 'running';
+      return '<div class="control-card" id="backgroundDrainControls"><div class="control-title"><strong>Background Drain</strong>'
+        + renderStatusText(backgroundDrain.state || 'unknown', toneForActualStatus(backgroundDrain.state || 'unknown'))
+        + '</div><dl>'
+        + '<dt>Interval</dt><dd>' + escapeHtml(formatNullable(backgroundDrain.intervalMs, 'disabled')) + '</dd>'
+        + '<dt>Last Run</dt><dd>' + escapeHtml(backgroundDrain.lastCompletedAt || backgroundDrain.lastStartedAt || 'never') + '</dd>'
+        + '</dl><div class="row">'
+        + '<button id="pauseBackgroundDrain" type="button" onclick="controlBackgroundDrain(' + "'pause'" + ')" ' + disabledAttr(!enabled || paused) + '>Pause</button>'
+        + '<button id="resumeBackgroundDrain" type="button" onclick="controlBackgroundDrain(' + "'resume'" + ')" ' + disabledAttr(!enabled || running && !paused) + '>Resume</button>'
+        + '</div></div>';
+    }
+
+    function renderMirrorSchedulerControl(scheduler) {
+      const enabled = scheduler.enabled === true;
+      const paused = scheduler.paused === true || scheduler.state === 'paused';
+      const running = scheduler.state === 'running';
+      return '<div class="control-card" id="mirrorSchedulerControls"><div class="control-title"><strong>Mirror Scheduler</strong>'
+        + renderStatusText(scheduler.state || 'unknown', toneForActualStatus(scheduler.state || 'unknown'))
+        + '</div><dl>'
+        + '<dt>Mode</dt><dd>' + escapeHtml(scheduler.dryRun ? 'dry run' : 'execute') + '</dd>'
+        + '<dt>Wake</dt><dd>' + escapeHtml(scheduler.lastWakeReason || 'none') + '</dd>'
+        + '<dt>Wake At</dt><dd>' + escapeHtml(scheduler.lastWakeAt || 'never') + '</dd>'
+        + '</dl><div class="row">'
+        + '<button id="runMirrorScheduler" class="primary" type="button" onclick="controlMirrorScheduler(' + "'run-once'" + ', false)" ' + disabledAttr(running) + '>Run Now</button>'
+        + '<button id="dryRunMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'run-once'" + ', true)" ' + disabledAttr(running) + '>Dry Run</button>'
+        + '<button id="pauseMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'pause'" + ')" ' + disabledAttr(!enabled || paused) + '>Pause</button>'
+        + '<button id="resumeMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'resume'" + ')" ' + disabledAttr(!enabled || running && !paused) + '>Resume</button>'
+        + '</div></div>';
+    }
+
+    function renderLiveFollowControlSummary(liveFollow) {
+      const targets = liveFollow.targets || {};
+      return '<div class="control-card" id="liveFollowControls"><div class="control-title"><strong>Live Follow</strong>'
+        + renderSeverity(liveFollow.severity || 'unknown')
+        + '</div><dl>'
+        + '<dt>Targets</dt><dd>' + formatTargetHealth(targets) + '</dd>'
+        + '<dt>Next Action</dt><dd>Use the live-follow table to pause, resume, or cancel a completion by id.</dd>'
+        + '</dl></div>';
+    }
+
     function renderSeverity(severity) {
       return '<span class="severity-' + severity + '">' + severity + '</span>';
     }
@@ -3406,11 +3513,14 @@ function createOperatorBrowserDashboardHtml(): string {
       ].join('') + '</span>';
     }
 
-    function formatCompletionHistory(metrics) {
+    function formatCompletionHistory(metrics, targets) {
+      const staleOnly = targets && (targets.attentionNeeded || 0) === 0;
+      const failedTone = metrics.failed && !staleOnly ? 'bad' : 'muted';
+      const cancelledTone = metrics.cancelled && !staleOnly ? 'warn' : 'muted';
       return '<span class="badges">' + [
         renderBadge('active', metrics.active || 0, metrics.active ? 'ok' : 'muted'),
-        renderBadge('failed', metrics.failed || 0, metrics.failed ? 'bad' : 'muted'),
-        renderBadge('cancelled', metrics.cancelled || 0, metrics.cancelled ? 'warn' : 'muted'),
+        renderBadge('failed', metrics.failed || 0, failedTone),
+        renderBadge('cancelled', metrics.cancelled || 0, cancelledTone),
         renderBadge('total', metrics.total || 0, 'muted'),
       ].join('') + '</span>';
     }
@@ -3605,6 +3715,12 @@ function createOperatorBrowserDashboardHtml(): string {
       node.textContent = message;
     }
 
+    function setOpsControlNotice(message, tone) {
+      const node = $('opsControlNotice');
+      node.className = 'notice notice-' + (tone || 'warn');
+      node.textContent = message;
+    }
+
     function renderStatusText(value, tone) {
       return '<span class="' + tone + '">' + escapeHtml(value || 'unknown') + '</span>';
     }
@@ -3621,6 +3737,14 @@ function createOperatorBrowserDashboardHtml(): string {
       if (status === 'paused') return 'warn';
       if (status === 'blocked' || status === 'failed' || status === 'cancelled') return 'bad';
       return 'muted';
+    }
+
+    function disabledAttr(disabled) {
+      return disabled ? 'disabled' : '';
+    }
+
+    function formatNullable(value, fallback) {
+      return value == null ? fallback : String(value);
     }
 
     function formatTargetName(target) {
@@ -3785,6 +3909,7 @@ function createOperatorBrowserDashboardHtml(): string {
 
     async function refreshStatus() {
       $('serverSummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
+      $('opsControls').textContent = 'Loading controls...';
       $('mirrorStatus').textContent = 'Loading...';
       $('mirrorAttentionQueue').textContent = 'Loading attention queue...';
       $('mirrorTargetTable').textContent = 'Loading target accounts...';
@@ -3793,10 +3918,12 @@ function createOperatorBrowserDashboardHtml(): string {
       $('mirrorCompletions').textContent = 'Loading...';
       try {
         const status = await fetchJson('/status');
+        renderOpsControls(status);
         renderServerSummary(status);
         renderMirrorCompletions(status);
       } catch (error) {
         $('serverSummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
+        $('opsControls').textContent = String(error.message || error);
         $('mirrorTargetTable').textContent = String(error.message || error);
         $('mirrorActiveCompletionTable').textContent = String(error.message || error);
         $('mirrorTargets').textContent = String(error.message || error);
@@ -3806,6 +3933,55 @@ function createOperatorBrowserDashboardHtml(): string {
         $('mirrorStatus').textContent = asJson(await fetchJson('/v1/account-mirrors/status'));
       } catch (error) {
         $('mirrorStatus').textContent = String(error.message || error);
+      }
+    }
+
+    async function postStatusControl(payload) {
+      const response = await fetch('/status', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(asJson({ status: response.status, payload: result }));
+      }
+      return result.controlResult || result;
+    }
+
+    async function controlBackgroundDrain(action) {
+      await controlService('background drain', () => postStatusControl({ backgroundDrain: { action } }));
+    }
+
+    async function controlMirrorScheduler(action, dryRun) {
+      const body = { accountMirrorScheduler: { action } };
+      if (action === 'run-once' && typeof dryRun === 'boolean') {
+        body.accountMirrorScheduler.dryRun = dryRun;
+      }
+      await controlService('mirror scheduler', () => postStatusControl(body));
+    }
+
+    async function controlService(label, task) {
+      setOpsControlNotice('Sending control action for ' + label + '...', 'warn');
+      setOpsButtonsDisabled(true);
+      let refreshed = false;
+      try {
+        const result = await task();
+        setOpsControlNotice('Completed ' + label + ' control: ' + (result.action || result.status || 'ok') + '.', 'ok');
+        await refreshStatus();
+        refreshed = true;
+      } catch (error) {
+        setOpsControlNotice('Failed ' + label + ' control: ' + String(error.message || error), 'bad');
+      } finally {
+        if (!refreshed) {
+          setOpsButtonsDisabled(false);
+        }
+      }
+    }
+
+    function setOpsButtonsDisabled(disabled) {
+      for (const button of document.querySelectorAll('#opsControls button')) {
+        button.disabled = disabled;
       }
     }
 

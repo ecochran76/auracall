@@ -118,11 +118,15 @@ Current State:
     detail surfaces are proven
   - `/status.liveFollow.targets` now includes explicit `desired` and `actual`
     rollups; CLI `api status`, MCP `api_status`, and `/ops/browser` expose the
-    same desired-vs-actual signal so operators can distinguish configured
+    same current-target health and desired-vs-actual signal so operators can
+    distinguish configured
     intent from current mirror activity without raw status entry inspection;
-    `/ops/browser` also renders the per-account live-follow targets as a
-    compact table, an operator attention queue, and an active completion
-    operations table while preserving the raw JSON block for debugging; active rows expose the matching
+    `/ops/browser` also includes the first one-page AuraCall UX navigation
+    scaffold, local controls for background drain pause/resume and mirror
+    scheduler run-once/dry-run/pause/resume, and per-account live-follow
+    targets as a compact table, an operator attention queue, and an active
+    completion operations table while preserving the raw JSON block for
+    debugging; active rows expose the matching
     completion id, can inspect the persisted completion detail from either a
     row or a typed id, fill the shared control input, provide state-aware direct
     row actions, and show immediate operator feedback for each control request;

@@ -14,6 +14,13 @@ export interface ApiOpsBrowserStatusCliOptions extends ApiStatusCliOptions {
 
 export interface ApiOpsBrowserDashboardSummary {
   route: '/ops/browser';
+  hasNavigationScaffold: boolean;
+  hasOperationsPanel: boolean;
+  hasBackgroundDrainControls: boolean;
+  hasMirrorSchedulerControls: boolean;
+  hasRunOnceSchedulerControl: boolean;
+  usesBackgroundDrainPayload: boolean;
+  usesAccountMirrorSchedulerPayload: boolean;
   hasMirrorLiveFollowPanel: boolean;
   hasLiveFollowTargetsPanel: boolean;
   hasAttentionQueue: boolean;
@@ -79,6 +86,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
   return [
     `AuraCall ops browser: ok (${summary.host}:${summary.port}${dashboard.route})`,
     `Dashboard URL: ${summary.dashboardUrl}`,
+    `Dashboard service control: nav=${formatBoolean(dashboard.hasNavigationScaffold)} operations=${formatBoolean(dashboard.hasOperationsPanel)} backgroundDrain=${formatBoolean(dashboard.hasBackgroundDrainControls)} scheduler=${formatBoolean(dashboard.hasMirrorSchedulerControls)} runOnce=${formatBoolean(dashboard.hasRunOnceSchedulerControl)}`,
     `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} attention=${formatBoolean(dashboard.hasAttentionQueue)} activeTable=${formatBoolean(dashboard.hasActiveCompletionTable)} inspect=${formatBoolean(dashboard.hasCompletionInspectAction)} inputInspect=${formatBoolean(dashboard.hasCompletionInputInspectControl)} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} stateAware=${formatBoolean(dashboard.hasStateAwareCompletionActions)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
     summary.status.liveFollow.line,
     `Account mirror completions: active=${formatNullableNumber(summary.status.completions.metrics.active)} paused=${formatNullableNumber(summary.status.completions.metrics.paused)} failed=${formatNullableNumber(summary.status.completions.metrics.failed)} cancelled=${formatNullableNumber(summary.status.completions.metrics.cancelled)} total=${formatNullableNumber(summary.status.completions.metrics.total)}`,
@@ -87,6 +95,13 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
 
 function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
   const checks: Array<[boolean, string]> = [
+    [summary.hasNavigationScaffold, 'Expected /ops/browser to include the AuraCall navigation scaffold.'],
+    [summary.hasOperationsPanel, 'Expected /ops/browser to include the Operations panel.'],
+    [summary.hasBackgroundDrainControls, 'Expected /ops/browser to include background drain controls.'],
+    [summary.hasMirrorSchedulerControls, 'Expected /ops/browser to include mirror scheduler controls.'],
+    [summary.hasRunOnceSchedulerControl, 'Expected /ops/browser to include a scheduler run-once control.'],
+    [summary.usesBackgroundDrainPayload, 'Expected /ops/browser to send backgroundDrain status-control payloads.'],
+    [summary.usesAccountMirrorSchedulerPayload, 'Expected /ops/browser to send accountMirrorScheduler status-control payloads.'],
     [summary.hasMirrorLiveFollowPanel, 'Expected /ops/browser to include the Mirror Live Follow panel.'],
     [summary.hasLiveFollowTargetsPanel, 'Expected /ops/browser to render status.liveFollow.targets.'],
     [summary.hasAttentionQueue, 'Expected /ops/browser to render the live-follow attention queue.'],
@@ -134,6 +149,26 @@ async function fetchDashboardHtml(
 function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
   return {
     route: '/ops/browser',
+    hasNavigationScaffold: html.includes('aria-label="AuraCall sections"')
+      && html.includes('Browser Ops')
+      && html.includes('Account Mirror')
+      && html.includes('Agents / Teams')
+      && html.includes('Config'),
+    hasOperationsPanel: html.includes('<h2>Operations</h2>')
+      && html.includes('opsControls')
+      && html.includes('opsControlNotice')
+      && html.includes('renderOpsControls'),
+    hasBackgroundDrainControls: html.includes('backgroundDrainControls')
+      && html.includes('pauseBackgroundDrain')
+      && html.includes('resumeBackgroundDrain')
+      && html.includes('controlBackgroundDrain'),
+    hasMirrorSchedulerControls: html.includes('mirrorSchedulerControls')
+      && html.includes('pauseMirrorScheduler')
+      && html.includes('resumeMirrorScheduler')
+      && html.includes('controlMirrorScheduler'),
+    hasRunOnceSchedulerControl: html.includes('runMirrorScheduler')
+      && html.includes('dryRunMirrorScheduler')
+      && html.includes("'run-once'"),
     hasMirrorLiveFollowPanel: html.includes('Mirror Live Follow'),
     hasLiveFollowTargetsPanel: html.includes('mirrorTargets') && html.includes('status.liveFollow.targets'),
     hasAttentionQueue: html.includes('mirrorAttentionQueue')
@@ -156,6 +191,8 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes("status === 'queued' || status === 'running' || status === 'refreshing'"),
     hasControlFeedbackNotice: html.includes('mirrorControlNotice') && html.includes('setMirrorControlNotice'),
     usesStatusControlPath: html.includes("fetch('/status'"),
+    usesBackgroundDrainPayload: html.includes('backgroundDrain: { action }'),
+    usesAccountMirrorSchedulerPayload: html.includes('accountMirrorScheduler: { action }'),
     usesAccountMirrorCompletionPayload: html.includes('accountMirrorCompletion: { id, action }'),
     hasPauseBinding: html.includes("$('pauseMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('pause'))"),
     hasResumeBinding: html.includes("$('resumeMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('resume'))"),

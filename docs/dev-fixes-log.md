@@ -15406,3 +15406,15 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   host/port a status probe used. Pin `api.dashboardUrl` in config, have
   `/status.routes` advertise it, and make CLI/MCP dashboard status helpers
   prefer that canonical URL.
+- 2026-05-03: The first AuraCall UX page should expose operational controls
+  without creating another control plane. Put background-drain and mirror
+  scheduler controls on `/ops/browser`, keep them routed through `POST /status`,
+  and have the CLI dashboard contract assert the wiring.
+- 2026-05-03: Historical failed/cancelled mirror completions should remain
+  inspectable without making a healthy dashboard look unhealthy. Label them as
+  completion records and let current target attention drive the alert tone.
+- 2026-05-03: CLI mirror operation helpers should use the pinned local API
+  config by default. `api mirror-complete`, `api mirror-completions`,
+  `api mirror-completion-status`, `api mirror-completion-control`, and
+  `api scheduler-history` should accept omitted `--port` when `api.port` is
+  configured.

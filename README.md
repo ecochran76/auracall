@@ -239,22 +239,24 @@ Terminology note:
   dogfood, prefer a long interval plus one manual `run-once` request so the
   scheduler proves the refresh path without repeatedly touching bot-sensitive
   provider pages.
-  Use `auracall api mirror-complete --port <port>` to start live follow for a
-  mirror target. The command returns an id immediately; the service backfills
-  history until no more history is detected, then stays in steady follow and
-  periodically crawls for new content. `--max-passes` is a debug cap, not the
-  default. `auracall api mirror-completion-status <id> --port <port>` polls
-  mode, phase, next attempt, counts, and latest refresh. Completion operation
+  Use `auracall api mirror-complete` to start live follow for a mirror target
+  on the configured local API. The command returns an id immediately; the
+  service backfills history until no more history is detected, then stays in
+  steady follow and periodically crawls for new content. `--max-passes` is a
+  debug cap, not the default. `auracall api mirror-completion-status <id>`
+  polls mode, phase, next attempt, counts, and latest refresh. Completion operation
   records are persisted under the account-mirror cache and hydrated on API/MCP
   startup, so operators can keep polling the same id after service restarts.
-  `auracall api mirror-completions --port <port> --status active` lists recent
-  and active persisted completion operations without touching provider pages.
-  `auracall api mirror-completion-control <id> pause|resume|cancel --port
-  <port>` controls a live-follow operation without killing the API service or
-  touching provider browser state.
+  `auracall api mirror-completions --status active` lists recent and active
+  persisted completion operations without touching provider pages.
+  `auracall api mirror-completion-control <id> pause|resume|cancel` controls a
+  live-follow operation without killing the API service or touching provider
+  browser state.
   `/status.accountMirrorCompletions` reports completion metrics plus active and
   recent records, and `/ops/browser` renders the same live-follow posture plus
-  pause/resume/cancel controls in the local operator dashboard.
+  service controls for the background drain, mirror scheduler run-once,
+  scheduler pause/resume, and live-follow completion pause/resume/cancel in the
+  local operator dashboard.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs
