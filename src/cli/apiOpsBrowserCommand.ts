@@ -8,7 +8,9 @@ import {
   type ApiStatusLiveFollowSeverityExpectation,
 } from './apiStatusCommand.js';
 
-export interface ApiOpsBrowserStatusCliOptions extends ApiStatusCliOptions {}
+export interface ApiOpsBrowserStatusCliOptions extends ApiStatusCliOptions {
+  dashboardUrl?: string | null;
+}
 
 export interface ApiOpsBrowserDashboardSummary {
   route: '/ops/browser';
@@ -50,12 +52,16 @@ export async function readApiOpsBrowserStatusForCli(
   const port = normalizePort(options.port);
   const timeoutMs = normalizeTimeoutMs(options.timeoutMs);
   const dashboardHtml = await fetchDashboardHtml({ host, port, timeoutMs }, fetchImpl);
+  const status = await readApiStatusForCli({ host, port, timeoutMs }, fetchImpl);
   return {
     host,
     port,
-    dashboardUrl: formatDashboardUrl(host, port),
+    dashboardUrl:
+      normalizeDashboardUrl(options.dashboardUrl)
+      ?? readStatusDashboardUrl(status.raw)
+      ?? formatDashboardUrl(host, port),
     dashboard: summarizeDashboardHtml(dashboardHtml),
-    status: await readApiStatusForCli({ host, port, timeoutMs }, fetchImpl),
+    status,
   };
 }
 
@@ -166,6 +172,20 @@ function hasInlineCompletionAction(html: string, action: string, label: string):
 
 function formatDashboardUrl(host: string, port: number): string {
   return `http://${host}:${port}/ops/browser`;
+}
+
+function normalizeDashboardUrl(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function readStatusDashboardUrl(raw: unknown): string | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const routes = (raw as { routes?: unknown }).routes;
+  if (!routes || typeof routes !== 'object' || Array.isArray(routes)) return null;
+  const dashboardUrl = (routes as { operatorBrowserDashboardUrl?: unknown }).operatorBrowserDashboardUrl;
+  return typeof dashboardUrl === 'string' ? normalizeDashboardUrl(dashboardUrl) : null;
 }
 
 function normalizeHost(value: string | null | undefined): string {

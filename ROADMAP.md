@@ -126,8 +126,9 @@ Current State:
     completion id, can inspect the persisted completion detail from either a
     row or a typed id, fill the shared control input, provide state-aware direct
     row actions, and show immediate operator feedback for each control request;
-    CLI/MCP `api_ops_browser_status` surfaces the concrete dashboard URL for
-    operator handoff
+    CLI/MCP `api_ops_browser_status` surfaces the configured canonical
+    dashboard URL for operator handoff, with `http://auracall.localhost/ops/browser`
+    as the stable local dashboard endpoint
   - service restart dogfood exposed a shutdown cleanup gap: `api serve` now
     terminates same-port orphan `api serve` processes before binding and
     parks active account-mirror completions as persisted `queued` work during

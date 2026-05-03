@@ -143,6 +143,8 @@ export const DEFAULT_BACKGROUND_DRAIN_INTERVAL_MS = 60_000;
 export interface ResponsesHttpServerOptions {
   host?: string;
   port?: number;
+  dashboardUrl?: string;
+  publicDashboardUrl?: string;
   logger?: (message: string) => void;
   recoverRunsOnStart?: boolean;
   recoverRunsOnStartMaxRuns?: number;
@@ -332,6 +334,8 @@ interface HttpStatusResponse {
     accountMirrorSchedulerHistory: string;
     workbenchCapabilitiesList: string;
     operatorBrowserDashboard: string;
+    operatorBrowserDashboardUrl?: string;
+    publicOperatorBrowserDashboardUrl?: string;
   };
   compatibility: {
     openai: true;
@@ -736,6 +740,8 @@ export async function createResponsesHttpServer(
         const statusResponse = await createHttpStatusResponse({
           host: boundHost,
           port: boundPort,
+          dashboardUrl: options.dashboardUrl,
+          publicDashboardUrl: options.publicDashboardUrl,
           recoverySummary: statusResponseRecoverySummary,
           localClaimSummary: statusResponseLocalClaimSummary,
           runnerTopology,
@@ -1080,6 +1086,8 @@ export async function createResponsesHttpServer(
         const statusResponse = await createHttpStatusResponse({
           host: boundHost,
           port: boundPort,
+          dashboardUrl: options.dashboardUrl,
+          publicDashboardUrl: options.publicDashboardUrl,
           localClaimSummary: await host.summarizeLocalClaimState({ sourceKind: 'direct' }),
           runnerTopology: await host.summarizeRunnerTopology(),
           runner: runnerState,
@@ -1508,7 +1516,6 @@ export async function createResponsesHttpServer(
 }
 
 export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}): Promise<void> {
-  assertResponsesHostAllowed(options.host, options.listenPublic ?? false);
   const logger = options.logger ?? console.log;
   const {
     listenPublic: _unusedListenPublic,
@@ -1520,6 +1527,12 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
     ...serverOptions
   } = options;
   const resolvedUserConfig = await resolveConfig(options.cliOptions ?? {}, process.cwd(), process.env);
+  const apiConfig = readApiServerConfig(resolvedUserConfig as Record<string, unknown>);
+  serverOptions.host = serverOptions.host ?? apiConfig.host;
+  serverOptions.port = serverOptions.port ?? apiConfig.port;
+  serverOptions.dashboardUrl = serverOptions.dashboardUrl ?? apiConfig.dashboardUrl;
+  serverOptions.publicDashboardUrl = serverOptions.publicDashboardUrl ?? apiConfig.publicDashboardUrl;
+  assertResponsesHostAllowed(serverOptions.host, options.listenPublic ?? false);
   await terminateSamePortApiServeProcesses({
     port: serverOptions.port,
     logger,
@@ -1562,7 +1575,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
       ),
     },
   );
-  const host = options.host ?? '127.0.0.1';
+  const host = serverOptions.host ?? '127.0.0.1';
   const bindAddress = `${host}:${server.port}`;
   const probeUrl = `http://${localProbeHost(host)}:${server.port}`;
   const localOnly = isLoopbackHost(host);
@@ -1577,6 +1590,12 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
     'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
+  if (serverOptions.dashboardUrl) {
+    logger(`Operator dashboard: ${serverOptions.dashboardUrl}`);
+  }
+  if (serverOptions.publicDashboardUrl) {
+    logger(`Public operator dashboard: ${serverOptions.publicDashboardUrl}`);
+  }
   logger('Leave this terminal running; press Ctrl+C to stop auracall api serve.');
 
   await new Promise<void>((resolve, reject) => {
@@ -1954,6 +1973,8 @@ function createHttpModelListResponse(): HttpModelListResponse {
 function createHttpStatusResponse(input: {
   host: string;
   port: number;
+  dashboardUrl?: string;
+  publicDashboardUrl?: string;
   recoverySummary?: ExecutionServiceHostRecoverySummary;
   localClaimSummary?: ExecutionServiceHostLocalClaimSummary;
   runnerTopology: ExecutionServiceHostRunnerTopologySummary;
@@ -2005,6 +2026,8 @@ function createHttpStatusResponse(input: {
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
       operatorBrowserDashboard: '/ops/browser',
+      ...(input.dashboardUrl ? { operatorBrowserDashboardUrl: input.dashboardUrl } : {}),
+      ...(input.publicDashboardUrl ? { publicOperatorBrowserDashboardUrl: input.publicDashboardUrl } : {}),
     },
     compatibility: {
       openai: true,
@@ -2248,6 +2271,37 @@ function createAccountMirrorCompletionStatusSummary(
     active,
     recent: all.slice(0, 10),
   };
+}
+
+function readApiServerConfig(config: Record<string, unknown>): {
+  host?: string;
+  port?: number;
+  dashboardUrl?: string;
+  publicDashboardUrl?: string;
+} {
+  const api = config.api;
+  if (!isRecord(api)) return {};
+  return {
+    host: readNonEmptyString(api.host),
+    port: readPositiveInteger(api.port),
+    dashboardUrl: readNonEmptyString(api.dashboardUrl),
+    publicDashboardUrl: readNonEmptyString(api.publicDashboardUrl),
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function readNonEmptyString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function readPositiveInteger(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) return undefined;
+  return value;
 }
 
 function createAccountMirrorSchedulerOperatorStatus(

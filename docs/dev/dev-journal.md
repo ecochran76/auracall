@@ -25453,3 +25453,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `attention=0`
   - installed `auracall api ops-browser-status --port 18095` also reports
     `severity=healthy`
+
+## Turn 86 | 2026-05-03
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: pin the browser operator dashboard to stable local/public URLs and
+  prepare ingress for `auracall.localhost` plus Authelia-guarded
+  `auracall.ecochran.dyndns.org`.
+- Change:
+  - added top-level `api.host`, `api.port`, `api.dashboardUrl`, and
+    `api.publicDashboardUrl` config support
+  - `api serve` now defaults host/port/dashboard URLs from config when CLI
+    flags are omitted
+  - `/status.routes`, CLI `api ops-browser-status`, and MCP status helpers can
+    report the configured canonical dashboard URL instead of formatting only
+    the raw host/port probe URL
+- Validation:
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/http.responsesServer.test.ts -t "status endpoint|dashboard URL" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/schema/types.ts src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts bin/auracall.ts tests/cli/apiOpsBrowserCommand.test.ts tests/http.responsesServer.test.ts`
+    reported existing warnings only
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `auracall api status` without `--port` reported
+    `operatorBrowserDashboardUrl: http://auracall.localhost/ops/browser`
+  - `http://auracall.localhost/ops/browser` returned HTTP 200 through local
+    Traefik
+  - unauthenticated
+    `https://auracall.ecochran.dyndns.org/ops/browser` returned HTTP 302 to
+    `auth.ecochran.dyndns.org`

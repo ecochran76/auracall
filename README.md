@@ -82,16 +82,16 @@ auracall features snapshot --target gemini --json
 auracall features diff --target gemini --json
 
 # Local dev-only OpenAI-compatible responses server
-auracall api serve --port 8080
+auracall api serve
 
 # Serve against a non-default AuraCall runtime profile
-auracall --profile auracall-gemini-pro api serve --port 8080
+auracall --profile auracall-gemini-pro api serve
 
 # Probe the local dev server posture
-curl http://127.0.0.1:8080/status
+curl http://auracall.localhost/status
 
 # Open the local read-only browser operator dashboard
-xdg-open http://127.0.0.1:8080/ops/browser
+xdg-open http://auracall.localhost/ops/browser
 
 # Explicitly allow a non-loopback bind only when you mean it
 auracall api serve --host 0.0.0.0 --listen-public --port 8080
@@ -181,7 +181,10 @@ Terminology note:
 - A bounded local OpenAI-compatible responses adapter is available for
   development through `auracall api serve`. Start it with
   `auracall --profile <name> api serve` to bind response, runtime, workbench,
-  and media behavior to a non-default AuraCall runtime profile. Current
+  and media behavior to a non-default AuraCall runtime profile. The local
+  operator dashboard should use the configured stable URL
+  `http://auracall.localhost/ops/browser`; `/status.routes` advertises both the
+  relative dashboard path and any configured canonical dashboard URLs. Current
   endpoints are:
   - `GET /ops/browser`
   - `GET /dashboard` (alias)

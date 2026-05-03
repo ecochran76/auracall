@@ -9,6 +9,7 @@ The primary documented shape is now:
 - `browserProfiles`
 - `runtimeProfiles`
 - `runtimeProfiles.<name>.browserProfile`
+- `api`
 - `version: 3`
 
 The compatibility bridge shape still exists and still loads:
@@ -81,6 +82,27 @@ read-only team planning view directly:
 
 This does not enable team execution or parallelism. It is an inspection and
 runtime-planning surface only.
+
+## Local API and dashboard
+
+Use the top-level `api` block to pin the local API binding and operator-facing
+dashboard URLs:
+
+```json5
+{
+  api: {
+    host: "127.0.0.1",
+    port: 18095,
+    dashboardUrl: "http://auracall.localhost/ops/browser",
+    publicDashboardUrl: "https://auracall.ecochran.dyndns.org/ops/browser",
+  },
+}
+```
+
+`auracall api serve` defaults to `api.host` and `api.port` when CLI flags are
+omitted. `/status.routes.operatorBrowserDashboardUrl`, CLI
+`api ops-browser-status`, and MCP `api_ops_browser_status` report the canonical
+dashboard URL when configured.
 
 Selector precedence is now explicit in those reports:
 - runtime selection uses `--profile` first

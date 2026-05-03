@@ -31,6 +31,14 @@ export const RemoteServiceConfigSchema = z.object({
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const ApiServerConfigSchema = z.object({
+  host: z.string().optional(),
+  port: z.number().int().positive().optional(),
+  dashboardUrl: z.string().optional(),
+  publicDashboardUrl: z.string().optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const BrowserListConfigSchema = z.object({
   includeHistory: z.boolean().optional(),
   historyLimit: z.number().optional(),
@@ -409,6 +417,7 @@ export const ConfigSchema = z.object({
   remote: RemoteServiceConfigSchema.optional(),
   remoteHost: z.string().optional(),
   remoteToken: z.string().optional(),
+  api: ApiServerConfigSchema.optional(),
   
   // Misc
   verbose: z.boolean().optional(),

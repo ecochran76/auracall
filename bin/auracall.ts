@@ -1023,7 +1023,7 @@ apiCommand
   .command('status')
   .description('Read the local AuraCall API /status summary.')
   .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
-  .requiredOption('--port <number>', 'Local API port to query.', parseIntOption)
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
   .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
   .option(
     '--expect-account-mirror-backpressure <reason>',
@@ -1062,9 +1062,15 @@ apiCommand
   )
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
     const summary = await readApiStatusForCli({
-      host: commandOptions.host,
-      port: commandOptions.port,
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
       timeoutMs: commandOptions.timeoutMs,
     });
     assertApiStatusBackpressure(summary, {
@@ -1093,8 +1099,9 @@ apiCommand
   .command('ops-browser-status')
   .description('Read /ops/browser and assert its dashboard/status control contract.')
   .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
-  .requiredOption('--port <number>', 'Local API port to query.', parseIntOption)
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
   .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--dashboard-url <url>', 'Canonical operator dashboard URL to report (defaults to api.dashboardUrl).')
   .option(
     '--expect-live-follow-severity <severity>',
     'Fail unless linked /status liveFollow.severity matches.',
@@ -1112,10 +1119,17 @@ apiCommand
   )
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
     const summary = await readApiOpsBrowserStatusForCli({
-      host: commandOptions.host,
-      port: commandOptions.port,
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
       timeoutMs: commandOptions.timeoutMs,
+      dashboardUrl: commandOptions.dashboardUrl ?? apiConfig.dashboardUrl,
     });
     assertApiOpsBrowserStatus(summary, {
       expectedSeverity: commandOptions.expectLiveFollowSeverity,
@@ -9768,6 +9782,32 @@ function resolveWaitFlag({
   if (waitFlag === true) return true;
   if (noWaitFlag === true) return false;
   return defaultWaitPreference(model, engine);
+}
+
+function readCliApiConfig(config: unknown): {
+  host?: string;
+  port?: number;
+  dashboardUrl?: string;
+} {
+  if (!config || typeof config !== 'object' || Array.isArray(config)) return {};
+  const api = (config as { api?: unknown }).api;
+  if (!api || typeof api !== 'object' || Array.isArray(api)) return {};
+  return {
+    host: readCliNonEmptyString((api as { host?: unknown }).host),
+    port: readCliPositiveInteger((api as { port?: unknown }).port),
+    dashboardUrl: readCliNonEmptyString((api as { dashboardUrl?: unknown }).dashboardUrl),
+  };
+}
+
+function readCliNonEmptyString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function readCliPositiveInteger(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) return undefined;
+  return value;
 }
 
 

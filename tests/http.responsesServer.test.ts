@@ -14365,7 +14365,12 @@ describe('http responses adapter', () => {
 
   it('reports development-only posture through the status endpoint', async () => {
     const server = await createResponsesHttpServer(
-      { host: '127.0.0.1', port: 0 },
+      {
+        host: '127.0.0.1',
+        port: 0,
+        dashboardUrl: 'http://auracall.localhost/ops/browser',
+        publicDashboardUrl: 'https://auracall.ecochran.dyndns.org/ops/browser',
+      },
       {
         accountMirrorCompletionService: {
           start: vi.fn(),
@@ -14404,6 +14409,12 @@ describe('http responses adapter', () => {
         },
       });
       expect((payload.routes as Record<string, unknown>).operatorBrowserDashboard).toBe('/ops/browser');
+      expect((payload.routes as Record<string, unknown>).operatorBrowserDashboardUrl).toBe(
+        'http://auracall.localhost/ops/browser',
+      );
+      expect((payload.routes as Record<string, unknown>).publicOperatorBrowserDashboardUrl).toBe(
+        'https://auracall.ecochran.dyndns.org/ops/browser',
+      );
     } finally {
       await server.close();
     }

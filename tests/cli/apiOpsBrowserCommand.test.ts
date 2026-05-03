@@ -150,6 +150,62 @@ describe('api ops browser CLI helpers', () => {
     );
   });
 
+  it('prefers the configured dashboard URL advertised by status', async () => {
+    const fetchImpl = async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.endsWith('/ops/browser')) {
+        return new Response(dashboardHtml, {
+          status: 200,
+          headers: { 'content-type': 'text/html' },
+        });
+      }
+      if (url.endsWith('/status')) {
+        return Response.json({
+          ...statusPayload,
+          routes: {
+            operatorBrowserDashboard: '/ops/browser',
+            operatorBrowserDashboardUrl: 'http://auracall.localhost/ops/browser',
+          },
+        });
+      }
+      return new Response('not found', { status: 404 });
+    };
+
+    const summary = await readApiOpsBrowserStatusForCli({
+      host: '127.0.0.1',
+      port: 18080,
+    }, fetchImpl as typeof fetch);
+
+    expect(summary.dashboardUrl).toBe('http://auracall.localhost/ops/browser');
+  });
+
+  it('lets an explicit dashboard URL override status metadata', async () => {
+    const fetchImpl = async (input: URL | RequestInfo) => {
+      const url = String(input);
+      if (url.endsWith('/ops/browser')) {
+        return new Response(dashboardHtml, {
+          status: 200,
+          headers: { 'content-type': 'text/html' },
+        });
+      }
+      return Response.json({
+        ...statusPayload,
+        routes: {
+          operatorBrowserDashboard: '/ops/browser',
+          operatorBrowserDashboardUrl: 'http://auracall.localhost/ops/browser',
+        },
+      });
+    };
+
+    const summary = await readApiOpsBrowserStatusForCli({
+      host: '127.0.0.1',
+      port: 18080,
+      dashboardUrl: 'https://auracall.ecochran.dyndns.org/ops/browser',
+    }, fetchImpl as typeof fetch);
+
+    expect(summary.dashboardUrl).toBe('https://auracall.ecochran.dyndns.org/ops/browser');
+  });
+
   it('fails when dashboard control wiring drifts', async () => {
     const fetchImpl = async (input: URL | RequestInfo) => {
       const url = String(input);

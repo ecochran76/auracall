@@ -15402,3 +15402,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   stale terminal completion history after configured targets have recovered.
   When `status.liveFollow.targets` exists, enabled target attention/completeness
   should drive severity first; old failures remain visible as history.
+- 2026-05-03: Operator dashboard handoffs should not depend on whichever
+  host/port a status probe used. Pin `api.dashboardUrl` in config, have
+  `/status.routes` advertise it, and make CLI/MCP dashboard status helpers
+  prefer that canonical URL.
