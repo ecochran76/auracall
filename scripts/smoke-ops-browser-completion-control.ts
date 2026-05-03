@@ -128,6 +128,8 @@ async function main(): Promise<void> {
     assertIncludes(dashboard, "renderCompletionActionButton(id, 'pause', 'Pause')", 'dashboard row pause control');
     assertIncludes(dashboard, "renderCompletionActionButton(id, 'resume', 'Resume')", 'dashboard row resume control');
     assertIncludes(dashboard, "renderCompletionActionButton(id, 'cancel', 'Cancel')", 'dashboard row cancel control');
+    assertIncludes(dashboard, 'mirrorControlNotice', 'dashboard control feedback notice');
+    assertIncludes(dashboard, 'setMirrorControlNotice', 'dashboard control feedback handler');
     assertIncludes(dashboard, "$('pauseMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('pause'))", 'dashboard pause binding');
     assertIncludes(dashboard, "$('resumeMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('resume'))", 'dashboard resume binding');
     assertIncludes(dashboard, "$('cancelMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('cancel'))", 'dashboard cancel binding');
@@ -194,6 +196,7 @@ async function main(): Promise<void> {
       `ops-browser completion-control smoke: pass port=${server.port}`,
       'dashboardControl=/status',
       'rowActions=ok',
+      'feedback=ok',
       `operation=${operation.id}`,
       `status.pause=${pause.controlResult?.status ?? 'unknown'}`,
       `liveFollow=${pause.liveFollow?.severity ?? 'unknown'}`,

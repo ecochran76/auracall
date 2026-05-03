@@ -702,4 +702,6 @@ wake, and cache counts, while keeping the raw JSON block as a debug surface.
 Rows with an active completion expose the matching completion id, provide a
 `Use ID` control that fills the existing pause/resume/cancel input, and render
 direct pause/resume/cancel row actions wired to the same `/status`
-`accountMirrorCompletion` control path.
+`accountMirrorCompletion` control path. The same panel now includes an
+`aria-live` operator feedback notice so selection, in-flight control requests,
+successes, and failures are visible without reading the raw JSON block.

@@ -124,7 +124,8 @@ Current State:
     compact table with status, phase, pass count, effective wake, and cache
     counts while preserving the raw JSON block for debugging; active table
     rows expose the matching completion id, can fill the shared control input,
-    and provide direct pause/resume/cancel row actions
+    provide direct pause/resume/cancel row actions, and show immediate
+    operator feedback for each control request
   - service restart dogfood exposed a shutdown cleanup gap: `api serve` now
     terminates same-port orphan `api serve` processes before binding and
     parks active account-mirror completions as persisted `queued` work during

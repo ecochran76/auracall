@@ -2812,3 +2812,19 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard"`
   - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
   - `pnpm typecheck`
+
+## Turn 102 | 2026-05-02
+
+- Goal: make `/ops/browser` live-follow controls visibly acknowledge operator
+  actions.
+- Change:
+  - added `mirrorControlNotice` as an `aria-live` feedback area for completion
+    controls
+  - `Use ID` now reports selection, and pause/resume/cancel report in-flight,
+    success, or failure status outside the raw JSON panel
+  - extended CLI/MCP ops-browser contract checks and smoke coverage for the
+    feedback notice
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard"`
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+  - `pnpm typecheck`

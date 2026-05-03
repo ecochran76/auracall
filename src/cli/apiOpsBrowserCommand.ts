@@ -17,6 +17,7 @@ export interface ApiOpsBrowserDashboardSummary {
   hasLiveFollowTargetTable: boolean;
   hasCompletionIdFillControl: boolean;
   hasInlineCompletionActionControls: boolean;
+  hasControlFeedbackNotice: boolean;
   usesStatusControlPath: boolean;
   usesAccountMirrorCompletionPayload: boolean;
   hasPauseBinding: boolean;
@@ -64,7 +65,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
   const dashboard = summary.dashboard;
   return [
     `AuraCall ops browser: ok (${summary.host}:${summary.port}${dashboard.route})`,
-    `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
+    `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
     summary.status.liveFollow.line,
     `Account mirror completions: active=${formatNullableNumber(summary.status.completions.metrics.active)} paused=${formatNullableNumber(summary.status.completions.metrics.paused)} failed=${formatNullableNumber(summary.status.completions.metrics.failed)} cancelled=${formatNullableNumber(summary.status.completions.metrics.cancelled)} total=${formatNullableNumber(summary.status.completions.metrics.total)}`,
   ].join('\n');
@@ -77,6 +78,7 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
     [summary.hasLiveFollowTargetTable, 'Expected /ops/browser to render the live-follow target account table.'],
     [summary.hasCompletionIdFillControl, 'Expected /ops/browser target rows to fill the completion-control id.'],
     [summary.hasInlineCompletionActionControls, 'Expected /ops/browser target rows to control active completions directly.'],
+    [summary.hasControlFeedbackNotice, 'Expected /ops/browser completion controls to show operator feedback.'],
     [summary.usesStatusControlPath, 'Expected /ops/browser completion controls to call POST /status.'],
     [
       summary.usesAccountMirrorCompletionPayload,
@@ -121,6 +123,7 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && hasInlineCompletionAction(html, 'pause', 'Pause')
       && hasInlineCompletionAction(html, 'resume', 'Resume')
       && hasInlineCompletionAction(html, 'cancel', 'Cancel'),
+    hasControlFeedbackNotice: html.includes('mirrorControlNotice') && html.includes('setMirrorControlNotice'),
     usesStatusControlPath: html.includes("fetch('/status'"),
     usesAccountMirrorCompletionPayload: html.includes('accountMirrorCompletion: { id, action }'),
     hasPauseBinding: html.includes("$('pauseMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('pause'))"),

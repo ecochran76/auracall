@@ -14428,6 +14428,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('mirrorTargetAccounts');
       expect(html).toContain('mirrorTargets');
       expect(html).toContain('mirrorCompletions');
+      expect(html).toContain('mirrorControlNotice');
+      expect(html).toContain('setMirrorControlNotice');
       expect(html).toContain('Live Follow Severity');
       expect(html).toContain('Live Follow Targets');
       expect(html).toContain('Desired vs Actual');

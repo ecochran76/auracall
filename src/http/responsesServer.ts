@@ -3156,6 +3156,18 @@ function createOperatorBrowserDashboardHtml(): string {
     .badge-warn { border-color: var(--warn); color: var(--warn); }
     .badge-bad { border-color: var(--bad); color: var(--bad); }
     .badge-muted { color: var(--muted); }
+    .notice {
+      margin: 0 0 10px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #0b0c0f;
+      color: var(--muted);
+      min-height: 18px;
+    }
+    .notice-ok { border-color: var(--accent); color: var(--accent); }
+    .notice-warn { border-color: var(--warn); color: var(--warn); }
+    .notice-bad { border-color: var(--bad); color: var(--bad); }
     .severity-healthy { color: var(--accent); }
     .severity-backpressured, .severity-paused { color: var(--warn); }
     .severity-attention-needed { color: var(--bad); }
@@ -3195,6 +3207,7 @@ function createOperatorBrowserDashboardHtml(): string {
           <button id="cancelMirrorCompletion">Cancel</button>
         </div>
         <div id="mirrorTargetTable" class="muted" style="margin-bottom: 10px;">Loading target accounts...</div>
+        <div id="mirrorControlNotice" class="notice" role="status" aria-live="polite">No live-follow control action yet.</div>
         <pre id="mirrorTargets">Loading...</pre>
         <pre id="mirrorCompletions">Loading...</pre>
       </section>
@@ -3397,6 +3410,13 @@ function createOperatorBrowserDashboardHtml(): string {
       if (!id) return;
       $('mirrorCompletionId').value = id;
       $('mirrorCompletions').textContent = 'Selected completion id: ' + id;
+      setMirrorControlNotice('Selected ' + id + '.', 'ok');
+    }
+
+    function setMirrorControlNotice(message, tone) {
+      const node = $('mirrorControlNotice');
+      node.className = 'notice notice-' + (tone || 'warn');
+      node.textContent = message;
     }
 
     function renderStatusText(value, tone) {
@@ -3502,12 +3522,14 @@ function createOperatorBrowserDashboardHtml(): string {
       const id = $('mirrorCompletionId').value.trim();
       if (!id) {
         $('mirrorCompletions').textContent = 'Enter a completion id.';
+        setMirrorControlNotice('Enter a completion id before running a control action.', 'warn');
         return;
       }
       await controlMirrorCompletionById(id, action);
     }
 
     async function controlMirrorCompletionById(id, action) {
+      setMirrorControlNotice('Sending ' + action + ' for ' + id + '...', 'warn');
       for (const buttonId of ['pauseMirrorCompletion', 'resumeMirrorCompletion', 'cancelMirrorCompletion']) {
         $(buttonId).disabled = true;
       }
@@ -3524,10 +3546,14 @@ function createOperatorBrowserDashboardHtml(): string {
         if (!result.ok) {
           throw new Error(asJson({ status: result.status, payload }));
         }
-        $('mirrorCompletions').textContent = asJson({ controlled: payload.controlResult || payload });
+        const controlled = payload.controlResult || payload;
+        $('mirrorCompletions').textContent = asJson({ controlled });
+        setMirrorControlNotice('Completed ' + action + ' for ' + id + ': ' + (controlled.status || 'ok') + '.', 'ok');
         await refreshStatus();
       } catch (error) {
-        $('mirrorCompletions').textContent = String(error.message || error);
+        const message = String(error.message || error);
+        $('mirrorCompletions').textContent = message;
+        setMirrorControlNotice('Failed ' + action + ' for ' + id + ': ' + message, 'bad');
       } finally {
         for (const buttonId of ['pauseMirrorCompletion', 'resumeMirrorCompletion', 'cancelMirrorCompletion']) {
           $(buttonId).disabled = false;

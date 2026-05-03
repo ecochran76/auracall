@@ -201,6 +201,7 @@ async function main(): Promise<void> {
         hasLiveFollowTargetTable?: unknown;
         hasCompletionIdFillControl?: unknown;
         hasInlineCompletionActionControls?: unknown;
+        hasControlFeedbackNotice?: unknown;
         hasPauseBinding?: unknown;
         hasResumeBinding?: unknown;
         hasCancelBinding?: unknown;
@@ -219,6 +220,7 @@ async function main(): Promise<void> {
     assertEqual(structuredContent?.dashboard?.hasLiveFollowTargetTable, true, 'dashboard target table');
     assertEqual(structuredContent?.dashboard?.hasCompletionIdFillControl, true, 'dashboard completion id fill');
     assertEqual(structuredContent?.dashboard?.hasInlineCompletionActionControls, true, 'dashboard row actions');
+    assertEqual(structuredContent?.dashboard?.hasControlFeedbackNotice, true, 'dashboard feedback notice');
     assertEqual(structuredContent?.dashboard?.hasPauseBinding, true, 'dashboard pause binding');
     assertEqual(structuredContent?.dashboard?.hasResumeBinding, true, 'dashboard resume binding');
     assertEqual(structuredContent?.dashboard?.hasCancelBinding, true, 'dashboard cancel binding');
@@ -234,6 +236,7 @@ async function main(): Promise<void> {
       'targetTable=ok',
       'completionIdFill=ok',
       'rowActions=ok',
+      'feedback=ok',
       'liveFollow=paused',
       'providerWork=none',
     ].join('\n'));

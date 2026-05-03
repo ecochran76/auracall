@@ -12,8 +12,10 @@ const dashboardHtml = `
 <button data-completion-id="acctmirror_paused" data-completion-action="pause" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Pause</button>
 <button data-completion-id="acctmirror_paused" data-completion-action="resume" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Resume</button>
 <button data-completion-id="acctmirror_paused" data-completion-action="cancel" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Cancel</button>
+<div id="mirrorControlNotice" role="status" aria-live="polite"></div>
 <pre id="mirrorTargets">status.liveFollow.targets</pre>
 <script>
+  function setMirrorControlNotice(message, tone) {}
   async function controlMirrorCompletion(action) {
     await fetch('/status', {
       method: 'POST',
@@ -103,6 +105,7 @@ describe('api ops browser CLI helpers', () => {
       hasLiveFollowTargetTable: true,
       hasCompletionIdFillControl: true,
       hasInlineCompletionActionControls: true,
+      hasControlFeedbackNotice: true,
       usesStatusControlPath: true,
       usesAccountMirrorCompletionPayload: true,
       hasPauseBinding: true,
@@ -116,7 +119,7 @@ describe('api ops browser CLI helpers', () => {
       expectedPaused: 1,
     })).not.toThrow();
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard completion control: path=/status payload=accountMirrorCompletion input=ok rowActions=ok pause=ok resume=ok cancel=ok',
+      'Dashboard completion control: path=/status payload=accountMirrorCompletion input=ok rowActions=ok feedback=ok pause=ok resume=ok cancel=ok',
     );
   });
 
@@ -124,7 +127,7 @@ describe('api ops browser CLI helpers', () => {
     const fetchImpl = async (input: URL | RequestInfo) => {
       const url = String(input);
       if (url.endsWith('/ops/browser')) {
-        return new Response('<h2>Mirror Live Follow</h2><div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div><button data-completion-id="acctmirror_paused" onclick="fillMirrorCompletionId(this.dataset.completionId)">Use ID</button><button data-completion-id="acctmirror_paused" data-completion-action="pause" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Pause</button><button data-completion-id="acctmirror_paused" data-completion-action="resume" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Resume</button><button data-completion-id="acctmirror_paused" data-completion-action="cancel" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Cancel</button><pre id="mirrorTargets">status.liveFollow.targets</pre>', {
+        return new Response('<h2>Mirror Live Follow</h2><div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div><button data-completion-id="acctmirror_paused" onclick="fillMirrorCompletionId(this.dataset.completionId)">Use ID</button><button data-completion-id="acctmirror_paused" data-completion-action="pause" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Pause</button><button data-completion-id="acctmirror_paused" data-completion-action="resume" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Resume</button><button data-completion-id="acctmirror_paused" data-completion-action="cancel" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Cancel</button><div id="mirrorControlNotice" role="status" aria-live="polite"></div><script>function setMirrorControlNotice(message, tone) {}</script><pre id="mirrorTargets">status.liveFollow.targets</pre>', {
           status: 200,
           headers: { 'content-type': 'text/html' },
         });
