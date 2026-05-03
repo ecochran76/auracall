@@ -137,7 +137,29 @@ function parseOperation(value: unknown): AccountMirrorCompletionOperation {
     lastRefresh: isRecord(value.lastRefresh) ? value.lastRefresh as unknown as AccountMirrorCompletionOperation['lastRefresh'] : null,
     mirrorCompleteness: isRecord(value.mirrorCompleteness) ? value.mirrorCompleteness as AccountMirrorCompletionOperation['mirrorCompleteness'] : null,
     error: parseError(value.error),
+    lifecycleEvents: parseLifecycleEvents(value.lifecycleEvents),
   };
+}
+
+function parseLifecycleEvents(value: unknown): NonNullable<AccountMirrorCompletionOperation['lifecycleEvents']> {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => {
+      if (!isRecord(entry)) return null;
+      const at = normalizeIsoString(entry.at);
+      const type = readLifecycleEventType(entry.type);
+      if (!at || !type) return null;
+      return {
+        at,
+        type,
+        status: readStatus(entry.status),
+        previousStatus: isKnownStatus(entry.previousStatus) ? entry.previousStatus : null,
+        processPid: Math.max(0, Math.floor(readNumber(entry.processPid) ?? 0)),
+        message: typeof entry.message === 'string' ? entry.message : '',
+      } satisfies NonNullable<AccountMirrorCompletionOperation['lifecycleEvents']>[number];
+    })
+    .filter((entry): entry is NonNullable<AccountMirrorCompletionOperation['lifecycleEvents']>[number] => entry !== null)
+    .slice(-20);
 }
 
 function parseError(value: unknown): AccountMirrorCompletionOperation['error'] {
@@ -154,6 +176,11 @@ function readProvider(value: unknown): AccountMirrorCompletionOperation['provide
 }
 
 function readStatus(value: unknown): AccountMirrorCompletionOperation['status'] {
+  if (isKnownStatus(value)) return value;
+  return 'queued';
+}
+
+function isKnownStatus(value: unknown): value is AccountMirrorCompletionOperation['status'] {
   if (
     value === 'running'
     || value === 'paused'
@@ -161,8 +188,20 @@ function readStatus(value: unknown): AccountMirrorCompletionOperation['status'] 
     || value === 'blocked'
     || value === 'failed'
     || value === 'cancelled'
+  ) return true;
+  return value === 'queued';
+}
+
+function readLifecycleEventType(value: unknown): NonNullable<AccountMirrorCompletionOperation['lifecycleEvents']>[number]['type'] | null {
+  if (
+    value === 'started'
+    || value === 'parked_for_shutdown'
+    || value === 'resumed_after_restart'
+    || value === 'operator_paused'
+    || value === 'operator_resumed'
+    || value === 'operator_cancelled'
   ) return value;
-  return 'queued';
+  return null;
 }
 
 function readMaxPasses(value: unknown): number | null {

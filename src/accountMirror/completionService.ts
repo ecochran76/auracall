@@ -30,6 +30,21 @@ export interface AccountMirrorCompletionControlRequest {
   action: 'pause' | 'resume' | 'cancel';
 }
 
+export interface AccountMirrorCompletionLifecycleEvent {
+  at: string;
+  type:
+    | 'started'
+    | 'parked_for_shutdown'
+    | 'resumed_after_restart'
+    | 'operator_paused'
+    | 'operator_resumed'
+    | 'operator_cancelled';
+  status: AccountMirrorCompletionOperation['status'];
+  previousStatus: AccountMirrorCompletionOperation['status'] | null;
+  processPid: number;
+  message: string;
+}
+
 export interface AccountMirrorCompletionOperation {
   object: 'account_mirror_completion';
   id: string;
@@ -49,6 +64,7 @@ export interface AccountMirrorCompletionOperation {
     message: string;
     code: string | null;
   } | null;
+  lifecycleEvents?: AccountMirrorCompletionLifecycleEvent[];
 }
 
 export interface AccountMirrorCompletionService {
@@ -102,7 +118,7 @@ export function createAccountMirrorCompletionService(input: {
   };
 
   for (const operation of input.initialOperations ?? []) {
-    operations.set(operation.id, operation);
+    operations.set(operation.id, normalizeLifecycleEvents(operation));
   }
 
   const update = (id: string, patch: Partial<AccountMirrorCompletionOperation>) => {
@@ -234,6 +250,12 @@ export function createAccountMirrorCompletionService(input: {
   if (input.resumeActiveOperations) {
     for (const operation of operations.values()) {
       if (isRunnableOperation(operation)) {
+        appendLifecycleEvent(operation.id, {
+          type: 'resumed_after_restart',
+          status: 'running',
+          previousStatus: operation.status,
+          message: 'Resumed persisted account-mirror completion after API startup.',
+        });
         launch(operation.id);
       }
     }
@@ -258,7 +280,16 @@ export function createAccountMirrorCompletionService(input: {
         lastRefresh: null,
         mirrorCompleteness: null,
         error: null,
+        lifecycleEvents: [],
       };
+      operation.lifecycleEvents = appendLifecycleEventToList(operation.lifecycleEvents ?? [], {
+        at: operation.startedAt,
+        type: 'started',
+        status: operation.status,
+        previousStatus: null,
+        processPid: process.pid,
+        message: 'Started account-mirror completion.',
+      });
       operations.set(id, operation);
       persist(operation);
       launch(id);
@@ -285,10 +316,16 @@ export function createAccountMirrorCompletionService(input: {
       if (!operation) return null;
       if (request.action === 'pause') {
         if (!isActiveOperation(operation)) return operation;
-        return update(operation.id, {
+        const updated = update(operation.id, {
           status: 'paused',
           error: null,
         });
+        return appendLifecycleEvent(operation.id, {
+          type: 'operator_paused',
+          status: 'paused',
+          previousStatus: operation.status,
+          message: 'Paused account-mirror completion by operator request.',
+        }) ?? updated;
       }
       if (request.action === 'resume') {
         if (operation.status !== 'paused') return operation;
@@ -297,17 +334,29 @@ export function createAccountMirrorCompletionService(input: {
           completedAt: null,
           error: null,
         });
+        const evented = appendLifecycleEvent(operation.id, {
+          type: 'operator_resumed',
+          status: 'queued',
+          previousStatus: operation.status,
+          message: 'Resumed account-mirror completion by operator request.',
+        });
         launch(operation.id);
-        return resumed;
+        return evented ?? resumed;
       }
       if (request.action === 'cancel') {
         if (isTerminalOperation(operation)) return operation;
-        return update(operation.id, {
+        const updated = update(operation.id, {
           status: 'cancelled',
           completedAt: now().toISOString(),
           nextAttemptAt: null,
           error: null,
         });
+        return appendLifecycleEvent(operation.id, {
+          type: 'operator_cancelled',
+          status: 'cancelled',
+          previousStatus: operation.status,
+          message: 'Cancelled account-mirror completion by operator request.',
+        }) ?? updated;
       }
       return operation;
     },
@@ -320,7 +369,14 @@ export function createAccountMirrorCompletionService(input: {
           completedAt: null,
           error: null,
         });
-        if (next) parked.push(next);
+        const evented = appendLifecycleEvent(operation.id, {
+          type: 'parked_for_shutdown',
+          status: 'queued',
+          previousStatus: operation.status,
+          message: 'Parked account-mirror completion for API shutdown and restart resume.',
+        });
+        const parkedOperation = evented ?? next;
+        if (parkedOperation) parked.push(parkedOperation);
       }
       wakeSleepers();
       return parked;
@@ -337,6 +393,32 @@ export function createAccountMirrorCompletionService(input: {
       .catch((error) => input.onPersistError?.(error, operation));
     persistQueues.set(operation.id, next);
   }
+
+  function appendLifecycleEvent(id: string, inputEvent: Omit<AccountMirrorCompletionLifecycleEvent, 'at' | 'processPid'>): AccountMirrorCompletionOperation | null {
+    const current = operations.get(id);
+    if (!current) return null;
+    return update(id, {
+      lifecycleEvents: appendLifecycleEventToList(current.lifecycleEvents ?? [], {
+        ...inputEvent,
+        at: now().toISOString(),
+        processPid: process.pid,
+      }),
+    });
+  }
+}
+
+function normalizeLifecycleEvents(operation: AccountMirrorCompletionOperation): AccountMirrorCompletionOperation {
+  return {
+    ...operation,
+    lifecycleEvents: Array.isArray(operation.lifecycleEvents) ? operation.lifecycleEvents.slice(-20) : [],
+  };
+}
+
+function appendLifecycleEventToList(
+  events: AccountMirrorCompletionLifecycleEvent[],
+  event: AccountMirrorCompletionLifecycleEvent,
+): AccountMirrorCompletionLifecycleEvent[] {
+  return [...events, event].slice(-20);
 }
 
 function isActiveOperation(operation: AccountMirrorCompletionOperation): boolean {

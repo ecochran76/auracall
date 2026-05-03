@@ -166,6 +166,10 @@ export function formatApiMirrorCompletionCliSummary(operation: unknown): string 
   if (error) {
     lines.push(`Error: ${readString(error.code) ?? 'unknown'} ${readString(error.message) ?? ''}`.trim());
   }
+  const lifecycleEvent = latestLifecycleEvent(record.lifecycleEvents);
+  if (lifecycleEvent) {
+    lines.push(`Latest lifecycle: ${readString(lifecycleEvent.type) ?? 'unknown'} at ${readString(lifecycleEvent.at) ?? 'unknown'} - ${readString(lifecycleEvent.message) ?? ''}`.trim());
+  }
   return lines.join('\n');
 }
 
@@ -187,9 +191,17 @@ export function formatApiMirrorCompletionListCliSummary(payload: unknown): strin
     const passCount = readNumber(operation.passCount) ?? 0;
     const maxPasses = readNumber(operation.maxPasses) ?? 'unbounded';
     const nextAttemptAt = readString(operation.nextAttemptAt);
-    lines.push(`- ${id}: ${status} ${mode}/${phase} ${provider}/${runtimeProfileId} passes=${passCount}/${maxPasses}${nextAttemptAt ? ` next=${nextAttemptAt}` : ''}`);
+    const lifecycleEvent = latestLifecycleEvent(operation.lifecycleEvents);
+    const lifecycle = lifecycleEvent ? ` lifecycle=${readString(lifecycleEvent.type) ?? 'unknown'}` : '';
+    lines.push(`- ${id}: ${status} ${mode}/${phase} ${provider}/${runtimeProfileId} passes=${passCount}/${maxPasses}${nextAttemptAt ? ` next=${nextAttemptAt}` : ''}${lifecycle}`);
   }
   return lines.join('\n');
+}
+
+function latestLifecycleEvent(value: unknown): Record<string, unknown> | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const latest = value.at(-1);
+  return isRecord(latest) ? latest : null;
 }
 
 function normalizeHost(value: string | null | undefined): string {

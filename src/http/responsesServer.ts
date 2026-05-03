@@ -2087,6 +2087,7 @@ function createLiveFollowTargetRollup(
       activeCompletionNextAttemptAt: operation?.nextAttemptAt ?? null,
       nextAttemptAt: operation?.nextAttemptAt ?? entry.eligibleAt,
       mirrorCompleteness: entry.mirrorCompleteness.state,
+      latestLifecycleEvent: summarizeCompletionLifecycleEvent(operation),
       metadataCounts: entry.metadataCounts,
     };
   });
@@ -2149,6 +2150,16 @@ function createLiveFollowTargetRollup(
       accounts: [],
     },
   );
+}
+
+function summarizeCompletionLifecycleEvent(operation: AccountMirrorCompletionOperation | null): LiveFollowTargetAccountSummary['latestLifecycleEvent'] {
+  const event = operation?.lifecycleEvents?.at(-1);
+  if (!event) return null;
+  return {
+    at: event.at,
+    type: event.type,
+    message: event.message,
+  };
 }
 
 function createAccountMirrorCompletionStatusSummary(

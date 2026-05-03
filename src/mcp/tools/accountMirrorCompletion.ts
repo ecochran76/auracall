@@ -49,6 +49,21 @@ const accountMirrorCompletionOutputShape = {
     message: z.string(),
     code: z.string().nullable(),
   }).nullable(),
+  lifecycleEvents: z.array(z.object({
+    at: z.string(),
+    type: z.enum([
+      'started',
+      'parked_for_shutdown',
+      'resumed_after_restart',
+      'operator_paused',
+      'operator_resumed',
+      'operator_cancelled',
+    ]),
+    status: z.enum(['queued', 'running', 'paused', 'completed', 'blocked', 'failed', 'cancelled']),
+    previousStatus: z.enum(['queued', 'running', 'paused', 'completed', 'blocked', 'failed', 'cancelled']).nullable(),
+    processPid: z.number(),
+    message: z.string(),
+  })).optional(),
 } satisfies z.ZodRawShape;
 
 const accountMirrorCompletionListOutputShape = {

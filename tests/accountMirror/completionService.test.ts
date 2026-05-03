@@ -164,6 +164,13 @@ describe('account mirror completion service', () => {
       phase: 'steady_follow',
       nextAttemptAt: '2026-04-30T12:10:00.000Z',
       passCount: 1,
+      lifecycleEvents: [
+        {
+          type: 'resumed_after_restart',
+          status: 'running',
+          previousStatus: 'running',
+        },
+      ],
     });
     expect(sleep).toHaveBeenCalledWith(60_000);
     expect(requestRefresh).not.toHaveBeenCalled();
@@ -244,6 +251,9 @@ describe('account mirror completion service', () => {
 
     service.start();
     await waitFor(() => service.read('acctmirror_control')?.status === 'running');
+    expect(service.read('acctmirror_control')?.lifecycleEvents?.map((event) => event.type)).toEqual([
+      'started',
+    ]);
 
     expect(service.control({ id: 'acctmirror_control', action: 'pause' })).toMatchObject({
       id: 'acctmirror_control',
@@ -270,11 +280,22 @@ describe('account mirror completion service', () => {
       status: 'queued',
     });
     await waitFor(() => service.read('acctmirror_control')?.status === 'running');
+    expect(service.read('acctmirror_control')?.lifecycleEvents?.map((event) => event.type)).toEqual([
+      'started',
+      'operator_paused',
+      'operator_resumed',
+    ]);
     expect(requestRefresh).toHaveBeenCalledTimes(2);
 
     expect(service.control({ id: 'acctmirror_control', action: 'cancel' })).toMatchObject({
       status: 'cancelled',
       completedAt: '2026-04-30T12:00:00.000Z',
+    });
+    expect(service.read('acctmirror_control')?.lifecycleEvents?.at(-1)).toMatchObject({
+      type: 'operator_cancelled',
+      status: 'cancelled',
+      previousStatus: 'running',
+      processPid: process.pid,
     });
     expect(service.control({ id: 'missing', action: 'pause' })).toBeNull();
   });
@@ -553,6 +574,13 @@ describe('account mirror completion service', () => {
       status: 'queued',
       completedAt: null,
       nextAttemptAt: '2026-04-30T12:10:00.000Z',
+      lifecycleEvents: [
+        {
+          type: 'parked_for_shutdown',
+          status: 'queued',
+          previousStatus: 'running',
+        },
+      ],
     });
     expect(service.read('acctmirror_shutdown_paused')).toMatchObject({
       status: 'paused',
@@ -661,6 +689,13 @@ describe('account mirror completion service', () => {
         status: 'queued',
         completedAt: null,
         nextAttemptAt: '2026-04-30T12:10:00.000Z',
+        lifecycleEvents: [
+          {
+            type: 'parked_for_shutdown',
+            status: 'queued',
+            previousStatus: 'running',
+          },
+        ],
       });
     } finally {
       await fs.rm(tmp, { recursive: true, force: true });

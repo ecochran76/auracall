@@ -102,6 +102,11 @@ export interface ApiStatusCompletionOperationSummary {
   nextAttemptAt: string | null;
   passCount: number | null;
   errorMessage: string | null;
+  latestLifecycleEvent: {
+    at: string | null;
+    type: string | null;
+    message: string | null;
+  } | null;
 }
 
 export interface ApiStatusCompletionControlSummary {
@@ -503,6 +508,7 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
     activeCompletionNextAttemptAt: readString(account.activeCompletionNextAttemptAt),
     nextAttemptAt: readString(account.nextAttemptAt),
     mirrorCompleteness: readString(account.mirrorCompleteness),
+    latestLifecycleEvent: readLatestCompletionLifecycleEvent(account.latestLifecycleEvent),
     metadataCounts: metadataCounts
       ? {
           projects: readNumber(metadataCounts.projects) ?? 0,
@@ -518,6 +524,7 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
 function summarizeCompletionOperation(value: unknown): ApiStatusCompletionOperationSummary {
   const operation = isRecord(value) ? value : {};
   const error = isRecord(operation.error) ? operation.error : {};
+  const latestLifecycleEvent = readLatestCompletionLifecycleEvent(operation.lifecycleEvents);
   return {
     id: readString(operation.id),
     provider: readString(operation.provider),
@@ -530,6 +537,19 @@ function summarizeCompletionOperation(value: unknown): ApiStatusCompletionOperat
     nextAttemptAt: readString(operation.nextAttemptAt),
     passCount: readNumber(operation.passCount),
     errorMessage: readString(error.message),
+    latestLifecycleEvent,
+  };
+}
+
+function readLatestCompletionLifecycleEvent(value: unknown): ApiStatusCompletionOperationSummary['latestLifecycleEvent'] {
+  const event = Array.isArray(value)
+    ? (isRecord(value.at(-1)) ? value.at(-1) as Record<string, unknown> : null)
+    : (isRecord(value) ? value : null);
+  if (!event) return null;
+  return {
+    at: readString(event.at),
+    type: readString(event.type),
+    message: readString(event.message),
   };
 }
 
@@ -563,7 +583,8 @@ function formatCompletionOperationLine(
     const phase = operation.phase ? ` phase=${operation.phase}` : '';
     const next = operation.nextAttemptAt ? ` next=${operation.nextAttemptAt}` : '';
     const error = operation.errorMessage ? ` error=${operation.errorMessage}` : '';
-    return `${operation.id ?? 'unknown'} ${target} status=${operation.status ?? 'unknown'}${phase}${next}${error}`;
+    const lifecycle = operation.latestLifecycleEvent?.type ? ` lifecycle=${operation.latestLifecycleEvent.type}` : '';
+    return `${operation.id ?? 'unknown'} ${target} status=${operation.status ?? 'unknown'}${phase}${next}${error}${lifecycle}`;
   });
   const suffix = operations.length > formatted.length ? ` (+${operations.length - formatted.length} more)` : '';
   return `${label}: ${formatted.join('; ')}${suffix}`;

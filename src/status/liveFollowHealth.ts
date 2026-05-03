@@ -72,6 +72,11 @@ export interface LiveFollowTargetAccountSummary {
   activeCompletionNextAttemptAt: string | null;
   nextAttemptAt: string | null;
   mirrorCompleteness: string | null;
+  latestLifecycleEvent: {
+    at: string | null;
+    type: string | null;
+    message: string | null;
+  } | null;
   metadataCounts: {
     projects: number;
     conversations: number;

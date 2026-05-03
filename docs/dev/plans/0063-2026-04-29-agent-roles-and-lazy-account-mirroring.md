@@ -683,4 +683,7 @@ dogfood: `api serve` terminates same-port orphan `api serve` processes before
 binding, and graceful server shutdown parks runnable account-mirror completions
 as persisted `queued` work before marking the local runner stale. Startup also
 prunes stale browser-operation locks so a forced restart does not leave
-live-follow targets blocked by dead owner PIDs.
+live-follow targets blocked by dead owner PIDs. Completion records now include
+a bounded `lifecycleEvents` trail, surfaced through API/MCP/CLI status paths,
+so operators can see `parked_for_shutdown` and `resumed_after_restart` handoff
+evidence without inspecting cache files.

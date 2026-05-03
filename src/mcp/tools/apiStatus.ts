@@ -55,6 +55,11 @@ const apiStatusCompletionOperationShape = z.object({
   nextAttemptAt: z.string().nullable(),
   passCount: z.number().nullable(),
   errorMessage: z.string().nullable(),
+  latestLifecycleEvent: z.object({
+    at: z.string().nullable(),
+    type: z.string().nullable(),
+    message: z.string().nullable(),
+  }).nullable(),
 });
 
 const apiStatusLiveFollowTargetAccountShape = z.object({
@@ -69,6 +74,11 @@ const apiStatusLiveFollowTargetAccountShape = z.object({
   activeCompletionNextAttemptAt: z.string().nullable().optional(),
   nextAttemptAt: z.string().nullable(),
   mirrorCompleteness: z.string().nullable(),
+  latestLifecycleEvent: z.object({
+    at: z.string().nullable(),
+    type: z.string().nullable(),
+    message: z.string().nullable(),
+  }).nullable(),
   metadataCounts: z.object({
     projects: z.number(),
     conversations: z.number(),
