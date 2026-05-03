@@ -3207,6 +3207,7 @@ function createOperatorBrowserDashboardHtml(): string {
           <button id="cancelMirrorCompletion">Cancel</button>
         </div>
         <div id="mirrorTargetTable" class="muted" style="margin-bottom: 10px;">Loading target accounts...</div>
+        <div id="mirrorActiveCompletionTable" class="muted" style="margin-bottom: 10px;">Loading active operations...</div>
         <div id="mirrorControlNotice" class="notice" role="status" aria-live="polite">No live-follow control action yet.</div>
         <pre id="mirrorTargets">Loading...</pre>
         <pre id="mirrorCompletions">Loading...</pre>
@@ -3321,6 +3322,7 @@ function createOperatorBrowserDashboardHtml(): string {
       const recent = Array.isArray(summary.recent) ? summary.recent : [];
       const targets = status.liveFollow && status.liveFollow.targets ? status.liveFollow.targets : null;
       $('mirrorTargetTable').innerHTML = renderLiveFollowTargetTable(targets);
+      $('mirrorActiveCompletionTable').innerHTML = renderActiveCompletionTable(active);
       $('mirrorTargets').textContent = asJson({
         source: 'status.liveFollow.targets',
         targets: targets ? compactLiveFollowTargets(targets) : null,
@@ -3388,6 +3390,32 @@ function createOperatorBrowserDashboardHtml(): string {
         '<td class="wrap">' + escapeHtml(target.nextAttemptAt || target.routineEligibleAt || 'none') + '</td>',
         '<td class="wrap">' + escapeHtml(formatMetadataCounts(counts)) + '</td>',
         '<td>' + renderCompletionControlButtons(target.activeCompletionId, status) + '</td>',
+      ].join('') + '</tr>';
+    }
+
+    function renderActiveCompletionTable(active) {
+      if (!active.length) return '<span class="muted">No active live-follow operations.</span>';
+      return '<div class="table-wrap"><table id="mirrorActiveCompletions"><thead><tr>' + [
+        'Completion',
+        'Target',
+        'Status',
+        'Phase',
+        'Passes',
+        'Next Wake',
+        'Controls',
+      ].map((label) => '<th>' + label + '</th>').join('') + '</tr></thead><tbody>' + active.map(renderActiveCompletionRow).join('') + '</tbody></table></div>';
+    }
+
+    function renderActiveCompletionRow(operation) {
+      const status = operation.status || 'unknown';
+      return '<tr>' + [
+        '<td class="wrap"><strong>' + escapeHtml(operation.id || 'unknown') + '</strong></td>',
+        '<td>' + escapeHtml(formatCompletionTarget(operation)) + '</td>',
+        '<td>' + renderStatusText(status, toneForActualStatus(status)) + '</td>',
+        '<td>' + escapeHtml(operation.phase || 'none') + '</td>',
+        '<td>' + escapeHtml(formatCompletionPasses(operation)) + '</td>',
+        '<td class="wrap">' + escapeHtml(operation.nextAttemptAt || 'none') + '</td>',
+        '<td>' + renderCompletionControlButtons(operation.id, status) + '</td>',
       ].join('') + '</tr>';
     }
 
@@ -3463,6 +3491,14 @@ function createOperatorBrowserDashboardHtml(): string {
       ].join(' ');
     }
 
+    function formatCompletionTarget(operation) {
+      return [operation.provider, operation.runtimeProfileId].filter(Boolean).join('/') || 'unknown';
+    }
+
+    function formatCompletionPasses(operation) {
+      return String(operation.passCount || 0) + '/' + (operation.maxPasses || 'unbounded');
+    }
+
     function escapeHtml(value) {
       return String(value)
         .replace(/&/g, '&amp;')
@@ -3520,11 +3556,11 @@ function createOperatorBrowserDashboardHtml(): string {
     function compactCompletion(operation) {
       return {
         id: operation.id,
-        target: [operation.provider, operation.runtimeProfileId].filter(Boolean).join('/'),
+        target: formatCompletionTarget(operation),
         status: operation.status,
         mode: operation.mode,
         phase: operation.phase,
-        passes: String(operation.passCount || 0) + '/' + (operation.maxPasses || 'unbounded'),
+        passes: formatCompletionPasses(operation),
         nextAttemptAt: operation.nextAttemptAt || null,
         completedAt: operation.completedAt || null,
       };
@@ -3580,6 +3616,7 @@ function createOperatorBrowserDashboardHtml(): string {
       $('serverSummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
       $('mirrorStatus').textContent = 'Loading...';
       $('mirrorTargetTable').textContent = 'Loading target accounts...';
+      $('mirrorActiveCompletionTable').textContent = 'Loading active operations...';
       $('mirrorTargets').textContent = 'Loading...';
       $('mirrorCompletions').textContent = 'Loading...';
       try {
@@ -3589,6 +3626,7 @@ function createOperatorBrowserDashboardHtml(): string {
       } catch (error) {
         $('serverSummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
         $('mirrorTargetTable').textContent = String(error.message || error);
+        $('mirrorActiveCompletionTable').textContent = String(error.message || error);
         $('mirrorTargets').textContent = String(error.message || error);
         $('mirrorCompletions').textContent = String(error.message || error);
       }

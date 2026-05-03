@@ -14426,6 +14426,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('Mirror Live Follow');
       expect(html).toContain('mirrorTargetTable');
       expect(html).toContain('mirrorTargetAccounts');
+      expect(html).toContain('mirrorActiveCompletionTable');
+      expect(html).toContain('mirrorActiveCompletions');
       expect(html).toContain('mirrorTargets');
       expect(html).toContain('mirrorCompletions');
       expect(html).toContain('mirrorControlNotice');
@@ -14442,6 +14444,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('badge-warn');
       expect(html).toContain('renderBadge');
       expect(html).toContain('renderLiveFollowTargetTable');
+      expect(html).toContain('renderActiveCompletionTable');
       expect(html).toContain('fillMirrorCompletionId');
       expect(html).toContain('data-completion-id');
       expect(html).toContain('controlMirrorCompletionById');

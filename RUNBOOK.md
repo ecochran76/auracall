@@ -2842,3 +2842,17 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard"`
   - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
   - `pnpm typecheck`
+
+## Turn 104 | 2026-05-02
+
+- Goal: make active live-follow operations inspectable without reading JSON.
+- Change:
+  - added `mirrorActiveCompletionTable` below the target table
+  - active rows show completion id, target, status, phase, pass count, next
+    wake, and the same state-aware controls
+  - extended CLI/MCP ops-browser contract checks and smoke coverage for the
+    active completion operations table
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard"`
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+  - `pnpm typecheck`
