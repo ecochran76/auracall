@@ -14421,6 +14421,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('Completion History');
       expect(html).toContain('formatTargetHealth');
       expect(html).toContain('formatCompletionHistory');
+      expect(html).toContain('class="badges"');
+      expect(html).toContain('badge-bad');
+      expect(html).toContain('badge-warn');
+      expect(html).toContain('renderBadge');
       expect(html).toContain('status.liveFollow');
       expect(html).toContain('status.liveFollow.targets');
       expect(html).toContain('severity-attention-needed');

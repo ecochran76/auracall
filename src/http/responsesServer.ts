@@ -3067,6 +3067,25 @@ function createOperatorBrowserDashboardHtml(): string {
     .warn { color: var(--warn); }
     .bad { color: var(--bad); }
     .muted { color: var(--muted); }
+    .badges { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 22px;
+      padding: 2px 7px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #11151a;
+      color: var(--text);
+      font-size: 12px;
+      line-height: 1.35;
+      white-space: nowrap;
+    }
+    .badge-ok { border-color: var(--accent); color: var(--accent); }
+    .badge-warn { border-color: var(--warn); color: var(--warn); }
+    .badge-bad { border-color: var(--bad); color: var(--bad); }
+    .badge-muted { color: var(--muted); }
     .severity-healthy { color: var(--accent); }
     .severity-backpressured, .severity-paused { color: var(--warn); }
     .severity-attention-needed { color: var(--bad); }
@@ -3234,21 +3253,25 @@ function createOperatorBrowserDashboardHtml(): string {
 
     function formatTargetHealth(targets) {
       if (!targets || !targets.total) return 'unknown';
-      return [
-        'enabled=' + (targets.enabled || 0),
-        'active=' + (targets.active || 0),
-        'paused=' + (targets.paused || 0),
-        'attention=' + (targets.attentionNeeded || 0),
-      ].join(' ');
+      return '<span class="badges">' + [
+        renderBadge('enabled', targets.enabled || 0, targets.enabled ? 'ok' : 'muted'),
+        renderBadge('active', targets.active || 0, targets.active ? 'ok' : 'muted'),
+        renderBadge('paused', targets.paused || 0, targets.paused ? 'warn' : 'muted'),
+        renderBadge('attention', targets.attentionNeeded || 0, targets.attentionNeeded ? 'bad' : 'ok'),
+      ].join('') + '</span>';
     }
 
     function formatCompletionHistory(metrics) {
-      return [
-        'active=' + (metrics.active || 0),
-        'failed=' + (metrics.failed || 0),
-        'cancelled=' + (metrics.cancelled || 0),
-        'total=' + (metrics.total || 0),
-      ].join(' ');
+      return '<span class="badges">' + [
+        renderBadge('active', metrics.active || 0, metrics.active ? 'ok' : 'muted'),
+        renderBadge('failed', metrics.failed || 0, metrics.failed ? 'bad' : 'muted'),
+        renderBadge('cancelled', metrics.cancelled || 0, metrics.cancelled ? 'warn' : 'muted'),
+        renderBadge('total', metrics.total || 0, 'muted'),
+      ].join('') + '</span>';
+    }
+
+    function renderBadge(label, value, tone) {
+      return '<span class="badge badge-' + tone + '"><span>' + label + '</span><strong>' + value + '</strong></span>';
     }
 
     function compactLiveFollowTargets(targets) {
