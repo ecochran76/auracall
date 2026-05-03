@@ -550,6 +550,7 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
     desiredState: readString(account.desiredState) ?? 'unknown',
     desiredEnabled: account.desiredEnabled === true,
     actualStatus: readString(account.actualStatus),
+    activeCompletionId: readString(account.activeCompletionId),
     phase: readString(account.phase),
     passCount: readNumber(account.passCount),
     routineEligibleAt: readString(account.routineEligibleAt),

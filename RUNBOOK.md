@@ -2782,3 +2782,18 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard"`
   - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
   - `pnpm typecheck`
+
+## Turn 100 | 2026-05-02
+
+- Goal: let dashboard operators control active live-follow rows without
+  copying ids from JSON.
+- Change:
+  - added `activeCompletionId` to each `/status.liveFollow.targets.accounts[]`
+    entry when an operation is active or recent
+  - added `Use ID` table controls that fill `mirrorCompletionId`
+  - extended CLI/MCP ops-browser contract checks and smoke coverage for the
+    completion-id fill control
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "reports effective live-follow wake separately from routine mirror eligibility|serves a read-only browser operator dashboard"`
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+  - `pnpm typecheck`

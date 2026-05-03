@@ -1756,6 +1756,7 @@ describe('http responses adapter', () => {
             accounts: Array<{
               provider: string;
               runtimeProfileId: string;
+              activeCompletionId: string | null;
               nextAttemptAt: string | null;
               routineEligibleAt: string | null;
               activeCompletionNextAttemptAt: string | null;
@@ -1769,6 +1770,7 @@ describe('http responses adapter', () => {
       expect(account).toMatchObject({
         provider: 'chatgpt',
         runtimeProfileId: 'default',
+        activeCompletionId: 'acctmirror_effective_wake',
         routineEligibleAt: expect.any(String),
         activeCompletionNextAttemptAt: '2026-04-30T12:10:00.000Z',
         nextAttemptAt: '2026-04-30T12:10:00.000Z',
@@ -14438,6 +14440,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('badge-warn');
       expect(html).toContain('renderBadge');
       expect(html).toContain('renderLiveFollowTargetTable');
+      expect(html).toContain('fillMirrorCompletionId');
+      expect(html).toContain('data-completion-id');
       expect(html).toContain('formatMetadataCounts');
       expect(html).toContain('escapeHtml');
       expect(html).toContain('status.liveFollow');

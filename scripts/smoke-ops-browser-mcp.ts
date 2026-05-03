@@ -199,6 +199,7 @@ async function main(): Promise<void> {
         usesStatusControlPath?: unknown;
         usesAccountMirrorCompletionPayload?: unknown;
         hasLiveFollowTargetTable?: unknown;
+        hasCompletionIdFillControl?: unknown;
         hasPauseBinding?: unknown;
         hasResumeBinding?: unknown;
         hasCancelBinding?: unknown;
@@ -215,6 +216,7 @@ async function main(): Promise<void> {
       'dashboard completion payload',
     );
     assertEqual(structuredContent?.dashboard?.hasLiveFollowTargetTable, true, 'dashboard target table');
+    assertEqual(structuredContent?.dashboard?.hasCompletionIdFillControl, true, 'dashboard completion id fill');
     assertEqual(structuredContent?.dashboard?.hasPauseBinding, true, 'dashboard pause binding');
     assertEqual(structuredContent?.dashboard?.hasResumeBinding, true, 'dashboard resume binding');
     assertEqual(structuredContent?.dashboard?.hasCancelBinding, true, 'dashboard cancel binding');
@@ -228,6 +230,7 @@ async function main(): Promise<void> {
       'listed=ok',
       'dashboardControl=/status',
       'targetTable=ok',
+      'completionIdFill=ok',
       'liveFollow=paused',
       'providerWork=none',
     ].join('\n'));

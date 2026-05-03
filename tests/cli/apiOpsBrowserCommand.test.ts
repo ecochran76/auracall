@@ -8,6 +8,7 @@ import {
 const dashboardHtml = `
 <section><h2>Mirror Live Follow</h2></section>
 <div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div>
+<button data-completion-id="acctmirror_paused" onclick="fillMirrorCompletionId(this.dataset.completionId)">Use ID</button>
 <pre id="mirrorTargets">status.liveFollow.targets</pre>
 <script>
   async function controlMirrorCompletion(action) {
@@ -97,6 +98,7 @@ describe('api ops browser CLI helpers', () => {
       hasMirrorLiveFollowPanel: true,
       hasLiveFollowTargetsPanel: true,
       hasLiveFollowTargetTable: true,
+      hasCompletionIdFillControl: true,
       usesStatusControlPath: true,
       usesAccountMirrorCompletionPayload: true,
       hasPauseBinding: true,
@@ -118,7 +120,7 @@ describe('api ops browser CLI helpers', () => {
     const fetchImpl = async (input: URL | RequestInfo) => {
       const url = String(input);
       if (url.endsWith('/ops/browser')) {
-        return new Response('<h2>Mirror Live Follow</h2><div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div><pre id="mirrorTargets">status.liveFollow.targets</pre>', {
+        return new Response('<h2>Mirror Live Follow</h2><div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div><button data-completion-id="acctmirror_paused" onclick="fillMirrorCompletionId(this.dataset.completionId)">Use ID</button><pre id="mirrorTargets">status.liveFollow.targets</pre>', {
           status: 200,
           headers: { 'content-type': 'text/html' },
         });

@@ -122,7 +122,9 @@ Current State:
     intent from current mirror activity without raw status entry inspection;
     `/ops/browser` also renders the per-account live-follow targets as a
     compact table with status, phase, pass count, effective wake, and cache
-    counts while preserving the raw JSON block for debugging
+    counts while preserving the raw JSON block for debugging; active table
+    rows expose the matching completion id and can fill the pause/resume/cancel
+    control input directly
   - service restart dogfood exposed a shutdown cleanup gap: `api serve` now
     terminates same-port orphan `api serve` processes before binding and
     parks active account-mirror completions as persisted `queued` work during

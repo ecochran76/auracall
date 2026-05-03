@@ -68,6 +68,7 @@ const apiStatusLiveFollowTargetAccountShape = z.object({
   desiredState: z.string(),
   desiredEnabled: z.boolean(),
   actualStatus: z.string().nullable(),
+  activeCompletionId: z.string().nullable().optional(),
   phase: z.string().nullable(),
   passCount: z.number().nullable(),
   routineEligibleAt: z.string().nullable().optional(),

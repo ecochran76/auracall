@@ -2081,6 +2081,7 @@ function createLiveFollowTargetRollup(
       desiredState: entry.liveFollow.state,
       desiredEnabled: entry.liveFollow.enabled,
       actualStatus: operation?.status ?? (entry.mirrorState.running ? 'refreshing' : entry.status),
+      activeCompletionId: operation?.id ?? null,
       phase: operation?.phase ?? null,
       passCount: operation?.passCount ?? null,
       routineEligibleAt: entry.eligibleAt,
@@ -3357,6 +3358,7 @@ function createOperatorBrowserDashboardHtml(): string {
         'Passes',
         'Next Wake',
         'Counts',
+        'Control',
       ].map((label) => '<th>' + label + '</th>').join('') + '</tr></thead><tbody>' + accounts.map(renderLiveFollowTargetRow).join('') + '</tbody></table></div>';
     }
 
@@ -3372,7 +3374,19 @@ function createOperatorBrowserDashboardHtml(): string {
         '<td>' + escapeHtml(target.passCount == null ? 'none' : String(target.passCount)) + '</td>',
         '<td class="wrap">' + escapeHtml(target.nextAttemptAt || target.routineEligibleAt || 'none') + '</td>',
         '<td class="wrap">' + escapeHtml(formatMetadataCounts(counts)) + '</td>',
+        '<td>' + renderCompletionControlButton(target.activeCompletionId) + '</td>',
       ].join('') + '</tr>';
+    }
+
+    function renderCompletionControlButton(id) {
+      if (!id) return '<span class="muted">none</span>';
+      return '<button type="button" data-completion-id="' + escapeHtml(id) + '" onclick="fillMirrorCompletionId(this.dataset.completionId)">Use ID</button>';
+    }
+
+    function fillMirrorCompletionId(id) {
+      if (!id) return;
+      $('mirrorCompletionId').value = id;
+      $('mirrorCompletions').textContent = 'Selected completion id: ' + id;
     }
 
     function renderStatusText(value, tone) {
@@ -3450,6 +3464,7 @@ function createOperatorBrowserDashboardHtml(): string {
         target: [target.provider, target.runtimeProfileId].filter(Boolean).join('/'),
         desiredState: target.desiredState || null,
         status: target.actualStatus || null,
+        activeCompletionId: target.activeCompletionId || null,
         phase: target.phase || null,
         passCount: target.passCount || null,
         routineEligibleAt: target.routineEligibleAt || null,

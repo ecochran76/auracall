@@ -89,6 +89,7 @@ export interface LiveFollowTargetAccountSummary {
   desiredState: string;
   desiredEnabled: boolean;
   actualStatus: string | null;
+  activeCompletionId: string | null;
   phase: string | null;
   passCount: number | null;
   routineEligibleAt: string | null;

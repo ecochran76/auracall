@@ -143,6 +143,7 @@ const statusPayload = {
           desiredState: 'enabled',
           desiredEnabled: true,
           actualStatus: 'paused',
+          activeCompletionId: 'acctmirror_paused',
           phase: 'steady_follow',
           passCount: 7,
           nextAttemptAt: '2026-04-29T12:05:00.000Z',
@@ -274,6 +275,7 @@ describe('api status CLI helpers', () => {
               runtimeProfileId: 'default',
               desiredState: 'enabled',
               actualStatus: 'paused',
+              activeCompletionId: 'acctmirror_paused',
               metadataCounts: {
                 conversations: 10,
               },
