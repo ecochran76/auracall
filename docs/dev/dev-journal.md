@@ -25540,3 +25540,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "effective live-follow wake|failed completion retry" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
+
+## Turn 89 | 2026-05-03
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make live-follow timing labels explicit in the operator dashboard.
+- Change:
+  - split the target table's generic `Next Wake` column into `Next
+    Live-Follow Attempt` and `Routine Crawl Eligible`
+  - the live-follow column reads `activeCompletionNextAttemptAt`; routine
+    eligibility reads `routineEligibleAt`
+  - renamed the active-completions table timing column to `Next Completion
+    Attempt`
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "browser operator dashboard" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts tests/http.responsesServer.test.ts`
+    reported existing warning debt only
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `2659649`; stale
+    PID `2558934` needed SIGKILL after not exiting on SIGTERM
+  - dashboard HTML contains `Next Live-Follow Attempt`, `Routine Crawl
+    Eligible`, and `Next Completion Attempt`, with no `Next Wake`
+  - installed `api ops-browser-status` reports live-follow `healthy` with
+    three enabled targets and zero attention-needed targets

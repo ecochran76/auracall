@@ -3624,7 +3624,8 @@ function createOperatorBrowserDashboardHtml(): string {
         'Status',
         'Phase',
         'Passes',
-        'Next Wake',
+        'Next Live-Follow Attempt',
+        'Routine Crawl Eligible',
         'Counts',
         'Controls',
       ].map((label) => '<th>' + label + '</th>').join('') + '</tr></thead><tbody>' + accounts.map(renderLiveFollowTargetRow).join('') + '</tbody></table></div>';
@@ -3640,7 +3641,8 @@ function createOperatorBrowserDashboardHtml(): string {
         '<td>' + renderStatusText(status, toneForActualStatus(status)) + '</td>',
         '<td>' + escapeHtml(target.phase || 'none') + '</td>',
         '<td>' + escapeHtml(target.passCount == null ? 'none' : String(target.passCount)) + '</td>',
-        '<td class="wrap">' + escapeHtml(target.nextAttemptAt || target.routineEligibleAt || 'none') + '</td>',
+        '<td class="wrap">' + escapeHtml(target.activeCompletionNextAttemptAt || 'none') + '</td>',
+        '<td class="wrap">' + escapeHtml(target.routineEligibleAt || 'none') + '</td>',
         '<td class="wrap">' + escapeHtml(formatMetadataCounts(counts)) + '</td>',
         '<td>' + renderCompletionControlButtons(target.activeCompletionId, status) + '</td>',
       ].join('') + '</tr>';
@@ -3654,7 +3656,7 @@ function createOperatorBrowserDashboardHtml(): string {
         'Status',
         'Phase',
         'Passes',
-        'Next Wake',
+        'Next Completion Attempt',
         'Inspect',
         'Controls',
       ].map((label) => '<th>' + label + '</th>').join('') + '</tr></thead><tbody>' + active.map(renderActiveCompletionRow).join('') + '</tbody></table></div>';

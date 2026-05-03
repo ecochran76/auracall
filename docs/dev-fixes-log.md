@@ -15423,3 +15423,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   should populate `activeCompletionId` and `activeCompletionNextAttemptAt`;
   failed/cancelled recent records may remain as history but must not override
   routine eligibility.
+- 2026-05-03: Dashboard timing labels should not collapse live-follow retry
+  and routine crawl eligibility into "Next Wake". Render separate columns for
+  `activeCompletionNextAttemptAt` and `routineEligibleAt` so operators can see
+  short active retries without misreading the longer politeness gate; label
+  active operation retries as `Next Completion Attempt`.

@@ -14586,6 +14586,12 @@ describe('http responses adapter', () => {
       expect(html).toContain('setMirrorControlNotice');
       expect(html).toContain('Live Follow Severity');
       expect(html).toContain('Live Follow Targets');
+      expect(html).toContain('Next Live-Follow Attempt');
+      expect(html).toContain('Routine Crawl Eligible');
+      expect(html).toContain('Next Completion Attempt');
+      expect(html).toContain("target.activeCompletionNextAttemptAt || 'none'");
+      expect(html).toContain("target.routineEligibleAt || 'none'");
+      expect(html).not.toContain('Next Wake');
       expect(html).toContain('Desired vs Actual');
       expect(html).toContain('Completion Records');
       expect(html).toContain('formatTargetHealth');
