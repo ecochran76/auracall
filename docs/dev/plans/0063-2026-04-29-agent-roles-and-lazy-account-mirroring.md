@@ -678,3 +678,9 @@ Operator status now distinguishes routine mirror cadence from active live-follow
 backfill cadence: `/status.liveFollow.targets.accounts[]` includes
 `routineEligibleAt`, `activeCompletionNextAttemptAt`, and effective
 `nextAttemptAt`, with the effective value preferring the active completion wake.
+API service lifecycle hygiene now handles the restart case exposed during
+dogfood: `api serve` terminates same-port orphan `api serve` processes before
+binding, and graceful server shutdown cancels active account-mirror completions
+before marking the local runner stale. Startup also prunes stale
+browser-operation locks so a forced restart does not leave live-follow targets
+blocked by dead owner PIDs.

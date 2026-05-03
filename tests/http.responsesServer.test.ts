@@ -9,6 +9,7 @@ import {
   createDefaultRuntimeRunServiceStateProbe,
   createResponsesHttpServer,
   serveResponsesHttp,
+  terminateSamePortApiServeProcesses,
 } from '../src/http/responsesServer.js';
 import {
   createAccountMirrorStatusRegistry,
@@ -1768,6 +1769,140 @@ describe('http responses adapter', () => {
     } finally {
       await server.close();
     }
+  });
+
+  it('cancels active account mirror completions during server close', async () => {
+    const activeOperation: AccountMirrorCompletionOperation = {
+      object: 'account_mirror_completion',
+      id: 'acctmirror_shutdown_active',
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      mode: 'live_follow',
+      phase: 'backfill_history',
+      status: 'running',
+      startedAt: '2026-04-30T12:00:00.000Z',
+      completedAt: null,
+      nextAttemptAt: '2026-04-30T12:10:00.000Z',
+      maxPasses: null,
+      passCount: 1,
+      lastRefresh: null,
+      mirrorCompleteness: completeAccountMirror,
+      error: null,
+    };
+    const control = vi.fn(() => ({
+      ...activeOperation,
+      status: 'cancelled' as const,
+      completedAt: '2026-04-30T12:01:00.000Z',
+    }));
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        accountMirrorCompletionService: {
+          start: vi.fn(() => activeOperation),
+          read: vi.fn(() => activeOperation),
+          list: vi.fn((request) => request?.status === 'active' ? [activeOperation] : []),
+          control,
+        },
+      },
+    );
+
+    await server.close();
+
+    expect(control).toHaveBeenCalledWith({
+      id: 'acctmirror_shutdown_active',
+      action: 'cancel',
+    });
+  });
+
+  it('terminates same-port orphan api serve processes before binding', async () => {
+    const procRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-proc-'));
+    const operationLockRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-operation-locks-'));
+    cleanup.push(procRoot);
+    cleanup.push(operationLockRoot);
+    await fs.mkdir(path.join(procRoot, '101'));
+    await fs.mkdir(path.join(procRoot, '102'));
+    await fs.mkdir(path.join(procRoot, '103'));
+    await fs.mkdir(path.join(procRoot, '104'));
+    await fs.writeFile(
+      path.join(procRoot, '101', 'cmdline'),
+      ['node', '/home/user/.auracall/user-runtime/node_modules/auracall/dist/bin/auracall.js', 'api', 'serve', '--port', '18095'].join('\0'),
+    );
+    await fs.writeFile(
+      path.join(procRoot, '102', 'cmdline'),
+      ['node', '/home/user/.auracall/user-runtime/node_modules/auracall/dist/bin/auracall.js', 'api', 'serve', '--port', '18096'].join('\0'),
+    );
+    await fs.writeFile(
+      path.join(procRoot, '103', 'cmdline'),
+      ['node', '/home/user/.auracall/user-runtime/node_modules/auracall/dist/bin/auracall.js', 'api', 'status'].join('\0'),
+    );
+    await fs.writeFile(
+      path.join(procRoot, '104', 'cmdline'),
+      ['zsh', '-lc', 'setsid /home/user/.local/bin/auracall api serve --port 18095'].join('\0'),
+    );
+    await fs.writeFile(
+      path.join(operationLockRoot, 'matched.json'),
+      JSON.stringify({ ownerPid: 101, key: 'managed-profile:/tmp/profile::service:chatgpt' }),
+      'utf8',
+    );
+    await fs.writeFile(
+      path.join(operationLockRoot, 'other.json'),
+      JSON.stringify({ ownerPid: 102, key: 'managed-profile:/tmp/profile::service:grok' }),
+      'utf8',
+    );
+    await fs.writeFile(
+      path.join(operationLockRoot, 'stale.json'),
+      JSON.stringify({ ownerPid: 105, key: 'managed-profile:/tmp/profile::service:gemini' }),
+      'utf8',
+    );
+    const terminated: Array<{ pid: number; signal: NodeJS.Signals }> = [];
+    const logs: string[] = [];
+
+    await expect(terminateSamePortApiServeProcesses({
+      port: 18095,
+      currentPid: 999,
+      procRoot,
+      operationLockRoot,
+      logger: (message) => logs.push(message),
+      isProcessAlive: (pid) => pid === 102,
+      sleep: async () => undefined,
+      terminateProcess: (pid, signal) => {
+        terminated.push({ pid, signal });
+      },
+    })).resolves.toEqual([101]);
+
+    expect(terminated).toEqual([{ pid: 101, signal: 'SIGTERM' }]);
+    expect(logs[0]).toContain('Terminated orphan AuraCall api serve process 101 for port 18095');
+    await expect(fs.access(path.join(operationLockRoot, 'matched.json'))).rejects.toThrow();
+    await expect(fs.access(path.join(operationLockRoot, 'other.json'))).resolves.toBeUndefined();
+    await expect(fs.access(path.join(operationLockRoot, 'stale.json'))).rejects.toThrow();
+  });
+
+  it('escalates orphan api serve termination when SIGTERM does not stop the process', async () => {
+    const procRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-proc-stubborn-'));
+    cleanup.push(procRoot);
+    await fs.mkdir(path.join(procRoot, '201'));
+    await fs.writeFile(
+      path.join(procRoot, '201', 'cmdline'),
+      ['node', '/home/user/.auracall/user-runtime/node_modules/auracall/dist/bin/auracall.js', 'api', 'serve', '--port=18095'].join('\0'),
+    );
+    const terminated: Array<{ pid: number; signal: NodeJS.Signals }> = [];
+
+    await expect(terminateSamePortApiServeProcesses({
+      port: 18095,
+      currentPid: 999,
+      procRoot,
+      terminationGraceMs: 0,
+      isProcessAlive: () => true,
+      sleep: async () => undefined,
+      terminateProcess: (pid, signal) => {
+        terminated.push({ pid, signal });
+      },
+    })).resolves.toEqual([201]);
+
+    expect(terminated).toEqual([
+      { pid: 201, signal: 'SIGTERM' },
+      { pid: 201, signal: 'SIGKILL' },
+    ]);
   });
 
   it('controls account mirror completions through the status preflight path', async () => {

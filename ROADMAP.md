@@ -120,10 +120,11 @@ Current State:
     actual rollups in `/status.liveFollow`, CLI `api status`, MCP
     `api_status`, and `/ops/browser` so the dashboard shows every configured
     account without requiring raw status entry inspection
-  - service restart dogfood exposed a shutdown cleanup gap: the old API process
-    can lose its listener while still holding a browser-operation lease, so the
-    live-follow service should drain/cancel owned mirror operations on shutdown
-    before this moves from dogfood to unattended service mode
+  - service restart dogfood exposed a shutdown cleanup gap: `api serve` now
+    terminates same-port orphan `api serve` processes before binding and
+    cancels active account-mirror completions during graceful shutdown; startup
+    also prunes stale browser-operation locks so forced restart recovery does
+    not leave live-follow targets blocked by dead owner PIDs
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local

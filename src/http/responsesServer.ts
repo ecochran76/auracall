@@ -1,9 +1,12 @@
 import http from 'node:http';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { z, ZodError } from 'zod';
 import type { OptionValues } from 'commander';
 import { MODEL_CONFIGS } from '../oracle/config.js';
 import { getCliVersion } from '../version.js';
+import { getAuracallHomeDir } from '../auracallHome.js';
 import type { ResolvedUserConfig } from '../config.js';
 import { resolveConfig } from '../schema/resolver.js';
 import { resolveHostLocalActionExecutionPolicy } from '../config/model.js';
@@ -175,6 +178,7 @@ export interface ResponsesHttpServerDeps {
   accountMirrorSchedulerService?: AccountMirrorSchedulerPassService;
   accountMirrorSchedulerLedger?: AccountMirrorSchedulerPassLedger;
   accountMirrorCompletionService?: AccountMirrorCompletionService;
+  terminateProcess?: (pid: number, signal: NodeJS.Signals) => void;
 }
 
 export interface ResponsesHttpServerInstance {
@@ -195,6 +199,7 @@ export interface ServeResponsesHttpOptions extends ResponsesHttpServerOptions {
   mediaGenerationExecutor?: ResponsesHttpServerDeps['mediaGenerationExecutor'];
   probeRuntimeRunServiceState?: ResponsesHttpServerDeps['probeRuntimeRunServiceState'];
   probeRuntimeRunBrowserDiagnostics?: ResponsesHttpServerDeps['probeRuntimeRunBrowserDiagnostics'];
+  terminateProcess?: ResponsesHttpServerDeps['terminateProcess'];
 }
 
 interface HttpErrorPayload {
@@ -1487,6 +1492,7 @@ export async function createResponsesHttpServer(
       backgroundDrainState.state = 'disabled';
       accountMirrorSchedulerState.paused = false;
       accountMirrorSchedulerState.state = 'disabled';
+      cancelActiveAccountMirrorCompletions(accountMirrorCompletionService);
       await host.waitForDrainQueue().catch(() => null);
       if (!deps.executionHost && runnerState.id) {
         const staleRunner = await host.markLocalRunnerStale(localRunnerLifecycleOptions);
@@ -1510,9 +1516,15 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
     executeStoredRunStep: overrideExecuteStoredRunStep,
     mediaGenerationExecutor: overrideMediaGenerationExecutor,
     probeRuntimeRunServiceState: overrideProbeRuntimeRunServiceState,
+    terminateProcess: terminateProcessOverride,
     ...serverOptions
   } = options;
   const resolvedUserConfig = await resolveConfig(options.cliOptions ?? {}, process.cwd(), process.env);
+  await terminateSamePortApiServeProcesses({
+    port: serverOptions.port,
+    logger,
+    terminateProcess: terminateProcessOverride,
+  });
   const configuredStoredStepExecutor = createConfiguredStoredStepExecutor(
     resolvedUserConfig as Record<string, unknown>,
   );
@@ -1577,6 +1589,205 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
     process.once('SIGINT', handleSignal);
     process.once('SIGTERM', handleSignal);
   });
+}
+
+function cancelActiveAccountMirrorCompletions(service: AccountMirrorCompletionService): void {
+  for (const operation of service.list({ status: 'active', limit: null })) {
+    service.control({ id: operation.id, action: 'cancel' });
+  }
+}
+
+export async function terminateSamePortApiServeProcesses(input: {
+  port?: number | null;
+  logger?: (message: string) => void;
+  terminateProcess?: (pid: number, signal: NodeJS.Signals) => void;
+  isProcessAlive?: (pid: number) => boolean;
+  sleep?: (ms: number) => Promise<void>;
+  terminationGraceMs?: number;
+  currentPid?: number;
+  procRoot?: string;
+  operationLockRoot?: string;
+}): Promise<number[]> {
+  const port = normalizeApiServePort(input.port);
+  if (port === null) return [];
+  const currentPid = input.currentPid ?? process.pid;
+  const procRoot = input.procRoot ?? '/proc';
+  const terminateProcess = input.terminateProcess ?? ((pid, signal) => process.kill(pid, signal));
+  const isProcessAlive = input.isProcessAlive ?? defaultIsProcessAlive;
+  const sleep = input.sleep ?? ((ms) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  const matches = await findSamePortApiServeProcesses({
+    port,
+    currentPid,
+    procRoot,
+  });
+  const terminatedPids: number[] = [];
+  for (const match of matches) {
+    try {
+      terminateProcess(match.pid, 'SIGTERM');
+      input.logger?.(`Terminated orphan AuraCall api serve process ${match.pid} for port ${port}.`);
+      const exited = await waitForProcessExit(match.pid, {
+        isProcessAlive,
+        sleep,
+        timeoutMs: input.terminationGraceMs ?? 2_000,
+        pollMs: 100,
+      });
+      if (!exited && isProcessAlive(match.pid)) {
+        terminateProcess(match.pid, 'SIGKILL');
+        input.logger?.(`Force-killed orphan AuraCall api serve process ${match.pid} for port ${port}.`);
+      }
+      terminatedPids.push(match.pid);
+    } catch (error) {
+      input.logger?.(
+        `Failed to terminate orphan AuraCall api serve process ${match.pid} for port ${port}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  const operationLockRoot = input.operationLockRoot ?? path.join(getAuracallHomeDir(), 'browser-operations');
+  await removeBrowserOperationLocksForOwnerPids({
+    ownerPids: terminatedPids,
+    lockRoot: operationLockRoot,
+    logger: input.logger,
+  });
+  await removeStaleBrowserOperationLocks({
+    lockRoot: operationLockRoot,
+    isProcessAlive,
+    logger: input.logger,
+  });
+  return matches.map((match) => match.pid);
+}
+
+async function removeBrowserOperationLocksForOwnerPids(input: {
+  ownerPids: number[];
+  lockRoot: string;
+  logger?: (message: string) => void;
+}): Promise<number> {
+  const ownerPids = new Set(input.ownerPids);
+  if (ownerPids.size === 0) return 0;
+  let entries: string[];
+  try {
+    entries = await fs.readdir(input.lockRoot);
+  } catch {
+    return 0;
+  }
+  let removed = 0;
+  for (const entry of entries) {
+    if (!entry.endsWith('.json')) continue;
+    const lockPath = path.join(input.lockRoot, entry);
+    try {
+      const raw = await fs.readFile(lockPath, 'utf8');
+      const parsed = JSON.parse(raw) as { ownerPid?: unknown };
+      if (typeof parsed.ownerPid !== 'number' || !ownerPids.has(parsed.ownerPid)) continue;
+      await fs.rm(lockPath, { force: true });
+      removed += 1;
+    } catch {
+      continue;
+    }
+  }
+  if (removed > 0) {
+    input.logger?.(`Removed ${removed} browser operation lock${removed === 1 ? '' : 's'} owned by terminated api serve process.`);
+  }
+  return removed;
+}
+
+async function removeStaleBrowserOperationLocks(input: {
+  lockRoot: string;
+  isProcessAlive: (pid: number) => boolean;
+  logger?: (message: string) => void;
+}): Promise<number> {
+  let entries: string[];
+  try {
+    entries = await fs.readdir(input.lockRoot);
+  } catch {
+    return 0;
+  }
+  let removed = 0;
+  for (const entry of entries) {
+    if (!entry.endsWith('.json')) continue;
+    const lockPath = path.join(input.lockRoot, entry);
+    try {
+      const raw = await fs.readFile(lockPath, 'utf8');
+      const parsed = JSON.parse(raw) as { ownerPid?: unknown };
+      if (typeof parsed.ownerPid !== 'number' || input.isProcessAlive(parsed.ownerPid)) continue;
+      await fs.rm(lockPath, { force: true });
+      removed += 1;
+    } catch {
+      continue;
+    }
+  }
+  if (removed > 0) {
+    input.logger?.(`Removed ${removed} stale browser operation lock${removed === 1 ? '' : 's'}.`);
+  }
+  return removed;
+}
+
+async function findSamePortApiServeProcesses(input: {
+  port: number;
+  currentPid: number;
+  procRoot: string;
+}): Promise<Array<{ pid: number; commandLine: string }>> {
+  let entries: string[];
+  try {
+    entries = await fs.readdir(input.procRoot);
+  } catch {
+    return [];
+  }
+  const matches: Array<{ pid: number; commandLine: string }> = [];
+  for (const entry of entries) {
+    if (!/^\d+$/.test(entry)) continue;
+    const pid = Number(entry);
+    if (!Number.isSafeInteger(pid) || pid <= 0 || pid === input.currentPid) continue;
+    const commandLine = await readProcCommandLine(input.procRoot, pid);
+    if (!commandLine) continue;
+    if (isSamePortApiServeCommand(commandLine, input.port)) {
+      matches.push({ pid, commandLine });
+    }
+  }
+  return matches;
+}
+
+async function readProcCommandLine(procRoot: string, pid: number): Promise<string | null> {
+  try {
+    const raw = await fs.readFile(`${procRoot}/${pid}/cmdline`);
+    return raw.toString('utf8').split('\0').filter(Boolean).join(' ');
+  } catch {
+    return null;
+  }
+}
+
+function isSamePortApiServeCommand(commandLine: string, port: number): boolean {
+  if (!/^node\s+/.test(commandLine)) return false;
+  if (!commandLine.includes('/auracall.js') && !/\bauracall\.js\b/.test(commandLine)) return false;
+  if (!/\bapi\s+serve\b/.test(commandLine)) return false;
+  return commandLine.includes(`--port ${port}`) || commandLine.includes(`--port=${port}`);
+}
+
+function normalizeApiServePort(value: number | null | undefined): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  const port = Math.trunc(value);
+  return port > 0 && port <= 65535 ? port : null;
+}
+
+async function waitForProcessExit(pid: number, input: {
+  isProcessAlive: (pid: number) => boolean;
+  sleep: (ms: number) => Promise<void>;
+  timeoutMs: number;
+  pollMs: number;
+}): Promise<boolean> {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < input.timeoutMs) {
+    if (!input.isProcessAlive(pid)) return true;
+    await input.sleep(input.pollMs);
+  }
+  return !input.isProcessAlive(pid);
+}
+
+function defaultIsProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 type DefaultRuntimeRunServiceStateProbeDeps = {
