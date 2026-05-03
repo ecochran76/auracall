@@ -701,7 +701,9 @@ table with target id, desired state, actual status, phase, pass count, next
 wake, and cache counts, while keeping the raw JSON block as a debug surface.
 It also renders active completion operations as a compact table with
 completion id, target, status, phase, pass count, next wake, and matching
-controls.
+controls. Each active completion row can inspect the persisted operation via
+the existing `GET /v1/account-mirrors/completions/{id}` endpoint without
+starting provider work.
 Rows with an active completion expose the matching completion id and provide a
 `Use ID` control that fills the existing pause/resume/cancel input. They also
 render state-aware row actions wired to the same `/status`

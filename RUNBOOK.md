@@ -2856,3 +2856,18 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard"`
   - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
   - `pnpm typecheck`
+
+## Turn 105 | 2026-05-02
+
+- Goal: add direct detail inspection to `/ops/browser` active live-follow
+  operations.
+- Change:
+  - added an `Inspect` action to active completion rows
+  - the dashboard reads `GET /v1/account-mirrors/completions/{id}` and renders
+    the selected operation in the existing completion detail panel
+  - extended CLI/MCP ops-browser contract checks and smoke coverage for the
+    inspect path
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard"`
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+  - `pnpm typecheck`

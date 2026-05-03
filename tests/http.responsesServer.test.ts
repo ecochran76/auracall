@@ -14428,6 +14428,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('mirrorTargetAccounts');
       expect(html).toContain('mirrorActiveCompletionTable');
       expect(html).toContain('mirrorActiveCompletions');
+      expect(html).toContain('inspectMirrorCompletion');
+      expect(html).toContain('/v1/account-mirrors/completions/');
       expect(html).toContain('mirrorTargets');
       expect(html).toContain('mirrorCompletions');
       expect(html).toContain('mirrorControlNotice');

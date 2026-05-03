@@ -3402,6 +3402,7 @@ function createOperatorBrowserDashboardHtml(): string {
         'Phase',
         'Passes',
         'Next Wake',
+        'Inspect',
         'Controls',
       ].map((label) => '<th>' + label + '</th>').join('') + '</tr></thead><tbody>' + active.map(renderActiveCompletionRow).join('') + '</tbody></table></div>';
     }
@@ -3415,8 +3416,14 @@ function createOperatorBrowserDashboardHtml(): string {
         '<td>' + escapeHtml(operation.phase || 'none') + '</td>',
         '<td>' + escapeHtml(formatCompletionPasses(operation)) + '</td>',
         '<td class="wrap">' + escapeHtml(operation.nextAttemptAt || 'none') + '</td>',
+        '<td>' + renderCompletionInspectButton(operation.id) + '</td>',
         '<td>' + renderCompletionControlButtons(operation.id, status) + '</td>',
       ].join('') + '</tr>';
+    }
+
+    function renderCompletionInspectButton(id) {
+      if (!id) return '<span class="muted">none</span>';
+      return '<button type="button" data-completion-id="' + escapeHtml(id) + '" onclick="inspectMirrorCompletion(this.dataset.completionId)">Inspect</button>';
     }
 
     function renderCompletionControlButtons(id, status) {
@@ -3609,6 +3616,21 @@ function createOperatorBrowserDashboardHtml(): string {
         for (const button of document.querySelectorAll('[data-completion-action]')) {
           button.disabled = false;
         }
+      }
+    }
+
+    async function inspectMirrorCompletion(id) {
+      if (!id) return;
+      setMirrorControlNotice('Inspecting ' + id + '...', 'warn');
+      $('mirrorCompletions').textContent = 'Inspecting ' + id + '...';
+      try {
+        const detail = await fetchJson('/v1/account-mirrors/completions/' + encodeURIComponent(id));
+        $('mirrorCompletions').textContent = asJson({ selectedCompletion: detail });
+        setMirrorControlNotice('Loaded details for ' + id + '.', 'ok');
+      } catch (error) {
+        const message = String(error.message || error);
+        $('mirrorCompletions').textContent = message;
+        setMirrorControlNotice('Failed to inspect ' + id + ': ' + message, 'bad');
       }
     }
 
