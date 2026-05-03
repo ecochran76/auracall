@@ -119,7 +119,10 @@ Current State:
   - `/status.liveFollow.targets` now includes explicit `desired` and `actual`
     rollups; CLI `api status`, MCP `api_status`, and `/ops/browser` expose the
     same desired-vs-actual signal so operators can distinguish configured
-    intent from current mirror activity without raw status entry inspection
+    intent from current mirror activity without raw status entry inspection;
+    `/ops/browser` also renders the per-account live-follow targets as a
+    compact table with status, phase, pass count, effective wake, and cache
+    counts while preserving the raw JSON block for debugging
   - service restart dogfood exposed a shutdown cleanup gap: `api serve` now
     terminates same-port orphan `api serve` processes before binding and
     parks active account-mirror completions as persisted `queued` work during

@@ -3103,6 +3103,24 @@ function createOperatorBrowserDashboardHtml(): string {
     dl { display: grid; grid-template-columns: 140px 1fr; gap: 6px 10px; margin: 0; }
     dt { color: var(--muted); }
     dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+    table { width: 100%; border-collapse: collapse; min-width: 780px; }
+    th, td {
+      padding: 7px 8px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+    th { color: var(--muted); font-size: 12px; font-weight: 600; background: #11151a; }
+    tr:last-child td { border-bottom: 0; }
+    td.wrap { white-space: normal; min-width: 180px; }
     pre {
       margin: 0;
       white-space: pre-wrap;
@@ -3175,6 +3193,7 @@ function createOperatorBrowserDashboardHtml(): string {
           <button id="resumeMirrorCompletion">Resume</button>
           <button id="cancelMirrorCompletion">Cancel</button>
         </div>
+        <div id="mirrorTargetTable" class="muted" style="margin-bottom: 10px;">Loading target accounts...</div>
         <pre id="mirrorTargets">Loading...</pre>
         <pre id="mirrorCompletions">Loading...</pre>
       </section>
@@ -3287,6 +3306,7 @@ function createOperatorBrowserDashboardHtml(): string {
       const active = Array.isArray(summary.active) ? summary.active : [];
       const recent = Array.isArray(summary.recent) ? summary.recent : [];
       const targets = status.liveFollow && status.liveFollow.targets ? status.liveFollow.targets : null;
+      $('mirrorTargetTable').innerHTML = renderLiveFollowTargetTable(targets);
       $('mirrorTargets').textContent = asJson({
         source: 'status.liveFollow.targets',
         targets: targets ? compactLiveFollowTargets(targets) : null,
@@ -3324,6 +3344,76 @@ function createOperatorBrowserDashboardHtml(): string {
 
     function renderBadge(label, value, tone) {
       return '<span class="badge badge-' + tone + '"><span>' + label + '</span><strong>' + value + '</strong></span>';
+    }
+
+    function renderLiveFollowTargetTable(targets) {
+      const accounts = targets && Array.isArray(targets.accounts) ? targets.accounts : [];
+      if (!accounts.length) return '<span class="muted">No configured live-follow accounts.</span>';
+      return '<div class="table-wrap"><table id="mirrorTargetAccounts"><thead><tr>' + [
+        'Target',
+        'Desired',
+        'Status',
+        'Phase',
+        'Passes',
+        'Next Wake',
+        'Counts',
+      ].map((label) => '<th>' + label + '</th>').join('') + '</tr></thead><tbody>' + accounts.map(renderLiveFollowTargetRow).join('') + '</tbody></table></div>';
+    }
+
+    function renderLiveFollowTargetRow(target) {
+      const status = target.actualStatus || 'unknown';
+      const desiredState = target.desiredState || 'unknown';
+      const counts = target.metadataCounts || {};
+      return '<tr>' + [
+        '<td><strong>' + escapeHtml(formatTargetName(target)) + '</strong></td>',
+        '<td>' + renderStatusText(desiredState, toneForDesiredState(desiredState)) + '</td>',
+        '<td>' + renderStatusText(status, toneForActualStatus(status)) + '</td>',
+        '<td>' + escapeHtml(target.phase || 'none') + '</td>',
+        '<td>' + escapeHtml(target.passCount == null ? 'none' : String(target.passCount)) + '</td>',
+        '<td class="wrap">' + escapeHtml(target.nextAttemptAt || target.routineEligibleAt || 'none') + '</td>',
+        '<td class="wrap">' + escapeHtml(formatMetadataCounts(counts)) + '</td>',
+      ].join('') + '</tr>';
+    }
+
+    function renderStatusText(value, tone) {
+      return '<span class="' + tone + '">' + escapeHtml(value || 'unknown') + '</span>';
+    }
+
+    function toneForDesiredState(state) {
+      if (state === 'enabled') return 'ok';
+      if (state === 'missing_identity' || state === 'unsupported') return 'bad';
+      if (state === 'disabled') return 'warn';
+      return 'muted';
+    }
+
+    function toneForActualStatus(status) {
+      if (status === 'running' || status === 'refreshing' || status === 'queued') return 'ok';
+      if (status === 'paused') return 'warn';
+      if (status === 'blocked' || status === 'failed' || status === 'cancelled') return 'bad';
+      return 'muted';
+    }
+
+    function formatTargetName(target) {
+      return [target.provider, target.runtimeProfileId].filter(Boolean).join('/') || 'unknown';
+    }
+
+    function formatMetadataCounts(counts) {
+      return [
+        'p=' + (counts.projects || 0),
+        'c=' + (counts.conversations || 0),
+        'a=' + (counts.artifacts || 0),
+        'f=' + (counts.files || 0),
+        'm=' + (counts.media || 0),
+      ].join(' ');
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
     function formatDesiredActualHealth(targets) {
@@ -3416,6 +3506,7 @@ function createOperatorBrowserDashboardHtml(): string {
     async function refreshStatus() {
       $('serverSummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
       $('mirrorStatus').textContent = 'Loading...';
+      $('mirrorTargetTable').textContent = 'Loading target accounts...';
       $('mirrorTargets').textContent = 'Loading...';
       $('mirrorCompletions').textContent = 'Loading...';
       try {
@@ -3424,6 +3515,7 @@ function createOperatorBrowserDashboardHtml(): string {
         renderMirrorCompletions(status);
       } catch (error) {
         $('serverSummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
+        $('mirrorTargetTable').textContent = String(error.message || error);
         $('mirrorTargets').textContent = String(error.message || error);
         $('mirrorCompletions').textContent = String(error.message || error);
       }

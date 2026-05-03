@@ -2769,3 +2769,16 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "reports effective live-follow wake separately from routine mirror eligibility|serves a read-only browser operator dashboard"`
   - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts`
   - `pnpm typecheck`
+
+## Turn 99 | 2026-05-02
+
+- Goal: make `/ops/browser` per-account live-follow state scan-friendly.
+- Change:
+  - added a compact live-follow target account table above the raw JSON block
+  - table columns include target, desired state, actual status, phase, passes,
+    next wake, and cache counts
+  - extended CLI/MCP ops-browser contract checks to require the table
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard"`
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+  - `pnpm typecheck`

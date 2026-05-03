@@ -14422,6 +14422,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('/v1/runs/{run_id}/status');
       expect(html).toContain('Probe Browser State');
       expect(html).toContain('Mirror Live Follow');
+      expect(html).toContain('mirrorTargetTable');
+      expect(html).toContain('mirrorTargetAccounts');
       expect(html).toContain('mirrorTargets');
       expect(html).toContain('mirrorCompletions');
       expect(html).toContain('Live Follow Severity');
@@ -14435,6 +14437,9 @@ describe('http responses adapter', () => {
       expect(html).toContain('badge-bad');
       expect(html).toContain('badge-warn');
       expect(html).toContain('renderBadge');
+      expect(html).toContain('renderLiveFollowTargetTable');
+      expect(html).toContain('formatMetadataCounts');
+      expect(html).toContain('escapeHtml');
       expect(html).toContain('status.liveFollow');
       expect(html).toContain('status.liveFollow.targets');
       expect(html).toContain('severity-attention-needed');

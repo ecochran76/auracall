@@ -18,6 +18,8 @@ const apiOpsBrowserStatusInputShape = {
 const apiOpsBrowserDashboardShape = z.object({
   route: z.literal('/ops/browser'),
   hasMirrorLiveFollowPanel: z.boolean(),
+  hasLiveFollowTargetsPanel: z.boolean(),
+  hasLiveFollowTargetTable: z.boolean(),
   usesStatusControlPath: z.boolean(),
   usesAccountMirrorCompletionPayload: z.boolean(),
   hasPauseBinding: z.boolean(),

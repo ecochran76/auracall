@@ -696,3 +696,6 @@ Operator status now also exposes desired-vs-actual live-follow rollups:
 `/status.liveFollow.targets.actual` records active/completeness state. CLI
 `api status`, MCP `api_status`, and `/ops/browser` render the same compact
 signal so operators can see configured accounts without raw entry inspection.
+The browser dashboard now renders the per-account live-follow targets as a
+table with target id, desired state, actual status, phase, pass count, next
+wake, and cache counts, while keeping the raw JSON block as a debug surface.
