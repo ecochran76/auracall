@@ -22,6 +22,7 @@ const apiOpsBrowserDashboardShape = z.object({
   hasLiveFollowTargetTable: z.boolean(),
   hasCompletionIdFillControl: z.boolean(),
   hasInlineCompletionActionControls: z.boolean(),
+  hasStateAwareCompletionActions: z.boolean(),
   hasControlFeedbackNotice: z.boolean(),
   usesStatusControlPath: z.boolean(),
   usesAccountMirrorCompletionPayload: z.boolean(),

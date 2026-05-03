@@ -14446,6 +14446,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('data-completion-id');
       expect(html).toContain('controlMirrorCompletionById');
       expect(html).toContain('data-completion-action');
+      expect(html).toContain('completionActionsForStatus');
+      expect(html).toContain("status === 'paused'");
       expect(html).toContain('formatMetadataCounts');
       expect(html).toContain('escapeHtml');
       expect(html).toContain('status.liveFollow');

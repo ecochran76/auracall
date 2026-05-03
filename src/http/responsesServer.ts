@@ -3387,19 +3387,31 @@ function createOperatorBrowserDashboardHtml(): string {
         '<td>' + escapeHtml(target.passCount == null ? 'none' : String(target.passCount)) + '</td>',
         '<td class="wrap">' + escapeHtml(target.nextAttemptAt || target.routineEligibleAt || 'none') + '</td>',
         '<td class="wrap">' + escapeHtml(formatMetadataCounts(counts)) + '</td>',
-        '<td>' + renderCompletionControlButtons(target.activeCompletionId) + '</td>',
+        '<td>' + renderCompletionControlButtons(target.activeCompletionId, status) + '</td>',
       ].join('') + '</tr>';
     }
 
-    function renderCompletionControlButtons(id) {
+    function renderCompletionControlButtons(id, status) {
       if (!id) return '<span class="muted">none</span>';
       const escapedId = escapeHtml(id);
+      const actions = completionActionsForStatus(status);
       return '<span class="badges">' + [
         '<button type="button" data-completion-id="' + escapedId + '" onclick="fillMirrorCompletionId(this.dataset.completionId)">Use ID</button>',
-        renderCompletionActionButton(id, 'pause', 'Pause'),
-        renderCompletionActionButton(id, 'resume', 'Resume'),
-        renderCompletionActionButton(id, 'cancel', 'Cancel'),
+        ...actions.map((action) => renderCompletionActionButton(id, action, labelForCompletionAction(action))),
       ].join('') + '</span>';
+    }
+
+    function completionActionsForStatus(status) {
+      if (status === 'paused') return ['resume', 'cancel'];
+      if (status === 'queued' || status === 'running' || status === 'refreshing') return ['pause', 'cancel'];
+      return [];
+    }
+
+    function labelForCompletionAction(action) {
+      if (action === 'pause') return 'Pause';
+      if (action === 'resume') return 'Resume';
+      if (action === 'cancel') return 'Cancel';
+      return action;
     }
 
     function renderCompletionActionButton(id, action, label) {

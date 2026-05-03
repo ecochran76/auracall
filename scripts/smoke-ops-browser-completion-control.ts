@@ -125,9 +125,12 @@ async function main(): Promise<void> {
     assertIncludes(dashboard, "fetch('/status'", 'dashboard control endpoint');
     assertIncludes(dashboard, 'body: JSON.stringify({ accountMirrorCompletion: { id, action } })', 'dashboard control payload');
     assertIncludes(dashboard, 'controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)', 'dashboard row control handler');
-    assertIncludes(dashboard, "renderCompletionActionButton(id, 'pause', 'Pause')", 'dashboard row pause control');
-    assertIncludes(dashboard, "renderCompletionActionButton(id, 'resume', 'Resume')", 'dashboard row resume control');
-    assertIncludes(dashboard, "renderCompletionActionButton(id, 'cancel', 'Cancel')", 'dashboard row cancel control');
+    assertIncludes(dashboard, 'renderCompletionActionButton(id, action, labelForCompletionAction(action))', 'dashboard row action renderer');
+    assertIncludes(dashboard, "if (action === 'pause') return 'Pause'", 'dashboard row pause label');
+    assertIncludes(dashboard, "if (action === 'resume') return 'Resume'", 'dashboard row resume label');
+    assertIncludes(dashboard, "if (action === 'cancel') return 'Cancel'", 'dashboard row cancel label');
+    assertIncludes(dashboard, 'completionActionsForStatus', 'dashboard state-aware row controls');
+    assertIncludes(dashboard, "status === 'paused'", 'dashboard paused row controls');
     assertIncludes(dashboard, 'mirrorControlNotice', 'dashboard control feedback notice');
     assertIncludes(dashboard, 'setMirrorControlNotice', 'dashboard control feedback handler');
     assertIncludes(dashboard, "$('pauseMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('pause'))", 'dashboard pause binding');
@@ -196,6 +199,7 @@ async function main(): Promise<void> {
       `ops-browser completion-control smoke: pass port=${server.port}`,
       'dashboardControl=/status',
       'rowActions=ok',
+      'stateAware=ok',
       'feedback=ok',
       `operation=${operation.id}`,
       `status.pause=${pause.controlResult?.status ?? 'unknown'}`,

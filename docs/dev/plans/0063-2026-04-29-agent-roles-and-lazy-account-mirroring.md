@@ -699,9 +699,11 @@ signal so operators can see configured accounts without raw entry inspection.
 The browser dashboard now renders the per-account live-follow targets as a
 table with target id, desired state, actual status, phase, pass count, next
 wake, and cache counts, while keeping the raw JSON block as a debug surface.
-Rows with an active completion expose the matching completion id, provide a
-`Use ID` control that fills the existing pause/resume/cancel input, and render
-direct pause/resume/cancel row actions wired to the same `/status`
-`accountMirrorCompletion` control path. The same panel now includes an
-`aria-live` operator feedback notice so selection, in-flight control requests,
-successes, and failures are visible without reading the raw JSON block.
+Rows with an active completion expose the matching completion id and provide a
+`Use ID` control that fills the existing pause/resume/cancel input. They also
+render state-aware row actions wired to the same `/status`
+`accountMirrorCompletion` control path: queued/running/refreshing operations
+offer pause and cancel, while paused operations offer resume and cancel. The
+same panel includes an `aria-live` operator feedback notice so selection,
+in-flight control requests, successes, and failures are visible without
+reading the raw JSON block.

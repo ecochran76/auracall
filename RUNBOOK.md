@@ -2828,3 +2828,17 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard"`
   - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
   - `pnpm typecheck`
+
+## Turn 103 | 2026-05-02
+
+- Goal: make `/ops/browser` live-follow row controls match completion state.
+- Change:
+  - added state-aware action selection for target table rows
+  - queued/running/refreshing rows render `Pause` and `Cancel`
+  - paused rows render `Resume` and `Cancel`
+  - extended CLI/MCP ops-browser contract checks and smoke coverage for
+    state-aware row controls
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard"`
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+  - `pnpm typecheck`
