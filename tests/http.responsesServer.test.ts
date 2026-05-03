@@ -1771,10 +1771,52 @@ describe('http responses adapter', () => {
     }
   });
 
-  it('cancels active account mirror completions during server close', async () => {
+  it('parks active account mirror completions during server close when supported', async () => {
     const activeOperation: AccountMirrorCompletionOperation = {
       object: 'account_mirror_completion',
       id: 'acctmirror_shutdown_active',
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      mode: 'live_follow',
+      phase: 'backfill_history',
+      status: 'running',
+      startedAt: '2026-04-30T12:00:00.000Z',
+      completedAt: null,
+      nextAttemptAt: '2026-04-30T12:10:00.000Z',
+      maxPasses: null,
+      passCount: 1,
+      lastRefresh: null,
+      mirrorCompleteness: completeAccountMirror,
+      error: null,
+    };
+    const prepareForShutdown = vi.fn(() => [{
+      ...activeOperation,
+      status: 'queued' as const,
+    }]);
+    const control = vi.fn();
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        accountMirrorCompletionService: {
+          start: vi.fn(() => activeOperation),
+          read: vi.fn(() => activeOperation),
+          list: vi.fn((request) => request?.status === 'active' ? [activeOperation] : []),
+          control,
+          prepareForShutdown,
+        },
+      },
+    );
+
+    await server.close();
+
+    expect(prepareForShutdown).toHaveBeenCalledTimes(1);
+    expect(control).not.toHaveBeenCalled();
+  });
+
+  it('falls back to cancelling active account mirror completions during server close', async () => {
+    const activeOperation: AccountMirrorCompletionOperation = {
+      object: 'account_mirror_completion',
+      id: 'acctmirror_shutdown_active_legacy',
       provider: 'chatgpt',
       runtimeProfileId: 'default',
       mode: 'live_follow',
@@ -1809,7 +1851,7 @@ describe('http responses adapter', () => {
     await server.close();
 
     expect(control).toHaveBeenCalledWith({
-      id: 'acctmirror_shutdown_active',
+      id: 'acctmirror_shutdown_active_legacy',
       action: 'cancel',
     });
   });

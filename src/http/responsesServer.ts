@@ -1592,6 +1592,10 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
 }
 
 function cancelActiveAccountMirrorCompletions(service: AccountMirrorCompletionService): void {
+  if (service.prepareForShutdown) {
+    service.prepareForShutdown();
+    return;
+  }
   for (const operation of service.list({ status: 'active', limit: null })) {
     service.control({ id: operation.id, action: 'cancel' });
   }

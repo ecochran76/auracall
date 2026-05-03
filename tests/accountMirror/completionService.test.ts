@@ -508,6 +508,165 @@ describe('account mirror completion service', () => {
     });
   });
 
+  test('parks runnable operations for restart instead of cancelling them', async () => {
+    const running = {
+      object: 'account_mirror_completion' as const,
+      id: 'acctmirror_shutdown_running',
+      provider: 'chatgpt' as const,
+      runtimeProfileId: 'default',
+      mode: 'live_follow' as const,
+      phase: 'steady_follow' as const,
+      status: 'running' as const,
+      startedAt: '2026-04-30T12:00:00.000Z',
+      completedAt: null,
+      nextAttemptAt: '2026-04-30T12:10:00.000Z',
+      maxPasses: null,
+      passCount: 1,
+      lastRefresh: createRefreshResult(),
+      mirrorCompleteness: completeMirror,
+      error: null,
+    };
+    const paused = {
+      ...running,
+      id: 'acctmirror_shutdown_paused',
+      status: 'paused' as const,
+      startedAt: '2026-04-30T11:59:00.000Z',
+    };
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date('2026-04-30T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh: vi.fn(async () => createRefreshResult()),
+      },
+      initialOperations: [running, paused],
+      resumeActiveOperations: false,
+      now: () => new Date('2026-04-30T12:00:00.000Z'),
+    });
+
+    expect(service.prepareForShutdown?.().map((operation) => operation.id)).toEqual([
+      'acctmirror_shutdown_running',
+    ]);
+
+    expect(service.read('acctmirror_shutdown_running')).toMatchObject({
+      status: 'queued',
+      completedAt: null,
+      nextAttemptAt: '2026-04-30T12:10:00.000Z',
+    });
+    expect(service.read('acctmirror_shutdown_paused')).toMatchObject({
+      status: 'paused',
+    });
+  });
+
+  test('wakes cooldown sleeps during shutdown parking', async () => {
+    const initial = {
+      object: 'account_mirror_completion' as const,
+      id: 'acctmirror_shutdown_sleep',
+      provider: 'chatgpt' as const,
+      runtimeProfileId: 'default',
+      mode: 'live_follow' as const,
+      phase: 'steady_follow' as const,
+      status: 'running' as const,
+      startedAt: '2026-04-30T12:00:00.000Z',
+      completedAt: null,
+      nextAttemptAt: '2026-04-30T12:10:00.000Z',
+      maxPasses: null,
+      passCount: 1,
+      lastRefresh: createRefreshResult(),
+      mirrorCompleteness: completeMirror,
+      error: null,
+    };
+    let sleepStarted = false;
+    let sleepSettled = false;
+    const sleep = vi.fn(async () => {
+      sleepStarted = true;
+      await new Promise<void>(() => {});
+      sleepSettled = true;
+    });
+    const requestRefresh = vi.fn(async () => createRefreshResult());
+    const service = createAccountMirrorCompletionService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date('2026-04-30T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      initialOperations: [initial],
+      resumeActiveOperations: true,
+      now: () => new Date('2026-04-30T12:00:00.000Z'),
+      sleep,
+    });
+
+    await waitFor(() => sleepStarted);
+    service.prepareForShutdown?.();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(service.read('acctmirror_shutdown_sleep')).toMatchObject({
+      status: 'queued',
+    });
+    expect(sleepSettled).toBe(false);
+    expect(requestRefresh).not.toHaveBeenCalled();
+  });
+
+  test('persists parked shutdown operations for restart resume', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-completion-shutdown-'));
+    try {
+      const store = createAccountMirrorCompletionStore({
+        config: {
+          browser: {
+            cache: {
+              rootDir: tmp,
+            },
+          },
+        },
+      });
+      const running = {
+        object: 'account_mirror_completion' as const,
+        id: 'acctmirror_shutdown_persisted',
+        provider: 'chatgpt' as const,
+        runtimeProfileId: 'default',
+        mode: 'live_follow' as const,
+        phase: 'steady_follow' as const,
+        status: 'running' as const,
+        startedAt: '2026-04-30T12:00:00.000Z',
+        completedAt: null,
+        nextAttemptAt: '2026-04-30T12:10:00.000Z',
+        maxPasses: null,
+        passCount: 1,
+        lastRefresh: createRefreshResult(),
+        mirrorCompleteness: completeMirror,
+        error: null,
+      };
+      const service = createAccountMirrorCompletionService({
+        registry: createAccountMirrorStatusRegistry({
+          config,
+          now: () => new Date('2026-04-30T12:00:00.000Z'),
+        }),
+        refreshService: {
+          requestRefresh: vi.fn(async () => createRefreshResult()),
+        },
+        store,
+        initialOperations: [running],
+        resumeActiveOperations: false,
+        now: () => new Date('2026-04-30T12:00:00.000Z'),
+      });
+
+      service.prepareForShutdown?.();
+
+      await waitFor(async () => (await store.readOperation('acctmirror_shutdown_persisted'))?.status === 'queued');
+      expect(await store.readOperation('acctmirror_shutdown_persisted')).toMatchObject({
+        status: 'queued',
+        completedAt: null,
+        nextAttemptAt: '2026-04-30T12:10:00.000Z',
+      });
+    } finally {
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
   test('forces a verification refresh even when persisted status already says complete', async () => {
     const requestRefresh = vi.fn(async () => createRefreshResult());
     const registry = createAccountMirrorStatusRegistry({

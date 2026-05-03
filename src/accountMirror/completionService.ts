@@ -56,6 +56,7 @@ export interface AccountMirrorCompletionService {
   read(id: string): AccountMirrorCompletionOperation | null;
   list(request?: AccountMirrorCompletionListRequest): AccountMirrorCompletionOperation[];
   control(request: AccountMirrorCompletionControlRequest): AccountMirrorCompletionOperation | null;
+  prepareForShutdown?(): AccountMirrorCompletionOperation[];
 }
 
 export function createAccountMirrorCompletionService(input: {
@@ -75,11 +76,27 @@ export function createAccountMirrorCompletionService(input: {
   const operations = new Map<string, AccountMirrorCompletionOperation>();
   const persistQueues = new Map<string, Promise<void>>();
   const activeRuns = new Set<string>();
+  const sleepWakeups = new Set<() => void>();
+  const waitForShutdownWake = () => new Promise<void>((resolve) => {
+    const wake = () => {
+      sleepWakeups.delete(wake);
+      resolve();
+    };
+    sleepWakeups.add(wake);
+  });
+  const wakeSleepers = () => {
+    for (const wake of Array.from(sleepWakeups)) {
+      wake();
+    }
+  };
   const sleepUntilAttempt = async (id: string, attemptAt: string): Promise<boolean> => {
     while (shouldContinue(id)) {
       const delayMs = resolveDelayMs(attemptAt, now());
       if (delayMs <= 0) return true;
-      await sleepImpl(Math.min(delayMs, 60_000));
+      await Promise.race([
+        sleepImpl(Math.min(delayMs, 60_000)),
+        waitForShutdownWake(),
+      ]);
     }
     return false;
   };
@@ -294,6 +311,20 @@ export function createAccountMirrorCompletionService(input: {
       }
       return operation;
     },
+    prepareForShutdown() {
+      const parked: AccountMirrorCompletionOperation[] = [];
+      for (const operation of operations.values()) {
+        if (!isRunnableOperation(operation)) continue;
+        const next = update(operation.id, {
+          status: 'queued',
+          completedAt: null,
+          error: null,
+        });
+        if (next) parked.push(next);
+      }
+      wakeSleepers();
+      return parked;
+    },
   };
   return service;
 
@@ -381,5 +412,9 @@ function resolveDelayMs(eligibleAt: string, now: Date): number {
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+  if (ms <= 0) return Promise.resolve();
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    timer.unref?.();
+  });
 }
