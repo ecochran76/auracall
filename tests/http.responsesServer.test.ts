@@ -1781,6 +1781,121 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('does not report failed completion retry timestamps as active live-follow wake', async () => {
+    const config = {
+      model: 'gpt-5.2',
+      browser: {},
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+          services: {
+            chatgpt: {
+              identity: {
+                email: 'ecochran76@gmail.com',
+                accountLevel: 'Business',
+              },
+              liveFollow: {
+                enabled: true,
+                mode: 'metadata-first',
+                priority: 'background',
+              },
+            },
+          },
+        },
+      },
+    };
+    const registry = createAccountMirrorStatusRegistry({
+      config,
+      now: () => new Date('2026-04-30T12:00:00.000Z'),
+      initialState: {
+        'chatgpt:default': {
+          detectedIdentityKey: 'ecochran76@gmail.com',
+          lastAttemptAtMs: Date.parse('2026-04-30T11:50:00.000Z'),
+          lastSuccessAtMs: Date.parse('2026-04-30T11:50:00.000Z'),
+          metadataCounts: {
+            projects: 5,
+            conversations: 304,
+            artifacts: 532,
+            files: 65,
+            media: 0,
+          },
+        },
+      },
+    });
+    const failedOperation: AccountMirrorCompletionOperation = {
+      object: 'account_mirror_completion',
+      id: 'acctmirror_failed_stale_next',
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      mode: 'live_follow',
+      phase: 'backfill_history',
+      status: 'failed',
+      startedAt: '2026-04-30T11:55:00.000Z',
+      completedAt: '2026-04-30T12:05:00.000Z',
+      nextAttemptAt: '2026-04-30T12:10:00.000Z',
+      maxPasses: null,
+      passCount: 0,
+      lastRefresh: null,
+      mirrorCompleteness: completeAccountMirror,
+      error: {
+        message: 'collector timed out',
+        code: null,
+      },
+    };
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        config,
+        accountMirrorStatusRegistry: registry,
+        accountMirrorCompletionService: {
+          start: vi.fn(() => failedOperation),
+          read: vi.fn(() => failedOperation),
+          list: vi.fn((request) => request?.status === 'active' ? [] : [failedOperation]),
+          control: vi.fn(() => failedOperation),
+        },
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(response.status).toBe(200);
+      const payload = await response.json() as {
+        liveFollow: {
+          targets: {
+            actual: {
+              running: number;
+              attentionNeeded: number;
+            };
+            accounts: Array<{
+              activeCompletionId: string | null;
+              activeCompletionNextAttemptAt: string | null;
+              nextAttemptAt: string | null;
+              routineEligibleAt: string | null;
+              actualStatus: string | null;
+              phase: string | null;
+              passCount: number | null;
+            }>;
+          };
+        };
+      };
+      const account = payload.liveFollow.targets.accounts[0];
+      expect(account).toMatchObject({
+        activeCompletionId: null,
+        activeCompletionNextAttemptAt: null,
+        nextAttemptAt: account.routineEligibleAt,
+        actualStatus: 'delayed',
+        phase: 'backfill_history',
+        passCount: 0,
+      });
+      expect(account.nextAttemptAt).not.toBe('2026-04-30T12:10:00.000Z');
+      expect(payload.liveFollow.targets.actual.running).toBe(0);
+      expect(payload.liveFollow.targets.actual.attentionNeeded).toBe(0);
+    } finally {
+      await server.close();
+    }
+  });
+
   it('parks active account mirror completions during server close when supported', async () => {
     const activeOperation: AccountMirrorCompletionOperation = {
       object: 'account_mirror_completion',

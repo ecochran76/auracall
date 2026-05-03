@@ -2093,9 +2093,13 @@ function createLiveFollowTargetRollup(
   status: AccountMirrorStatusSummary,
   completions: AccountMirrorCompletionStatusSummary,
 ): LiveFollowTargetRollup {
-  const operations = [...completions.active, ...completions.recent];
+  const activeOperations = completions.active;
+  const recentOperations = completions.recent;
   const accounts = status.entries.map((entry): LiveFollowTargetAccountSummary => {
-    const operation = operations.find((candidate) =>
+    const activeOperation = activeOperations.find((candidate) =>
+      candidate.provider === entry.provider && candidate.runtimeProfileId === entry.runtimeProfileId
+    ) ?? null;
+    const recentOperation = activeOperation ?? recentOperations.find((candidate) =>
       candidate.provider === entry.provider && candidate.runtimeProfileId === entry.runtimeProfileId
     ) ?? null;
     return {
@@ -2103,15 +2107,15 @@ function createLiveFollowTargetRollup(
       runtimeProfileId: entry.runtimeProfileId,
       desiredState: entry.liveFollow.state,
       desiredEnabled: entry.liveFollow.enabled,
-      actualStatus: operation?.status ?? (entry.mirrorState.running ? 'refreshing' : entry.status),
-      activeCompletionId: operation?.id ?? null,
-      phase: operation?.phase ?? null,
-      passCount: operation?.passCount ?? null,
+      actualStatus: activeOperation?.status ?? (entry.mirrorState.running ? 'refreshing' : entry.status),
+      activeCompletionId: activeOperation?.id ?? null,
+      phase: activeOperation?.phase ?? recentOperation?.phase ?? null,
+      passCount: activeOperation?.passCount ?? recentOperation?.passCount ?? null,
       routineEligibleAt: entry.eligibleAt,
-      activeCompletionNextAttemptAt: operation?.nextAttemptAt ?? null,
-      nextAttemptAt: operation?.nextAttemptAt ?? entry.eligibleAt,
+      activeCompletionNextAttemptAt: activeOperation?.nextAttemptAt ?? null,
+      nextAttemptAt: activeOperation?.nextAttemptAt ?? entry.eligibleAt,
       mirrorCompleteness: entry.mirrorCompleteness.state,
-      latestLifecycleEvent: summarizeCompletionLifecycleEvent(operation),
+      latestLifecycleEvent: summarizeCompletionLifecycleEvent(activeOperation ?? recentOperation),
       metadataCounts: entry.metadataCounts,
     };
   });

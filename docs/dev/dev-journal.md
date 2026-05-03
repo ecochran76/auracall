@@ -25521,3 +25521,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     succeeded without `--port` and listed three active live-follow operations
   - `curl http://auracall.localhost/ops/browser` confirmed the nav scaffold,
     operations panel, scheduler controls, and completion-records label
+
+## Turn 88 | 2026-05-03
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: fix misleading live-follow next-eligibility projection.
+- Finding:
+  - `/status.liveFollow.targets.accounts[]` used the first matching active or
+    recent completion, so a failed recent ChatGPT completion with a stale
+    `nextAttemptAt` could appear as `activeCompletionNextAttemptAt`
+- Change:
+  - live-follow target projection now uses only active completions for
+    `activeCompletionId`, `activeCompletionNextAttemptAt`, and effective
+    `nextAttemptAt`
+  - recent terminal completions can still provide historical phase/pass/lifecycle
+    context, but they no longer override routine eligibility
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "effective live-follow wake|failed completion retry" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`

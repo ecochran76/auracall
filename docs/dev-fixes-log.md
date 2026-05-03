@@ -15418,3 +15418,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `api mirror-completion-status`, `api mirror-completion-control`, and
   `api scheduler-history` should accept omitted `--port` when `api.port` is
   configured.
+- 2026-05-03: Live-follow target next-attempt projection must distinguish
+  active retry from historical completion records. Only active completions
+  should populate `activeCompletionId` and `activeCompletionNextAttemptAt`;
+  failed/cancelled recent records may remain as history but must not override
+  routine eligibility.
