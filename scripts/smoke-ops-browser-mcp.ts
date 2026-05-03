@@ -195,6 +195,7 @@ async function main(): Promise<void> {
     });
     if (result.isError) throw new Error('MCP api_ops_browser_status returned an error result.');
     const structuredContent = result.structuredContent as {
+      dashboardUrl?: unknown;
       dashboard?: {
         usesStatusControlPath?: unknown;
         usesAccountMirrorCompletionPayload?: unknown;
@@ -215,6 +216,7 @@ async function main(): Promise<void> {
         completions?: { metrics?: { active?: unknown; paused?: unknown } };
       };
     } | undefined;
+    assertEqual(structuredContent?.dashboardUrl, `http://127.0.0.1:${server.port}/ops/browser`, 'dashboard url');
     assertEqual(structuredContent?.dashboard?.usesStatusControlPath, true, 'dashboard status path');
     assertEqual(
       structuredContent?.dashboard?.usesAccountMirrorCompletionPayload,
@@ -241,6 +243,7 @@ async function main(): Promise<void> {
       'tool=api_ops_browser_status',
       'listed=ok',
       'dashboardControl=/status',
+      `dashboardUrl=${String(structuredContent?.dashboardUrl ?? 'unknown')}`,
       'targetTable=ok',
       'activeTable=ok',
       'inspect=ok',

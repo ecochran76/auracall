@@ -37,6 +37,7 @@ const apiOpsBrowserDashboardShape = z.object({
 const apiOpsBrowserStatusOutputShape = {
   host: z.string(),
   port: z.number().int().positive(),
+  dashboardUrl: z.string(),
   dashboard: apiOpsBrowserDashboardShape,
   status: z.unknown(),
 } satisfies z.ZodRawShape;
@@ -82,7 +83,7 @@ export function createApiOpsBrowserStatusToolHandler(
       content: [
         {
           type: 'text' as const,
-          text: `AuraCall ops browser ${summary.host}:${summary.port} is ok; dashboard completion controls use /status; ${summary.status.liveFollow.line}`,
+          text: `AuraCall ops browser ${summary.host}:${summary.port} is ok; dashboard=${summary.dashboardUrl}; dashboard completion controls use /status; ${summary.status.liveFollow.line}`,
         },
       ],
       structuredContent: summary as typeof summary & Record<string, unknown>,

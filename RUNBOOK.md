@@ -2886,3 +2886,16 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard"`
   - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
   - `pnpm typecheck`
+
+## Turn 107 | 2026-05-03
+
+- Goal: make `/ops/browser` easier to open from status checks.
+- Change:
+  - added `dashboardUrl` to `auracall api ops-browser-status` readback
+  - MCP `api_ops_browser_status` now returns the same structured URL and
+    includes it in the text response
+  - extended ops-browser smokes to prove the URL points to the fixture
+    dashboard without browser/provider work
+- Verification:
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+  - `pnpm typecheck`

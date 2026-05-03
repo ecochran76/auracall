@@ -131,12 +131,16 @@ describe('api ops browser CLI helpers', () => {
       hasResumeBinding: true,
       hasCancelBinding: true,
     });
+    expect(summary.dashboardUrl).toBe('http://127.0.0.1:18080/ops/browser');
     expect(summary.status.liveFollow.severity).toBe('paused');
     expect(() => assertApiOpsBrowserStatus(summary, {
       expectedSeverity: 'paused',
       expectedActive: 1,
       expectedPaused: 1,
     })).not.toThrow();
+    expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
+      'Dashboard URL: http://127.0.0.1:18080/ops/browser',
+    );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard completion control: path=/status payload=accountMirrorCompletion activeTable=ok inspect=ok inputInspect=ok input=ok rowActions=ok stateAware=ok feedback=ok pause=ok resume=ok cancel=ok',
     );

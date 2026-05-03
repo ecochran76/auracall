@@ -125,7 +125,9 @@ Current State:
     the raw JSON block for debugging; active rows expose the matching
     completion id, can inspect the persisted completion detail from either a
     row or a typed id, fill the shared control input, provide state-aware direct
-    row actions, and show immediate operator feedback for each control request
+    row actions, and show immediate operator feedback for each control request;
+    CLI/MCP `api_ops_browser_status` surfaces the concrete dashboard URL for
+    operator handoff
   - service restart dogfood exposed a shutdown cleanup gap: `api serve` now
     terminates same-port orphan `api serve` processes before binding and
     parks active account-mirror completions as persisted `queued` work during

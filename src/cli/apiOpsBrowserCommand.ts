@@ -32,6 +32,7 @@ export interface ApiOpsBrowserDashboardSummary {
 export interface ApiOpsBrowserStatusSummary {
   host: string;
   port: number;
+  dashboardUrl: string;
   dashboard: ApiOpsBrowserDashboardSummary;
   status: ApiStatusCliSummary;
 }
@@ -51,6 +52,7 @@ export async function readApiOpsBrowserStatusForCli(
   return {
     host,
     port,
+    dashboardUrl: formatDashboardUrl(host, port),
     dashboard: summarizeDashboardHtml(dashboardHtml),
     status: await readApiStatusForCli({ host, port, timeoutMs }, fetchImpl),
   };
@@ -69,6 +71,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
   const dashboard = summary.dashboard;
   return [
     `AuraCall ops browser: ok (${summary.host}:${summary.port}${dashboard.route})`,
+    `Dashboard URL: ${summary.dashboardUrl}`,
     `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} activeTable=${formatBoolean(dashboard.hasActiveCompletionTable)} inspect=${formatBoolean(dashboard.hasCompletionInspectAction)} inputInspect=${formatBoolean(dashboard.hasCompletionInputInspectControl)} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} stateAware=${formatBoolean(dashboard.hasStateAwareCompletionActions)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
     summary.status.liveFollow.line,
     `Account mirror completions: active=${formatNullableNumber(summary.status.completions.metrics.active)} paused=${formatNullableNumber(summary.status.completions.metrics.paused)} failed=${formatNullableNumber(summary.status.completions.metrics.failed)} cancelled=${formatNullableNumber(summary.status.completions.metrics.cancelled)} total=${formatNullableNumber(summary.status.completions.metrics.total)}`,
@@ -153,6 +156,10 @@ function hasInlineCompletionAction(html: string, action: string, label: string):
     || (html.includes('renderCompletionActionButton(id, action, labelForCompletionAction(action))')
       && html.includes(`if (action === '${action}') return '${label}'`))
     || html.includes(`data-completion-action="${action}"`);
+}
+
+function formatDashboardUrl(host: string, port: number): string {
+  return `http://${host}:${port}/ops/browser`;
 }
 
 function normalizeHost(value: string | null | undefined): string {

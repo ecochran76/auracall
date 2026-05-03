@@ -186,6 +186,7 @@ async function main(): Promise<void> {
     const opsBrowserStatus = await readApiOpsBrowserStatusForCli({
       port: server.port,
     });
+    assertEqual(opsBrowserStatus.dashboardUrl, `${baseUrl}/ops/browser`, 'ops-browser dashboard url');
     assertApiOpsBrowserStatus(opsBrowserStatus, {
       expectedSeverity: 'paused',
       expectedActive: 1,
@@ -205,6 +206,7 @@ async function main(): Promise<void> {
     console.log([
       `ops-browser completion-control smoke: pass port=${server.port}`,
       'dashboardControl=/status',
+      `dashboardUrl=${opsBrowserStatus.dashboardUrl}`,
       'activeTable=ok',
       'inspect=ok',
       'inputInspect=ok',

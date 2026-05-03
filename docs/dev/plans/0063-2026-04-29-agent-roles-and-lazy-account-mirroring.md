@@ -516,10 +516,13 @@ Each status payload should include:
   acquiring browser dispatcher or provider state.
 - `auracall api ops-browser-status` reads `/ops/browser` and linked `/status`,
   asserts the dashboard completion-control contract, and supports the same
-  live-follow severity and completion-count expectations as `api status`.
+  live-follow severity and completion-count expectations as `api status`. The
+  CLI summary also prints the concrete `/ops/browser` URL for direct operator
+  handoff.
 - MCP `api_ops_browser_status` exposes the same dashboard/status contract
-  readback for remote operators, and `pnpm run smoke:ops-browser-control`
-  verifies it against the fixture server without browser/provider work.
+  readback plus the same `dashboardUrl` for remote operators, and
+  `pnpm run smoke:ops-browser-control` verifies it against the fixture server
+  without browser/provider work.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.
