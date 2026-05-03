@@ -2094,20 +2094,41 @@ function createLiveFollowTargetRollup(
   return accounts.reduce<LiveFollowTargetRollup>(
     (acc, account) => {
       acc.total += 1;
-      if (account.desiredState === 'enabled') acc.enabled += 1;
-      else if (account.desiredState === 'disabled') acc.disabled += 1;
-      else if (account.desiredState === 'unconfigured') acc.unconfigured += 1;
-      else if (account.desiredState === 'missing_identity') acc.missingIdentity += 1;
-      else if (account.desiredState === 'unsupported') acc.unsupported += 1;
+      acc.desired.total += 1;
+      if (account.desiredState === 'enabled') {
+        acc.enabled += 1;
+        acc.desired.enabled += 1;
+      } else if (account.desiredState === 'disabled') {
+        acc.disabled += 1;
+        acc.desired.disabled += 1;
+      } else if (account.desiredState === 'unconfigured') {
+        acc.unconfigured += 1;
+        acc.desired.unconfigured += 1;
+      } else if (account.desiredState === 'missing_identity') {
+        acc.missingIdentity += 1;
+        acc.desired.missingIdentity += 1;
+      } else if (account.desiredState === 'unsupported') {
+        acc.unsupported += 1;
+        acc.desired.unsupported += 1;
+      }
 
       if (!account.desiredEnabled) {
         acc.accounts.push(account);
         return acc;
       }
 
-      if (account.actualStatus === 'queued') acc.queued += 1;
-      if (account.actualStatus === 'running' || account.actualStatus === 'refreshing') acc.running += 1;
-      if (account.actualStatus === 'paused') acc.paused += 1;
+      if (account.actualStatus === 'queued') {
+        acc.queued += 1;
+        acc.actual.queued += 1;
+      }
+      if (account.actualStatus === 'running' || account.actualStatus === 'refreshing') {
+        acc.running += 1;
+        acc.actual.running += 1;
+      }
+      if (account.actualStatus === 'paused') {
+        acc.paused += 1;
+        acc.actual.paused += 1;
+      }
       if (
         account.actualStatus === 'queued' ||
         account.actualStatus === 'running' ||
@@ -2115,6 +2136,7 @@ function createLiveFollowTargetRollup(
         account.actualStatus === 'paused'
       ) {
         acc.active += 1;
+        acc.actual.active += 1;
       }
       if (
         account.actualStatus === 'blocked' ||
@@ -2122,12 +2144,22 @@ function createLiveFollowTargetRollup(
         account.actualStatus === 'cancelled'
       ) {
         acc.attentionNeeded += 1;
+        acc.actual.attentionNeeded += 1;
       }
 
-      if (account.mirrorCompleteness === 'complete') acc.complete += 1;
-      else if (account.mirrorCompleteness === 'in_progress') acc.inProgress += 1;
-      else if (account.mirrorCompleteness === 'none') acc.none += 1;
-      else acc.unknown += 1;
+      if (account.mirrorCompleteness === 'complete') {
+        acc.complete += 1;
+        acc.actual.complete += 1;
+      } else if (account.mirrorCompleteness === 'in_progress') {
+        acc.inProgress += 1;
+        acc.actual.inProgress += 1;
+      } else if (account.mirrorCompleteness === 'none') {
+        acc.none += 1;
+        acc.actual.none += 1;
+      } else {
+        acc.unknown += 1;
+        acc.actual.unknown += 1;
+      }
       acc.accounts.push(account);
       return acc;
     },
@@ -2147,6 +2179,25 @@ function createLiveFollowTargetRollup(
       inProgress: 0,
       none: 0,
       unknown: 0,
+      desired: {
+        total: 0,
+        enabled: 0,
+        disabled: 0,
+        unconfigured: 0,
+        missingIdentity: 0,
+        unsupported: 0,
+      },
+      actual: {
+        active: 0,
+        queued: 0,
+        running: 0,
+        paused: 0,
+        attentionNeeded: 0,
+        complete: 0,
+        inProgress: 0,
+        none: 0,
+        unknown: 0,
+      },
       accounts: [],
     },
   );
@@ -3222,6 +3273,7 @@ function createOperatorBrowserDashboardHtml(): string {
         ['Mirror Posture', scheduler.operatorStatus ? scheduler.operatorStatus.posture : 'unknown'],
         ['Live Follow Severity', renderSeverity(liveFollow.severity)],
         ['Live Follow Targets', formatTargetHealth(targets)],
+        ['Desired vs Actual', formatDesiredActualHealth(targets)],
         ['Mirror Wake', scheduler.lastWakeReason || 'none'],
         ['Mirror Wake At', scheduler.lastWakeAt || 'never'],
         ['Completion History', formatCompletionHistory(completionMetrics)],
@@ -3274,6 +3326,19 @@ function createOperatorBrowserDashboardHtml(): string {
       return '<span class="badge badge-' + tone + '"><span>' + label + '</span><strong>' + value + '</strong></span>';
     }
 
+    function formatDesiredActualHealth(targets) {
+      if (!targets || !targets.total) return 'unknown';
+      const desired = targets.desired || targets;
+      const actual = targets.actual || targets;
+      return '<span class="badges">' + [
+        renderBadge('desired enabled', desired.enabled || 0, desired.enabled ? 'ok' : 'muted'),
+        renderBadge('desired missing', desired.missingIdentity || 0, desired.missingIdentity ? 'bad' : 'muted'),
+        renderBadge('actual active', actual.active || 0, actual.active ? 'ok' : 'muted'),
+        renderBadge('actual complete', actual.complete || 0, actual.complete ? 'ok' : 'muted'),
+        renderBadge('actual attention', actual.attentionNeeded || 0, actual.attentionNeeded ? 'bad' : 'ok'),
+      ].join('') + '</span>';
+    }
+
     function compactLiveFollowTargets(targets) {
       return {
         total: targets.total || 0,
@@ -3284,6 +3349,8 @@ function createOperatorBrowserDashboardHtml(): string {
         attentionNeeded: targets.attentionNeeded || 0,
         complete: targets.complete || 0,
         inProgress: targets.inProgress || 0,
+        desired: targets.desired || null,
+        actual: targets.actual || null,
         accounts: Array.isArray(targets.accounts) ? targets.accounts.map(compactLiveFollowTarget) : [],
       };
     }

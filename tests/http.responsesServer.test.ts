@@ -1747,6 +1747,12 @@ describe('http responses adapter', () => {
       const payload = await response.json() as {
         liveFollow: {
           targets: {
+            desired: {
+              enabled: number;
+            };
+            actual: {
+              running: number;
+            };
             accounts: Array<{
               provider: string;
               runtimeProfileId: string;
@@ -1757,6 +1763,8 @@ describe('http responses adapter', () => {
           };
         };
       };
+      expect(payload.liveFollow.targets.desired.enabled).toBe(1);
+      expect(payload.liveFollow.targets.actual.running).toBe(1);
       const account = payload.liveFollow.targets.accounts[0];
       expect(account).toMatchObject({
         provider: 'chatgpt',
@@ -14418,8 +14426,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('mirrorCompletions');
       expect(html).toContain('Live Follow Severity');
       expect(html).toContain('Live Follow Targets');
+      expect(html).toContain('Desired vs Actual');
       expect(html).toContain('Completion History');
       expect(html).toContain('formatTargetHealth');
+      expect(html).toContain('formatDesiredActualHealth');
       expect(html).toContain('formatCompletionHistory');
       expect(html).toContain('class="badges"');
       expect(html).toContain('badge-bad');

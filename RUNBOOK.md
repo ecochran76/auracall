@@ -2756,3 +2756,16 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - source live probe now reports `chatgpt.model.selector` as `available` with
     `label: Instant`, `location: prompt_workbench`, and
     `selector: button.__composer-pill`
+
+## Turn 98 | 2026-05-02
+
+- Goal: close the desired-vs-actual live-follow operator visibility gap.
+- Change:
+  - added `desired` and `actual` rollups under `/status.liveFollow.targets`
+  - rendered the same signal through CLI `api status`, MCP `api_status`, and
+    `/ops/browser`
+  - kept the existing flat target counts for compatibility
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "reports effective live-follow wake separately from routine mirror eligibility|serves a read-only browser operator dashboard"`
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts`
+  - `pnpm typecheck`

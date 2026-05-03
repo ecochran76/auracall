@@ -104,6 +104,25 @@ const apiStatusLiveFollowTargetsShape = z.object({
   inProgress: z.number(),
   none: z.number(),
   unknown: z.number(),
+  desired: z.object({
+    total: z.number(),
+    enabled: z.number(),
+    disabled: z.number(),
+    unconfigured: z.number(),
+    missingIdentity: z.number(),
+    unsupported: z.number(),
+  }),
+  actual: z.object({
+    active: z.number(),
+    queued: z.number(),
+    running: z.number(),
+    paused: z.number(),
+    attentionNeeded: z.number(),
+    complete: z.number(),
+    inProgress: z.number(),
+    none: z.number(),
+    unknown: z.number(),
+  }),
   accounts: z.array(apiStatusLiveFollowTargetAccountShape),
 });
 

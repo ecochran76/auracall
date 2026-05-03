@@ -156,6 +156,25 @@ const statusPayload = {
           },
         },
       ],
+      desired: {
+        total: 3,
+        enabled: 2,
+        disabled: 0,
+        unconfigured: 1,
+        missingIdentity: 0,
+        unsupported: 0,
+      },
+      actual: {
+        active: 1,
+        queued: 0,
+        running: 0,
+        paused: 1,
+        attentionNeeded: 1,
+        complete: 1,
+        inProgress: 1,
+        none: 1,
+        unknown: 0,
+      },
     },
   },
 };
@@ -283,6 +302,9 @@ describe('api status CLI helpers', () => {
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
       'Live follow targets: total=3 enabled=2 active=1 complete=1 in_progress=1 attention=1',
+    );
+    expect(formatApiStatusCliSummary(summary)).toContain(
+      'Live follow desired/actual: desired_enabled=2 desired_disabled=0 desired_missing_identity=0 actual_active=1 actual_complete=1 actual_attention=1',
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
       'Active mirror completion: acctmirror_paused chatgpt/default status=paused phase=steady_follow next=2026-04-29T12:05:00.000Z',

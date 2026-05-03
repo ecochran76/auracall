@@ -57,7 +57,30 @@ export interface LiveFollowTargetRollup {
   inProgress: number;
   none: number;
   unknown: number;
+  desired: LiveFollowDesiredTargetRollup;
+  actual: LiveFollowActualTargetRollup;
   accounts: LiveFollowTargetAccountSummary[];
+}
+
+export interface LiveFollowDesiredTargetRollup {
+  total: number;
+  enabled: number;
+  disabled: number;
+  unconfigured: number;
+  missingIdentity: number;
+  unsupported: number;
+}
+
+export interface LiveFollowActualTargetRollup {
+  active: number;
+  queued: number;
+  running: number;
+  paused: number;
+  attentionNeeded: number;
+  complete: number;
+  inProgress: number;
+  none: number;
+  unknown: number;
 }
 
 export interface LiveFollowTargetAccountSummary {

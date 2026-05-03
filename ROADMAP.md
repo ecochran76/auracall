@@ -116,10 +116,10 @@ Current State:
     `grok/default` cached 9 projects and 43 conversations; non-ChatGPT
     attachment/media detail inventory remains deferred until provider-specific
     detail surfaces are proven
-  - next live-follow service-mode slice should add operator-facing desired vs.
-    actual rollups in `/status.liveFollow`, CLI `api status`, MCP
-    `api_status`, and `/ops/browser` so the dashboard shows every configured
-    account without requiring raw status entry inspection
+  - `/status.liveFollow.targets` now includes explicit `desired` and `actual`
+    rollups; CLI `api status`, MCP `api_status`, and `/ops/browser` expose the
+    same desired-vs-actual signal so operators can distinguish configured
+    intent from current mirror activity without raw status entry inspection
   - service restart dogfood exposed a shutdown cleanup gap: `api serve` now
     terminates same-port orphan `api serve` processes before binding and
     parks active account-mirror completions as persisted `queued` work during

@@ -95,6 +95,45 @@ const statusPayload = {
       },
     ],
   },
+  liveFollow: {
+    targets: {
+      total: 2,
+      enabled: 1,
+      disabled: 0,
+      unconfigured: 1,
+      missingIdentity: 0,
+      unsupported: 0,
+      active: 1,
+      queued: 0,
+      running: 1,
+      paused: 0,
+      attentionNeeded: 1,
+      complete: 0,
+      inProgress: 1,
+      none: 1,
+      unknown: 0,
+      desired: {
+        total: 2,
+        enabled: 1,
+        disabled: 0,
+        unconfigured: 1,
+        missingIdentity: 0,
+        unsupported: 0,
+      },
+      actual: {
+        active: 1,
+        queued: 0,
+        running: 1,
+        paused: 0,
+        attentionNeeded: 1,
+        complete: 0,
+        inProgress: 1,
+        none: 1,
+        unknown: 0,
+      },
+      accounts: [],
+    },
+  },
 };
 
 describe('mcp api_status tool', () => {
@@ -124,7 +163,7 @@ describe('mcp api_status tool', () => {
       content: [
         {
           type: 'text',
-          text: 'AuraCall API 127.0.0.1:18080 is ok; mirror posture backpressured; scheduler state idle; Live follow health: severity=attention-needed posture=backpressured state=idle active=1 paused=0 failed=0 cancelled=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
+          text: 'AuraCall API 127.0.0.1:18080 is ok; mirror posture backpressured; scheduler state idle; Live follow health: severity=attention-needed posture=backpressured state=idle enabled=1 active=1 paused=0 attention=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
         },
       ],
       structuredContent: {
@@ -181,7 +220,7 @@ describe('mcp api_status tool', () => {
           ],
         },
         liveFollow: {
-          line: 'Live follow health: severity=attention-needed posture=backpressured state=idle active=1 paused=0 failed=0 cancelled=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
+          line: 'Live follow health: severity=attention-needed posture=backpressured state=idle enabled=1 active=1 paused=0 attention=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
           severity: 'attention-needed',
           schedulerPosture: 'backpressured',
           schedulerState: 'idle',
@@ -195,6 +234,17 @@ describe('mcp api_status tool', () => {
             runtimeProfileId: 'default',
             queuedOwnerCommand: 'media-generation:chatgpt:image',
             remainingDetailSurfaces: 4,
+          },
+          targets: {
+            desired: {
+              enabled: 1,
+              unconfigured: 1,
+            },
+            actual: {
+              active: 1,
+              attentionNeeded: 1,
+              inProgress: 1,
+            },
           },
         },
       },

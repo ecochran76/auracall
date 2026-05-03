@@ -290,6 +290,10 @@ export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string 
   if (targetLine) {
     lines.push(targetLine);
   }
+  const desiredActualLine = formatLiveFollowDesiredActualLine(summary.liveFollow.targets);
+  if (desiredActualLine) {
+    lines.push(desiredActualLine);
+  }
   const activeLine = formatCompletionOperationLine('Active mirror completion', summary.completions.active);
   if (activeLine) {
     lines.push(activeLine);
@@ -311,6 +315,21 @@ function formatLiveFollowTargetLine(targets: ApiStatusLiveFollowHealthSummary['t
     `complete=${targets.complete}`,
     `in_progress=${targets.inProgress}`,
     `attention=${targets.attentionNeeded}`,
+  ].join(' ');
+}
+
+function formatLiveFollowDesiredActualLine(targets: ApiStatusLiveFollowHealthSummary['targets']): string | null {
+  if (!targets) return null;
+  const desired = targets.desired ?? targets;
+  const actual = targets.actual ?? targets;
+  return [
+    'Live follow desired/actual:',
+    `desired_enabled=${desired.enabled}`,
+    `desired_disabled=${desired.disabled}`,
+    `desired_missing_identity=${desired.missingIdentity}`,
+    `actual_active=${actual.active}`,
+    `actual_complete=${actual.complete}`,
+    `actual_attention=${actual.attentionNeeded}`,
   ].join(' ');
 }
 
@@ -489,7 +508,36 @@ function summarizeLiveFollowTargets(value: unknown): ApiStatusLiveFollowHealthSu
     inProgress: readNumber(value.inProgress) ?? 0,
     none: readNumber(value.none) ?? 0,
     unknown: readNumber(value.unknown) ?? 0,
+    desired: summarizeLiveFollowDesiredTargets(value.desired, value),
+    actual: summarizeLiveFollowActualTargets(value.actual, value),
     accounts,
+  };
+}
+
+function summarizeLiveFollowDesiredTargets(value: unknown, fallback: Record<string, unknown>) {
+  const desired = isRecord(value) ? value : fallback;
+  return {
+    total: readNumber(desired.total) ?? readNumber(fallback.total) ?? 0,
+    enabled: readNumber(desired.enabled) ?? readNumber(fallback.enabled) ?? 0,
+    disabled: readNumber(desired.disabled) ?? readNumber(fallback.disabled) ?? 0,
+    unconfigured: readNumber(desired.unconfigured) ?? readNumber(fallback.unconfigured) ?? 0,
+    missingIdentity: readNumber(desired.missingIdentity) ?? readNumber(fallback.missingIdentity) ?? 0,
+    unsupported: readNumber(desired.unsupported) ?? readNumber(fallback.unsupported) ?? 0,
+  };
+}
+
+function summarizeLiveFollowActualTargets(value: unknown, fallback: Record<string, unknown>) {
+  const actual = isRecord(value) ? value : fallback;
+  return {
+    active: readNumber(actual.active) ?? readNumber(fallback.active) ?? 0,
+    queued: readNumber(actual.queued) ?? readNumber(fallback.queued) ?? 0,
+    running: readNumber(actual.running) ?? readNumber(fallback.running) ?? 0,
+    paused: readNumber(actual.paused) ?? readNumber(fallback.paused) ?? 0,
+    attentionNeeded: readNumber(actual.attentionNeeded) ?? readNumber(fallback.attentionNeeded) ?? 0,
+    complete: readNumber(actual.complete) ?? readNumber(fallback.complete) ?? 0,
+    inProgress: readNumber(actual.inProgress) ?? readNumber(fallback.inProgress) ?? 0,
+    none: readNumber(actual.none) ?? readNumber(fallback.none) ?? 0,
+    unknown: readNumber(actual.unknown) ?? readNumber(fallback.unknown) ?? 0,
   };
 }
 

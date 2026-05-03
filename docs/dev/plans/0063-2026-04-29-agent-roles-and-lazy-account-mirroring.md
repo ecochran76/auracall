@@ -691,3 +691,8 @@ The headline live-follow health line now uses current target rollups
 (`enabled`, `active`, `paused`, `attention`) when available, leaving
 historical failed/cancelled completion totals in the separate completion
 metrics block.
+Operator status now also exposes desired-vs-actual live-follow rollups:
+`/status.liveFollow.targets.desired` records configured intent, and
+`/status.liveFollow.targets.actual` records active/completeness state. CLI
+`api status`, MCP `api_status`, and `/ops/browser` render the same compact
+signal so operators can see configured accounts without raw entry inspection.
