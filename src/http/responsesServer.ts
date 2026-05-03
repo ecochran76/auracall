@@ -3207,6 +3207,7 @@ function createOperatorBrowserDashboardHtml(): string {
           <button id="resumeMirrorCompletion">Resume</button>
           <button id="cancelMirrorCompletion">Cancel</button>
         </div>
+        <div id="mirrorAttentionQueue" class="muted" style="margin-bottom: 10px;">Loading attention queue...</div>
         <div id="mirrorTargetTable" class="muted" style="margin-bottom: 10px;">Loading target accounts...</div>
         <div id="mirrorActiveCompletionTable" class="muted" style="margin-bottom: 10px;">Loading active operations...</div>
         <div id="mirrorControlNotice" class="notice" role="status" aria-live="polite">No live-follow control action yet.</div>
@@ -3322,6 +3323,7 @@ function createOperatorBrowserDashboardHtml(): string {
       const active = Array.isArray(summary.active) ? summary.active : [];
       const recent = Array.isArray(summary.recent) ? summary.recent : [];
       const targets = status.liveFollow && status.liveFollow.targets ? status.liveFollow.targets : null;
+      $('mirrorAttentionQueue').innerHTML = renderAttentionQueue(targets, active, recent);
       $('mirrorTargetTable').innerHTML = renderLiveFollowTargetTable(targets);
       $('mirrorActiveCompletionTable').innerHTML = renderActiveCompletionTable(active);
       $('mirrorTargets').textContent = asJson({
@@ -3361,6 +3363,88 @@ function createOperatorBrowserDashboardHtml(): string {
 
     function renderBadge(label, value, tone) {
       return '<span class="badge badge-' + tone + '"><span>' + label + '</span><strong>' + value + '</strong></span>';
+    }
+
+    function renderAttentionQueue(targets, active, recent) {
+      const rows = collectAttentionRows(targets, active, recent);
+      if (!rows.length) return '<span class="muted">No live-follow operator attention needed.</span>';
+      return '<div class="table-wrap"><table id="mirrorAttentionItems"><thead><tr>' + [
+        'Kind',
+        'Target',
+        'State',
+        'Detail',
+        'Controls',
+      ].map((label) => '<th>' + label + '</th>').join('') + '</tr></thead><tbody>' + rows.map(renderAttentionRow).join('') + '</tbody></table></div>';
+    }
+
+    function collectAttentionRows(targets, active, recent) {
+      const rows = [];
+      const accounts = targets && Array.isArray(targets.accounts) ? targets.accounts : [];
+      for (const target of accounts) {
+        const desiredState = target.desiredState || 'unknown';
+        const status = target.actualStatus || 'unknown';
+        if (isAttentionTarget(desiredState, status)) {
+          rows.push({
+            kind: 'target',
+            target: formatTargetName(target),
+            state: desiredState + '/' + status,
+            detail: target.activeCompletionId || target.phase || target.reason || 'attention needed',
+            completionId: target.activeCompletionId || null,
+            status,
+          });
+        }
+      }
+      const operations = [...(Array.isArray(active) ? active : []), ...(Array.isArray(recent) ? recent : [])];
+      const seen = new Set();
+      for (const operation of operations) {
+        const id = operation.id || '';
+        const status = operation.status || 'unknown';
+        if (!isAttentionCompletion(status) || seen.has(id)) continue;
+        seen.add(id);
+        rows.push({
+          kind: 'completion',
+          target: formatCompletionTarget(operation),
+          state: status,
+          detail: id || operation.error || 'attention needed',
+          completionId: id || null,
+          status,
+        });
+      }
+      return rows;
+    }
+
+    function isAttentionTarget(desiredState, status) {
+      return desiredState === 'missing_identity'
+        || status === 'paused'
+        || status === 'blocked'
+        || status === 'failed'
+        || status === 'cancelled'
+        || status === 'attention-needed';
+    }
+
+    function isAttentionCompletion(status) {
+      return status === 'paused'
+        || status === 'blocked'
+        || status === 'failed'
+        || status === 'cancelled';
+    }
+
+    function renderAttentionRow(row) {
+      return '<tr>' + [
+        '<td>' + escapeHtml(row.kind) + '</td>',
+        '<td><strong>' + escapeHtml(row.target) + '</strong></td>',
+        '<td>' + renderStatusText(row.state, toneForActualStatus(row.status)) + '</td>',
+        '<td class="wrap">' + escapeHtml(row.detail) + '</td>',
+        '<td>' + renderAttentionControls(row.completionId, row.status) + '</td>',
+      ].join('') + '</tr>';
+    }
+
+    function renderAttentionControls(completionId, status) {
+      if (!completionId) return '<span class="muted">none</span>';
+      return '<span class="badges">' + [
+        renderCompletionInspectButton(completionId),
+        renderCompletionControlButtons(completionId, status),
+      ].join('') + '</span>';
     }
 
     function renderLiveFollowTargetTable(targets) {
@@ -3648,6 +3732,7 @@ function createOperatorBrowserDashboardHtml(): string {
     async function refreshStatus() {
       $('serverSummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
       $('mirrorStatus').textContent = 'Loading...';
+      $('mirrorAttentionQueue').textContent = 'Loading attention queue...';
       $('mirrorTargetTable').textContent = 'Loading target accounts...';
       $('mirrorActiveCompletionTable').textContent = 'Loading active operations...';
       $('mirrorTargets').textContent = 'Loading...';

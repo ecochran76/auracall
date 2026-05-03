@@ -14,6 +14,7 @@ export interface ApiOpsBrowserDashboardSummary {
   route: '/ops/browser';
   hasMirrorLiveFollowPanel: boolean;
   hasLiveFollowTargetsPanel: boolean;
+  hasAttentionQueue: boolean;
   hasLiveFollowTargetTable: boolean;
   hasActiveCompletionTable: boolean;
   hasCompletionInspectAction: boolean;
@@ -72,7 +73,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
   return [
     `AuraCall ops browser: ok (${summary.host}:${summary.port}${dashboard.route})`,
     `Dashboard URL: ${summary.dashboardUrl}`,
-    `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} activeTable=${formatBoolean(dashboard.hasActiveCompletionTable)} inspect=${formatBoolean(dashboard.hasCompletionInspectAction)} inputInspect=${formatBoolean(dashboard.hasCompletionInputInspectControl)} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} stateAware=${formatBoolean(dashboard.hasStateAwareCompletionActions)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
+    `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} attention=${formatBoolean(dashboard.hasAttentionQueue)} activeTable=${formatBoolean(dashboard.hasActiveCompletionTable)} inspect=${formatBoolean(dashboard.hasCompletionInspectAction)} inputInspect=${formatBoolean(dashboard.hasCompletionInputInspectControl)} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} stateAware=${formatBoolean(dashboard.hasStateAwareCompletionActions)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
     summary.status.liveFollow.line,
     `Account mirror completions: active=${formatNullableNumber(summary.status.completions.metrics.active)} paused=${formatNullableNumber(summary.status.completions.metrics.paused)} failed=${formatNullableNumber(summary.status.completions.metrics.failed)} cancelled=${formatNullableNumber(summary.status.completions.metrics.cancelled)} total=${formatNullableNumber(summary.status.completions.metrics.total)}`,
   ].join('\n');
@@ -82,6 +83,7 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
   const checks: Array<[boolean, string]> = [
     [summary.hasMirrorLiveFollowPanel, 'Expected /ops/browser to include the Mirror Live Follow panel.'],
     [summary.hasLiveFollowTargetsPanel, 'Expected /ops/browser to render status.liveFollow.targets.'],
+    [summary.hasAttentionQueue, 'Expected /ops/browser to render the live-follow attention queue.'],
     [summary.hasLiveFollowTargetTable, 'Expected /ops/browser to render the live-follow target account table.'],
     [summary.hasActiveCompletionTable, 'Expected /ops/browser to render the active completion operations table.'],
     [summary.hasCompletionInspectAction, 'Expected /ops/browser active completion rows to inspect completion detail.'],
@@ -128,6 +130,10 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
     route: '/ops/browser',
     hasMirrorLiveFollowPanel: html.includes('Mirror Live Follow'),
     hasLiveFollowTargetsPanel: html.includes('mirrorTargets') && html.includes('status.liveFollow.targets'),
+    hasAttentionQueue: html.includes('mirrorAttentionQueue')
+      && html.includes('mirrorAttentionItems')
+      && html.includes('renderAttentionQueue')
+      && html.includes('collectAttentionRows'),
     hasLiveFollowTargetTable: html.includes('mirrorTargetTable') && html.includes('mirrorTargetAccounts'),
     hasActiveCompletionTable: html.includes('mirrorActiveCompletionTable') && html.includes('mirrorActiveCompletions'),
     hasCompletionInspectAction: html.includes('inspectMirrorCompletion') && html.includes('/v1/account-mirrors/completions/'),

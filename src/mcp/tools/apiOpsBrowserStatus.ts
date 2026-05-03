@@ -19,6 +19,7 @@ const apiOpsBrowserDashboardShape = z.object({
   route: z.literal('/ops/browser'),
   hasMirrorLiveFollowPanel: z.boolean(),
   hasLiveFollowTargetsPanel: z.boolean(),
+  hasAttentionQueue: z.boolean(),
   hasLiveFollowTargetTable: z.boolean(),
   hasActiveCompletionTable: z.boolean(),
   hasCompletionInspectAction: z.boolean(),

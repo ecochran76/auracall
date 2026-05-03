@@ -702,6 +702,9 @@ signal so operators can see configured accounts without raw entry inspection.
 The browser dashboard now renders the per-account live-follow targets as a
 table with target id, desired state, actual status, phase, pass count, next
 wake, and cache counts, while keeping the raw JSON block as a debug surface.
+It also renders an operator attention queue ahead of the full tables, limited
+to targets and completion operations in paused, blocked, failed, cancelled,
+missing-identity, or attention-needed states.
 It also renders active completion operations as a compact table with
 completion id, target, status, phase, pass count, next wake, and matching
 controls. Each active completion row can inspect the persisted operation via

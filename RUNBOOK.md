@@ -2899,3 +2899,18 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification:
   - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
   - `pnpm typecheck`
+
+## Turn 108 | 2026-05-03
+
+- Goal: put actionable live-follow items first in `/ops/browser`.
+- Change:
+  - added `mirrorAttentionQueue` above the full target and active-completion
+    tables
+  - attention rows include targets or completions in paused, blocked, failed,
+    cancelled, missing-identity, or attention-needed states
+  - extended CLI/MCP ops-browser contract checks and smoke coverage for the
+    attention queue
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard"`
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+  - `pnpm typecheck`

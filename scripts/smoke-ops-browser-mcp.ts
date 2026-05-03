@@ -199,6 +199,7 @@ async function main(): Promise<void> {
       dashboard?: {
         usesStatusControlPath?: unknown;
         usesAccountMirrorCompletionPayload?: unknown;
+        hasAttentionQueue?: unknown;
         hasLiveFollowTargetTable?: unknown;
         hasActiveCompletionTable?: unknown;
         hasCompletionInspectAction?: unknown;
@@ -223,6 +224,7 @@ async function main(): Promise<void> {
       true,
       'dashboard completion payload',
     );
+    assertEqual(structuredContent?.dashboard?.hasAttentionQueue, true, 'dashboard attention queue');
     assertEqual(structuredContent?.dashboard?.hasLiveFollowTargetTable, true, 'dashboard target table');
     assertEqual(structuredContent?.dashboard?.hasActiveCompletionTable, true, 'dashboard active completion table');
     assertEqual(structuredContent?.dashboard?.hasCompletionInspectAction, true, 'dashboard completion inspect');
@@ -244,6 +246,7 @@ async function main(): Promise<void> {
       'listed=ok',
       'dashboardControl=/status',
       `dashboardUrl=${String(structuredContent?.dashboardUrl ?? 'unknown')}`,
+      'attention=ok',
       'targetTable=ok',
       'activeTable=ok',
       'inspect=ok',

@@ -122,6 +122,10 @@ async function main(): Promise<void> {
     const baseUrl = `http://127.0.0.1:${server.port}`;
     const dashboard = await fetchText(`${baseUrl}/ops/browser`);
     assertIncludes(dashboard, 'Mirror Live Follow', 'dashboard panel');
+    assertIncludes(dashboard, 'mirrorAttentionQueue', 'dashboard attention queue panel');
+    assertIncludes(dashboard, 'mirrorAttentionItems', 'dashboard attention queue table');
+    assertIncludes(dashboard, 'renderAttentionQueue', 'dashboard attention queue renderer');
+    assertIncludes(dashboard, 'collectAttentionRows', 'dashboard attention queue collector');
     assertIncludes(dashboard, 'mirrorActiveCompletionTable', 'dashboard active completion table panel');
     assertIncludes(dashboard, 'mirrorActiveCompletions', 'dashboard active completion table');
     assertIncludes(dashboard, 'renderActiveCompletionTable', 'dashboard active completion table renderer');
@@ -207,6 +211,7 @@ async function main(): Promise<void> {
       `ops-browser completion-control smoke: pass port=${server.port}`,
       'dashboardControl=/status',
       `dashboardUrl=${opsBrowserStatus.dashboardUrl}`,
+      'attention=ok',
       'activeTable=ok',
       'inspect=ok',
       'inputInspect=ok',
