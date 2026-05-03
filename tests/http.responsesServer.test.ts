@@ -14442,6 +14442,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('renderLiveFollowTargetTable');
       expect(html).toContain('fillMirrorCompletionId');
       expect(html).toContain('data-completion-id');
+      expect(html).toContain('controlMirrorCompletionById');
+      expect(html).toContain('data-completion-action');
       expect(html).toContain('formatMetadataCounts');
       expect(html).toContain('escapeHtml');
       expect(html).toContain('status.liveFollow');

@@ -3358,7 +3358,7 @@ function createOperatorBrowserDashboardHtml(): string {
         'Passes',
         'Next Wake',
         'Counts',
-        'Control',
+        'Controls',
       ].map((label) => '<th>' + label + '</th>').join('') + '</tr></thead><tbody>' + accounts.map(renderLiveFollowTargetRow).join('') + '</tbody></table></div>';
     }
 
@@ -3374,13 +3374,23 @@ function createOperatorBrowserDashboardHtml(): string {
         '<td>' + escapeHtml(target.passCount == null ? 'none' : String(target.passCount)) + '</td>',
         '<td class="wrap">' + escapeHtml(target.nextAttemptAt || target.routineEligibleAt || 'none') + '</td>',
         '<td class="wrap">' + escapeHtml(formatMetadataCounts(counts)) + '</td>',
-        '<td>' + renderCompletionControlButton(target.activeCompletionId) + '</td>',
+        '<td>' + renderCompletionControlButtons(target.activeCompletionId) + '</td>',
       ].join('') + '</tr>';
     }
 
-    function renderCompletionControlButton(id) {
+    function renderCompletionControlButtons(id) {
       if (!id) return '<span class="muted">none</span>';
-      return '<button type="button" data-completion-id="' + escapeHtml(id) + '" onclick="fillMirrorCompletionId(this.dataset.completionId)">Use ID</button>';
+      const escapedId = escapeHtml(id);
+      return '<span class="badges">' + [
+        '<button type="button" data-completion-id="' + escapedId + '" onclick="fillMirrorCompletionId(this.dataset.completionId)">Use ID</button>',
+        renderCompletionActionButton(id, 'pause', 'Pause'),
+        renderCompletionActionButton(id, 'resume', 'Resume'),
+        renderCompletionActionButton(id, 'cancel', 'Cancel'),
+      ].join('') + '</span>';
+    }
+
+    function renderCompletionActionButton(id, action, label) {
+      return '<button type="button" data-completion-id="' + escapeHtml(id) + '" data-completion-action="' + escapeHtml(action) + '" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">' + escapeHtml(label) + '</button>';
     }
 
     function fillMirrorCompletionId(id) {
@@ -3494,8 +3504,15 @@ function createOperatorBrowserDashboardHtml(): string {
         $('mirrorCompletions').textContent = 'Enter a completion id.';
         return;
       }
+      await controlMirrorCompletionById(id, action);
+    }
+
+    async function controlMirrorCompletionById(id, action) {
       for (const buttonId of ['pauseMirrorCompletion', 'resumeMirrorCompletion', 'cancelMirrorCompletion']) {
         $(buttonId).disabled = true;
+      }
+      for (const button of document.querySelectorAll('[data-completion-action]')) {
+        button.disabled = true;
       }
       try {
         const result = await fetch('/status', {
@@ -3514,6 +3531,9 @@ function createOperatorBrowserDashboardHtml(): string {
       } finally {
         for (const buttonId of ['pauseMirrorCompletion', 'resumeMirrorCompletion', 'cancelMirrorCompletion']) {
           $(buttonId).disabled = false;
+        }
+        for (const button of document.querySelectorAll('[data-completion-action]')) {
+          button.disabled = false;
         }
       }
     }

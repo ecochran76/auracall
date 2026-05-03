@@ -124,6 +124,10 @@ async function main(): Promise<void> {
     assertIncludes(dashboard, 'Mirror Live Follow', 'dashboard panel');
     assertIncludes(dashboard, "fetch('/status'", 'dashboard control endpoint');
     assertIncludes(dashboard, 'body: JSON.stringify({ accountMirrorCompletion: { id, action } })', 'dashboard control payload');
+    assertIncludes(dashboard, 'controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)', 'dashboard row control handler');
+    assertIncludes(dashboard, "renderCompletionActionButton(id, 'pause', 'Pause')", 'dashboard row pause control');
+    assertIncludes(dashboard, "renderCompletionActionButton(id, 'resume', 'Resume')", 'dashboard row resume control');
+    assertIncludes(dashboard, "renderCompletionActionButton(id, 'cancel', 'Cancel')", 'dashboard row cancel control');
     assertIncludes(dashboard, "$('pauseMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('pause'))", 'dashboard pause binding');
     assertIncludes(dashboard, "$('resumeMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('resume'))", 'dashboard resume binding');
     assertIncludes(dashboard, "$('cancelMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('cancel'))", 'dashboard cancel binding');
@@ -189,6 +193,7 @@ async function main(): Promise<void> {
     console.log([
       `ops-browser completion-control smoke: pass port=${server.port}`,
       'dashboardControl=/status',
+      'rowActions=ok',
       `operation=${operation.id}`,
       `status.pause=${pause.controlResult?.status ?? 'unknown'}`,
       `liveFollow=${pause.liveFollow?.severity ?? 'unknown'}`,

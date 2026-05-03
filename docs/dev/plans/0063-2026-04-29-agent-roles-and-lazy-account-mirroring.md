@@ -699,5 +699,7 @@ signal so operators can see configured accounts without raw entry inspection.
 The browser dashboard now renders the per-account live-follow targets as a
 table with target id, desired state, actual status, phase, pass count, next
 wake, and cache counts, while keeping the raw JSON block as a debug surface.
-Rows with an active completion expose the matching completion id and provide a
-`Use ID` control that fills the existing pause/resume/cancel input.
+Rows with an active completion expose the matching completion id, provide a
+`Use ID` control that fills the existing pause/resume/cancel input, and render
+direct pause/resume/cancel row actions wired to the same `/status`
+`accountMirrorCompletion` control path.

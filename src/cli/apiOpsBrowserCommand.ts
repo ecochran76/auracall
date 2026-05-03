@@ -16,6 +16,7 @@ export interface ApiOpsBrowserDashboardSummary {
   hasLiveFollowTargetsPanel: boolean;
   hasLiveFollowTargetTable: boolean;
   hasCompletionIdFillControl: boolean;
+  hasInlineCompletionActionControls: boolean;
   usesStatusControlPath: boolean;
   usesAccountMirrorCompletionPayload: boolean;
   hasPauseBinding: boolean;
@@ -63,7 +64,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
   const dashboard = summary.dashboard;
   return [
     `AuraCall ops browser: ok (${summary.host}:${summary.port}${dashboard.route})`,
-    `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
+    `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
     summary.status.liveFollow.line,
     `Account mirror completions: active=${formatNullableNumber(summary.status.completions.metrics.active)} paused=${formatNullableNumber(summary.status.completions.metrics.paused)} failed=${formatNullableNumber(summary.status.completions.metrics.failed)} cancelled=${formatNullableNumber(summary.status.completions.metrics.cancelled)} total=${formatNullableNumber(summary.status.completions.metrics.total)}`,
   ].join('\n');
@@ -75,6 +76,7 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
     [summary.hasLiveFollowTargetsPanel, 'Expected /ops/browser to render status.liveFollow.targets.'],
     [summary.hasLiveFollowTargetTable, 'Expected /ops/browser to render the live-follow target account table.'],
     [summary.hasCompletionIdFillControl, 'Expected /ops/browser target rows to fill the completion-control id.'],
+    [summary.hasInlineCompletionActionControls, 'Expected /ops/browser target rows to control active completions directly.'],
     [summary.usesStatusControlPath, 'Expected /ops/browser completion controls to call POST /status.'],
     [
       summary.usesAccountMirrorCompletionPayload,
@@ -115,12 +117,21 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
     hasLiveFollowTargetsPanel: html.includes('mirrorTargets') && html.includes('status.liveFollow.targets'),
     hasLiveFollowTargetTable: html.includes('mirrorTargetTable') && html.includes('mirrorTargetAccounts'),
     hasCompletionIdFillControl: html.includes('fillMirrorCompletionId') && html.includes('data-completion-id'),
+    hasInlineCompletionActionControls: html.includes('controlMirrorCompletionById')
+      && hasInlineCompletionAction(html, 'pause', 'Pause')
+      && hasInlineCompletionAction(html, 'resume', 'Resume')
+      && hasInlineCompletionAction(html, 'cancel', 'Cancel'),
     usesStatusControlPath: html.includes("fetch('/status'"),
     usesAccountMirrorCompletionPayload: html.includes('accountMirrorCompletion: { id, action }'),
     hasPauseBinding: html.includes("$('pauseMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('pause'))"),
     hasResumeBinding: html.includes("$('resumeMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('resume'))"),
     hasCancelBinding: html.includes("$('cancelMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('cancel'))"),
   };
+}
+
+function hasInlineCompletionAction(html: string, action: string, label: string): boolean {
+  return html.includes(`renderCompletionActionButton(id, '${action}', '${label}')`)
+    || html.includes(`data-completion-action="${action}"`);
 }
 
 function normalizeHost(value: string | null | undefined): string {

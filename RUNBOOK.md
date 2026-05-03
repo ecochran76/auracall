@@ -2797,3 +2797,18 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "reports effective live-follow wake separately from routine mirror eligibility|serves a read-only browser operator dashboard"`
   - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
   - `pnpm typecheck`
+
+## Turn 101 | 2026-05-02
+
+- Goal: make active live-follow table rows directly actionable.
+- Change:
+  - replaced the single target-table control cell with `Use ID`,
+    `Pause`, `Resume`, and `Cancel` row buttons
+  - row buttons call the existing `/status` `accountMirrorCompletion`
+    control path directly
+  - extended CLI/MCP ops-browser contract checks and smoke coverage for
+    direct row actions
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard"`
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+  - `pnpm typecheck`
