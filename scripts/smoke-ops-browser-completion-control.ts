@@ -126,6 +126,8 @@ async function main(): Promise<void> {
     assertIncludes(dashboard, 'mirrorActiveCompletions', 'dashboard active completion table');
     assertIncludes(dashboard, 'renderActiveCompletionTable', 'dashboard active completion table renderer');
     assertIncludes(dashboard, 'inspectMirrorCompletion', 'dashboard completion inspect handler');
+    assertIncludes(dashboard, 'inspectMirrorCompletionById', 'dashboard completion input inspect button');
+    assertIncludes(dashboard, 'inspectSelectedMirrorCompletion', 'dashboard completion input inspect handler');
     assertIncludes(dashboard, '/v1/account-mirrors/completions/', 'dashboard completion inspect endpoint');
     assertIncludes(dashboard, "fetch('/status'", 'dashboard control endpoint');
     assertIncludes(dashboard, 'body: JSON.stringify({ accountMirrorCompletion: { id, action } })', 'dashboard control payload');
@@ -205,6 +207,7 @@ async function main(): Promise<void> {
       'dashboardControl=/status',
       'activeTable=ok',
       'inspect=ok',
+      'inputInspect=ok',
       'rowActions=ok',
       'stateAware=ok',
       'feedback=ok',

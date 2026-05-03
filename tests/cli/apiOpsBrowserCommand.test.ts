@@ -10,6 +10,7 @@ const dashboardHtml = `
 <div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div>
 <div id="mirrorActiveCompletionTable"><table id="mirrorActiveCompletions"></table></div>
 <button data-completion-id="acctmirror_paused" onclick="fillMirrorCompletionId(this.dataset.completionId)">Use ID</button>
+<button id="inspectMirrorCompletionById">Inspect</button>
 <button data-completion-id="acctmirror_paused" onclick="inspectMirrorCompletion(this.dataset.completionId)">Inspect</button>
 <button data-completion-id="acctmirror_paused" data-completion-action="pause" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Pause</button>
 <button data-completion-id="acctmirror_paused" data-completion-action="resume" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Resume</button>
@@ -33,6 +34,10 @@ const dashboardHtml = `
   async function inspectMirrorCompletion(id) {
     await fetch('/v1/account-mirrors/completions/' + encodeURIComponent(id));
   }
+  async function inspectSelectedMirrorCompletion() {
+    await inspectMirrorCompletion($('mirrorCompletionId').value.trim());
+  }
+  $('inspectMirrorCompletionById').addEventListener('click', inspectSelectedMirrorCompletion);
   $('pauseMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('pause'));
   $('resumeMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('resume'));
   $('cancelMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('cancel'));
@@ -115,6 +120,7 @@ describe('api ops browser CLI helpers', () => {
       hasLiveFollowTargetTable: true,
       hasActiveCompletionTable: true,
       hasCompletionInspectAction: true,
+      hasCompletionInputInspectControl: true,
       hasCompletionIdFillControl: true,
       hasInlineCompletionActionControls: true,
       hasStateAwareCompletionActions: true,
@@ -132,7 +138,7 @@ describe('api ops browser CLI helpers', () => {
       expectedPaused: 1,
     })).not.toThrow();
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard completion control: path=/status payload=accountMirrorCompletion activeTable=ok inspect=ok input=ok rowActions=ok stateAware=ok feedback=ok pause=ok resume=ok cancel=ok',
+      'Dashboard completion control: path=/status payload=accountMirrorCompletion activeTable=ok inspect=ok inputInspect=ok input=ok rowActions=ok stateAware=ok feedback=ok pause=ok resume=ok cancel=ok',
     );
   });
 
@@ -140,7 +146,7 @@ describe('api ops browser CLI helpers', () => {
     const fetchImpl = async (input: URL | RequestInfo) => {
       const url = String(input);
       if (url.endsWith('/ops/browser')) {
-        return new Response(`<h2>Mirror Live Follow</h2><div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div><div id="mirrorActiveCompletionTable"><table id="mirrorActiveCompletions"></table></div><button data-completion-id="acctmirror_paused" onclick="fillMirrorCompletionId(this.dataset.completionId)">Use ID</button><button data-completion-id="acctmirror_paused" onclick="inspectMirrorCompletion(this.dataset.completionId)">Inspect</button><button data-completion-id="acctmirror_paused" data-completion-action="pause" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Pause</button><button data-completion-id="acctmirror_paused" data-completion-action="resume" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Resume</button><button data-completion-id="acctmirror_paused" data-completion-action="cancel" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Cancel</button><div id="mirrorControlNotice" role="status" aria-live="polite"></div><script>function setMirrorControlNotice(message, tone) {} function inspectMirrorCompletion(id) { return fetch('/v1/account-mirrors/completions/' + encodeURIComponent(id)); } function completionActionsForStatus(status) { if (status === 'paused') return ['resume', 'cancel']; if (status === 'queued' || status === 'running' || status === 'refreshing') return ['pause', 'cancel']; return []; }</script><pre id="mirrorTargets">status.liveFollow.targets</pre>`, {
+        return new Response(`<h2>Mirror Live Follow</h2><div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div><div id="mirrorActiveCompletionTable"><table id="mirrorActiveCompletions"></table></div><button id="inspectMirrorCompletionById">Inspect</button><button data-completion-id="acctmirror_paused" onclick="fillMirrorCompletionId(this.dataset.completionId)">Use ID</button><button data-completion-id="acctmirror_paused" onclick="inspectMirrorCompletion(this.dataset.completionId)">Inspect</button><button data-completion-id="acctmirror_paused" data-completion-action="pause" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Pause</button><button data-completion-id="acctmirror_paused" data-completion-action="resume" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Resume</button><button data-completion-id="acctmirror_paused" data-completion-action="cancel" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Cancel</button><div id="mirrorControlNotice" role="status" aria-live="polite"></div><script>function setMirrorControlNotice(message, tone) {} function inspectMirrorCompletion(id) { return fetch('/v1/account-mirrors/completions/' + encodeURIComponent(id)); } function inspectSelectedMirrorCompletion() { return inspectMirrorCompletion('acctmirror_paused'); } $('inspectMirrorCompletionById').addEventListener('click', inspectSelectedMirrorCompletion); function completionActionsForStatus(status) { if (status === 'paused') return ['resume', 'cancel']; if (status === 'queued' || status === 'running' || status === 'refreshing') return ['pause', 'cancel']; return []; }</script><pre id="mirrorTargets">status.liveFollow.targets</pre>`, {
           status: 200,
           headers: { 'content-type': 'text/html' },
         });

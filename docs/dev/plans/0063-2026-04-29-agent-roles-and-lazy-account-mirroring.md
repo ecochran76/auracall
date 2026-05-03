@@ -703,7 +703,8 @@ It also renders active completion operations as a compact table with
 completion id, target, status, phase, pass count, next wake, and matching
 controls. Each active completion row can inspect the persisted operation via
 the existing `GET /v1/account-mirrors/completions/{id}` endpoint without
-starting provider work.
+starting provider work. The same inspection path is available from the manual
+completion-id input for pasted operation ids.
 Rows with an active completion expose the matching completion id and provide a
 `Use ID` control that fills the existing pause/resume/cancel input. They also
 render state-aware row actions wired to the same `/status`

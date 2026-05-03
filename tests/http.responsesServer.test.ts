@@ -14429,6 +14429,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('mirrorActiveCompletionTable');
       expect(html).toContain('mirrorActiveCompletions');
       expect(html).toContain('inspectMirrorCompletion');
+      expect(html).toContain('inspectMirrorCompletionById');
+      expect(html).toContain('inspectSelectedMirrorCompletion');
       expect(html).toContain('/v1/account-mirrors/completions/');
       expect(html).toContain('mirrorTargets');
       expect(html).toContain('mirrorCompletions');

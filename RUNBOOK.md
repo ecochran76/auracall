@@ -2871,3 +2871,18 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard"`
   - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
   - `pnpm typecheck`
+
+## Turn 106 | 2026-05-03
+
+- Goal: make pasted live-follow completion ids inspectable from the manual
+  control strip.
+- Change:
+  - added `Inspect` next to the completion-id input
+  - the input-bound inspect action reuses the same persisted completion detail
+    endpoint as active table rows
+  - extended CLI/MCP ops-browser contract checks and smoke coverage for the
+    input-bound inspect action
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard"`
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+  - `pnpm typecheck`

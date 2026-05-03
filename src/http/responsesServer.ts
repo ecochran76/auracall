@@ -3202,6 +3202,7 @@ function createOperatorBrowserDashboardHtml(): string {
           <label>Completion ID
             <input id="mirrorCompletionId" placeholder="acctmirror_completion_id">
           </label>
+          <button id="inspectMirrorCompletionById">Inspect</button>
           <button id="pauseMirrorCompletion">Pause</button>
           <button id="resumeMirrorCompletion">Resume</button>
           <button id="cancelMirrorCompletion">Cancel</button>
@@ -3583,6 +3584,16 @@ function createOperatorBrowserDashboardHtml(): string {
       await controlMirrorCompletionById(id, action);
     }
 
+    async function inspectSelectedMirrorCompletion() {
+      const id = $('mirrorCompletionId').value.trim();
+      if (!id) {
+        $('mirrorCompletions').textContent = 'Enter a completion id.';
+        setMirrorControlNotice('Enter a completion id before inspecting details.', 'warn');
+        return;
+      }
+      await inspectMirrorCompletion(id);
+    }
+
     async function controlMirrorCompletionById(id, action) {
       setMirrorControlNotice('Sending ' + action + ' for ' + id + '...', 'warn');
       for (const buttonId of ['pauseMirrorCompletion', 'resumeMirrorCompletion', 'cancelMirrorCompletion']) {
@@ -3698,6 +3709,7 @@ function createOperatorBrowserDashboardHtml(): string {
     }
 
     $('refreshStatus').addEventListener('click', refreshStatus);
+    $('inspectMirrorCompletionById').addEventListener('click', inspectSelectedMirrorCompletion);
     $('pauseMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('pause'));
     $('resumeMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('resume'));
     $('cancelMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('cancel'));
