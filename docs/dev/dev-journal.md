@@ -24290,6 +24290,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run install:user-runtime`
 - Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `3822813`
+  - installed `api ops-browser-status --json` reports
+    `.dashboard.hasCatalogRowPreviewActions=true`
+  - installed `/account-mirror?provider=chatgpt&kind=artifacts&preview=previewable&sort=preview-first&limit=1`
+    includes `renderCatalogRowActions`, `resolveCatalogRowPreviewUrl`,
+    `buildMirrorCatalogItemAssetPath`, `copyCatalogPreviewUrl`,
+    `Open Preview`, `Copy URL`, and `navigator.clipboard.writeText`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
   - restarted the pinned `127.0.0.1:18095` service on PID `2507834`
   - installed `api ops-browser-status --json` reports
     `.dashboard.hasCatalogMaterializationControls=true`
@@ -25730,6 +25739,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `metadata`
   - catalog summary now includes a `previewable` count for the filtered rows
   - dashboard CLI contract now asserts the materialization badge affordance
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing lint-warning debt (`noUselessContinue`,
+    `noNonNullAssertion`)
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+
+## Turn 104 | 2026-05-04
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: let operators use previewable cached assets from catalog rows without
+  opening item detail first.
+- Change:
+  - previewable local/remote asset rows now include direct `Open Preview` and
+    `Copy URL` actions
+  - local row previews use the existing account-mirror item asset route
+  - copy actions normalize relative local asset paths to absolute dashboard URLs
+  - dashboard CLI contract now asserts the row preview action affordance
 - Validation:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`

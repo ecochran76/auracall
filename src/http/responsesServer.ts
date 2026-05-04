@@ -3497,6 +3497,15 @@ function createOperatorBrowserDashboardHtml(input: {
     button { cursor: pointer; }
     button.primary { border-color: var(--accent); }
     button:disabled { cursor: not-allowed; opacity: 0.6; }
+    button.link-button {
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--accent);
+      font: inherit;
+      text-decoration: underline;
+    }
     dl { display: grid; grid-template-columns: 140px 1fr; gap: 6px 10px; margin: 0; }
     dt { color: var(--muted); }
     dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
@@ -3552,6 +3561,12 @@ function createOperatorBrowserDashboardHtml(input: {
     .badge-warn { border-color: var(--warn); color: var(--warn); }
     .badge-bad { border-color: var(--bad); color: var(--bad); }
     .badge-muted { color: var(--muted); }
+    .catalog-row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
     .notice {
       margin: 0 0 10px;
       padding: 8px 10px;
@@ -4464,7 +4479,7 @@ function createOperatorBrowserDashboardHtml(input: {
         'Transcript',
         'Preview',
         'Identity',
-        'Open',
+        'Actions',
         'Snippet',
       ].map((label) => '<th>' + label + '</th>').join('') + '</tr></thead><tbody>' + rows.map(renderMirrorCatalogRow).join('') + '</tbody></table></div>';
     }
@@ -4482,9 +4497,50 @@ function createOperatorBrowserDashboardHtml(input: {
         '<td>' + renderCatalogTranscriptBadge(row) + '</td>',
         '<td>' + renderCatalogMaterializationBadge(row) + '</td>',
         '<td class="wrap">' + escapeHtml(row.boundIdentityKey) + '</td>',
-        '<td><a href="' + escapeHtml(itemPath) + '" data-catalog-item-path="' + escapeHtml(itemPath) + '" onclick="event.preventDefault(); event.stopPropagation(); showMirrorCatalogDetailByPath(this.dataset.catalogItemPath)">Details</a></td>',
+        '<td>' + renderCatalogRowActions(row, itemPath) + '</td>',
         '<td class="wrap">' + escapeHtml(trimCatalogSnippet(row.searchable)) + '</td>',
       ].join('') + '</tr>';
+    }
+
+    function renderCatalogRowActions(row, itemPath) {
+      const previewUrl = resolveCatalogRowPreviewUrl(row);
+      const actions = [
+        '<a href="' + escapeHtml(itemPath) + '" data-catalog-item-path="' + escapeHtml(itemPath) + '" onclick="event.preventDefault(); event.stopPropagation(); showMirrorCatalogDetailByPath(this.dataset.catalogItemPath)">Details</a>',
+      ];
+      if (previewUrl) {
+        actions.push('<a href="' + escapeHtml(previewUrl) + '" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open Preview</a>');
+        actions.push('<button type="button" class="link-button" data-catalog-preview-url="' + escapeHtml(previewUrl) + '" onclick="copyCatalogPreviewUrl(this); event.stopPropagation();">Copy URL</button>');
+      }
+      return '<span class="catalog-row-actions">' + actions.join(' ') + '</span>';
+    }
+
+    function resolveCatalogRowPreviewUrl(row) {
+      const status = classifyCatalogItemPreview(row.item);
+      if (status === 'local') return buildMirrorCatalogItemAssetPath(row);
+      if (status === 'remote') return readCatalogPreviewUrl(row.item);
+      return '';
+    }
+
+    function buildMirrorCatalogItemAssetPath(row) {
+      const params = new URLSearchParams();
+      if (row.provider) params.set('provider', row.provider);
+      if (row.runtimeProfileId) params.set('runtimeProfile', row.runtimeProfileId);
+      if (row.kind) params.set('kind', row.kind);
+      return '/v1/account-mirrors/catalog/items/' + encodeURIComponent(row.itemId) + '/asset?' + params.toString();
+    }
+
+    async function copyCatalogPreviewUrl(button) {
+      const url = button && button.dataset ? button.dataset.catalogPreviewUrl : '';
+      if (!url) return;
+      try {
+        await navigator.clipboard.writeText(new URL(url, window.location.origin).href);
+        button.textContent = 'Copied';
+      } catch {
+        button.textContent = 'Copy failed';
+      }
+      window.setTimeout(() => {
+        button.textContent = 'Copy URL';
+      }, 1800);
     }
 
     function renderCatalogTranscriptBadge(row) {

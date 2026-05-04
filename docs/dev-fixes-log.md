@@ -15493,3 +15493,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   every catalog row. Add cache-only asset preview filters and preview-first
   sorting so operators can surface local/remote/inline cached assets before
   opening item detail.
+- 2026-05-04: Previewable mirror assets should not require opening item detail
+  for routine inspection. Add row-level `Open Preview` and `Copy URL` actions
+  for local/remote preview assets, with local cache blobs served through the
+  existing bounded asset route.

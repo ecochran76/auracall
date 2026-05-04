@@ -280,7 +280,9 @@ Terminology note:
   local files served through the local API before the raw JSON block. Catalog
   rows also show a `Preview` badge so operators can spot `local`, `remote`,
   `inline`, and `metadata` assets before opening detail, then filter or sort
-  cached rows by previewability without triggering browser work.
+  cached rows by previewability without triggering browser work. Previewable
+  asset rows also expose `Open Preview` and `Copy URL` actions directly from
+  the catalog table.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs
