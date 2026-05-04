@@ -3217,6 +3217,35 @@ function createOperatorBrowserDashboardHtml(input: {
       display: grid;
       gap: 8px;
     }
+    .chat-transcript {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .chat-turn {
+      display: grid;
+      gap: 4px;
+      max-width: 82%;
+    }
+    .chat-turn-user { justify-self: end; }
+    .chat-turn-assistant, .chat-turn-system, .chat-turn-tool { justify-self: start; }
+    .chat-role {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    .chat-bubble {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      background: #11151a;
+    }
+    .chat-turn-user .chat-bubble {
+      border-color: var(--accent);
+      background: #10211f;
+    }
     .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 12px; }
     .panel {
       grid-column: span 12;
@@ -3397,6 +3426,7 @@ function createOperatorBrowserDashboardHtml(input: {
         <div id="mirrorCatalogResults" class="muted" style="margin-bottom: 10px;">No catalog loaded.</div>
         <div id="mirrorCatalogDetail" class="catalog-detail">
           <div class="notice">Select a cached row to inspect its raw manifest entry.</div>
+          <div id="mirrorCatalogDetailView" class="notice">No row selected.</div>
           <pre id="mirrorCatalogDetailRaw">No row selected.</pre>
         </div>
         <pre id="mirrorCatalogRaw">No catalog loaded.</pre>
@@ -4022,6 +4052,8 @@ function createOperatorBrowserDashboardHtml(input: {
         $('mirrorCatalogSummary').className = 'notice notice-ok';
         $('mirrorCatalogSummary').innerHTML = renderMirrorCatalogSummary(catalog, mirrorCatalogRows, mirrorCatalogFilteredRows);
         $('mirrorCatalogResults').innerHTML = renderMirrorCatalogTable(mirrorCatalogFilteredRows);
+        $('mirrorCatalogDetailView').className = 'notice';
+        $('mirrorCatalogDetailView').textContent = 'No row selected.';
         $('mirrorCatalogDetailRaw').textContent = 'No row selected.';
         $('mirrorCatalogRaw').textContent = asJson(catalog);
       } catch (error) {
@@ -4127,30 +4159,136 @@ function createOperatorBrowserDashboardHtml(input: {
       const parsed = Number(index);
       const row = mirrorCatalogRows.find((candidate) => candidate.rowIndex === parsed);
       if (!row) {
+        $('mirrorCatalogDetailView').className = 'notice notice-bad';
+        $('mirrorCatalogDetailView').textContent = 'Cached row not found.';
         $('mirrorCatalogDetailRaw').textContent = 'Cached row not found.';
         return;
       }
-      $('mirrorCatalogDetailRaw').textContent = asJson({
-        detailUrl: buildMirrorCatalogItemPath(row),
-        provider: row.provider,
-        runtimeProfileId: row.runtimeProfileId,
-        boundIdentityKey: row.boundIdentityKey,
-        status: row.status,
-        kind: row.kind,
-        label: row.label,
-        itemId: row.itemId,
-        timestamp: row.timestamp,
-        item: row.item,
-      });
+      showMirrorCatalogDetailByPath(buildMirrorCatalogItemPath(row));
     }
 
     async function showMirrorCatalogDetailByPath(path) {
+      $('mirrorCatalogDetailView').className = 'notice notice-warn';
+      $('mirrorCatalogDetailView').textContent = 'Loading cached item detail...';
       $('mirrorCatalogDetailRaw').textContent = 'Loading cached item detail...';
       try {
-        $('mirrorCatalogDetailRaw').textContent = asJson(await fetchJson(path));
+        const detail = await fetchJson(path);
+        $('mirrorCatalogDetailView').className = 'notice';
+        $('mirrorCatalogDetailView').innerHTML = renderMirrorCatalogDetailView(detail);
+        $('mirrorCatalogDetailRaw').textContent = asJson(detail);
       } catch (error) {
-        $('mirrorCatalogDetailRaw').textContent = String(error.message || error);
+        const message = String(error.message || error);
+        $('mirrorCatalogDetailView').className = 'notice notice-bad';
+        $('mirrorCatalogDetailView').textContent = message;
+        $('mirrorCatalogDetailRaw').textContent = message;
       }
+    }
+
+    function renderMirrorCatalogDetailView(detail) {
+      if (!detail || typeof detail !== 'object') return '<span class="muted">No cached detail available.</span>';
+      if (detail.kind === 'conversations') return renderConversationDetailView(detail);
+      return renderGenericCatalogDetailView(detail);
+    }
+
+    function renderConversationDetailView(detail) {
+      const item = detail.item || {};
+      const turns = extractConversationTurns(item);
+      const header = renderCatalogDetailHeader(detail, item);
+      if (!turns.length) {
+        return header
+          + '<div class="notice notice-warn">No cached transcript turns are available for this conversation yet.</div>';
+      }
+      return header + '<div class="chat-transcript">' + turns.map(renderChatTurn).join('') + '</div>';
+    }
+
+    function renderGenericCatalogDetailView(detail) {
+      return renderCatalogDetailHeader(detail, detail.item || {});
+    }
+
+    function renderCatalogDetailHeader(detail, item) {
+      const title = formatCatalogItemLabel(item);
+      const fields = [
+        ['Kind', detail.kind || 'unknown'],
+        ['Provider', detail.provider || 'unknown'],
+        ['Profile', detail.runtimeProfileId || 'unknown'],
+        ['Identity', detail.boundIdentityKey || 'unbound'],
+        ['ID', detail.itemId || formatCatalogItemId(item)],
+        ['Updated', formatCatalogItemTimestamp(item)],
+        ['URL', readStringField(item, ['url', 'href']) || 'none'],
+      ];
+      return '<h2>' + escapeHtml(title) + '</h2><dl>' + fields.map(([key, value]) =>
+        '<dt>' + escapeHtml(key) + '</dt><dd>' + escapeHtml(value) + '</dd>'
+      ).join('') + '</dl>';
+    }
+
+    function extractConversationTurns(item) {
+      const direct = readTurnArray(item, ['messages', 'turns', 'conversation', 'transcript']);
+      if (direct.length) return direct;
+      if (item && typeof item === 'object' && item.mapping && typeof item.mapping === 'object') {
+        return Object.values(item.mapping)
+          .map((entry) => entry && typeof entry === 'object' ? entry.message : null)
+          .filter(Boolean)
+          .map(normalizeConversationTurn)
+          .filter(Boolean);
+      }
+      return [];
+    }
+
+    function readTurnArray(item, fields) {
+      if (!item || typeof item !== 'object') return [];
+      for (const field of fields) {
+        const value = item[field];
+        if (Array.isArray(value)) {
+          return value.map(normalizeConversationTurn).filter(Boolean);
+        }
+      }
+      return [];
+    }
+
+    function normalizeConversationTurn(value) {
+      if (!value || typeof value !== 'object') return null;
+      const role = normalizeChatRole(readStringField(value, ['role', 'authorRole', 'speaker', 'from']) || readAuthorRole(value));
+      const content = readConversationTurnContent(value);
+      if (!content) return null;
+      return { role, content };
+    }
+
+    function readAuthorRole(value) {
+      const author = value && typeof value === 'object' ? value.author : null;
+      return author && typeof author === 'object' ? readStringField(author, ['role', 'name']) : null;
+    }
+
+    function readConversationTurnContent(value) {
+      const direct = readStringField(value, ['content', 'text', 'message', 'body', 'markdown']);
+      if (direct) return direct;
+      const content = value && typeof value === 'object' ? value.content : null;
+      if (content && typeof content === 'object') {
+        const parts = content.parts;
+        if (Array.isArray(parts)) {
+          return parts.map((part) => typeof part === 'string' ? part : stringifyCatalogItem(part)).join('\\n').trim();
+        }
+        return readStringField(content, ['text', 'content', 'markdown']);
+      }
+      const parts = value && typeof value === 'object' ? value.parts : null;
+      if (Array.isArray(parts)) {
+        return parts.map((part) => typeof part === 'string' ? part : stringifyCatalogItem(part)).join('\\n').trim();
+      }
+      return null;
+    }
+
+    function normalizeChatRole(role) {
+      const normalized = String(role || 'assistant').toLowerCase();
+      if (normalized.includes('user') || normalized.includes('human')) return 'user';
+      if (normalized.includes('system')) return 'system';
+      if (normalized.includes('tool')) return 'tool';
+      return 'assistant';
+    }
+
+    function renderChatTurn(turn) {
+      return '<div class="chat-turn chat-turn-' + escapeHtml(turn.role) + '">'
+        + '<div class="chat-role">' + escapeHtml(turn.role) + '</div>'
+        + '<div class="chat-bubble">' + escapeHtml(turn.content) + '</div>'
+        + '</div>';
     }
 
     function formatCatalogItemLabel(item) {

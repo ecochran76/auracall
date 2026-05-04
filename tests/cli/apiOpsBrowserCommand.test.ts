@@ -23,6 +23,7 @@ const dashboardHtml = `
   <div id="mirrorCatalogSummary"></div>
   <div id="mirrorCatalogResults"></div>
   <div id="mirrorCatalogDetail"></div>
+  <div id="mirrorCatalogDetailView"></div>
   <pre id="mirrorCatalogDetailRaw"></pre>
   <pre id="mirrorCatalogRaw"></pre>
 </section>
@@ -61,6 +62,11 @@ const dashboardHtml = `
   async function showMirrorCatalogDetailByPath(path) {
     await fetch(path);
   }
+  function renderConversationDetailView() {
+    return '<div class="chat-transcript"><div class="chat-bubble">hello</div></div>';
+  }
+  function extractConversationTurns() {}
+  function renderChatTurn() {}
   async function loadMirrorCatalog() {
     await fetch('/v1/account-mirrors/catalog?kind=all&limit=50');
   }
@@ -206,6 +212,7 @@ describe('api ops browser CLI helpers', () => {
       hasAccountMirrorPageLink: true,
       hasCatalogSavedFilterState: true,
       hasCatalogDetailInspection: true,
+      hasConversationChatDetailView: true,
       usesAccountMirrorCatalogItemPath: true,
       usesAccountMirrorCatalogPath: true,
     });
@@ -223,7 +230,7 @@ describe('api ops browser CLI helpers', () => {
       'Dashboard service control: nav=ok operations=ok backgroundDrain=ok scheduler=ok runOnce=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard cache browse: catalog=ok page=ok search=ok savedFilters=ok table=ok detail=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
+      'Dashboard cache browse: catalog=ok page=ok search=ok savedFilters=ok table=ok detail=ok chat=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok inputInspect=ok input=ok rowActions=ok stateAware=ok feedback=ok pause=ok resume=ok cancel=ok',

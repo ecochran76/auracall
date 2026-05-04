@@ -14630,6 +14630,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('mirrorCatalogSummary');
       expect(html).toContain('mirrorCatalogResults');
       expect(html).toContain('mirrorCatalogDetail');
+      expect(html).toContain('mirrorCatalogDetailView');
       expect(html).toContain('mirrorCatalogDetailRaw');
       expect(html).toContain('mirrorCatalogRaw');
       expect(html).toContain('/v1/account-mirrors/catalog');
@@ -14647,6 +14648,11 @@ describe('http responses adapter', () => {
       expect(html).toContain('data-catalog-item-path');
       expect(html).toContain('showMirrorCatalogDetailByIndex');
       expect(html).toContain('showMirrorCatalogDetailByPath');
+      expect(html).toContain('renderConversationDetailView');
+      expect(html).toContain('extractConversationTurns');
+      expect(html).toContain('renderChatTurn');
+      expect(html).toContain('chat-transcript');
+      expect(html).toContain('chat-bubble');
       expect(html).toContain('Catalog reads are cache-only');
       expect(html).toContain('Mirror Live Follow');
       expect(html).toContain('mirrorTargetTable');
@@ -14733,6 +14739,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('initializeMirrorCatalogFiltersFromUrl');
       expect(html).toContain('showMirrorCatalogDetailByIndex');
       expect(html).toContain('showMirrorCatalogDetailByPath');
+      expect(html).toContain('renderConversationDetailView');
       expect(html).toContain('/v1/account-mirrors/catalog');
       expect(html).toContain('/v1/account-mirrors/catalog/items/');
     } finally {

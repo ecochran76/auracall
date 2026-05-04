@@ -730,3 +730,8 @@ Catalog rows now also have stable cache-backed detail URLs:
 `GET /v1/account-mirrors/catalog/items/{item_id}?provider={provider}&runtimeProfile={runtime_profile}&kind={kind}`.
 Those item-detail reads share the same bounded cached catalog lookup and do
 not enqueue browser work.
+Conversation item details now render cached transcript turns as a chat dialog
+when `messages`, `turns`, `conversation`, `transcript`, or ChatGPT-style
+`mapping` data is present. If a mirror only has metadata, the detail view shows
+the conversation header and a no-transcript state while keeping raw JSON
+available.
