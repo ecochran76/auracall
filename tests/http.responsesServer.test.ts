@@ -14694,9 +14694,15 @@ describe('http responses adapter', () => {
       expect(html).toContain('resolveCatalogRowPreviewUrl');
       expect(html).toContain('buildMirrorCatalogItemAssetPath');
       expect(html).toContain('copyCatalogPreviewUrl');
+      expect(html).toContain('collectVisibleCatalogPreviewUrls');
+      expect(html).toContain('copyVisibleMirrorCatalogPreviewUrls');
+      expect(html).toContain('setMirrorCatalogBatchNotice');
+      expect(html).toContain('mirrorCatalogBatchNotice');
       expect(html).toContain('data-catalog-preview-url');
       expect(html).toContain('Open Preview');
       expect(html).toContain('Copy URL');
+      expect(html).toContain('Copy visible preview URLs');
+      expect(html).toContain('visible preview URL(s)');
       expect(html).toContain('navigator.clipboard.writeText');
       expect(html).toContain('catalog-row-actions');
       expect(html).toContain('link-button');
@@ -14859,6 +14865,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('renderCatalogMaterializationBadge');
       expect(html).toContain('renderCatalogRowActions');
       expect(html).toContain('copyCatalogPreviewUrl');
+      expect(html).toContain('copyVisibleMirrorCatalogPreviewUrls');
+      expect(html).toContain('mirrorCatalogBatchNotice');
       expect(html).toContain('renderCatalogTranscriptBadge');
       expect(html).toContain('mirrorCatalogWithTranscriptOnly');
       expect(html).toContain('/v1/account-mirrors/catalog');

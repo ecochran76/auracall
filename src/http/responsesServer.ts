@@ -3689,7 +3689,9 @@ function createOperatorBrowserDashboardHtml(input: {
             <input id="mirrorCatalogLimit" type="number" min="0" max="500" step="1" value="50">
           </label>
           <button id="loadMirrorCatalog" class="primary">Search Cache</button>
+          <button id="copyVisibleMirrorCatalogPreviewUrls" type="button">Copy visible preview URLs</button>
         </div>
+        <div id="mirrorCatalogBatchNotice" class="notice" role="status" aria-live="polite">No catalog batch action yet.</div>
         <div id="mirrorCatalogSummary" class="notice">Catalog reads are cache-only and do not enqueue browser work.</div>
         <div id="mirrorCatalogResults" class="muted" style="margin-bottom: 10px;">No catalog loaded.</div>
         <div id="mirrorCatalogDetail" class="catalog-detail">
@@ -4465,6 +4467,34 @@ function createOperatorBrowserDashboardHtml(input: {
 
     function countPreviewableCatalogRows(rows) {
       return rows.filter((row) => hasCatalogItemPreviewSignal(row.item)).length;
+    }
+
+    function collectVisibleCatalogPreviewUrls() {
+      return mirrorCatalogFilteredRows
+        .map(resolveCatalogRowPreviewUrl)
+        .filter(Boolean)
+        .map((url) => new URL(url, window.location.origin).href)
+        .filter((url, index, urls) => urls.indexOf(url) === index);
+    }
+
+    async function copyVisibleMirrorCatalogPreviewUrls() {
+      const urls = collectVisibleCatalogPreviewUrls();
+      if (!urls.length) {
+        setMirrorCatalogBatchNotice('No visible preview URLs to copy.', 'warn');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(urls.join('\\n'));
+        setMirrorCatalogBatchNotice('Copied ' + String(urls.length) + ' visible preview URL(s).', 'ok');
+      } catch {
+        setMirrorCatalogBatchNotice('Could not copy visible preview URLs.', 'bad');
+      }
+    }
+
+    function setMirrorCatalogBatchNotice(message, tone) {
+      const node = $('mirrorCatalogBatchNotice');
+      node.className = 'notice' + (tone ? ' notice-' + tone : '');
+      node.textContent = message;
     }
 
     function renderMirrorCatalogTable(rows) {
@@ -5338,6 +5368,7 @@ function createOperatorBrowserDashboardHtml(input: {
     $('resumeMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('resume'));
     $('cancelMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('cancel'));
     $('loadMirrorCatalog').addEventListener('click', loadMirrorCatalog);
+    $('copyVisibleMirrorCatalogPreviewUrls').addEventListener('click', copyVisibleMirrorCatalogPreviewUrls);
     $('mirrorCatalogSearch').addEventListener('keydown', (event) => {
       if (event.key === 'Enter') loadMirrorCatalog();
     });

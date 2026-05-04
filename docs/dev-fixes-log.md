@@ -15497,3 +15497,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   for routine inspection. Add row-level `Open Preview` and `Copy URL` actions
   for local/remote preview assets, with local cache blobs served through the
   existing bounded asset route.
+- 2026-05-04: Operators need to export filtered previewable cache rows without
+  clicking each row. Add a `Copy visible preview URLs` batch action that
+  deduplicates the currently filtered local/remote preview URLs and copies them
+  as newline-separated absolute URLs.

@@ -24290,6 +24290,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run install:user-runtime`
 - Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `587012`
+  - installed `api ops-browser-status --json` reports
+    `.dashboard.hasCatalogBatchPreviewUrlCopy=true`
+  - installed `/account-mirror?provider=chatgpt&kind=artifacts&preview=previewable&sort=preview-first&limit=1`
+    includes `copyVisibleMirrorCatalogPreviewUrls`,
+    `collectVisibleCatalogPreviewUrls`, `setMirrorCatalogBatchNotice`,
+    `Copy visible preview URLs`, and newline `urls.join`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
   - restarted the pinned `127.0.0.1:18095` service on PID `3822813`
   - installed `api ops-browser-status --json` reports
     `.dashboard.hasCatalogRowPreviewActions=true`
@@ -25739,6 +25748,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `metadata`
   - catalog summary now includes a `previewable` count for the filtered rows
   - dashboard CLI contract now asserts the materialization badge affordance
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing lint-warning debt (`noUselessContinue`,
+    `noNonNullAssertion`)
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+
+## Turn 105 | 2026-05-04
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: let operators copy the visible filtered preview URL set in one step.
+- Change:
+  - added `Copy visible preview URLs` to the account mirror catalog controls
+  - the batch action collects preview URLs from the current filtered rows,
+    deduplicates them, normalizes local asset paths to absolute dashboard URLs,
+    and copies newline-separated URLs
+  - dashboard CLI contract now asserts the batch preview URL copy affordance
 - Validation:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
