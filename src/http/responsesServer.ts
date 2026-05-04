@@ -4240,6 +4240,9 @@ function createOperatorBrowserDashboardHtml(input: {
     function renderMirrorCatalogDetailView(detail) {
       if (!detail || typeof detail !== 'object') return '<span class="muted">No cached detail available.</span>';
       if (detail.kind === 'conversations') return renderConversationDetailView(detail);
+      if (detail.kind === 'files' || detail.kind === 'artifacts' || detail.kind === 'media') {
+        return renderCachedAssetDetailView(detail);
+      }
       return renderGenericCatalogDetailView(detail);
     }
 
@@ -4351,6 +4354,60 @@ function createOperatorBrowserDashboardHtml(input: {
       return renderCatalogDetailHeader(detail, detail.item || {});
     }
 
+    function renderCachedAssetDetailView(detail) {
+      const item = detail.item || {};
+      return renderCatalogDetailHeader(detail, item)
+        + '<div class="notice">'
+        + '<strong>Cached item inspector</strong>'
+        + renderCatalogItemInspectorFields(detail, item)
+        + renderCatalogItemExternalLinks(item)
+        + '</div>';
+    }
+
+    function renderCatalogItemInspectorFields(detail, item) {
+      const metadata = readObjectField(item, 'metadata') || {};
+      const fields = [
+        ['Kind', detail.kind || 'unknown'],
+        ['Provider', readStringField(item, ['provider']) || detail.provider || 'unknown'],
+        ['Source', readStringField(item, ['source', 'type']) || 'unknown'],
+        ['MIME', readStringField(item, ['mimeType', 'mime', 'contentType']) || 'unknown'],
+        ['Size', formatCatalogItemSize(readNumberField(item, ['size', 'sizeBytes', 'bytes', 'fileSize']))],
+        ['Conversation', readStringField(item, ['conversationId']) || readStringField(metadata, ['conversationId']) || 'none'],
+        ['Project', readStringField(item, ['projectId']) || readStringField(metadata, ['projectId']) || 'none'],
+        ['Created', readStringField(item, ['createdAt', 'created']) || 'unknown'],
+        ['Updated', formatCatalogItemTimestamp(item)],
+      ];
+      return '<dl>' + fields.map(([key, value]) =>
+        '<dt>' + escapeHtml(key) + '</dt><dd>' + escapeHtml(value) + '</dd>'
+      ).join('') + '</dl>';
+    }
+
+    function renderCatalogItemExternalLinks(item) {
+      const links = [
+        ['URL', readStringField(item, ['url', 'href', 'remoteUrl'])],
+        ['Download', readStringField(item, ['downloadUrl', 'downloadHref'])],
+        ['Thumbnail', readStringField(item, ['thumbnailUrl', 'previewUrl'])],
+      ].filter((entry, index, list) => entry[1] && list.findIndex((candidate) => candidate[1] === entry[1]) === index);
+      if (!links.length) return '<div class="muted">No cached external URLs.</div>';
+      return '<div class="catalog-detail">'
+        + '<div class="muted">Cached URLs</div>'
+        + links.map(([label, url]) => renderCatalogExternalLink(label, url)).join('')
+        + '</div>';
+    }
+
+    function renderCatalogExternalLink(label, url) {
+      return '<a class="pill" href="' + escapeHtml(url) + '" target="_blank" rel="noreferrer">'
+        + escapeHtml(label)
+        + '</a>';
+    }
+
+    function formatCatalogItemSize(value) {
+      if (!value) return 'unknown';
+      if (value < 1024) return String(value) + ' B';
+      if (value < 1048576) return String(Math.round(value / 102.4) / 10) + ' KB';
+      return String(Math.round(value / 104857.6) / 10) + ' MB';
+    }
+
     function renderCatalogDetailHeader(detail, item) {
       const title = formatCatalogItemLabel(item);
       const fields = [
@@ -4400,6 +4457,12 @@ function createOperatorBrowserDashboardHtml(input: {
         }
       }
       return [];
+    }
+
+    function readObjectField(item, field) {
+      if (!item || typeof item !== 'object') return null;
+      const value = item[field];
+      return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
     }
 
     function normalizeConversationTurn(value) {

@@ -15474,3 +15474,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   files/artifacts/sources from the hydrated cached conversation context and
   route files/artifacts through existing item-detail URLs so operators can move
   from transcript review to attachment review without provider browser work.
+- 2026-05-03: File/artifact item detail should be inspectable without raw JSON.
+  Render a compact cached metadata inspector for file, artifact, and media
+  details with provider/source/type/size/parent context plus cached URL links.

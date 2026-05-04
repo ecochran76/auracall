@@ -756,3 +756,7 @@ without re-reading the catalog or touching provider pages.
 Conversation detail now also surfaces cached related files, artifacts, and
 sources. Files and artifacts reuse the existing cache-backed item-detail route,
 while source URLs open externally; neither path starts provider browser work.
+File, artifact, and media item-detail views now render a compact cached
+metadata inspector with provider/source/type/size/parent context and cached
+URLs before the raw JSON block, so operators can review attachments without
+manually reading the full payload.

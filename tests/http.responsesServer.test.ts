@@ -14663,6 +14663,13 @@ describe('http responses adapter', () => {
       expect(html).toContain('data-related-item-path');
       expect(html).toContain('Cached related items');
       expect(html).toContain('target="_blank" rel="noreferrer"');
+      expect(html).toContain('renderCachedAssetDetailView');
+      expect(html).toContain('renderCatalogItemInspectorFields');
+      expect(html).toContain('renderCatalogItemExternalLinks');
+      expect(html).toContain('renderCatalogExternalLink');
+      expect(html).toContain('Cached item inspector');
+      expect(html).toContain('Cached URLs');
+      expect(html).toContain('formatCatalogItemSize');
       expect(html).toContain('extractConversationTurns');
       expect(html).toContain('renderChatTurn');
       expect(html).toContain('downloadCurrentMirrorConversationTranscript');
@@ -14768,6 +14775,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('downloadCurrentMirrorConversationTranscript');
       expect(html).toContain('filterCurrentMirrorConversationTranscript');
       expect(html).toContain('renderConversationRelatedItems');
+      expect(html).toContain('renderCachedAssetDetailView');
       expect(html).toContain('renderCatalogTranscriptBadge');
       expect(html).toContain('mirrorCatalogWithTranscriptOnly');
       expect(html).toContain('/v1/account-mirrors/catalog');
