@@ -15458,3 +15458,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   before click-through. Add a cache-only row affordance derived from
   `hasCachedTranscript` and `messageCount` so operators can distinguish
   metadata-only conversations from rows that will open as chat dialogs.
+- 2026-05-03: Account mirror catalog search needs a transcript-backed row
+  filter. Persist it as `withTranscript=1` and apply it client-side from cached
+  transcript summaries so operators can focus on conversations that have
+  readable chat-dialog detail without touching provider pages.

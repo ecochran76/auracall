@@ -743,3 +743,6 @@ Catalog conversation rows now include a bounded transcript summary
 (`hasCachedTranscript`, `messageCount`, and cached attachment/source/artifact
 counts), and the dashboard renders that summary as a `Transcript` column so
 operators can identify full chat-dialog candidates before opening item detail.
+The dashboard also has a `With transcript only` checkbox persisted as
+`withTranscript=1`; it filters client-side against the cached transcript
+summary and does not enqueue provider browser work.

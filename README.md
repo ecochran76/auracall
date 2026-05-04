@@ -267,7 +267,8 @@ Terminology note:
   `GET /v1/account-mirrors/catalog`, persists filters in the page URL, and
   opens stable item-detail URLs without starting provider browser work.
   Conversation catalog rows show cached transcript availability and message
-  count before opening the row.
+  count before opening the row, with a `withTranscript=1` filter for rows that
+  will open as chat dialogs.
   Conversation detail reads hydrate any existing cached conversation context
   into the item detail and render cached turns as a chat dialog, while keeping
   the raw cached item JSON available for debugging.

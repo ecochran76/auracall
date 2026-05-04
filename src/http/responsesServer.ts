@@ -3417,6 +3417,10 @@ function createOperatorBrowserDashboardHtml(input: {
           <label>Search
             <input id="mirrorCatalogSearch" placeholder="cached title, id, URL, or metadata">
           </label>
+          <label>
+            <input id="mirrorCatalogWithTranscriptOnly" type="checkbox">
+            With transcript only
+          </label>
           <label>Limit
             <input id="mirrorCatalogLimit" type="number" min="0" max="500" step="1" value="50">
           </label>
@@ -4002,6 +4006,7 @@ function createOperatorBrowserDashboardHtml(input: {
       if (params.has('runtimeProfile')) $('mirrorCatalogRuntimeProfile').value = params.get('runtimeProfile') || '';
       setSelectValue('mirrorCatalogKind', params.get('kind') || 'all');
       if (params.has('search')) $('mirrorCatalogSearch').value = params.get('search') || '';
+      $('mirrorCatalogWithTranscriptOnly').checked = params.get('withTranscript') === '1';
       if (params.has('limit')) $('mirrorCatalogLimit').value = String(normalizeMirrorCatalogLimit(params.get('limit')));
     }
 
@@ -4017,6 +4022,7 @@ function createOperatorBrowserDashboardHtml(input: {
       setOptionalUrlParam(params, 'runtimeProfile', $('mirrorCatalogRuntimeProfile').value.trim());
       setOptionalUrlParam(params, 'kind', $('mirrorCatalogKind').value === 'all' ? '' : $('mirrorCatalogKind').value);
       setOptionalUrlParam(params, 'search', $('mirrorCatalogSearch').value.trim());
+      setOptionalUrlParam(params, 'withTranscript', $('mirrorCatalogWithTranscriptOnly').checked ? '1' : '');
       const limit = normalizeMirrorCatalogLimit($('mirrorCatalogLimit').value);
       setOptionalUrlParam(params, 'limit', limit === 50 ? '' : String(limit));
       const query = params.toString();
@@ -4048,7 +4054,10 @@ function createOperatorBrowserDashboardHtml(input: {
         updateMirrorCatalogUrl();
         const catalog = await fetchJson(buildMirrorCatalogPath());
         mirrorCatalogRows = flattenMirrorCatalogEntries(catalog);
-        mirrorCatalogFilteredRows = filterMirrorCatalogRows(mirrorCatalogRows, $('mirrorCatalogSearch').value);
+        mirrorCatalogFilteredRows = filterMirrorCatalogRows(mirrorCatalogRows, {
+          query: $('mirrorCatalogSearch').value,
+          withTranscriptOnly: $('mirrorCatalogWithTranscriptOnly').checked,
+        });
         $('mirrorCatalogSummary').className = 'notice notice-ok';
         $('mirrorCatalogSummary').innerHTML = renderMirrorCatalogSummary(catalog, mirrorCatalogRows, mirrorCatalogFilteredRows);
         $('mirrorCatalogResults').innerHTML = renderMirrorCatalogTable(mirrorCatalogFilteredRows);
@@ -4096,21 +4105,31 @@ function createOperatorBrowserDashboardHtml(input: {
       return rows;
     }
 
-    function filterMirrorCatalogRows(rows, query) {
-      const needle = String(query || '').trim().toLowerCase();
-      if (!needle) return rows;
-      return rows.filter((row) => [
-        row.provider,
-        row.runtimeProfileId,
-        row.boundIdentityKey,
-        row.status,
-        row.kind,
-        row.label,
-        row.itemId,
-        row.timestamp,
-        row.transcriptStatus,
-        row.searchable,
-      ].join(' ').toLowerCase().includes(needle));
+    function filterMirrorCatalogRows(rows, filters) {
+      const needle = String(filters && filters.query || '').trim().toLowerCase();
+      const withTranscriptOnly = Boolean(filters && filters.withTranscriptOnly);
+      return rows.filter((row) => {
+        if (withTranscriptOnly && !hasCachedCatalogTranscript(row)) return false;
+        if (!needle) return true;
+        return [
+          row.provider,
+          row.runtimeProfileId,
+          row.boundIdentityKey,
+          row.status,
+          row.kind,
+          row.label,
+          row.itemId,
+          row.timestamp,
+          row.transcriptStatus,
+          row.searchable,
+        ].join(' ').toLowerCase().includes(needle);
+      });
+    }
+
+    function hasCachedCatalogTranscript(row) {
+      if (!row || row.kind !== 'conversations') return false;
+      return readBooleanField(row.item, ['hasCachedTranscript'])
+        || readNumberField(row.item, ['messageCount']) > 0;
     }
 
     function renderMirrorCatalogSummary(catalog, rows, filteredRows) {

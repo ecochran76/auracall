@@ -14624,6 +14624,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('mirrorCatalogRuntimeProfile');
       expect(html).toContain('mirrorCatalogKind');
       expect(html).toContain('mirrorCatalogSearch');
+      expect(html).toContain('mirrorCatalogWithTranscriptOnly');
       expect(html).toContain('mirrorCatalogLimit');
       expect(html).toContain('loadMirrorCatalog');
       expect(html).toContain('Search Cache');
@@ -14647,8 +14648,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('Transcript');
       expect(html).toContain('renderCatalogTranscriptBadge');
       expect(html).toContain('formatCatalogTranscriptStatus');
+      expect(html).toContain('hasCachedCatalogTranscript');
       expect(html).toContain('hasCachedTranscript');
       expect(html).toContain('messageCount');
+      expect(html).toContain('withTranscript');
       expect(html).toContain('data-catalog-row-index');
       expect(html).toContain('data-catalog-item-path');
       expect(html).toContain('showMirrorCatalogDetailByIndex');
@@ -14746,6 +14749,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('showMirrorCatalogDetailByPath');
       expect(html).toContain('renderConversationDetailView');
       expect(html).toContain('renderCatalogTranscriptBadge');
+      expect(html).toContain('mirrorCatalogWithTranscriptOnly');
       expect(html).toContain('/v1/account-mirrors/catalog');
       expect(html).toContain('/v1/account-mirrors/catalog/items/');
     } finally {

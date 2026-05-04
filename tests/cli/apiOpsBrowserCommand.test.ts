@@ -18,6 +18,7 @@ const dashboardHtml = `
   <input id="mirrorCatalogRuntimeProfile">
   <select id="mirrorCatalogKind"></select>
   <input id="mirrorCatalogSearch">
+  <input id="mirrorCatalogWithTranscriptOnly" type="checkbox">
   <input id="mirrorCatalogLimit">
   <button id="loadMirrorCatalog">Search Cache</button>
   <div id="mirrorCatalogSummary"></div>
@@ -46,6 +47,7 @@ const dashboardHtml = `
   function collectAttentionRows() {}
   function flattenMirrorCatalogEntries() {}
   function filterMirrorCatalogRows() {}
+  function hasCachedCatalogTranscript() {}
   function renderMirrorCatalogTable() {
     return '<table id="mirrorCatalogItems"><thead><tr><th>Transcript</th></tr></thead><tr data-catalog-row-index="0"><td><a href="/v1/account-mirrors/catalog/items/conv_1?provider=chatgpt&runtimeProfile=default&kind=conversations" data-catalog-item-path="/v1/account-mirrors/catalog/items/conv_1?provider=chatgpt&runtimeProfile=default&kind=conversations">Details</a></td></tr></table>';
   }
@@ -58,9 +60,11 @@ const dashboardHtml = `
   function initializeMirrorCatalogFiltersFromUrl() {
     params.get('provider');
     params.get('search');
+    params.get('withTranscript');
   }
   function updateMirrorCatalogUrl() {
-    window.history.replaceState(null, '', '/account-mirror?provider=chatgpt&search=test');
+    const withTranscriptOnly = true;
+    window.history.replaceState(null, '', '/account-mirror?provider=chatgpt&search=test&withTranscript=1');
   }
   function showMirrorCatalogDetailByIndex(index) {
     $('mirrorCatalogDetailRaw').textContent = index;
@@ -220,6 +224,7 @@ describe('api ops browser CLI helpers', () => {
       hasCatalogDetailInspection: true,
       hasConversationChatDetailView: true,
       hasConversationTranscriptAffordance: true,
+      hasConversationTranscriptOnlyFilter: true,
       usesAccountMirrorCatalogItemPath: true,
       usesAccountMirrorCatalogPath: true,
     });
@@ -237,7 +242,7 @@ describe('api ops browser CLI helpers', () => {
       'Dashboard service control: nav=ok operations=ok backgroundDrain=ok scheduler=ok runOnce=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard cache browse: catalog=ok page=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
+      'Dashboard cache browse: catalog=ok page=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok transcriptFilter=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok inputInspect=ok input=ok rowActions=ok stateAware=ok feedback=ok pause=ok resume=ok cancel=ok',

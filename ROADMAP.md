@@ -137,9 +137,10 @@ Current State:
     page URL and rows open stable cache-backed item-detail URLs through
     `/v1/account-mirrors/catalog/items/{item_id}` without starting browser
     work; conversation rows show cached transcript availability and message
-    count before click-through; conversation item-detail reads hydrate any
-    existing cached conversation context and render cached turns as a chat
-    dialog when available, with raw JSON retained as the debug fallback;
+    count before click-through, with a persisted `withTranscript=1` filter for
+    transcript-backed rows; conversation item-detail reads hydrate any existing
+    cached conversation context and render cached turns as a chat dialog when
+    available, with raw JSON retained as the debug fallback;
     CLI/MCP `api_ops_browser_status` surfaces the configured canonical
     dashboard URL for operator handoff, with `http://auracall.localhost/ops/browser`
     as the stable local dashboard endpoint

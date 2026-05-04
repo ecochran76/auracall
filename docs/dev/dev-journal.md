@@ -25699,6 +25699,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
   - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing lint-warning debt in broad touched files
+    (`noUselessContinue`, `noNonNullAssertion`)
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `4058248`; stale
+    PID `4004187` exited after a second SIGTERM
+  - installed `api ops-browser-status --json` reports
+    `.dashboard.hasConversationTranscriptOnlyFilter=true`
+  - installed `/account-mirror?provider=chatgpt&kind=conversations&withTranscript=1&limit=3`
+    includes `mirrorCatalogWithTranscriptOnly`, `withTranscript`,
+    `hasCachedCatalogTranscript`, and `With transcript only`
+  - installed catalog read confirms all first three ChatGPT/default
+    conversation rows have cached transcript counts
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
     reported only existing lint-warning debt in the touched broad files
     (`noUselessContinue`, `noNonNullAssertion`)
   - `pnpm run docs:list`
@@ -25786,3 +25803,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `formatCatalogTranscriptStatus`
   - installed catalog read for ChatGPT/default conversations shows the first
     three rows with cached transcript summaries: 5, 5, and 4 messages
+
+## Turn 96 | 2026-05-03
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: let operators filter account mirror catalog rows to conversations with
+  cached transcripts.
+- Change:
+  - `/account-mirror` has a `With transcript only` checkbox persisted as
+    `withTranscript=1`
+  - catalog filtering now uses cached `hasCachedTranscript`/`messageCount`
+    summary fields client-side; it does not enqueue browser work
+  - dashboard CLI contract now asserts the transcript-only filter wiring
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
