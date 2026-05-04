@@ -266,9 +266,9 @@ Terminology note:
   provider/profile/kind/search/limit controls backed by
   `GET /v1/account-mirrors/catalog`, persists filters in the page URL, and
   opens stable item-detail URLs without starting provider browser work.
-  Conversation details render cached turns as a chat dialog when transcript
-  turns are present, while keeping the raw cached item JSON available for
-  debugging.
+  Conversation detail reads hydrate any existing cached conversation context
+  into the item detail and render cached turns as a chat dialog, while keeping
+  the raw cached item JSON available for debugging.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

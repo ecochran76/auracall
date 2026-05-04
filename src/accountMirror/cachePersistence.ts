@@ -3,6 +3,7 @@ import type { ProviderCacheContext } from '../browser/providers/cache.js';
 import type {
   Conversation,
   ConversationArtifact,
+  ConversationContext,
   FileRef,
   Project,
 } from '../browser/providers/domain.js';
@@ -62,6 +63,11 @@ export interface AccountMirrorPersistence {
     browserProfileId: string | null;
     boundIdentityKey: string | null;
   }): Promise<AccountMirrorStatusState | null>;
+  readConversationContext(input: {
+    provider: AccountMirrorProvider;
+    boundIdentityKey: string | null;
+    conversationId: string;
+  }): Promise<ConversationContext | null>;
 }
 
 export function createAccountMirrorPersistence(input: {
@@ -179,7 +185,28 @@ export function createAccountMirrorPersistence(input: {
         metadataEvidence: snapshot.metadataEvidence,
       };
     },
+    async readConversationContext(request) {
+      if (!request.boundIdentityKey || !request.conversationId.trim()) {
+        return null;
+      }
+      const context = createMirrorCacheContext({
+        config: options.config,
+        provider: request.provider,
+        boundIdentityKey: request.boundIdentityKey,
+      });
+      const result = await cacheStore.readConversationContext(context, request.conversationId.trim());
+      return hasConversationContextPayload(result.items) ? result.items : null;
+    },
   };
+}
+
+function hasConversationContextPayload(context: ConversationContext): boolean {
+  return Boolean(
+    context.messages.length > 0 ||
+      (context.files?.length ?? 0) > 0 ||
+      (context.sources?.length ?? 0) > 0 ||
+      (context.artifacts?.length ?? 0) > 0,
+  );
 }
 
 function createMirrorCacheContext(input: {

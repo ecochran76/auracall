@@ -55,6 +55,7 @@ function createNoopPersistence(): AccountMirrorPersistence {
     writeSnapshot: vi.fn(async () => {}),
     readCatalog: vi.fn(async () => null),
     readState: vi.fn(async () => null),
+    readConversationContext: vi.fn(async () => null),
   };
 }
 
@@ -339,6 +340,7 @@ describe('account mirror refresh service', () => {
         },
         metadataEvidence: previousEvidence,
       })),
+      readConversationContext: vi.fn(async () => null),
     };
     const registry = createAccountMirrorStatusRegistry({
       config,

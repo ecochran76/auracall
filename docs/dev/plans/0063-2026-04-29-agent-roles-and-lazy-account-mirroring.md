@@ -735,3 +735,7 @@ when `messages`, `turns`, `conversation`, `transcript`, or ChatGPT-style
 `mapping` data is present. If a mirror only has metadata, the detail view shows
 the conversation header and a no-transcript state while keeping raw JSON
 available.
+The catalog item detail path also hydrates conversation rows from the existing
+cached conversation context store. That keeps catalog list reads lightweight,
+does not enqueue browser work, and lets `/account-mirror` display real chat
+bubbles whenever a prior provider detail read has cached `messages`.

@@ -15449,3 +15449,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `activeCompletionNextAttemptAt` and `routineEligibleAt` so operators can see
   short active retries without misreading the longer politeness gate; label
   active operation retries as `Next Completion Attempt`.
+- 2026-05-03: Conversation catalog detail should hydrate from the existing
+  conversation context cache. Catalog list rows should remain lightweight, but
+  `/v1/account-mirrors/catalog/items/{id}` should include cached `messages`
+  when available so `/account-mirror` can render a real chat dialog without
+  launching provider browser work.

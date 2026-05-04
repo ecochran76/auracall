@@ -37,9 +37,10 @@ describe('account mirror catalog service', () => {
   test('reads cached mirror manifests without invoking browser refresh', async () => {
     const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-mirror-catalog-'));
     setAuracallHomeDirOverrideForTest(homeDir);
+    const cacheStore = createCacheStore('dual');
     const persistence = createAccountMirrorPersistence({
       config,
-      cacheStore: createCacheStore('dual'),
+      cacheStore,
     });
     try {
       await persistence.writeSnapshot({
@@ -102,6 +103,26 @@ describe('account mirror catalog service', () => {
             { id: 'media_1', title: 'Image 1', mediaType: 'image', provider: 'chatgpt' },
           ],
         },
+      });
+      await cacheStore.writeConversationContext({
+        provider: 'chatgpt',
+        userConfig: config as never,
+        listOptions: {},
+        identityKey: 'ecochran76@gmail.com',
+      }, 'conv_1', {
+        provider: 'chatgpt',
+        conversationId: 'conv_1',
+        messages: [
+          { role: 'user', text: 'Can you summarize this?' },
+          { role: 'assistant', text: 'Yes. Here is the summary.' },
+        ],
+        artifacts: [
+          {
+            id: 'artifact_1',
+            title: 'Artifact 1',
+            kind: 'document',
+          },
+        ],
       });
       const service = createAccountMirrorCatalogService({
         config,
@@ -199,6 +220,36 @@ describe('account mirror catalog service', () => {
         item: {
           id: 'file_1',
           name: 'Upload.pdf',
+        },
+      });
+
+      const conversationItem = await service.readItem({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        kind: 'conversations',
+        itemId: 'conv_1',
+      });
+      expect(conversationItem).toMatchObject({
+        object: 'account_mirror_catalog_item',
+        generatedAt: '2026-04-29T12:10:00.000Z',
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        boundIdentityKey: 'ecochran76@gmail.com',
+        kind: 'conversations',
+        itemId: 'conv_1',
+        item: {
+          id: 'conv_1',
+          title: 'Conversation 1',
+          messages: [
+            { role: 'user', text: 'Can you summarize this?' },
+            { role: 'assistant', text: 'Yes. Here is the summary.' },
+          ],
+          artifacts: [
+            {
+              id: 'artifact_1',
+              title: 'Artifact 1',
+            },
+          ],
         },
       });
 

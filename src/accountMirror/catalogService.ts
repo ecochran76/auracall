@@ -178,6 +178,9 @@ export function createAccountMirrorCatalogService(input: {
           for (const item of items) {
             const itemId = readCatalogItemId(item);
             if (itemId === requestedId) {
+              const hydratedItem = kind === 'conversations'
+                ? await hydrateConversationCatalogItem(persistence, entry, itemId, item)
+                : item;
               return {
                 object: 'account_mirror_catalog_item',
                 generatedAt: now().toISOString(),
@@ -189,7 +192,7 @@ export function createAccountMirrorCatalogService(input: {
                 reason: entry.reason,
                 kind,
                 itemId,
-                item,
+                item: hydratedItem,
               };
             }
           }
@@ -198,6 +201,32 @@ export function createAccountMirrorCatalogService(input: {
       return null;
     },
   };
+}
+
+async function hydrateConversationCatalogItem(
+  persistence: AccountMirrorPersistence,
+  entry: AccountMirrorCatalogEntry,
+  conversationId: string,
+  item: unknown,
+): Promise<unknown> {
+  const context = await persistence.readConversationContext({
+    provider: entry.provider,
+    boundIdentityKey: entry.boundIdentityKey,
+    conversationId,
+  });
+  if (!context) return item;
+  const base = isRecord(item) ? item : {};
+  return {
+    ...base,
+    messages: context.messages,
+    files: context.files ?? [],
+    sources: context.sources ?? [],
+    artifacts: context.artifacts ?? [],
+  };
+}
+
+function isRecord(item: unknown): item is Record<string, unknown> {
+  return Boolean(item && typeof item === 'object' && !Array.isArray(item));
 }
 
 function catalogKindsForItemLookup(kind: AccountMirrorCatalogKind): Array<Exclude<AccountMirrorCatalogKind, 'all'>> {
