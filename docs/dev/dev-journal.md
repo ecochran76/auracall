@@ -25706,6 +25706,57 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run install:user-runtime`
 - Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `4164355`
+  - installed `api ops-browser-status --json` reports
+    `.dashboard.hasConversationTranscriptDownload=true` alongside the existing
+    chat detail, transcript affordance, and transcript-only filter checks
+  - installed `/account-mirror?provider=chatgpt&kind=conversations&withTranscript=1&limit=3`
+    includes `downloadCurrentMirrorConversationTranscript`,
+    `Download Transcript.md`, `renderConversationTranscriptMarkdown`,
+    `formatTranscriptFilename`, and `text/markdown`
+  - installed catalog item route for ChatGPT/default conversation
+    `69e236bf-d298-832d-9f5c-f1a11a9fd156` still returns five cached messages
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing lint-warning debt in broad touched files
+    (`noUselessContinue`, `noNonNullAssertion`)
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `4058248`
+  - installed `api ops-browser-status --json` reports
+    `.dashboard.hasConversationTranscriptOnlyFilter=true`
+  - installed `/account-mirror?provider=chatgpt&kind=conversations&withTranscript=1&limit=3`
+    includes `With transcript only`, `withTranscript=1`, and cached transcript
+    row filtering wiring
+
+## Turn 97 | 2026-05-03
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: let operators export cached chat-dialog conversation detail as a local
+  Markdown transcript.
+- Change:
+  - conversation detail views now keep the loaded cached detail object in
+    dashboard state
+  - cached chat-dialog detail renders a `Download Transcript.md` action with
+    the cached turn count
+  - the browser builds a local Markdown `Blob` from cached provider/profile,
+    identity, id, URL, and turn content; no provider navigation or browser work
+    is started
+  - dashboard CLI contract now asserts the transcript download affordance
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing lint-warning debt in broad touched files
+    (`noUselessContinue`, `noNonNullAssertion`)
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
   - restarted the pinned `127.0.0.1:18095` service on PID `4058248`; stale
     PID `4004187` exited after a second SIGTERM
   - installed `api ops-browser-status --json` reports

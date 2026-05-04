@@ -15462,3 +15462,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   filter. Persist it as `withTranscript=1` and apply it client-side from cached
   transcript summaries so operators can focus on conversations that have
   readable chat-dialog detail without touching provider pages.
+- 2026-05-03: Conversation detail should support local transcript export.
+  Render Markdown downloads from the already hydrated cached detail object so
+  operators can move cached chat evidence out of the dashboard without
+  re-entering provider browser flows.

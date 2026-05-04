@@ -746,3 +746,7 @@ operators can identify full chat-dialog candidates before opening item detail.
 The dashboard also has a `With transcript only` checkbox persisted as
 `withTranscript=1`; it filters client-side against the cached transcript
 summary and does not enqueue provider browser work.
+Conversation detail views with cached turns now include a local Markdown
+transcript download action. The export is rendered in the dashboard from the
+already-hydrated cached detail object, so it does not navigate, submit prompts,
+or start provider browser work.

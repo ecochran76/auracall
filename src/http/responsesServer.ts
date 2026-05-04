@@ -3518,6 +3518,7 @@ function createOperatorBrowserDashboardHtml(input: {
     const asJson = (value) => JSON.stringify(value, null, 2);
     let mirrorCatalogRows = [];
     let mirrorCatalogFilteredRows = [];
+    let mirrorCatalogCurrentDetail = null;
 
     async function fetchJson(path) {
       const response = await fetch(path, { cache: 'no-store' });
@@ -4212,10 +4213,12 @@ function createOperatorBrowserDashboardHtml(input: {
       $('mirrorCatalogDetailRaw').textContent = 'Loading cached item detail...';
       try {
         const detail = await fetchJson(path);
+        mirrorCatalogCurrentDetail = detail;
         $('mirrorCatalogDetailView').className = 'notice';
         $('mirrorCatalogDetailView').innerHTML = renderMirrorCatalogDetailView(detail);
         $('mirrorCatalogDetailRaw').textContent = asJson(detail);
       } catch (error) {
+        mirrorCatalogCurrentDetail = null;
         const message = String(error.message || error);
         $('mirrorCatalogDetailView').className = 'notice notice-bad';
         $('mirrorCatalogDetailView').textContent = message;
@@ -4237,7 +4240,16 @@ function createOperatorBrowserDashboardHtml(input: {
         return header
           + '<div class="notice notice-warn">No cached transcript turns are available for this conversation yet.</div>';
       }
-      return header + '<div class="chat-transcript">' + turns.map(renderChatTurn).join('') + '</div>';
+      return header
+        + renderConversationTranscriptActions(turns)
+        + '<div class="chat-transcript">' + turns.map(renderChatTurn).join('') + '</div>';
+    }
+
+    function renderConversationTranscriptActions(turns) {
+      return '<div class="row" style="margin-bottom: 10px;">'
+        + '<button type="button" onclick="downloadCurrentMirrorConversationTranscript()">Download Transcript.md</button>'
+        + '<span class="muted">' + escapeHtml(String(turns.length)) + ' cached turns</span>'
+        + '</div>';
     }
 
     function renderGenericCatalogDetailView(detail) {
@@ -4328,6 +4340,54 @@ function createOperatorBrowserDashboardHtml(input: {
         + '<div class="chat-role">' + escapeHtml(turn.role) + '</div>'
         + '<div class="chat-bubble">' + escapeHtml(turn.content) + '</div>'
         + '</div>';
+    }
+
+    function downloadCurrentMirrorConversationTranscript() {
+      const detail = mirrorCatalogCurrentDetail;
+      const item = detail && typeof detail === 'object' ? detail.item || {} : {};
+      const turns = extractConversationTurns(item);
+      if (!turns.length) return;
+      const markdown = renderConversationTranscriptMarkdown(detail, item, turns);
+      const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = formatTranscriptFilename(detail, item);
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function renderConversationTranscriptMarkdown(detail, item, turns) {
+      const title = formatCatalogItemLabel(item);
+      const lines = [
+        '# ' + title,
+        '',
+        '- Provider: ' + (detail.provider || 'unknown'),
+        '- Profile: ' + (detail.runtimeProfileId || 'unknown'),
+        '- Identity: ' + (detail.boundIdentityKey || 'unbound'),
+        '- ID: ' + (detail.itemId || formatCatalogItemId(item)),
+        '- URL: ' + (readStringField(item, ['url', 'href']) || 'none'),
+        '',
+      ];
+      for (const turn of turns) {
+        lines.push('## ' + turn.role);
+        lines.push('');
+        lines.push(turn.content);
+        lines.push('');
+      }
+      return lines.join('\\n').trim() + '\\n';
+    }
+
+    function formatTranscriptFilename(detail, item) {
+      const id = detail && detail.itemId ? detail.itemId : formatCatalogItemId(item);
+      const title = formatCatalogItemLabel(item);
+      const base = (title + '-' + id).toLowerCase()
+        .replace(/[^a-z0-9._-]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 96) || 'conversation-transcript';
+      return base + '.md';
     }
 
     function formatCatalogItemLabel(item) {

@@ -140,7 +140,8 @@ Current State:
     count before click-through, with a persisted `withTranscript=1` filter for
     transcript-backed rows; conversation item-detail reads hydrate any existing
     cached conversation context and render cached turns as a chat dialog when
-    available, with raw JSON retained as the debug fallback;
+    available, with raw JSON retained as the debug fallback and a local
+    Markdown transcript download action;
     CLI/MCP `api_ops_browser_status` surfaces the configured canonical
     dashboard URL for operator handoff, with `http://auracall.localhost/ops/browser`
     as the stable local dashboard endpoint

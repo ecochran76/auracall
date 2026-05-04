@@ -271,7 +271,8 @@ Terminology note:
   will open as chat dialogs.
   Conversation detail reads hydrate any existing cached conversation context
   into the item detail and render cached turns as a chat dialog, while keeping
-  the raw cached item JSON available for debugging.
+  the raw cached item JSON available for debugging. Cached chat-dialog details
+  can be downloaded locally as Markdown without starting provider browser work.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs
