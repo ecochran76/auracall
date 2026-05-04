@@ -753,3 +753,6 @@ or start provider browser work.
 Those cached chat-dialog detail views also include local transcript search:
 operators can filter visible turns by text or role inside the loaded detail
 without re-reading the catalog or touching provider pages.
+Conversation detail now also surfaces cached related files, artifacts, and
+sources. Files and artifacts reuse the existing cache-backed item-detail route,
+while source URLs open externally; neither path starts provider browser work.

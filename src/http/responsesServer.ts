@@ -4247,13 +4247,95 @@ function createOperatorBrowserDashboardHtml(input: {
       const item = detail.item || {};
       const turns = extractConversationTurns(item);
       const header = renderCatalogDetailHeader(detail, item);
+      const relatedItems = renderConversationRelatedItems(detail, item);
       if (!turns.length) {
         return header
+          + relatedItems
           + '<div class="notice notice-warn">No cached transcript turns are available for this conversation yet.</div>';
       }
       return header
+        + relatedItems
         + renderConversationTranscriptActions(turns)
         + '<div class="chat-transcript">' + turns.map(renderChatTurn).join('') + '</div>';
+    }
+
+    function renderConversationRelatedItems(detail, item) {
+      const files = readObjectArray(item, ['files']);
+      const artifacts = readObjectArray(item, ['artifacts']);
+      const sources = readObjectArray(item, ['sources']);
+      if (!files.length && !artifacts.length && !sources.length) return '';
+      return '<div class="notice">'
+        + '<strong>Cached related items</strong>'
+        + renderConversationRelatedSection('Files', 'files', files, detail)
+        + renderConversationRelatedSection('Artifacts', 'artifacts', artifacts, detail)
+        + renderConversationSourceSection(sources)
+        + '</div>';
+    }
+
+    function renderConversationRelatedSection(label, kind, items, detail) {
+      if (!items.length) return '';
+      return '<div class="catalog-detail">'
+        + '<div class="muted">' + escapeHtml(label) + '</div>'
+        + items.map((item) => renderConversationRelatedLink(kind, item, detail)).join('')
+        + '</div>';
+    }
+
+    function renderConversationRelatedLink(kind, item, detail) {
+      const path = buildRelatedCatalogItemPath(detail, kind, item);
+      const title = formatCatalogItemLabel(item);
+      const subtitle = formatRelatedItemSubtitle(item);
+      if (!path) {
+        return '<span class="pill">' + escapeHtml(title) + subtitle + '</span>';
+      }
+      return '<a class="pill" href="' + escapeHtml(path) + '" data-related-item-path="' + escapeHtml(path) + '" onclick="showMirrorCatalogDetailByPath(this.dataset.relatedItemPath); return false;">'
+        + escapeHtml(title)
+        + subtitle
+        + '</a>';
+    }
+
+    function renderConversationSourceSection(items) {
+      if (!items.length) return '';
+      return '<div class="catalog-detail">'
+        + '<div class="muted">Sources</div>'
+        + items.map(renderConversationSourceLink).join('')
+        + '</div>';
+    }
+
+    function renderConversationSourceLink(item) {
+      const title = formatCatalogItemLabel(item);
+      const url = readStringField(item, ['url', 'href', 'sourceUrl']);
+      const subtitle = formatRelatedItemSubtitle(item);
+      if (!url) return '<span class="pill">' + escapeHtml(title) + subtitle + '</span>';
+      return '<a class="pill" href="' + escapeHtml(url) + '" target="_blank" rel="noreferrer">'
+        + escapeHtml(title)
+        + subtitle
+        + '</a>';
+    }
+
+    function buildRelatedCatalogItemPath(detail, kind, item) {
+      const itemId = formatCatalogItemId(item);
+      if (!itemId || itemId === 'unknown') return '';
+      const params = new URLSearchParams({
+        provider: detail.provider || currentMirrorCatalogProvider(),
+        runtimeProfile: detail.runtimeProfileId || currentMirrorCatalogRuntimeProfile(),
+        kind,
+      });
+      return '/v1/account-mirrors/catalog/items/' + encodeURIComponent(itemId) + '?' + params.toString();
+    }
+
+    function currentMirrorCatalogProvider() {
+      const select = $('mirrorCatalogProvider');
+      return select && select.value ? select.value : 'chatgpt';
+    }
+
+    function currentMirrorCatalogRuntimeProfile() {
+      const input = $('mirrorCatalogRuntimeProfile');
+      return input && input.value ? input.value : 'default';
+    }
+
+    function formatRelatedItemSubtitle(item) {
+      const type = readStringField(item, ['mimeType', 'type', 'source']);
+      return type ? ' <span class="muted">(' + escapeHtml(type) + ')</span>' : '';
     }
 
     function renderConversationTranscriptActions(turns) {
@@ -4304,6 +4386,17 @@ function createOperatorBrowserDashboardHtml(input: {
         const value = item[field];
         if (Array.isArray(value)) {
           return value.map(normalizeConversationTurn).filter(Boolean);
+        }
+      }
+      return [];
+    }
+
+    function readObjectArray(item, fields) {
+      if (!item || typeof item !== 'object') return [];
+      for (const field of fields) {
+        const value = item[field];
+        if (Array.isArray(value)) {
+          return value.filter((entry) => entry && typeof entry === 'object');
         }
       }
       return [];

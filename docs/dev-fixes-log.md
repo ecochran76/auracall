@@ -15470,3 +15470,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   Filter visible turns against the already rendered cached detail so operators
   can review long mirrored conversations without another catalog read or
   provider browser touch.
+- 2026-05-03: Conversation detail should expose cached related items. Render
+  files/artifacts/sources from the hydrated cached conversation context and
+  route files/artifacts through existing item-detail URLs so operators can move
+  from transcript review to attachment review without provider browser work.

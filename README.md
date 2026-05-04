@@ -272,8 +272,9 @@ Terminology note:
   Conversation detail reads hydrate any existing cached conversation context
   into the item detail and render cached turns as a chat dialog, while keeping
   the raw cached item JSON available for debugging. Cached chat-dialog details
-  can be searched in place and downloaded locally as Markdown without starting
-  provider browser work.
+  can be searched in place, downloaded locally as Markdown, and used to
+  navigate cached related files/artifacts/sources without starting provider
+  browser work.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

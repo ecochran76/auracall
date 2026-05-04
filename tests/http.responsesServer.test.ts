@@ -14657,6 +14657,12 @@ describe('http responses adapter', () => {
       expect(html).toContain('showMirrorCatalogDetailByIndex');
       expect(html).toContain('showMirrorCatalogDetailByPath');
       expect(html).toContain('renderConversationDetailView');
+      expect(html).toContain('renderConversationRelatedItems');
+      expect(html).toContain('renderConversationRelatedLink');
+      expect(html).toContain('buildRelatedCatalogItemPath');
+      expect(html).toContain('data-related-item-path');
+      expect(html).toContain('Cached related items');
+      expect(html).toContain('target="_blank" rel="noreferrer"');
       expect(html).toContain('extractConversationTurns');
       expect(html).toContain('renderChatTurn');
       expect(html).toContain('downloadCurrentMirrorConversationTranscript');
@@ -14761,6 +14767,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('renderConversationDetailView');
       expect(html).toContain('downloadCurrentMirrorConversationTranscript');
       expect(html).toContain('filterCurrentMirrorConversationTranscript');
+      expect(html).toContain('renderConversationRelatedItems');
       expect(html).toContain('renderCatalogTranscriptBadge');
       expect(html).toContain('mirrorCatalogWithTranscriptOnly');
       expect(html).toContain('/v1/account-mirrors/catalog');

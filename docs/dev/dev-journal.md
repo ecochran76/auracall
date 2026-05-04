@@ -25706,6 +25706,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run install:user-runtime`
 - Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `363313`
+  - installed `api ops-browser-status --json` reports
+    `.dashboard.hasConversationRelatedItemNavigation=true` alongside the
+    existing chat detail, transcript affordance, transcript filter, transcript
+    download, and transcript search checks
+  - installed `/account-mirror?provider=chatgpt&kind=conversations&withTranscript=1&limit=3`
+    includes `renderConversationRelatedItems`,
+    `renderConversationRelatedLink`, `buildRelatedCatalogItemPath`,
+    `data-related-item-path`, `Cached related items`, and external source-link
+    wiring
+  - installed catalog item route for ChatGPT/default conversation
+    `69e236bf-d298-832d-9f5c-f1a11a9fd156` returned five cached messages,
+    eleven cached artifacts, and nine cached sources
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing lint-warning debt in broad touched files
+    (`noUselessContinue`, `noNonNullAssertion`)
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
   - restarted the pinned `127.0.0.1:18095` service on PID `297810`
   - installed `api ops-browser-status --json` reports
     `.dashboard.hasConversationTranscriptSearch=true` alongside the existing
@@ -25903,6 +25924,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     the visible-count status without re-reading the catalog
   - `Clear` restores the loaded transcript view
   - dashboard CLI contract now asserts the transcript search affordance
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+
+## Turn 99 | 2026-05-03
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: let conversation detail navigate from cached transcripts to related
+  cached files, artifacts, and sources.
+- Change:
+  - cached conversation detail now renders a `Cached related items` block when
+    hydrated `files`, `artifacts`, or `sources` are present
+  - files and artifacts link back through the existing
+    `/v1/account-mirrors/catalog/items/{item_id}` item-detail route and reuse
+    the current detail loader
+  - source URLs render as external links when a cached URL is present
+  - dashboard CLI contract now asserts the related-item navigation affordance
 - Validation:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
