@@ -73,7 +73,7 @@ const dashboardHtml = `
     await fetch(path);
   }
   function renderConversationDetailView() {
-    return '<button>Download Transcript.md</button><div class="chat-transcript"><div class="chat-bubble">hello</div></div>';
+    return '<input id="mirrorConversationTranscriptSearch" placeholder="Search cached transcript" /><button>Download Transcript.md</button><div class="chat-transcript"><div class="chat-bubble">hello</div></div>';
   }
   function extractConversationTurns() {}
   function renderChatTurn() {}
@@ -82,6 +82,9 @@ const dashboardHtml = `
   }
   function renderConversationTranscriptMarkdown() {}
   function formatTranscriptFilename() {}
+  function filterCurrentMirrorConversationTranscript() { turn.textContent; }
+  function clearCurrentMirrorConversationTranscriptSearch() {}
+  function normalizeTranscriptSearchTerm() {}
   async function loadMirrorCatalog() {
     await fetch('/v1/account-mirrors/catalog?kind=all&limit=50');
   }
@@ -231,6 +234,7 @@ describe('api ops browser CLI helpers', () => {
       hasConversationTranscriptAffordance: true,
       hasConversationTranscriptOnlyFilter: true,
       hasConversationTranscriptDownload: true,
+      hasConversationTranscriptSearch: true,
       usesAccountMirrorCatalogItemPath: true,
       usesAccountMirrorCatalogPath: true,
     });
@@ -248,7 +252,7 @@ describe('api ops browser CLI helpers', () => {
       'Dashboard service control: nav=ok operations=ok backgroundDrain=ok scheduler=ok runOnce=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard cache browse: catalog=ok page=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok transcriptFilter=ok transcriptDownload=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
+      'Dashboard cache browse: catalog=ok page=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok transcriptFilter=ok transcriptDownload=ok transcriptSearch=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok inputInspect=ok input=ok rowActions=ok stateAware=ok feedback=ok pause=ok resume=ok cancel=ok',

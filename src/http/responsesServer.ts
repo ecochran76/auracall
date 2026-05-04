@@ -3222,6 +3222,17 @@ function createOperatorBrowserDashboardHtml(input: {
       gap: 10px;
       margin-bottom: 10px;
     }
+    .chat-transcript-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .chat-transcript-actions input {
+      min-width: 220px;
+      flex: 1 1 260px;
+    }
     .chat-turn {
       display: grid;
       gap: 4px;
@@ -4246,9 +4257,11 @@ function createOperatorBrowserDashboardHtml(input: {
     }
 
     function renderConversationTranscriptActions(turns) {
-      return '<div class="row" style="margin-bottom: 10px;">'
+      return '<div class="chat-transcript-actions">'
+        + '<input id="mirrorConversationTranscriptSearch" type="search" placeholder="Search cached transcript" oninput="filterCurrentMirrorConversationTranscript()" />'
         + '<button type="button" onclick="downloadCurrentMirrorConversationTranscript()">Download Transcript.md</button>'
-        + '<span class="muted">' + escapeHtml(String(turns.length)) + ' cached turns</span>'
+        + '<button type="button" onclick="clearCurrentMirrorConversationTranscriptSearch()">Clear</button>'
+        + '<span id="mirrorConversationTranscriptSearchStatus" class="muted">' + escapeHtml(String(turns.length)) + ' cached turns</span>'
         + '</div>';
     }
 
@@ -4340,6 +4353,34 @@ function createOperatorBrowserDashboardHtml(input: {
         + '<div class="chat-role">' + escapeHtml(turn.role) + '</div>'
         + '<div class="chat-bubble">' + escapeHtml(turn.content) + '</div>'
         + '</div>';
+    }
+
+    function filterCurrentMirrorConversationTranscript() {
+      const input = $('mirrorConversationTranscriptSearch');
+      const status = $('mirrorConversationTranscriptSearchStatus');
+      if (!input || !status) return;
+      const query = normalizeTranscriptSearchTerm(input.value);
+      const turns = Array.from(document.querySelectorAll('#mirrorCatalogDetailView .chat-turn'));
+      let visible = 0;
+      for (const turn of turns) {
+        const text = normalizeTranscriptSearchTerm(turn.textContent);
+        const match = !query || text.includes(query);
+        turn.style.display = match ? '' : 'none';
+        if (match) visible += 1;
+      }
+      status.textContent = query
+        ? String(visible) + ' of ' + String(turns.length) + ' cached turns'
+        : String(turns.length) + ' cached turns';
+    }
+
+    function clearCurrentMirrorConversationTranscriptSearch() {
+      const input = $('mirrorConversationTranscriptSearch');
+      if (input) input.value = '';
+      filterCurrentMirrorConversationTranscript();
+    }
+
+    function normalizeTranscriptSearchTerm(value) {
+      return String(value || '').trim().toLowerCase();
     }
 
     function downloadCurrentMirrorConversationTranscript() {

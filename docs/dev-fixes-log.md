@@ -15466,3 +15466,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   Render Markdown downloads from the already hydrated cached detail object so
   operators can move cached chat evidence out of the dashboard without
   re-entering provider browser flows.
+- 2026-05-03: Cached chat-dialog detail needs in-place transcript search.
+  Filter visible turns against the already rendered cached detail so operators
+  can review long mirrored conversations without another catalog read or
+  provider browser touch.

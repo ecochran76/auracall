@@ -14664,6 +14664,12 @@ describe('http responses adapter', () => {
       expect(html).toContain('formatTranscriptFilename');
       expect(html).toContain('Download Transcript.md');
       expect(html).toContain('text/markdown');
+      expect(html).toContain('mirrorConversationTranscriptSearch');
+      expect(html).toContain('filterCurrentMirrorConversationTranscript');
+      expect(html).toContain('clearCurrentMirrorConversationTranscriptSearch');
+      expect(html).toContain('normalizeTranscriptSearchTerm');
+      expect(html).toContain('Search cached transcript');
+      expect(html).toContain('turn.textContent');
       expect(html).toContain('chat-transcript');
       expect(html).toContain('chat-bubble');
       expect(html).toContain('Catalog reads are cache-only');
@@ -14754,6 +14760,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('showMirrorCatalogDetailByPath');
       expect(html).toContain('renderConversationDetailView');
       expect(html).toContain('downloadCurrentMirrorConversationTranscript');
+      expect(html).toContain('filterCurrentMirrorConversationTranscript');
       expect(html).toContain('renderCatalogTranscriptBadge');
       expect(html).toContain('mirrorCatalogWithTranscriptOnly');
       expect(html).toContain('/v1/account-mirrors/catalog');

@@ -750,3 +750,6 @@ Conversation detail views with cached turns now include a local Markdown
 transcript download action. The export is rendered in the dashboard from the
 already-hydrated cached detail object, so it does not navigate, submit prompts,
 or start provider browser work.
+Those cached chat-dialog detail views also include local transcript search:
+operators can filter visible turns by text or role inside the loaded detail
+without re-reading the catalog or touching provider pages.
