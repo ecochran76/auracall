@@ -51,6 +51,7 @@ export interface ApiOpsBrowserDashboardSummary {
   hasConversationRelatedItemNavigation: boolean;
   hasCatalogAssetDetailInspector: boolean;
   hasCatalogAssetPreview: boolean;
+  hasCatalogLocalAssetRoute: boolean;
   usesAccountMirrorCatalogItemPath: boolean;
   usesAccountMirrorCatalogPath: boolean;
 }
@@ -103,7 +104,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
     `AuraCall ops browser: ok (${summary.host}:${summary.port}${dashboard.route})`,
     `Dashboard URL: ${summary.dashboardUrl}`,
     `Dashboard service control: nav=${formatBoolean(dashboard.hasNavigationScaffold)} operations=${formatBoolean(dashboard.hasOperationsPanel)} backgroundDrain=${formatBoolean(dashboard.hasBackgroundDrainControls)} scheduler=${formatBoolean(dashboard.hasMirrorSchedulerControls)} runOnce=${formatBoolean(dashboard.hasRunOnceSchedulerControl)}`,
-    `Dashboard cache browse: catalog=${formatBoolean(dashboard.hasAccountMirrorCatalogPanel)} page=${formatBoolean(dashboard.hasAccountMirrorPageLink)} search=${formatBoolean(dashboard.hasCatalogSearchControls)} savedFilters=${formatBoolean(dashboard.hasCatalogSavedFilterState)} table=${formatBoolean(dashboard.hasCatalogResultsTable)} detail=${formatBoolean(dashboard.hasCatalogDetailInspection)} chat=${formatBoolean(dashboard.hasConversationChatDetailView)} transcript=${formatBoolean(dashboard.hasConversationTranscriptAffordance)} transcriptFilter=${formatBoolean(dashboard.hasConversationTranscriptOnlyFilter)} transcriptDownload=${formatBoolean(dashboard.hasConversationTranscriptDownload)} transcriptSearch=${formatBoolean(dashboard.hasConversationTranscriptSearch)} related=${formatBoolean(dashboard.hasConversationRelatedItemNavigation)} assetInspector=${formatBoolean(dashboard.hasCatalogAssetDetailInspector)} assetPreview=${formatBoolean(dashboard.hasCatalogAssetPreview)} path=${dashboard.usesAccountMirrorCatalogPath ? '/v1/account-mirrors/catalog' : 'unknown'} itemPath=${dashboard.usesAccountMirrorCatalogItemPath ? '/v1/account-mirrors/catalog/items/{id}' : 'unknown'}`,
+    `Dashboard cache browse: catalog=${formatBoolean(dashboard.hasAccountMirrorCatalogPanel)} page=${formatBoolean(dashboard.hasAccountMirrorPageLink)} search=${formatBoolean(dashboard.hasCatalogSearchControls)} savedFilters=${formatBoolean(dashboard.hasCatalogSavedFilterState)} table=${formatBoolean(dashboard.hasCatalogResultsTable)} detail=${formatBoolean(dashboard.hasCatalogDetailInspection)} chat=${formatBoolean(dashboard.hasConversationChatDetailView)} transcript=${formatBoolean(dashboard.hasConversationTranscriptAffordance)} transcriptFilter=${formatBoolean(dashboard.hasConversationTranscriptOnlyFilter)} transcriptDownload=${formatBoolean(dashboard.hasConversationTranscriptDownload)} transcriptSearch=${formatBoolean(dashboard.hasConversationTranscriptSearch)} related=${formatBoolean(dashboard.hasConversationRelatedItemNavigation)} assetInspector=${formatBoolean(dashboard.hasCatalogAssetDetailInspector)} assetPreview=${formatBoolean(dashboard.hasCatalogAssetPreview)} localAsset=${formatBoolean(dashboard.hasCatalogLocalAssetRoute)} path=${dashboard.usesAccountMirrorCatalogPath ? '/v1/account-mirrors/catalog' : 'unknown'} itemPath=${dashboard.usesAccountMirrorCatalogItemPath ? '/v1/account-mirrors/catalog/items/{id}' : 'unknown'}`,
     `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} attention=${formatBoolean(dashboard.hasAttentionQueue)} activeTable=${formatBoolean(dashboard.hasActiveCompletionTable)} inspect=${formatBoolean(dashboard.hasCompletionInspectAction)} inputInspect=${formatBoolean(dashboard.hasCompletionInputInspectControl)} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} stateAware=${formatBoolean(dashboard.hasStateAwareCompletionActions)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
     summary.status.liveFollow.line,
     `Account mirror completions: active=${formatNullableNumber(summary.status.completions.metrics.active)} paused=${formatNullableNumber(summary.status.completions.metrics.paused)} failed=${formatNullableNumber(summary.status.completions.metrics.failed)} cancelled=${formatNullableNumber(summary.status.completions.metrics.cancelled)} total=${formatNullableNumber(summary.status.completions.metrics.total)}`,
@@ -152,6 +153,7 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
     [summary.hasConversationRelatedItemNavigation, 'Expected /ops/browser conversation details to navigate cached related items.'],
     [summary.hasCatalogAssetDetailInspector, 'Expected /ops/browser file/artifact details to render a compact inspector.'],
     [summary.hasCatalogAssetPreview, 'Expected /ops/browser file/artifact details to render cached asset previews.'],
+    [summary.hasCatalogLocalAssetRoute, 'Expected /ops/browser file/artifact details to route local cached assets through the API.'],
     [summary.usesAccountMirrorCatalogPath, 'Expected /ops/browser to read /v1/account-mirrors/catalog.'],
     [summary.usesAccountMirrorCatalogItemPath, 'Expected /ops/browser to read /v1/account-mirrors/catalog/items/{id}.'],
   ];
@@ -299,10 +301,14 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('formatCatalogItemSize'),
     hasCatalogAssetPreview: html.includes('renderCatalogItemPreview')
       && html.includes('resolveCatalogItemPreview')
+      && html.includes('buildCatalogItemAssetPath')
       && html.includes('readCatalogPreviewUrl')
       && html.includes('isSafePreviewUrl')
       && html.includes('Cached preview')
       && html.includes('asset-preview'),
+    hasCatalogLocalAssetRoute: html.includes("'/v1/account-mirrors/catalog/items/' + encodeURIComponent(itemId) + '/asset?'")
+      && html.includes('assetStorageRelpath')
+      && html.includes('storageRelpath'),
     usesAccountMirrorCatalogItemPath: html.includes('/v1/account-mirrors/catalog/items/'),
     usesAccountMirrorCatalogPath: html.includes('/v1/account-mirrors/catalog'),
   };

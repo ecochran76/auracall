@@ -25698,6 +25698,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
+
+## Turn 102 | 2026-05-03
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: serve materialized cached assets through the local API for preview.
+- Change:
+  - added `GET /v1/account-mirrors/catalog/items/{item_id}/asset`
+  - the route reuses the catalog item lookup and serves only cache-owned local
+    files under the configured AuraCall cache roots
+  - cached asset preview now uses that local route when a cached item has
+    `localPath`, `assetStorageRelpath`, or `storageRelpath`
+  - dashboard CLI contract now asserts local cached asset route wiring
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed dogfood: restarted the pinned `127.0.0.1:18095` service on
+    PID `566476`
+  - installed `api ops-browser-status --json` reports
+    `.dashboard.hasCatalogAssetPreview=true`,
+    `.dashboard.hasCatalogLocalAssetRoute=true`, and
+    `.dashboard.hasCatalogAssetDetailInspector=true`
+  - installed `/account-mirror?provider=chatgpt&kind=artifacts&limit=1`
+    includes `buildCatalogItemAssetPath`, `/asset?`, `assetStorageRelpath`,
+    `storageRelpath`, `Cached preview`, and `asset-preview`
   - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
   - `pnpm run docs:list`
   - `pnpm run plans:audit -- --keep 63`

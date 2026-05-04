@@ -84,6 +84,9 @@ const dashboardHtml = `
   function renderCatalogExternalLink() {}
   function renderCatalogItemPreview() {}
   function resolveCatalogItemPreview() {}
+  function buildCatalogItemAssetPath() {
+    return '/v1/account-mirrors/catalog/items/' + encodeURIComponent(itemId) + '/asset?' + String(assetStorageRelpath || storageRelpath);
+  }
   function readCatalogPreviewUrl() {}
   function isSafePreviewUrl() {}
   function formatCatalogItemSize() {}
@@ -250,6 +253,7 @@ describe('api ops browser CLI helpers', () => {
       hasConversationRelatedItemNavigation: true,
       hasCatalogAssetDetailInspector: true,
       hasCatalogAssetPreview: true,
+      hasCatalogLocalAssetRoute: true,
       usesAccountMirrorCatalogItemPath: true,
       usesAccountMirrorCatalogPath: true,
     });
@@ -267,7 +271,7 @@ describe('api ops browser CLI helpers', () => {
       'Dashboard service control: nav=ok operations=ok backgroundDrain=ok scheduler=ok runOnce=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard cache browse: catalog=ok page=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok transcriptFilter=ok transcriptDownload=ok transcriptSearch=ok related=ok assetInspector=ok assetPreview=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
+      'Dashboard cache browse: catalog=ok page=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok transcriptFilter=ok transcriptDownload=ok transcriptSearch=ok related=ok assetInspector=ok assetPreview=ok localAsset=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok inputInspect=ok input=ok rowActions=ok stateAware=ok feedback=ok pause=ok resume=ok cancel=ok',

@@ -762,4 +762,8 @@ URLs before the raw JSON block, so operators can review attachments without
 manually reading the full payload. The same detail view now renders a
 browser-safe cached preview when the cached item has inline text or an
 image/video/audio/PDF URL; unavailable previews remain explicit metadata-only
-states and do not trigger provider browser work.
+states and do not trigger provider browser work. Materialized cache-owned local
+files are served through
+`GET /v1/account-mirrors/catalog/items/{item_id}/asset` after the same catalog
+identity/profile lookup and a cache-root containment check, allowing the
+dashboard preview to render local blobs without exposing arbitrary file paths.

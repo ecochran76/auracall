@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { createReadStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -775,6 +776,32 @@ export async function createResponsesHttpServer(
         const query = parseAccountMirrorCatalogQuery(url.searchParams);
         const result: HttpAccountMirrorCatalogResponse = await accountMirrorCatalogService.readCatalog(query);
         sendJson(res, 200, result);
+        return;
+      }
+
+      if (req.method === 'GET' && isAccountMirrorCatalogItemAssetRoute(url.pathname)) {
+        const query = parseAccountMirrorCatalogItemAssetQuery(url.pathname, url.searchParams);
+        const result: HttpAccountMirrorCatalogItemResponse | null = await accountMirrorCatalogService.readItem(query);
+        if (!result) {
+          sendJson(res, 404, {
+            error: {
+              message: `Account mirror catalog item ${query.itemId} was not found.`,
+              type: 'not_found_error',
+            },
+          });
+          return;
+        }
+        const asset = await resolveCachedCatalogItemAsset(result, configuredRuntimeConfig);
+        if (!asset) {
+          sendJson(res, 404, {
+            error: {
+              message: `Account mirror catalog item ${query.itemId} has no cache-owned local asset.`,
+              type: 'not_found_error',
+            },
+          });
+          return;
+        }
+        sendCachedAsset(res, asset);
         return;
       }
 
@@ -2324,6 +2351,127 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
+async function resolveCachedCatalogItemAsset(
+  detail: AccountMirrorCatalogItemResult,
+  config: Record<string, unknown> | null | undefined,
+): Promise<CachedCatalogItemAsset | null> {
+  const item = isRecord(detail.item) ? detail.item : {};
+  const localPath = readCatalogAssetStringField(item, ['localPath', 'path', 'filePath', 'absolutePath']);
+  const storageRelpath = readCatalogAssetStringField(item, ['assetStorageRelpath', 'storageRelpath']);
+  const rawPath = localPath ?? storageRelpath;
+  if (!rawPath) return null;
+  const resolvedPath = await resolveCacheOwnedAssetPath(rawPath, config);
+  if (!resolvedPath) return null;
+  const stat = await fs.stat(resolvedPath).catch(() => null);
+  if (!stat?.isFile()) return null;
+  return {
+    path: resolvedPath,
+    mimeType: inferCachedAssetMimeType(
+      readCatalogAssetStringField(item, ['mimeType', 'mime', 'contentType']),
+      readCatalogAssetStringField(item, ['name', 'filename', 'fileName', 'title']) ?? resolvedPath,
+    ),
+    size: stat.size,
+  };
+}
+
+async function resolveCacheOwnedAssetPath(
+  rawPath: string,
+  config: Record<string, unknown> | null | undefined,
+): Promise<string | null> {
+  const roots = resolveCacheAssetRoots(config);
+  const candidates = path.isAbsolute(rawPath)
+    ? [path.normalize(rawPath)]
+    : roots.map((root) => path.resolve(root, rawPath));
+  for (const candidate of candidates) {
+    const normalized = path.normalize(candidate);
+    if (!isPathInsideAnyRoot(normalized, roots)) continue;
+    if (await pathExists(normalized)) return normalized;
+  }
+  return null;
+}
+
+function resolveCacheAssetRoots(config: Record<string, unknown> | null | undefined): string[] {
+  const configuredRoot = readNestedNonEmptyString(config, ['browser', 'cache', 'rootDir']);
+  const roots = [
+    configuredRoot ? path.resolve(configuredRoot) : null,
+    path.join(getAuracallHomeDir(), 'cache'),
+    path.join(getAuracallHomeDir(), 'cache', 'providers'),
+  ].filter((value): value is string => Boolean(value));
+  return Array.from(new Set(roots.map((root) => path.normalize(root))));
+}
+
+function isPathInsideAnyRoot(candidate: string, roots: string[]): boolean {
+  return roots.some((root) => {
+    const relative = path.relative(root, candidate);
+    return relative.length > 0 && !relative.startsWith('..') && !path.isAbsolute(relative);
+  });
+}
+
+async function pathExists(targetPath: string): Promise<boolean> {
+  try {
+    await fs.access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function inferCachedAssetMimeType(configured: string | null, fileName: string): string {
+  if (configured?.includes('/')) return configured;
+  const ext = path.extname(fileName).toLowerCase();
+  const types: Record<string, string> = {
+    '.avif': 'image/avif',
+    '.gif': 'image/gif',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.svg': 'image/svg+xml',
+    '.webp': 'image/webp',
+    '.mp4': 'video/mp4',
+    '.m4v': 'video/mp4',
+    '.mov': 'video/quicktime',
+    '.webm': 'video/webm',
+    '.mp3': 'audio/mpeg',
+    '.m4a': 'audio/mp4',
+    '.ogg': 'audio/ogg',
+    '.wav': 'audio/wav',
+    '.pdf': 'application/pdf',
+    '.md': 'text/markdown; charset=utf-8',
+    '.markdown': 'text/markdown; charset=utf-8',
+    '.txt': 'text/plain; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
+  };
+  return types[ext] ?? 'application/octet-stream';
+}
+
+function readCatalogAssetStringField(item: Record<string, unknown>, fields: string[]): string | null {
+  const direct = readRecordStringField(item, fields);
+  if (direct) return direct;
+  const metadata = item.metadata;
+  return isRecord(metadata) ? readRecordStringField(metadata, fields) : null;
+}
+
+function readRecordStringField(item: Record<string, unknown>, fields: string[]): string | null {
+  for (const field of fields) {
+    const value = item[field];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  }
+  return null;
+}
+
+function readNestedNonEmptyString(
+  value: Record<string, unknown> | null | undefined,
+  segments: string[],
+): string | null {
+  let current: unknown = value;
+  for (const segment of segments) {
+    if (!isRecord(current)) return null;
+    current = current[segment];
+  }
+  return typeof current === 'string' && current.trim() ? current.trim() : null;
+}
+
 function readNonEmptyString(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
@@ -2694,6 +2842,12 @@ interface ParsedAccountMirrorCatalogItemQuery extends ParsedAccountMirrorCatalog
   itemId: string;
 }
 
+interface CachedCatalogItemAsset {
+  path: string;
+  mimeType: string;
+  size: number;
+}
+
 interface ParsedAccountMirrorCompletionListQuery {
   provider?: AccountMirrorProvider;
   runtimeProfileId?: string;
@@ -2893,6 +3047,29 @@ function parseAccountMirrorCatalogItemQuery(
 ): ParsedAccountMirrorCatalogItemQuery {
   const prefix = '/v1/account-mirrors/catalog/items/';
   const encodedItemId = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : '';
+  const itemId = decodeURIComponent(encodedItemId).trim();
+  if (!itemId) {
+    throw new Error('Account mirror catalog item id is required.');
+  }
+  return {
+    ...parseAccountMirrorCatalogQuery(searchParams),
+    itemId,
+  };
+}
+
+function isAccountMirrorCatalogItemAssetRoute(pathname: string): boolean {
+  return pathname.startsWith('/v1/account-mirrors/catalog/items/') && pathname.endsWith('/asset');
+}
+
+function parseAccountMirrorCatalogItemAssetQuery(
+  pathname: string,
+  searchParams: URLSearchParams,
+): ParsedAccountMirrorCatalogItemQuery {
+  const prefix = '/v1/account-mirrors/catalog/items/';
+  const suffix = '/asset';
+  const encodedItemId = pathname.startsWith(prefix) && pathname.endsWith(suffix)
+    ? pathname.slice(prefix.length, -suffix.length)
+    : '';
   const itemId = decodeURIComponent(encodedItemId).trim();
   if (!itemId) {
     throw new Error('Account mirror catalog item id is required.');
@@ -3144,6 +3321,27 @@ function sendHtml(res: http.ServerResponse, statusCode: number, html: string): v
     'Cache-Control': 'no-store',
   });
   res.end(html);
+}
+
+function sendCachedAsset(res: http.ServerResponse, asset: CachedCatalogItemAsset): void {
+  res.writeHead(200, {
+    'Content-Type': asset.mimeType,
+    'Content-Length': String(asset.size),
+    'Cache-Control': 'private, max-age=300',
+    'X-Content-Type-Options': 'nosniff',
+  });
+  createReadStream(asset.path).on('error', () => {
+    if (!res.headersSent) {
+      sendJson(res, 404, {
+        error: {
+          message: 'Cached asset could not be read.',
+          type: 'not_found_error',
+        },
+      });
+      return;
+    }
+    res.destroy();
+  }).pipe(res);
 }
 
 function createOperatorBrowserDashboardHtml(input: {
@@ -4464,7 +4662,10 @@ function createOperatorBrowserDashboardHtml(input: {
     function resolveCatalogItemPreview(detail, item) {
       const text = readCatalogItemStringField(item, ['markdown', 'text', 'content', 'body']);
       if (text) return { type: 'text', text };
-      const url = readCatalogPreviewUrl(item);
+      const localAssetUrl = readCatalogItemStringField(item, ['localPath', 'path', 'filePath', 'absolutePath', 'assetStorageRelpath', 'storageRelpath'])
+        ? buildCatalogItemAssetPath(detail)
+        : null;
+      const url = localAssetUrl || readCatalogPreviewUrl(item);
       if (!url) return null;
       const mime = (readCatalogItemStringField(item, ['mimeType', 'mime', 'contentType']) || '').toLowerCase();
       const kind = [
@@ -4486,6 +4687,15 @@ function createOperatorBrowserDashboardHtml(input: {
         return { type: 'pdf', url };
       }
       return null;
+    }
+
+    function buildCatalogItemAssetPath(detail) {
+      const params = new URLSearchParams();
+      if (detail.provider) params.set('provider', detail.provider);
+      if (detail.runtimeProfileId) params.set('runtimeProfile', detail.runtimeProfileId);
+      if (detail.kind) params.set('kind', detail.kind);
+      const itemId = detail.itemId || formatCatalogItemId(detail.item || {});
+      return '/v1/account-mirrors/catalog/items/' + encodeURIComponent(itemId) + '/asset?' + params.toString();
     }
 
     function readCatalogPreviewUrl(item) {

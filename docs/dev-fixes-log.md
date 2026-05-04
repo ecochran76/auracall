@@ -15481,3 +15481,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   Render inline text and browser-safe image/video/audio/PDF URLs from cached
   item metadata while leaving metadata-only items explicit and avoiding provider
   browser work.
+- 2026-05-03: Cached previews need a local materialized-asset path. Serve
+  materialized file/artifact/media blobs through the account-mirror item asset
+  route only after catalog lookup and cache-root containment checks, so the
+  dashboard can preview local cached files without exposing arbitrary paths.

@@ -142,8 +142,9 @@ Current State:
     cached conversation context and render cached turns as a chat dialog when
     available, with raw JSON retained as the debug fallback and a local
     transcript search/download action plus cached related item navigation;
-    file/artifact/media detail now renders a compact cached metadata inspector
-    and browser-safe cached previews before the raw JSON fallback;
+    file/artifact/media detail now renders a compact cached metadata inspector,
+    browser-safe cached previews, and cache-owned local asset serving before
+    the raw JSON fallback;
     CLI/MCP `api_ops_browser_status` surfaces the configured canonical
     dashboard URL for operator handoff, with `http://auracall.localhost/ops/browser`
     as the stable local dashboard endpoint

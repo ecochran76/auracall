@@ -1463,6 +1463,12 @@ describe('http responses adapter', () => {
   });
 
   it('reports read-only account mirror catalog through the API surface', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-account-mirror-asset-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const cachedAssetPath = path.join(homeDir, 'cache', 'providers', 'chatgpt', 'ecochran76@gmail.com', 'blobs', 'asset.txt');
+    await fs.mkdir(path.dirname(cachedAssetPath), { recursive: true });
+    await fs.writeFile(cachedAssetPath, 'cached asset body', 'utf8');
     const mirrorCompleteness = {
       state: 'complete' as const,
       summary: 'Mirrored metadata indexes are complete within current provider surfaces.',
@@ -1518,6 +1524,26 @@ describe('http responses adapter', () => {
     };
     const readCatalog = vi.fn(async () => catalog);
     const readItem = vi.fn(async (query: { itemId: string }): Promise<AccountMirrorCatalogItemResult | null> => {
+      if (query.itemId === 'asset_1') {
+        return {
+          object: 'account_mirror_catalog_item',
+          generatedAt: '2026-04-29T12:00:00.000Z',
+          provider: 'chatgpt',
+          runtimeProfileId: 'default',
+          browserProfileId: 'default',
+          boundIdentityKey: 'ecochran76@gmail.com',
+          status: 'eligible',
+          reason: 'eligible',
+          kind: 'files',
+          itemId: 'asset_1',
+          item: {
+            id: 'asset_1',
+            name: 'asset.txt',
+            mimeType: 'text/plain',
+            localPath: cachedAssetPath,
+          },
+        };
+      }
       if (query.itemId !== 'conv_1') return null;
       return {
         object: 'account_mirror_catalog_item',
@@ -1589,6 +1615,19 @@ describe('http responses adapter', () => {
         `http://127.0.0.1:${server.port}/v1/account-mirrors/catalog/items/missing?provider=chatgpt&runtimeProfile=default&kind=conversations`,
       );
       expect(missingResponse.status).toBe(404);
+
+      const assetResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/account-mirrors/catalog/items/asset_1/asset?provider=chatgpt&runtimeProfile=default&kind=files`,
+      );
+      expect(assetResponse.status).toBe(200);
+      expect(assetResponse.headers.get('content-type')).toContain('text/plain');
+      expect(assetResponse.headers.get('cache-control')).toContain('private');
+      expect(await assetResponse.text()).toBe('cached asset body');
+
+      const missingAssetResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/account-mirrors/catalog/items/conv_1/asset?provider=chatgpt&runtimeProfile=default&kind=conversations`,
+      );
+      expect(missingAssetResponse.status).toBe(404);
     } finally {
       await server.close();
     }
@@ -14671,10 +14710,14 @@ describe('http responses adapter', () => {
       expect(html).toContain('Cached URLs');
       expect(html).toContain('renderCatalogItemPreview');
       expect(html).toContain('resolveCatalogItemPreview');
+      expect(html).toContain('buildCatalogItemAssetPath');
       expect(html).toContain('readCatalogPreviewUrl');
       expect(html).toContain('isSafePreviewUrl');
       expect(html).toContain('Cached preview');
       expect(html).toContain('asset-preview');
+      expect(html).toContain('/asset?');
+      expect(html).toContain('assetStorageRelpath');
+      expect(html).toContain('storageRelpath');
       expect(html).toContain('formatCatalogItemSize');
       expect(html).toContain('extractConversationTurns');
       expect(html).toContain('renderChatTurn');
@@ -14783,6 +14826,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('renderConversationRelatedItems');
       expect(html).toContain('renderCachedAssetDetailView');
       expect(html).toContain('renderCatalogItemPreview');
+      expect(html).toContain('buildCatalogItemAssetPath');
       expect(html).toContain('renderCatalogTranscriptBadge');
       expect(html).toContain('mirrorCatalogWithTranscriptOnly');
       expect(html).toContain('/v1/account-mirrors/catalog');
