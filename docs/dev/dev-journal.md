@@ -25715,6 +25715,41 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed cached artifact detail read resolves
     `bbb21bf6-a1e5-4b83-b535-7817257921fa:image:sediment://file_00000000f200722fb39ed7deb3ff69ac`
     as a `Generated image` artifact
+
+## Turn 101 | 2026-05-03
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: preview safe cached asset bodies from file/artifact/media detail.
+- Change:
+  - cached asset detail now renders a `Cached preview` section below the compact
+    inspector
+  - the preview embeds only browser-safe cached image, video, audio, and PDF
+    URLs or inline text fields
+  - metadata-only assets remain explicit as no-preview states and do not start
+    provider browser work
+  - inspector fields now also read provider metadata fallbacks for MIME, size,
+    source, and parent context
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed dogfood: restarted the pinned `127.0.0.1:18095` service on
+    PID `492627`
+  - installed `api ops-browser-status --json` reports
+    `.dashboard.hasCatalogAssetDetailInspector=true` and
+    `.dashboard.hasCatalogAssetPreview=true`
+  - installed `/account-mirror?provider=chatgpt&kind=artifacts&limit=1`
+    includes `renderCatalogItemPreview`, `resolveCatalogItemPreview`,
+    `readCatalogPreviewUrl`, `isSafePreviewUrl`, `Cached preview`, and
+    `asset-preview`
+  - installed cached ChatGPT artifact detail resolves metadata fallback MIME,
+    size, and conversation context for
+    `bbb21bf6-a1e5-4b83-b535-7817257921fa:image:sediment://file_00000000f200722fb39ed7deb3ff69ac`
   - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
     reported only existing lint-warning debt in broad touched files
     (`noUselessContinue`, `noNonNullAssertion`)

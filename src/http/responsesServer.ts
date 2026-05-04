@@ -3366,6 +3366,28 @@ function createOperatorBrowserDashboardHtml(input: {
     .notice-ok { border-color: var(--accent); color: var(--accent); }
     .notice-warn { border-color: var(--warn); color: var(--warn); }
     .notice-bad { border-color: var(--bad); color: var(--bad); }
+    .asset-preview {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .asset-preview img,
+    .asset-preview video,
+    .asset-preview audio,
+    .asset-preview iframe {
+      max-width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #11151a;
+    }
+    .asset-preview img {
+      max-height: 520px;
+      object-fit: contain;
+    }
+    .asset-preview iframe {
+      width: 100%;
+      min-height: 520px;
+    }
     .severity-healthy { color: var(--accent); }
     .severity-backpressured, .severity-paused { color: var(--warn); }
     .severity-attention-needed { color: var(--bad); }
@@ -4361,20 +4383,20 @@ function createOperatorBrowserDashboardHtml(input: {
         + '<strong>Cached item inspector</strong>'
         + renderCatalogItemInspectorFields(detail, item)
         + renderCatalogItemExternalLinks(item)
+        + renderCatalogItemPreview(detail, item)
         + '</div>';
     }
 
     function renderCatalogItemInspectorFields(detail, item) {
-      const metadata = readObjectField(item, 'metadata') || {};
       const fields = [
         ['Kind', detail.kind || 'unknown'],
-        ['Provider', readStringField(item, ['provider']) || detail.provider || 'unknown'],
-        ['Source', readStringField(item, ['source', 'type']) || 'unknown'],
-        ['MIME', readStringField(item, ['mimeType', 'mime', 'contentType']) || 'unknown'],
-        ['Size', formatCatalogItemSize(readNumberField(item, ['size', 'sizeBytes', 'bytes', 'fileSize']))],
-        ['Conversation', readStringField(item, ['conversationId']) || readStringField(metadata, ['conversationId']) || 'none'],
-        ['Project', readStringField(item, ['projectId']) || readStringField(metadata, ['projectId']) || 'none'],
-        ['Created', readStringField(item, ['createdAt', 'created']) || 'unknown'],
+        ['Provider', readCatalogItemStringField(item, ['provider']) || detail.provider || 'unknown'],
+        ['Source', readCatalogItemStringField(item, ['source', 'type']) || 'unknown'],
+        ['MIME', readCatalogItemStringField(item, ['mimeType', 'mime', 'contentType']) || 'unknown'],
+        ['Size', formatCatalogItemSize(readCatalogItemNumberField(item, ['size', 'sizeBytes', 'bytes', 'fileSize']))],
+        ['Conversation', readCatalogItemStringField(item, ['conversationId']) || 'none'],
+        ['Project', readCatalogItemStringField(item, ['projectId']) || 'none'],
+        ['Created', readCatalogItemStringField(item, ['createdAt', 'created']) || 'unknown'],
         ['Updated', formatCatalogItemTimestamp(item)],
       ];
       return '<dl>' + fields.map(([key, value]) =>
@@ -4384,9 +4406,9 @@ function createOperatorBrowserDashboardHtml(input: {
 
     function renderCatalogItemExternalLinks(item) {
       const links = [
-        ['URL', readStringField(item, ['url', 'href', 'remoteUrl'])],
-        ['Download', readStringField(item, ['downloadUrl', 'downloadHref'])],
-        ['Thumbnail', readStringField(item, ['thumbnailUrl', 'previewUrl'])],
+        ['URL', readCatalogItemStringField(item, ['url', 'href', 'remoteUrl', 'uri'])],
+        ['Download', readCatalogItemStringField(item, ['downloadUrl', 'downloadHref'])],
+        ['Thumbnail', readCatalogItemStringField(item, ['thumbnailUrl', 'previewUrl'])],
       ].filter((entry, index, list) => entry[1] && list.findIndex((candidate) => candidate[1] === entry[1]) === index);
       if (!links.length) return '<div class="muted">No cached external URLs.</div>';
       return '<div class="catalog-detail">'
@@ -4399,6 +4421,92 @@ function createOperatorBrowserDashboardHtml(input: {
       return '<a class="pill" href="' + escapeHtml(url) + '" target="_blank" rel="noreferrer">'
         + escapeHtml(label)
         + '</a>';
+    }
+
+    function renderCatalogItemPreview(detail, item) {
+      const preview = resolveCatalogItemPreview(detail, item);
+      if (!preview) {
+        return '<div class="asset-preview">'
+          + '<strong>Cached preview</strong>'
+          + '<div class="muted">No browser-safe cached preview is available for this item.</div>'
+          + '</div>';
+      }
+      if (preview.type === 'text') {
+        return '<div class="asset-preview">'
+          + '<strong>Cached preview</strong>'
+          + '<pre>' + escapeHtml(preview.text) + '</pre>'
+          + '</div>';
+      }
+      if (preview.type === 'image') {
+        return '<div class="asset-preview">'
+          + '<strong>Cached preview</strong>'
+          + '<img src="' + escapeHtml(preview.url) + '" alt="' + escapeHtml(formatCatalogItemLabel(item)) + '" loading="lazy">'
+          + '</div>';
+      }
+      if (preview.type === 'video') {
+        return '<div class="asset-preview">'
+          + '<strong>Cached preview</strong>'
+          + '<video src="' + escapeHtml(preview.url) + '" controls preload="metadata"></video>'
+          + '</div>';
+      }
+      if (preview.type === 'audio') {
+        return '<div class="asset-preview">'
+          + '<strong>Cached preview</strong>'
+          + '<audio src="' + escapeHtml(preview.url) + '" controls preload="metadata"></audio>'
+          + '</div>';
+      }
+      return '<div class="asset-preview">'
+        + '<strong>Cached preview</strong>'
+        + '<iframe src="' + escapeHtml(preview.url) + '" title="' + escapeHtml(formatCatalogItemLabel(item)) + '"></iframe>'
+        + '</div>';
+    }
+
+    function resolveCatalogItemPreview(detail, item) {
+      const text = readCatalogItemStringField(item, ['markdown', 'text', 'content', 'body']);
+      if (text) return { type: 'text', text };
+      const url = readCatalogPreviewUrl(item);
+      if (!url) return null;
+      const mime = (readCatalogItemStringField(item, ['mimeType', 'mime', 'contentType']) || '').toLowerCase();
+      const kind = [
+        detail.kind,
+        readCatalogItemStringField(item, ['kind', 'mediaType', 'type']),
+        readCatalogItemStringField(readObjectField(item, 'metadata') || {}, ['fileName', 'name', 'title']),
+        url,
+      ].join(' ').toLowerCase();
+      if (mime.startsWith('image/') || /\bimage\b/.test(kind) || /[.](png|jpe?g|gif|webp|svg)(?:[?#].*)?$/i.test(url)) {
+        return { type: 'image', url };
+      }
+      if (mime.startsWith('video/') || /\bvideo\b/.test(kind) || /[.](mp4|webm|mov|m4v)(?:[?#].*)?$/i.test(url)) {
+        return { type: 'video', url };
+      }
+      if (mime.startsWith('audio/') || /\baudio\b|\bmusic\b/.test(kind) || /[.](mp3|m4a|wav|ogg)(?:[?#].*)?$/i.test(url)) {
+        return { type: 'audio', url };
+      }
+      if (mime === 'application/pdf' || /[.]pdf(?:[?#].*)?$/i.test(url)) {
+        return { type: 'pdf', url };
+      }
+      return null;
+    }
+
+    function readCatalogPreviewUrl(item) {
+      const candidates = [
+        readCatalogItemStringField(item, ['previewUrl', 'thumbnailUrl']),
+        readCatalogItemStringField(item, ['downloadUrl', 'downloadHref']),
+        readCatalogItemStringField(item, ['remoteUrl', 'url', 'href', 'uri']),
+      ].filter(Boolean);
+      return candidates.find(isSafePreviewUrl) || null;
+    }
+
+    function isSafePreviewUrl(value) {
+      if (!value) return false;
+      const normalized = String(value).trim().toLowerCase();
+      return normalized.startsWith('http://')
+        || normalized.startsWith('https://')
+        || normalized.startsWith('data:image/')
+        || normalized.startsWith('data:video/')
+        || normalized.startsWith('data:audio/')
+        || normalized.startsWith('data:application/pdf;')
+        || normalized.startsWith('data:application/pdf,');
     }
 
     function formatCatalogItemSize(value) {
@@ -4463,6 +4571,16 @@ function createOperatorBrowserDashboardHtml(input: {
       if (!item || typeof item !== 'object') return null;
       const value = item[field];
       return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+    }
+
+    function readCatalogItemStringField(item, fields) {
+      return readStringField(item, fields)
+        || readStringField(readObjectField(item, 'metadata') || {}, fields);
+    }
+
+    function readCatalogItemNumberField(item, fields) {
+      return readNumberField(item, fields)
+        || readNumberField(readObjectField(item, 'metadata') || {}, fields);
     }
 
     function normalizeConversationTurn(value) {

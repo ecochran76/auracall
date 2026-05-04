@@ -143,7 +143,7 @@ Current State:
     available, with raw JSON retained as the debug fallback and a local
     transcript search/download action plus cached related item navigation;
     file/artifact/media detail now renders a compact cached metadata inspector
-    before the raw JSON fallback;
+    and browser-safe cached previews before the raw JSON fallback;
     CLI/MCP `api_ops_browser_status` surfaces the configured canonical
     dashboard URL for operator handoff, with `http://auracall.localhost/ops/browser`
     as the stable local dashboard endpoint

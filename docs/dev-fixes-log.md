@@ -15477,3 +15477,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-03: File/artifact item detail should be inspectable without raw JSON.
   Render a compact cached metadata inspector for file, artifact, and media
   details with provider/source/type/size/parent context plus cached URL links.
+- 2026-05-03: Cached asset details should preview safe cached bodies in place.
+  Render inline text and browser-safe image/video/audio/PDF URLs from cached
+  item metadata while leaving metadata-only items explicit and avoiding provider
+  browser work.

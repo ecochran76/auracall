@@ -275,7 +275,8 @@ Terminology note:
   can be searched in place, downloaded locally as Markdown, and used to
   navigate cached related files/artifacts/sources without starting provider
   browser work. File, artifact, and media item detail includes a compact cached
-  metadata inspector plus cached URL links before the raw JSON block.
+  metadata inspector, cached URL links, and a browser-safe cached preview for
+  inline text or image/video/audio/PDF URLs before the raw JSON block.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

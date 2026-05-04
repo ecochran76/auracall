@@ -759,4 +759,7 @@ while source URLs open externally; neither path starts provider browser work.
 File, artifact, and media item-detail views now render a compact cached
 metadata inspector with provider/source/type/size/parent context and cached
 URLs before the raw JSON block, so operators can review attachments without
-manually reading the full payload.
+manually reading the full payload. The same detail view now renders a
+browser-safe cached preview when the cached item has inline text or an
+image/video/audio/PDF URL; unavailable previews remain explicit metadata-only
+states and do not trigger provider browser work.
