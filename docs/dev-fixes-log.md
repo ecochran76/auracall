@@ -1,3 +1,10 @@
+- 2026-05-03: Account mirror catalog row details need stable API URLs.
+  `GET /v1/account-mirrors/catalog/items/{item_id}` now returns one cached
+  manifest row using provider/runtime-profile/kind filters, and
+  `/account-mirror` row detail links use that endpoint. This keeps operator
+  deep links cache-only instead of depending on transient client-side table
+  state.
+
 - 2026-05-03: Account mirror browsing should be its own operator page, not
   only a block inside browser ops. `GET /account-mirror` now serves the
   read-only cache catalog browser, keeps filters in the URL, and opens raw

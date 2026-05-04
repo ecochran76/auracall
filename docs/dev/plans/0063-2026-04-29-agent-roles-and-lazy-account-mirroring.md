@@ -726,3 +726,7 @@ browsing reads cached indexes only and does not enqueue browser work. Filters
 are preserved in the page URL, and rows open cached manifest detail for the
 first account mirror navigation/search surface before broader account-mirror
 pages are added.
+Catalog rows now also have stable cache-backed detail URLs:
+`GET /v1/account-mirrors/catalog/items/{item_id}?provider={provider}&runtimeProfile={runtime_profile}&kind={kind}`.
+Those item-detail reads share the same bounded cached catalog lookup and do
+not enqueue browser work.

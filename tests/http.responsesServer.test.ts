@@ -15,7 +15,10 @@ import {
   createAccountMirrorStatusRegistry,
   type AccountMirrorStatusSummary,
 } from '../src/accountMirror/statusRegistry.js';
-import type { AccountMirrorCatalogResult } from '../src/accountMirror/catalogService.js';
+import type {
+  AccountMirrorCatalogItemResult,
+  AccountMirrorCatalogResult,
+} from '../src/accountMirror/catalogService.js';
 import type { AccountMirrorCompletionOperation } from '../src/accountMirror/completionService.js';
 import type { AccountMirrorSchedulerPassResult } from '../src/accountMirror/schedulerService.js';
 import type { AccountMirrorSchedulerPassLedger } from '../src/accountMirror/schedulerLedger.js';
@@ -1514,11 +1517,28 @@ describe('http responses adapter', () => {
       },
     };
     const readCatalog = vi.fn(async () => catalog);
+    const readItem = vi.fn(async (query: { itemId: string }): Promise<AccountMirrorCatalogItemResult | null> => {
+      if (query.itemId !== 'conv_1') return null;
+      return {
+        object: 'account_mirror_catalog_item',
+        generatedAt: '2026-04-29T12:00:00.000Z',
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        boundIdentityKey: 'ecochran76@gmail.com',
+        status: 'eligible',
+        reason: 'eligible',
+        kind: 'conversations',
+        itemId: 'conv_1',
+        item: { id: 'conv_1', title: 'Conversation 1', provider: 'chatgpt' },
+      };
+    });
     const server = await createResponsesHttpServer(
       { host: '127.0.0.1', port: 0 },
       {
         accountMirrorCatalogService: {
           readCatalog,
+          readItem,
         },
       },
     );
@@ -1543,6 +1563,32 @@ describe('http responses adapter', () => {
         kind: 'conversations',
         limit: 2,
       });
+
+      const itemResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/account-mirrors/catalog/items/conv_1?provider=chatgpt&runtimeProfile=default&kind=conversations`,
+      );
+      expect(itemResponse.status).toBe(200);
+      expect(await itemResponse.json()).toMatchObject({
+        object: 'account_mirror_catalog_item',
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        kind: 'conversations',
+        itemId: 'conv_1',
+        item: {
+          title: 'Conversation 1',
+        },
+      });
+      expect(readItem).toHaveBeenCalledWith({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        kind: 'conversations',
+        itemId: 'conv_1',
+      });
+
+      const missingResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/account-mirrors/catalog/items/missing?provider=chatgpt&runtimeProfile=default&kind=conversations`,
+      );
+      expect(missingResponse.status).toBe(404);
     } finally {
       await server.close();
     }
@@ -14525,6 +14571,9 @@ describe('http responses adapter', () => {
       });
       expect((payload.routes as Record<string, unknown>).operatorBrowserDashboard).toBe('/ops/browser');
       expect((payload.routes as Record<string, unknown>).accountMirrorDashboard).toBe('/account-mirror');
+      expect((payload.routes as Record<string, unknown>).accountMirrorCatalogItemTemplate).toContain(
+        '/v1/account-mirrors/catalog/items/{item_id}',
+      );
       expect((payload.routes as Record<string, unknown>).operatorBrowserDashboardUrl).toBe(
         'http://auracall.localhost/ops/browser',
       );
@@ -14584,7 +14633,9 @@ describe('http responses adapter', () => {
       expect(html).toContain('mirrorCatalogDetailRaw');
       expect(html).toContain('mirrorCatalogRaw');
       expect(html).toContain('/v1/account-mirrors/catalog');
+      expect(html).toContain('/v1/account-mirrors/catalog/items/');
       expect(html).toContain('buildMirrorCatalogPath');
+      expect(html).toContain('buildMirrorCatalogItemPath');
       expect(html).toContain('initializeMirrorCatalogFiltersFromUrl');
       expect(html).toContain('updateMirrorCatalogUrl');
       expect(html).toContain('window.history.replaceState');
@@ -14593,7 +14644,9 @@ describe('http responses adapter', () => {
       expect(html).toContain('renderMirrorCatalogTable');
       expect(html).toContain('mirrorCatalogItems');
       expect(html).toContain('data-catalog-row-index');
+      expect(html).toContain('data-catalog-item-path');
       expect(html).toContain('showMirrorCatalogDetailByIndex');
+      expect(html).toContain('showMirrorCatalogDetailByPath');
       expect(html).toContain('Catalog reads are cache-only');
       expect(html).toContain('Mirror Live Follow');
       expect(html).toContain('mirrorTargetTable');
@@ -14679,7 +14732,9 @@ describe('http responses adapter', () => {
       expect(html).toContain('mirrorCatalogProvider');
       expect(html).toContain('initializeMirrorCatalogFiltersFromUrl');
       expect(html).toContain('showMirrorCatalogDetailByIndex');
+      expect(html).toContain('showMirrorCatalogDetailByPath');
       expect(html).toContain('/v1/account-mirrors/catalog');
+      expect(html).toContain('/v1/account-mirrors/catalog/items/');
     } finally {
       await server.close();
     }

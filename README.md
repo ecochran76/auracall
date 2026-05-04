@@ -204,6 +204,7 @@ Terminology note:
   - `GET /v1/runs/{run_id}/status`
   - `GET /v1/account-mirrors/status`
   - `GET /v1/account-mirrors/catalog`
+  - `GET /v1/account-mirrors/catalog/items/{item_id}`
   - `POST /v1/account-mirrors/refresh`
   - `POST /v1/account-mirrors/completions`
   - `GET /v1/account-mirrors/completions`
@@ -216,7 +217,10 @@ Terminology note:
   artifact/file/media indexes without fetching full content. Operators and agents
   can inspect those cached indexes with
   `GET /v1/account-mirrors/catalog?provider=chatgpt&runtimeProfile=default&kind=all&limit=50`;
-  catalog reads are cache-only and do not enqueue browser work. Lazy mirror
+  catalog reads are cache-only and do not enqueue browser work. Individual
+  cached rows can be read with
+  `GET /v1/account-mirrors/catalog/items/{item_id}?provider=chatgpt&runtimeProfile=default&kind=conversations`;
+  item reads use the same cache catalog and do not enqueue browser work. Lazy mirror
   scheduling is disabled by default; start `api serve` with
   `--account-mirror-scheduler-interval-ms <ms>` to record dry-run eligibility
   passes in `/status.accountMirrorScheduler`, and add
@@ -261,7 +265,7 @@ Terminology note:
   mirror page; it includes the same cache-only catalog browser with
   provider/profile/kind/search/limit controls backed by
   `GET /v1/account-mirrors/catalog`, persists filters in the page URL, and
-  opens cached row details without starting provider browser work.
+  opens stable item-detail URLs without starting provider browser work.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

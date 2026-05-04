@@ -106,6 +106,7 @@ import { createAccountMirrorPersistence } from '../accountMirror/cachePersistenc
 import {
   createAccountMirrorCatalogService,
   type AccountMirrorCatalogKind,
+  type AccountMirrorCatalogItemResult,
   type AccountMirrorCatalogResult,
   type AccountMirrorCatalogService,
 } from '../accountMirror/catalogService.js';
@@ -251,6 +252,7 @@ interface HttpRuntimeRunInspectionResponse {
 
 interface HttpAccountMirrorRefreshResponse extends AccountMirrorRefreshResult {}
 interface HttpAccountMirrorCatalogResponse extends AccountMirrorCatalogResult {}
+interface HttpAccountMirrorCatalogItemResponse extends AccountMirrorCatalogItemResult {}
 interface HttpAccountMirrorSchedulerHistoryResponse extends AccountMirrorSchedulerCompactHistory {}
 interface HttpAccountMirrorCompletionResponse extends AccountMirrorCompletionOperation {}
 interface HttpAccountMirrorCompletionListResponse {
@@ -326,6 +328,7 @@ interface HttpStatusResponse {
     runStatusTemplate: string;
     accountMirrorStatus: string;
     accountMirrorCatalog: string;
+    accountMirrorCatalogItemTemplate: string;
     accountMirrorRefresh: string;
     accountMirrorCompletionsCreate: string;
     accountMirrorCompletionsList: string;
@@ -771,6 +774,22 @@ export async function createResponsesHttpServer(
       if (req.method === 'GET' && url.pathname === '/v1/account-mirrors/catalog') {
         const query = parseAccountMirrorCatalogQuery(url.searchParams);
         const result: HttpAccountMirrorCatalogResponse = await accountMirrorCatalogService.readCatalog(query);
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname.startsWith('/v1/account-mirrors/catalog/items/')) {
+        const query = parseAccountMirrorCatalogItemQuery(url.pathname, url.searchParams);
+        const result: HttpAccountMirrorCatalogItemResponse | null = await accountMirrorCatalogService.readItem(query);
+        if (!result) {
+          sendJson(res, 404, {
+            error: {
+              message: `Account mirror catalog item ${query.itemId} was not found.`,
+              type: 'not_found_error',
+            },
+          });
+          return;
+        }
         sendJson(res, 200, result);
         return;
       }
@@ -2023,6 +2042,7 @@ function createHttpStatusResponse(input: {
       runStatusTemplate: '/v1/runs/{run_id}/status[?diagnostics=browser-state]',
       accountMirrorStatus: '/v1/account-mirrors/status[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&explicitRefresh=true]',
       accountMirrorCatalog: '/v1/account-mirrors/catalog[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&kind=projects|conversations|artifacts|files|media|all][&limit=50]',
+      accountMirrorCatalogItemTemplate: '/v1/account-mirrors/catalog/items/{item_id}?provider={chatgpt|gemini|grok}&runtimeProfile={runtime_profile}&kind={kind}',
       accountMirrorRefresh: '/v1/account-mirrors/refresh',
       accountMirrorCompletionsCreate: '/v1/account-mirrors/completions',
       accountMirrorCompletionsList: '/v1/account-mirrors/completions[?status=active|queued|running|paused|completed|blocked|failed|cancelled][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&limit=50]',
@@ -2670,6 +2690,10 @@ interface ParsedAccountMirrorCatalogQuery {
   limit?: number;
 }
 
+interface ParsedAccountMirrorCatalogItemQuery extends ParsedAccountMirrorCatalogQuery {
+  itemId: string;
+}
+
 interface ParsedAccountMirrorCompletionListQuery {
   provider?: AccountMirrorProvider;
   runtimeProfileId?: string;
@@ -2860,6 +2884,22 @@ function parseAccountMirrorCatalogQuery(searchParams: URLSearchParams): ParsedAc
     runtimeProfileId: parsed.runtimeProfile,
     kind: parsed.kind,
     limit: parsed.limit,
+  };
+}
+
+function parseAccountMirrorCatalogItemQuery(
+  pathname: string,
+  searchParams: URLSearchParams,
+): ParsedAccountMirrorCatalogItemQuery {
+  const prefix = '/v1/account-mirrors/catalog/items/';
+  const encodedItemId = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : '';
+  const itemId = decodeURIComponent(encodedItemId).trim();
+  if (!itemId) {
+    throw new Error('Account mirror catalog item id is required.');
+  }
+  return {
+    ...parseAccountMirrorCatalogQuery(searchParams),
+    itemId,
   };
 }
 
@@ -3917,6 +3957,15 @@ function createOperatorBrowserDashboardHtml(input: {
       return '/v1/account-mirrors/catalog?' + params.toString();
     }
 
+    function buildMirrorCatalogItemPath(row) {
+      const params = new URLSearchParams();
+      if (row.provider) params.set('provider', row.provider);
+      if (row.runtimeProfileId) params.set('runtimeProfile', row.runtimeProfileId);
+      if (row.kind) params.set('kind', row.kind);
+      params.set('limit', String(normalizeMirrorCatalogLimit($('mirrorCatalogLimit').value)));
+      return '/v1/account-mirrors/catalog/items/' + encodeURIComponent(row.itemId) + '?' + params.toString();
+    }
+
     function initializeMirrorCatalogFiltersFromUrl() {
       const params = new URLSearchParams(window.location.search);
       setSelectValue('mirrorCatalogProvider', params.get('provider') || '');
@@ -4060,6 +4109,7 @@ function createOperatorBrowserDashboardHtml(input: {
 
     function renderMirrorCatalogRow(row) {
       const rowIndex = String(row.rowIndex);
+      const itemPath = buildMirrorCatalogItemPath(row);
       return '<tr data-catalog-row-index="' + escapeHtml(rowIndex) + '" onclick="showMirrorCatalogDetailByIndex(this.dataset.catalogRowIndex)">' + [
         '<td>' + escapeHtml(row.provider) + '</td>',
         '<td>' + escapeHtml(row.runtimeProfileId) + '</td>',
@@ -4068,7 +4118,7 @@ function createOperatorBrowserDashboardHtml(input: {
         '<td class="wrap">' + escapeHtml(row.itemId) + '</td>',
         '<td class="wrap">' + escapeHtml(row.timestamp) + '</td>',
         '<td class="wrap">' + escapeHtml(row.boundIdentityKey) + '</td>',
-        '<td><button type="button" data-catalog-row-index="' + escapeHtml(rowIndex) + '" onclick="event.stopPropagation(); showMirrorCatalogDetailByIndex(this.dataset.catalogRowIndex)">Details</button></td>',
+        '<td><a href="' + escapeHtml(itemPath) + '" data-catalog-item-path="' + escapeHtml(itemPath) + '" onclick="event.preventDefault(); event.stopPropagation(); showMirrorCatalogDetailByPath(this.dataset.catalogItemPath)">Details</a></td>',
         '<td class="wrap">' + escapeHtml(trimCatalogSnippet(row.searchable)) + '</td>',
       ].join('') + '</tr>';
     }
@@ -4081,6 +4131,7 @@ function createOperatorBrowserDashboardHtml(input: {
         return;
       }
       $('mirrorCatalogDetailRaw').textContent = asJson({
+        detailUrl: buildMirrorCatalogItemPath(row),
         provider: row.provider,
         runtimeProfileId: row.runtimeProfileId,
         boundIdentityKey: row.boundIdentityKey,
@@ -4091,6 +4142,15 @@ function createOperatorBrowserDashboardHtml(input: {
         timestamp: row.timestamp,
         item: row.item,
       });
+    }
+
+    async function showMirrorCatalogDetailByPath(path) {
+      $('mirrorCatalogDetailRaw').textContent = 'Loading cached item detail...';
+      try {
+        $('mirrorCatalogDetailRaw').textContent = asJson(await fetchJson(path));
+      } catch (error) {
+        $('mirrorCatalogDetailRaw').textContent = String(error.message || error);
+      }
     }
 
     function formatCatalogItemLabel(item) {

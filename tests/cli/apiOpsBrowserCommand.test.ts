@@ -46,7 +46,7 @@ const dashboardHtml = `
   function flattenMirrorCatalogEntries() {}
   function filterMirrorCatalogRows() {}
   function renderMirrorCatalogTable() {
-    return '<table id="mirrorCatalogItems"><tr data-catalog-row-index="0"><td><button data-catalog-row-index="0">Details</button></td></tr></table>';
+    return '<table id="mirrorCatalogItems"><tr data-catalog-row-index="0"><td><a href="/v1/account-mirrors/catalog/items/conv_1?provider=chatgpt&runtimeProfile=default&kind=conversations" data-catalog-item-path="/v1/account-mirrors/catalog/items/conv_1?provider=chatgpt&runtimeProfile=default&kind=conversations">Details</a></td></tr></table>';
   }
   function initializeMirrorCatalogFiltersFromUrl() {
     params.get('provider');
@@ -57,6 +57,9 @@ const dashboardHtml = `
   }
   function showMirrorCatalogDetailByIndex(index) {
     $('mirrorCatalogDetailRaw').textContent = index;
+  }
+  async function showMirrorCatalogDetailByPath(path) {
+    await fetch(path);
   }
   async function loadMirrorCatalog() {
     await fetch('/v1/account-mirrors/catalog?kind=all&limit=50');
@@ -203,6 +206,7 @@ describe('api ops browser CLI helpers', () => {
       hasAccountMirrorPageLink: true,
       hasCatalogSavedFilterState: true,
       hasCatalogDetailInspection: true,
+      usesAccountMirrorCatalogItemPath: true,
       usesAccountMirrorCatalogPath: true,
     });
     expect(summary.dashboardUrl).toBe('http://127.0.0.1:18080/ops/browser');
@@ -219,7 +223,7 @@ describe('api ops browser CLI helpers', () => {
       'Dashboard service control: nav=ok operations=ok backgroundDrain=ok scheduler=ok runOnce=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard cache browse: catalog=ok page=ok search=ok savedFilters=ok table=ok detail=ok path=/v1/account-mirrors/catalog',
+      'Dashboard cache browse: catalog=ok page=ok search=ok savedFilters=ok table=ok detail=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok inputInspect=ok input=ok rowActions=ok stateAware=ok feedback=ok pause=ok resume=ok cancel=ok',

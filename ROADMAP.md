@@ -134,7 +134,8 @@ Current State:
     browser backed by cache-only `/v1/account-mirrors/catalog`, with provider,
     runtime profile, kind, search, and limit controls for cached projects,
     conversations, artifacts, files, and media; catalog filters persist in the
-    page URL and rows open cached manifest detail without starting browser work;
+    page URL and rows open stable cache-backed item-detail URLs through
+    `/v1/account-mirrors/catalog/items/{item_id}` without starting browser work;
     CLI/MCP `api_ops_browser_status` surfaces the configured canonical
     dashboard URL for operator handoff, with `http://auracall.localhost/ops/browser`
     as the stable local dashboard endpoint

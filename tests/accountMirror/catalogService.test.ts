@@ -181,6 +181,33 @@ describe('account mirror catalog service', () => {
         files: [],
         media: [],
       });
+
+      const item = await service.readItem({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        kind: 'files',
+        itemId: 'file_1',
+      });
+      expect(item).toMatchObject({
+        object: 'account_mirror_catalog_item',
+        generatedAt: '2026-04-29T12:10:00.000Z',
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        boundIdentityKey: 'ecochran76@gmail.com',
+        kind: 'files',
+        itemId: 'file_1',
+        item: {
+          id: 'file_1',
+          name: 'Upload.pdf',
+        },
+      });
+
+      await expect(service.readItem({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        kind: 'files',
+        itemId: 'missing_file',
+      })).resolves.toBeNull();
     } finally {
       await rm(homeDir, { recursive: true, force: true });
     }

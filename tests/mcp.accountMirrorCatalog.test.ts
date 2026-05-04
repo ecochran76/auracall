@@ -58,6 +58,7 @@ describe('mcp account_mirror_catalog tool', () => {
     const handler = createAccountMirrorCatalogToolHandler({
       service: {
         readCatalog,
+        readItem: vi.fn(async () => null),
       },
     });
 

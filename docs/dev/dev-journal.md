@@ -25640,3 +25640,39 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `.raw.routes.accountMirrorDashboard: /account-mirror`
   - installed `api ops-browser-status --json` passed the expanded contract with
     account-mirror page, saved-filter, detail, and catalog checks true
+
+## Turn 92 | 2026-05-03
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: add stable cache-backed detail URLs for account mirror catalog rows.
+- Change:
+  - added account mirror catalog item lookup to the catalog service
+  - added `GET /v1/account-mirrors/catalog/items/{item_id}` with
+    provider/runtime profile/kind query filters
+  - `/status.routes.accountMirrorCatalogItemTemplate` now advertises the item
+    detail route
+  - `/account-mirror` row detail links now call the item-detail endpoint instead
+    of only inspecting client-side list rows
+  - CLI dashboard contract checks now include the item-detail route wiring
+- Validation:
+  - `pnpm vitest run tests/accountMirror/catalogService.test.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.accountMirrorCatalog.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm vitest run tests/accountMirror/catalogService.test.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.accountMirrorCatalog.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers|status endpoint" --maxWorkers 1`
+  - `pnpm vitest run tests/mcp.accountMirrorCatalog.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/accountMirror/catalogService.ts src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/accountMirror/catalogService.test.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.accountMirrorCatalog.test.ts`
+    reported existing warning debt only
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `3801026`; stale
+    PID `3046760` needed SIGKILL after not exiting on SIGTERM
+  - installed catalog item route returned ChatGPT/default conversation
+    `69e236bf-d298-832d-9f5c-f1a11a9fd156` with title
+    `Fridge Mullion Repair Guide`
+  - installed `api status --json` advertises
+    `.raw.routes.accountMirrorCatalogItemTemplate`
+  - installed `api ops-browser-status --json` reports item-detail path and
+    dashboard detail checks true

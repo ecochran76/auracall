@@ -24,6 +24,10 @@ export interface AccountMirrorCatalogRequest {
   limit?: number | null;
 }
 
+export interface AccountMirrorCatalogItemRequest extends AccountMirrorCatalogRequest {
+  itemId: string;
+}
+
 export interface AccountMirrorCatalogEntry {
   provider: AccountMirrorProvider;
   runtimeProfileId: string;
@@ -64,8 +68,23 @@ export interface AccountMirrorCatalogResult {
   };
 }
 
+export interface AccountMirrorCatalogItemResult {
+  object: 'account_mirror_catalog_item';
+  generatedAt: string;
+  provider: AccountMirrorProvider;
+  runtimeProfileId: string;
+  browserProfileId: string | null;
+  boundIdentityKey: string | null;
+  status: AccountMirrorStatusEntry['status'];
+  reason: AccountMirrorStatusEntry['reason'];
+  kind: Exclude<AccountMirrorCatalogKind, 'all'>;
+  itemId: string;
+  item: unknown;
+}
+
 export interface AccountMirrorCatalogService {
   readCatalog(request?: AccountMirrorCatalogRequest): Promise<AccountMirrorCatalogResult>;
+  readItem(request: AccountMirrorCatalogItemRequest): Promise<AccountMirrorCatalogItemResult | null>;
 }
 
 export function createAccountMirrorCatalogService(input: {
@@ -145,7 +164,61 @@ export function createAccountMirrorCatalogService(input: {
         metrics,
       };
     },
+    async readItem(request) {
+      const catalog = await this.readCatalog({
+        provider: request.provider ?? null,
+        runtimeProfileId: request.runtimeProfileId ?? null,
+        kind: request.kind ?? 'all',
+        limit: request.limit ?? 500,
+      });
+      const requestedId = request.itemId.trim();
+      for (const entry of catalog.entries) {
+        for (const kind of catalogKindsForItemLookup(request.kind ?? 'all')) {
+          const items = entry.manifests[kind];
+          for (const item of items) {
+            const itemId = readCatalogItemId(item);
+            if (itemId === requestedId) {
+              return {
+                object: 'account_mirror_catalog_item',
+                generatedAt: now().toISOString(),
+                provider: entry.provider,
+                runtimeProfileId: entry.runtimeProfileId,
+                browserProfileId: entry.browserProfileId,
+                boundIdentityKey: entry.boundIdentityKey,
+                status: entry.status,
+                reason: entry.reason,
+                kind,
+                itemId,
+                item,
+              };
+            }
+          }
+        }
+      }
+      return null;
+    },
   };
+}
+
+function catalogKindsForItemLookup(kind: AccountMirrorCatalogKind): Array<Exclude<AccountMirrorCatalogKind, 'all'>> {
+  if (kind === 'all') return ['projects', 'conversations', 'artifacts', 'files', 'media'];
+  return [kind];
+}
+
+function readCatalogItemId(item: unknown): string {
+  return readCatalogStringField(item, ['id', 'conversationId', 'projectId', 'artifactId', 'fileId', 'mediaId', 'url', 'href'])
+    ?? 'unknown';
+}
+
+function readCatalogStringField(item: unknown, fields: string[]): string | null {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
+  const record = item as Record<string, unknown>;
+  for (const field of fields) {
+    const value = record[field];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  }
+  return null;
 }
 
 function filterCatalogKind(
