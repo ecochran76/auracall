@@ -277,7 +277,9 @@ Terminology note:
   browser work. File, artifact, and media item detail includes a compact cached
   metadata inspector, cached URL links, and a browser-safe cached preview for
   inline text, remote image/video/audio/PDF URLs, or cache-owned materialized
-  local files served through the local API before the raw JSON block.
+  local files served through the local API before the raw JSON block. Catalog
+  rows also show a `Preview` badge so operators can spot `local`, `remote`,
+  `inline`, and `metadata` assets before opening detail.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

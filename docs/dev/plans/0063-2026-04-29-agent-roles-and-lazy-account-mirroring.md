@@ -767,3 +767,6 @@ files are served through
 `GET /v1/account-mirrors/catalog/items/{item_id}/asset` after the same catalog
 identity/profile lookup and a cache-root containment check, allowing the
 dashboard preview to render local blobs without exposing arbitrary file paths.
+Catalog rows now also include a `Preview` column and summary count that mark
+file/artifact/media rows as `local`, `remote`, `inline`, or `metadata`, so
+operators can pick previewable cached items before opening the detail pane.

@@ -15485,3 +15485,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   materialized file/artifact/media blobs through the account-mirror item asset
   route only after catalog lookup and cache-root containment checks, so the
   dashboard can preview local cached files without exposing arbitrary paths.
+- 2026-05-04: Account mirror catalog rows need previewability at a glance.
+  Add row-level asset materialization badges and a previewable summary count so
+  operators can distinguish local/remote/inline preview assets from
+  metadata-only rows before opening detail.

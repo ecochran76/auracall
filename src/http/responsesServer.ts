@@ -4328,6 +4328,7 @@ function createOperatorBrowserDashboardHtml(input: {
               itemId: formatCatalogItemId(item),
               timestamp: formatCatalogItemTimestamp(item),
               transcriptStatus: formatCatalogTranscriptStatus(kind, item),
+              materializationStatus: formatCatalogMaterializationStatus(kind, item),
               item,
               searchable: stringifyCatalogItem(item),
             });
@@ -4353,6 +4354,7 @@ function createOperatorBrowserDashboardHtml(input: {
           row.itemId,
           row.timestamp,
           row.transcriptStatus,
+          row.materializationStatus,
           row.searchable,
         ].join(' ').toLowerCase().includes(needle);
       });
@@ -4373,8 +4375,13 @@ function createOperatorBrowserDashboardHtml(input: {
         renderBadge('artifacts', metrics.artifacts || 0, metrics.artifacts ? 'ok' : 'muted'),
         renderBadge('files', metrics.files || 0, metrics.files ? 'ok' : 'muted'),
         renderBadge('media', metrics.media || 0, metrics.media ? 'ok' : 'muted'),
+        renderBadge('previewable', countPreviewableCatalogRows(filteredRows), countPreviewableCatalogRows(filteredRows) ? 'ok' : 'muted'),
         renderBadge('shown', filteredRows.length + '/' + rows.length, filteredRows.length ? 'ok' : 'warn'),
       ].join('') + '</span>';
+    }
+
+    function countPreviewableCatalogRows(rows) {
+      return rows.filter((row) => hasCatalogItemPreviewSignal(row.item)).length;
     }
 
     function renderMirrorCatalogTable(rows) {
@@ -4387,6 +4394,7 @@ function createOperatorBrowserDashboardHtml(input: {
         'ID',
         'Updated',
         'Transcript',
+        'Preview',
         'Identity',
         'Open',
         'Snippet',
@@ -4404,6 +4412,7 @@ function createOperatorBrowserDashboardHtml(input: {
         '<td class="wrap">' + escapeHtml(row.itemId) + '</td>',
         '<td class="wrap">' + escapeHtml(row.timestamp) + '</td>',
         '<td>' + renderCatalogTranscriptBadge(row) + '</td>',
+        '<td>' + renderCatalogMaterializationBadge(row) + '</td>',
         '<td class="wrap">' + escapeHtml(row.boundIdentityKey) + '</td>',
         '<td><a href="' + escapeHtml(itemPath) + '" data-catalog-item-path="' + escapeHtml(itemPath) + '" onclick="event.preventDefault(); event.stopPropagation(); showMirrorCatalogDetailByPath(this.dataset.catalogItemPath)">Details</a></td>',
         '<td class="wrap">' + escapeHtml(trimCatalogSnippet(row.searchable)) + '</td>',
@@ -4417,6 +4426,36 @@ function createOperatorBrowserDashboardHtml(input: {
         return renderBadge('chat', String(count || '?'), 'ok');
       }
       return renderBadge('chat', 'none', 'warn');
+    }
+
+    function renderCatalogMaterializationBadge(row) {
+      if (row.kind === 'conversations' || row.kind === 'projects') return renderBadge('asset', 'n/a', 'muted');
+      const status = classifyCatalogItemPreview(row.item);
+      if (status === 'local') return renderBadge('asset', 'local', 'ok');
+      if (status === 'remote') return renderBadge('asset', 'remote', 'ok');
+      if (status === 'inline') return renderBadge('asset', 'inline', 'ok');
+      return renderBadge('asset', 'metadata', 'muted');
+    }
+
+    function formatCatalogMaterializationStatus(kind, item) {
+      if (kind === 'conversations' || kind === 'projects') return 'asset n/a';
+      const status = classifyCatalogItemPreview(item);
+      if (status === 'local') return 'local cached asset';
+      if (status === 'remote') return 'remote preview asset';
+      if (status === 'inline') return 'inline preview asset';
+      return 'metadata only asset';
+    }
+
+    function classifyCatalogItemPreview(item) {
+      if (readCatalogItemStringField(item, ['markdown', 'text', 'content', 'body'])) return 'inline';
+      if (readCatalogItemStringField(item, ['localPath', 'path', 'filePath', 'absolutePath', 'assetStorageRelpath', 'storageRelpath'])) return 'local';
+      if (readCatalogPreviewUrl(item)) return 'remote';
+      return 'metadata';
+    }
+
+    function hasCatalogItemPreviewSignal(item) {
+      const status = classifyCatalogItemPreview(item);
+      return status === 'local' || status === 'remote' || status === 'inline';
     }
 
     function formatCatalogTranscriptStatus(kind, item) {

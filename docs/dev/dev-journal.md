@@ -24288,6 +24288,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run docs:list`
   - `pnpm run plans:audit -- --keep 63`
   - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `2464769`
+  - installed `api ops-browser-status --json` reports
+    `.dashboard.hasCatalogMaterializationBadges=true`
+  - installed `/account-mirror?provider=chatgpt&kind=artifacts&limit=1`
+    includes `renderCatalogMaterializationBadge`,
+    `formatCatalogMaterializationStatus`, `classifyCatalogItemPreview`,
+    `countPreviewableCatalogRows`, `Preview`, `previewable`,
+    `local cached asset`, and `metadata only asset`
   - observed `latestYield.owner=media-generation:chatgpt:image`,
     `latestYield.remaining=4`, and `latestYield.nextConversationIndex=3`.
 
@@ -25698,6 +25708,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
+
+## Turn 101 | 2026-05-04
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make asset previewability visible from account mirror catalog rows.
+- Change:
+  - catalog rows now include a `Preview` column for file/artifact/media rows
+  - row badges classify cached assets as `local`, `remote`, `inline`, or
+    `metadata`
+  - catalog summary now includes a `previewable` count for the filtered rows
+  - dashboard CLI contract now asserts the materialization badge affordance
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
 
 ## Turn 102 | 2026-05-03
 

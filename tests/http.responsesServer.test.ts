@@ -14687,6 +14687,15 @@ describe('http responses adapter', () => {
       expect(html).toContain('Transcript');
       expect(html).toContain('renderCatalogTranscriptBadge');
       expect(html).toContain('formatCatalogTranscriptStatus');
+      expect(html).toContain('renderCatalogMaterializationBadge');
+      expect(html).toContain('formatCatalogMaterializationStatus');
+      expect(html).toContain('classifyCatalogItemPreview');
+      expect(html).toContain('hasCatalogItemPreviewSignal');
+      expect(html).toContain('countPreviewableCatalogRows');
+      expect(html).toContain('Preview');
+      expect(html).toContain('previewable');
+      expect(html).toContain('local cached asset');
+      expect(html).toContain('metadata only asset');
       expect(html).toContain('hasCachedCatalogTranscript');
       expect(html).toContain('hasCachedTranscript');
       expect(html).toContain('messageCount');
@@ -14827,6 +14836,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('renderCachedAssetDetailView');
       expect(html).toContain('renderCatalogItemPreview');
       expect(html).toContain('buildCatalogItemAssetPath');
+      expect(html).toContain('renderCatalogMaterializationBadge');
       expect(html).toContain('renderCatalogTranscriptBadge');
       expect(html).toContain('mirrorCatalogWithTranscriptOnly');
       expect(html).toContain('/v1/account-mirrors/catalog');
