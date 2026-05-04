@@ -118,13 +118,21 @@ export function createAccountMirrorCatalogService(input: {
           boundIdentityKey: target.expectedIdentityKey,
           limit,
         });
-        const manifests = filterCatalogKind(catalog ?? {
-          projects: [],
-          conversations: [],
-          artifacts: [],
-          files: [],
-          media: [],
-        }, kind);
+        const manifests = await hydrateCatalogManifestsWithConversationSummaries(
+          persistence,
+          target.provider,
+          target.expectedIdentityKey,
+          filterCatalogKind(
+            catalog ?? {
+              projects: [],
+              conversations: [],
+              artifacts: [],
+              files: [],
+              media: [],
+            },
+            kind,
+          ),
+        );
         entries.push({
           provider: target.provider,
           runtimeProfileId: target.runtimeProfileId,
@@ -200,6 +208,39 @@ export function createAccountMirrorCatalogService(input: {
       }
       return null;
     },
+  };
+}
+
+async function hydrateCatalogManifestsWithConversationSummaries(
+  persistence: AccountMirrorPersistence,
+  provider: AccountMirrorProvider,
+  boundIdentityKey: string | null,
+  manifests: AccountMirrorCatalogEntry['manifests'],
+): Promise<AccountMirrorCatalogEntry['manifests']> {
+  if (!manifests.conversations.length) return manifests;
+  return {
+    ...manifests,
+    conversations: await Promise.all(
+      manifests.conversations.map(async (item) => {
+        const conversationId = readCatalogItemId(item);
+        if (!conversationId || conversationId === 'unknown') return item;
+        const context = await persistence.readConversationContext({
+          provider,
+          boundIdentityKey,
+          conversationId,
+        });
+        if (!context) return item;
+        const base = isRecord(item) ? item : {};
+        return {
+          ...base,
+          hasCachedTranscript: context.messages.length > 0,
+          messageCount: context.messages.length,
+          cachedFileCount: context.files?.length ?? 0,
+          cachedSourceCount: context.sources?.length ?? 0,
+          cachedArtifactCount: context.artifacts?.length ?? 0,
+        };
+      }),
+    ),
   };
 }
 

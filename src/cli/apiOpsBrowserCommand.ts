@@ -44,6 +44,7 @@ export interface ApiOpsBrowserDashboardSummary {
   hasCatalogSavedFilterState: boolean;
   hasCatalogDetailInspection: boolean;
   hasConversationChatDetailView: boolean;
+  hasConversationTranscriptAffordance: boolean;
   usesAccountMirrorCatalogItemPath: boolean;
   usesAccountMirrorCatalogPath: boolean;
 }
@@ -96,7 +97,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
     `AuraCall ops browser: ok (${summary.host}:${summary.port}${dashboard.route})`,
     `Dashboard URL: ${summary.dashboardUrl}`,
     `Dashboard service control: nav=${formatBoolean(dashboard.hasNavigationScaffold)} operations=${formatBoolean(dashboard.hasOperationsPanel)} backgroundDrain=${formatBoolean(dashboard.hasBackgroundDrainControls)} scheduler=${formatBoolean(dashboard.hasMirrorSchedulerControls)} runOnce=${formatBoolean(dashboard.hasRunOnceSchedulerControl)}`,
-    `Dashboard cache browse: catalog=${formatBoolean(dashboard.hasAccountMirrorCatalogPanel)} page=${formatBoolean(dashboard.hasAccountMirrorPageLink)} search=${formatBoolean(dashboard.hasCatalogSearchControls)} savedFilters=${formatBoolean(dashboard.hasCatalogSavedFilterState)} table=${formatBoolean(dashboard.hasCatalogResultsTable)} detail=${formatBoolean(dashboard.hasCatalogDetailInspection)} chat=${formatBoolean(dashboard.hasConversationChatDetailView)} path=${dashboard.usesAccountMirrorCatalogPath ? '/v1/account-mirrors/catalog' : 'unknown'} itemPath=${dashboard.usesAccountMirrorCatalogItemPath ? '/v1/account-mirrors/catalog/items/{id}' : 'unknown'}`,
+    `Dashboard cache browse: catalog=${formatBoolean(dashboard.hasAccountMirrorCatalogPanel)} page=${formatBoolean(dashboard.hasAccountMirrorPageLink)} search=${formatBoolean(dashboard.hasCatalogSearchControls)} savedFilters=${formatBoolean(dashboard.hasCatalogSavedFilterState)} table=${formatBoolean(dashboard.hasCatalogResultsTable)} detail=${formatBoolean(dashboard.hasCatalogDetailInspection)} chat=${formatBoolean(dashboard.hasConversationChatDetailView)} transcript=${formatBoolean(dashboard.hasConversationTranscriptAffordance)} path=${dashboard.usesAccountMirrorCatalogPath ? '/v1/account-mirrors/catalog' : 'unknown'} itemPath=${dashboard.usesAccountMirrorCatalogItemPath ? '/v1/account-mirrors/catalog/items/{id}' : 'unknown'}`,
     `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} attention=${formatBoolean(dashboard.hasAttentionQueue)} activeTable=${formatBoolean(dashboard.hasActiveCompletionTable)} inspect=${formatBoolean(dashboard.hasCompletionInspectAction)} inputInspect=${formatBoolean(dashboard.hasCompletionInputInspectControl)} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} stateAware=${formatBoolean(dashboard.hasStateAwareCompletionActions)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
     summary.status.liveFollow.line,
     `Account mirror completions: active=${formatNullableNumber(summary.status.completions.metrics.active)} paused=${formatNullableNumber(summary.status.completions.metrics.paused)} failed=${formatNullableNumber(summary.status.completions.metrics.failed)} cancelled=${formatNullableNumber(summary.status.completions.metrics.cancelled)} total=${formatNullableNumber(summary.status.completions.metrics.total)}`,
@@ -138,6 +139,7 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
     [summary.hasCatalogResultsTable, 'Expected /ops/browser to render cached account mirror catalog rows.'],
     [summary.hasCatalogDetailInspection, 'Expected /ops/browser to inspect cached catalog row details.'],
     [summary.hasConversationChatDetailView, 'Expected /ops/browser to render cached conversation details as a chat dialog.'],
+    [summary.hasConversationTranscriptAffordance, 'Expected /ops/browser catalog rows to show cached conversation transcript availability.'],
     [summary.usesAccountMirrorCatalogPath, 'Expected /ops/browser to read /v1/account-mirrors/catalog.'],
     [summary.usesAccountMirrorCatalogItemPath, 'Expected /ops/browser to read /v1/account-mirrors/catalog/items/{id}.'],
   ];
@@ -249,6 +251,11 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('renderChatTurn')
       && html.includes('chat-transcript')
       && html.includes('chat-bubble'),
+    hasConversationTranscriptAffordance: html.includes('renderCatalogTranscriptBadge')
+      && html.includes('formatCatalogTranscriptStatus')
+      && html.includes('hasCachedTranscript')
+      && html.includes('messageCount')
+      && html.includes('Transcript'),
     usesAccountMirrorCatalogItemPath: html.includes('/v1/account-mirrors/catalog/items/'),
     usesAccountMirrorCatalogPath: html.includes('/v1/account-mirrors/catalog'),
   };

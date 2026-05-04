@@ -15454,3 +15454,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `/v1/account-mirrors/catalog/items/{id}` should include cached `messages`
   when available so `/account-mirror` can render a real chat dialog without
   launching provider browser work.
+- 2026-05-03: Conversation catalog browsing should show transcript readiness
+  before click-through. Add a cache-only row affordance derived from
+  `hasCachedTranscript` and `messageCount` so operators can distinguish
+  metadata-only conversations from rows that will open as chat dialogs.

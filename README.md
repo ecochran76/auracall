@@ -266,6 +266,8 @@ Terminology note:
   provider/profile/kind/search/limit controls backed by
   `GET /v1/account-mirrors/catalog`, persists filters in the page URL, and
   opens stable item-detail URLs without starting provider browser work.
+  Conversation catalog rows show cached transcript availability and message
+  count before opening the row.
   Conversation detail reads hydrate any existing cached conversation context
   into the item detail and render cached turns as a chat dialog, while keeping
   the raw cached item JSON available for debugging.

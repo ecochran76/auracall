@@ -739,3 +739,7 @@ The catalog item detail path also hydrates conversation rows from the existing
 cached conversation context store. That keeps catalog list reads lightweight,
 does not enqueue browser work, and lets `/account-mirror` display real chat
 bubbles whenever a prior provider detail read has cached `messages`.
+Catalog conversation rows now include a bounded transcript summary
+(`hasCachedTranscript`, `messageCount`, and cached attachment/source/artifact
+counts), and the dashboard renders that summary as a `Transcript` column so
+operators can identify full chat-dialog candidates before opening item detail.

@@ -180,6 +180,20 @@ describe('account mirror catalog service', () => {
       expect(catalog.entries[0]?.manifests.files).toEqual([
         { id: 'file_1', name: 'Upload.pdf', provider: 'chatgpt', source: 'conversation' },
       ]);
+      expect(catalog.entries[0]?.manifests.conversations).toEqual([
+        {
+          id: 'conv_1',
+          title: 'Conversation 1',
+          provider: 'chatgpt',
+          projectId: 'project_1',
+          hasCachedTranscript: true,
+          messageCount: 2,
+          cachedFileCount: 0,
+          cachedSourceCount: 0,
+          cachedArtifactCount: 1,
+        },
+        { id: 'conv_2', title: 'Conversation 2', provider: 'chatgpt', projectId: 'project_2' },
+      ]);
 
       const projectsOnly = await service.readCatalog({
         provider: 'chatgpt',

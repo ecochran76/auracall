@@ -4086,6 +4086,7 @@ function createOperatorBrowserDashboardHtml(input: {
               label: formatCatalogItemLabel(item),
               itemId: formatCatalogItemId(item),
               timestamp: formatCatalogItemTimestamp(item),
+              transcriptStatus: formatCatalogTranscriptStatus(kind, item),
               item,
               searchable: stringifyCatalogItem(item),
             });
@@ -4107,6 +4108,7 @@ function createOperatorBrowserDashboardHtml(input: {
         row.label,
         row.itemId,
         row.timestamp,
+        row.transcriptStatus,
         row.searchable,
       ].join(' ').toLowerCase().includes(needle));
     }
@@ -4133,6 +4135,7 @@ function createOperatorBrowserDashboardHtml(input: {
         'Title',
         'ID',
         'Updated',
+        'Transcript',
         'Identity',
         'Open',
         'Snippet',
@@ -4149,10 +4152,27 @@ function createOperatorBrowserDashboardHtml(input: {
         '<td class="wrap"><strong>' + escapeHtml(row.label) + '</strong></td>',
         '<td class="wrap">' + escapeHtml(row.itemId) + '</td>',
         '<td class="wrap">' + escapeHtml(row.timestamp) + '</td>',
+        '<td>' + renderCatalogTranscriptBadge(row) + '</td>',
         '<td class="wrap">' + escapeHtml(row.boundIdentityKey) + '</td>',
         '<td><a href="' + escapeHtml(itemPath) + '" data-catalog-item-path="' + escapeHtml(itemPath) + '" onclick="event.preventDefault(); event.stopPropagation(); showMirrorCatalogDetailByPath(this.dataset.catalogItemPath)">Details</a></td>',
         '<td class="wrap">' + escapeHtml(trimCatalogSnippet(row.searchable)) + '</td>',
       ].join('') + '</tr>';
+    }
+
+    function renderCatalogTranscriptBadge(row) {
+      if (row.kind !== 'conversations') return renderBadge('n/a', 'metadata', 'muted');
+      const count = readNumberField(row.item, ['messageCount']);
+      if (readBooleanField(row.item, ['hasCachedTranscript']) || count > 0) {
+        return renderBadge('chat', String(count || '?'), 'ok');
+      }
+      return renderBadge('chat', 'none', 'warn');
+    }
+
+    function formatCatalogTranscriptStatus(kind, item) {
+      if (kind !== 'conversations') return 'metadata only';
+      const count = readNumberField(item, ['messageCount']);
+      if (readBooleanField(item, ['hasCachedTranscript']) || count > 0) return 'cached transcript ' + String(count || '');
+      return 'no cached transcript';
     }
 
     function showMirrorCatalogDetailByIndex(index) {
@@ -4322,6 +4342,26 @@ function createOperatorBrowserDashboardHtml(input: {
         if (typeof candidate === 'number' && Number.isFinite(candidate)) return String(candidate);
       }
       return null;
+    }
+
+    function readNumberField(value, fields) {
+      if (!value || typeof value !== 'object') return 0;
+      for (const field of fields) {
+        const candidate = value[field];
+        if (typeof candidate === 'number' && Number.isFinite(candidate)) return candidate;
+        if (typeof candidate === 'string' && candidate.trim() && Number.isFinite(Number(candidate))) return Number(candidate);
+      }
+      return 0;
+    }
+
+    function readBooleanField(value, fields) {
+      if (!value || typeof value !== 'object') return false;
+      for (const field of fields) {
+        const candidate = value[field];
+        if (typeof candidate === 'boolean') return candidate;
+        if (typeof candidate === 'string' && candidate.trim()) return candidate.trim().toLowerCase() === 'true';
+      }
+      return false;
     }
 
     function stringifyCatalogItem(item) {

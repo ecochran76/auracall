@@ -25753,3 +25753,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `69e236bf-d298-832d-9f5c-f1a11a9fd156` now returns hydrated
     `messages`, `files`, `sources`, and `artifacts`; the live cache had five
     cached messages for that item
+
+## Turn 95 | 2026-05-03
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: show which account mirror conversation rows have cached transcript
+  data before an operator opens detail.
+- Change:
+  - catalog conversation manifests now get cache-only transcript summary fields:
+    `hasCachedTranscript`, `messageCount`, `cachedFileCount`,
+    `cachedSourceCount`, and `cachedArtifactCount`
+  - `/account-mirror` renders a `Transcript` column with `chat <count>` or
+    `chat none`
+  - dashboard CLI contract now asserts the transcript availability affordance
+- Validation:
+  - `pnpm vitest run tests/accountMirror/catalogService.test.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror catalog service|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/accountMirror/catalogService.ts src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/accountMirror/catalogService.test.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing lint-warning debt in broad touched files
+    (`noUselessContinue`, `noNonNullAssertion`)
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `4004187`
+  - installed `api ops-browser-status --json` reports
+    `.dashboard.hasConversationTranscriptAffordance=true`
+  - installed `/account-mirror?provider=chatgpt&kind=conversations&limit=3`
+    includes `Transcript`, `renderCatalogTranscriptBadge`, and
+    `formatCatalogTranscriptStatus`
+  - installed catalog read for ChatGPT/default conversations shows the first
+    three rows with cached transcript summaries: 5, 5, and 4 messages
