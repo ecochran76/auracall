@@ -770,3 +770,5 @@ dashboard preview to render local blobs without exposing arbitrary file paths.
 Catalog rows now also include a `Preview` column and summary count that mark
 file/artifact/media rows as `local`, `remote`, `inline`, or `metadata`, so
 operators can pick previewable cached items before opening the detail pane.
+The catalog controls can now filter by preview state and sort previewable or
+local cached assets first while staying entirely cache-only.

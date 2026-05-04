@@ -14663,6 +14663,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('mirrorCatalogRuntimeProfile');
       expect(html).toContain('mirrorCatalogKind');
       expect(html).toContain('mirrorCatalogSearch');
+      expect(html).toContain('mirrorCatalogPreviewFilter');
+      expect(html).toContain('mirrorCatalogSort');
       expect(html).toContain('mirrorCatalogWithTranscriptOnly');
       expect(html).toContain('mirrorCatalogLimit');
       expect(html).toContain('loadMirrorCatalog');
@@ -14682,6 +14684,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('window.history.replaceState');
       expect(html).toContain('flattenMirrorCatalogEntries');
       expect(html).toContain('filterMirrorCatalogRows');
+      expect(html).toContain('matchesCatalogPreviewFilter');
+      expect(html).toContain('sortMirrorCatalogRows');
+      expect(html).toContain('compareMirrorCatalogRows');
+      expect(html).toContain('compareCatalogPreviewRank');
       expect(html).toContain('renderMirrorCatalogTable');
       expect(html).toContain('mirrorCatalogItems');
       expect(html).toContain('Transcript');
@@ -14694,8 +14700,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('countPreviewableCatalogRows');
       expect(html).toContain('Preview');
       expect(html).toContain('previewable');
+      expect(html).toContain('previewable first');
       expect(html).toContain('local cached asset');
       expect(html).toContain('metadata only asset');
+      expect(html).toContain('metadata only');
       expect(html).toContain('hasCachedCatalogTranscript');
       expect(html).toContain('hasCachedTranscript');
       expect(html).toContain('messageCount');
@@ -14826,6 +14834,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('href="/account-mirror" aria-current="page"');
       expect(html).toContain('href="/ops/browser"');
       expect(html).toContain('mirrorCatalogProvider');
+      expect(html).toContain('mirrorCatalogPreviewFilter');
+      expect(html).toContain('mirrorCatalogSort');
       expect(html).toContain('initializeMirrorCatalogFiltersFromUrl');
       expect(html).toContain('showMirrorCatalogDetailByIndex');
       expect(html).toContain('showMirrorCatalogDetailByPath');

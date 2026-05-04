@@ -3648,6 +3648,24 @@ function createOperatorBrowserDashboardHtml(input: {
           <label>Search
             <input id="mirrorCatalogSearch" placeholder="cached title, id, URL, or metadata">
           </label>
+          <label>Asset Preview
+            <select id="mirrorCatalogPreviewFilter">
+              <option value="all">all</option>
+              <option value="previewable">previewable</option>
+              <option value="local">local</option>
+              <option value="remote">remote</option>
+              <option value="inline">inline</option>
+              <option value="metadata">metadata only</option>
+            </select>
+          </label>
+          <label>Sort
+            <select id="mirrorCatalogSort">
+              <option value="updated-desc">updated desc</option>
+              <option value="preview-first">previewable first</option>
+              <option value="local-first">local first</option>
+              <option value="kind">kind/title</option>
+            </select>
+          </label>
           <label>
             <input id="mirrorCatalogWithTranscriptOnly" type="checkbox">
             With transcript only
@@ -4238,6 +4256,8 @@ function createOperatorBrowserDashboardHtml(input: {
       if (params.has('runtimeProfile')) $('mirrorCatalogRuntimeProfile').value = params.get('runtimeProfile') || '';
       setSelectValue('mirrorCatalogKind', params.get('kind') || 'all');
       if (params.has('search')) $('mirrorCatalogSearch').value = params.get('search') || '';
+      setSelectValue('mirrorCatalogPreviewFilter', params.get('preview') || 'all');
+      setSelectValue('mirrorCatalogSort', params.get('sort') || 'updated-desc');
       $('mirrorCatalogWithTranscriptOnly').checked = params.get('withTranscript') === '1';
       if (params.has('limit')) $('mirrorCatalogLimit').value = String(normalizeMirrorCatalogLimit(params.get('limit')));
     }
@@ -4254,6 +4274,8 @@ function createOperatorBrowserDashboardHtml(input: {
       setOptionalUrlParam(params, 'runtimeProfile', $('mirrorCatalogRuntimeProfile').value.trim());
       setOptionalUrlParam(params, 'kind', $('mirrorCatalogKind').value === 'all' ? '' : $('mirrorCatalogKind').value);
       setOptionalUrlParam(params, 'search', $('mirrorCatalogSearch').value.trim());
+      setOptionalUrlParam(params, 'preview', $('mirrorCatalogPreviewFilter').value === 'all' ? '' : $('mirrorCatalogPreviewFilter').value);
+      setOptionalUrlParam(params, 'sort', $('mirrorCatalogSort').value === 'updated-desc' ? '' : $('mirrorCatalogSort').value);
       setOptionalUrlParam(params, 'withTranscript', $('mirrorCatalogWithTranscriptOnly').checked ? '1' : '');
       const limit = normalizeMirrorCatalogLimit($('mirrorCatalogLimit').value);
       setOptionalUrlParam(params, 'limit', limit === 50 ? '' : String(limit));
@@ -4286,10 +4308,11 @@ function createOperatorBrowserDashboardHtml(input: {
         updateMirrorCatalogUrl();
         const catalog = await fetchJson(buildMirrorCatalogPath());
         mirrorCatalogRows = flattenMirrorCatalogEntries(catalog);
-        mirrorCatalogFilteredRows = filterMirrorCatalogRows(mirrorCatalogRows, {
+        mirrorCatalogFilteredRows = sortMirrorCatalogRows(filterMirrorCatalogRows(mirrorCatalogRows, {
           query: $('mirrorCatalogSearch').value,
+          previewFilter: $('mirrorCatalogPreviewFilter').value,
           withTranscriptOnly: $('mirrorCatalogWithTranscriptOnly').checked,
-        });
+        }), $('mirrorCatalogSort').value);
         $('mirrorCatalogSummary').className = 'notice notice-ok';
         $('mirrorCatalogSummary').innerHTML = renderMirrorCatalogSummary(catalog, mirrorCatalogRows, mirrorCatalogFilteredRows);
         $('mirrorCatalogResults').innerHTML = renderMirrorCatalogTable(mirrorCatalogFilteredRows);
@@ -4340,9 +4363,11 @@ function createOperatorBrowserDashboardHtml(input: {
 
     function filterMirrorCatalogRows(rows, filters) {
       const needle = String(filters && filters.query || '').trim().toLowerCase();
+      const previewFilter = String(filters && filters.previewFilter || 'all');
       const withTranscriptOnly = Boolean(filters && filters.withTranscriptOnly);
       return rows.filter((row) => {
         if (withTranscriptOnly && !hasCachedCatalogTranscript(row)) return false;
+        if (!matchesCatalogPreviewFilter(row, previewFilter)) return false;
         if (!needle) return true;
         return [
           row.provider,
@@ -4358,6 +4383,49 @@ function createOperatorBrowserDashboardHtml(input: {
           row.searchable,
         ].join(' ').toLowerCase().includes(needle);
       });
+    }
+
+    function matchesCatalogPreviewFilter(row, previewFilter) {
+      if (!previewFilter || previewFilter === 'all') return true;
+      const status = classifyCatalogItemPreview(row.item);
+      if (previewFilter === 'previewable') return hasCatalogItemPreviewSignal(row.item);
+      if (previewFilter === 'metadata') return row.kind !== 'conversations' && row.kind !== 'projects' && status === 'metadata';
+      return status === previewFilter;
+    }
+
+    function sortMirrorCatalogRows(rows, sortMode) {
+      const copy = rows.slice();
+      const mode = sortMode || 'updated-desc';
+      copy.sort((left, right) => compareMirrorCatalogRows(left, right, mode));
+      return copy;
+    }
+
+    function compareMirrorCatalogRows(left, right, sortMode) {
+      if (sortMode === 'preview-first') {
+        return compareCatalogPreviewRank(left, right, ['local', 'remote', 'inline', 'metadata']) || compareCatalogUpdatedDesc(left, right);
+      }
+      if (sortMode === 'local-first') {
+        return compareCatalogPreviewRank(left, right, ['local', 'remote', 'inline', 'metadata']) || compareCatalogUpdatedDesc(left, right);
+      }
+      if (sortMode === 'kind') {
+        return left.kind.localeCompare(right.kind)
+          || left.label.localeCompare(right.label)
+          || compareCatalogUpdatedDesc(left, right);
+      }
+      return compareCatalogUpdatedDesc(left, right);
+    }
+
+    function compareCatalogPreviewRank(left, right, order) {
+      const leftRank = order.indexOf(classifyCatalogItemPreview(left.item));
+      const rightRank = order.indexOf(classifyCatalogItemPreview(right.item));
+      return (leftRank === -1 ? order.length : leftRank) - (rightRank === -1 ? order.length : rightRank);
+    }
+
+    function compareCatalogUpdatedDesc(left, right) {
+      const leftTime = Date.parse(left.timestamp || '');
+      const rightTime = Date.parse(right.timestamp || '');
+      return (Number.isFinite(rightTime) ? rightTime : 0) - (Number.isFinite(leftTime) ? leftTime : 0)
+        || left.label.localeCompare(right.label);
     }
 
     function hasCachedCatalogTranscript(row) {

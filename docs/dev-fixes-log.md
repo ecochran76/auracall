@@ -15489,3 +15489,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   Add row-level asset materialization badges and a previewable summary count so
   operators can distinguish local/remote/inline preview assets from
   metadata-only rows before opening detail.
+- 2026-05-04: Previewable mirror assets should be discoverable without scanning
+  every catalog row. Add cache-only asset preview filters and preview-first
+  sorting so operators can surface local/remote/inline cached assets before
+  opening item detail.
