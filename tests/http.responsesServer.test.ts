@@ -14696,14 +14696,20 @@ describe('http responses adapter', () => {
       expect(html).toContain('copyCatalogPreviewUrl');
       expect(html).toContain('collectVisibleCatalogPreviewUrls');
       expect(html).toContain('copyVisibleMirrorCatalogPreviewUrls');
+      expect(html).toContain('downloadVisibleMirrorCatalogPreviewUrls');
+      expect(html).toContain('formatVisibleCatalogPreviewUrlsFilename');
       expect(html).toContain('setMirrorCatalogBatchNotice');
       expect(html).toContain('mirrorCatalogBatchNotice');
       expect(html).toContain('data-catalog-preview-url');
       expect(html).toContain('Open Preview');
       expect(html).toContain('Copy URL');
       expect(html).toContain('Copy visible preview URLs');
+      expect(html).toContain('Download visible preview URL list');
       expect(html).toContain('visible preview URL(s)');
       expect(html).toContain('navigator.clipboard.writeText');
+      expect(html).toContain('text/plain;charset=utf-8');
+      expect(html).toContain('URL.createObjectURL');
+      expect(html).toContain('URL.revokeObjectURL');
       expect(html).toContain('catalog-row-actions');
       expect(html).toContain('link-button');
       expect(html).toContain('Transcript');
@@ -14866,6 +14872,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('renderCatalogRowActions');
       expect(html).toContain('copyCatalogPreviewUrl');
       expect(html).toContain('copyVisibleMirrorCatalogPreviewUrls');
+      expect(html).toContain('downloadVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('mirrorCatalogBatchNotice');
       expect(html).toContain('renderCatalogTranscriptBadge');
       expect(html).toContain('mirrorCatalogWithTranscriptOnly');

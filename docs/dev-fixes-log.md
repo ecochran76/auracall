@@ -15501,3 +15501,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   clicking each row. Add a `Copy visible preview URLs` batch action that
   deduplicates the currently filtered local/remote preview URLs and copies them
   as newline-separated absolute URLs.
+- 2026-05-04: Clipboard-only preview URL export is not durable enough for
+  operator handoff. Add a `Download visible preview URL list` action that saves
+  the same deduplicated visible preview URL set as a timestamped text file.

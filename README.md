@@ -282,7 +282,8 @@ Terminology note:
   `inline`, and `metadata` assets before opening detail, then filter or sort
   cached rows by previewability without triggering browser work. Previewable
   asset rows also expose `Open Preview` and `Copy URL` actions directly from
-  the catalog table, plus a batch action to copy all visible preview URLs.
+  the catalog table, plus batch actions to copy or download all visible preview
+  URLs.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

@@ -3690,6 +3690,7 @@ function createOperatorBrowserDashboardHtml(input: {
           </label>
           <button id="loadMirrorCatalog" class="primary">Search Cache</button>
           <button id="copyVisibleMirrorCatalogPreviewUrls" type="button">Copy visible preview URLs</button>
+          <button id="downloadVisibleMirrorCatalogPreviewUrls" type="button">Download visible preview URL list</button>
         </div>
         <div id="mirrorCatalogBatchNotice" class="notice" role="status" aria-live="polite">No catalog batch action yet.</div>
         <div id="mirrorCatalogSummary" class="notice">Catalog reads are cache-only and do not enqueue browser work.</div>
@@ -4489,6 +4490,30 @@ function createOperatorBrowserDashboardHtml(input: {
       } catch {
         setMirrorCatalogBatchNotice('Could not copy visible preview URLs.', 'bad');
       }
+    }
+
+    function downloadVisibleMirrorCatalogPreviewUrls() {
+      const urls = collectVisibleCatalogPreviewUrls();
+      if (!urls.length) {
+        setMirrorCatalogBatchNotice('No visible preview URLs to download.', 'warn');
+        return;
+      }
+      const blob = new Blob([urls.join('\\n') + '\\n'], { type: 'text/plain;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = formatVisibleCatalogPreviewUrlsFilename();
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+      setMirrorCatalogBatchNotice('Downloaded ' + String(urls.length) + ' visible preview URL(s).', 'ok');
+    }
+
+    function formatVisibleCatalogPreviewUrlsFilename() {
+      const provider = $('mirrorCatalogProvider').value || 'all-providers';
+      const kind = $('mirrorCatalogKind').value || 'all';
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      return 'auracall-preview-urls-' + provider + '-' + kind + '-' + timestamp + '.txt';
     }
 
     function setMirrorCatalogBatchNotice(message, tone) {
@@ -5369,6 +5394,7 @@ function createOperatorBrowserDashboardHtml(input: {
     $('cancelMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('cancel'));
     $('loadMirrorCatalog').addEventListener('click', loadMirrorCatalog);
     $('copyVisibleMirrorCatalogPreviewUrls').addEventListener('click', copyVisibleMirrorCatalogPreviewUrls);
+    $('downloadVisibleMirrorCatalogPreviewUrls').addEventListener('click', downloadVisibleMirrorCatalogPreviewUrls);
     $('mirrorCatalogSearch').addEventListener('keydown', (event) => {
       if (event.key === 'Enter') loadMirrorCatalog();
     });

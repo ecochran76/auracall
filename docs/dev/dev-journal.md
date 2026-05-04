@@ -24290,6 +24290,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run install:user-runtime`
 - Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `693280`
+  - installed `api ops-browser-status --json` reports
+    `.dashboard.hasCatalogBatchPreviewUrlDownload=true`
+  - installed `/account-mirror?provider=chatgpt&kind=artifacts&preview=previewable&sort=preview-first&limit=1`
+    includes `downloadVisibleMirrorCatalogPreviewUrls`,
+    `formatVisibleCatalogPreviewUrlsFilename`, `Download visible preview URL
+    list`, `auracall-preview-urls-`, `URL.createObjectURL`, and
+    `URL.revokeObjectURL`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
   - restarted the pinned `127.0.0.1:18095` service on PID `587012`
   - installed `api ops-browser-status --json` reports
     `.dashboard.hasCatalogBatchPreviewUrlCopy=true`
@@ -25762,13 +25772,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 - Continued implementation plan:
   `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
-- Goal: let operators copy the visible filtered preview URL set in one step.
+- Goal: let operators export the visible filtered preview URL set in one step.
 - Change:
-  - added `Copy visible preview URLs` to the account mirror catalog controls
-  - the batch action collects preview URLs from the current filtered rows,
+  - added `Copy visible preview URLs` and `Download visible preview URL list`
+    to the account mirror catalog controls
+  - the batch actions collect preview URLs from the current filtered rows,
     deduplicates them, normalizes local asset paths to absolute dashboard URLs,
-    and copies newline-separated URLs
-  - dashboard CLI contract now asserts the batch preview URL copy affordance
+    and export newline-separated URLs
+  - the download path saves a timestamped text file
+  - dashboard CLI contract now asserts the batch preview URL copy/download
+    affordances
 - Validation:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
