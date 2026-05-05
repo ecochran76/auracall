@@ -14713,6 +14713,18 @@ describe('http responses adapter', () => {
       expect(html).toContain('configRoutingRaw');
       expect(html).toContain('renderConfigRouting');
       expect(html).toContain('operatorConfigDashboard');
+      expect(html).toContain('configIdentityPanel');
+      expect(html).toContain('configIdentitySummary');
+      expect(html).toContain('renderConfigIdentityProjection');
+      expect(html).toContain('expectedIdentityKey');
+      expect(html).toContain('detectedIdentityKey');
+      expect(html).toContain('accountLevel');
+      expect(html).toContain('configLiveFollowPanel');
+      expect(html).toContain('configLiveFollowSummary');
+      expect(html).toContain('renderConfigLiveFollowProjection');
+      expect(html).toContain('desiredState');
+      expect(html).toContain('nextAttemptAt');
+      expect(html).toContain('mirrorCompleteness');
       expect(html).toContain('backgroundDrainControls');
       expect(html).toContain('pauseBackgroundDrain');
       expect(html).toContain('resumeBackgroundDrain');

@@ -36,6 +36,8 @@ const dashboardHtml = `
 </section>
 <section><h2>Service Discovery</h2><dl id="serviceDiscoverySummary"><dt>Local Dashboard</dt><dd>http://auracall.localhost/ops/browser</dd><dt>External Dashboard</dt><dd>https://auracall.ecochran.dyndns.org/ops/browser</dd><dt>Preview Session Path</dt><dd>/account-mirror/preview-session</dd><dt>Config Path</dt><dd>/config</dd><dt>Proxy Target</dt><dd>http://127.0.0.1:18080</dd><dt>Auth Guard</dt><dd>authelia</dd></dl></section>
 <section id="configRoutingPanel"><h2>Config</h2><dl id="configRoutingSummary"></dl><pre id="configRoutingRaw">operatorConfigDashboard publicOperatorBrowserDashboardUrl externalServiceBaseUrl</pre></section>
+<section id="configIdentityPanel"><h2>Bound Identities</h2><div id="configIdentitySummary">expectedIdentityKey detectedIdentityKey accountLevel</div></section>
+<section id="configLiveFollowPanel"><h2>Live Follow Eligibility</h2><div id="configLiveFollowSummary">status.liveFollow desiredState nextAttemptAt mirrorCompleteness</div></section>
 <section><h2>Mirror Live Follow</h2></section>
 <div id="mirrorAttentionQueue"><table id="mirrorAttentionItems"></table></div>
 <div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div>
@@ -54,6 +56,8 @@ const dashboardHtml = `
   function renderOpsControls() {}
   function renderServiceDiscovery(status) { return status.serviceDiscovery.routing.previewSessionPath + status.serviceDiscovery.routing.configPath; }
   function renderConfigRouting(status) { return status.routes.operatorConfigDashboard; }
+  function renderConfigIdentityProjection(status) { return status.accountMirrorStatus.entries[0].expectedIdentityKey; }
+  function renderConfigLiveFollowProjection(status) { return status.liveFollow.targets.accounts[0].desiredState; }
   function applyServiceDiscoveryRoutes() {}
   function isAccountMirrorRoute() {}
   function isPreviewSessionRoute() {}
@@ -360,6 +364,8 @@ describe('api ops browser CLI helpers', () => {
       hasNavigationScaffold: true,
       hasConfigBackedNavigationRoutes: true,
       hasConfigPage: true,
+      hasConfigIdentityProjection: true,
+      hasConfigLiveFollowProjection: true,
       hasOperationsPanel: true,
       hasServiceDiscoveryPanel: true,
       hasBackgroundDrainControls: true,

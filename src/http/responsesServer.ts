@@ -4155,6 +4155,16 @@ function createOperatorBrowserDashboardHtml(input: {
         <pre id="configRoutingRaw">No status loaded.</pre>
       </section>
 
+      <section class="panel half" id="configIdentityPanel">
+        <h2>Bound Identities</h2>
+        <div id="configIdentitySummary" class="muted">Loading...</div>
+      </section>
+
+      <section class="panel half" id="configLiveFollowPanel">
+        <h2>Live Follow Eligibility</h2>
+        <div id="configLiveFollowSummary" class="muted">Loading...</div>
+      </section>
+
       <section class="panel">
         <h2>Account Mirrors</h2>
         <div class="row" style="margin-bottom: 10px;">
@@ -4515,6 +4525,61 @@ function createOperatorBrowserDashboardHtml(input: {
           externalServiceBaseUrl: routes.externalServiceBaseUrl,
         },
       });
+    }
+
+    function renderConfigIdentityProjection(status) {
+      const entries = ((status.accountMirrorStatus || {}).entries || []).slice();
+      if (!entries.length) {
+        $('configIdentitySummary').innerHTML = '<span class="muted">No configured service/profile identity projections.</span>';
+        return;
+      }
+      $('configIdentitySummary').innerHTML = '<table><thead><tr>'
+        + '<th>Provider</th><th>Runtime Profile</th><th>Browser Profile</th><th>Expected</th><th>Detected</th><th>Account Level</th><th>Status</th>'
+        + '</tr></thead><tbody>'
+        + entries.map((entry) => {
+          const expected = entry.expectedIdentityKey || 'missing';
+          const detected = entry.detectedIdentityKey || 'unknown';
+          const identityClass = !entry.expectedIdentityKey ? 'bad' : (entry.expectedIdentityKey === entry.detectedIdentityKey ? 'ok' : 'warn');
+          return '<tr>'
+            + '<td>' + escapeHtml(entry.provider || 'unknown') + '</td>'
+            + '<td>' + escapeHtml(entry.runtimeProfileId || 'default') + '</td>'
+            + '<td>' + escapeHtml(entry.browserProfileId || 'default') + '</td>'
+            + '<td class="' + identityClass + '">' + escapeHtml(expected) + '</td>'
+            + '<td>' + escapeHtml(detected) + '</td>'
+            + '<td>' + escapeHtml(entry.accountLevel || 'unknown') + '</td>'
+            + '<td>' + escapeHtml(entry.status || 'unknown') + '</td>'
+            + '</tr>';
+        }).join('')
+        + '</tbody></table>';
+    }
+
+    function renderConfigLiveFollowProjection(status) {
+      const liveFollow = status.liveFollow || {};
+      const targets = liveFollow.targets || {};
+      const accounts = (targets.accounts || []).slice();
+      if (!accounts.length) {
+        $('configLiveFollowSummary').innerHTML = '<span class="muted">No live-follow target projections.</span>';
+        return;
+      }
+      $('configLiveFollowSummary').innerHTML = '<div class="notice">'
+        + 'severity=' + escapeHtml(liveFollow.severity || 'unknown')
+        + ' scheduler=' + escapeHtml(liveFollow.schedulerState || 'unknown')
+        + ' enabled=' + escapeHtml(String(targets.enabled ?? 0))
+        + ' active=' + escapeHtml(String(targets.active ?? 0))
+        + '</div>'
+        + '<table><thead><tr>'
+        + '<th>Provider</th><th>Runtime Profile</th><th>Desired</th><th>Actual</th><th>Phase</th><th>Next Attempt</th><th>Completeness</th>'
+        + '</tr></thead><tbody>'
+        + accounts.map((account) => '<tr>'
+          + '<td>' + escapeHtml(account.provider || 'unknown') + '</td>'
+          + '<td>' + escapeHtml(account.runtimeProfileId || 'default') + '</td>'
+          + '<td>' + escapeHtml(account.desiredState || 'unknown') + '</td>'
+          + '<td>' + escapeHtml(account.actualStatus || 'unknown') + '</td>'
+          + '<td>' + escapeHtml(account.phase || 'none') + '</td>'
+          + '<td>' + escapeHtml(account.nextAttemptAt || 'none') + '</td>'
+          + '<td>' + escapeHtml(account.mirrorCompleteness || 'unknown') + '</td>'
+          + '</tr>').join('')
+        + '</tbody></table>';
     }
 
     function renderMaybeLink(value) {
@@ -6691,6 +6756,8 @@ function createOperatorBrowserDashboardHtml(input: {
       $('serviceDiscoverySummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
       $('configRoutingSummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
       $('configRoutingRaw').textContent = 'Loading...';
+      $('configIdentitySummary').textContent = 'Loading...';
+      $('configLiveFollowSummary').textContent = 'Loading...';
       $('opsControls').textContent = 'Loading controls...';
       $('mirrorStatus').textContent = 'Loading...';
       $('mirrorAttentionQueue').textContent = 'Loading attention queue...';
@@ -6704,12 +6771,16 @@ function createOperatorBrowserDashboardHtml(input: {
         renderServerSummary(status);
         renderServiceDiscovery(status);
         renderConfigRouting(status);
+        renderConfigIdentityProjection(status);
+        renderConfigLiveFollowProjection(status);
         renderMirrorCompletions(status);
       } catch (error) {
         $('serverSummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
         $('serviceDiscoverySummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
         $('configRoutingSummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
         $('configRoutingRaw').textContent = String(error.message || error);
+        $('configIdentitySummary').textContent = String(error.message || error);
+        $('configLiveFollowSummary').textContent = String(error.message || error);
         $('opsControls').textContent = String(error.message || error);
         $('mirrorTargetTable').textContent = String(error.message || error);
         $('mirrorActiveCompletionTable').textContent = String(error.message || error);
