@@ -321,6 +321,7 @@ interface OperatorDashboardRoutes {
   dashboardPath: string;
   accountMirrorPath: string;
   previewSessionPath: string;
+  configPath: string;
 }
 
 interface ApiServiceDiscovery {
@@ -346,6 +347,7 @@ interface ApiServiceDiscovery {
     dashboardPath: string;
     accountMirrorPath: string;
     previewSessionPath: string;
+    configPath: string;
     proxyTarget?: string;
     auth?: string;
     ingress?: string;
@@ -392,6 +394,7 @@ interface HttpStatusResponse {
     operatorBrowserDashboard: string;
     accountMirrorDashboard: string;
     accountMirrorPreviewSessionDashboard: string;
+    operatorConfigDashboard: string;
     operatorBrowserDashboardUrl?: string;
     publicOperatorBrowserDashboardUrl?: string;
     localServiceBaseUrl: string;
@@ -797,6 +800,14 @@ export async function createResponsesHttpServer(
       ) {
         sendHtml(res, 200, createOperatorBrowserDashboardHtml({
           activePage: 'preview-session',
+          routes: operatorDashboardRoutes,
+        }));
+        return;
+      }
+
+      if (req.method === 'GET' && matchesRoutePath(url.pathname, operatorDashboardRoutes.configPath, '/config')) {
+        sendHtml(res, 200, createOperatorBrowserDashboardHtml({
+          activePage: 'config',
           routes: operatorDashboardRoutes,
         }));
         return;
@@ -2277,6 +2288,7 @@ function createHttpStatusResponse(input: {
       operatorBrowserDashboard: serviceDiscovery.routing.dashboardPath,
       accountMirrorDashboard: serviceDiscovery.routing.accountMirrorPath,
       accountMirrorPreviewSessionDashboard: serviceDiscovery.routing.previewSessionPath,
+      operatorConfigDashboard: serviceDiscovery.routing.configPath,
       ...(input.dashboardUrl ? { operatorBrowserDashboardUrl: input.dashboardUrl } : {}),
       ...(input.publicDashboardUrl ? { publicOperatorBrowserDashboardUrl: input.publicDashboardUrl } : {}),
       localServiceBaseUrl: serviceDiscovery.local.baseUrl,
@@ -3442,7 +3454,7 @@ function buildApiServiceDiscovery(input: {
   serviceRouting?: ApiServiceRoutingConfig;
 }): ApiServiceDiscovery {
   const routing = input.serviceRouting ?? {};
-  const { dashboardPath, accountMirrorPath, previewSessionPath } = resolveOperatorDashboardRoutes(routing);
+  const { dashboardPath, accountMirrorPath, previewSessionPath, configPath } = resolveOperatorDashboardRoutes(routing);
   const bindBaseUrl = formatApiBaseUrl(input.host, input.port);
   const localBaseUrl = normalizeBaseUrl(routing.localBaseUrl)
     ?? normalizeBaseUrl(baseUrlFromUrl(input.dashboardUrl))
@@ -3480,6 +3492,7 @@ function buildApiServiceDiscovery(input: {
       dashboardPath,
       accountMirrorPath,
       previewSessionPath,
+      configPath,
       ...(routing.proxyTarget ? { proxyTarget: routing.proxyTarget } : {}),
       ...(routing.auth ? { auth: routing.auth } : {}),
       ...(routing.ingress ? { ingress: routing.ingress } : {}),
@@ -3494,6 +3507,7 @@ function resolveOperatorDashboardRoutes(serviceRouting: ApiServiceRoutingConfig 
     dashboardPath,
     accountMirrorPath,
     previewSessionPath: joinRoutePath(accountMirrorPath, 'preview-session'),
+    configPath: '/config',
   };
 }
 
@@ -3686,7 +3700,7 @@ function sendCachedAsset(res: http.ServerResponse, asset: CachedCatalogItemAsset
 }
 
 function createOperatorBrowserDashboardHtml(input: {
-  activePage?: 'browser' | 'account-mirror' | 'preview-session';
+  activePage?: 'browser' | 'account-mirror' | 'preview-session' | 'config';
   routes?: OperatorDashboardRoutes;
 } = {}): string {
   const activePage = input.activePage ?? 'browser';
@@ -3694,19 +3708,25 @@ function createOperatorBrowserDashboardHtml(input: {
   const dashboardPath = escapeHtmlAttribute(routes.dashboardPath);
   const accountMirrorPath = escapeHtmlAttribute(routes.accountMirrorPath);
   const previewSessionPath = escapeHtmlAttribute(routes.previewSessionPath);
+  const configPath = escapeHtmlAttribute(routes.configPath);
   const browserCurrent = activePage === 'browser' ? ' aria-current="page"' : '';
   const accountMirrorCurrent = activePage === 'account-mirror' ? ' aria-current="page"' : '';
   const previewSessionCurrent = activePage === 'preview-session' ? ' aria-current="page"' : '';
+  const configCurrent = activePage === 'config' ? ' aria-current="page"' : '';
   const pageTitle = activePage === 'account-mirror'
     ? 'AuraCall Account Mirror'
     : activePage === 'preview-session'
       ? 'AuraCall Preview Session'
-      : 'AuraCall Browser Ops';
+      : activePage === 'config'
+        ? 'AuraCall Config'
+        : 'AuraCall Browser Ops';
   const pageDescription = activePage === 'account-mirror'
     ? 'Read-only account mirror navigation backed by cached provider indexes.'
     : activePage === 'preview-session'
       ? 'Cache-only review of selected account mirror preview assets.'
-      : 'Local operator view. Browser diagnostics run only when requested.';
+      : activePage === 'config'
+        ? 'Read-only effective service routing and operator URL discovery.'
+        : 'Local operator view. Browser diagnostics run only when requested.';
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -4102,8 +4122,8 @@ function createOperatorBrowserDashboardHtml(input: {
       <a id="navBrowserOps" href="${dashboardPath}" data-route-key="dashboardPath"${browserCurrent}>Browser Ops</a>
       <a id="navAccountMirror" href="${accountMirrorPath}" data-route-key="accountMirrorPath"${accountMirrorCurrent}>Account Mirror</a>
       <a id="navPreviewSession" href="${previewSessionPath}" data-route-key="previewSessionPath"${previewSessionCurrent}>Preview Session</a>
+      <a id="navConfig" href="${configPath}" data-route-key="configPath"${configCurrent}>Config</a>
       <span aria-disabled="true">Agents / Teams</span>
-      <span aria-disabled="true">Config</span>
     </nav>
 
     <div class="grid">
@@ -4125,6 +4145,14 @@ function createOperatorBrowserDashboardHtml(input: {
         <dl id="serviceDiscoverySummary">
           <dt>Status</dt><dd class="muted">Loading...</dd>
         </dl>
+      </section>
+
+      <section class="panel" id="configRoutingPanel">
+        <h2>Config</h2>
+        <dl id="configRoutingSummary">
+          <dt>Status</dt><dd class="muted">Loading...</dd>
+        </dl>
+        <pre id="configRoutingRaw">No status loaded.</pre>
       </section>
 
       <section class="panel">
@@ -4316,6 +4344,7 @@ function createOperatorBrowserDashboardHtml(input: {
           <dt>Dashboard</dt><dd><a id="usefulDashboardLink" href="${dashboardPath}">${dashboardPath}</a></dd>
           <dt>Account Mirror</dt><dd><a id="usefulAccountMirrorLink" href="${accountMirrorPath}">${accountMirrorPath}</a></dd>
           <dt>Preview Session</dt><dd><a id="usefulPreviewSessionLink" href="${previewSessionPath}">${previewSessionPath}</a></dd>
+          <dt>Config</dt><dd><a id="usefulConfigLink" href="${configPath}">${configPath}</a></dd>
           <dt>Status</dt><dd><a href="/status">/status</a></dd>
           <dt>Mirror Catalog</dt><dd>/v1/account-mirrors/catalog?kind=all&amp;limit=50</dd>
           <dt>Preview Sessions</dt><dd>/v1/account-mirrors/preview-sessions</dd>
@@ -4451,10 +4480,41 @@ function createOperatorBrowserDashboardHtml(input: {
         ['External Dashboard', renderMaybeLink(external.dashboardUrl)],
         ['External Account Mirror', renderMaybeLink(external.accountMirrorUrl)],
         ['Preview Session Path', escapeHtml(routing.previewSessionPath || 'none')],
+        ['Config Path', escapeHtml(routing.configPath || 'none')],
         ['Proxy Target', renderMaybeLink(routing.proxyTarget)],
         ['Ingress', escapeHtml(routing.ingress || 'none')],
         ['Auth Guard', escapeHtml(routing.auth || 'none')],
       ].map(([key, value]) => '<dt>' + key + '</dt><dd>' + value + '</dd>').join('');
+    }
+
+    function renderConfigRouting(status) {
+      const discovery = status.serviceDiscovery || {};
+      const routes = status.routes || {};
+      const routing = discovery.routing || {};
+      $('configRoutingSummary').innerHTML = [
+        ['Dashboard Path', escapeHtml(routing.dashboardPath || routes.operatorBrowserDashboard || 'none')],
+        ['Account Mirror Path', escapeHtml(routing.accountMirrorPath || routes.accountMirrorDashboard || 'none')],
+        ['Preview Session Path', escapeHtml(routing.previewSessionPath || routes.accountMirrorPreviewSessionDashboard || 'none')],
+        ['Config Path', escapeHtml(routing.configPath || routes.operatorConfigDashboard || 'none')],
+        ['Local Base URL', renderMaybeLink(discovery.local && discovery.local.baseUrl)],
+        ['External Base URL', renderMaybeLink(discovery.external && discovery.external.baseUrl)],
+        ['Proxy Target', renderMaybeLink(routing.proxyTarget)],
+        ['Ingress', escapeHtml(routing.ingress || 'none')],
+        ['Auth Guard', escapeHtml(routing.auth || 'none')],
+      ].map(([key, value]) => '<dt>' + key + '</dt><dd>' + value + '</dd>').join('');
+      $('configRoutingRaw').textContent = asJson({
+        serviceDiscovery: discovery,
+        routes: {
+          operatorBrowserDashboard: routes.operatorBrowserDashboard,
+          accountMirrorDashboard: routes.accountMirrorDashboard,
+          accountMirrorPreviewSessionDashboard: routes.accountMirrorPreviewSessionDashboard,
+          operatorConfigDashboard: routes.operatorConfigDashboard,
+          operatorBrowserDashboardUrl: routes.operatorBrowserDashboardUrl,
+          publicOperatorBrowserDashboardUrl: routes.publicOperatorBrowserDashboardUrl,
+          localServiceBaseUrl: routes.localServiceBaseUrl,
+          externalServiceBaseUrl: routes.externalServiceBaseUrl,
+        },
+      });
     }
 
     function renderMaybeLink(value) {
@@ -4468,15 +4528,19 @@ function createOperatorBrowserDashboardHtml(input: {
       const dashboardPath = normalizeDashboardRoutePath(routing && routing.dashboardPath, OPERATOR_DASHBOARD_ROUTES.dashboardPath || '/ops/browser');
       const accountMirrorPath = normalizeDashboardRoutePath(routing && routing.accountMirrorPath, OPERATOR_DASHBOARD_ROUTES.accountMirrorPath || '/account-mirror');
       const previewSessionPath = normalizeDashboardRoutePath(routing && routing.previewSessionPath, OPERATOR_DASHBOARD_ROUTES.previewSessionPath || (accountMirrorPath + '/preview-session'));
+      const configPath = normalizeDashboardRoutePath(routing && routing.configPath, OPERATOR_DASHBOARD_ROUTES.configPath || '/config');
       OPERATOR_DASHBOARD_ROUTES.dashboardPath = dashboardPath;
       OPERATOR_DASHBOARD_ROUTES.accountMirrorPath = accountMirrorPath;
       OPERATOR_DASHBOARD_ROUTES.previewSessionPath = previewSessionPath;
+      OPERATOR_DASHBOARD_ROUTES.configPath = configPath;
       setRouteLink('navBrowserOps', dashboardPath);
       setRouteLink('navAccountMirror', accountMirrorPath);
       setRouteLink('navPreviewSession', previewSessionPath);
+      setRouteLink('navConfig', configPath);
       setRouteLink('usefulDashboardLink', dashboardPath, dashboardPath);
       setRouteLink('usefulAccountMirrorLink', accountMirrorPath, accountMirrorPath);
       setRouteLink('usefulPreviewSessionLink', previewSessionPath, previewSessionPath);
+      setRouteLink('usefulConfigLink', configPath, configPath);
     }
 
     function setRouteLink(id, href, label) {
@@ -6625,6 +6689,8 @@ function createOperatorBrowserDashboardHtml(input: {
     async function refreshStatus() {
       $('serverSummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
       $('serviceDiscoverySummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
+      $('configRoutingSummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
+      $('configRoutingRaw').textContent = 'Loading...';
       $('opsControls').textContent = 'Loading controls...';
       $('mirrorStatus').textContent = 'Loading...';
       $('mirrorAttentionQueue').textContent = 'Loading attention queue...';
@@ -6637,10 +6703,13 @@ function createOperatorBrowserDashboardHtml(input: {
         renderOpsControls(status);
         renderServerSummary(status);
         renderServiceDiscovery(status);
+        renderConfigRouting(status);
         renderMirrorCompletions(status);
       } catch (error) {
         $('serverSummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
         $('serviceDiscoverySummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
+        $('configRoutingSummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
+        $('configRoutingRaw').textContent = String(error.message || error);
         $('opsControls').textContent = String(error.message || error);
         $('mirrorTargetTable').textContent = String(error.message || error);
         $('mirrorActiveCompletionTable').textContent = String(error.message || error);

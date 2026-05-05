@@ -14685,9 +14685,11 @@ describe('http responses adapter', () => {
       expect(html).toContain('href="/account-mirror"');
       expect(html).toContain('Preview Session');
       expect(html).toContain('href="/account-mirror/preview-session"');
+      expect(html).toContain('href="/config"');
       expect(html).toContain('data-route-key="dashboardPath"');
       expect(html).toContain('data-route-key="accountMirrorPath"');
       expect(html).toContain('data-route-key="previewSessionPath"');
+      expect(html).toContain('data-route-key="configPath"');
       expect(html).toContain('OPERATOR_DASHBOARD_ROUTES');
       expect(html).toContain('applyServiceDiscoveryRoutes');
       expect(html).toContain('isAccountMirrorRoute');
@@ -14703,8 +14705,14 @@ describe('http responses adapter', () => {
       expect(html).toContain('Local Dashboard');
       expect(html).toContain('External Dashboard');
       expect(html).toContain('Preview Session Path');
+      expect(html).toContain('Config Path');
       expect(html).toContain('Proxy Target');
       expect(html).toContain('Auth Guard');
+      expect(html).toContain('configRoutingPanel');
+      expect(html).toContain('configRoutingSummary');
+      expect(html).toContain('configRoutingRaw');
+      expect(html).toContain('renderConfigRouting');
+      expect(html).toContain('operatorConfigDashboard');
       expect(html).toContain('backgroundDrainControls');
       expect(html).toContain('pauseBackgroundDrain');
       expect(html).toContain('resumeBackgroundDrain');
@@ -15007,6 +15015,7 @@ describe('http responses adapter', () => {
       expect(dashboardHtml).toContain('href="/operator/browser"');
       expect(dashboardHtml).toContain('href="/operator/account-mirror"');
       expect(dashboardHtml).toContain('href="/operator/account-mirror/preview-session"');
+      expect(dashboardHtml).toContain('href="/config"');
 
       const accountMirror = await fetch(`http://127.0.0.1:${server.port}/operator/account-mirror`);
       expect(accountMirror.status).toBe(200);
@@ -15016,17 +15025,23 @@ describe('http responses adapter', () => {
       expect(previewSession.status).toBe(200);
       expect(await previewSession.text()).toContain('AuraCall Preview Session');
 
+      const config = await fetch(`http://127.0.0.1:${server.port}/config`);
+      expect(config.status).toBe(200);
+      expect(await config.text()).toContain('AuraCall Config');
+
       const status = await fetch(`http://127.0.0.1:${server.port}/status`);
       const payload = await status.json() as { serviceDiscovery?: { routing?: Record<string, string> }; routes?: Record<string, string> };
       expect(payload.serviceDiscovery?.routing).toMatchObject({
         dashboardPath: '/operator/browser',
         accountMirrorPath: '/operator/account-mirror',
         previewSessionPath: '/operator/account-mirror/preview-session',
+        configPath: '/config',
       });
       expect(payload.routes).toMatchObject({
         operatorBrowserDashboard: '/operator/browser',
         accountMirrorDashboard: '/operator/account-mirror',
         accountMirrorPreviewSessionDashboard: '/operator/account-mirror/preview-session',
+        operatorConfigDashboard: '/config',
       });
     } finally {
       await server.close();

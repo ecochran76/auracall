@@ -10,9 +10,10 @@ const dashboardHtml = `
   <a href="/ops/browser" data-route-key="dashboardPath" aria-current="page">Browser Ops</a>
   <a href="/account-mirror" data-route-key="accountMirrorPath">Account Mirror</a>
   <a href="/account-mirror/preview-session" data-route-key="previewSessionPath">Preview Session</a>
+  <a id="navConfig" href="/config" data-route-key="configPath">Config</a>
   <span>Agents / Teams</span>
-  <span>Config</span>
 </nav>
+<h1>AuraCall Config</h1>
 <section><h2>Operations</h2><div id="opsControlNotice"></div><div id="opsControls"></div></section>
 <section><h2>Account Mirrors</h2>
   <select id="mirrorCatalogProvider"></select>
@@ -33,7 +34,8 @@ const dashboardHtml = `
   <pre id="mirrorCatalogDetailRaw"></pre>
   <pre id="mirrorCatalogRaw"></pre>
 </section>
-<section><h2>Service Discovery</h2><dl id="serviceDiscoverySummary"><dt>Local Dashboard</dt><dd>http://auracall.localhost/ops/browser</dd><dt>External Dashboard</dt><dd>https://auracall.ecochran.dyndns.org/ops/browser</dd><dt>Preview Session Path</dt><dd>/account-mirror/preview-session</dd><dt>Proxy Target</dt><dd>http://127.0.0.1:18080</dd><dt>Auth Guard</dt><dd>authelia</dd></dl></section>
+<section><h2>Service Discovery</h2><dl id="serviceDiscoverySummary"><dt>Local Dashboard</dt><dd>http://auracall.localhost/ops/browser</dd><dt>External Dashboard</dt><dd>https://auracall.ecochran.dyndns.org/ops/browser</dd><dt>Preview Session Path</dt><dd>/account-mirror/preview-session</dd><dt>Config Path</dt><dd>/config</dd><dt>Proxy Target</dt><dd>http://127.0.0.1:18080</dd><dt>Auth Guard</dt><dd>authelia</dd></dl></section>
+<section id="configRoutingPanel"><h2>Config</h2><dl id="configRoutingSummary"></dl><pre id="configRoutingRaw">operatorConfigDashboard publicOperatorBrowserDashboardUrl externalServiceBaseUrl</pre></section>
 <section><h2>Mirror Live Follow</h2></section>
 <div id="mirrorAttentionQueue"><table id="mirrorAttentionItems"></table></div>
 <div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div>
@@ -47,10 +49,11 @@ const dashboardHtml = `
 <div id="mirrorControlNotice" role="status" aria-live="polite"></div>
 <pre id="mirrorTargets">status.liveFollow.targets</pre>
 <script>
-  const OPERATOR_DASHBOARD_ROUTES = { dashboardPath: '/ops/browser', accountMirrorPath: '/account-mirror', previewSessionPath: '/account-mirror/preview-session' };
+  const OPERATOR_DASHBOARD_ROUTES = { dashboardPath: '/ops/browser', accountMirrorPath: '/account-mirror', previewSessionPath: '/account-mirror/preview-session', configPath: '/config' };
   function setMirrorControlNotice(message, tone) {}
   function renderOpsControls() {}
-  function renderServiceDiscovery(status) { return status.serviceDiscovery.routing.previewSessionPath; }
+  function renderServiceDiscovery(status) { return status.serviceDiscovery.routing.previewSessionPath + status.serviceDiscovery.routing.configPath; }
+  function renderConfigRouting(status) { return status.routes.operatorConfigDashboard; }
   function applyServiceDiscoveryRoutes() {}
   function isAccountMirrorRoute() {}
   function isPreviewSessionRoute() {}
@@ -277,6 +280,8 @@ const statusPayload = {
     routing: {
       dashboardPath: '/ops/browser',
       accountMirrorPath: '/account-mirror',
+      previewSessionPath: '/account-mirror/preview-session',
+      configPath: '/config',
       proxyTarget: 'http://127.0.0.1:18080',
       auth: 'authelia',
       ingress: 'traefik',
@@ -354,6 +359,7 @@ describe('api ops browser CLI helpers', () => {
     expect(summary.dashboard).toMatchObject({
       hasNavigationScaffold: true,
       hasConfigBackedNavigationRoutes: true,
+      hasConfigPage: true,
       hasOperationsPanel: true,
       hasServiceDiscoveryPanel: true,
       hasBackgroundDrainControls: true,

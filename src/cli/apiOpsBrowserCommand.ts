@@ -16,6 +16,7 @@ export interface ApiOpsBrowserDashboardSummary {
   route: '/ops/browser';
   hasNavigationScaffold: boolean;
   hasConfigBackedNavigationRoutes: boolean;
+  hasConfigPage: boolean;
   hasOperationsPanel: boolean;
   hasServiceDiscoveryPanel: boolean;
   hasBackgroundDrainControls: boolean;
@@ -134,6 +135,7 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
   const checks: Array<[boolean, string]> = [
     [summary.hasNavigationScaffold, 'Expected /ops/browser to include the AuraCall navigation scaffold.'],
     [summary.hasConfigBackedNavigationRoutes, 'Expected /ops/browser navigation to be backed by configured service discovery routes.'],
+    [summary.hasConfigPage, 'Expected /ops/browser to include the read-only Config page contract.'],
     [summary.hasOperationsPanel, 'Expected /ops/browser to include the Operations panel.'],
     [summary.hasServiceDiscoveryPanel, 'Expected /ops/browser to include the Service Discovery panel.'],
     [summary.hasBackgroundDrainControls, 'Expected /ops/browser to include background drain controls.'],
@@ -223,10 +225,21 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('data-route-key="dashboardPath"')
       && html.includes('data-route-key="accountMirrorPath"')
       && html.includes('data-route-key="previewSessionPath"')
+      && html.includes('data-route-key="configPath"')
       && html.includes('applyServiceDiscoveryRoutes')
+      && html.includes('routing.configPath')
       && html.includes('routing.previewSessionPath')
       && html.includes('isAccountMirrorRoute')
       && html.includes('isPreviewSessionRoute'),
+    hasConfigPage: html.includes('navConfig')
+      && html.includes('href="/config"')
+      && html.includes('configRoutingPanel')
+      && html.includes('configRoutingSummary')
+      && html.includes('configRoutingRaw')
+      && html.includes('renderConfigRouting')
+      && html.includes('operatorConfigDashboard')
+      && html.includes('publicOperatorBrowserDashboardUrl')
+      && html.includes('externalServiceBaseUrl'),
     hasOperationsPanel: html.includes('<h2>Operations</h2>')
       && html.includes('opsControls')
       && html.includes('opsControlNotice')
@@ -238,6 +251,7 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('Local Dashboard')
       && html.includes('External Dashboard')
       && html.includes('Preview Session Path')
+      && html.includes('Config Path')
       && html.includes('Proxy Target')
       && html.includes('Auth Guard'),
     hasBackgroundDrainControls: html.includes('backgroundDrainControls')

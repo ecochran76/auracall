@@ -531,7 +531,8 @@ Each status payload should include:
   data as a dedicated panel so operators can find local, external, and proxy
   routes without opening raw `/status`. The configured dashboard and
   account-mirror paths are also served as operator route aliases and drive the
-  dashboard navigation/preview links.
+  dashboard navigation/preview links. `/config` is the read-only operator page
+  for the effective service discovery, operator URLs, and routing fields.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.
