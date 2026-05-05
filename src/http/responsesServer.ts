@@ -4596,6 +4596,56 @@ function createOperatorBrowserDashboardHtml(input: {
       window.history.replaceState(null, '', nextUrl);
     }
 
+    function updateMirrorCatalogDetailUrl(row) {
+      if (window.location.pathname !== '/account-mirror') return;
+      const params = new URLSearchParams(window.location.search);
+      setOptionalUrlParam(params, 'item', row && row.itemId ? row.itemId : '');
+      setOptionalUrlParam(params, 'itemKind', row && row.kind ? row.kind : '');
+      setOptionalUrlParam(params, 'itemProvider', row && row.provider ? row.provider : '');
+      setOptionalUrlParam(params, 'itemRuntimeProfile', row && row.runtimeProfileId ? row.runtimeProfileId : '');
+      const query = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (query ? '?' + query : ''));
+    }
+
+    function readMirrorCatalogDetailSelectionFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const itemId = params.get('item') || '';
+      if (!itemId) return null;
+      return {
+        itemId,
+        kind: params.get('itemKind') || params.get('kind') || '',
+        provider: params.get('itemProvider') || params.get('provider') || '',
+        runtimeProfileId: params.get('itemRuntimeProfile') || params.get('runtimeProfile') || '',
+      };
+    }
+
+    function buildMirrorCatalogItemPathFromSelection(selection) {
+      const params = new URLSearchParams();
+      if (selection.provider) params.set('provider', selection.provider);
+      if (selection.runtimeProfileId) params.set('runtimeProfile', selection.runtimeProfileId);
+      if (selection.kind && selection.kind !== 'all') params.set('kind', selection.kind);
+      params.set('limit', String(normalizeMirrorCatalogLimit($('mirrorCatalogLimit').value)));
+      return '/v1/account-mirrors/catalog/items/' + encodeURIComponent(selection.itemId) + '?' + params.toString();
+    }
+
+    function updateMirrorCatalogDetailUrlFromPath(path) {
+      if (window.location.pathname !== '/account-mirror') return;
+      try {
+        const url = new URL(path, window.location.origin);
+        const prefix = '/v1/account-mirrors/catalog/items/';
+        if (!url.pathname.startsWith(prefix) || url.pathname.endsWith('/asset')) return;
+        const itemId = decodeURIComponent(url.pathname.slice(prefix.length));
+        updateMirrorCatalogDetailUrl({
+          itemId,
+          kind: url.searchParams.get('kind') || '',
+          provider: url.searchParams.get('provider') || '',
+          runtimeProfileId: url.searchParams.get('runtimeProfile') || '',
+        });
+      } catch {
+        return;
+      }
+    }
+
     function setOptionalUrlParam(params, key, value) {
       if (value) {
         params.set(key, value);
@@ -4634,7 +4684,7 @@ function createOperatorBrowserDashboardHtml(input: {
         $('mirrorCatalogDetailRaw').textContent = 'No row selected.';
         $('mirrorCatalogRaw').textContent = asJson(catalog);
         if (window.location.pathname === '/account-mirror') {
-          openDefaultMirrorCatalogDetail();
+          openInitialMirrorCatalogDetail();
         }
       } catch (error) {
         const message = String(error.message || error);
@@ -4783,6 +4833,33 @@ function createOperatorBrowserDashboardHtml(input: {
     function setMirrorCatalogKindFilter(kind) {
       setSelectValue('mirrorCatalogKind', kind || 'all');
       void loadMirrorCatalog();
+    }
+
+    function openInitialMirrorCatalogDetail() {
+      if (openSelectedMirrorCatalogDetailFromUrl()) return;
+      openDefaultMirrorCatalogDetail();
+    }
+
+    function openSelectedMirrorCatalogDetailFromUrl() {
+      const selection = readMirrorCatalogDetailSelectionFromUrl();
+      if (!selection) return false;
+      const row = findMirrorCatalogRowBySelection(selection);
+      if (row) {
+        markSelectedMirrorCatalogRow(row.rowIndex);
+        showMirrorCatalogDetailByPath(buildMirrorCatalogItemPath(row));
+        return true;
+      }
+      showMirrorCatalogDetailByPath(buildMirrorCatalogItemPathFromSelection(selection));
+      return true;
+    }
+
+    function findMirrorCatalogRowBySelection(selection) {
+      return mirrorCatalogRows.find((row) =>
+        row.itemId === selection.itemId
+          && (!selection.kind || selection.kind === 'all' || row.kind === selection.kind)
+          && (!selection.provider || row.provider === selection.provider)
+          && (!selection.runtimeProfileId || row.runtimeProfileId === selection.runtimeProfileId)
+      );
     }
 
     function openDefaultMirrorCatalogDetail() {
@@ -5375,7 +5452,7 @@ function createOperatorBrowserDashboardHtml(input: {
     function renderCatalogRowActions(row, itemPath) {
       const previewUrl = resolveCatalogRowPreviewUrl(row);
       const actions = [
-        '<a href="' + escapeHtml(itemPath) + '" data-catalog-item-path="' + escapeHtml(itemPath) + '" onclick="event.preventDefault(); event.stopPropagation(); showMirrorCatalogDetailByPath(this.dataset.catalogItemPath)">Details</a>',
+        '<a href="' + escapeHtml(itemPath) + '" data-catalog-row-index="' + escapeHtml(String(row.rowIndex)) + '" data-catalog-item-path="' + escapeHtml(itemPath) + '" onclick="event.preventDefault(); event.stopPropagation(); showMirrorCatalogDetailByIndex(this.dataset.catalogRowIndex)">Details</a>',
       ];
       if (previewUrl) {
         actions.push('<a href="' + escapeHtml(previewUrl) + '" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open Preview</a>');
@@ -5469,6 +5546,7 @@ function createOperatorBrowserDashboardHtml(input: {
         return;
       }
       markSelectedMirrorCatalogRow(row.rowIndex);
+      updateMirrorCatalogDetailUrl(row);
       showMirrorCatalogDetailByPath(buildMirrorCatalogItemPath(row));
     }
 
@@ -5478,7 +5556,8 @@ function createOperatorBrowserDashboardHtml(input: {
       });
     }
 
-    async function showMirrorCatalogDetailByPath(path) {
+    async function showMirrorCatalogDetailByPath(path, updateUrlFromPath) {
+      if (updateUrlFromPath) updateMirrorCatalogDetailUrlFromPath(path);
       $('mirrorCatalogDetailView').className = 'notice notice-warn';
       $('mirrorCatalogDetailView').textContent = 'Loading cached item detail...';
       $('mirrorCatalogDetailRaw').textContent = 'Loading cached item detail...';
@@ -5550,7 +5629,7 @@ function createOperatorBrowserDashboardHtml(input: {
       if (!path) {
         return '<span class="pill">' + escapeHtml(title) + subtitle + '</span>';
       }
-      return '<a class="pill" href="' + escapeHtml(path) + '" data-related-item-path="' + escapeHtml(path) + '" onclick="showMirrorCatalogDetailByPath(this.dataset.relatedItemPath); return false;">'
+      return '<a class="pill" href="' + escapeHtml(path) + '" data-related-item-path="' + escapeHtml(path) + '" onclick="showMirrorCatalogDetailByPath(this.dataset.relatedItemPath, true); return false;">'
         + escapeHtml(title)
         + subtitle
         + '</a>';

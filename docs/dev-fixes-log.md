@@ -1,3 +1,9 @@
+- 2026-05-04: Account mirror row selection needs stable page-level deep links.
+  `/account-mirror` now persists selected cached detail state in `item`,
+  `itemKind`, `itemProvider`, and `itemRuntimeProfile` URL params, reopens that
+  cache-only item after refresh, and falls back to the catalog item API when
+  the selected item is not present in the current visible row set.
+
 - 2026-05-04: Account mirror browsing needs to feel like navigation, not raw
   JSON triage. `/account-mirror` now renders a compact cached-item browser with
   kind-count quick filters, selected-row highlighting, and a first cached

@@ -145,14 +145,21 @@ const dashboardHtml = `
   function initializeMirrorCatalogFiltersFromUrl() {
     params.get('provider');
     params.get('search');
+    params.get('item');
+    params.get('itemKind');
     params.get('preview');
     params.get('sort');
     params.get('withTranscript');
   }
   function updateMirrorCatalogUrl() {
     const withTranscriptOnly = true;
-    window.history.replaceState(null, '', '/account-mirror?provider=chatgpt&search=test&withTranscript=1');
+    window.history.replaceState(null, '', '/account-mirror?provider=chatgpt&search=test&withTranscript=1&item=conv_1&itemKind=conversations');
   }
+  function updateMirrorCatalogDetailUrl() {}
+  function readMirrorCatalogDetailSelectionFromUrl() {}
+  function openSelectedMirrorCatalogDetailFromUrl() {}
+  function buildMirrorCatalogItemPathFromSelection() {}
+  function updateMirrorCatalogDetailUrlFromPath() {}
   function showMirrorCatalogDetailByIndex(index) {
     $('mirrorCatalogDetailRaw').textContent = index;
   }

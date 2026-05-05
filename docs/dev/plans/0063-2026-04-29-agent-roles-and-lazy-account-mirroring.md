@@ -751,6 +751,10 @@ cached-object browser: kind-count quick filters sit above the table, rows are
 condensed to type/name/updated/state/identity/actions, selected rows are
 highlighted, and the page automatically opens the first cached conversation
 detail as a chat-dialog drill-in when transcript data is available.
+Selected account-mirror details are now encoded in the page URL as `item`,
+`itemKind`, `itemProvider`, and `itemRuntimeProfile`, so refreshing or sharing
+the `/account-mirror` URL reopens the same cache-only detail view without
+depending on transient client row indexes.
 Conversation detail views with cached turns now include a local Markdown
 transcript download action. The export is rendered in the dashboard from the
 already-hydrated cached detail object, so it does not navigate, submit prompts,

@@ -272,9 +272,16 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('preview-session-grid'),
     hasCatalogSavedFilterState: html.includes('initializeMirrorCatalogFiltersFromUrl')
       && html.includes('updateMirrorCatalogUrl')
+      && html.includes('updateMirrorCatalogDetailUrl')
+      && html.includes('readMirrorCatalogDetailSelectionFromUrl')
+      && html.includes('openSelectedMirrorCatalogDetailFromUrl')
+      && html.includes('buildMirrorCatalogItemPathFromSelection')
+      && html.includes('updateMirrorCatalogDetailUrlFromPath')
       && html.includes('window.history.replaceState')
       && html.includes("params.get('provider')")
-      && html.includes("params.get('search')"),
+      && html.includes("params.get('search')")
+      && html.includes("params.get('item')")
+      && html.includes("params.get('itemKind')"),
     hasCatalogResultsTable: html.includes('renderMirrorCatalogTable')
       && html.includes('mirrorCatalogItems')
       && html.includes('flattenMirrorCatalogEntries')

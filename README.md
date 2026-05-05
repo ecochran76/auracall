@@ -274,7 +274,10 @@ Terminology note:
   opens stable item-detail URLs without starting provider browser work.
   The catalog page now renders a compact cached-item browser with kind-count
   quick filters, selected-row highlighting, and a first cached conversation
-  drill-in by default on `/account-mirror`.
+  drill-in by default on `/account-mirror`. Selecting a cached row also writes
+  `item`, `itemKind`, `itemProvider`, and `itemRuntimeProfile` into the page
+  URL so the same detail view can be reopened after refresh or shared without
+  relying on transient table state.
   Conversation catalog rows show cached transcript availability and message
   count before opening the row, with a `withTranscript=1` filter for rows that
   will open as chat dialogs.

@@ -14694,6 +14694,13 @@ describe('http responses adapter', () => {
       expect(html).toContain('buildMirrorCatalogItemPath');
       expect(html).toContain('initializeMirrorCatalogFiltersFromUrl');
       expect(html).toContain('updateMirrorCatalogUrl');
+      expect(html).toContain('updateMirrorCatalogDetailUrl');
+      expect(html).toContain('readMirrorCatalogDetailSelectionFromUrl');
+      expect(html).toContain('openSelectedMirrorCatalogDetailFromUrl');
+      expect(html).toContain('buildMirrorCatalogItemPathFromSelection');
+      expect(html).toContain('updateMirrorCatalogDetailUrlFromPath');
+      expect(html).toContain("params.get('item')");
+      expect(html).toContain("params.get('itemKind')");
       expect(html).toContain('window.history.replaceState');
       expect(html).toContain('flattenMirrorCatalogEntries');
       expect(html).toContain('filterMirrorCatalogRows');
