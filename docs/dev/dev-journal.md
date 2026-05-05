@@ -26035,6 +26035,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     record with `auracall.preview-session-manifest.v1`
   - `git diff --check`
 
+## Turn 114 | 2026-05-04
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: align named preview-session persistence with the configured cache
+  backend instead of treating JSON files as the only durable store.
+- Change:
+  - `sqlite` and `dual` cache modes now write named preview sessions to
+    `account-mirror/cache.sqlite`
+  - legacy JSON preview-session records remain readable through the same API
+    and dashboard list/load path
+  - `json` cache mode keeps the previous JSON-only behavior
+- Validation:
+  - `pnpm vitest run tests/accountMirror/previewSessionStore.test.ts tests/http.responsesServer.test.ts -t "preview session|persists named account mirror preview sessions" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/accountMirror/previewSessionStore.ts tests/accountMirror/previewSessionStore.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed local API `POST /v1/account-mirrors/preview-sessions` created
+    `installed-sqlite-smoke`
+  - installed readback returned the same record, and direct SQLite read from
+    `~/.auracall/cache/account-mirror/cache.sqlite` confirmed
+    `id = installed-sqlite-smoke`, `item_count = 1`
+
 ## Turn 104 | 2026-05-04
 
 - Continued implementation plan:

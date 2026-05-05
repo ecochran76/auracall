@@ -788,4 +788,7 @@ updated timestamp context, and can load that manifest back into the same
 cache-only preview-session renderer. The local API now persists named preview
 session records under the account-mirror cache through
 `POST /v1/account-mirrors/preview-sessions`, list/read routes, and matching
-dashboard controls so reviewed preview sets can be reopened by id.
+dashboard controls so reviewed preview sets can be reopened by id. In
+`sqlite`/`dual` cache mode, the canonical named-session rows live in
+`account-mirror/cache.sqlite`; the older `account-mirror/preview-sessions/*.json`
+records remain readable as a compatibility/import layer.

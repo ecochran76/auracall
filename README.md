@@ -292,7 +292,9 @@ Terminology note:
   selected JSON manifest for operator handoff. Exported manifests can be loaded
   back into the preview-session page for cache-only review, and selected
   sessions can be saved as named records under the account-mirror cache for
-  later dashboard/API readback.
+  later dashboard/API readback. In `sqlite`/`dual` cache mode these named
+  sessions live in `account-mirror/cache.sqlite`; legacy JSON records under
+  `account-mirror/preview-sessions/` remain readable for compatibility.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

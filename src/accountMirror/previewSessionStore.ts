@@ -4,8 +4,26 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { getAuracallHomeDir } from '../auracallHome.js';
 
+type SqliteLikeDatabase = {
+  exec(sql: string): unknown;
+  close(): void;
+  prepare(sql: string): {
+    run(...args: unknown[]): unknown;
+    get(...args: unknown[]): Record<string, unknown> | undefined;
+    all(...args: unknown[]): Array<Record<string, unknown>>;
+  };
+};
+
+type SqliteModule = {
+  // biome-ignore lint/style/useNamingConvention: node:sqlite exposes this constructor as DatabaseSync.
+  DatabaseSync: new (filename: string) => SqliteLikeDatabase;
+};
+
+let sqliteModulePromise: Promise<SqliteModule> | null = null;
+
 const PREVIEW_SESSIONS_DIRNAME = 'preview-sessions';
 const PREVIEW_SESSION_SCHEMA = 'auracall.preview-session-manifest.v1';
+const PREVIEW_SESSION_SQLITE_FILENAME = 'cache.sqlite';
 
 export interface AccountMirrorPreviewSessionItem {
   index?: number;
@@ -51,12 +69,20 @@ export interface AccountMirrorPreviewSessionStore {
 export function createAccountMirrorPreviewSessionStore(input: {
   config: Record<string, unknown> | null | undefined;
 }): AccountMirrorPreviewSessionStore {
-  const rootDir = resolveAccountMirrorPreviewSessionsDir(input.config);
+  const rootDir = resolveAccountMirrorRootDir(input.config);
+  const jsonDir = path.join(rootDir, PREVIEW_SESSIONS_DIRNAME);
+  const sqlitePath = path.join(rootDir, PREVIEW_SESSION_SQLITE_FILENAME);
+  const storeKind = resolveCacheStoreKind(input.config);
   return {
     async writeSession(request) {
       const now = normalizeIsoString(request.now) ?? new Date().toISOString();
       const id = normalizeSessionId(request.id) ?? randomUUID();
-      const existing = await readStoredRecord(rootDir, id);
+      const existing = await readRecord({
+        jsonDir,
+        sqlitePath,
+        storeKind,
+        id,
+      });
       const manifest = normalizeManifest(request.manifest, now);
       const record: AccountMirrorPreviewSessionRecord = {
         object: 'account_mirror_preview_session',
@@ -68,33 +94,32 @@ export function createAccountMirrorPreviewSessionStore(input: {
         itemCount: manifest.items.length,
         manifest,
       };
-      await fs.mkdir(rootDir, { recursive: true });
-      const recordPath = resolvePreviewSessionRecordPath(rootDir, id);
-      const tempPath = `${recordPath}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`;
-      await fs.writeFile(tempPath, `${JSON.stringify(record, null, 2)}\n`, 'utf8');
-      await fs.rename(tempPath, recordPath);
+      if (storeKind === 'sqlite' || storeKind === 'dual') {
+        await writeSqlRecord(sqlitePath, record);
+      }
+      if (storeKind === 'json' || storeKind === 'dual') {
+        await writeJsonRecord(jsonDir, record);
+      }
       return record;
     },
     async readSession(id) {
       const normalized = normalizeSessionId(id);
-      return normalized ? readStoredRecord(rootDir, normalized) : null;
+      return normalized
+        ? readRecord({
+          jsonDir,
+          sqlitePath,
+          storeKind,
+          id: normalized,
+        })
+        : null;
     },
     async listSessions(options = {}) {
-      let entries: Dirent[];
-      try {
-        entries = await fs.readdir(rootDir, { withFileTypes: true });
-      } catch (error) {
-        if (isMissingFileError(error)) return [];
-        throw error;
-      }
-      const records = (
-        await Promise.all(
-          entries
-            .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
-            .map((entry) => readStoredRecordFile(path.join(rootDir, entry.name))),
-        )
-      ).filter((record): record is AccountMirrorPreviewSessionRecord => record !== null);
       const limit = normalizeLimit(options.limit);
+      const records = await listRecords({
+        jsonDir,
+        sqlitePath,
+        storeKind,
+      });
       return records
         .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
         .slice(0, limit);
@@ -102,21 +127,51 @@ export function createAccountMirrorPreviewSessionStore(input: {
   };
 }
 
-function resolveAccountMirrorPreviewSessionsDir(config: Record<string, unknown> | null | undefined): string {
-  const cacheRoot = readNestedString(config, ['browser', 'cache', 'rootDir'])
-    ?? path.join(getAuracallHomeDir(), 'cache');
-  return path.join(cacheRoot, 'account-mirror', PREVIEW_SESSIONS_DIRNAME);
+async function readRecord(input: {
+  jsonDir: string;
+  sqlitePath: string;
+  storeKind: CacheStoreKind;
+  id: string;
+}): Promise<AccountMirrorPreviewSessionRecord | null> {
+  if (input.storeKind === 'sqlite' || input.storeKind === 'dual') {
+    const sqlRecord = await readSqlRecord(input.sqlitePath, input.id);
+    if (sqlRecord) return sqlRecord;
+  }
+  return readJsonRecord(input.jsonDir, input.id);
 }
 
-function resolvePreviewSessionRecordPath(rootDir: string, id: string): string {
-  return path.join(rootDir, `${encodeURIComponent(id)}.json`);
+async function listRecords(input: {
+  jsonDir: string;
+  sqlitePath: string;
+  storeKind: CacheStoreKind;
+}): Promise<AccountMirrorPreviewSessionRecord[]> {
+  const recordsById = new Map<string, AccountMirrorPreviewSessionRecord>();
+  if (input.storeKind === 'sqlite' || input.storeKind === 'dual') {
+    for (const record of await listSqlRecords(input.sqlitePath)) {
+      recordsById.set(record.id, record);
+    }
+  }
+  for (const record of await listJsonRecords(input.jsonDir)) {
+    if (!recordsById.has(record.id)) {
+      recordsById.set(record.id, record);
+    }
+  }
+  return [...recordsById.values()];
 }
 
-async function readStoredRecord(rootDir: string, id: string): Promise<AccountMirrorPreviewSessionRecord | null> {
-  return readStoredRecordFile(resolvePreviewSessionRecordPath(rootDir, id));
+async function writeJsonRecord(rootDir: string, record: AccountMirrorPreviewSessionRecord): Promise<void> {
+  await fs.mkdir(rootDir, { recursive: true });
+  const recordPath = resolvePreviewSessionRecordPath(rootDir, record.id);
+  const tempPath = `${recordPath}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`;
+  await fs.writeFile(tempPath, `${JSON.stringify(record, null, 2)}\n`, 'utf8');
+  await fs.rename(tempPath, recordPath);
 }
 
-async function readStoredRecordFile(recordPath: string): Promise<AccountMirrorPreviewSessionRecord | null> {
+async function readJsonRecord(rootDir: string, id: string): Promise<AccountMirrorPreviewSessionRecord | null> {
+  return readJsonRecordFile(resolvePreviewSessionRecordPath(rootDir, id));
+}
+
+async function readJsonRecordFile(recordPath: string): Promise<AccountMirrorPreviewSessionRecord | null> {
   try {
     const raw = await fs.readFile(recordPath, 'utf8');
     return normalizeRecord(JSON.parse(raw));
@@ -124,6 +179,140 @@ async function readStoredRecordFile(recordPath: string): Promise<AccountMirrorPr
     if (isMissingFileError(error)) return null;
     throw error;
   }
+}
+
+async function listJsonRecords(rootDir: string): Promise<AccountMirrorPreviewSessionRecord[]> {
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(rootDir, { withFileTypes: true });
+  } catch (error) {
+    if (isMissingFileError(error)) return [];
+    throw error;
+  }
+  return (
+    await Promise.all(
+      entries
+        .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+        .map((entry) => readJsonRecordFile(path.join(rootDir, entry.name))),
+    )
+  ).filter((record): record is AccountMirrorPreviewSessionRecord => record !== null);
+}
+
+async function writeSqlRecord(sqlitePath: string, record: AccountMirrorPreviewSessionRecord): Promise<void> {
+  await withPreviewSessionDatabase(sqlitePath, async (db) => {
+    db.prepare(
+      `INSERT INTO account_mirror_preview_sessions (
+        id, name, created_at, updated_at, item_count, manifest_json, record_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        updated_at = excluded.updated_at,
+        item_count = excluded.item_count,
+        manifest_json = excluded.manifest_json,
+        record_json = excluded.record_json`,
+    ).run(
+      record.id,
+      record.name,
+      record.createdAt,
+      record.updatedAt,
+      record.itemCount,
+      JSON.stringify(record.manifest),
+      JSON.stringify(record),
+    );
+  });
+}
+
+async function readSqlRecord(sqlitePath: string, id: string): Promise<AccountMirrorPreviewSessionRecord | null> {
+  if (!await fileExists(sqlitePath)) return null;
+  return withPreviewSessionDatabase(sqlitePath, async (db) => {
+    const row = db
+      .prepare('SELECT record_json FROM account_mirror_preview_sessions WHERE id = ?')
+      .get(id);
+    return row ? normalizeRecord(parseSqlRecordJson(row.record_json)) : null;
+  });
+}
+
+async function listSqlRecords(sqlitePath: string): Promise<AccountMirrorPreviewSessionRecord[]> {
+  if (!await fileExists(sqlitePath)) return [];
+  return withPreviewSessionDatabase(sqlitePath, async (db) => {
+    const rows = db
+      .prepare('SELECT record_json FROM account_mirror_preview_sessions ORDER BY updated_at DESC')
+      .all();
+    return rows.map((row) => normalizeRecord(parseSqlRecordJson(row.record_json)));
+  });
+}
+
+async function withPreviewSessionDatabase<T>(
+  sqlitePath: string,
+  callback: (db: SqliteLikeDatabase) => Promise<T> | T,
+): Promise<T> {
+  await fs.mkdir(path.dirname(sqlitePath), { recursive: true });
+  const sqlite = await loadSqliteModule();
+  const db = new sqlite.DatabaseSync(sqlitePath);
+  try {
+    ensurePreviewSessionSchema(db);
+    return await callback(db);
+  } finally {
+    db.close();
+  }
+}
+
+async function loadSqliteModule(): Promise<SqliteModule> {
+  if (!sqliteModulePromise) {
+    sqliteModulePromise = import('node:sqlite') as unknown as Promise<SqliteModule>;
+  }
+  return sqliteModulePromise;
+}
+
+function ensurePreviewSessionSchema(db: SqliteLikeDatabase): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS account_mirror_preview_sessions (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      item_count INTEGER NOT NULL,
+      manifest_json TEXT NOT NULL,
+      record_json TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_account_mirror_preview_sessions_updated_at
+      ON account_mirror_preview_sessions(updated_at DESC);
+  `);
+}
+
+function parseSqlRecordJson(value: unknown): unknown {
+  const raw = typeof value === 'string' ? value : '';
+  return JSON.parse(raw);
+}
+
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch (error) {
+    if (isMissingFileError(error)) return false;
+    throw error;
+  }
+}
+
+type CacheStoreKind = 'json' | 'sqlite' | 'dual';
+
+function resolveCacheStoreKind(config: Record<string, unknown> | null | undefined): CacheStoreKind {
+  const configured = readNestedString(config, ['browser', 'cache', 'store']);
+  if (configured === 'json' || configured === 'sqlite' || configured === 'dual') {
+    return configured;
+  }
+  return 'dual';
+}
+
+function resolveAccountMirrorRootDir(config: Record<string, unknown> | null | undefined): string {
+  const cacheRoot = readNestedString(config, ['browser', 'cache', 'rootDir'])
+    ?? path.join(getAuracallHomeDir(), 'cache');
+  return path.join(cacheRoot, 'account-mirror');
+}
+
+function resolvePreviewSessionRecordPath(rootDir: string, id: string): string {
+  return path.join(rootDir, `${encodeURIComponent(id)}.json`);
 }
 
 function normalizeRecord(value: unknown): AccountMirrorPreviewSessionRecord {

@@ -15529,3 +15529,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-04: Preview-session handoffs should not depend on loose local files.
   Add account-mirror cache persistence for named preview-session records plus
   local API create/list/read routes and dashboard save/load controls.
+- 2026-05-04: Named preview-session persistence should follow cache backend
+  policy. Store preview-session rows in `account-mirror/cache.sqlite` for
+  `sqlite`/`dual` cache mode while retaining legacy JSON readback under
+  `account-mirror/preview-sessions/`.
