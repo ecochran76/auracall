@@ -7,9 +7,9 @@ import {
 
 const dashboardHtml = `
 <nav aria-label="AuraCall sections">
-  <a href="/ops/browser" aria-current="page">Browser Ops</a>
-  <a href="/account-mirror">Account Mirror</a>
-  <a href="/account-mirror/preview-session">Preview Session</a>
+  <a href="/ops/browser" data-route-key="dashboardPath" aria-current="page">Browser Ops</a>
+  <a href="/account-mirror" data-route-key="accountMirrorPath">Account Mirror</a>
+  <a href="/account-mirror/preview-session" data-route-key="previewSessionPath">Preview Session</a>
   <span>Agents / Teams</span>
   <span>Config</span>
 </nav>
@@ -33,7 +33,7 @@ const dashboardHtml = `
   <pre id="mirrorCatalogDetailRaw"></pre>
   <pre id="mirrorCatalogRaw"></pre>
 </section>
-<section><h2>Service Discovery</h2><dl id="serviceDiscoverySummary"><dt>Local Dashboard</dt><dd>http://auracall.localhost/ops/browser</dd><dt>External Dashboard</dt><dd>https://auracall.ecochran.dyndns.org/ops/browser</dd><dt>Proxy Target</dt><dd>http://127.0.0.1:18080</dd><dt>Auth Guard</dt><dd>authelia</dd></dl></section>
+<section><h2>Service Discovery</h2><dl id="serviceDiscoverySummary"><dt>Local Dashboard</dt><dd>http://auracall.localhost/ops/browser</dd><dt>External Dashboard</dt><dd>https://auracall.ecochran.dyndns.org/ops/browser</dd><dt>Preview Session Path</dt><dd>/account-mirror/preview-session</dd><dt>Proxy Target</dt><dd>http://127.0.0.1:18080</dd><dt>Auth Guard</dt><dd>authelia</dd></dl></section>
 <section><h2>Mirror Live Follow</h2></section>
 <div id="mirrorAttentionQueue"><table id="mirrorAttentionItems"></table></div>
 <div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div>
@@ -47,9 +47,13 @@ const dashboardHtml = `
 <div id="mirrorControlNotice" role="status" aria-live="polite"></div>
 <pre id="mirrorTargets">status.liveFollow.targets</pre>
 <script>
+  const OPERATOR_DASHBOARD_ROUTES = { dashboardPath: '/ops/browser', accountMirrorPath: '/account-mirror', previewSessionPath: '/account-mirror/preview-session' };
   function setMirrorControlNotice(message, tone) {}
   function renderOpsControls() {}
-  function renderServiceDiscovery(status) { return status.serviceDiscovery; }
+  function renderServiceDiscovery(status) { return status.serviceDiscovery.routing.previewSessionPath; }
+  function applyServiceDiscoveryRoutes() {}
+  function isAccountMirrorRoute() {}
+  function isPreviewSessionRoute() {}
   function renderAttentionQueue() {}
   function collectAttentionRows() {}
   function flattenMirrorCatalogEntries() {}
@@ -79,7 +83,7 @@ const dashboardHtml = `
   function reviewVisibleMirrorCatalogPreviews() {
     const selectedEntries = collectVisibleCatalogPreviewEntries();
     localStorage.setItem('auracall.previewSession.preview-1', JSON.stringify({ items: selectedEntries, urls: selectedEntries.map((entry) => entry.url) }));
-    window.open('/account-mirror/preview-session?session=' + encodeURIComponent('preview-1'), '_blank', 'noopener,noreferrer');
+    window.open(routeWithQuery(OPERATOR_DASHBOARD_ROUTES.previewSessionPath || '/account-mirror/preview-session', 'session=' + encodeURIComponent('preview-1')), '_blank', 'noopener,noreferrer');
     setMirrorCatalogBatchNotice('Opened preview session for 1 visible preview URL(s).', 'ok');
   }
   function openVisibleMirrorCatalogPreviewUrls() {
@@ -101,7 +105,7 @@ const dashboardHtml = `
   <button id="hideVisibleMirrorCatalogPreviewUrls">Close</button>
   <div id="mirrorCatalogBatchNotice"></div>
   <div id="mirrorCatalogPreviewUrlDrawer"><strong>Visible preview URLs</strong><pre id="mirrorCatalogPreviewUrlList">No visible preview URLs.</pre></div>
-  <section id="mirrorPreviewSessionPanel"><h2>Cached Preview Session</h2><input id="savedMirrorPreviewSessionSearch"><button id="refreshSavedMirrorPreviewSessionTable">Refresh saved session list</button><div id="savedMirrorPreviewSessionTable"><button data-saved-preview-action="load">Load</button><a href="/account-mirror/preview-session?saved=session">Open</a></div><button id="selectAllMirrorPreviewSessionItems">Select all</button><button id="clearMirrorPreviewSessionSelection">Select none</button><button>Copy selected URLs</button><button>Download selected URL list</button><button>Download selected manifest</button><input id="mirrorPreviewSessionName"><button id="saveMirrorPreviewSession">Save named session</button><button id="refreshMirrorPreviewSessionList">Refresh saved sessions</button><select id="savedMirrorPreviewSessions"></select><button id="loadSavedMirrorPreviewSession">Load saved session</button><button id="renameSavedMirrorPreviewSession">Rename saved session</button><button id="deleteSavedMirrorPreviewSession">Delete saved session</button><label>Load manifest <input id="loadMirrorPreviewSessionManifest" type="file"></label><div id="mirrorPreviewSessionNotice">Rendering 1 session URL(s)</div><div id="mirrorPreviewSessionGrid" class="preview-session-grid"></div></section>
+  <section id="mirrorPreviewSessionPanel"><h2>Cached Preview Session</h2><input id="savedMirrorPreviewSessionSearch"><button id="refreshSavedMirrorPreviewSessionTable">Refresh saved session list</button><div id="savedMirrorPreviewSessionTable"><button data-saved-preview-action="load">Load</button><a href="'saved=' + encodeURIComponent(id)">Open</a></div><button id="selectAllMirrorPreviewSessionItems">Select all</button><button id="clearMirrorPreviewSessionSelection">Select none</button><button>Copy selected URLs</button><button>Download selected URL list</button><button>Download selected manifest</button><input id="mirrorPreviewSessionName"><button id="saveMirrorPreviewSession">Save named session</button><button id="refreshMirrorPreviewSessionList">Refresh saved sessions</button><select id="savedMirrorPreviewSessions"></select><button id="loadSavedMirrorPreviewSession">Load saved session</button><button id="renameSavedMirrorPreviewSession">Rename saved session</button><button id="deleteSavedMirrorPreviewSession">Delete saved session</button><label>Load manifest <input id="loadMirrorPreviewSessionManifest" type="file"></label><div id="mirrorPreviewSessionNotice">Rendering 1 cached preview URL(s)</div><div id="mirrorPreviewSessionGrid" class="preview-session-grid"></div></section>
   function initializeMirrorPreviewSession() {}
   async function refreshSavedMirrorPreviewSessions() { await fetchJson('/v1/account-mirrors/preview-sessions?limit=50'); }
   async function saveMirrorPreviewSession() { await postJson('/v1/account-mirrors/preview-sessions', {}); }
@@ -116,7 +120,7 @@ const dashboardHtml = `
   function readMirrorPreviewSessionUrls() { return []; }
   function normalizeMirrorPreviewSessionManifest() { return []; }
   function normalizeMirrorPreviewSessionItems() { return []; }
-  function renderMirrorPreviewSession() { return 'Rendering session URL(s)'; }
+  function renderMirrorPreviewSession() { return 'Rendering cached preview URL(s)'; }
   function renderMirrorPreviewSessionItem() { return '<input class="mirror-preview-session-select" data-preview-url="https://example.com/asset.png"><dt>Item ID</dt><dd>artifact_1</dd><span>boundIdentity</span>'; }
   function selectedMirrorPreviewSessionUrls() { return []; }
   function selectedMirrorPreviewSessionItems() { return []; }
@@ -349,6 +353,7 @@ describe('api ops browser CLI helpers', () => {
 
     expect(summary.dashboard).toMatchObject({
       hasNavigationScaffold: true,
+      hasConfigBackedNavigationRoutes: true,
       hasOperationsPanel: true,
       hasServiceDiscoveryPanel: true,
       hasBackgroundDrainControls: true,

@@ -529,7 +529,9 @@ Each status payload should include:
   findable after restart without relying on whichever host/port a single
   status probe used. The browser dashboard renders the same service discovery
   data as a dedicated panel so operators can find local, external, and proxy
-  routes without opening raw `/status`.
+  routes without opening raw `/status`. The configured dashboard and
+  account-mirror paths are also served as operator route aliases and drive the
+  dashboard navigation/preview links.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.

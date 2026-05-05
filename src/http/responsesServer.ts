@@ -317,6 +317,12 @@ interface ApiServiceRoutingConfig {
   ingress?: string;
 }
 
+interface OperatorDashboardRoutes {
+  dashboardPath: string;
+  accountMirrorPath: string;
+  previewSessionPath: string;
+}
+
 interface ApiServiceDiscovery {
   bind: {
     host: string;
@@ -339,6 +345,7 @@ interface ApiServiceDiscovery {
   routing: {
     dashboardPath: string;
     accountMirrorPath: string;
+    previewSessionPath: string;
     proxyTarget?: string;
     auth?: string;
     ingress?: string;
@@ -384,6 +391,7 @@ interface HttpStatusResponse {
     workbenchCapabilitiesList: string;
     operatorBrowserDashboard: string;
     accountMirrorDashboard: string;
+    accountMirrorPreviewSessionDashboard: string;
     operatorBrowserDashboardUrl?: string;
     publicOperatorBrowserDashboardUrl?: string;
     localServiceBaseUrl: string;
@@ -760,24 +768,37 @@ export async function createResponsesHttpServer(
     }
     scheduleAccountMirrorScheduler(delayMs, wakeReason);
   };
+  const operatorDashboardRoutes = resolveOperatorDashboardRoutes(options.serviceRouting);
   const server = http.createServer();
 
   server.on('request', async (req, res) => {
     try {
       const url = new URL(req.url ?? '/', 'http://127.0.0.1');
 
-      if (req.method === 'GET' && (url.pathname === '/ops/browser' || url.pathname === '/dashboard')) {
-        sendHtml(res, 200, createOperatorBrowserDashboardHtml({ activePage: 'browser' }));
+      if (
+        req.method === 'GET'
+        && matchesRoutePath(url.pathname, operatorDashboardRoutes.dashboardPath, '/ops/browser', '/dashboard')
+      ) {
+        sendHtml(res, 200, createOperatorBrowserDashboardHtml({ activePage: 'browser', routes: operatorDashboardRoutes }));
         return;
       }
 
-      if (req.method === 'GET' && url.pathname === '/account-mirror') {
-        sendHtml(res, 200, createOperatorBrowserDashboardHtml({ activePage: 'account-mirror' }));
+      if (req.method === 'GET' && matchesRoutePath(url.pathname, operatorDashboardRoutes.accountMirrorPath, '/account-mirror')) {
+        sendHtml(res, 200, createOperatorBrowserDashboardHtml({
+          activePage: 'account-mirror',
+          routes: operatorDashboardRoutes,
+        }));
         return;
       }
 
-      if (req.method === 'GET' && url.pathname === '/account-mirror/preview-session') {
-        sendHtml(res, 200, createOperatorBrowserDashboardHtml({ activePage: 'preview-session' }));
+      if (
+        req.method === 'GET'
+        && matchesRoutePath(url.pathname, operatorDashboardRoutes.previewSessionPath, '/account-mirror/preview-session')
+      ) {
+        sendHtml(res, 200, createOperatorBrowserDashboardHtml({
+          activePage: 'preview-session',
+          routes: operatorDashboardRoutes,
+        }));
         return;
       }
 
@@ -2253,8 +2274,9 @@ function createHttpStatusResponse(input: {
       accountMirrorSchedulerHistory: '/v1/account-mirrors/scheduler/history[?limit=10]',
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
-      operatorBrowserDashboard: '/ops/browser',
-      accountMirrorDashboard: '/account-mirror',
+      operatorBrowserDashboard: serviceDiscovery.routing.dashboardPath,
+      accountMirrorDashboard: serviceDiscovery.routing.accountMirrorPath,
+      accountMirrorPreviewSessionDashboard: serviceDiscovery.routing.previewSessionPath,
       ...(input.dashboardUrl ? { operatorBrowserDashboardUrl: input.dashboardUrl } : {}),
       ...(input.publicDashboardUrl ? { publicOperatorBrowserDashboardUrl: input.publicDashboardUrl } : {}),
       localServiceBaseUrl: serviceDiscovery.local.baseUrl,
@@ -3420,8 +3442,7 @@ function buildApiServiceDiscovery(input: {
   serviceRouting?: ApiServiceRoutingConfig;
 }): ApiServiceDiscovery {
   const routing = input.serviceRouting ?? {};
-  const dashboardPath = normalizeRoutePath(routing.dashboardPath) ?? '/ops/browser';
-  const accountMirrorPath = normalizeRoutePath(routing.accountMirrorPath) ?? '/account-mirror';
+  const { dashboardPath, accountMirrorPath, previewSessionPath } = resolveOperatorDashboardRoutes(routing);
   const bindBaseUrl = formatApiBaseUrl(input.host, input.port);
   const localBaseUrl = normalizeBaseUrl(routing.localBaseUrl)
     ?? normalizeBaseUrl(baseUrlFromUrl(input.dashboardUrl))
@@ -3458,11 +3479,32 @@ function buildApiServiceDiscovery(input: {
     routing: {
       dashboardPath,
       accountMirrorPath,
+      previewSessionPath,
       ...(routing.proxyTarget ? { proxyTarget: routing.proxyTarget } : {}),
       ...(routing.auth ? { auth: routing.auth } : {}),
       ...(routing.ingress ? { ingress: routing.ingress } : {}),
     },
   };
+}
+
+function resolveOperatorDashboardRoutes(serviceRouting: ApiServiceRoutingConfig | undefined): OperatorDashboardRoutes {
+  const dashboardPath = normalizeRoutePath(serviceRouting?.dashboardPath) ?? '/ops/browser';
+  const accountMirrorPath = normalizeRoutePath(serviceRouting?.accountMirrorPath) ?? '/account-mirror';
+  return {
+    dashboardPath,
+    accountMirrorPath,
+    previewSessionPath: joinRoutePath(accountMirrorPath, 'preview-session'),
+  };
+}
+
+function joinRoutePath(basePath: string, childPath: string): string {
+  const normalizedBase = normalizeRoutePath(basePath) ?? '/';
+  const normalizedChild = childPath.replace(/^\/+/, '').replace(/\/+$/, '');
+  return `${normalizedBase.replace(/\/+$/, '')}/${normalizedChild}`;
+}
+
+function matchesRoutePath(pathname: string, ...paths: string[]): boolean {
+  return paths.some((path) => pathname === path);
 }
 
 function formatApiBaseUrl(host: string, port: number): string {
@@ -3501,6 +3543,14 @@ function baseUrlFromUrl(value: string | undefined): string | null {
 
 function joinBaseUrlPath(baseUrl: string, path: string): string {
   return `${baseUrl.replace(/\/+$/, '')}${normalizeRoutePath(path) ?? '/'}`;
+}
+
+function escapeHtmlAttribute(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 function mergeExecutionRequestHints(
@@ -3637,8 +3687,13 @@ function sendCachedAsset(res: http.ServerResponse, asset: CachedCatalogItemAsset
 
 function createOperatorBrowserDashboardHtml(input: {
   activePage?: 'browser' | 'account-mirror' | 'preview-session';
+  routes?: OperatorDashboardRoutes;
 } = {}): string {
   const activePage = input.activePage ?? 'browser';
+  const routes = input.routes ?? resolveOperatorDashboardRoutes(undefined);
+  const dashboardPath = escapeHtmlAttribute(routes.dashboardPath);
+  const accountMirrorPath = escapeHtmlAttribute(routes.accountMirrorPath);
+  const previewSessionPath = escapeHtmlAttribute(routes.previewSessionPath);
   const browserCurrent = activePage === 'browser' ? ' aria-current="page"' : '';
   const accountMirrorCurrent = activePage === 'account-mirror' ? ' aria-current="page"' : '';
   const previewSessionCurrent = activePage === 'preview-session' ? ' aria-current="page"' : '';
@@ -4044,9 +4099,9 @@ function createOperatorBrowserDashboardHtml(input: {
       <button id="refreshStatus">Refresh Status</button>
     </div>
     <nav class="nav" aria-label="AuraCall sections">
-      <a href="/ops/browser"${browserCurrent}>Browser Ops</a>
-      <a href="/account-mirror"${accountMirrorCurrent}>Account Mirror</a>
-      <a href="/account-mirror/preview-session"${previewSessionCurrent}>Preview Session</a>
+      <a id="navBrowserOps" href="${dashboardPath}" data-route-key="dashboardPath"${browserCurrent}>Browser Ops</a>
+      <a id="navAccountMirror" href="${accountMirrorPath}" data-route-key="accountMirrorPath"${accountMirrorCurrent}>Account Mirror</a>
+      <a id="navPreviewSession" href="${previewSessionPath}" data-route-key="previewSessionPath"${previewSessionCurrent}>Preview Session</a>
       <span aria-disabled="true">Agents / Teams</span>
       <span aria-disabled="true">Config</span>
     </nav>
@@ -4258,7 +4313,9 @@ function createOperatorBrowserDashboardHtml(input: {
       <section class="panel">
         <h2>Useful Endpoints</h2>
         <dl>
-          <dt>Dashboard</dt><dd><a href="/ops/browser">/ops/browser</a></dd>
+          <dt>Dashboard</dt><dd><a id="usefulDashboardLink" href="${dashboardPath}">${dashboardPath}</a></dd>
+          <dt>Account Mirror</dt><dd><a id="usefulAccountMirrorLink" href="${accountMirrorPath}">${accountMirrorPath}</a></dd>
+          <dt>Preview Session</dt><dd><a id="usefulPreviewSessionLink" href="${previewSessionPath}">${previewSessionPath}</a></dd>
           <dt>Status</dt><dd><a href="/status">/status</a></dd>
           <dt>Mirror Catalog</dt><dd>/v1/account-mirrors/catalog?kind=all&amp;limit=50</dd>
           <dt>Preview Sessions</dt><dd>/v1/account-mirrors/preview-sessions</dd>
@@ -4273,6 +4330,7 @@ function createOperatorBrowserDashboardHtml(input: {
   <script>
     const $ = (id) => document.getElementById(id);
     const asJson = (value) => JSON.stringify(value, null, 2);
+    const OPERATOR_DASHBOARD_ROUTES = ${JSON.stringify(routes)};
     let mirrorCatalogRows = [];
     let mirrorCatalogFilteredRows = [];
     let mirrorCatalogCurrentDetail = null;
@@ -4385,12 +4443,14 @@ function createOperatorBrowserDashboardHtml(input: {
       const local = discovery.local || {};
       const external = discovery.external || {};
       const routing = discovery.routing || {};
+      applyServiceDiscoveryRoutes(routing);
       $('serviceDiscoverySummary').innerHTML = [
         ['Bind URL', renderMaybeLink(bind.url)],
         ['Local Dashboard', renderMaybeLink(local.dashboardUrl)],
         ['Local Account Mirror', renderMaybeLink(local.accountMirrorUrl)],
         ['External Dashboard', renderMaybeLink(external.dashboardUrl)],
         ['External Account Mirror', renderMaybeLink(external.accountMirrorUrl)],
+        ['Preview Session Path', escapeHtml(routing.previewSessionPath || 'none')],
         ['Proxy Target', renderMaybeLink(routing.proxyTarget)],
         ['Ingress', escapeHtml(routing.ingress || 'none')],
         ['Auth Guard', escapeHtml(routing.auth || 'none')],
@@ -4402,6 +4462,48 @@ function createOperatorBrowserDashboardHtml(input: {
       const text = escapeHtml(value);
       if (!/^https?:\\/\\//.test(String(value))) return text;
       return '<a href="' + text + '" target="_blank" rel="noreferrer">' + text + '</a>';
+    }
+
+    function applyServiceDiscoveryRoutes(routing) {
+      const dashboardPath = normalizeDashboardRoutePath(routing && routing.dashboardPath, OPERATOR_DASHBOARD_ROUTES.dashboardPath || '/ops/browser');
+      const accountMirrorPath = normalizeDashboardRoutePath(routing && routing.accountMirrorPath, OPERATOR_DASHBOARD_ROUTES.accountMirrorPath || '/account-mirror');
+      const previewSessionPath = normalizeDashboardRoutePath(routing && routing.previewSessionPath, OPERATOR_DASHBOARD_ROUTES.previewSessionPath || (accountMirrorPath + '/preview-session'));
+      OPERATOR_DASHBOARD_ROUTES.dashboardPath = dashboardPath;
+      OPERATOR_DASHBOARD_ROUTES.accountMirrorPath = accountMirrorPath;
+      OPERATOR_DASHBOARD_ROUTES.previewSessionPath = previewSessionPath;
+      setRouteLink('navBrowserOps', dashboardPath);
+      setRouteLink('navAccountMirror', accountMirrorPath);
+      setRouteLink('navPreviewSession', previewSessionPath);
+      setRouteLink('usefulDashboardLink', dashboardPath, dashboardPath);
+      setRouteLink('usefulAccountMirrorLink', accountMirrorPath, accountMirrorPath);
+      setRouteLink('usefulPreviewSessionLink', previewSessionPath, previewSessionPath);
+    }
+
+    function setRouteLink(id, href, label) {
+      const link = $(id);
+      if (!link) return;
+      link.href = href;
+      if (label) link.textContent = label;
+    }
+
+    function normalizeDashboardRoutePath(value, fallback) {
+      const text = String(value || fallback || '').trim();
+      if (!text) return '/';
+      return text.startsWith('/') ? text : '/' + text;
+    }
+
+    function isAccountMirrorRoute() {
+      return window.location.pathname === (OPERATOR_DASHBOARD_ROUTES.accountMirrorPath || '/account-mirror')
+        || window.location.pathname === '/account-mirror';
+    }
+
+    function isPreviewSessionRoute() {
+      return window.location.pathname === (OPERATOR_DASHBOARD_ROUTES.previewSessionPath || '/account-mirror/preview-session')
+        || window.location.pathname === '/account-mirror/preview-session';
+    }
+
+    function routeWithQuery(path, query) {
+      return path + (query ? '?' + query : '');
     }
 
     function renderMirrorCompletions(status) {
@@ -4879,7 +4981,7 @@ function createOperatorBrowserDashboardHtml(input: {
     }
 
     function updateMirrorCatalogDetailUrl(row) {
-      if (window.location.pathname !== '/account-mirror') return;
+      if (!isAccountMirrorRoute()) return;
       const params = new URLSearchParams(window.location.search);
       setOptionalUrlParam(params, 'item', row && row.itemId ? row.itemId : '');
       setOptionalUrlParam(params, 'itemKind', row && row.kind ? row.kind : '');
@@ -4911,7 +5013,7 @@ function createOperatorBrowserDashboardHtml(input: {
     }
 
     function updateMirrorCatalogDetailUrlFromPath(path) {
-      if (window.location.pathname !== '/account-mirror') return;
+      if (!isAccountMirrorRoute()) return;
       try {
         const url = new URL(path, window.location.origin);
         const prefix = '/v1/account-mirrors/catalog/items/';
@@ -4967,7 +5069,7 @@ function createOperatorBrowserDashboardHtml(input: {
         $('mirrorCatalogDetailView').textContent = 'Select a cached row to inspect it.';
         $('mirrorCatalogDetailRaw').textContent = 'No row selected.';
         $('mirrorCatalogRaw').textContent = asJson(catalog);
-        if (window.location.pathname === '/account-mirror') {
+        if (isAccountMirrorRoute()) {
           openInitialMirrorCatalogDetail();
         }
       } catch (error) {
@@ -5251,7 +5353,7 @@ function createOperatorBrowserDashboardHtml(input: {
         urls: selectedEntries.map((entry) => entry.url),
       }));
       const suffix = entries.length > reviewLimit ? ' Limited to first ' + String(reviewLimit) + ' of ' + String(entries.length) + '.' : '';
-      window.open('/account-mirror/preview-session?session=' + encodeURIComponent(sessionId), '_blank', 'noopener,noreferrer');
+      window.open(routeWithQuery(OPERATOR_DASHBOARD_ROUTES.previewSessionPath || '/account-mirror/preview-session', 'session=' + encodeURIComponent(sessionId)), '_blank', 'noopener,noreferrer');
       setMirrorCatalogBatchNotice('Opened preview session for ' + String(selectedEntries.length) + ' visible preview URL(s).' + suffix, 'ok');
     }
 
@@ -5294,7 +5396,7 @@ function createOperatorBrowserDashboardHtml(input: {
     }
 
     async function initializeMirrorPreviewSession() {
-      if (window.location.pathname !== '/account-mirror/preview-session') return;
+      if (!isPreviewSessionRoute()) return;
       $('mirrorPreviewSessionPanel').hidden = false;
       await refreshSavedMirrorPreviewSessions();
       const params = new URLSearchParams(window.location.search);
@@ -5528,7 +5630,7 @@ function createOperatorBrowserDashboardHtml(input: {
     }
 
     async function refreshSavedMirrorPreviewSessions(selectedId) {
-      if (window.location.pathname !== '/account-mirror/preview-session') return;
+      if (!isPreviewSessionRoute()) return;
       const select = $('savedMirrorPreviewSessions');
       try {
         const payload = await fetchJson('/v1/account-mirrors/preview-sessions?limit=50');
@@ -5559,7 +5661,7 @@ function createOperatorBrowserDashboardHtml(input: {
       }
       const rows = sessions.map((session) => {
         const id = session.id || '';
-        const openPath = '/account-mirror/preview-session?saved=' + encodeURIComponent(id);
+        const openPath = routeWithQuery(OPERATOR_DASHBOARD_ROUTES.previewSessionPath || '/account-mirror/preview-session', 'saved=' + encodeURIComponent(id));
         return '<tr data-preview-session-id="' + escapeHtml(id) + '">'
           + '<td class="wrap"><strong>' + escapeHtml(session.name || id || 'preview session') + '</strong><br><span class="muted">' + escapeHtml(id) + '</span></td>'
           + '<td>' + escapeHtml(String(session.itemCount || 0)) + '</td>'

@@ -3,7 +3,8 @@
   base URLs, dashboard/account-mirror paths, proxy target, ingress, and auth
   guard, and `/status.serviceDiscovery` reports that contract with the active
   bind URL. `/ops/browser` now renders the same service discovery data as a
-  first-class operator panel.
+  first-class operator panel. Configured dashboard/account-mirror paths are now
+  served as operator aliases and used by dashboard nav/link generation.
 
 - 2026-05-05: Account mirror result navigation needs fast keyboard controls.
   The `/account-mirror` page now supports `/` to focus cached catalog search

@@ -276,7 +276,8 @@ Terminology note:
   `auracall.localhost` route, external route, dashboard/account-mirror paths,
   proxy target, ingress, and auth guard so operators can rediscover the service
   after restart. `/ops/browser` renders the same service discovery block as a
-  first-class dashboard panel.
+  first-class dashboard panel, and the configured dashboard/account-mirror
+  paths are served as operator route aliases instead of being display-only.
   The catalog page now renders a compact cached-item browser with kind-count
   quick filters, selected-row highlighting, and a first cached conversation
   drill-in by default on `/account-mirror`. Selecting a cached row also writes

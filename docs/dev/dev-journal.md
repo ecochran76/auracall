@@ -26626,6 +26626,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `https://auracall.ecochran.dyndns.org/ops/browser`, proxy target
     `http://127.0.0.1:18095`, and auth `authelia`
 
+## Turn 123 | 2026-05-05
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make configured operator routing active, not display-only.
+- Change:
+  - configured dashboard and account-mirror paths are now served as route
+    aliases alongside the legacy `/ops/browser` and `/account-mirror` paths
+  - `/status.serviceDiscovery.routing` now includes the derived preview-session
+    path
+  - dashboard nav, useful links, and preview-session opens use the configured
+    route paths from service discovery
+  - CLI dashboard contract checks now assert config-backed route wiring
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|configured route paths|api ops browser CLI helpers|status endpoint" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `253501`
+  - installed `api ops-browser-status --port 18095 --json` reports
+    `hasConfigBackedNavigationRoutes=true`,
+    `hasServiceDiscoveryPanel=true`, `dashboardPath=/ops/browser`,
+    `accountMirrorPath=/account-mirror`, and
+    `previewSessionPath=/account-mirror/preview-session`
+
 ## Turn 118 | 2026-05-04
 
 - Continued implementation plan:

@@ -15,6 +15,7 @@ export interface ApiOpsBrowserStatusCliOptions extends ApiStatusCliOptions {
 export interface ApiOpsBrowserDashboardSummary {
   route: '/ops/browser';
   hasNavigationScaffold: boolean;
+  hasConfigBackedNavigationRoutes: boolean;
   hasOperationsPanel: boolean;
   hasServiceDiscoveryPanel: boolean;
   hasBackgroundDrainControls: boolean;
@@ -132,6 +133,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
 function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
   const checks: Array<[boolean, string]> = [
     [summary.hasNavigationScaffold, 'Expected /ops/browser to include the AuraCall navigation scaffold.'],
+    [summary.hasConfigBackedNavigationRoutes, 'Expected /ops/browser navigation to be backed by configured service discovery routes.'],
     [summary.hasOperationsPanel, 'Expected /ops/browser to include the Operations panel.'],
     [summary.hasServiceDiscoveryPanel, 'Expected /ops/browser to include the Service Discovery panel.'],
     [summary.hasBackgroundDrainControls, 'Expected /ops/browser to include background drain controls.'],
@@ -217,6 +219,14 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('Account Mirror')
       && html.includes('Agents / Teams')
       && html.includes('Config'),
+    hasConfigBackedNavigationRoutes: html.includes('OPERATOR_DASHBOARD_ROUTES')
+      && html.includes('data-route-key="dashboardPath"')
+      && html.includes('data-route-key="accountMirrorPath"')
+      && html.includes('data-route-key="previewSessionPath"')
+      && html.includes('applyServiceDiscoveryRoutes')
+      && html.includes('routing.previewSessionPath')
+      && html.includes('isAccountMirrorRoute')
+      && html.includes('isPreviewSessionRoute'),
     hasOperationsPanel: html.includes('<h2>Operations</h2>')
       && html.includes('opsControls')
       && html.includes('opsControlNotice')
@@ -227,6 +237,7 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('status.serviceDiscovery')
       && html.includes('Local Dashboard')
       && html.includes('External Dashboard')
+      && html.includes('Preview Session Path')
       && html.includes('Proxy Target')
       && html.includes('Auth Guard'),
     hasBackgroundDrainControls: html.includes('backgroundDrainControls')
@@ -425,12 +436,12 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
     hasCatalogBatchPreviewSessionReview: html.includes('reviewVisibleMirrorCatalogPreviews')
       && html.includes('collectVisibleCatalogPreviewEntries')
       && html.includes('Review visible previews')
-      && html.includes('/account-mirror/preview-session?session=')
+      && html.includes('routeWithQuery(OPERATOR_DASHBOARD_ROUTES.previewSessionPath')
       && html.includes('auracall.previewSession.')
       && html.includes('items: selectedEntries')
       && html.includes('Opened preview session for ')
       && html.includes('Rendering ')
-      && html.includes('session URL(s)')
+      && html.includes('cached preview URL(s)')
       && html.includes('normalizeMirrorPreviewSessionItems')
       && html.includes('renderMirrorPreviewSessionItem')
       && html.includes('boundIdentity')
@@ -462,7 +473,7 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('renderSavedMirrorPreviewSessionTable')
       && html.includes('handleSavedMirrorPreviewSessionTableClick')
       && html.includes('data-saved-preview-action="load"')
-      && html.includes('/account-mirror/preview-session?saved=')
+      && html.includes("'saved=' + encodeURIComponent(id)")
       && html.includes('/v1/account-mirrors/preview-sessions')
       && html.includes('Load manifest')
       && html.includes('loadMirrorPreviewSessionManifest')

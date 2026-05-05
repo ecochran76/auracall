@@ -14685,6 +14685,13 @@ describe('http responses adapter', () => {
       expect(html).toContain('href="/account-mirror"');
       expect(html).toContain('Preview Session');
       expect(html).toContain('href="/account-mirror/preview-session"');
+      expect(html).toContain('data-route-key="dashboardPath"');
+      expect(html).toContain('data-route-key="accountMirrorPath"');
+      expect(html).toContain('data-route-key="previewSessionPath"');
+      expect(html).toContain('OPERATOR_DASHBOARD_ROUTES');
+      expect(html).toContain('applyServiceDiscoveryRoutes');
+      expect(html).toContain('isAccountMirrorRoute');
+      expect(html).toContain('isPreviewSessionRoute');
       expect(html).toContain('Agents / Teams');
       expect(html).toContain('<h2>Operations</h2>');
       expect(html).toContain('opsControls');
@@ -14695,6 +14702,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('status.serviceDiscovery');
       expect(html).toContain('Local Dashboard');
       expect(html).toContain('External Dashboard');
+      expect(html).toContain('Preview Session Path');
       expect(html).toContain('Proxy Target');
       expect(html).toContain('Auth Guard');
       expect(html).toContain('backgroundDrainControls');
@@ -14809,7 +14817,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('renderSavedMirrorPreviewSessionTable');
       expect(html).toContain('handleSavedMirrorPreviewSessionTableClick');
       expect(html).toContain('data-saved-preview-action="load"');
-      expect(html).toContain('/account-mirror/preview-session?saved=');
+      expect(html).toContain("routeWithQuery(OPERATOR_DASHBOARD_ROUTES.previewSessionPath || '/account-mirror/preview-session', 'saved='");
       expect(html).toContain('mirrorPreviewSessionName');
       expect(html).toContain('savedMirrorPreviewSessions');
       expect(html).toContain('saveMirrorPreviewSession');
@@ -14853,7 +14861,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('Limited to first ');
       expect(html).toContain('visible preview URL(s)');
       expect(html).toContain("window.open(url, '_blank', 'noopener,noreferrer')");
-      expect(html).toContain('/account-mirror/preview-session?session=');
+      expect(html).toContain("routeWithQuery(OPERATOR_DASHBOARD_ROUTES.previewSessionPath || '/account-mirror/preview-session', 'session='");
       expect(html).toContain('auracall.previewSession.');
       expect(html).toContain('items: selectedEntries');
       expect(html).toContain('boundIdentity');
@@ -14977,6 +14985,49 @@ describe('http responses adapter', () => {
       expect(html).toContain('pauseMirrorCompletion');
       expect(html).toContain("fetch('/status'");
       expect(html).toContain('accountMirrorCompletion: { id, action }');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('serves operator dashboard pages at configured route paths', async () => {
+    const server = await createResponsesHttpServer({
+      host: '127.0.0.1',
+      port: 0,
+      serviceRouting: {
+        dashboardPath: '/operator/browser',
+        accountMirrorPath: '/operator/account-mirror',
+      },
+    });
+
+    try {
+      const dashboard = await fetch(`http://127.0.0.1:${server.port}/operator/browser`);
+      expect(dashboard.status).toBe(200);
+      const dashboardHtml = await dashboard.text();
+      expect(dashboardHtml).toContain('href="/operator/browser"');
+      expect(dashboardHtml).toContain('href="/operator/account-mirror"');
+      expect(dashboardHtml).toContain('href="/operator/account-mirror/preview-session"');
+
+      const accountMirror = await fetch(`http://127.0.0.1:${server.port}/operator/account-mirror`);
+      expect(accountMirror.status).toBe(200);
+      expect(await accountMirror.text()).toContain('AuraCall Account Mirror');
+
+      const previewSession = await fetch(`http://127.0.0.1:${server.port}/operator/account-mirror/preview-session`);
+      expect(previewSession.status).toBe(200);
+      expect(await previewSession.text()).toContain('AuraCall Preview Session');
+
+      const status = await fetch(`http://127.0.0.1:${server.port}/status`);
+      const payload = await status.json() as { serviceDiscovery?: { routing?: Record<string, string> }; routes?: Record<string, string> };
+      expect(payload.serviceDiscovery?.routing).toMatchObject({
+        dashboardPath: '/operator/browser',
+        accountMirrorPath: '/operator/account-mirror',
+        previewSessionPath: '/operator/account-mirror/preview-session',
+      });
+      expect(payload.routes).toMatchObject({
+        operatorBrowserDashboard: '/operator/browser',
+        accountMirrorDashboard: '/operator/account-mirror',
+        accountMirrorPreviewSessionDashboard: '/operator/account-mirror/preview-session',
+      });
     } finally {
       await server.close();
     }
