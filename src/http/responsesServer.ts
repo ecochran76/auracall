@@ -3787,6 +3787,7 @@ function createOperatorBrowserDashboardHtml(input: {
           <button id="copyMirrorPreviewSessionUrls" type="button">Copy selected URLs</button>
           <button id="downloadMirrorPreviewSessionUrls" type="button">Download selected URL list</button>
           <button id="downloadMirrorPreviewSessionManifest" type="button">Download selected manifest</button>
+          <label>Load manifest <input id="loadMirrorPreviewSessionManifest" type="file" accept="application/json,.json"></label>
         </div>
         <div id="mirrorPreviewSessionGrid" class="preview-session-grid">No previews loaded.</div>
       </section>
@@ -4665,6 +4666,8 @@ function createOperatorBrowserDashboardHtml(input: {
       if (sessionId) {
         try {
           const record = JSON.parse(localStorage.getItem('auracall.previewSession.' + sessionId) || '{}');
+          const manifestItems = normalizeMirrorPreviewSessionManifest(record);
+          if (manifestItems.length) return manifestItems;
           if (Array.isArray(record.items)) return normalizeMirrorPreviewSessionItems(record.items);
           if (Array.isArray(record.urls)) return normalizeMirrorPreviewSessionItems(record.urls);
         } catch {
@@ -4680,6 +4683,12 @@ function createOperatorBrowserDashboardHtml(input: {
       } catch {
         return [];
       }
+    }
+
+    function normalizeMirrorPreviewSessionManifest(value) {
+      if (!value || typeof value !== 'object') return [];
+      if (value.schema !== 'auracall.preview-session-manifest.v1') return [];
+      return normalizeMirrorPreviewSessionItems(value.items);
     }
 
     function normalizeMirrorPreviewSessionItems(values) {
@@ -4823,6 +4832,29 @@ function createOperatorBrowserDashboardHtml(input: {
       URL.revokeObjectURL(link.href);
       $('mirrorPreviewSessionNotice').textContent = 'Downloaded selected manifest for ' + String(items.length) + ' session item(s).';
       $('mirrorPreviewSessionNotice').className = 'notice notice-ok';
+    }
+
+    async function loadMirrorPreviewSessionManifestFile(event) {
+      const input = event && event.target;
+      const file = input && input.files && input.files[0];
+      if (!file) return;
+      try {
+        const manifest = JSON.parse(await file.text());
+        const items = normalizeMirrorPreviewSessionManifest(manifest);
+        if (!items.length) {
+          $('mirrorPreviewSessionNotice').textContent = 'No valid preview session manifest items were found.';
+          $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
+          return;
+        }
+        renderMirrorPreviewSession(items);
+        $('mirrorPreviewSessionNotice').textContent = 'Loaded manifest with ' + String(items.length) + ' preview item(s); ' + String(mirrorPreviewSessionSelectedUrls.size) + ' selected.';
+        $('mirrorPreviewSessionNotice').className = 'notice notice-ok';
+      } catch (error) {
+        $('mirrorPreviewSessionNotice').textContent = 'Could not load preview session manifest: ' + String(error && error.message ? error.message : error);
+        $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
+      } finally {
+        input.value = '';
+      }
     }
 
     function selectedMirrorPreviewSessionUrls() {
@@ -5745,6 +5777,7 @@ function createOperatorBrowserDashboardHtml(input: {
     $('copyMirrorPreviewSessionUrls').addEventListener('click', copyMirrorPreviewSessionUrls);
     $('downloadMirrorPreviewSessionUrls').addEventListener('click', downloadMirrorPreviewSessionUrls);
     $('downloadMirrorPreviewSessionManifest').addEventListener('click', downloadMirrorPreviewSessionManifest);
+    $('loadMirrorPreviewSessionManifest').addEventListener('change', loadMirrorPreviewSessionManifestFile);
     $('mirrorPreviewSessionGrid').addEventListener('change', updateMirrorPreviewSessionSelection);
     $('mirrorCatalogSearch').addEventListener('keydown', (event) => {
       if (event.key === 'Enter') loadMirrorCatalog();

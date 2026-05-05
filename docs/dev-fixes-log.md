@@ -15523,3 +15523,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-04: URL-only preview-session export loses catalog context. Add a
   selected JSON manifest export with schema, timestamp, count, URL, provider,
   profile, kind, title, item id, identity, and updated timestamp fields.
+- 2026-05-04: Preview-session manifest handoff should be reversible. Add a
+  client-side manifest loader that validates `auracall.preview-session-manifest.v1`
+  and rerenders selected items without provider browser work.

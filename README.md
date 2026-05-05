@@ -286,7 +286,8 @@ Terminology note:
   the catalog table, plus batch actions to inspect, review in one cache-only
   preview session with provider/kind/title/item metadata, select reviewed
   items, open, copy, download selected visible preview URLs, or export a
-  selected JSON manifest for operator handoff.
+  selected JSON manifest for operator handoff. Exported manifests can be loaded
+  back into the preview-session page for cache-only review.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

@@ -25973,6 +25973,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `auracall.preview-session-manifest.v1`
   - `git diff --check`
 
+## Turn 112 | 2026-05-04
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: let operators reopen exported preview-session manifests inside the
+  dashboard without touching provider browsers.
+- Change:
+  - added a `Load manifest` file input to cached preview sessions
+  - added schema-aware `auracall.preview-session-manifest.v1` normalization
+  - valid manifests rerender through the existing preview-session grid and
+    selection state
+  - dashboard CLI contract now asserts the manifest load path
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers|preview session" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing lint-warning debt (`noUselessContinue`,
+    `noNonNullAssertion`)
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run install:user-runtime`
+  - installed `/home/ecochran76/.local/bin/auracall api ops-browser-status --json`
+    reports preview-session and batch review contract flags as true
+  - installed `/account-mirror/preview-session?url=https%3A%2F%2Fexample.com%2Fasset.png`
+    includes `Load manifest`, `loadMirrorPreviewSessionManifest`,
+    `normalizeMirrorPreviewSessionManifest`,
+    `loadMirrorPreviewSessionManifestFile`, and
+    `auracall.preview-session-manifest.v1`
+  - `git diff --check`
+
 ## Turn 104 | 2026-05-04
 
 - Continued implementation plan:

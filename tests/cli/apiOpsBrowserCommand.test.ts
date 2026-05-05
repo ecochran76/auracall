@@ -97,9 +97,10 @@ const dashboardHtml = `
   <button id="hideVisibleMirrorCatalogPreviewUrls">Close</button>
   <div id="mirrorCatalogBatchNotice"></div>
   <div id="mirrorCatalogPreviewUrlDrawer"><strong>Visible preview URLs</strong><pre id="mirrorCatalogPreviewUrlList">No visible preview URLs.</pre></div>
-  <section id="mirrorPreviewSessionPanel"><h2>Cached Preview Session</h2><button id="selectAllMirrorPreviewSessionItems">Select all</button><button id="clearMirrorPreviewSessionSelection">Select none</button><button>Copy selected URLs</button><button>Download selected URL list</button><button>Download selected manifest</button><div id="mirrorPreviewSessionNotice">Rendering 1 session URL(s)</div><div id="mirrorPreviewSessionGrid" class="preview-session-grid"></div></section>
+  <section id="mirrorPreviewSessionPanel"><h2>Cached Preview Session</h2><button id="selectAllMirrorPreviewSessionItems">Select all</button><button id="clearMirrorPreviewSessionSelection">Select none</button><button>Copy selected URLs</button><button>Download selected URL list</button><button>Download selected manifest</button><label>Load manifest <input id="loadMirrorPreviewSessionManifest" type="file"></label><div id="mirrorPreviewSessionNotice">Rendering 1 session URL(s)</div><div id="mirrorPreviewSessionGrid" class="preview-session-grid"></div></section>
   function initializeMirrorPreviewSession() {}
   function readMirrorPreviewSessionUrls() { return []; }
+  function normalizeMirrorPreviewSessionManifest() { return []; }
   function normalizeMirrorPreviewSessionItems() { return []; }
   function renderMirrorPreviewSession() { return 'Rendering session URL(s)'; }
   function renderMirrorPreviewSessionItem() { return '<input class="mirror-preview-session-select" data-preview-url="https://example.com/asset.png"><dt>Item ID</dt><dd>artifact_1</dd><span>boundIdentity</span>'; }
@@ -110,6 +111,7 @@ const dashboardHtml = `
   async function copyMirrorPreviewSessionUrls() {}
   function downloadMirrorPreviewSessionUrls() {}
   function downloadMirrorPreviewSessionManifest() { return 'auracall.preview-session-manifest.v1'; }
+  async function loadMirrorPreviewSessionManifestFile() {}
   function downloadVisibleMirrorCatalogPreviewUrls() {
     new Blob([], { type: 'text/plain;charset=utf-8' });
     URL.createObjectURL(new Blob());
