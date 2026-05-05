@@ -11,7 +11,9 @@
   `/status` completion-control path for start/pause/resume/cancel controls, and
   row actions render compact completion-id/status/next-attempt feedback.
   Destructive cancel actions now require confirmation; start, pause, and resume
-  stay one-click.
+  stay one-click. `/agents` now turns the disabled Agents / Teams nav item into
+  a read-only inspection page backed by the existing team-run/runtime-run
+  inspect endpoints.
 
 - 2026-05-05: Account mirror result navigation needs fast keyboard controls.
   The `/account-mirror` page now supports `/` to focus cached catalog search

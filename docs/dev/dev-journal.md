@@ -26697,6 +26697,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run plans:audit -- --keep 63`
   - `git diff --check`
   - `pnpm run install:user-runtime`
+  - restarted pinned installed service on PID `1883743`
+  - installed `/agents` contains `AuraCall Agents / Teams`,
+    `navAgentsTeams`, `agentsTeamsPanel`, and both inspect endpoint calls
+  - installed `/status` reports `agentsPath=/agents` and
+    `operatorAgentsDashboard=/agents`
+  - installed `auracall api ops-browser-status --port 18095 --json` reports
+    `hasAgentsTeamsPage=true`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
 - Installed dogfood:
   - restarted the pinned `127.0.0.1:18095` service on PID `253501`
   - installed `api ops-browser-status --port 18095 --json` reports
@@ -26810,6 +26823,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm exec tsc --noEmit --pretty false`
   - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
     reported only existing warning debt in touched broad files
+
+## Turn 129 | 2026-05-05
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: start the next operator dashboard page family without adding new write
+  surfaces.
+- Change:
+  - added `/agents` as the active Agents / Teams nav route
+  - status/service discovery now advertises `agentsPath` and
+    `operatorAgentsDashboard`
+  - the page exposes read-only team and runtime inspection controls backed by
+    `GET /v1/team-runs/inspect` and `GET /v1/runtime-runs/inspect`
+  - CLI dashboard contract now asserts the Agents / Teams page markers
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|configured route paths|api ops browser CLI helpers|status endpoint" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
 
 ## Turn 118 | 2026-05-04
 

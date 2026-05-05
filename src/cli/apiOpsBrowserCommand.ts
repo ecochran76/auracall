@@ -20,6 +20,7 @@ export interface ApiOpsBrowserDashboardSummary {
   hasConfigIdentityProjection: boolean;
   hasConfigLiveFollowProjection: boolean;
   hasConfigLiveFollowControls: boolean;
+  hasAgentsTeamsPage: boolean;
   hasOperationsPanel: boolean;
   hasServiceDiscoveryPanel: boolean;
   hasBackgroundDrainControls: boolean;
@@ -128,7 +129,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
     `AuraCall ops browser: ok (${summary.host}:${summary.port}${dashboard.route})`,
     `Dashboard URL: ${summary.dashboardUrl}`,
     `Service discovery: local=${summary.serviceDiscovery.localBaseUrl ?? 'unknown'} external=${summary.serviceDiscovery.externalBaseUrl ?? 'none'} proxy=${summary.serviceDiscovery.proxyTarget ?? 'none'} auth=${summary.serviceDiscovery.auth ?? 'none'}`,
-    `Dashboard config: page=${formatBoolean(dashboard.hasConfigPage)} identities=${formatBoolean(dashboard.hasConfigIdentityProjection)} liveFollow=${formatBoolean(dashboard.hasConfigLiveFollowProjection)} controls=${formatBoolean(dashboard.hasConfigLiveFollowControls)}`,
+    `Dashboard config: page=${formatBoolean(dashboard.hasConfigPage)} identities=${formatBoolean(dashboard.hasConfigIdentityProjection)} liveFollow=${formatBoolean(dashboard.hasConfigLiveFollowProjection)} controls=${formatBoolean(dashboard.hasConfigLiveFollowControls)} agents=${formatBoolean(dashboard.hasAgentsTeamsPage)}`,
     `Dashboard service control: nav=${formatBoolean(dashboard.hasNavigationScaffold)} operations=${formatBoolean(dashboard.hasOperationsPanel)} backgroundDrain=${formatBoolean(dashboard.hasBackgroundDrainControls)} scheduler=${formatBoolean(dashboard.hasMirrorSchedulerControls)} runOnce=${formatBoolean(dashboard.hasRunOnceSchedulerControl)}`,
     `Dashboard cache browse: catalog=${formatBoolean(dashboard.hasAccountMirrorCatalogPanel)} page=${formatBoolean(dashboard.hasAccountMirrorPageLink)} previewSession=${formatBoolean(dashboard.hasAccountMirrorPreviewSessionPage)} search=${formatBoolean(dashboard.hasCatalogSearchControls)} savedFilters=${formatBoolean(dashboard.hasCatalogSavedFilterState)} table=${formatBoolean(dashboard.hasCatalogResultsTable)} detail=${formatBoolean(dashboard.hasCatalogDetailInspection)} chat=${formatBoolean(dashboard.hasConversationChatDetailView)} transcript=${formatBoolean(dashboard.hasConversationTranscriptAffordance)} transcriptFilter=${formatBoolean(dashboard.hasConversationTranscriptOnlyFilter)} transcriptDownload=${formatBoolean(dashboard.hasConversationTranscriptDownload)} transcriptSearch=${formatBoolean(dashboard.hasConversationTranscriptSearch)} related=${formatBoolean(dashboard.hasConversationRelatedItemNavigation)} assetInspector=${formatBoolean(dashboard.hasCatalogAssetDetailInspector)} assetPreview=${formatBoolean(dashboard.hasCatalogAssetPreview)} localAsset=${formatBoolean(dashboard.hasCatalogLocalAssetRoute)} materialization=${formatBoolean(dashboard.hasCatalogMaterializationBadges)} materializationControls=${formatBoolean(dashboard.hasCatalogMaterializationControls)} rowPreviewActions=${formatBoolean(dashboard.hasCatalogRowPreviewActions)} batchPreviewDrawer=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDrawer)} batchPreviewReview=${formatBoolean(dashboard.hasCatalogBatchPreviewSessionReview)} batchPreviewOpen=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlOpen)} batchPreviewCopy=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlCopy)} batchPreviewDownload=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDownload)} path=${dashboard.usesAccountMirrorCatalogPath ? '/v1/account-mirrors/catalog' : 'unknown'} itemPath=${dashboard.usesAccountMirrorCatalogItemPath ? '/v1/account-mirrors/catalog/items/{id}' : 'unknown'}`,
     `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} attention=${formatBoolean(dashboard.hasAttentionQueue)} activeTable=${formatBoolean(dashboard.hasActiveCompletionTable)} inspect=${formatBoolean(dashboard.hasCompletionInspectAction)} resultToast=${formatBoolean(dashboard.hasCompletionResultToast)} inputInspect=${formatBoolean(dashboard.hasCompletionInputInspectControl)} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} stateAware=${formatBoolean(dashboard.hasStateAwareCompletionActions)} confirmCancel=${formatBoolean(dashboard.hasCancelConfirmation)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
@@ -145,6 +146,7 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
     [summary.hasConfigIdentityProjection, 'Expected /ops/browser Config page to expose bound identity projections.'],
     [summary.hasConfigLiveFollowProjection, 'Expected /ops/browser Config page to expose live-follow eligibility projections.'],
     [summary.hasConfigLiveFollowControls, 'Expected /ops/browser Config page to expose live-follow target controls.'],
+    [summary.hasAgentsTeamsPage, 'Expected /ops/browser to include the read-only Agents / Teams inspection page.'],
     [summary.hasOperationsPanel, 'Expected /ops/browser to include the Operations panel.'],
     [summary.hasServiceDiscoveryPanel, 'Expected /ops/browser to include the Service Discovery panel.'],
     [summary.hasBackgroundDrainControls, 'Expected /ops/browser to include background drain controls.'],
@@ -237,11 +239,13 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('data-route-key="accountMirrorPath"')
       && html.includes('data-route-key="previewSessionPath"')
       && html.includes('data-route-key="configPath"')
+      && html.includes('data-route-key="agentsPath"')
       && html.includes('applyServiceDiscoveryRoutes')
       && html.includes('routing.configPath')
       && html.includes('routing.previewSessionPath')
       && html.includes('isAccountMirrorRoute')
-      && html.includes('isPreviewSessionRoute'),
+      && html.includes('isPreviewSessionRoute')
+      && html.includes('isAgentsTeamsRoute'),
     hasConfigPage: html.includes('navConfig')
       && html.includes('href="/config"')
       && html.includes('configRoutingPanel')
@@ -269,6 +273,13 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes("postJson('/v1/account-mirrors/completions'")
       && html.includes('data-runtime-profile')
       && html.includes('not live-follow enabled'),
+    hasAgentsTeamsPage: html.includes('navAgentsTeams')
+      && html.includes('href="/agents"')
+      && html.includes('agentsTeamsPanel')
+      && html.includes('inspectAgentsTeamRun')
+      && html.includes('inspectAgentsRuntimeRun')
+      && html.includes('/v1/team-runs/inspect?')
+      && html.includes('/v1/runtime-runs/inspect?'),
     hasOperationsPanel: html.includes('<h2>Operations</h2>')
       && html.includes('opsControls')
       && html.includes('opsControlNotice')

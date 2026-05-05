@@ -540,6 +540,9 @@ Each status payload should include:
   result card with completion id, target, status, and next attempt so operators
   do not need to parse raw completion JSON for normal feedback. Destructive
   cancel actions require confirmation while start/pause/resume remain one-click.
+  `/agents` now turns the disabled Agents / Teams nav item into a read-only
+  operator page that calls the existing `GET /v1/team-runs/inspect` and
+  `GET /v1/runtime-runs/inspect` surfaces without adding write paths.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.

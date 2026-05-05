@@ -284,7 +284,9 @@ Terminology note:
   paths are served as operator route aliases instead of being display-only.
   `/config` is the read-only effective config page for the same service
   discovery/operator route data, bound identity/account-level projections, and
-  live-follow desired/actual eligibility view.
+  live-follow desired/actual eligibility view. `/agents` is the read-only
+  Agents / Teams page for existing team-run and runtime-run inspection
+  endpoints.
   The catalog page now renders a compact cached-item browser with kind-count
   quick filters, selected-row highlighting, and a first cached conversation
   drill-in by default on `/account-mirror`. Selecting a cached row also writes

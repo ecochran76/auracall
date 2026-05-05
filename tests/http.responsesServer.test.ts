@@ -14686,15 +14686,23 @@ describe('http responses adapter', () => {
       expect(html).toContain('Preview Session');
       expect(html).toContain('href="/account-mirror/preview-session"');
       expect(html).toContain('href="/config"');
+      expect(html).toContain('href="/agents"');
       expect(html).toContain('data-route-key="dashboardPath"');
       expect(html).toContain('data-route-key="accountMirrorPath"');
       expect(html).toContain('data-route-key="previewSessionPath"');
       expect(html).toContain('data-route-key="configPath"');
+      expect(html).toContain('data-route-key="agentsPath"');
       expect(html).toContain('OPERATOR_DASHBOARD_ROUTES');
       expect(html).toContain('applyServiceDiscoveryRoutes');
       expect(html).toContain('isAccountMirrorRoute');
       expect(html).toContain('isPreviewSessionRoute');
+      expect(html).toContain('isAgentsTeamsRoute');
       expect(html).toContain('Agents / Teams');
+      expect(html).toContain('agentsTeamsPanel');
+      expect(html).toContain('inspectAgentsTeamRun');
+      expect(html).toContain('inspectAgentsRuntimeRun');
+      expect(html).toContain('/v1/team-runs/inspect?');
+      expect(html).toContain('/v1/runtime-runs/inspect?');
       expect(html).toContain('<h2>Operations</h2>');
       expect(html).toContain('opsControls');
       expect(html).toContain('opsControlNotice');
@@ -15042,6 +15050,7 @@ describe('http responses adapter', () => {
       expect(dashboardHtml).toContain('href="/operator/account-mirror"');
       expect(dashboardHtml).toContain('href="/operator/account-mirror/preview-session"');
       expect(dashboardHtml).toContain('href="/config"');
+      expect(dashboardHtml).toContain('href="/agents"');
 
       const accountMirror = await fetch(`http://127.0.0.1:${server.port}/operator/account-mirror`);
       expect(accountMirror.status).toBe(200);
@@ -15055,6 +15064,10 @@ describe('http responses adapter', () => {
       expect(config.status).toBe(200);
       expect(await config.text()).toContain('AuraCall Config');
 
+      const agents = await fetch(`http://127.0.0.1:${server.port}/agents`);
+      expect(agents.status).toBe(200);
+      expect(await agents.text()).toContain('AuraCall Agents / Teams');
+
       const status = await fetch(`http://127.0.0.1:${server.port}/status`);
       const payload = await status.json() as { serviceDiscovery?: { routing?: Record<string, string> }; routes?: Record<string, string> };
       expect(payload.serviceDiscovery?.routing).toMatchObject({
@@ -15062,12 +15075,14 @@ describe('http responses adapter', () => {
         accountMirrorPath: '/operator/account-mirror',
         previewSessionPath: '/operator/account-mirror/preview-session',
         configPath: '/config',
+        agentsPath: '/agents',
       });
       expect(payload.routes).toMatchObject({
         operatorBrowserDashboard: '/operator/browser',
         accountMirrorDashboard: '/operator/account-mirror',
         accountMirrorPreviewSessionDashboard: '/operator/account-mirror/preview-session',
         operatorConfigDashboard: '/config',
+        operatorAgentsDashboard: '/agents',
       });
     } finally {
       await server.close();

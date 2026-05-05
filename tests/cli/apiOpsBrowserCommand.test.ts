@@ -11,7 +11,7 @@ const dashboardHtml = `
   <a href="/account-mirror" data-route-key="accountMirrorPath">Account Mirror</a>
   <a href="/account-mirror/preview-session" data-route-key="previewSessionPath">Preview Session</a>
   <a id="navConfig" href="/config" data-route-key="configPath">Config</a>
-  <span>Agents / Teams</span>
+  <a id="navAgentsTeams" href="/agents" data-route-key="agentsPath">Agents / Teams</a>
 </nav>
 <h1>AuraCall Config</h1>
 <section><h2>Operations</h2><div id="opsControlNotice"></div><div id="opsControls"></div></section>
@@ -38,6 +38,7 @@ const dashboardHtml = `
 <section id="configRoutingPanel"><h2>Config</h2><dl id="configRoutingSummary"></dl><pre id="configRoutingRaw">operatorConfigDashboard publicOperatorBrowserDashboardUrl externalServiceBaseUrl</pre></section>
 <section id="configIdentityPanel"><h2>Bound Identities</h2><div id="configIdentitySummary">expectedIdentityKey detectedIdentityKey accountLevel</div></section>
 <section id="configLiveFollowPanel"><h2>Live Follow Eligibility</h2><div id="configLiveFollowSummary">status.liveFollow desiredState nextAttemptAt mirrorCompleteness data-runtime-profile not live-follow enabled</div></section>
+<section id="agentsTeamsPanel"><h2>Agents / Teams</h2><button id="inspectTeamRun">Inspect Team</button><button id="inspectRuntimeRun">Inspect Runtime</button><pre id="agentsTeamsRaw"></pre></section>
 <section><h2>Mirror Live Follow</h2></section>
 <div id="mirrorAttentionQueue"><table id="mirrorAttentionItems"></table></div>
 <div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div>
@@ -52,7 +53,7 @@ const dashboardHtml = `
 <div id="mirrorControlResultToast" class="notice control-result-toast">Completion control succeeded Live follow started</div>
 <pre id="mirrorTargets">status.liveFollow.targets</pre>
 <script>
-  const OPERATOR_DASHBOARD_ROUTES = { dashboardPath: '/ops/browser', accountMirrorPath: '/account-mirror', previewSessionPath: '/account-mirror/preview-session', configPath: '/config' };
+  const OPERATOR_DASHBOARD_ROUTES = { dashboardPath: '/ops/browser', accountMirrorPath: '/account-mirror', previewSessionPath: '/account-mirror/preview-session', configPath: '/config', agentsPath: '/agents' };
   function setMirrorControlNotice(message, tone) {}
   function setMirrorControlResultToast(input) { return input.operation.nextAttemptAt; }
   function confirmMirrorCompletionCancel(id, action = 'cancel') { if (action === 'cancel') return window.confirm('Cancel live-follow completion ' + id + '?'); return 'Cancel not sent'; }
@@ -66,6 +67,9 @@ const dashboardHtml = `
   function applyServiceDiscoveryRoutes() {}
   function isAccountMirrorRoute() {}
   function isPreviewSessionRoute() {}
+  function isAgentsTeamsRoute() {}
+  async function inspectAgentsTeamRun() { return fetchJson('/v1/team-runs/inspect?' + new URLSearchParams({ teamRunId: 'team' }).toString()); }
+  async function inspectAgentsRuntimeRun() { return fetchJson('/v1/runtime-runs/inspect?' + new URLSearchParams({ runtimeRunId: 'runtime' }).toString()); }
   function renderAttentionQueue() {}
   function collectAttentionRows() {}
   function flattenMirrorCatalogEntries() {}
@@ -291,6 +295,7 @@ const statusPayload = {
       accountMirrorPath: '/account-mirror',
       previewSessionPath: '/account-mirror/preview-session',
       configPath: '/config',
+      agentsPath: '/agents',
       proxyTarget: 'http://127.0.0.1:18080',
       auth: 'authelia',
       ingress: 'traefik',
@@ -372,6 +377,7 @@ describe('api ops browser CLI helpers', () => {
       hasConfigIdentityProjection: true,
       hasConfigLiveFollowProjection: true,
       hasConfigLiveFollowControls: true,
+      hasAgentsTeamsPage: true,
       hasOperationsPanel: true,
       hasServiceDiscoveryPanel: true,
       hasBackgroundDrainControls: true,
@@ -442,6 +448,9 @@ describe('api ops browser CLI helpers', () => {
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Service discovery: local=http://auracall.localhost external=https://auracall.ecochran.dyndns.org proxy=http://127.0.0.1:18080 auth=authelia',
+    );
+    expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
+      'Dashboard config: page=ok identities=ok liveFollow=ok controls=ok agents=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard service control: nav=ok operations=ok backgroundDrain=ok scheduler=ok runOnce=ok',

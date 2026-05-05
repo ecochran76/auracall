@@ -322,6 +322,7 @@ interface OperatorDashboardRoutes {
   accountMirrorPath: string;
   previewSessionPath: string;
   configPath: string;
+  agentsPath: string;
 }
 
 interface ApiServiceDiscovery {
@@ -348,6 +349,7 @@ interface ApiServiceDiscovery {
     accountMirrorPath: string;
     previewSessionPath: string;
     configPath: string;
+    agentsPath: string;
     proxyTarget?: string;
     auth?: string;
     ingress?: string;
@@ -395,6 +397,7 @@ interface HttpStatusResponse {
     accountMirrorDashboard: string;
     accountMirrorPreviewSessionDashboard: string;
     operatorConfigDashboard: string;
+    operatorAgentsDashboard: string;
     operatorBrowserDashboardUrl?: string;
     publicOperatorBrowserDashboardUrl?: string;
     localServiceBaseUrl: string;
@@ -808,6 +811,14 @@ export async function createResponsesHttpServer(
       if (req.method === 'GET' && matchesRoutePath(url.pathname, operatorDashboardRoutes.configPath, '/config')) {
         sendHtml(res, 200, createOperatorBrowserDashboardHtml({
           activePage: 'config',
+          routes: operatorDashboardRoutes,
+        }));
+        return;
+      }
+
+      if (req.method === 'GET' && matchesRoutePath(url.pathname, operatorDashboardRoutes.agentsPath, '/agents')) {
+        sendHtml(res, 200, createOperatorBrowserDashboardHtml({
+          activePage: 'agents',
           routes: operatorDashboardRoutes,
         }));
         return;
@@ -2289,6 +2300,7 @@ function createHttpStatusResponse(input: {
       accountMirrorDashboard: serviceDiscovery.routing.accountMirrorPath,
       accountMirrorPreviewSessionDashboard: serviceDiscovery.routing.previewSessionPath,
       operatorConfigDashboard: serviceDiscovery.routing.configPath,
+      operatorAgentsDashboard: serviceDiscovery.routing.agentsPath,
       ...(input.dashboardUrl ? { operatorBrowserDashboardUrl: input.dashboardUrl } : {}),
       ...(input.publicDashboardUrl ? { publicOperatorBrowserDashboardUrl: input.publicDashboardUrl } : {}),
       localServiceBaseUrl: serviceDiscovery.local.baseUrl,
@@ -3454,7 +3466,7 @@ function buildApiServiceDiscovery(input: {
   serviceRouting?: ApiServiceRoutingConfig;
 }): ApiServiceDiscovery {
   const routing = input.serviceRouting ?? {};
-  const { dashboardPath, accountMirrorPath, previewSessionPath, configPath } = resolveOperatorDashboardRoutes(routing);
+  const { dashboardPath, accountMirrorPath, previewSessionPath, configPath, agentsPath } = resolveOperatorDashboardRoutes(routing);
   const bindBaseUrl = formatApiBaseUrl(input.host, input.port);
   const localBaseUrl = normalizeBaseUrl(routing.localBaseUrl)
     ?? normalizeBaseUrl(baseUrlFromUrl(input.dashboardUrl))
@@ -3493,6 +3505,7 @@ function buildApiServiceDiscovery(input: {
       accountMirrorPath,
       previewSessionPath,
       configPath,
+      agentsPath,
       ...(routing.proxyTarget ? { proxyTarget: routing.proxyTarget } : {}),
       ...(routing.auth ? { auth: routing.auth } : {}),
       ...(routing.ingress ? { ingress: routing.ingress } : {}),
@@ -3508,6 +3521,7 @@ function resolveOperatorDashboardRoutes(serviceRouting: ApiServiceRoutingConfig 
     accountMirrorPath,
     previewSessionPath: joinRoutePath(accountMirrorPath, 'preview-session'),
     configPath: '/config',
+    agentsPath: '/agents',
   };
 }
 
@@ -3700,7 +3714,7 @@ function sendCachedAsset(res: http.ServerResponse, asset: CachedCatalogItemAsset
 }
 
 function createOperatorBrowserDashboardHtml(input: {
-  activePage?: 'browser' | 'account-mirror' | 'preview-session' | 'config';
+  activePage?: 'browser' | 'account-mirror' | 'preview-session' | 'config' | 'agents';
   routes?: OperatorDashboardRoutes;
 } = {}): string {
   const activePage = input.activePage ?? 'browser';
@@ -3709,24 +3723,30 @@ function createOperatorBrowserDashboardHtml(input: {
   const accountMirrorPath = escapeHtmlAttribute(routes.accountMirrorPath);
   const previewSessionPath = escapeHtmlAttribute(routes.previewSessionPath);
   const configPath = escapeHtmlAttribute(routes.configPath);
+  const agentsPath = escapeHtmlAttribute(routes.agentsPath);
   const browserCurrent = activePage === 'browser' ? ' aria-current="page"' : '';
   const accountMirrorCurrent = activePage === 'account-mirror' ? ' aria-current="page"' : '';
   const previewSessionCurrent = activePage === 'preview-session' ? ' aria-current="page"' : '';
   const configCurrent = activePage === 'config' ? ' aria-current="page"' : '';
+  const agentsCurrent = activePage === 'agents' ? ' aria-current="page"' : '';
   const pageTitle = activePage === 'account-mirror'
     ? 'AuraCall Account Mirror'
     : activePage === 'preview-session'
       ? 'AuraCall Preview Session'
       : activePage === 'config'
         ? 'AuraCall Config'
-        : 'AuraCall Browser Ops';
+        : activePage === 'agents'
+          ? 'AuraCall Agents / Teams'
+          : 'AuraCall Browser Ops';
   const pageDescription = activePage === 'account-mirror'
     ? 'Read-only account mirror navigation backed by cached provider indexes.'
     : activePage === 'preview-session'
       ? 'Cache-only review of selected account mirror preview assets.'
       : activePage === 'config'
         ? 'Read-only effective service routing and operator URL discovery.'
-        : 'Local operator view. Browser diagnostics run only when requested.';
+        : activePage === 'agents'
+          ? 'Read-only team and runtime inspection backed by existing API endpoints.'
+          : 'Local operator view. Browser diagnostics run only when requested.';
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -4136,7 +4156,7 @@ function createOperatorBrowserDashboardHtml(input: {
       <a id="navAccountMirror" href="${accountMirrorPath}" data-route-key="accountMirrorPath"${accountMirrorCurrent}>Account Mirror</a>
       <a id="navPreviewSession" href="${previewSessionPath}" data-route-key="previewSessionPath"${previewSessionCurrent}>Preview Session</a>
       <a id="navConfig" href="${configPath}" data-route-key="configPath"${configCurrent}>Config</a>
-      <span aria-disabled="true">Agents / Teams</span>
+      <a id="navAgentsTeams" href="${agentsPath}" data-route-key="agentsPath"${agentsCurrent}>Agents / Teams</a>
     </nav>
 
     <div class="grid">
@@ -4318,6 +4338,31 @@ function createOperatorBrowserDashboardHtml(input: {
           <label>Load manifest <input id="loadMirrorPreviewSessionManifest" type="file" accept="application/json,.json"></label>
         </div>
         <div id="mirrorPreviewSessionGrid" class="preview-session-grid">No previews loaded.</div>
+      </section>
+
+      <section id="agentsTeamsPanel" class="panel">
+        <h2>Agents / Teams</h2>
+        <div id="agentsTeamsNotice" class="notice" role="status" aria-live="polite">Enter an id to inspect persisted team/runtime state.</div>
+        <div class="row" style="margin-bottom: 10px;">
+          <label>Task Run Spec ID
+            <input id="agentTaskRunSpecId" placeholder="task_spec_id">
+          </label>
+          <label>Team Run ID
+            <input id="agentTeamRunId" placeholder="team_run_id">
+          </label>
+          <label>Runtime Run ID
+            <input id="agentRuntimeRunId" placeholder="runtime_run_id">
+          </label>
+          <label>Runner ID
+            <input id="agentRunnerId" placeholder="runner_id">
+          </label>
+          <button id="inspectTeamRun" type="button">Inspect Team</button>
+          <button id="inspectRuntimeRun" type="button">Inspect Runtime</button>
+        </div>
+        <dl id="agentsTeamsSummary">
+          <dt>Status</dt><dd class="muted">No inspection loaded.</dd>
+        </dl>
+        <pre id="agentsTeamsRaw">No inspection loaded.</pre>
       </section>
 
       <section class="panel wide">
@@ -4505,6 +4550,7 @@ function createOperatorBrowserDashboardHtml(input: {
         ['External Account Mirror', renderMaybeLink(external.accountMirrorUrl)],
         ['Preview Session Path', escapeHtml(routing.previewSessionPath || 'none')],
         ['Config Path', escapeHtml(routing.configPath || 'none')],
+        ['Agents Path', escapeHtml(routing.agentsPath || 'none')],
         ['Proxy Target', renderMaybeLink(routing.proxyTarget)],
         ['Ingress', escapeHtml(routing.ingress || 'none')],
         ['Auth Guard', escapeHtml(routing.auth || 'none')],
@@ -4520,6 +4566,7 @@ function createOperatorBrowserDashboardHtml(input: {
         ['Account Mirror Path', escapeHtml(routing.accountMirrorPath || routes.accountMirrorDashboard || 'none')],
         ['Preview Session Path', escapeHtml(routing.previewSessionPath || routes.accountMirrorPreviewSessionDashboard || 'none')],
         ['Config Path', escapeHtml(routing.configPath || routes.operatorConfigDashboard || 'none')],
+        ['Agents Path', escapeHtml(routing.agentsPath || routes.operatorAgentsDashboard || 'none')],
         ['Local Base URL', renderMaybeLink(discovery.local && discovery.local.baseUrl)],
         ['External Base URL', renderMaybeLink(discovery.external && discovery.external.baseUrl)],
         ['Proxy Target', renderMaybeLink(routing.proxyTarget)],
@@ -4533,6 +4580,7 @@ function createOperatorBrowserDashboardHtml(input: {
           accountMirrorDashboard: routes.accountMirrorDashboard,
           accountMirrorPreviewSessionDashboard: routes.accountMirrorPreviewSessionDashboard,
           operatorConfigDashboard: routes.operatorConfigDashboard,
+          operatorAgentsDashboard: routes.operatorAgentsDashboard,
           operatorBrowserDashboardUrl: routes.operatorBrowserDashboardUrl,
           publicOperatorBrowserDashboardUrl: routes.publicOperatorBrowserDashboardUrl,
           localServiceBaseUrl: routes.localServiceBaseUrl,
@@ -4597,6 +4645,80 @@ function createOperatorBrowserDashboardHtml(input: {
         + '</tbody></table>';
     }
 
+    function buildAgentsTeamInspectionQuery(kind) {
+      const params = new URLSearchParams();
+      const taskRunSpecId = $('agentTaskRunSpecId').value.trim();
+      const teamRunId = $('agentTeamRunId').value.trim();
+      const runtimeRunId = $('agentRuntimeRunId').value.trim();
+      const runnerId = $('agentRunnerId').value.trim();
+      if (taskRunSpecId) params.set('taskRunSpecId', taskRunSpecId);
+      if (teamRunId) params.set('teamRunId', teamRunId);
+      if (runtimeRunId) params.set('runtimeRunId', runtimeRunId);
+      if (kind === 'runtime' && runnerId) params.set('runnerId', runnerId);
+      return params;
+    }
+
+    function setAgentsTeamsNotice(message, tone) {
+      const node = $('agentsTeamsNotice');
+      node.className = 'notice notice-' + (tone || 'warn');
+      node.textContent = message;
+    }
+
+    function renderAgentsTeamsInspection(kind, payload) {
+      const record = payload && typeof payload === 'object' ? payload : {};
+      const fields = kind === 'team'
+        ? [
+            ['Kind', 'team'],
+            ['Team Run', readStringField(record, ['teamRunId', 'id']) || 'unknown'],
+            ['Runtime Run', readStringField(record, ['runtimeRunId']) || 'unknown'],
+            ['Task Spec', readStringField(record, ['taskRunSpecId']) || 'unknown'],
+          ]
+        : [
+            ['Kind', 'runtime'],
+            ['Run', readStringField(record, ['runId', 'runtimeRunId', 'id']) || 'unknown'],
+            ['Status', readStringField(record, ['status']) || readStringField(record.run || {}, ['status']) || 'unknown'],
+            ['Runner', readStringField(record, ['runnerId']) || readStringField(record.runner || {}, ['id']) || 'unknown'],
+          ];
+      $('agentsTeamsSummary').innerHTML = fields.map(([key, value]) =>
+        '<dt>' + escapeHtml(key) + '</dt><dd>' + escapeHtml(String(value)) + '</dd>'
+      ).join('');
+      $('agentsTeamsRaw').textContent = asJson(payload);
+    }
+
+    async function inspectAgentsTeamRun() {
+      const params = buildAgentsTeamInspectionQuery('team');
+      if (!params.toString()) {
+        setAgentsTeamsNotice('Enter a task, team, or runtime id before inspecting.', 'warn');
+        return;
+      }
+      setAgentsTeamsNotice('Inspecting team run...', 'warn');
+      try {
+        const payload = await fetchJson('/v1/team-runs/inspect?' + params.toString());
+        renderAgentsTeamsInspection('team', payload);
+        setAgentsTeamsNotice('Team inspection loaded.', 'ok');
+      } catch (error) {
+        $('agentsTeamsRaw').textContent = String(error.message || error);
+        setAgentsTeamsNotice('Team inspection failed: ' + String(error.message || error), 'bad');
+      }
+    }
+
+    async function inspectAgentsRuntimeRun() {
+      const params = buildAgentsTeamInspectionQuery('runtime');
+      if (!params.toString()) {
+        setAgentsTeamsNotice('Enter a task, team, or runtime id before inspecting.', 'warn');
+        return;
+      }
+      setAgentsTeamsNotice('Inspecting runtime run...', 'warn');
+      try {
+        const payload = await fetchJson('/v1/runtime-runs/inspect?' + params.toString());
+        renderAgentsTeamsInspection('runtime', payload);
+        setAgentsTeamsNotice('Runtime inspection loaded.', 'ok');
+      } catch (error) {
+        $('agentsTeamsRaw').textContent = String(error.message || error);
+        setAgentsTeamsNotice('Runtime inspection failed: ' + String(error.message || error), 'bad');
+      }
+    }
+
     function renderMaybeLink(value) {
       if (!value) return '<span class="muted">none</span>';
       const text = escapeHtml(value);
@@ -4609,14 +4731,17 @@ function createOperatorBrowserDashboardHtml(input: {
       const accountMirrorPath = normalizeDashboardRoutePath(routing && routing.accountMirrorPath, OPERATOR_DASHBOARD_ROUTES.accountMirrorPath || '/account-mirror');
       const previewSessionPath = normalizeDashboardRoutePath(routing && routing.previewSessionPath, OPERATOR_DASHBOARD_ROUTES.previewSessionPath || (accountMirrorPath + '/preview-session'));
       const configPath = normalizeDashboardRoutePath(routing && routing.configPath, OPERATOR_DASHBOARD_ROUTES.configPath || '/config');
+      const agentsPath = normalizeDashboardRoutePath(routing && routing.agentsPath, OPERATOR_DASHBOARD_ROUTES.agentsPath || '/agents');
       OPERATOR_DASHBOARD_ROUTES.dashboardPath = dashboardPath;
       OPERATOR_DASHBOARD_ROUTES.accountMirrorPath = accountMirrorPath;
       OPERATOR_DASHBOARD_ROUTES.previewSessionPath = previewSessionPath;
       OPERATOR_DASHBOARD_ROUTES.configPath = configPath;
+      OPERATOR_DASHBOARD_ROUTES.agentsPath = agentsPath;
       setRouteLink('navBrowserOps', dashboardPath);
       setRouteLink('navAccountMirror', accountMirrorPath);
       setRouteLink('navPreviewSession', previewSessionPath);
       setRouteLink('navConfig', configPath);
+      setRouteLink('navAgentsTeams', agentsPath);
       setRouteLink('usefulDashboardLink', dashboardPath, dashboardPath);
       setRouteLink('usefulAccountMirrorLink', accountMirrorPath, accountMirrorPath);
       setRouteLink('usefulPreviewSessionLink', previewSessionPath, previewSessionPath);
@@ -4644,6 +4769,11 @@ function createOperatorBrowserDashboardHtml(input: {
     function isPreviewSessionRoute() {
       return window.location.pathname === (OPERATOR_DASHBOARD_ROUTES.previewSessionPath || '/account-mirror/preview-session')
         || window.location.pathname === '/account-mirror/preview-session';
+    }
+
+    function isAgentsTeamsRoute() {
+      return window.location.pathname === (OPERATOR_DASHBOARD_ROUTES.agentsPath || '/agents')
+        || window.location.pathname === '/agents';
     }
 
     function routeWithQuery(path, query) {
@@ -7040,6 +7170,8 @@ function createOperatorBrowserDashboardHtml(input: {
     $('refreshSavedMirrorPreviewSessionTable').addEventListener('click', () => refreshSavedMirrorPreviewSessions($('savedMirrorPreviewSessions').value));
     $('savedMirrorPreviewSessionSearch').addEventListener('input', renderSavedMirrorPreviewSessionTable);
     $('savedMirrorPreviewSessionTable').addEventListener('click', handleSavedMirrorPreviewSessionTableClick);
+    $('inspectTeamRun').addEventListener('click', inspectAgentsTeamRun);
+    $('inspectRuntimeRun').addEventListener('click', inspectAgentsRuntimeRun);
     $('loadMirrorPreviewSessionManifest').addEventListener('change', loadMirrorPreviewSessionManifestFile);
     $('mirrorPreviewSessionGrid').addEventListener('change', updateMirrorPreviewSessionSelection);
     $('mirrorCatalogSearch').addEventListener('keydown', (event) => {
