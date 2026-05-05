@@ -26526,6 +26526,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run install:user-runtime`
 - Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `977110`
+  - installed `/config` contains `mirrorControlResultToast`,
+    `setMirrorControlResultToast`, `control-result-toast`, and the compact
+    `completion=... next=...` result line
+  - installed `api ops-browser-status --port 18095 --json` reports
+    `hasCompletionResultToast=true`, live-follow controls true, and completion
+    control payload support
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
   - restarted the pinned `127.0.0.1:18095` service on PID `508985`
   - installed `/config` contains `startMirrorCompletionForTarget`,
     `renderLiveFollowAccountControls`, `/v1/account-mirrors/completions`, and
@@ -26746,6 +26758,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - CLI dashboard contract checks now assert the live-follow row controls
 - Validation:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts -t "browser operator dashboard|configured route paths|api ops browser CLI helpers|api ops browser status|status endpoint" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in touched broad files
+
+## Turn 127 | 2026-05-05
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make live-follow row-control outcomes readable without opening raw
+  JSON.
+- Change:
+  - added a compact `mirrorControlResultToast` result card for live-follow
+    start/control/inspect outcomes
+  - the card shows action, status, target, completion id, and next attempt
+  - completion raw JSON remains in the existing debug block
+  - dashboard CLI contract now asserts the compact result feedback markers
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|configured route paths|api ops browser CLI helpers|status endpoint" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
   - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
     reported only existing warning debt in touched broad files

@@ -536,7 +536,9 @@ Each status payload should include:
   identity/account-level projections, and live-follow desired/actual
   eligibility view. Config/live-follow rows use the existing completion API and
   `/status` completion-control path for live-follow start/pause/resume/cancel
-  without adding a second dashboard control plane.
+  without adding a second dashboard control plane. Row actions render a compact
+  result card with completion id, target, status, and next attempt so operators
+  do not need to parse raw completion JSON for normal feedback.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.

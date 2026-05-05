@@ -33,6 +33,7 @@ export interface ApiOpsBrowserDashboardSummary {
   hasLiveFollowTargetTable: boolean;
   hasActiveCompletionTable: boolean;
   hasCompletionInspectAction: boolean;
+  hasCompletionResultToast: boolean;
   hasCompletionInputInspectControl: boolean;
   hasCompletionIdFillControl: boolean;
   hasInlineCompletionActionControls: boolean;
@@ -129,7 +130,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
     `Dashboard config: page=${formatBoolean(dashboard.hasConfigPage)} identities=${formatBoolean(dashboard.hasConfigIdentityProjection)} liveFollow=${formatBoolean(dashboard.hasConfigLiveFollowProjection)} controls=${formatBoolean(dashboard.hasConfigLiveFollowControls)}`,
     `Dashboard service control: nav=${formatBoolean(dashboard.hasNavigationScaffold)} operations=${formatBoolean(dashboard.hasOperationsPanel)} backgroundDrain=${formatBoolean(dashboard.hasBackgroundDrainControls)} scheduler=${formatBoolean(dashboard.hasMirrorSchedulerControls)} runOnce=${formatBoolean(dashboard.hasRunOnceSchedulerControl)}`,
     `Dashboard cache browse: catalog=${formatBoolean(dashboard.hasAccountMirrorCatalogPanel)} page=${formatBoolean(dashboard.hasAccountMirrorPageLink)} previewSession=${formatBoolean(dashboard.hasAccountMirrorPreviewSessionPage)} search=${formatBoolean(dashboard.hasCatalogSearchControls)} savedFilters=${formatBoolean(dashboard.hasCatalogSavedFilterState)} table=${formatBoolean(dashboard.hasCatalogResultsTable)} detail=${formatBoolean(dashboard.hasCatalogDetailInspection)} chat=${formatBoolean(dashboard.hasConversationChatDetailView)} transcript=${formatBoolean(dashboard.hasConversationTranscriptAffordance)} transcriptFilter=${formatBoolean(dashboard.hasConversationTranscriptOnlyFilter)} transcriptDownload=${formatBoolean(dashboard.hasConversationTranscriptDownload)} transcriptSearch=${formatBoolean(dashboard.hasConversationTranscriptSearch)} related=${formatBoolean(dashboard.hasConversationRelatedItemNavigation)} assetInspector=${formatBoolean(dashboard.hasCatalogAssetDetailInspector)} assetPreview=${formatBoolean(dashboard.hasCatalogAssetPreview)} localAsset=${formatBoolean(dashboard.hasCatalogLocalAssetRoute)} materialization=${formatBoolean(dashboard.hasCatalogMaterializationBadges)} materializationControls=${formatBoolean(dashboard.hasCatalogMaterializationControls)} rowPreviewActions=${formatBoolean(dashboard.hasCatalogRowPreviewActions)} batchPreviewDrawer=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDrawer)} batchPreviewReview=${formatBoolean(dashboard.hasCatalogBatchPreviewSessionReview)} batchPreviewOpen=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlOpen)} batchPreviewCopy=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlCopy)} batchPreviewDownload=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDownload)} path=${dashboard.usesAccountMirrorCatalogPath ? '/v1/account-mirrors/catalog' : 'unknown'} itemPath=${dashboard.usesAccountMirrorCatalogItemPath ? '/v1/account-mirrors/catalog/items/{id}' : 'unknown'}`,
-    `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} attention=${formatBoolean(dashboard.hasAttentionQueue)} activeTable=${formatBoolean(dashboard.hasActiveCompletionTable)} inspect=${formatBoolean(dashboard.hasCompletionInspectAction)} inputInspect=${formatBoolean(dashboard.hasCompletionInputInspectControl)} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} stateAware=${formatBoolean(dashboard.hasStateAwareCompletionActions)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
+    `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} attention=${formatBoolean(dashboard.hasAttentionQueue)} activeTable=${formatBoolean(dashboard.hasActiveCompletionTable)} inspect=${formatBoolean(dashboard.hasCompletionInspectAction)} resultToast=${formatBoolean(dashboard.hasCompletionResultToast)} inputInspect=${formatBoolean(dashboard.hasCompletionInputInspectControl)} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} stateAware=${formatBoolean(dashboard.hasStateAwareCompletionActions)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
     summary.status.liveFollow.line,
     `Account mirror completions: active=${formatNullableNumber(summary.status.completions.metrics.active)} paused=${formatNullableNumber(summary.status.completions.metrics.paused)} failed=${formatNullableNumber(summary.status.completions.metrics.failed)} cancelled=${formatNullableNumber(summary.status.completions.metrics.cancelled)} total=${formatNullableNumber(summary.status.completions.metrics.total)}`,
   ].join('\n');
@@ -156,6 +157,7 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
     [summary.hasLiveFollowTargetTable, 'Expected /ops/browser to render the live-follow target account table.'],
     [summary.hasActiveCompletionTable, 'Expected /ops/browser to render the active completion operations table.'],
     [summary.hasCompletionInspectAction, 'Expected /ops/browser active completion rows to inspect completion detail.'],
+    [summary.hasCompletionResultToast, 'Expected /ops/browser completion controls to render compact result feedback.'],
     [summary.hasCompletionInputInspectControl, 'Expected /ops/browser completion id input to inspect completion detail.'],
     [summary.hasCompletionIdFillControl, 'Expected /ops/browser target rows to fill the completion-control id.'],
     [summary.hasInlineCompletionActionControls, 'Expected /ops/browser target rows to control active completions directly.'],
@@ -299,6 +301,11 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
     hasLiveFollowTargetTable: html.includes('mirrorTargetTable') && html.includes('mirrorTargetAccounts'),
     hasActiveCompletionTable: html.includes('mirrorActiveCompletionTable') && html.includes('mirrorActiveCompletions'),
     hasCompletionInspectAction: html.includes('inspectMirrorCompletion') && html.includes('/v1/account-mirrors/completions/'),
+    hasCompletionResultToast: html.includes('mirrorControlResultToast')
+      && html.includes('setMirrorControlResultToast')
+      && html.includes('control-result-toast')
+      && html.includes('Completion control succeeded')
+      && html.includes('Live follow started'),
     hasCompletionInputInspectControl: html.includes('inspectMirrorCompletionById')
       && html.includes('inspectSelectedMirrorCompletion')
       && html.includes("$('inspectMirrorCompletionById').addEventListener('click', inspectSelectedMirrorCompletion)"),

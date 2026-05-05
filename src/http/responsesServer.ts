@@ -4051,6 +4051,19 @@ function createOperatorBrowserDashboardHtml(input: {
     .notice-ok { border-color: var(--accent); color: var(--accent); }
     .notice-warn { border-color: var(--warn); color: var(--warn); }
     .notice-bad { border-color: var(--bad); color: var(--bad); }
+    .control-result-toast {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .control-result-toast strong {
+      color: var(--text);
+    }
+    .control-result-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
     .asset-preview {
       display: grid;
       gap: 8px;
@@ -4274,6 +4287,7 @@ function createOperatorBrowserDashboardHtml(input: {
         <div id="mirrorTargetTable" class="muted" style="margin-bottom: 10px;">Loading target accounts...</div>
         <div id="mirrorActiveCompletionTable" class="muted" style="margin-bottom: 10px;">Loading active operations...</div>
         <div id="mirrorControlNotice" class="notice" role="status" aria-live="polite">No live-follow control action yet.</div>
+        <div id="mirrorControlResultToast" class="notice control-result-toast" role="status" aria-live="polite" hidden>No live-follow control result yet.</div>
         <pre id="mirrorTargets">Loading...</pre>
         <pre id="mirrorCompletions">Loading...</pre>
       </section>
@@ -4738,7 +4752,7 @@ function createOperatorBrowserDashboardHtml(input: {
     }
 
     function renderBadge(label, value, tone) {
-      return '<span class="badge badge-' + tone + '"><span>' + label + '</span><strong>' + value + '</strong></span>';
+      return '<span class="badge badge-' + escapeHtml(tone) + '"><span>' + escapeHtml(label) + '</span><strong>' + escapeHtml(value) + '</strong></span>';
     }
 
     function renderAttentionQueue(targets, active, recent) {
@@ -4936,6 +4950,30 @@ function createOperatorBrowserDashboardHtml(input: {
       const node = $('mirrorControlNotice');
       node.className = 'notice notice-' + (tone || 'warn');
       node.textContent = message;
+    }
+
+    function setMirrorControlResultToast(input) {
+      const node = $('mirrorControlResultToast');
+      if (!input) {
+        node.hidden = true;
+        node.textContent = 'No live-follow control result yet.';
+        return;
+      }
+      const tone = input.tone || 'ok';
+      const operation = input.operation || {};
+      const id = input.id || operation.id || 'unknown';
+      const status = input.status || operation.status || 'unknown';
+      const target = input.target || formatCompletionTarget(operation);
+      const nextAttempt = input.nextAttemptAt || operation.nextAttemptAt || 'none';
+      node.hidden = false;
+      node.className = 'notice notice-' + tone + ' control-result-toast';
+      node.innerHTML = '<strong>' + escapeHtml(input.title || 'Live-follow result') + '</strong>'
+        + '<div class="control-result-meta">'
+        + renderBadge('action', input.action || 'none', tone)
+        + renderBadge('status', status, toneForActualStatus(status))
+        + renderBadge('target', target, 'muted')
+        + '</div>'
+        + '<div class="wrap">completion=' + escapeHtml(id) + ' next=' + escapeHtml(nextAttempt) + '</div>';
     }
 
     function setOpsControlNotice(message, tone) {
@@ -6730,11 +6768,27 @@ function createOperatorBrowserDashboardHtml(input: {
         }
         const controlled = payload.controlResult || payload;
         $('mirrorCompletions').textContent = asJson({ controlled });
+        setMirrorControlResultToast({
+          title: 'Completion control succeeded',
+          action,
+          id,
+          status: controlled.status || 'ok',
+          operation: controlled,
+          tone: 'ok',
+        });
         setMirrorControlNotice('Completed ' + action + ' for ' + id + ': ' + (controlled.status || 'ok') + '.', 'ok');
         await refreshStatus();
       } catch (error) {
         const message = String(error.message || error);
         $('mirrorCompletions').textContent = message;
+        setMirrorControlResultToast({
+          title: 'Completion control failed',
+          action,
+          id,
+          status: 'failed',
+          target: id,
+          tone: 'bad',
+        });
         setMirrorControlNotice('Failed ' + action + ' for ' + id + ': ' + message, 'bad');
       } finally {
         for (const buttonId of ['pauseMirrorCompletion', 'resumeMirrorCompletion', 'cancelMirrorCompletion']) {
@@ -6756,11 +6810,29 @@ function createOperatorBrowserDashboardHtml(input: {
         });
         $('mirrorCompletionId').value = result.id || '';
         $('mirrorCompletions').textContent = asJson({ startedCompletion: result });
+        setMirrorControlResultToast({
+          title: 'Live follow started',
+          action: 'start',
+          id: result.id || 'unknown',
+          status: result.status || 'queued',
+          target: provider + '/' + runtimeProfile,
+          nextAttemptAt: result.nextAttemptAt || 'none',
+          operation: result,
+          tone: 'ok',
+        });
         setMirrorControlNotice('Started live follow for ' + provider + '/' + runtimeProfile + '.', 'ok');
         await refreshStatus();
       } catch (error) {
         const message = String(error.message || error);
         $('mirrorCompletions').textContent = message;
+        setMirrorControlResultToast({
+          title: 'Live follow start failed',
+          action: 'start',
+          id: 'none',
+          status: 'failed',
+          target: provider + '/' + runtimeProfile,
+          tone: 'bad',
+        });
         setMirrorControlNotice('Failed to start live follow for ' + provider + '/' + runtimeProfile + ': ' + message, 'bad');
       }
     }
@@ -6772,10 +6844,26 @@ function createOperatorBrowserDashboardHtml(input: {
       try {
         const detail = await fetchJson('/v1/account-mirrors/completions/' + encodeURIComponent(id));
         $('mirrorCompletions').textContent = asJson({ selectedCompletion: detail });
+        setMirrorControlResultToast({
+          title: 'Completion detail loaded',
+          action: 'inspect',
+          id,
+          status: detail.status || 'unknown',
+          operation: detail,
+          tone: 'ok',
+        });
         setMirrorControlNotice('Loaded details for ' + id + '.', 'ok');
       } catch (error) {
         const message = String(error.message || error);
         $('mirrorCompletions').textContent = message;
+        setMirrorControlResultToast({
+          title: 'Completion inspect failed',
+          action: 'inspect',
+          id,
+          status: 'failed',
+          target: id,
+          tone: 'bad',
+        });
         setMirrorControlNotice('Failed to inspect ' + id + ': ' + message, 'bad');
       }
     }

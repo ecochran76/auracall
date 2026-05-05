@@ -49,10 +49,12 @@ const dashboardHtml = `
 <button data-completion-id="acctmirror_paused" data-completion-action="resume" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Resume</button>
 <button data-completion-id="acctmirror_paused" data-completion-action="cancel" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Cancel</button>
 <div id="mirrorControlNotice" role="status" aria-live="polite"></div>
+<div id="mirrorControlResultToast" class="notice control-result-toast">Completion control succeeded Live follow started</div>
 <pre id="mirrorTargets">status.liveFollow.targets</pre>
 <script>
   const OPERATOR_DASHBOARD_ROUTES = { dashboardPath: '/ops/browser', accountMirrorPath: '/account-mirror', previewSessionPath: '/account-mirror/preview-session', configPath: '/config' };
   function setMirrorControlNotice(message, tone) {}
+  function setMirrorControlResultToast(input) { return input.operation.nextAttemptAt; }
   function renderOpsControls() {}
   function renderServiceDiscovery(status) { return status.serviceDiscovery.routing.previewSessionPath + status.serviceDiscovery.routing.configPath; }
   function renderConfigRouting(status) { return status.routes.operatorConfigDashboard; }
@@ -382,6 +384,7 @@ describe('api ops browser CLI helpers', () => {
       hasLiveFollowTargetTable: true,
       hasActiveCompletionTable: true,
       hasCompletionInspectAction: true,
+      hasCompletionResultToast: true,
       hasCompletionInputInspectControl: true,
       hasCompletionIdFillControl: true,
       hasInlineCompletionActionControls: true,
@@ -445,7 +448,7 @@ describe('api ops browser CLI helpers', () => {
       'Dashboard cache browse: catalog=ok page=ok previewSession=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok transcriptFilter=ok transcriptDownload=ok transcriptSearch=ok related=ok assetInspector=ok assetPreview=ok localAsset=ok materialization=ok materializationControls=ok rowPreviewActions=ok batchPreviewDrawer=ok batchPreviewReview=ok batchPreviewOpen=ok batchPreviewCopy=ok batchPreviewDownload=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok inputInspect=ok input=ok rowActions=ok stateAware=ok feedback=ok pause=ok resume=ok cancel=ok',
+      'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok resultToast=ok inputInspect=ok input=ok rowActions=ok stateAware=ok feedback=ok pause=ok resume=ok cancel=ok',
     );
   });
 

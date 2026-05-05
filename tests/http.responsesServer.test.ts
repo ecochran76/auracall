@@ -14974,6 +14974,11 @@ describe('http responses adapter', () => {
       expect(html).toContain('mirrorCompletions');
       expect(html).toContain('mirrorControlNotice');
       expect(html).toContain('setMirrorControlNotice');
+      expect(html).toContain('mirrorControlResultToast');
+      expect(html).toContain('setMirrorControlResultToast');
+      expect(html).toContain('control-result-toast');
+      expect(html).toContain('Completion control succeeded');
+      expect(html).toContain('Live follow started');
       expect(html).toContain('Live Follow Severity');
       expect(html).toContain('Live Follow Targets');
       expect(html).toContain('Next Live-Follow Attempt');
