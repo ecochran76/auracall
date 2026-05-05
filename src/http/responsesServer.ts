@@ -3851,6 +3851,7 @@ function createOperatorBrowserDashboardHtml(input: {
     let mirrorCatalogFilteredRows = [];
     let mirrorCatalogCurrentDetail = null;
     let mirrorPreviewSessionUrls = [];
+    let mirrorPreviewSessionItems = [];
 
     async function fetchJson(path) {
       const response = await fetch(path, { cache: 'no-store' });
@@ -4536,11 +4537,28 @@ function createOperatorBrowserDashboardHtml(input: {
     }
 
     function collectVisibleCatalogPreviewUrls() {
-      return mirrorCatalogFilteredRows
-        .map(resolveCatalogRowPreviewUrl)
-        .filter(Boolean)
-        .map((url) => new URL(url, window.location.origin).href)
-        .filter((url, index, urls) => urls.indexOf(url) === index);
+      return collectVisibleCatalogPreviewEntries().map((entry) => entry.url);
+    }
+
+    function collectVisibleCatalogPreviewEntries() {
+      const entries = [];
+      for (const row of mirrorCatalogFilteredRows) {
+        const previewUrl = resolveCatalogRowPreviewUrl(row);
+        if (!previewUrl) continue;
+        const url = new URL(previewUrl, window.location.origin).href;
+        if (entries.some((entry) => entry.url === url)) continue;
+        entries.push({
+          url,
+          provider: row.provider || '',
+          runtimeProfile: row.runtimeProfileId || '',
+          kind: row.kind || '',
+          title: row.label || '',
+          itemId: row.itemId || '',
+          boundIdentity: row.boundIdentityKey || '',
+          updatedAt: row.timestamp || '',
+        });
+      }
+      return entries;
     }
 
     function showVisibleMirrorCatalogPreviewUrls() {
@@ -4574,21 +4592,22 @@ function createOperatorBrowserDashboardHtml(input: {
     }
 
     function reviewVisibleMirrorCatalogPreviews() {
-      const urls = collectVisibleCatalogPreviewUrls();
-      if (!urls.length) {
+      const entries = collectVisibleCatalogPreviewEntries();
+      if (!entries.length) {
         setMirrorCatalogBatchNotice('No visible preview URLs to review.', 'warn');
         return;
       }
       const reviewLimit = 24;
-      const selectedUrls = urls.slice(0, reviewLimit);
+      const selectedEntries = entries.slice(0, reviewLimit);
       const sessionId = 'preview-' + String(Date.now()) + '-' + String(Math.random()).slice(2);
       localStorage.setItem('auracall.previewSession.' + sessionId, JSON.stringify({
         createdAt: new Date().toISOString(),
-        urls: selectedUrls,
+        items: selectedEntries,
+        urls: selectedEntries.map((entry) => entry.url),
       }));
-      const suffix = urls.length > reviewLimit ? ' Limited to first ' + String(reviewLimit) + ' of ' + String(urls.length) + '.' : '';
+      const suffix = entries.length > reviewLimit ? ' Limited to first ' + String(reviewLimit) + ' of ' + String(entries.length) + '.' : '';
       window.open('/account-mirror/preview-session?session=' + encodeURIComponent(sessionId), '_blank', 'noopener,noreferrer');
-      setMirrorCatalogBatchNotice('Opened preview session for ' + String(selectedUrls.length) + ' visible preview URL(s).' + suffix, 'ok');
+      setMirrorCatalogBatchNotice('Opened preview session for ' + String(selectedEntries.length) + ' visible preview URL(s).' + suffix, 'ok');
     }
 
     async function copyVisibleMirrorCatalogPreviewUrls() {
@@ -4642,50 +4661,76 @@ function createOperatorBrowserDashboardHtml(input: {
       if (sessionId) {
         try {
           const record = JSON.parse(localStorage.getItem('auracall.previewSession.' + sessionId) || '{}');
-          if (Array.isArray(record.urls)) return normalizeMirrorPreviewSessionUrls(record.urls);
+          if (Array.isArray(record.items)) return normalizeMirrorPreviewSessionItems(record.items);
+          if (Array.isArray(record.urls)) return normalizeMirrorPreviewSessionItems(record.urls);
         } catch {
           return [];
         }
       }
       const repeatedUrls = params.getAll('url');
-      if (repeatedUrls.length) return normalizeMirrorPreviewSessionUrls(repeatedUrls);
+      if (repeatedUrls.length) return normalizeMirrorPreviewSessionItems(repeatedUrls);
       const encodedUrls = params.get('urls');
       if (!encodedUrls) return [];
       try {
-        return normalizeMirrorPreviewSessionUrls(JSON.parse(encodedUrls));
+        return normalizeMirrorPreviewSessionItems(JSON.parse(encodedUrls));
       } catch {
         return [];
       }
     }
 
-    function normalizeMirrorPreviewSessionUrls(values) {
+    function normalizeMirrorPreviewSessionItems(values) {
       if (!Array.isArray(values)) return [];
-      return values
-        .map((value) => String(value || '').trim())
-        .filter(isSafePreviewUrl)
-        .map((url) => new URL(url, window.location.origin).href)
-        .filter((url, index, urls) => urls.indexOf(url) === index)
-        .slice(0, 24);
+      const items = [];
+      for (const value of values) {
+        const source = value && typeof value === 'object' ? value : { url: value };
+        const rawUrl = String(source.url || '').trim();
+        if (!isSafePreviewUrl(rawUrl)) continue;
+        const url = new URL(rawUrl, window.location.origin).href;
+        if (items.some((item) => item.url === url)) continue;
+        items.push({
+          url,
+          provider: String(source.provider || ''),
+          runtimeProfile: String(source.runtimeProfile || ''),
+          kind: String(source.kind || ''),
+          title: String(source.title || ''),
+          itemId: String(source.itemId || ''),
+          boundIdentity: String(source.boundIdentity || ''),
+          updatedAt: String(source.updatedAt || ''),
+        });
+        if (items.length >= 24) break;
+      }
+      return items;
     }
 
-    function renderMirrorPreviewSession(urls) {
+    function renderMirrorPreviewSession(items) {
       const notice = $('mirrorPreviewSessionNotice');
       const grid = $('mirrorPreviewSessionGrid');
-      mirrorPreviewSessionUrls = urls;
-      if (!urls.length) {
+      mirrorPreviewSessionItems = items;
+      mirrorPreviewSessionUrls = items.map((item) => item.url);
+      if (!items.length) {
         notice.textContent = 'No preview session URLs were found. Start from Account Mirror and choose Review visible previews.';
         notice.className = 'notice notice-warn';
         grid.innerHTML = 'No previews loaded.';
         return;
       }
-      notice.textContent = 'Rendering ' + String(urls.length) + ' cached preview URL(s).';
+      notice.textContent = 'Rendering ' + String(items.length) + ' cached preview URL(s).';
       notice.className = 'notice notice-ok';
-      grid.innerHTML = urls.map(renderMirrorPreviewSessionItem).join('');
+      grid.innerHTML = items.map(renderMirrorPreviewSessionItem).join('');
     }
 
-    function renderMirrorPreviewSessionItem(url, index) {
+    function renderMirrorPreviewSessionItem(item, index) {
+      const url = item.url;
+      const title = item.title || item.itemId || 'Cached preview';
+      const labels = [
+        item.provider ? renderBadge('provider', item.provider, 'muted') : '',
+        item.kind ? renderBadge('kind', item.kind, 'muted') : '',
+        item.runtimeProfile ? renderBadge('profile', item.runtimeProfile, 'muted') : '',
+        item.boundIdentity ? renderBadge('identity', item.boundIdentity, 'muted') : '',
+      ].filter(Boolean).join('');
       return '<article class="preview-session-item">'
-        + '<div class="control-title"><strong>Preview ' + String(index + 1) + '</strong><a href="' + escapeHtml(url) + '" target="_blank" rel="noreferrer">Open</a></div>'
+        + '<div class="control-title"><strong>' + escapeHtml(title) + '</strong><a href="' + escapeHtml(url) + '" target="_blank" rel="noreferrer">Open</a></div>'
+        + '<div class="badges">' + labels + '</div>'
+        + '<dl><dt>Preview</dt><dd>' + String(index + 1) + '</dd><dt>Item ID</dt><dd>' + escapeHtml(item.itemId || 'unknown') + '</dd><dt>Updated</dt><dd>' + escapeHtml(item.updatedAt || 'unknown') + '</dd></dl>'
         + renderMirrorPreviewSessionEmbed(url)
         + '<code>' + escapeHtml(url) + '</code>'
         + '</article>';

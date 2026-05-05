@@ -383,12 +383,18 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('Previewing ')
       && html.includes("urls.join('\\n')"),
     hasCatalogBatchPreviewSessionReview: html.includes('reviewVisibleMirrorCatalogPreviews')
+      && html.includes('collectVisibleCatalogPreviewEntries')
       && html.includes('Review visible previews')
       && html.includes('/account-mirror/preview-session?session=')
       && html.includes('auracall.previewSession.')
+      && html.includes('items: selectedEntries')
       && html.includes('Opened preview session for ')
       && html.includes('Rendering ')
       && html.includes('session URL(s)')
+      && html.includes('normalizeMirrorPreviewSessionItems')
+      && html.includes('renderMirrorPreviewSessionItem')
+      && html.includes('boundIdentity')
+      && html.includes('<dt>Item ID</dt>')
       && html.includes('copyMirrorPreviewSessionUrls')
       && html.includes('downloadMirrorPreviewSessionUrls'),
     hasCatalogBatchPreviewUrlOpen: html.includes('openVisibleMirrorCatalogPreviewUrls')

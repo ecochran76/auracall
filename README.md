@@ -284,7 +284,8 @@ Terminology note:
   cached rows by previewability without triggering browser work. Previewable
   asset rows also expose `Open Preview` and `Copy URL` actions directly from
   the catalog table, plus batch actions to inspect, review in one cache-only
-  preview session, open, copy, or download all visible preview URLs.
+  preview session with provider/kind/title/item metadata, open, copy, or
+  download all visible preview URLs.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

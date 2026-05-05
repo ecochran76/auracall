@@ -65,6 +65,7 @@ const dashboardHtml = `
   function buildMirrorCatalogItemAssetPath() {}
   async function copyCatalogPreviewUrl() { await navigator.clipboard.writeText('url'); }
   function collectVisibleCatalogPreviewUrls() { return []; }
+  function collectVisibleCatalogPreviewEntries() { return [{ url: 'https://example.com/asset.png', provider: 'chatgpt', kind: 'artifacts', title: 'Example Asset', itemId: 'artifact_1', boundIdentity: 'default', updatedAt: '2026-05-04T00:00:00.000Z' }]; }
   function showVisibleMirrorCatalogPreviewUrls() {
     mirrorCatalogPreviewUrlDrawer.hidden = false;
     mirrorCatalogPreviewUrlList.textContent = collectVisibleCatalogPreviewUrls().join('\\n') || 'No visible preview URLs.';
@@ -72,7 +73,8 @@ const dashboardHtml = `
   }
   function hideVisibleMirrorCatalogPreviewUrls() { mirrorCatalogPreviewUrlDrawer.hidden = true; }
   function reviewVisibleMirrorCatalogPreviews() {
-    localStorage.setItem('auracall.previewSession.preview-1', JSON.stringify({ urls: collectVisibleCatalogPreviewUrls() }));
+    const selectedEntries = collectVisibleCatalogPreviewEntries();
+    localStorage.setItem('auracall.previewSession.preview-1', JSON.stringify({ items: selectedEntries, urls: selectedEntries.map((entry) => entry.url) }));
     window.open('/account-mirror/preview-session?session=' + encodeURIComponent('preview-1'), '_blank', 'noopener,noreferrer');
     setMirrorCatalogBatchNotice('Opened preview session for 1 visible preview URL(s).', 'ok');
   }
@@ -98,7 +100,9 @@ const dashboardHtml = `
   <section id="mirrorPreviewSessionPanel"><h2>Cached Preview Session</h2><div id="mirrorPreviewSessionNotice">Rendering 1 session URL(s)</div><div id="mirrorPreviewSessionGrid" class="preview-session-grid"></div></section>
   function initializeMirrorPreviewSession() {}
   function readMirrorPreviewSessionUrls() { return []; }
+  function normalizeMirrorPreviewSessionItems() { return []; }
   function renderMirrorPreviewSession() { return 'Rendering session URL(s)'; }
+  function renderMirrorPreviewSessionItem() { return '<dt>Item ID</dt><dd>artifact_1</dd><span>boundIdentity</span>'; }
   async function copyMirrorPreviewSessionUrls() {}
   function downloadMirrorPreviewSessionUrls() {}
   function downloadVisibleMirrorCatalogPreviewUrls() {

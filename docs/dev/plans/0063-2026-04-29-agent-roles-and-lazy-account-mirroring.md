@@ -778,5 +778,6 @@ account-mirror asset endpoint.
 The filtered table also has `Preview visible URL list`, `Review visible
 previews`, `Open visible previews`, `Copy visible preview URLs`, and `Download
 visible preview URL list` batch actions that inspect, render in a single
-cache-only preview session, open, or export the deduplicated local/remote
-preview URLs for the currently visible rows.
+cache-only preview session with provider/kind/title/item labels, open, or
+export the deduplicated local/remote preview URLs for the currently visible
+rows.

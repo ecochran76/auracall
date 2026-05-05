@@ -14697,6 +14697,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('buildMirrorCatalogItemAssetPath');
       expect(html).toContain('copyCatalogPreviewUrl');
       expect(html).toContain('collectVisibleCatalogPreviewUrls');
+      expect(html).toContain('collectVisibleCatalogPreviewEntries');
       expect(html).toContain('showVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('hideVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('reviewVisibleMirrorCatalogPreviews');
@@ -14713,6 +14714,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('initializeMirrorPreviewSession');
       expect(html).toContain('renderMirrorPreviewSession');
       expect(html).toContain('readMirrorPreviewSessionUrls');
+      expect(html).toContain('normalizeMirrorPreviewSessionItems');
       expect(html).toContain('data-catalog-preview-url');
       expect(html).toContain('Open Preview');
       expect(html).toContain('Copy URL');
@@ -14735,6 +14737,9 @@ describe('http responses adapter', () => {
       expect(html).toContain("window.open(url, '_blank', 'noopener,noreferrer')");
       expect(html).toContain('/account-mirror/preview-session?session=');
       expect(html).toContain('auracall.previewSession.');
+      expect(html).toContain('items: selectedEntries');
+      expect(html).toContain('boundIdentity');
+      expect(html).toContain('<dt>Item ID</dt>');
       expect(html).toContain('navigator.clipboard.writeText');
       expect(html).toContain('text/plain;charset=utf-8');
       expect(html).toContain('URL.createObjectURL');
@@ -14934,7 +14939,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('mirrorPreviewSessionGrid');
       expect(html).toContain('initializeMirrorPreviewSession');
       expect(html).toContain('readMirrorPreviewSessionUrls');
+      expect(html).toContain('normalizeMirrorPreviewSessionItems');
       expect(html).toContain('renderMirrorPreviewSessionItem');
+      expect(html).toContain('<dt>Item ID</dt>');
+      expect(html).toContain('boundIdentity');
       expect(html).toContain('copyMirrorPreviewSessionUrls');
       expect(html).toContain('downloadMirrorPreviewSessionUrls');
       expect(html).toContain('preview-session-grid');

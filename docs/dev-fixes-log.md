@@ -15514,3 +15514,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   Add a cache-only `/account-mirror/preview-session` page and a `Review visible
   previews` action that renders up to 24 selected preview URLs in one dashboard
   view.
+- 2026-05-04: Preview-session tiles need context beyond opaque URLs. Carry
+  catalog row metadata into preview sessions and render provider, profile,
+  kind, title, item id, identity, and updated timestamp beside each asset.

@@ -24290,6 +24290,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run install:user-runtime`
   - installed `/home/ecochran76/.local/bin/auracall api ops-browser-status --json`
+    still reports `.dashboard.hasAccountMirrorPreviewSessionPage=true` and
+    `.dashboard.hasCatalogBatchPreviewSessionReview=true`
+  - installed `/account-mirror?provider=chatgpt&kind=artifacts&preview=previewable&sort=preview-first&limit=1`
+    includes `collectVisibleCatalogPreviewEntries`, `items: selectedEntries`,
+    and `boundIdentity`
+  - installed `/account-mirror/preview-session?url=https%3A%2F%2Fexample.com%2Fasset.png`
+    includes `normalizeMirrorPreviewSessionItems`,
+    `renderMirrorPreviewSessionItem`, metadata fields, and `<dt>Item ID</dt>`
+  - `pnpm run install:user-runtime`
+  - installed `/home/ecochran76/.local/bin/auracall api ops-browser-status --json`
     reports `.dashboard.hasAccountMirrorPreviewSessionPage=true` and
     `.dashboard.hasCatalogBatchPreviewSessionReview=true`
   - installed `/account-mirror/preview-session?url=https%3A%2F%2Fexample.com%2Fasset.png`
@@ -25874,6 +25884,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     and provides copy/download controls for the session URL list
   - dashboard CLI contract now asserts the preview-session route and batch
     review affordance
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers|preview session" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing lint-warning debt (`noUselessContinue`,
+    `noNonNullAssertion`)
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+
+## Turn 109 | 2026-05-04
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make preview-session tiles self-describing instead of URL-only.
+- Change:
+  - visible preview collection now builds deduplicated entries with URL plus
+    provider, runtime profile, kind, title, item id, identity, and updated
+    timestamp
+  - `Review visible previews` stores those entries in the local preview-session
+    payload while preserving URL-only fallback compatibility
+  - preview-session tiles now render catalog metadata labels beside each asset
+  - dashboard CLI contract now asserts the metadata-aware session path
 - Validation:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers|preview session" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
