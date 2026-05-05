@@ -25792,6 +25792,37 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run plans:audit -- --keep 63`
   - `git diff --check`
 
+## Turn 106 | 2026-05-04
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: let operators inspect the visible preview URL export set before
+  copying or downloading it.
+- Change:
+  - added `Preview visible URL list` to the account mirror catalog controls
+  - the preview action opens a compact drawer with the deduplicated visible
+    preview URL list, using the same collector as copy/download
+  - dashboard CLI contract now asserts the batch preview URL drawer
+    affordance
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing lint-warning debt (`noUselessContinue`,
+    `noNonNullAssertion`)
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `/home/ecochran76/.local/bin/auracall api ops-browser-status --json`
+    reports `.dashboard.hasCatalogBatchPreviewUrlDrawer=true`,
+    `.dashboard.hasCatalogBatchPreviewUrlCopy=true`, and
+    `.dashboard.hasCatalogBatchPreviewUrlDownload=true`
+  - installed `/account-mirror?provider=chatgpt&kind=artifacts&preview=previewable&sort=preview-first&limit=1`
+    includes `showVisibleMirrorCatalogPreviewUrls`,
+    `hideVisibleMirrorCatalogPreviewUrls`, `mirrorCatalogPreviewUrlDrawer`,
+    `mirrorCatalogPreviewUrlList`, and `Preview visible URL list`
+
 ## Turn 104 | 2026-05-04
 
 - Continued implementation plan:

@@ -3689,10 +3689,18 @@ function createOperatorBrowserDashboardHtml(input: {
             <input id="mirrorCatalogLimit" type="number" min="0" max="500" step="1" value="50">
           </label>
           <button id="loadMirrorCatalog" class="primary">Search Cache</button>
+          <button id="showVisibleMirrorCatalogPreviewUrls" type="button">Preview visible URL list</button>
           <button id="copyVisibleMirrorCatalogPreviewUrls" type="button">Copy visible preview URLs</button>
           <button id="downloadVisibleMirrorCatalogPreviewUrls" type="button">Download visible preview URL list</button>
         </div>
         <div id="mirrorCatalogBatchNotice" class="notice" role="status" aria-live="polite">No catalog batch action yet.</div>
+        <div id="mirrorCatalogPreviewUrlDrawer" class="notice" hidden>
+          <div class="row" style="justify-content: space-between; margin-bottom: 8px;">
+            <strong>Visible preview URLs</strong>
+            <button id="hideVisibleMirrorCatalogPreviewUrls" type="button">Close</button>
+          </div>
+          <pre id="mirrorCatalogPreviewUrlList">No visible preview URLs.</pre>
+        </div>
         <div id="mirrorCatalogSummary" class="notice">Catalog reads are cache-only and do not enqueue browser work.</div>
         <div id="mirrorCatalogResults" class="muted" style="margin-bottom: 10px;">No catalog loaded.</div>
         <div id="mirrorCatalogDetail" class="catalog-detail">
@@ -4476,6 +4484,22 @@ function createOperatorBrowserDashboardHtml(input: {
         .filter(Boolean)
         .map((url) => new URL(url, window.location.origin).href)
         .filter((url, index, urls) => urls.indexOf(url) === index);
+    }
+
+    function showVisibleMirrorCatalogPreviewUrls() {
+      const urls = collectVisibleCatalogPreviewUrls();
+      $('mirrorCatalogPreviewUrlDrawer').hidden = false;
+      $('mirrorCatalogPreviewUrlList').textContent = urls.length ? urls.join('\\n') : 'No visible preview URLs.';
+      setMirrorCatalogBatchNotice(
+        urls.length
+          ? 'Previewing ' + String(urls.length) + ' visible preview URL(s).'
+          : 'No visible preview URLs to preview.',
+        urls.length ? 'ok' : 'warn',
+      );
+    }
+
+    function hideVisibleMirrorCatalogPreviewUrls() {
+      $('mirrorCatalogPreviewUrlDrawer').hidden = true;
     }
 
     async function copyVisibleMirrorCatalogPreviewUrls() {
@@ -5393,6 +5417,8 @@ function createOperatorBrowserDashboardHtml(input: {
     $('resumeMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('resume'));
     $('cancelMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('cancel'));
     $('loadMirrorCatalog').addEventListener('click', loadMirrorCatalog);
+    $('showVisibleMirrorCatalogPreviewUrls').addEventListener('click', showVisibleMirrorCatalogPreviewUrls);
+    $('hideVisibleMirrorCatalogPreviewUrls').addEventListener('click', hideVisibleMirrorCatalogPreviewUrls);
     $('copyVisibleMirrorCatalogPreviewUrls').addEventListener('click', copyVisibleMirrorCatalogPreviewUrls);
     $('downloadVisibleMirrorCatalogPreviewUrls').addEventListener('click', downloadVisibleMirrorCatalogPreviewUrls);
     $('mirrorCatalogSearch').addEventListener('keydown', (event) => {

@@ -15504,3 +15504,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-04: Clipboard-only preview URL export is not durable enough for
   operator handoff. Add a `Download visible preview URL list` action that saves
   the same deduplicated visible preview URL set as a timestamped text file.
+- 2026-05-04: Batch preview URL export needs a review step before clipboard or
+  file handoff. Add a `Preview visible URL list` drawer that uses the same
+  deduplicated visible preview URL collector as copy/download.

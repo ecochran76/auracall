@@ -775,6 +775,7 @@ local cached assets first while staying entirely cache-only.
 Rows with local or remote preview URLs now expose direct `Open Preview` and
 `Copy URL` actions, with local blobs still routed through the bounded
 account-mirror asset endpoint.
-The filtered table also has `Copy visible preview URLs` and `Download visible
-preview URL list` batch actions that export the deduplicated local/remote
-preview URLs for the currently visible rows.
+The filtered table also has `Preview visible URL list`, `Copy visible preview
+URLs`, and `Download visible preview URL list` batch actions that inspect or
+export the deduplicated local/remote preview URLs for the currently visible
+rows.
