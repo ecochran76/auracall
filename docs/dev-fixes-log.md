@@ -15507,3 +15507,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-04: Batch preview URL export needs a review step before clipboard or
   file handoff. Add a `Preview visible URL list` drawer that uses the same
   deduplicated visible preview URL collector as copy/download.
+- 2026-05-04: Operators need a bounded way to visually inspect the visible
+  preview set. Add an `Open visible previews` action that opens the first eight
+  deduplicated visible preview URLs and reports when the set was capped.

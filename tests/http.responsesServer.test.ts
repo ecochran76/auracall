@@ -14697,6 +14697,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('collectVisibleCatalogPreviewUrls');
       expect(html).toContain('showVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('hideVisibleMirrorCatalogPreviewUrls');
+      expect(html).toContain('openVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('copyVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('downloadVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('formatVisibleCatalogPreviewUrlsFilename');
@@ -14709,11 +14710,16 @@ describe('http responses adapter', () => {
       expect(html).toContain('Copy URL');
       expect(html).toContain('Preview visible URL list');
       expect(html).toContain('Visible preview URLs');
+      expect(html).toContain('Open visible previews');
       expect(html).toContain('Copy visible preview URLs');
       expect(html).toContain('Download visible preview URL list');
       expect(html).toContain('No visible preview URLs.');
+      expect(html).toContain('No visible preview URLs to open.');
       expect(html).toContain('Previewing ');
+      expect(html).toContain('Opened ');
+      expect(html).toContain('Limited to first ');
       expect(html).toContain('visible preview URL(s)');
+      expect(html).toContain("window.open(url, '_blank', 'noopener,noreferrer')");
       expect(html).toContain('navigator.clipboard.writeText');
       expect(html).toContain('text/plain;charset=utf-8');
       expect(html).toContain('URL.createObjectURL');
@@ -14881,6 +14887,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('copyCatalogPreviewUrl');
       expect(html).toContain('showVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('hideVisibleMirrorCatalogPreviewUrls');
+      expect(html).toContain('openVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('copyVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('downloadVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('mirrorCatalogBatchNotice');

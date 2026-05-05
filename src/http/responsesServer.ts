@@ -3690,6 +3690,7 @@ function createOperatorBrowserDashboardHtml(input: {
           </label>
           <button id="loadMirrorCatalog" class="primary">Search Cache</button>
           <button id="showVisibleMirrorCatalogPreviewUrls" type="button">Preview visible URL list</button>
+          <button id="openVisibleMirrorCatalogPreviewUrls" type="button">Open visible previews</button>
           <button id="copyVisibleMirrorCatalogPreviewUrls" type="button">Copy visible preview URLs</button>
           <button id="downloadVisibleMirrorCatalogPreviewUrls" type="button">Download visible preview URL list</button>
         </div>
@@ -4500,6 +4501,20 @@ function createOperatorBrowserDashboardHtml(input: {
 
     function hideVisibleMirrorCatalogPreviewUrls() {
       $('mirrorCatalogPreviewUrlDrawer').hidden = true;
+    }
+
+    function openVisibleMirrorCatalogPreviewUrls() {
+      const urls = collectVisibleCatalogPreviewUrls();
+      if (!urls.length) {
+        setMirrorCatalogBatchNotice('No visible preview URLs to open.', 'warn');
+        return;
+      }
+      const openLimit = 8;
+      urls.slice(0, openLimit).forEach((url) => {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      });
+      const suffix = urls.length > openLimit ? ' Limited to first ' + String(openLimit) + ' of ' + String(urls.length) + '.' : '';
+      setMirrorCatalogBatchNotice('Opened ' + String(Math.min(urls.length, openLimit)) + ' visible preview URL(s).' + suffix, 'ok');
     }
 
     async function copyVisibleMirrorCatalogPreviewUrls() {
@@ -5419,6 +5434,7 @@ function createOperatorBrowserDashboardHtml(input: {
     $('loadMirrorCatalog').addEventListener('click', loadMirrorCatalog);
     $('showVisibleMirrorCatalogPreviewUrls').addEventListener('click', showVisibleMirrorCatalogPreviewUrls);
     $('hideVisibleMirrorCatalogPreviewUrls').addEventListener('click', hideVisibleMirrorCatalogPreviewUrls);
+    $('openVisibleMirrorCatalogPreviewUrls').addEventListener('click', openVisibleMirrorCatalogPreviewUrls);
     $('copyVisibleMirrorCatalogPreviewUrls').addEventListener('click', copyVisibleMirrorCatalogPreviewUrls);
     $('downloadVisibleMirrorCatalogPreviewUrls').addEventListener('click', downloadVisibleMirrorCatalogPreviewUrls);
     $('mirrorCatalogSearch').addEventListener('keydown', (event) => {

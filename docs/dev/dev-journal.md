@@ -25767,6 +25767,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run docs:list`
   - `pnpm run plans:audit -- --keep 63`
   - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `/home/ecochran76/.local/bin/auracall api ops-browser-status --json`
+    reports `.dashboard.hasCatalogBatchPreviewUrlOpen=true` alongside the
+    existing drawer/copy/download batch preview URL controls
+  - installed `/account-mirror?provider=chatgpt&kind=artifacts&preview=previewable&sort=preview-first&limit=1`
+    includes `openVisibleMirrorCatalogPreviewUrls`, `Open visible previews`,
+    `window.open`, and capped-open feedback strings
+  - `git diff --check`
 
 ## Turn 105 | 2026-05-04
 
@@ -25822,6 +25830,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     includes `showVisibleMirrorCatalogPreviewUrls`,
     `hideVisibleMirrorCatalogPreviewUrls`, `mirrorCatalogPreviewUrlDrawer`,
     `mirrorCatalogPreviewUrlList`, and `Preview visible URL list`
+
+## Turn 107 | 2026-05-04
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: let operators visually inspect a bounded set of visible cached
+  previews without clicking rows one at a time.
+- Change:
+  - added `Open visible previews` to the account mirror catalog controls
+  - the action opens up to eight deduplicated visible preview URLs in new tabs
+    and reports when the visible set was capped
+  - dashboard CLI contract now asserts the batch preview URL open affordance
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing lint-warning debt (`noUselessContinue`,
+    `noNonNullAssertion`)
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
 
 ## Turn 104 | 2026-05-04
 
