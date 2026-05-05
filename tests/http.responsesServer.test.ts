@@ -14731,6 +14731,13 @@ describe('http responses adapter', () => {
       expect(html).toContain('Load saved session');
       expect(html).toContain('Rename saved session');
       expect(html).toContain('Delete saved session');
+      expect(html).toContain('Saved session search');
+      expect(html).toContain('savedMirrorPreviewSessionSearch');
+      expect(html).toContain('savedMirrorPreviewSessionTable');
+      expect(html).toContain('renderSavedMirrorPreviewSessionTable');
+      expect(html).toContain('handleSavedMirrorPreviewSessionTableClick');
+      expect(html).toContain('data-saved-preview-action="load"');
+      expect(html).toContain('/account-mirror/preview-session?saved=');
       expect(html).toContain('mirrorPreviewSessionName');
       expect(html).toContain('savedMirrorPreviewSessions');
       expect(html).toContain('saveMirrorPreviewSession');

@@ -296,7 +296,10 @@ Terminology note:
   sessions can be saved as named records under the account-mirror cache for
   later dashboard/API readback. In `sqlite`/`dual` cache mode these named
   sessions live in `account-mirror/cache.sqlite`; legacy JSON records under
-  `account-mirror/preview-sessions/` remain readable for compatibility.
+  `account-mirror/preview-sessions/` remain readable for compatibility. The
+  Preview Session page includes a searchable saved-session table with
+  created/updated timestamps, item counts, content badges, and one-click
+  load/open actions.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

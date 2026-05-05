@@ -793,4 +793,6 @@ dashboard controls so reviewed preview sets can be reopened by id. In
 `account-mirror/cache.sqlite`; the older `account-mirror/preview-sessions/*.json`
 records remain readable as a compatibility/import layer. The same local API
 surface also supports `PATCH` rename and `DELETE` removal for saved preview
-sessions, with dashboard controls wired to the saved-session selector.
+sessions, with dashboard controls wired to the saved-session selector. The
+Preview Session page also includes a compact saved-session browser with search,
+created/updated timestamps, item counts, content badges, and load/open actions.

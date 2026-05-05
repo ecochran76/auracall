@@ -15536,3 +15536,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-04: Saved preview sessions need lifecycle controls after becoming
   durable cache rows. Add API and dashboard rename/delete paths and ensure
   delete removes both SQLite and legacy JSON records.
+- 2026-05-04: Saved preview sessions need a compact browser, not just a
+  selector. Add a searchable saved-session table with timestamps, item counts,
+  content badges, and one-click load/open actions.

@@ -3901,6 +3901,13 @@ function createOperatorBrowserDashboardHtml(input: {
         <h2>Cached Preview Session</h2>
         <div id="mirrorPreviewSessionNotice" class="notice" role="status" aria-live="polite">No preview session loaded.</div>
         <div class="row" style="margin-bottom: 10px;">
+          <label>Saved session search
+            <input id="savedMirrorPreviewSessionSearch" placeholder="name, id, provider, kind, or URL">
+          </label>
+          <button id="refreshSavedMirrorPreviewSessionTable" type="button">Refresh saved session list</button>
+        </div>
+        <div id="savedMirrorPreviewSessionTable" class="muted" style="margin-bottom: 10px;">No saved preview sessions loaded.</div>
+        <div class="row" style="margin-bottom: 10px;">
           <button id="selectAllMirrorPreviewSessionItems" type="button">Select all</button>
           <button id="clearMirrorPreviewSessionSelection" type="button">Select none</button>
           <button id="copyMirrorPreviewSessionUrls" type="button">Copy selected URLs</button>
@@ -3984,6 +3991,7 @@ function createOperatorBrowserDashboardHtml(input: {
     let mirrorPreviewSessionUrls = [];
     let mirrorPreviewSessionItems = [];
     let mirrorPreviewSessionSelectedUrls = new Set();
+    let savedMirrorPreviewSessionsCache = [];
 
     async function fetchJson(path) {
       const response = await fetch(path, { cache: 'no-store' });
@@ -4437,6 +4445,10 @@ function createOperatorBrowserDashboardHtml(input: {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+    }
+
+    function normalizeSearchTerm(value) {
+      return String(value || '').trim().toLowerCase();
     }
 
     function formatDesiredActualHealth(targets) {
@@ -5073,13 +5085,90 @@ function createOperatorBrowserDashboardHtml(input: {
       try {
         const payload = await fetchJson('/v1/account-mirrors/preview-sessions?limit=50');
         const sessions = Array.isArray(payload.data) ? payload.data : [];
+        savedMirrorPreviewSessionsCache = sessions;
         select.innerHTML = '<option value="">saved sessions</option>' + sessions.map((session) => {
           const label = (session.name || session.id || 'preview session') + ' (' + String(session.itemCount || 0) + ')';
           return '<option value="' + escapeHtml(session.id || '') + '">' + escapeHtml(label) + '</option>';
         }).join('');
         if (selectedId) select.value = selectedId;
+        renderSavedMirrorPreviewSessionTable();
       } catch {
+        savedMirrorPreviewSessionsCache = [];
         select.innerHTML = '<option value="">saved sessions unavailable</option>';
+        $('savedMirrorPreviewSessionTable').innerHTML = '<div class="notice notice-warn">Saved sessions unavailable.</div>';
+      }
+    }
+
+    function renderSavedMirrorPreviewSessionTable() {
+      const search = normalizeSearchTerm($('savedMirrorPreviewSessionSearch').value);
+      const sessions = savedMirrorPreviewSessionsCache.filter((session) => {
+        if (!search) return true;
+        return buildSavedPreviewSessionSearchText(session).includes(search);
+      });
+      if (!sessions.length) {
+        $('savedMirrorPreviewSessionTable').innerHTML = '<div class="notice">No saved preview sessions match the current search.</div>';
+        return;
+      }
+      const rows = sessions.map((session) => {
+        const id = session.id || '';
+        const openPath = '/account-mirror/preview-session?saved=' + encodeURIComponent(id);
+        return '<tr data-preview-session-id="' + escapeHtml(id) + '">'
+          + '<td class="wrap"><strong>' + escapeHtml(session.name || id || 'preview session') + '</strong><br><span class="muted">' + escapeHtml(id) + '</span></td>'
+          + '<td>' + escapeHtml(String(session.itemCount || 0)) + '</td>'
+          + '<td>' + escapeHtml(formatPreviewSessionTimestamp(session.createdAt)) + '</td>'
+          + '<td>' + escapeHtml(formatPreviewSessionTimestamp(session.updatedAt)) + '</td>'
+          + '<td class="wrap">' + renderSavedPreviewSessionKindBadges(session) + '</td>'
+          + '<td><div class="catalog-row-actions">'
+          + '<button class="link-button" type="button" data-saved-preview-action="load" data-preview-session-id="' + escapeHtml(id) + '">Load</button>'
+          + '<a href="' + escapeHtml(openPath) + '" target="_blank" rel="noreferrer">Open</a>'
+          + '</div></td>'
+          + '</tr>';
+      }).join('');
+      $('savedMirrorPreviewSessionTable').innerHTML = '<div class="table-wrap"><table id="savedMirrorPreviewSessionsTable">'
+        + '<thead><tr><th>Name</th><th>Items</th><th>Created</th><th>Updated</th><th>Content</th><th>Actions</th></tr></thead>'
+        + '<tbody>' + rows + '</tbody></table></div>';
+    }
+
+    function buildSavedPreviewSessionSearchText(session) {
+      const values = [
+        session.id,
+        session.name,
+        session.createdAt,
+        session.updatedAt,
+      ];
+      const items = session.manifest && Array.isArray(session.manifest.items) ? session.manifest.items : [];
+      for (const item of items) {
+        values.push(item.provider, item.runtimeProfile, item.kind, item.title, item.itemId, item.boundIdentity, item.url);
+      }
+      return normalizeSearchTerm(values.filter(Boolean).join(' '));
+    }
+
+    function renderSavedPreviewSessionKindBadges(session) {
+      const items = session.manifest && Array.isArray(session.manifest.items) ? session.manifest.items : [];
+      const counts = new Map();
+      for (const item of items) {
+        const key = [item.provider || 'provider?', item.kind || 'kind?'].join('/');
+        counts.set(key, (counts.get(key) || 0) + 1);
+      }
+      if (!counts.size) return '<span class="muted">metadata unavailable</span>';
+      return '<div class="badges">' + Array.from(counts.entries()).map(([key, count]) =>
+        '<span class="badge">' + escapeHtml(key) + ' ' + escapeHtml(String(count)) + '</span>'
+      ).join('') + '</div>';
+    }
+
+    function formatPreviewSessionTimestamp(value) {
+      const timestamp = Date.parse(String(value || ''));
+      if (!Number.isFinite(timestamp)) return 'unknown';
+      return new Date(timestamp).toLocaleString();
+    }
+
+    function handleSavedMirrorPreviewSessionTableClick(event) {
+      const action = event.target && event.target.getAttribute && event.target.getAttribute('data-saved-preview-action');
+      if (action !== 'load') return;
+      const id = event.target.getAttribute('data-preview-session-id');
+      if (id) {
+        $('savedMirrorPreviewSessions').value = id;
+        void loadSavedMirrorPreviewSessionById(id);
       }
     }
 
@@ -6082,6 +6171,9 @@ function createOperatorBrowserDashboardHtml(input: {
     $('loadSavedMirrorPreviewSession').addEventListener('click', loadSelectedSavedMirrorPreviewSession);
     $('renameSavedMirrorPreviewSession').addEventListener('click', renameSelectedSavedMirrorPreviewSession);
     $('deleteSavedMirrorPreviewSession').addEventListener('click', deleteSelectedSavedMirrorPreviewSession);
+    $('refreshSavedMirrorPreviewSessionTable').addEventListener('click', () => refreshSavedMirrorPreviewSessions($('savedMirrorPreviewSessions').value));
+    $('savedMirrorPreviewSessionSearch').addEventListener('input', renderSavedMirrorPreviewSessionTable);
+    $('savedMirrorPreviewSessionTable').addEventListener('click', handleSavedMirrorPreviewSessionTableClick);
     $('loadMirrorPreviewSessionManifest').addEventListener('change', loadMirrorPreviewSessionManifestFile);
     $('mirrorPreviewSessionGrid').addEventListener('change', updateMirrorPreviewSessionSelection);
     $('mirrorCatalogSearch').addEventListener('keydown', (event) => {

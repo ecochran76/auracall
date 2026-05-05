@@ -26088,6 +26088,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - direct SQLite read from `~/.auracall/cache/account-mirror/cache.sqlite`
     confirmed `installed-manage-smoke` row count was zero after delete
 
+## Turn 116 | 2026-05-04
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: add a compact saved-session browser to the Preview Session page.
+- Change:
+  - saved preview sessions now render in a searchable table
+  - table rows show name, id, item count, created/updated timestamps, and
+    provider/kind content badges
+  - each row exposes one-click `Load` and `Open` actions
+  - dashboard CLI contract now asserts the saved-session browser controls
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "preview session|api ops browser CLI helpers|browser operator dashboard" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing lint-warning debt (`noUselessContinue`,
+    `noNonNullAssertion`)
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed `/account-mirror/preview-session` HTML includes saved-session
+    search, table renderer, load click handler, and saved-session deep links
+  - installed `GET /v1/account-mirrors/preview-sessions?limit=5` returned two
+    saved sessions with id, name, item count, and timestamps
+
 ## Turn 104 | 2026-05-04
 
 - Continued implementation plan:
