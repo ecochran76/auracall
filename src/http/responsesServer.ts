@@ -3786,6 +3786,7 @@ function createOperatorBrowserDashboardHtml(input: {
           <button id="clearMirrorPreviewSessionSelection" type="button">Select none</button>
           <button id="copyMirrorPreviewSessionUrls" type="button">Copy selected URLs</button>
           <button id="downloadMirrorPreviewSessionUrls" type="button">Download selected URL list</button>
+          <button id="downloadMirrorPreviewSessionManifest" type="button">Download selected manifest</button>
         </div>
         <div id="mirrorPreviewSessionGrid" class="preview-session-grid">No previews loaded.</div>
       </section>
@@ -4788,8 +4789,48 @@ function createOperatorBrowserDashboardHtml(input: {
       $('mirrorPreviewSessionNotice').className = 'notice notice-ok';
     }
 
+    function downloadMirrorPreviewSessionManifest() {
+      const items = selectedMirrorPreviewSessionItems();
+      if (!items.length) {
+        $('mirrorPreviewSessionNotice').textContent = 'No selected session items to export.';
+        $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
+        return;
+      }
+      const generatedAt = new Date().toISOString();
+      const manifest = {
+        schema: 'auracall.preview-session-manifest.v1',
+        generatedAt,
+        count: items.length,
+        items: items.map((item, index) => ({
+          index: index + 1,
+          provider: item.provider || '',
+          runtimeProfile: item.runtimeProfile || '',
+          kind: item.kind || '',
+          title: item.title || '',
+          itemId: item.itemId || '',
+          boundIdentity: item.boundIdentity || '',
+          updatedAt: item.updatedAt || '',
+          url: item.url,
+        })),
+      };
+      const blob = new Blob([JSON.stringify(manifest, null, 2) + '\\n'], { type: 'application/json;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'auracall-preview-session-manifest-' + generatedAt.replace(/[:.]/g, '-') + '.json';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+      $('mirrorPreviewSessionNotice').textContent = 'Downloaded selected manifest for ' + String(items.length) + ' session item(s).';
+      $('mirrorPreviewSessionNotice').className = 'notice notice-ok';
+    }
+
     function selectedMirrorPreviewSessionUrls() {
       return mirrorPreviewSessionUrls.filter((url) => mirrorPreviewSessionSelectedUrls.has(url));
+    }
+
+    function selectedMirrorPreviewSessionItems() {
+      return mirrorPreviewSessionItems.filter((item) => mirrorPreviewSessionSelectedUrls.has(item.url));
     }
 
     function setMirrorPreviewSessionSelection(selectAll) {
@@ -5703,6 +5744,7 @@ function createOperatorBrowserDashboardHtml(input: {
     $('clearMirrorPreviewSessionSelection').addEventListener('click', () => setMirrorPreviewSessionSelection(false));
     $('copyMirrorPreviewSessionUrls').addEventListener('click', copyMirrorPreviewSessionUrls);
     $('downloadMirrorPreviewSessionUrls').addEventListener('click', downloadMirrorPreviewSessionUrls);
+    $('downloadMirrorPreviewSessionManifest').addEventListener('click', downloadMirrorPreviewSessionManifest);
     $('mirrorPreviewSessionGrid').addEventListener('change', updateMirrorPreviewSessionSelection);
     $('mirrorCatalogSearch').addEventListener('keydown', (event) => {
       if (event.key === 'Enter') loadMirrorCatalog();

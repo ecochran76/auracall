@@ -401,8 +401,12 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('updateMirrorPreviewSessionSelection')
       && html.includes('Copy selected URLs')
       && html.includes('Download selected URL list')
+      && html.includes('Download selected manifest')
+      && html.includes('selectedMirrorPreviewSessionItems')
       && html.includes('copyMirrorPreviewSessionUrls')
-      && html.includes('downloadMirrorPreviewSessionUrls'),
+      && html.includes('downloadMirrorPreviewSessionUrls')
+      && html.includes('downloadMirrorPreviewSessionManifest')
+      && html.includes('auracall.preview-session-manifest.v1'),
     hasCatalogBatchPreviewUrlOpen: html.includes('openVisibleMirrorCatalogPreviewUrls')
       && html.includes('Open visible previews')
       && html.includes("window.open(url, '_blank', 'noopener,noreferrer')")

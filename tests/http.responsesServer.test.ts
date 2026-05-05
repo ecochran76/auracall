@@ -14719,6 +14719,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('updateMirrorPreviewSessionSelection');
       expect(html).toContain('Copy selected URLs');
       expect(html).toContain('Download selected URL list');
+      expect(html).toContain('Download selected manifest');
+      expect(html).toContain('selectedMirrorPreviewSessionItems');
+      expect(html).toContain('downloadMirrorPreviewSessionManifest');
+      expect(html).toContain('auracall.preview-session-manifest.v1');
       expect(html).toContain('initializeMirrorPreviewSession');
       expect(html).toContain('renderMirrorPreviewSession');
       expect(html).toContain('readMirrorPreviewSessionUrls');
@@ -14957,6 +14961,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('updateMirrorPreviewSessionSelection');
       expect(html).toContain('Copy selected URLs');
       expect(html).toContain('Download selected URL list');
+      expect(html).toContain('Download selected manifest');
+      expect(html).toContain('selectedMirrorPreviewSessionItems');
+      expect(html).toContain('downloadMirrorPreviewSessionManifest');
+      expect(html).toContain('auracall.preview-session-manifest.v1');
       expect(html).toContain('copyMirrorPreviewSessionUrls');
       expect(html).toContain('downloadMirrorPreviewSessionUrls');
       expect(html).toContain('preview-session-grid');

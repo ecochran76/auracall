@@ -782,4 +782,6 @@ cache-only preview session with provider/kind/title/item labels, open, or
 export the deduplicated local/remote preview URLs for the currently visible
 rows. Preview sessions default all tiles selected, then let operators select
 all, select none, or narrow export to a reviewed subset before copying or
-downloading URLs.
+downloading URLs. Operators can also download a selected JSON manifest with the
+same URL plus provider, runtime profile, kind, title, item id, identity, and
+updated timestamp context.

@@ -15520,3 +15520,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-04: Preview-session export needs curation before handoff. Default
   all cached preview tiles to selected, add select-all/select-none controls,
   and make session copy/download export only the selected URL subset.
+- 2026-05-04: URL-only preview-session export loses catalog context. Add a
+  selected JSON manifest export with schema, timestamp, count, URL, provider,
+  profile, kind, title, item id, identity, and updated timestamp fields.

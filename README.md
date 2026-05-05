@@ -285,7 +285,8 @@ Terminology note:
   asset rows also expose `Open Preview` and `Copy URL` actions directly from
   the catalog table, plus batch actions to inspect, review in one cache-only
   preview session with provider/kind/title/item metadata, select reviewed
-  items, open, copy, or download selected visible preview URLs.
+  items, open, copy, download selected visible preview URLs, or export a
+  selected JSON manifest for operator handoff.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

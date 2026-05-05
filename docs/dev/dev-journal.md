@@ -25943,6 +25943,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     includes selected URL controls and selection helper functions
   - `git diff --check`
 
+## Turn 111 | 2026-05-04
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: preserve catalog context when preview-session selections are handed
+  off outside the dashboard.
+- Change:
+  - added `Download selected manifest` to cached preview sessions
+  - manifest export uses `auracall.preview-session-manifest.v1`
+  - selected manifest rows include URL plus provider, runtime profile, kind,
+    title, item id, identity, and updated timestamp
+  - dashboard CLI contract now asserts the selected manifest export path
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers|preview session" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing lint-warning debt (`noUselessContinue`,
+    `noNonNullAssertion`)
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run install:user-runtime`
+  - installed `/home/ecochran76/.local/bin/auracall api ops-browser-status --json`
+    reports preview-session and batch review contract flags as true
+  - installed `/account-mirror/preview-session?url=https%3A%2F%2Fexample.com%2Fasset.png`
+    includes `Download selected manifest`,
+    `downloadMirrorPreviewSessionManifest`,
+    `selectedMirrorPreviewSessionItems`, and
+    `auracall.preview-session-manifest.v1`
+  - `git diff --check`
+
 ## Turn 104 | 2026-05-04
 
 - Continued implementation plan:
