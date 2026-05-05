@@ -14570,6 +14570,17 @@ describe('http responses adapter', () => {
         port: 0,
         dashboardUrl: 'http://auracall.localhost/ops/browser',
         publicDashboardUrl: 'https://auracall.ecochran.dyndns.org/ops/browser',
+        serviceRouting: {
+          localHostname: 'auracall.localhost',
+          externalHostname: 'auracall.ecochran.dyndns.org',
+          localBaseUrl: 'http://auracall.localhost',
+          externalBaseUrl: 'https://auracall.ecochran.dyndns.org',
+          dashboardPath: '/ops/browser',
+          accountMirrorPath: '/account-mirror',
+          proxyTarget: 'http://127.0.0.1:18095',
+          auth: 'authelia',
+          ingress: 'traefik',
+        },
       },
       {
         accountMirrorCompletionService: {
@@ -14625,6 +14636,35 @@ describe('http responses adapter', () => {
       expect((payload.routes as Record<string, unknown>).publicOperatorBrowserDashboardUrl).toBe(
         'https://auracall.ecochran.dyndns.org/ops/browser',
       );
+      expect((payload.routes as Record<string, unknown>).localServiceBaseUrl).toBe('http://auracall.localhost');
+      expect((payload.routes as Record<string, unknown>).externalServiceBaseUrl).toBe(
+        'https://auracall.ecochran.dyndns.org',
+      );
+      expect(payload.serviceDiscovery).toMatchObject({
+        bind: {
+          host: '127.0.0.1',
+          localOnly: true,
+        },
+        local: {
+          hostname: 'auracall.localhost',
+          baseUrl: 'http://auracall.localhost',
+          dashboardUrl: 'http://auracall.localhost/ops/browser',
+          accountMirrorUrl: 'http://auracall.localhost/account-mirror',
+        },
+        external: {
+          hostname: 'auracall.ecochran.dyndns.org',
+          baseUrl: 'https://auracall.ecochran.dyndns.org',
+          dashboardUrl: 'https://auracall.ecochran.dyndns.org/ops/browser',
+          accountMirrorUrl: 'https://auracall.ecochran.dyndns.org/account-mirror',
+        },
+        routing: {
+          dashboardPath: '/ops/browser',
+          accountMirrorPath: '/account-mirror',
+          proxyTarget: 'http://127.0.0.1:18095',
+          auth: 'authelia',
+          ingress: 'traefik',
+        },
+      });
     } finally {
       await server.close();
     }

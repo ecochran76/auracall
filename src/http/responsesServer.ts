@@ -148,6 +148,7 @@ export interface ResponsesHttpServerOptions {
   port?: number;
   dashboardUrl?: string;
   publicDashboardUrl?: string;
+  serviceRouting?: ApiServiceRoutingConfig;
   logger?: (message: string) => void;
   recoverRunsOnStart?: boolean;
   recoverRunsOnStartMaxRuns?: number;
@@ -304,6 +305,46 @@ interface AccountMirrorCompletionStatusSummary {
   recent: AccountMirrorCompletionOperation[];
 }
 
+interface ApiServiceRoutingConfig {
+  localHostname?: string;
+  externalHostname?: string;
+  localBaseUrl?: string;
+  externalBaseUrl?: string;
+  dashboardPath?: string;
+  accountMirrorPath?: string;
+  proxyTarget?: string;
+  auth?: string;
+  ingress?: string;
+}
+
+interface ApiServiceDiscovery {
+  bind: {
+    host: string;
+    port: number;
+    url: string;
+    localOnly: boolean;
+  };
+  local: {
+    hostname?: string;
+    baseUrl: string;
+    dashboardUrl: string;
+    accountMirrorUrl: string;
+  };
+  external?: {
+    hostname?: string;
+    baseUrl: string;
+    dashboardUrl: string;
+    accountMirrorUrl: string;
+  };
+  routing: {
+    dashboardPath: string;
+    accountMirrorPath: string;
+    proxyTarget?: string;
+    auth?: string;
+    ingress?: string;
+  };
+}
+
 interface HttpStatusResponse {
   object: 'status';
   ok: true;
@@ -315,6 +356,7 @@ interface HttpStatusResponse {
     localOnly: boolean;
     unauthenticated: boolean;
   };
+  serviceDiscovery: ApiServiceDiscovery;
   routes: {
     status: string;
     recoveryDetailTemplate: string;
@@ -344,6 +386,8 @@ interface HttpStatusResponse {
     accountMirrorDashboard: string;
     operatorBrowserDashboardUrl?: string;
     publicOperatorBrowserDashboardUrl?: string;
+    localServiceBaseUrl: string;
+    externalServiceBaseUrl?: string;
   };
   compatibility: {
     openai: true;
@@ -763,6 +807,7 @@ export async function createResponsesHttpServer(
           port: boundPort,
           dashboardUrl: options.dashboardUrl,
           publicDashboardUrl: options.publicDashboardUrl,
+          serviceRouting: options.serviceRouting,
           recoverySummary: statusResponseRecoverySummary,
           localClaimSummary: statusResponseLocalClaimSummary,
           runnerTopology,
@@ -1257,6 +1302,7 @@ export async function createResponsesHttpServer(
           port: boundPort,
           dashboardUrl: options.dashboardUrl,
           publicDashboardUrl: options.publicDashboardUrl,
+          serviceRouting: options.serviceRouting,
           localClaimSummary: await host.summarizeLocalClaimState({ sourceKind: 'direct' }),
           runnerTopology: await host.summarizeRunnerTopology(),
           runner: runnerState,
@@ -1701,6 +1747,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   serverOptions.port = serverOptions.port ?? apiConfig.port;
   serverOptions.dashboardUrl = serverOptions.dashboardUrl ?? apiConfig.dashboardUrl;
   serverOptions.publicDashboardUrl = serverOptions.publicDashboardUrl ?? apiConfig.publicDashboardUrl;
+  serverOptions.serviceRouting = serverOptions.serviceRouting ?? apiConfig.routing;
   assertResponsesHostAllowed(serverOptions.host, options.listenPublic ?? false);
   await terminateSamePortApiServeProcesses({
     port: serverOptions.port,
@@ -2144,6 +2191,7 @@ function createHttpStatusResponse(input: {
   port: number;
   dashboardUrl?: string;
   publicDashboardUrl?: string;
+  serviceRouting?: ApiServiceRoutingConfig;
   recoverySummary?: ExecutionServiceHostRecoverySummary;
   localClaimSummary?: ExecutionServiceHostLocalClaimSummary;
   runnerTopology: ExecutionServiceHostRunnerTopologySummary;
@@ -2158,6 +2206,13 @@ function createHttpStatusResponse(input: {
     ...input.accountMirrorScheduler,
     operatorStatus: createAccountMirrorSchedulerOperatorStatus(input.accountMirrorScheduler),
   };
+  const serviceDiscovery = buildApiServiceDiscovery({
+    host: input.host,
+    port: input.port,
+    dashboardUrl: input.dashboardUrl,
+    publicDashboardUrl: input.publicDashboardUrl,
+    serviceRouting: input.serviceRouting,
+  });
   return {
     object: 'status',
     ok: true,
@@ -2169,6 +2224,7 @@ function createHttpStatusResponse(input: {
       localOnly: isLoopbackHost(input.host),
       unauthenticated: true,
     },
+    serviceDiscovery,
     routes: {
       status: '/status',
       recoveryDetailTemplate: '/status/recovery/{run_id}',
@@ -2201,6 +2257,8 @@ function createHttpStatusResponse(input: {
       accountMirrorDashboard: '/account-mirror',
       ...(input.dashboardUrl ? { operatorBrowserDashboardUrl: input.dashboardUrl } : {}),
       ...(input.publicDashboardUrl ? { publicOperatorBrowserDashboardUrl: input.publicDashboardUrl } : {}),
+      localServiceBaseUrl: serviceDiscovery.local.baseUrl,
+      ...(serviceDiscovery.external ? { externalServiceBaseUrl: serviceDiscovery.external.baseUrl } : {}),
     },
     compatibility: {
       openai: true,
@@ -2455,6 +2513,7 @@ function readApiServerConfig(config: Record<string, unknown>): {
   port?: number;
   dashboardUrl?: string;
   publicDashboardUrl?: string;
+  routing?: ApiServiceRoutingConfig;
 } {
   const api = config.api;
   if (!isRecord(api)) return {};
@@ -2463,7 +2522,24 @@ function readApiServerConfig(config: Record<string, unknown>): {
     port: readPositiveInteger(api.port),
     dashboardUrl: readNonEmptyString(api.dashboardUrl),
     publicDashboardUrl: readNonEmptyString(api.publicDashboardUrl),
+    routing: readApiServiceRoutingConfig(api.routing),
   };
+}
+
+function readApiServiceRoutingConfig(value: unknown): ApiServiceRoutingConfig | undefined {
+  if (!isRecord(value)) return undefined;
+  const routing: ApiServiceRoutingConfig = {
+    localHostname: readNonEmptyString(value.localHostname),
+    externalHostname: readNonEmptyString(value.externalHostname),
+    localBaseUrl: readNonEmptyString(value.localBaseUrl),
+    externalBaseUrl: readNonEmptyString(value.externalBaseUrl),
+    dashboardPath: readNonEmptyString(value.dashboardPath),
+    accountMirrorPath: readNonEmptyString(value.accountMirrorPath),
+    proxyTarget: readNonEmptyString(value.proxyTarget),
+    auth: readNonEmptyString(value.auth),
+    ingress: readNonEmptyString(value.ingress),
+  };
+  return Object.values(routing).some(Boolean) ? routing : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -3334,6 +3410,97 @@ function createTeamRunCreateLinks(input: {
 
 function localProbeHost(host: string): string {
   return isLoopbackHost(host) ? host : '127.0.0.1';
+}
+
+function buildApiServiceDiscovery(input: {
+  host: string;
+  port: number;
+  dashboardUrl?: string;
+  publicDashboardUrl?: string;
+  serviceRouting?: ApiServiceRoutingConfig;
+}): ApiServiceDiscovery {
+  const routing = input.serviceRouting ?? {};
+  const dashboardPath = normalizeRoutePath(routing.dashboardPath) ?? '/ops/browser';
+  const accountMirrorPath = normalizeRoutePath(routing.accountMirrorPath) ?? '/account-mirror';
+  const bindBaseUrl = formatApiBaseUrl(input.host, input.port);
+  const localBaseUrl = normalizeBaseUrl(routing.localBaseUrl)
+    ?? normalizeBaseUrl(baseUrlFromUrl(input.dashboardUrl))
+    ?? bindBaseUrl;
+  const externalBaseUrl = normalizeBaseUrl(routing.externalBaseUrl)
+    ?? normalizeBaseUrl(baseUrlFromUrl(input.publicDashboardUrl));
+  const localDashboardUrl = normalizeUrl(input.dashboardUrl)
+    ?? joinBaseUrlPath(localBaseUrl, dashboardPath);
+  const externalDashboardUrl = normalizeUrl(input.publicDashboardUrl)
+    ?? (externalBaseUrl ? joinBaseUrlPath(externalBaseUrl, dashboardPath) : undefined);
+  return {
+    bind: {
+      host: input.host,
+      port: input.port,
+      url: bindBaseUrl,
+      localOnly: isLoopbackHost(input.host),
+    },
+    local: {
+      ...(routing.localHostname ? { hostname: routing.localHostname } : {}),
+      baseUrl: localBaseUrl,
+      dashboardUrl: localDashboardUrl,
+      accountMirrorUrl: joinBaseUrlPath(localBaseUrl, accountMirrorPath),
+    },
+    ...(externalBaseUrl
+      ? {
+          external: {
+            ...(routing.externalHostname ? { hostname: routing.externalHostname } : {}),
+            baseUrl: externalBaseUrl,
+            dashboardUrl: externalDashboardUrl ?? joinBaseUrlPath(externalBaseUrl, dashboardPath),
+            accountMirrorUrl: joinBaseUrlPath(externalBaseUrl, accountMirrorPath),
+          },
+        }
+      : {}),
+    routing: {
+      dashboardPath,
+      accountMirrorPath,
+      ...(routing.proxyTarget ? { proxyTarget: routing.proxyTarget } : {}),
+      ...(routing.auth ? { auth: routing.auth } : {}),
+      ...(routing.ingress ? { ingress: routing.ingress } : {}),
+    },
+  };
+}
+
+function formatApiBaseUrl(host: string, port: number): string {
+  const normalizedHost = host.includes(':') && !host.startsWith('[') ? `[${host}]` : host;
+  return `http://${normalizedHost}:${String(port)}`;
+}
+
+function normalizeRoutePath(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+}
+
+function normalizeBaseUrl(value: string | null | undefined): string | null {
+  const normalized = normalizeUrl(value);
+  if (!normalized) return null;
+  return normalized.replace(/\/+$/, '');
+}
+
+function normalizeUrl(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  try {
+    return new URL(trimmed).href.replace(/\/+$/, '');
+  } catch {
+    return null;
+  }
+}
+
+function baseUrlFromUrl(value: string | undefined): string | null {
+  const normalized = normalizeUrl(value);
+  if (!normalized) return null;
+  const parsed = new URL(normalized);
+  return parsed.origin;
+}
+
+function joinBaseUrlPath(baseUrl: string, path: string): string {
+  return `${baseUrl.replace(/\/+$/, '')}${normalizeRoutePath(path) ?? '/'}`;
 }
 
 function mergeExecutionRequestHints(

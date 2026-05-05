@@ -36,6 +36,17 @@ export const ApiServerConfigSchema = z.object({
   port: z.number().int().positive().optional(),
   dashboardUrl: z.string().optional(),
   publicDashboardUrl: z.string().optional(),
+  routing: z.object({
+    localHostname: z.string().optional(),
+    externalHostname: z.string().optional(),
+    localBaseUrl: z.string().optional(),
+    externalBaseUrl: z.string().optional(),
+    dashboardPath: z.string().optional(),
+    accountMirrorPath: z.string().optional(),
+    proxyTarget: z.string().optional(),
+    auth: z.string().optional(),
+    ingress: z.string().optional(),
+  }).optional(),
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.

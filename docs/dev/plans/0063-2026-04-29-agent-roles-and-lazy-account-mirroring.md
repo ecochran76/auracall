@@ -523,6 +523,11 @@ Each status payload should include:
   readback plus the same `dashboardUrl` for remote operators, and
   `pnpm run smoke:ops-browser-control` verifies it against the fixture server
   without browser/provider work.
+- `/status.serviceDiscovery` reports the configured API bind URL, local
+  hostname/base URL, external hostname/base URL, dashboard/account-mirror
+  paths, proxy target, ingress, and auth guard. This keeps the service
+  findable after restart without relying on whichever host/port a single
+  status probe used.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.

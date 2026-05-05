@@ -26563,6 +26563,38 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - observed local hostname follow-up: `auracall.localhost` resolves to `::1`
     in this WSL environment while the pinned service is currently bound to
     IPv4 `127.0.0.1`
+
+## Turn 121 | 2026-05-05
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make the API service discoverable from config on every load.
+- Change:
+  - added `api.routing` config support for local/external hostnames, base
+    URLs, dashboard/account-mirror paths, proxy target, ingress, and auth guard
+  - `/status.serviceDiscovery` now reports the active bind URL alongside the
+    configured local and external routes
+  - `api ops-browser-status` now includes service discovery routing in its
+    summary
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "status endpoint|dashboard URL|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/schema/types.ts src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - updated `~/.auracall/config.json` with the `api.routing` local/external
+    route contract
+  - restarted the pinned `127.0.0.1:18095` service on PID `163164`
+  - installed `/status.serviceDiscovery` reports bind URL
+    `http://127.0.0.1:18095`, local base `http://auracall.localhost`,
+    external base `https://auracall.ecochran.dyndns.org`, proxy target
+    `http://127.0.0.1:18095`, ingress `traefik`, and auth `authelia`
+  - installed `api ops-browser-status` prints the service discovery line with
+    local, external, proxy, and auth values
   - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
     reported only existing warning debt in touched broad files
   - `pnpm run docs:list`

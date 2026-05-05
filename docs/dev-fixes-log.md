@@ -1,3 +1,9 @@
+- 2026-05-05: API service routing needs to be discoverable after restart, not
+  inferred from a probe. `api.routing` now stores local/external hostnames,
+  base URLs, dashboard/account-mirror paths, proxy target, ingress, and auth
+  guard, and `/status.serviceDiscovery` reports that contract with the active
+  bind URL.
+
 - 2026-05-05: Account mirror result navigation needs fast keyboard controls.
   The `/account-mirror` page now supports `/` to focus cached catalog search
   and ArrowUp/ArrowDown to move through the current result navigator using the

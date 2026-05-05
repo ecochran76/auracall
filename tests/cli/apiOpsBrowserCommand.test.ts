@@ -249,6 +249,33 @@ const dashboardHtml = `
 
 const statusPayload = {
   ok: true,
+  serviceDiscovery: {
+    bind: {
+      host: '127.0.0.1',
+      port: 18080,
+      url: 'http://127.0.0.1:18080',
+      localOnly: true,
+    },
+    local: {
+      hostname: 'auracall.localhost',
+      baseUrl: 'http://auracall.localhost',
+      dashboardUrl: 'http://auracall.localhost/ops/browser',
+      accountMirrorUrl: 'http://auracall.localhost/account-mirror',
+    },
+    external: {
+      hostname: 'auracall.ecochran.dyndns.org',
+      baseUrl: 'https://auracall.ecochran.dyndns.org',
+      dashboardUrl: 'https://auracall.ecochran.dyndns.org/ops/browser',
+      accountMirrorUrl: 'https://auracall.ecochran.dyndns.org/account-mirror',
+    },
+    routing: {
+      dashboardPath: '/ops/browser',
+      accountMirrorPath: '/account-mirror',
+      proxyTarget: 'http://127.0.0.1:18080',
+      auth: 'authelia',
+      ingress: 'traefik',
+    },
+  },
   accountMirrorScheduler: {
     enabled: true,
     state: 'idle',
@@ -370,6 +397,12 @@ describe('api ops browser CLI helpers', () => {
       usesAccountMirrorCatalogPath: true,
     });
     expect(summary.dashboardUrl).toBe('http://127.0.0.1:18080/ops/browser');
+    expect(summary.serviceDiscovery).toMatchObject({
+      localBaseUrl: 'http://auracall.localhost',
+      externalBaseUrl: 'https://auracall.ecochran.dyndns.org',
+      proxyTarget: 'http://127.0.0.1:18080',
+      auth: 'authelia',
+    });
     expect(summary.status.liveFollow.severity).toBe('paused');
     expect(() => assertApiOpsBrowserStatus(summary, {
       expectedSeverity: 'paused',
@@ -378,6 +411,9 @@ describe('api ops browser CLI helpers', () => {
     })).not.toThrow();
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard URL: http://127.0.0.1:18080/ops/browser',
+    );
+    expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
+      'Service discovery: local=http://auracall.localhost external=https://auracall.ecochran.dyndns.org proxy=http://127.0.0.1:18080 auth=authelia',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard service control: nav=ok operations=ok backgroundDrain=ok scheduler=ok runOnce=ok',

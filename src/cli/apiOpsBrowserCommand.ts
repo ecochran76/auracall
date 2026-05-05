@@ -69,6 +69,12 @@ export interface ApiOpsBrowserStatusSummary {
   host: string;
   port: number;
   dashboardUrl: string;
+  serviceDiscovery: {
+    localBaseUrl?: string;
+    externalBaseUrl?: string;
+    proxyTarget?: string;
+    auth?: string;
+  };
   dashboard: ApiOpsBrowserDashboardSummary;
   status: ApiStatusCliSummary;
 }
@@ -93,6 +99,7 @@ export async function readApiOpsBrowserStatusForCli(
       normalizeDashboardUrl(options.dashboardUrl)
       ?? readStatusDashboardUrl(status.raw)
       ?? formatDashboardUrl(host, port),
+    serviceDiscovery: readStatusServiceDiscovery(status.raw),
     dashboard: summarizeDashboardHtml(dashboardHtml),
     status,
   };
@@ -112,6 +119,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
   return [
     `AuraCall ops browser: ok (${summary.host}:${summary.port}${dashboard.route})`,
     `Dashboard URL: ${summary.dashboardUrl}`,
+    `Service discovery: local=${summary.serviceDiscovery.localBaseUrl ?? 'unknown'} external=${summary.serviceDiscovery.externalBaseUrl ?? 'none'} proxy=${summary.serviceDiscovery.proxyTarget ?? 'none'} auth=${summary.serviceDiscovery.auth ?? 'none'}`,
     `Dashboard service control: nav=${formatBoolean(dashboard.hasNavigationScaffold)} operations=${formatBoolean(dashboard.hasOperationsPanel)} backgroundDrain=${formatBoolean(dashboard.hasBackgroundDrainControls)} scheduler=${formatBoolean(dashboard.hasMirrorSchedulerControls)} runOnce=${formatBoolean(dashboard.hasRunOnceSchedulerControl)}`,
     `Dashboard cache browse: catalog=${formatBoolean(dashboard.hasAccountMirrorCatalogPanel)} page=${formatBoolean(dashboard.hasAccountMirrorPageLink)} previewSession=${formatBoolean(dashboard.hasAccountMirrorPreviewSessionPage)} search=${formatBoolean(dashboard.hasCatalogSearchControls)} savedFilters=${formatBoolean(dashboard.hasCatalogSavedFilterState)} table=${formatBoolean(dashboard.hasCatalogResultsTable)} detail=${formatBoolean(dashboard.hasCatalogDetailInspection)} chat=${formatBoolean(dashboard.hasConversationChatDetailView)} transcript=${formatBoolean(dashboard.hasConversationTranscriptAffordance)} transcriptFilter=${formatBoolean(dashboard.hasConversationTranscriptOnlyFilter)} transcriptDownload=${formatBoolean(dashboard.hasConversationTranscriptDownload)} transcriptSearch=${formatBoolean(dashboard.hasConversationTranscriptSearch)} related=${formatBoolean(dashboard.hasConversationRelatedItemNavigation)} assetInspector=${formatBoolean(dashboard.hasCatalogAssetDetailInspector)} assetPreview=${formatBoolean(dashboard.hasCatalogAssetPreview)} localAsset=${formatBoolean(dashboard.hasCatalogLocalAssetRoute)} materialization=${formatBoolean(dashboard.hasCatalogMaterializationBadges)} materializationControls=${formatBoolean(dashboard.hasCatalogMaterializationControls)} rowPreviewActions=${formatBoolean(dashboard.hasCatalogRowPreviewActions)} batchPreviewDrawer=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDrawer)} batchPreviewReview=${formatBoolean(dashboard.hasCatalogBatchPreviewSessionReview)} batchPreviewOpen=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlOpen)} batchPreviewCopy=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlCopy)} batchPreviewDownload=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDownload)} path=${dashboard.usesAccountMirrorCatalogPath ? '/v1/account-mirrors/catalog' : 'unknown'} itemPath=${dashboard.usesAccountMirrorCatalogItemPath ? '/v1/account-mirrors/catalog/items/{id}' : 'unknown'}`,
     `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} attention=${formatBoolean(dashboard.hasAttentionQueue)} activeTable=${formatBoolean(dashboard.hasActiveCompletionTable)} inspect=${formatBoolean(dashboard.hasCompletionInspectAction)} inputInspect=${formatBoolean(dashboard.hasCompletionInputInspectControl)} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} stateAware=${formatBoolean(dashboard.hasStateAwareCompletionActions)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
@@ -501,6 +509,27 @@ function readStatusDashboardUrl(raw: unknown): string | null {
   if (!routes || typeof routes !== 'object' || Array.isArray(routes)) return null;
   const dashboardUrl = (routes as { operatorBrowserDashboardUrl?: unknown }).operatorBrowserDashboardUrl;
   return typeof dashboardUrl === 'string' ? normalizeDashboardUrl(dashboardUrl) : null;
+}
+
+function readStatusServiceDiscovery(raw: unknown): ApiOpsBrowserStatusSummary['serviceDiscovery'] {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const serviceDiscovery = (raw as { serviceDiscovery?: unknown }).serviceDiscovery;
+  if (!serviceDiscovery || typeof serviceDiscovery !== 'object' || Array.isArray(serviceDiscovery)) return {};
+  const local = (serviceDiscovery as { local?: unknown }).local;
+  const external = (serviceDiscovery as { external?: unknown }).external;
+  const routing = (serviceDiscovery as { routing?: unknown }).routing;
+  return {
+    localBaseUrl: readStringField(local, 'baseUrl'),
+    externalBaseUrl: readStringField(external, 'baseUrl'),
+    proxyTarget: readStringField(routing, 'proxyTarget'),
+    auth: readStringField(routing, 'auth'),
+  };
+}
+
+function readStringField(source: unknown, field: string): string | undefined {
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return undefined;
+  const value = (source as Record<string, unknown>)[field];
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
 function normalizeHost(value: string | null | undefined): string {

@@ -95,6 +95,17 @@ dashboard URLs:
     port: 18095,
     dashboardUrl: "http://auracall.localhost/ops/browser",
     publicDashboardUrl: "https://auracall.ecochran.dyndns.org/ops/browser",
+    routing: {
+      localHostname: "auracall.localhost",
+      externalHostname: "auracall.ecochran.dyndns.org",
+      localBaseUrl: "http://auracall.localhost",
+      externalBaseUrl: "https://auracall.ecochran.dyndns.org",
+      dashboardPath: "/ops/browser",
+      accountMirrorPath: "/account-mirror",
+      proxyTarget: "http://127.0.0.1:18095",
+      auth: "authelia",
+      ingress: "traefik",
+    },
   },
 }
 ```
@@ -102,7 +113,10 @@ dashboard URLs:
 `auracall api serve` defaults to `api.host` and `api.port` when CLI flags are
 omitted. `/status.routes.operatorBrowserDashboardUrl`, CLI
 `api ops-browser-status`, and MCP `api_ops_browser_status` report the canonical
-dashboard URL when configured.
+dashboard URL when configured. `/status.serviceDiscovery` reports the
+configured bind URL, local hostname/base URL, external hostname/base URL,
+dashboard/account-mirror paths, proxy target, ingress, and auth guard so
+operators can find the same service after restart.
 
 Selector precedence is now explicit in those reports:
 - runtime selection uses `--profile` first

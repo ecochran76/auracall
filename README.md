@@ -272,6 +272,10 @@ Terminology note:
   provider/profile/kind/search/limit controls backed by
   `GET /v1/account-mirrors/catalog`, persists filters in the page URL, and
   opens stable item-detail URLs without starting provider browser work.
+  `/status.serviceDiscovery` reports the configured bind URL, local
+  `auracall.localhost` route, external route, dashboard/account-mirror paths,
+  proxy target, ingress, and auth guard so operators can rediscover the service
+  after restart.
   The catalog page now renders a compact cached-item browser with kind-count
   quick filters, selected-row highlighting, and a first cached conversation
   drill-in by default on `/account-mirror`. Selecting a cached row also writes
