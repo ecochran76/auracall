@@ -64,6 +64,12 @@ export interface AccountMirrorPreviewSessionStore {
   }): Promise<AccountMirrorPreviewSessionRecord>;
   readSession(id: string): Promise<AccountMirrorPreviewSessionRecord | null>;
   listSessions(options?: { limit?: number | null }): Promise<AccountMirrorPreviewSessionRecord[]>;
+  renameSession(input: {
+    id: string;
+    name: string | null | undefined;
+    now?: string | null;
+  }): Promise<AccountMirrorPreviewSessionRecord | null>;
+  deleteSession(id: string): Promise<boolean>;
 }
 
 export function createAccountMirrorPreviewSessionStore(input: {
@@ -124,6 +130,46 @@ export function createAccountMirrorPreviewSessionStore(input: {
         .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
         .slice(0, limit);
     },
+    async renameSession(request) {
+      const id = normalizeSessionId(request.id);
+      const name = normalizeName(request.name);
+      if (!id || !name) {
+        throw new Error('Invalid preview session rename request.');
+      }
+      const existing = await readRecord({
+        jsonDir,
+        sqlitePath,
+        storeKind,
+        id,
+      });
+      if (!existing) return null;
+      const updatedAt = normalizeIsoString(request.now) ?? new Date().toISOString();
+      const record: AccountMirrorPreviewSessionRecord = {
+        ...existing,
+        name,
+        updatedAt,
+      };
+      if (storeKind === 'sqlite' || storeKind === 'dual') {
+        await writeSqlRecord(sqlitePath, record);
+      }
+      if (storeKind === 'json' || storeKind === 'dual') {
+        await writeJsonRecord(jsonDir, record);
+      }
+      return record;
+    },
+    async deleteSession(id) {
+      const normalized = normalizeSessionId(id);
+      if (!normalized) return false;
+      const existed = await readRecord({
+        jsonDir,
+        sqlitePath,
+        storeKind,
+        id: normalized,
+      });
+      await deleteSqlRecord(sqlitePath, normalized);
+      await deleteJsonRecord(jsonDir, normalized);
+      return Boolean(existed);
+    },
   };
 }
 
@@ -169,6 +215,15 @@ async function writeJsonRecord(rootDir: string, record: AccountMirrorPreviewSess
 
 async function readJsonRecord(rootDir: string, id: string): Promise<AccountMirrorPreviewSessionRecord | null> {
   return readJsonRecordFile(resolvePreviewSessionRecordPath(rootDir, id));
+}
+
+async function deleteJsonRecord(rootDir: string, id: string): Promise<void> {
+  try {
+    await fs.unlink(resolvePreviewSessionRecordPath(rootDir, id));
+  } catch (error) {
+    if (isMissingFileError(error)) return;
+    throw error;
+  }
 }
 
 async function readJsonRecordFile(recordPath: string): Promise<AccountMirrorPreviewSessionRecord | null> {
@@ -229,6 +284,13 @@ async function readSqlRecord(sqlitePath: string, id: string): Promise<AccountMir
       .prepare('SELECT record_json FROM account_mirror_preview_sessions WHERE id = ?')
       .get(id);
     return row ? normalizeRecord(parseSqlRecordJson(row.record_json)) : null;
+  });
+}
+
+async function deleteSqlRecord(sqlitePath: string, id: string): Promise<void> {
+  if (!await fileExists(sqlitePath)) return;
+  await withPreviewSessionDatabase(sqlitePath, async (db) => {
+    db.prepare('DELETE FROM account_mirror_preview_sessions WHERE id = ?').run(id);
   });
 }
 

@@ -14729,12 +14729,18 @@ describe('http responses adapter', () => {
       expect(html).toContain('Save named session');
       expect(html).toContain('Refresh saved sessions');
       expect(html).toContain('Load saved session');
+      expect(html).toContain('Rename saved session');
+      expect(html).toContain('Delete saved session');
       expect(html).toContain('mirrorPreviewSessionName');
       expect(html).toContain('savedMirrorPreviewSessions');
       expect(html).toContain('saveMirrorPreviewSession');
       expect(html).toContain('refreshSavedMirrorPreviewSessions');
       expect(html).toContain('loadSelectedSavedMirrorPreviewSession');
       expect(html).toContain('loadSavedMirrorPreviewSessionById');
+      expect(html).toContain('renameSelectedSavedMirrorPreviewSession');
+      expect(html).toContain('deleteSelectedSavedMirrorPreviewSession');
+      expect(html).toContain('patchJson');
+      expect(html).toContain('deleteJson');
       expect(html).toContain('/v1/account-mirrors/preview-sessions');
       expect(html).toContain('Load manifest');
       expect(html).toContain('loadMirrorPreviewSessionManifest');
@@ -15065,6 +15071,29 @@ describe('http responses adapter', () => {
         name: 'Reviewed assets',
         itemCount: 1,
       });
+
+      const renameResponse = await fetch(`http://127.0.0.1:${server.port}/v1/account-mirrors/preview-sessions/${encodeURIComponent(created.id)}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: 'Renamed reviewed assets' }),
+      });
+      expect(renameResponse.status).toBe(200);
+      await expect(renameResponse.json()).resolves.toMatchObject({
+        id: created.id,
+        name: 'Renamed reviewed assets',
+      });
+
+      const deleteResponse = await fetch(`http://127.0.0.1:${server.port}/v1/account-mirrors/preview-sessions/${encodeURIComponent(created.id)}`, {
+        method: 'DELETE',
+      });
+      expect(deleteResponse.status).toBe(200);
+      await expect(deleteResponse.json()).resolves.toMatchObject({
+        id: created.id,
+        deleted: true,
+      });
+
+      const missingResponse = await fetch(`http://127.0.0.1:${server.port}/v1/account-mirrors/preview-sessions/${encodeURIComponent(created.id)}`);
+      expect(missingResponse.status).toBe(404);
     } finally {
       await server.close();
     }

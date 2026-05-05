@@ -15533,3 +15533,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   policy. Store preview-session rows in `account-mirror/cache.sqlite` for
   `sqlite`/`dual` cache mode while retaining legacy JSON readback under
   `account-mirror/preview-sessions/`.
+- 2026-05-04: Saved preview sessions need lifecycle controls after becoming
+  durable cache rows. Add API and dashboard rename/delete paths and ensure
+  delete removes both SQLite and legacy JSON records.

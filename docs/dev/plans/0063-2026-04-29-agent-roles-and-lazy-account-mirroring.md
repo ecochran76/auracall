@@ -791,4 +791,6 @@ session records under the account-mirror cache through
 dashboard controls so reviewed preview sets can be reopened by id. In
 `sqlite`/`dual` cache mode, the canonical named-session rows live in
 `account-mirror/cache.sqlite`; the older `account-mirror/preview-sessions/*.json`
-records remain readable as a compatibility/import layer.
+records remain readable as a compatibility/import layer. The same local API
+surface also supports `PATCH` rename and `DELETE` removal for saved preview
+sessions, with dashboard controls wired to the saved-session selector.

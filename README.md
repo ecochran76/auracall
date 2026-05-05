@@ -209,6 +209,8 @@ Terminology note:
   - `POST /v1/account-mirrors/preview-sessions`
   - `GET /v1/account-mirrors/preview-sessions`
   - `GET /v1/account-mirrors/preview-sessions/{preview_session_id}`
+  - `PATCH /v1/account-mirrors/preview-sessions/{preview_session_id}`
+  - `DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}`
   - `POST /v1/account-mirrors/refresh`
   - `POST /v1/account-mirrors/completions`
   - `GET /v1/account-mirrors/completions`

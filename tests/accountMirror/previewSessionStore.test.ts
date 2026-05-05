@@ -117,4 +117,54 @@ describe('account mirror preview session store', () => {
       await rm(homeDir, { recursive: true, force: true });
     }
   });
+
+  test('renames and deletes saved preview sessions across sqlite and legacy json', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-preview-session-manage-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const jsonStore = createAccountMirrorPreviewSessionStore({
+      config: {
+        browser: {
+          cache: {
+            store: 'json',
+          },
+        },
+      },
+    });
+    const sqliteStore = createAccountMirrorPreviewSessionStore({
+      config: {
+        browser: {
+          cache: {
+            store: 'sqlite',
+          },
+        },
+      },
+    });
+    try {
+      await jsonStore.writeSession({
+        id: 'managed-session',
+        name: 'Original name',
+        manifest,
+        now: '2026-05-04T22:01:00.000Z',
+      });
+
+      await expect(sqliteStore.renameSession({
+        id: 'managed-session',
+        name: 'Renamed session',
+        now: '2026-05-04T22:02:00.000Z',
+      })).resolves.toMatchObject({
+        id: 'managed-session',
+        name: 'Renamed session',
+        updatedAt: '2026-05-04T22:02:00.000Z',
+      });
+      await expect(sqliteStore.readSession('managed-session')).resolves.toMatchObject({
+        name: 'Renamed session',
+      });
+
+      await expect(sqliteStore.deleteSession('managed-session')).resolves.toBe(true);
+      await expect(sqliteStore.readSession('managed-session')).resolves.toBeNull();
+      await expect(sqliteStore.deleteSession('managed-session')).resolves.toBe(false);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
 });

@@ -898,6 +898,58 @@ export async function createResponsesHttpServer(
         return;
       }
 
+      if (req.method === 'PATCH' && accountMirrorPreviewSessionId) {
+        const body = await readRequestBody(req);
+        const payload = JSON.parse(body || '{}') as {
+          name?: unknown;
+        };
+        try {
+          const record = await accountMirrorPreviewSessionStore.renameSession({
+            id: accountMirrorPreviewSessionId,
+            name: typeof payload.name === 'string' ? payload.name : null,
+            now: now().toISOString(),
+          });
+          if (!record) {
+            sendJson(res, 404, {
+              error: {
+                message: `Account mirror preview session ${accountMirrorPreviewSessionId} was not found.`,
+                type: 'not_found_error',
+              },
+            });
+            return;
+          }
+          sendJson(res, 200, record);
+          return;
+        } catch (error) {
+          sendJson(res, 400, {
+            error: {
+              message: error instanceof Error ? error.message : 'Invalid preview session rename request.',
+              type: 'invalid_request_error',
+            },
+          });
+          return;
+        }
+      }
+
+      if (req.method === 'DELETE' && accountMirrorPreviewSessionId) {
+        const deleted = await accountMirrorPreviewSessionStore.deleteSession(accountMirrorPreviewSessionId);
+        if (!deleted) {
+          sendJson(res, 404, {
+            error: {
+              message: `Account mirror preview session ${accountMirrorPreviewSessionId} was not found.`,
+              type: 'not_found_error',
+            },
+          });
+          return;
+        }
+        sendJson(res, 200, {
+          object: 'account_mirror_preview_session.deleted',
+          id: accountMirrorPreviewSessionId,
+          deleted: true,
+        });
+        return;
+      }
+
       if (req.method === 'POST' && url.pathname === '/v1/account-mirrors/completions') {
         const body = await readRequestBody(req);
         const payload = ACCOUNT_MIRROR_COMPLETION_REQUEST_SCHEMA.parse(JSON.parse(body || '{}'));
@@ -1704,7 +1756,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   }
   logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
-    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
+    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   if (serverOptions.dashboardUrl) {
@@ -3859,6 +3911,8 @@ function createOperatorBrowserDashboardHtml(input: {
           <button id="refreshMirrorPreviewSessionList" type="button">Refresh saved sessions</button>
           <select id="savedMirrorPreviewSessions" aria-label="Saved preview sessions"><option value="">saved sessions</option></select>
           <button id="loadSavedMirrorPreviewSession" type="button">Load saved session</button>
+          <button id="renameSavedMirrorPreviewSession" type="button">Rename saved session</button>
+          <button id="deleteSavedMirrorPreviewSession" type="button">Delete saved session</button>
           <label>Load manifest <input id="loadMirrorPreviewSessionManifest" type="file" accept="application/json,.json"></label>
         </div>
         <div id="mirrorPreviewSessionGrid" class="preview-session-grid">No previews loaded.</div>
@@ -3952,6 +4006,40 @@ function createOperatorBrowserDashboardHtml(input: {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
       });
+      const text = await response.text();
+      let payload;
+      try {
+        payload = text ? JSON.parse(text) : null;
+      } catch {
+        payload = text;
+      }
+      if (!response.ok) {
+        throw new Error(asJson({ status: response.status, payload }));
+      }
+      return payload;
+    }
+
+    async function patchJson(path, body) {
+      const response = await fetch(path, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const text = await response.text();
+      let payload;
+      try {
+        payload = text ? JSON.parse(text) : null;
+      } catch {
+        payload = text;
+      }
+      if (!response.ok) {
+        throw new Error(asJson({ status: response.status, payload }));
+      }
+      return payload;
+    }
+
+    async function deleteJson(path) {
+      const response = await fetch(path, { method: 'DELETE' });
       const text = await response.text();
       let payload;
       try {
@@ -5025,6 +5113,50 @@ function createOperatorBrowserDashboardHtml(input: {
       }
     }
 
+    async function renameSelectedSavedMirrorPreviewSession() {
+      const id = $('savedMirrorPreviewSessions').value;
+      const name = $('mirrorPreviewSessionName').value.trim();
+      if (!id) {
+        $('mirrorPreviewSessionNotice').textContent = 'Choose a saved preview session to rename.';
+        $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
+        return;
+      }
+      if (!name) {
+        $('mirrorPreviewSessionNotice').textContent = 'Enter a session name before renaming.';
+        $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
+        return;
+      }
+      try {
+        const record = await patchJson('/v1/account-mirrors/preview-sessions/' + encodeURIComponent(id), { name });
+        $('mirrorPreviewSessionName').value = record.name || name;
+        $('mirrorPreviewSessionNotice').textContent = 'Renamed saved preview session ' + (record.name || record.id) + '.';
+        $('mirrorPreviewSessionNotice').className = 'notice notice-ok';
+        await refreshSavedMirrorPreviewSessions(record.id || id);
+      } catch (error) {
+        $('mirrorPreviewSessionNotice').textContent = 'Could not rename saved preview session: ' + String(error && error.message ? error.message : error);
+        $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
+      }
+    }
+
+    async function deleteSelectedSavedMirrorPreviewSession() {
+      const id = $('savedMirrorPreviewSessions').value;
+      if (!id) {
+        $('mirrorPreviewSessionNotice').textContent = 'Choose a saved preview session to delete.';
+        $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
+        return;
+      }
+      try {
+        await deleteJson('/v1/account-mirrors/preview-sessions/' + encodeURIComponent(id));
+        $('savedMirrorPreviewSessions').value = '';
+        $('mirrorPreviewSessionNotice').textContent = 'Deleted saved preview session ' + id + '.';
+        $('mirrorPreviewSessionNotice').className = 'notice notice-ok';
+        await refreshSavedMirrorPreviewSessions();
+      } catch (error) {
+        $('mirrorPreviewSessionNotice').textContent = 'Could not delete saved preview session: ' + String(error && error.message ? error.message : error);
+        $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
+      }
+    }
+
     function selectedMirrorPreviewSessionUrls() {
       return mirrorPreviewSessionUrls.filter((url) => mirrorPreviewSessionSelectedUrls.has(url));
     }
@@ -5948,6 +6080,8 @@ function createOperatorBrowserDashboardHtml(input: {
     $('saveMirrorPreviewSession').addEventListener('click', saveMirrorPreviewSession);
     $('refreshMirrorPreviewSessionList').addEventListener('click', () => refreshSavedMirrorPreviewSessions());
     $('loadSavedMirrorPreviewSession').addEventListener('click', loadSelectedSavedMirrorPreviewSession);
+    $('renameSavedMirrorPreviewSession').addEventListener('click', renameSelectedSavedMirrorPreviewSession);
+    $('deleteSavedMirrorPreviewSession').addEventListener('click', deleteSelectedSavedMirrorPreviewSession);
     $('loadMirrorPreviewSessionManifest').addEventListener('change', loadMirrorPreviewSessionManifestFile);
     $('mirrorPreviewSessionGrid').addEventListener('change', updateMirrorPreviewSessionSelection);
     $('mirrorCatalogSearch').addEventListener('keydown', (event) => {

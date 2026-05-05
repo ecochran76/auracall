@@ -26061,6 +26061,33 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `~/.auracall/cache/account-mirror/cache.sqlite` confirmed
     `id = installed-sqlite-smoke`, `item_count = 1`
 
+## Turn 115 | 2026-05-04
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make saved preview sessions manageable now that they are durable cache
+  records.
+- Change:
+  - added store-level rename/delete for preview-session records
+  - added `PATCH /v1/account-mirrors/preview-sessions/{id}` and
+    `DELETE /v1/account-mirrors/preview-sessions/{id}`
+  - preview-session dashboard can rename or delete the selected saved session
+  - delete removes both SQLite rows and legacy JSON fallback files
+- Validation:
+  - `pnpm vitest run tests/accountMirror/previewSessionStore.test.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "preview session|persists named account mirror preview sessions|api ops browser CLI helpers|browser operator dashboard" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/accountMirror/previewSessionStore.ts src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/accountMirror/previewSessionStore.test.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing lint-warning debt (`noUselessContinue`,
+    `noNonNullAssertion`)
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed local API created `installed-manage-smoke`, renamed it with
+    `PATCH`, deleted it with `DELETE`, and returned `404` on subsequent read
+  - direct SQLite read from `~/.auracall/cache/account-mirror/cache.sqlite`
+    confirmed `installed-manage-smoke` row count was zero after delete
+
 ## Turn 104 | 2026-05-04
 
 - Continued implementation plan:
