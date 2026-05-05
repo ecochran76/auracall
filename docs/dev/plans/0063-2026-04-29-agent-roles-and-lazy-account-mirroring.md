@@ -527,7 +527,9 @@ Each status payload should include:
   hostname/base URL, external hostname/base URL, dashboard/account-mirror
   paths, proxy target, ingress, and auth guard. This keeps the service
   findable after restart without relying on whichever host/port a single
-  status probe used.
+  status probe used. The browser dashboard renders the same service discovery
+  data as a dedicated panel so operators can find local, external, and proxy
+  routes without opening raw `/status`.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.

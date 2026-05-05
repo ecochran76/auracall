@@ -4066,6 +4066,13 @@ function createOperatorBrowserDashboardHtml(input: {
       </section>
 
       <section class="panel">
+        <h2>Service Discovery</h2>
+        <dl id="serviceDiscoverySummary">
+          <dt>Status</dt><dd class="muted">Loading...</dd>
+        </dl>
+      </section>
+
+      <section class="panel">
         <h2>Account Mirrors</h2>
         <div class="row" style="margin-bottom: 10px;">
           <label>Provider
@@ -4370,6 +4377,31 @@ function createOperatorBrowserDashboardHtml(input: {
         ['Completion Records', formatCompletionHistory(completionMetrics, targets)],
         ['Dashboard Route', dashboard || '/ops/browser'],
       ].map(([key, value]) => '<dt>' + key + '</dt><dd>' + value + '</dd>').join('');
+    }
+
+    function renderServiceDiscovery(status) {
+      const discovery = status.serviceDiscovery || {};
+      const bind = discovery.bind || {};
+      const local = discovery.local || {};
+      const external = discovery.external || {};
+      const routing = discovery.routing || {};
+      $('serviceDiscoverySummary').innerHTML = [
+        ['Bind URL', renderMaybeLink(bind.url)],
+        ['Local Dashboard', renderMaybeLink(local.dashboardUrl)],
+        ['Local Account Mirror', renderMaybeLink(local.accountMirrorUrl)],
+        ['External Dashboard', renderMaybeLink(external.dashboardUrl)],
+        ['External Account Mirror', renderMaybeLink(external.accountMirrorUrl)],
+        ['Proxy Target', renderMaybeLink(routing.proxyTarget)],
+        ['Ingress', escapeHtml(routing.ingress || 'none')],
+        ['Auth Guard', escapeHtml(routing.auth || 'none')],
+      ].map(([key, value]) => '<dt>' + key + '</dt><dd>' + value + '</dd>').join('');
+    }
+
+    function renderMaybeLink(value) {
+      if (!value) return '<span class="muted">none</span>';
+      const text = escapeHtml(value);
+      if (!/^https?:\\/\\//.test(String(value))) return text;
+      return '<a href="' + text + '" target="_blank" rel="noreferrer">' + text + '</a>';
     }
 
     function renderMirrorCompletions(status) {
@@ -6490,6 +6522,7 @@ function createOperatorBrowserDashboardHtml(input: {
 
     async function refreshStatus() {
       $('serverSummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
+      $('serviceDiscoverySummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
       $('opsControls').textContent = 'Loading controls...';
       $('mirrorStatus').textContent = 'Loading...';
       $('mirrorAttentionQueue').textContent = 'Loading attention queue...';
@@ -6501,9 +6534,11 @@ function createOperatorBrowserDashboardHtml(input: {
         const status = await fetchJson('/status');
         renderOpsControls(status);
         renderServerSummary(status);
+        renderServiceDiscovery(status);
         renderMirrorCompletions(status);
       } catch (error) {
         $('serverSummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
+        $('serviceDiscoverySummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
         $('opsControls').textContent = String(error.message || error);
         $('mirrorTargetTable').textContent = String(error.message || error);
         $('mirrorActiveCompletionTable').textContent = String(error.message || error);

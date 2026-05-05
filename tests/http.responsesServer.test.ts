@@ -14689,6 +14689,14 @@ describe('http responses adapter', () => {
       expect(html).toContain('<h2>Operations</h2>');
       expect(html).toContain('opsControls');
       expect(html).toContain('opsControlNotice');
+      expect(html).toContain('<h2>Service Discovery</h2>');
+      expect(html).toContain('serviceDiscoverySummary');
+      expect(html).toContain('renderServiceDiscovery');
+      expect(html).toContain('status.serviceDiscovery');
+      expect(html).toContain('Local Dashboard');
+      expect(html).toContain('External Dashboard');
+      expect(html).toContain('Proxy Target');
+      expect(html).toContain('Auth Guard');
       expect(html).toContain('backgroundDrainControls');
       expect(html).toContain('pauseBackgroundDrain');
       expect(html).toContain('resumeBackgroundDrain');

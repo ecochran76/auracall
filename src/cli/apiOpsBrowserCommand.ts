@@ -16,6 +16,7 @@ export interface ApiOpsBrowserDashboardSummary {
   route: '/ops/browser';
   hasNavigationScaffold: boolean;
   hasOperationsPanel: boolean;
+  hasServiceDiscoveryPanel: boolean;
   hasBackgroundDrainControls: boolean;
   hasMirrorSchedulerControls: boolean;
   hasRunOnceSchedulerControl: boolean;
@@ -132,6 +133,7 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
   const checks: Array<[boolean, string]> = [
     [summary.hasNavigationScaffold, 'Expected /ops/browser to include the AuraCall navigation scaffold.'],
     [summary.hasOperationsPanel, 'Expected /ops/browser to include the Operations panel.'],
+    [summary.hasServiceDiscoveryPanel, 'Expected /ops/browser to include the Service Discovery panel.'],
     [summary.hasBackgroundDrainControls, 'Expected /ops/browser to include background drain controls.'],
     [summary.hasMirrorSchedulerControls, 'Expected /ops/browser to include mirror scheduler controls.'],
     [summary.hasRunOnceSchedulerControl, 'Expected /ops/browser to include a scheduler run-once control.'],
@@ -219,6 +221,14 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('opsControls')
       && html.includes('opsControlNotice')
       && html.includes('renderOpsControls'),
+    hasServiceDiscoveryPanel: html.includes('<h2>Service Discovery</h2>')
+      && html.includes('serviceDiscoverySummary')
+      && html.includes('renderServiceDiscovery')
+      && html.includes('status.serviceDiscovery')
+      && html.includes('Local Dashboard')
+      && html.includes('External Dashboard')
+      && html.includes('Proxy Target')
+      && html.includes('Auth Guard'),
     hasBackgroundDrainControls: html.includes('backgroundDrainControls')
       && html.includes('pauseBackgroundDrain')
       && html.includes('resumeBackgroundDrain')

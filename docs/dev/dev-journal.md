@@ -26595,6 +26595,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `http://127.0.0.1:18095`, ingress `traefik`, and auth `authelia`
   - installed `api ops-browser-status` prints the service discovery line with
     local, external, proxy, and auth values
+
+## Turn 122 | 2026-05-05
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make service routing visible in the browser operator dashboard.
+- Change:
+  - `/ops/browser` now renders a dedicated Service Discovery panel from
+    `/status.serviceDiscovery`
+  - the panel shows bind URL, local and external dashboard/account-mirror
+    routes, proxy target, ingress, and auth guard
+  - CLI dashboard contract checks now assert the panel and render hook
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|api ops browser CLI helpers|status endpoint" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
   - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
     reported only existing warning debt in touched broad files
   - `pnpm run docs:list`
@@ -26602,16 +26617,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run install:user-runtime`
 - Installed dogfood:
-  - restarted the pinned `127.0.0.1:18095` service on PID `3064513`
-  - installed `api ops-browser-status --port 18095 --json` reports
-    account mirror catalog, compact table, and chat-detail dashboard markers
-  - installed `/account-mirror?provider=chatgpt&kind=conversations&limit=5`
-    contains the cached item browser, kind tabs, default drill-in, selected-row,
-    and chat-dialog markers
-  - installed catalog read for ChatGPT/default conversations returned
-    `Fridge Mullion Repair Guide` with `hasCachedTranscript=true` and
-    `messageCount=5`; the item-detail route hydrates five messages, nine
-    sources, and eleven artifacts
+  - restarted the pinned `127.0.0.1:18095` service on PID `207938`
+  - installed `/ops/browser` contains the Service Discovery panel and render
+    hook
+  - installed `api ops-browser-status --json` reports
+    `hasServiceDiscoveryPanel=true`, dashboard
+    `http://auracall.localhost/ops/browser`, external dashboard
+    `https://auracall.ecochran.dyndns.org/ops/browser`, proxy target
+    `http://127.0.0.1:18095`, and auth `authelia`
 
 ## Turn 118 | 2026-05-04
 

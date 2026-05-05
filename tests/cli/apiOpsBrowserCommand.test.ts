@@ -33,6 +33,7 @@ const dashboardHtml = `
   <pre id="mirrorCatalogDetailRaw"></pre>
   <pre id="mirrorCatalogRaw"></pre>
 </section>
+<section><h2>Service Discovery</h2><dl id="serviceDiscoverySummary"><dt>Local Dashboard</dt><dd>http://auracall.localhost/ops/browser</dd><dt>External Dashboard</dt><dd>https://auracall.ecochran.dyndns.org/ops/browser</dd><dt>Proxy Target</dt><dd>http://127.0.0.1:18080</dd><dt>Auth Guard</dt><dd>authelia</dd></dl></section>
 <section><h2>Mirror Live Follow</h2></section>
 <div id="mirrorAttentionQueue"><table id="mirrorAttentionItems"></table></div>
 <div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div>
@@ -48,6 +49,7 @@ const dashboardHtml = `
 <script>
   function setMirrorControlNotice(message, tone) {}
   function renderOpsControls() {}
+  function renderServiceDiscovery(status) { return status.serviceDiscovery; }
   function renderAttentionQueue() {}
   function collectAttentionRows() {}
   function flattenMirrorCatalogEntries() {}
@@ -348,6 +350,7 @@ describe('api ops browser CLI helpers', () => {
     expect(summary.dashboard).toMatchObject({
       hasNavigationScaffold: true,
       hasOperationsPanel: true,
+      hasServiceDiscoveryPanel: true,
       hasBackgroundDrainControls: true,
       hasMirrorSchedulerControls: true,
       hasRunOnceSchedulerControl: true,
