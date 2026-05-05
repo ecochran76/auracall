@@ -15006,6 +15006,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('data-completion-action');
       expect(html).toContain('completionActionsForStatus');
       expect(html).toContain("status === 'paused'");
+      expect(html).toContain('confirmMirrorCompletionCancel');
+      expect(html).toContain("action === 'cancel'");
+      expect(html).toContain('window.confirm');
+      expect(html).toContain('Cancel not sent');
       expect(html).toContain('formatMetadataCounts');
       expect(html).toContain('escapeHtml');
       expect(html).toContain('status.liveFollow');

@@ -538,7 +538,8 @@ Each status payload should include:
   `/status` completion-control path for live-follow start/pause/resume/cancel
   without adding a second dashboard control plane. Row actions render a compact
   result card with completion id, target, status, and next attempt so operators
-  do not need to parse raw completion JSON for normal feedback.
+  do not need to parse raw completion JSON for normal feedback. Destructive
+  cancel actions require confirmation while start/pause/resume remain one-click.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.

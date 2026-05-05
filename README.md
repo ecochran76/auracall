@@ -269,7 +269,9 @@ Terminology note:
   scheduler pause/resume, and live-follow start/pause/resume/cancel in the
   local operator dashboard. Row controls show a compact action-result card with
   the completion id, target, status, and next attempt while keeping raw JSON
-  available for debugging. `/account-mirror` is the dedicated read-only account
+  available for debugging. Destructive live-follow cancel actions require a
+  confirmation prompt; start, pause, and resume remain one-click controls.
+  `/account-mirror` is the dedicated read-only account
   mirror page; it includes the same cache-only catalog browser with
   provider/profile/kind/search/limit controls backed by
   `GET /v1/account-mirrors/catalog`, persists filters in the page URL, and

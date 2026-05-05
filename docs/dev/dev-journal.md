@@ -26525,6 +26525,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run plans:audit -- --keep 63`
   - `git diff --check`
   - `pnpm run install:user-runtime`
+  - restarted pinned installed service on PID `1792672`
+  - installed `/config` contains `confirmMirrorCompletionCancel`,
+    `window.confirm`, `Cancel not sent`, and result-toast markers
+  - installed `auracall api ops-browser-status --port 18095 --json` reports
+    `hasCancelConfirmation=true`, `hasCompletionResultToast=true`, and
+    live-follow controls true
+  - installed `/status` reports ok with live-follow `healthy` and three active
+    completions
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
 - Installed dogfood:
   - restarted the pinned `127.0.0.1:18095` service on PID `977110`
   - installed `/config` contains `mirrorControlResultToast`,
@@ -26774,6 +26786,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the card shows action, status, target, completion id, and next attempt
   - completion raw JSON remains in the existing debug block
   - dashboard CLI contract now asserts the compact result feedback markers
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|configured route paths|api ops browser CLI helpers|status endpoint" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in touched broad files
+
+## Turn 128 | 2026-05-05
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: guard destructive live-follow cancellation without slowing routine row
+  controls.
+- Change:
+  - `cancel` in `controlMirrorCompletionById` now calls
+    `confirmMirrorCompletionCancel`
+  - declined cancellation writes a warning notice/result card and does not call
+    `/status`
+  - start, pause, and resume remain one-click controls
+  - CLI dashboard contract asserts the cancel-confirmation markers
 - Validation:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|configured route paths|api ops browser CLI helpers|status endpoint" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`

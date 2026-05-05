@@ -55,6 +55,7 @@ const dashboardHtml = `
   const OPERATOR_DASHBOARD_ROUTES = { dashboardPath: '/ops/browser', accountMirrorPath: '/account-mirror', previewSessionPath: '/account-mirror/preview-session', configPath: '/config' };
   function setMirrorControlNotice(message, tone) {}
   function setMirrorControlResultToast(input) { return input.operation.nextAttemptAt; }
+  function confirmMirrorCompletionCancel(id, action = 'cancel') { if (action === 'cancel') return window.confirm('Cancel live-follow completion ' + id + '?'); return 'Cancel not sent'; }
   function renderOpsControls() {}
   function renderServiceDiscovery(status) { return status.serviceDiscovery.routing.previewSessionPath + status.serviceDiscovery.routing.configPath; }
   function renderConfigRouting(status) { return status.routes.operatorConfigDashboard; }
@@ -389,6 +390,7 @@ describe('api ops browser CLI helpers', () => {
       hasCompletionIdFillControl: true,
       hasInlineCompletionActionControls: true,
       hasStateAwareCompletionActions: true,
+      hasCancelConfirmation: true,
       hasControlFeedbackNotice: true,
       usesStatusControlPath: true,
       usesAccountMirrorCompletionPayload: true,
@@ -448,7 +450,7 @@ describe('api ops browser CLI helpers', () => {
       'Dashboard cache browse: catalog=ok page=ok previewSession=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok transcriptFilter=ok transcriptDownload=ok transcriptSearch=ok related=ok assetInspector=ok assetPreview=ok localAsset=ok materialization=ok materializationControls=ok rowPreviewActions=ok batchPreviewDrawer=ok batchPreviewReview=ok batchPreviewOpen=ok batchPreviewCopy=ok batchPreviewDownload=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok resultToast=ok inputInspect=ok input=ok rowActions=ok stateAware=ok feedback=ok pause=ok resume=ok cancel=ok',
+      'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok resultToast=ok inputInspect=ok input=ok rowActions=ok stateAware=ok confirmCancel=ok feedback=ok pause=ok resume=ok cancel=ok',
     );
   });
 

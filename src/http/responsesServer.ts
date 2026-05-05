@@ -6749,6 +6749,18 @@ function createOperatorBrowserDashboardHtml(input: {
     }
 
     async function controlMirrorCompletionById(id, action) {
+      if (action === 'cancel' && !confirmMirrorCompletionCancel(id)) {
+        setMirrorControlNotice('Cancel was not sent for ' + id + '.', 'warn');
+        setMirrorControlResultToast({
+          title: 'Cancel not sent',
+          action,
+          id,
+          status: 'paused',
+          target: id,
+          tone: 'warn',
+        });
+        return;
+      }
       setMirrorControlNotice('Sending ' + action + ' for ' + id + '...', 'warn');
       for (const buttonId of ['pauseMirrorCompletion', 'resumeMirrorCompletion', 'cancelMirrorCompletion']) {
         $(buttonId).disabled = true;
@@ -6798,6 +6810,10 @@ function createOperatorBrowserDashboardHtml(input: {
           button.disabled = false;
         }
       }
+    }
+
+    function confirmMirrorCompletionCancel(id) {
+      return window.confirm('Cancel live-follow completion ' + id + '? This stops the current completion record; start a new live-follow operation if you need it again.');
     }
 
     async function startMirrorCompletionForTarget(provider, runtimeProfile) {

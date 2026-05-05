@@ -10,6 +10,8 @@
   eligibility. Config/live-follow rows now reuse the existing completion API and
   `/status` completion-control path for start/pause/resume/cancel controls, and
   row actions render compact completion-id/status/next-attempt feedback.
+  Destructive cancel actions now require confirmation; start, pause, and resume
+  stay one-click.
 
 - 2026-05-05: Account mirror result navigation needs fast keyboard controls.
   The `/account-mirror` page now supports `/` to focus cached catalog search
