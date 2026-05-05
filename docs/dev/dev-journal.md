@@ -25917,6 +25917,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run plans:audit -- --keep 63`
   - `git diff --check`
 
+## Turn 110 | 2026-05-04
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: let operators curate a preview session before exporting URLs.
+- Change:
+  - preview-session tiles now include checked selection controls by default
+  - added `Select all` and `Select none` controls for session items
+  - session copy/download now exports selected URLs only and reports selected
+    counts
+  - dashboard CLI contract now asserts selected-only preview session export
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers|preview session" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing lint-warning debt (`noUselessContinue`,
+    `noNonNullAssertion`)
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run install:user-runtime`
+  - installed `/home/ecochran76/.local/bin/auracall api ops-browser-status --json`
+    reports preview-session and batch review contract flags as true
+  - installed `/account-mirror/preview-session?url=https%3A%2F%2Fexample.com%2Fasset.png`
+    includes selected URL controls and selection helper functions
+  - `git diff --check`
+
 ## Turn 104 | 2026-05-04
 
 - Continued implementation plan:

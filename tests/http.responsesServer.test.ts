@@ -14711,6 +14711,14 @@ describe('http responses adapter', () => {
       expect(html).toContain('mirrorCatalogPreviewUrlList');
       expect(html).toContain('mirrorPreviewSessionPanel');
       expect(html).toContain('mirrorPreviewSessionGrid');
+      expect(html).toContain('selectAllMirrorPreviewSessionItems');
+      expect(html).toContain('clearMirrorPreviewSessionSelection');
+      expect(html).toContain('mirror-preview-session-select');
+      expect(html).toContain('selectedMirrorPreviewSessionUrls');
+      expect(html).toContain('setMirrorPreviewSessionSelection');
+      expect(html).toContain('updateMirrorPreviewSessionSelection');
+      expect(html).toContain('Copy selected URLs');
+      expect(html).toContain('Download selected URL list');
       expect(html).toContain('initializeMirrorPreviewSession');
       expect(html).toContain('renderMirrorPreviewSession');
       expect(html).toContain('readMirrorPreviewSessionUrls');
@@ -14943,6 +14951,12 @@ describe('http responses adapter', () => {
       expect(html).toContain('renderMirrorPreviewSessionItem');
       expect(html).toContain('<dt>Item ID</dt>');
       expect(html).toContain('boundIdentity');
+      expect(html).toContain('mirror-preview-session-select');
+      expect(html).toContain('selectedMirrorPreviewSessionUrls');
+      expect(html).toContain('setMirrorPreviewSessionSelection');
+      expect(html).toContain('updateMirrorPreviewSessionSelection');
+      expect(html).toContain('Copy selected URLs');
+      expect(html).toContain('Download selected URL list');
       expect(html).toContain('copyMirrorPreviewSessionUrls');
       expect(html).toContain('downloadMirrorPreviewSessionUrls');
       expect(html).toContain('preview-session-grid');

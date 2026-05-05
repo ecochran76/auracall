@@ -15517,3 +15517,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-04: Preview-session tiles need context beyond opaque URLs. Carry
   catalog row metadata into preview sessions and render provider, profile,
   kind, title, item id, identity, and updated timestamp beside each asset.
+- 2026-05-04: Preview-session export needs curation before handoff. Default
+  all cached preview tiles to selected, add select-all/select-none controls,
+  and make session copy/download export only the selected URL subset.

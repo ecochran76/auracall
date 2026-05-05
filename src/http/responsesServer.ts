@@ -3782,8 +3782,10 @@ function createOperatorBrowserDashboardHtml(input: {
         <h2>Cached Preview Session</h2>
         <div id="mirrorPreviewSessionNotice" class="notice" role="status" aria-live="polite">No preview session loaded.</div>
         <div class="row" style="margin-bottom: 10px;">
-          <button id="copyMirrorPreviewSessionUrls" type="button">Copy session URLs</button>
-          <button id="downloadMirrorPreviewSessionUrls" type="button">Download session URL list</button>
+          <button id="selectAllMirrorPreviewSessionItems" type="button">Select all</button>
+          <button id="clearMirrorPreviewSessionSelection" type="button">Select none</button>
+          <button id="copyMirrorPreviewSessionUrls" type="button">Copy selected URLs</button>
+          <button id="downloadMirrorPreviewSessionUrls" type="button">Download selected URL list</button>
         </div>
         <div id="mirrorPreviewSessionGrid" class="preview-session-grid">No previews loaded.</div>
       </section>
@@ -3852,6 +3854,7 @@ function createOperatorBrowserDashboardHtml(input: {
     let mirrorCatalogCurrentDetail = null;
     let mirrorPreviewSessionUrls = [];
     let mirrorPreviewSessionItems = [];
+    let mirrorPreviewSessionSelectedUrls = new Set();
 
     async function fetchJson(path) {
       const response = await fetch(path, { cache: 'no-store' });
@@ -4707,13 +4710,14 @@ function createOperatorBrowserDashboardHtml(input: {
       const grid = $('mirrorPreviewSessionGrid');
       mirrorPreviewSessionItems = items;
       mirrorPreviewSessionUrls = items.map((item) => item.url);
+      mirrorPreviewSessionSelectedUrls = new Set(mirrorPreviewSessionUrls);
       if (!items.length) {
         notice.textContent = 'No preview session URLs were found. Start from Account Mirror and choose Review visible previews.';
         notice.className = 'notice notice-warn';
         grid.innerHTML = 'No previews loaded.';
         return;
       }
-      notice.textContent = 'Rendering ' + String(items.length) + ' cached preview URL(s).';
+      notice.textContent = 'Rendering ' + String(items.length) + ' cached preview URL(s); ' + String(mirrorPreviewSessionSelectedUrls.size) + ' selected.';
       notice.className = 'notice notice-ok';
       grid.innerHTML = items.map(renderMirrorPreviewSessionItem).join('');
     }
@@ -4728,7 +4732,7 @@ function createOperatorBrowserDashboardHtml(input: {
         item.boundIdentity ? renderBadge('identity', item.boundIdentity, 'muted') : '',
       ].filter(Boolean).join('');
       return '<article class="preview-session-item">'
-        + '<div class="control-title"><strong>' + escapeHtml(title) + '</strong><a href="' + escapeHtml(url) + '" target="_blank" rel="noreferrer">Open</a></div>'
+        + '<div class="control-title"><label><input class="mirror-preview-session-select" type="checkbox" data-preview-url="' + escapeHtml(url) + '" checked> <strong>' + escapeHtml(title) + '</strong></label><a href="' + escapeHtml(url) + '" target="_blank" rel="noreferrer">Open</a></div>'
         + '<div class="badges">' + labels + '</div>'
         + '<dl><dt>Preview</dt><dd>' + String(index + 1) + '</dd><dt>Item ID</dt><dd>' + escapeHtml(item.itemId || 'unknown') + '</dd><dt>Updated</dt><dd>' + escapeHtml(item.updatedAt || 'unknown') + '</dd></dl>'
         + renderMirrorPreviewSessionEmbed(url)
@@ -4754,23 +4758,25 @@ function createOperatorBrowserDashboardHtml(input: {
     }
 
     async function copyMirrorPreviewSessionUrls() {
-      if (!mirrorPreviewSessionUrls.length) {
-        $('mirrorPreviewSessionNotice').textContent = 'No session URLs to copy.';
+      const urls = selectedMirrorPreviewSessionUrls();
+      if (!urls.length) {
+        $('mirrorPreviewSessionNotice').textContent = 'No selected session URLs to copy.';
         $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
         return;
       }
-      await navigator.clipboard.writeText(mirrorPreviewSessionUrls.join('\\n'));
-      $('mirrorPreviewSessionNotice').textContent = 'Copied ' + String(mirrorPreviewSessionUrls.length) + ' session URL(s).';
+      await navigator.clipboard.writeText(urls.join('\\n'));
+      $('mirrorPreviewSessionNotice').textContent = 'Copied ' + String(urls.length) + ' selected session URL(s).';
       $('mirrorPreviewSessionNotice').className = 'notice notice-ok';
     }
 
     function downloadMirrorPreviewSessionUrls() {
-      if (!mirrorPreviewSessionUrls.length) {
-        $('mirrorPreviewSessionNotice').textContent = 'No session URLs to download.';
+      const urls = selectedMirrorPreviewSessionUrls();
+      if (!urls.length) {
+        $('mirrorPreviewSessionNotice').textContent = 'No selected session URLs to download.';
         $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
         return;
       }
-      const blob = new Blob([mirrorPreviewSessionUrls.join('\\n') + '\\n'], { type: 'text/plain;charset=utf-8' });
+      const blob = new Blob([urls.join('\\n') + '\\n'], { type: 'text/plain;charset=utf-8' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = 'auracall-preview-session-' + new Date().toISOString().replace(/[:.]/g, '-') + '.txt';
@@ -4778,8 +4784,36 @@ function createOperatorBrowserDashboardHtml(input: {
       link.click();
       link.remove();
       URL.revokeObjectURL(link.href);
-      $('mirrorPreviewSessionNotice').textContent = 'Downloaded ' + String(mirrorPreviewSessionUrls.length) + ' session URL(s).';
+      $('mirrorPreviewSessionNotice').textContent = 'Downloaded ' + String(urls.length) + ' selected session URL(s).';
       $('mirrorPreviewSessionNotice').className = 'notice notice-ok';
+    }
+
+    function selectedMirrorPreviewSessionUrls() {
+      return mirrorPreviewSessionUrls.filter((url) => mirrorPreviewSessionSelectedUrls.has(url));
+    }
+
+    function setMirrorPreviewSessionSelection(selectAll) {
+      mirrorPreviewSessionSelectedUrls = new Set(selectAll ? mirrorPreviewSessionUrls : []);
+      document.querySelectorAll('.mirror-preview-session-select').forEach((input) => {
+        input.checked = selectAll;
+      });
+      updateMirrorPreviewSessionSelectionNotice();
+    }
+
+    function updateMirrorPreviewSessionSelection(event) {
+      const input = event && event.target;
+      if (!input || !input.dataset || !input.dataset.previewUrl) return;
+      if (input.checked) {
+        mirrorPreviewSessionSelectedUrls.add(input.dataset.previewUrl);
+      } else {
+        mirrorPreviewSessionSelectedUrls.delete(input.dataset.previewUrl);
+      }
+      updateMirrorPreviewSessionSelectionNotice();
+    }
+
+    function updateMirrorPreviewSessionSelectionNotice() {
+      $('mirrorPreviewSessionNotice').textContent = 'Rendering ' + String(mirrorPreviewSessionUrls.length) + ' cached preview URL(s); ' + String(mirrorPreviewSessionSelectedUrls.size) + ' selected.';
+      $('mirrorPreviewSessionNotice').className = mirrorPreviewSessionSelectedUrls.size ? 'notice notice-ok' : 'notice notice-warn';
     }
 
     function setMirrorCatalogBatchNotice(message, tone) {
@@ -5665,8 +5699,11 @@ function createOperatorBrowserDashboardHtml(input: {
     $('openVisibleMirrorCatalogPreviewUrls').addEventListener('click', openVisibleMirrorCatalogPreviewUrls);
     $('copyVisibleMirrorCatalogPreviewUrls').addEventListener('click', copyVisibleMirrorCatalogPreviewUrls);
     $('downloadVisibleMirrorCatalogPreviewUrls').addEventListener('click', downloadVisibleMirrorCatalogPreviewUrls);
+    $('selectAllMirrorPreviewSessionItems').addEventListener('click', () => setMirrorPreviewSessionSelection(true));
+    $('clearMirrorPreviewSessionSelection').addEventListener('click', () => setMirrorPreviewSessionSelection(false));
     $('copyMirrorPreviewSessionUrls').addEventListener('click', copyMirrorPreviewSessionUrls);
     $('downloadMirrorPreviewSessionUrls').addEventListener('click', downloadMirrorPreviewSessionUrls);
+    $('mirrorPreviewSessionGrid').addEventListener('change', updateMirrorPreviewSessionSelection);
     $('mirrorCatalogSearch').addEventListener('keydown', (event) => {
       if (event.key === 'Enter') loadMirrorCatalog();
     });

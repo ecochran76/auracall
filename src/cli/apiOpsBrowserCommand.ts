@@ -395,6 +395,12 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('renderMirrorPreviewSessionItem')
       && html.includes('boundIdentity')
       && html.includes('<dt>Item ID</dt>')
+      && html.includes('mirror-preview-session-select')
+      && html.includes('selectedMirrorPreviewSessionUrls')
+      && html.includes('setMirrorPreviewSessionSelection')
+      && html.includes('updateMirrorPreviewSessionSelection')
+      && html.includes('Copy selected URLs')
+      && html.includes('Download selected URL list')
       && html.includes('copyMirrorPreviewSessionUrls')
       && html.includes('downloadMirrorPreviewSessionUrls'),
     hasCatalogBatchPreviewUrlOpen: html.includes('openVisibleMirrorCatalogPreviewUrls')

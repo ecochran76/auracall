@@ -780,4 +780,6 @@ previews`, `Open visible previews`, `Copy visible preview URLs`, and `Download
 visible preview URL list` batch actions that inspect, render in a single
 cache-only preview session with provider/kind/title/item labels, open, or
 export the deduplicated local/remote preview URLs for the currently visible
-rows.
+rows. Preview sessions default all tiles selected, then let operators select
+all, select none, or narrow export to a reviewed subset before copying or
+downloading URLs.
