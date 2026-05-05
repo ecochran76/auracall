@@ -14684,6 +14684,12 @@ describe('http responses adapter', () => {
       expect(html).toContain('setMirrorCatalogKindFilter');
       expect(html).toContain('openDefaultMirrorCatalogDetail');
       expect(html).toContain('catalog-row-selected');
+      expect(html).toContain('mirrorCatalogNavigator');
+      expect(html).toContain('mirrorCatalogNavigatorSummary');
+      expect(html).toContain('renderMirrorCatalogNavigator');
+      expect(html).toContain('renderMirrorCatalogNavigatorItem');
+      expect(html).toContain('catalog-result-sidebar');
+      expect(html).toContain('catalog-nav-selected');
       expect(html).toContain('mirrorCatalogDetail');
       expect(html).toContain('mirrorCatalogDetailView');
       expect(html).toContain('mirrorCatalogDetailRaw');

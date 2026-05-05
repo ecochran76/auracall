@@ -277,7 +277,10 @@ Terminology note:
   drill-in by default on `/account-mirror`. Selecting a cached row also writes
   `item`, `itemKind`, `itemProvider`, and `itemRuntimeProfile` into the page
   URL so the same detail view can be reopened after refresh or shared without
-  relying on transient table state.
+  relying on transient table state. The detail pane includes a compact result
+  navigator for the current filtered rows, allowing operators to move between
+  cached conversations, files, artifacts, and media without returning to the
+  table.
   Conversation catalog rows show cached transcript availability and message
   count before opening the row, with a `withTranscript=1` filter for rows that
   will open as chat dialogs.

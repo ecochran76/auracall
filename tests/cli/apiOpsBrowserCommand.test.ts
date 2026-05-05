@@ -27,6 +27,7 @@ const dashboardHtml = `
   <div id="mirrorCatalogSummary"></div>
   <div id="mirrorCatalogResults"></div>
   <div id="mirrorCatalogKindTabs">Cached item browser</div>
+  <aside class="catalog-result-sidebar"><span id="mirrorCatalogNavigatorSummary">1 shown</span><div id="mirrorCatalogNavigator"></div></aside>
   <div id="mirrorCatalogDetail"></div>
   <div id="mirrorCatalogDetailView"></div>
   <pre id="mirrorCatalogDetailRaw"></pre>
@@ -134,6 +135,8 @@ const dashboardHtml = `
   function renderMirrorCatalogTable() {
     return '<table id="mirrorCatalogItems"><thead><tr><th>Transcript</th><th>Preview</th></tr></thead><tr class="catalog-row-selected" data-catalog-row-index="0"><td><a href="/v1/account-mirrors/catalog/items/conv_1?provider=chatgpt&runtimeProfile=default&kind=conversations" data-catalog-item-path="/v1/account-mirrors/catalog/items/conv_1?provider=chatgpt&runtimeProfile=default&kind=conversations">Details</a></td></tr></table>';
   }
+  function renderMirrorCatalogNavigator() { return '<button class="catalog-result-button catalog-nav-selected">Conversation</button>'; }
+  function renderMirrorCatalogNavigatorItem() {}
   function setMirrorCatalogKindFilter() {}
   function openDefaultMirrorCatalogDetail() {}
   function renderCatalogTranscriptBadge(row) {

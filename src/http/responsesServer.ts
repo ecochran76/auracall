@@ -3725,6 +3725,73 @@ function createOperatorBrowserDashboardHtml(input: {
       gap: 4px;
       min-width: 260px;
     }
+    .catalog-detail-layout {
+      display: grid;
+      grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+    .catalog-result-sidebar {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #0b0c0f;
+      max-height: 620px;
+      overflow: auto;
+    }
+    .catalog-result-sidebar-header {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--line);
+      background: #11151a;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .catalog-result-list {
+      display: grid;
+      gap: 0;
+    }
+    .catalog-result-button {
+      display: grid;
+      gap: 4px;
+      width: 100%;
+      padding: 8px 10px;
+      border: 0;
+      border-bottom: 1px solid var(--line);
+      border-radius: 0;
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+    }
+    .catalog-result-button:hover,
+    .catalog-result-button.catalog-nav-selected {
+      background: #10211f;
+    }
+    .catalog-result-button strong,
+    .catalog-result-button span {
+      overflow-wrap: anywhere;
+    }
+    .catalog-result-meta {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .catalog-detail-main {
+      min-width: 0;
+    }
+    @media (max-width: 900px) {
+      .catalog-detail-layout {
+        grid-template-columns: 1fr;
+      }
+      .catalog-result-sidebar {
+        max-height: 280px;
+      }
+    }
     .notice {
       margin: 0 0 10px;
       padding: 8px 10px;
@@ -3901,8 +3968,19 @@ function createOperatorBrowserDashboardHtml(input: {
         <div id="mirrorCatalogResults" class="muted" style="margin-bottom: 10px;">No catalog loaded.</div>
         <div id="mirrorCatalogDetail" class="catalog-detail">
           <div class="notice">Select a cached row to inspect it. Cached conversations open as a chat dialog when transcript data is available.</div>
-          <div id="mirrorCatalogDetailView" class="notice">No row selected.</div>
-          <pre id="mirrorCatalogDetailRaw">No row selected.</pre>
+          <div class="catalog-detail-layout">
+            <aside class="catalog-result-sidebar" aria-label="Cached result navigation">
+              <div class="catalog-result-sidebar-header">
+                <span>Results</span>
+                <span id="mirrorCatalogNavigatorSummary">0 shown</span>
+              </div>
+              <div id="mirrorCatalogNavigator" class="catalog-result-list">Load catalog results to navigate cached items.</div>
+            </aside>
+            <div class="catalog-detail-main">
+              <div id="mirrorCatalogDetailView" class="notice">No row selected.</div>
+              <pre id="mirrorCatalogDetailRaw">No row selected.</pre>
+            </div>
+          </div>
         </div>
         <pre id="mirrorCatalogRaw">No catalog loaded.</pre>
         <h2 style="margin-top: 14px;">Mirror Status</h2>
@@ -4679,6 +4757,8 @@ function createOperatorBrowserDashboardHtml(input: {
         $('mirrorCatalogSummary').innerHTML = renderMirrorCatalogSummary(catalog, mirrorCatalogRows, mirrorCatalogFilteredRows);
         $('mirrorCatalogKindTabs').innerHTML = renderMirrorCatalogKindTabs(mirrorCatalogRows);
         $('mirrorCatalogResults').innerHTML = renderMirrorCatalogTable(mirrorCatalogFilteredRows);
+        $('mirrorCatalogNavigator').innerHTML = renderMirrorCatalogNavigator(mirrorCatalogFilteredRows);
+        $('mirrorCatalogNavigatorSummary').textContent = String(mirrorCatalogFilteredRows.length) + ' shown';
         $('mirrorCatalogDetailView').className = 'notice';
         $('mirrorCatalogDetailView').textContent = 'Select a cached row to inspect it.';
         $('mirrorCatalogDetailRaw').textContent = 'No row selected.';
@@ -4692,6 +4772,8 @@ function createOperatorBrowserDashboardHtml(input: {
         $('mirrorCatalogSummary').textContent = message;
         $('mirrorCatalogKindTabs').textContent = 'Catalog unavailable.';
         $('mirrorCatalogResults').textContent = message;
+        $('mirrorCatalogNavigator').textContent = 'Catalog unavailable.';
+        $('mirrorCatalogNavigatorSummary').textContent = '0 shown';
         $('mirrorCatalogRaw').textContent = message;
       } finally {
         button.disabled = false;
@@ -4828,6 +4910,28 @@ function createOperatorBrowserDashboardHtml(input: {
           + escapeHtml(label)
           + '</button>';
       }).join('');
+    }
+
+    function renderMirrorCatalogNavigator(rows) {
+      if (!rows.length) return '<span class="muted" style="padding: 10px;">No cached rows match the current filters.</span>';
+      const maxRows = 80;
+      const visibleRows = rows.slice(0, maxRows);
+      const buttons = visibleRows.map(renderMirrorCatalogNavigatorItem).join('');
+      const overflow = rows.length > maxRows
+        ? '<div class="catalog-result-meta" style="padding: 8px 10px;">Showing first ' + String(maxRows) + ' of ' + String(rows.length) + ' filtered rows.</div>'
+        : '';
+      return buttons + overflow;
+    }
+
+    function renderMirrorCatalogNavigatorItem(row) {
+      const rowIndex = String(row.rowIndex);
+      const title = row.label || row.itemId || 'cached item';
+      const meta = [row.kind, row.provider, row.timestamp].filter(Boolean).join(' / ');
+      return '<button type="button" class="catalog-result-button" data-catalog-row-index="' + escapeHtml(rowIndex) + '" onclick="showMirrorCatalogDetailByIndex(this.dataset.catalogRowIndex)">'
+        + '<strong>' + escapeHtml(title) + '</strong>'
+        + '<span class="catalog-result-meta">' + escapeHtml(meta) + '</span>'
+        + '<span class="catalog-result-meta">' + escapeHtml(row.itemId) + '</span>'
+        + '</button>';
     }
 
     function setMirrorCatalogKindFilter(kind) {
@@ -5553,6 +5657,9 @@ function createOperatorBrowserDashboardHtml(input: {
     function markSelectedMirrorCatalogRow(rowIndex) {
       document.querySelectorAll('#mirrorCatalogItems tr[data-catalog-row-index]').forEach((node) => {
         node.classList.toggle('catalog-row-selected', node.getAttribute('data-catalog-row-index') === String(rowIndex));
+      });
+      document.querySelectorAll('#mirrorCatalogNavigator .catalog-result-button[data-catalog-row-index]').forEach((node) => {
+        node.classList.toggle('catalog-nav-selected', node.getAttribute('data-catalog-row-index') === String(rowIndex));
       });
     }
 

@@ -755,6 +755,10 @@ Selected account-mirror details are now encoded in the page URL as `item`,
 `itemKind`, `itemProvider`, and `itemRuntimeProfile`, so refreshing or sharing
 the `/account-mirror` URL reopens the same cache-only detail view without
 depending on transient client row indexes.
+The same detail pane now includes a compact result navigator for the current
+filtered row set, so operators can move between cached conversations, files,
+artifacts, and media while preserving the selected-row highlight and stable
+detail URL params.
 Conversation detail views with cached turns now include a local Markdown
 transcript download action. The export is rendered in the dashboard from the
 already-hydrated cached detail object, so it does not navigate, submit prompts,

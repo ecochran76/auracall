@@ -26526,9 +26526,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run install:user-runtime`
 - Installed dogfood:
-  - restarted the pinned `127.0.0.1:18095` service on PID `3108316`
+  - restarted the pinned `127.0.0.1:18095` service on PID `3152739`
   - installed `/account-mirror?provider=chatgpt&kind=conversations&limit=5&item=69e236bf-d298-832d-9f5c-f1a11a9fd156&itemKind=conversations&itemProvider=chatgpt&itemRuntimeProfile=default`
-    contains the selected-item URL restore and fallback detail markers
+    contains the result navigator, navigator summary, selected-state, and
+    detail-layout markers
   - installed `api ops-browser-status --port 18095 --json` reports saved
     filters, catalog, compact table, detail inspection, and chat-detail
     dashboard markers
@@ -26564,6 +26565,37 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - related-item navigation from a cached conversation also updates the page
     URL
   - dashboard CLI contract now asserts the detail deep-link markers
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror dashboard|api ops browser CLI helpers|browser operator dashboard" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `3108316`
+  - installed `/account-mirror?provider=chatgpt&kind=conversations&limit=5&item=69e236bf-d298-832d-9f5c-f1a11a9fd156&itemKind=conversations&itemProvider=chatgpt&itemRuntimeProfile=default`
+    contains the selected-item URL restore and fallback detail markers
+  - installed `api ops-browser-status --port 18095 --json` reports saved
+    filters, catalog, compact table, detail inspection, and chat-detail
+    dashboard markers
+
+## Turn 119 | 2026-05-04
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: let operators move between cached account-mirror results without
+  returning to the table.
+- Change:
+  - added a compact result navigation sidebar beside cached detail views
+  - the sidebar renders the current filtered result set and limits the in-page
+    list to the first 80 rows
+  - selecting a sidebar item uses the same detail path as the table, preserving
+    row highlighting and stable selected-item URL params
+  - dashboard CLI contract now asserts the result navigator and selected-state
+    markers
 - Validation:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror dashboard|api ops browser CLI helpers|browser operator dashboard" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`

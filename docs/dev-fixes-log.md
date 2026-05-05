@@ -1,3 +1,9 @@
+- 2026-05-04: Account mirror detail review needs local result-to-result
+  navigation. The `/account-mirror` detail pane now includes a compact result
+  navigator for the current filtered row set, shares the same selection path as
+  the table, and keeps stable selected-item URL params while operators move
+  between cached items.
+
 - 2026-05-04: Account mirror row selection needs stable page-level deep links.
   `/account-mirror` now persists selected cached detail state in `item`,
   `itemKind`, `itemProvider`, and `itemRuntimeProfile` URL params, reopens that
