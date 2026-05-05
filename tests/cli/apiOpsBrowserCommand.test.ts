@@ -26,6 +26,7 @@ const dashboardHtml = `
   <button id="loadMirrorCatalog">Search Cache</button>
   <div id="mirrorCatalogSummary"></div>
   <div id="mirrorCatalogResults"></div>
+  <div id="mirrorCatalogKindTabs">Cached item browser</div>
   <div id="mirrorCatalogDetail"></div>
   <div id="mirrorCatalogDetailView"></div>
   <pre id="mirrorCatalogDetailRaw"></pre>
@@ -131,8 +132,10 @@ const dashboardHtml = `
   }
   function formatVisibleCatalogPreviewUrlsFilename() { return 'auracall-preview-urls-chatgpt-artifacts.txt'; }
   function renderMirrorCatalogTable() {
-    return '<table id="mirrorCatalogItems"><thead><tr><th>Transcript</th><th>Preview</th></tr></thead><tr data-catalog-row-index="0"><td><a href="/v1/account-mirrors/catalog/items/conv_1?provider=chatgpt&runtimeProfile=default&kind=conversations" data-catalog-item-path="/v1/account-mirrors/catalog/items/conv_1?provider=chatgpt&runtimeProfile=default&kind=conversations">Details</a></td></tr></table>';
+    return '<table id="mirrorCatalogItems"><thead><tr><th>Transcript</th><th>Preview</th></tr></thead><tr class="catalog-row-selected" data-catalog-row-index="0"><td><a href="/v1/account-mirrors/catalog/items/conv_1?provider=chatgpt&runtimeProfile=default&kind=conversations" data-catalog-item-path="/v1/account-mirrors/catalog/items/conv_1?provider=chatgpt&runtimeProfile=default&kind=conversations">Details</a></td></tr></table>';
   }
+  function setMirrorCatalogKindFilter() {}
+  function openDefaultMirrorCatalogDetail() {}
   function renderCatalogTranscriptBadge(row) {
     return row.hasCachedTranscript ? String(row.messageCount) : 'none';
   }

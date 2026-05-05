@@ -746,6 +746,11 @@ operators can identify full chat-dialog candidates before opening item detail.
 The dashboard also has a `With transcript only` checkbox persisted as
 `withTranscript=1`; it filters client-side against the cached transcript
 summary and does not enqueue provider browser work.
+The dedicated `/account-mirror` page now treats the catalog as a compact
+cached-object browser: kind-count quick filters sit above the table, rows are
+condensed to type/name/updated/state/identity/actions, selected rows are
+highlighted, and the page automatically opens the first cached conversation
+detail as a chat-dialog drill-in when transcript data is available.
 Conversation detail views with cached turns now include a local Markdown
 transcript download action. The export is rendered in the dashboard from the
 already-hydrated cached detail object, so it does not navigate, submit prompts,

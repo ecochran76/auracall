@@ -26503,3 +26503,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - dashboard CLI contract now asserts the materialization filter/sort controls
 - Validation:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers" --maxWorkers 1`
+
+## Turn 117 | 2026-05-04
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make the account-mirror page a usable cached-object navigation surface.
+- Change:
+  - added a cached item browser toolbar with kind-count quick filters
+  - compacted catalog rows to type/name/updated/state/identity/actions
+  - selected catalog rows are highlighted
+  - `/account-mirror` opens the first cached conversation detail by default,
+    rendering cached transcripts as a chat dialog when available
+  - dashboard CLI contract now asserts the compact navigation markers
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror dashboard|api ops browser CLI helpers|browser operator dashboard" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - restarted the pinned `127.0.0.1:18095` service on PID `3064513`
+  - installed `api ops-browser-status --port 18095 --json` reports
+    account mirror catalog, compact table, and chat-detail dashboard markers
+  - installed `/account-mirror?provider=chatgpt&kind=conversations&limit=5`
+    contains the cached item browser, kind tabs, default drill-in, selected-row,
+    and chat-dialog markers
+  - installed catalog read for ChatGPT/default conversations returned
+    `Fridge Mullion Repair Guide` with `hasCachedTranscript=true` and
+    `messageCount=5`; the item-detail route hydrates five messages, nine
+    sources, and eleven artifacts

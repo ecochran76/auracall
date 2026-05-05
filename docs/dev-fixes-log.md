@@ -1,3 +1,10 @@
+- 2026-05-04: Account mirror browsing needs to feel like navigation, not raw
+  JSON triage. `/account-mirror` now renders a compact cached-item browser with
+  kind-count quick filters, selected-row highlighting, and a first cached
+  conversation detail drill-in by default. The auto-drill-in is scoped to the
+  dedicated account mirror page so shared dashboard catalog code does not add
+  extra detail reads from unrelated operator pages.
+
 - 2026-05-03: Account mirror catalog row details need stable API URLs.
   `GET /v1/account-mirrors/catalog/items/{item_id}` now returns one cached
   manifest row using provider/runtime-profile/kind filters, and

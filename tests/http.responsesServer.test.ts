@@ -14679,6 +14679,11 @@ describe('http responses adapter', () => {
       expect(html).toContain('Search Cache');
       expect(html).toContain('mirrorCatalogSummary');
       expect(html).toContain('mirrorCatalogResults');
+      expect(html).toContain('Cached item browser');
+      expect(html).toContain('mirrorCatalogKindTabs');
+      expect(html).toContain('setMirrorCatalogKindFilter');
+      expect(html).toContain('openDefaultMirrorCatalogDetail');
+      expect(html).toContain('catalog-row-selected');
       expect(html).toContain('mirrorCatalogDetail');
       expect(html).toContain('mirrorCatalogDetailView');
       expect(html).toContain('mirrorCatalogDetailRaw');

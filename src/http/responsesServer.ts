@@ -3657,6 +3657,7 @@ function createOperatorBrowserDashboardHtml(input: {
     }
     th { color: var(--muted); font-size: 12px; font-weight: 600; background: #11151a; }
     tr:last-child td { border-bottom: 0; }
+    tr.catalog-row-selected td { background: #10211f; }
     td.wrap { white-space: normal; min-width: 180px; }
     pre {
       margin: 0;
@@ -3697,6 +3698,32 @@ function createOperatorBrowserDashboardHtml(input: {
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
+    }
+    .catalog-browser-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .catalog-kind-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .catalog-kind-tabs button {
+      min-height: 28px;
+      padding: 4px 8px;
+    }
+    .catalog-kind-tabs button[aria-pressed="true"] {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .catalog-title-cell {
+      display: grid;
+      gap: 4px;
+      min-width: 260px;
     }
     .notice {
       margin: 0 0 10px;
@@ -3867,9 +3894,13 @@ function createOperatorBrowserDashboardHtml(input: {
           <pre id="mirrorCatalogPreviewUrlList">No visible preview URLs.</pre>
         </div>
         <div id="mirrorCatalogSummary" class="notice">Catalog reads are cache-only and do not enqueue browser work.</div>
+        <div class="catalog-browser-toolbar">
+          <strong>Cached item browser</strong>
+          <div id="mirrorCatalogKindTabs" class="catalog-kind-tabs" aria-label="Cached item kind filters">Load catalog to browse cached items.</div>
+        </div>
         <div id="mirrorCatalogResults" class="muted" style="margin-bottom: 10px;">No catalog loaded.</div>
         <div id="mirrorCatalogDetail" class="catalog-detail">
-          <div class="notice">Select a cached row to inspect its raw manifest entry.</div>
+          <div class="notice">Select a cached row to inspect it. Cached conversations open as a chat dialog when transcript data is available.</div>
           <div id="mirrorCatalogDetailView" class="notice">No row selected.</div>
           <pre id="mirrorCatalogDetailRaw">No row selected.</pre>
         </div>
@@ -4596,15 +4627,20 @@ function createOperatorBrowserDashboardHtml(input: {
         }), $('mirrorCatalogSort').value);
         $('mirrorCatalogSummary').className = 'notice notice-ok';
         $('mirrorCatalogSummary').innerHTML = renderMirrorCatalogSummary(catalog, mirrorCatalogRows, mirrorCatalogFilteredRows);
+        $('mirrorCatalogKindTabs').innerHTML = renderMirrorCatalogKindTabs(mirrorCatalogRows);
         $('mirrorCatalogResults').innerHTML = renderMirrorCatalogTable(mirrorCatalogFilteredRows);
         $('mirrorCatalogDetailView').className = 'notice';
-        $('mirrorCatalogDetailView').textContent = 'No row selected.';
+        $('mirrorCatalogDetailView').textContent = 'Select a cached row to inspect it.';
         $('mirrorCatalogDetailRaw').textContent = 'No row selected.';
         $('mirrorCatalogRaw').textContent = asJson(catalog);
+        if (window.location.pathname === '/account-mirror') {
+          openDefaultMirrorCatalogDetail();
+        }
       } catch (error) {
         const message = String(error.message || error);
         $('mirrorCatalogSummary').className = 'notice notice-bad';
         $('mirrorCatalogSummary').textContent = message;
+        $('mirrorCatalogKindTabs').textContent = 'Catalog unavailable.';
         $('mirrorCatalogResults').textContent = message;
         $('mirrorCatalogRaw').textContent = message;
       } finally {
@@ -4727,6 +4763,33 @@ function createOperatorBrowserDashboardHtml(input: {
         renderBadge('previewable', countPreviewableCatalogRows(filteredRows), countPreviewableCatalogRows(filteredRows) ? 'ok' : 'muted'),
         renderBadge('shown', filteredRows.length + '/' + rows.length, filteredRows.length ? 'ok' : 'warn'),
       ].join('') + '</span>';
+    }
+
+    function renderMirrorCatalogKindTabs(rows) {
+      const kinds = ['all', 'projects', 'conversations', 'artifacts', 'files', 'media'];
+      const selected = $('mirrorCatalogKind').value || 'all';
+      const counts = kinds.reduce((acc, kind) => {
+        acc[kind] = kind === 'all' ? rows.length : rows.filter((row) => row.kind === kind).length;
+        return acc;
+      }, {});
+      return kinds.map((kind) => {
+        const label = kind + ' ' + String(counts[kind] || 0);
+        return '<button type="button" data-catalog-kind-filter="' + escapeHtml(kind) + '" aria-pressed="' + String(selected === kind) + '" onclick="setMirrorCatalogKindFilter(this.dataset.catalogKindFilter)">'
+          + escapeHtml(label)
+          + '</button>';
+      }).join('');
+    }
+
+    function setMirrorCatalogKindFilter(kind) {
+      setSelectValue('mirrorCatalogKind', kind || 'all');
+      void loadMirrorCatalog();
+    }
+
+    function openDefaultMirrorCatalogDetail() {
+      const row = mirrorCatalogFilteredRows.find((candidate) => candidate.kind === 'conversations')
+        || mirrorCatalogFilteredRows[0];
+      if (!row) return;
+      showMirrorCatalogDetailByIndex(row.rowIndex);
     }
 
     function countPreviewableCatalogRows(rows) {
@@ -5287,17 +5350,12 @@ function createOperatorBrowserDashboardHtml(input: {
     function renderMirrorCatalogTable(rows) {
       if (!rows.length) return '<span class="muted">No cached mirror catalog rows matched the current filters.</span>';
       return '<div class="table-wrap"><table id="mirrorCatalogItems"><thead><tr>' + [
-        'Provider',
-        'Profile',
-        'Kind',
-        'Title',
-        'ID',
+        'Type',
+        'Name',
         'Updated',
-        'Transcript',
-        'Preview',
+        'State',
         'Identity',
         'Actions',
-        'Snippet',
       ].map((label) => '<th>' + label + '</th>').join('') + '</tr></thead><tbody>' + rows.map(renderMirrorCatalogRow).join('') + '</tbody></table></div>';
     }
 
@@ -5305,17 +5363,12 @@ function createOperatorBrowserDashboardHtml(input: {
       const rowIndex = String(row.rowIndex);
       const itemPath = buildMirrorCatalogItemPath(row);
       return '<tr data-catalog-row-index="' + escapeHtml(rowIndex) + '" onclick="showMirrorCatalogDetailByIndex(this.dataset.catalogRowIndex)">' + [
-        '<td>' + escapeHtml(row.provider) + '</td>',
-        '<td>' + escapeHtml(row.runtimeProfileId) + '</td>',
-        '<td>' + escapeHtml(row.kind) + '</td>',
-        '<td class="wrap"><strong>' + escapeHtml(row.label) + '</strong></td>',
-        '<td class="wrap">' + escapeHtml(row.itemId) + '</td>',
+        '<td>' + renderBadge(row.provider, row.kind, row.kind === 'conversations' ? 'ok' : 'muted') + '<br><span class="muted">' + escapeHtml(row.runtimeProfileId) + '</span></td>',
+        '<td class="wrap"><div class="catalog-title-cell"><strong>' + escapeHtml(row.label) + '</strong><span class="muted">' + escapeHtml(row.itemId) + '</span><span>' + escapeHtml(trimCatalogSnippet(row.searchable)) + '</span></div></td>',
         '<td class="wrap">' + escapeHtml(row.timestamp) + '</td>',
-        '<td>' + renderCatalogTranscriptBadge(row) + '</td>',
-        '<td>' + renderCatalogMaterializationBadge(row) + '</td>',
+        '<td><div class="badges">' + renderCatalogTranscriptBadge(row) + renderCatalogMaterializationBadge(row) + '</div></td>',
         '<td class="wrap">' + escapeHtml(row.boundIdentityKey) + '</td>',
         '<td>' + renderCatalogRowActions(row, itemPath) + '</td>',
-        '<td class="wrap">' + escapeHtml(trimCatalogSnippet(row.searchable)) + '</td>',
       ].join('') + '</tr>';
     }
 
@@ -5415,7 +5468,14 @@ function createOperatorBrowserDashboardHtml(input: {
         $('mirrorCatalogDetailRaw').textContent = 'Cached row not found.';
         return;
       }
+      markSelectedMirrorCatalogRow(row.rowIndex);
       showMirrorCatalogDetailByPath(buildMirrorCatalogItemPath(row));
+    }
+
+    function markSelectedMirrorCatalogRow(rowIndex) {
+      document.querySelectorAll('#mirrorCatalogItems tr[data-catalog-row-index]').forEach((node) => {
+        node.classList.toggle('catalog-row-selected', node.getAttribute('data-catalog-row-index') === String(rowIndex));
+      });
     }
 
     async function showMirrorCatalogDetailByPath(path) {

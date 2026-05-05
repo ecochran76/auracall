@@ -272,6 +272,9 @@ Terminology note:
   provider/profile/kind/search/limit controls backed by
   `GET /v1/account-mirrors/catalog`, persists filters in the page URL, and
   opens stable item-detail URLs without starting provider browser work.
+  The catalog page now renders a compact cached-item browser with kind-count
+  quick filters, selected-row highlighting, and a first cached conversation
+  drill-in by default on `/account-mirror`.
   Conversation catalog rows show cached transcript availability and message
   count before opening the row, with a `withTranscript=1` filter for rows that
   will open as chat dialogs.

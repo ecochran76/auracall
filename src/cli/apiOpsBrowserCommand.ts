@@ -278,7 +278,12 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
     hasCatalogResultsTable: html.includes('renderMirrorCatalogTable')
       && html.includes('mirrorCatalogItems')
       && html.includes('flattenMirrorCatalogEntries')
-      && html.includes('filterMirrorCatalogRows'),
+      && html.includes('filterMirrorCatalogRows')
+      && html.includes('Cached item browser')
+      && html.includes('mirrorCatalogKindTabs')
+      && html.includes('setMirrorCatalogKindFilter')
+      && html.includes('openDefaultMirrorCatalogDetail')
+      && html.includes('catalog-row-selected'),
     hasCatalogDetailInspection: html.includes('mirrorCatalogDetail')
       && html.includes('mirrorCatalogDetailRaw')
       && html.includes('showMirrorCatalogDetailByIndex')
