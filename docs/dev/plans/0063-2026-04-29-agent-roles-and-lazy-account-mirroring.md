@@ -534,7 +534,9 @@ Each status payload should include:
   dashboard navigation/preview links. `/config` is the read-only operator page
   for the effective service discovery, operator URLs, routing fields, bound
   identity/account-level projections, and live-follow desired/actual
-  eligibility view.
+  eligibility view. Config/live-follow rows use the existing completion API and
+  `/status` completion-control path for live-follow start/pause/resume/cancel
+  without adding a second dashboard control plane.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.

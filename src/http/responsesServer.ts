@@ -4568,7 +4568,7 @@ function createOperatorBrowserDashboardHtml(input: {
         + ' active=' + escapeHtml(String(targets.active ?? 0))
         + '</div>'
         + '<table><thead><tr>'
-        + '<th>Provider</th><th>Runtime Profile</th><th>Desired</th><th>Actual</th><th>Phase</th><th>Next Attempt</th><th>Completeness</th>'
+        + '<th>Provider</th><th>Runtime Profile</th><th>Desired</th><th>Actual</th><th>Phase</th><th>Next Attempt</th><th>Completeness</th><th>Controls</th>'
         + '</tr></thead><tbody>'
         + accounts.map((account) => '<tr>'
           + '<td>' + escapeHtml(account.provider || 'unknown') + '</td>'
@@ -4578,6 +4578,7 @@ function createOperatorBrowserDashboardHtml(input: {
           + '<td>' + escapeHtml(account.phase || 'none') + '</td>'
           + '<td>' + escapeHtml(account.nextAttemptAt || 'none') + '</td>'
           + '<td>' + escapeHtml(account.mirrorCompleteness || 'unknown') + '</td>'
+          + '<td>' + renderLiveFollowAccountControls(account) + '</td>'
           + '</tr>').join('')
         + '</tbody></table>';
     }
@@ -4851,8 +4852,17 @@ function createOperatorBrowserDashboardHtml(input: {
         '<td class="wrap">' + escapeHtml(target.activeCompletionNextAttemptAt || 'none') + '</td>',
         '<td class="wrap">' + escapeHtml(target.routineEligibleAt || 'none') + '</td>',
         '<td class="wrap">' + escapeHtml(formatMetadataCounts(counts)) + '</td>',
-        '<td>' + renderCompletionControlButtons(target.activeCompletionId, status) + '</td>',
+        '<td>' + renderLiveFollowAccountControls(target) + '</td>',
       ].join('') + '</tr>';
+    }
+
+    function renderLiveFollowAccountControls(target) {
+      const completionId = target && target.activeCompletionId ? target.activeCompletionId : null;
+      if (completionId) return renderCompletionControlButtons(completionId, target.actualStatus || 'unknown');
+      if (target && target.desiredState === 'enabled') {
+        return '<button type="button" data-provider="' + escapeHtml(target.provider || '') + '" data-runtime-profile="' + escapeHtml(target.runtimeProfileId || '') + '" onclick="startMirrorCompletionForTarget(this.dataset.provider, this.dataset.runtimeProfile)">Start</button>';
+      }
+      return '<span class="muted">not live-follow enabled</span>';
     }
 
     function renderActiveCompletionTable(active) {
@@ -6733,6 +6743,25 @@ function createOperatorBrowserDashboardHtml(input: {
         for (const button of document.querySelectorAll('[data-completion-action]')) {
           button.disabled = false;
         }
+      }
+    }
+
+    async function startMirrorCompletionForTarget(provider, runtimeProfile) {
+      if (!provider || !runtimeProfile) return;
+      setMirrorControlNotice('Starting live follow for ' + provider + '/' + runtimeProfile + '...', 'warn');
+      try {
+        const result = await postJson('/v1/account-mirrors/completions', {
+          provider,
+          runtimeProfile,
+        });
+        $('mirrorCompletionId').value = result.id || '';
+        $('mirrorCompletions').textContent = asJson({ startedCompletion: result });
+        setMirrorControlNotice('Started live follow for ' + provider + '/' + runtimeProfile + '.', 'ok');
+        await refreshStatus();
+      } catch (error) {
+        const message = String(error.message || error);
+        $('mirrorCompletions').textContent = message;
+        setMirrorControlNotice('Failed to start live follow for ' + provider + '/' + runtimeProfile + ': ' + message, 'bad');
       }
     }
 

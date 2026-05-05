@@ -266,7 +266,7 @@ Terminology note:
   `/status.accountMirrorCompletions` reports completion metrics plus active and
   recent records, and `/ops/browser` renders the same live-follow posture plus
   service controls for the background drain, mirror scheduler run-once,
-  scheduler pause/resume, and live-follow completion pause/resume/cancel in the
+  scheduler pause/resume, and live-follow start/pause/resume/cancel in the
   local operator dashboard. `/account-mirror` is the dedicated read-only account
   mirror page; it includes the same cache-only catalog browser with
   provider/profile/kind/search/limit controls backed by

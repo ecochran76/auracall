@@ -14725,6 +14725,11 @@ describe('http responses adapter', () => {
       expect(html).toContain('desiredState');
       expect(html).toContain('nextAttemptAt');
       expect(html).toContain('mirrorCompleteness');
+      expect(html).toContain('renderLiveFollowAccountControls');
+      expect(html).toContain('startMirrorCompletionForTarget');
+      expect(html).toContain("postJson('/v1/account-mirrors/completions'");
+      expect(html).toContain('data-runtime-profile');
+      expect(html).toContain('not live-follow enabled');
       expect(html).toContain('backgroundDrainControls');
       expect(html).toContain('pauseBackgroundDrain');
       expect(html).toContain('resumeBackgroundDrain');

@@ -7,7 +7,8 @@
   served as operator aliases and used by dashboard nav/link generation. `/config`
   now gives operators a read-only effective view of the same routing block,
   bound identity/account-level projections, and live-follow desired/actual
-  eligibility.
+  eligibility. Config/live-follow rows now reuse the existing completion API and
+  `/status` completion-control path for start/pause/resume/cancel controls.
 
 - 2026-05-05: Account mirror result navigation needs fast keyboard controls.
   The `/account-mirror` page now supports `/` to focus cached catalog search
