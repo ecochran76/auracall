@@ -145,8 +145,8 @@ Current State:
     file/artifact/media detail now renders a compact cached metadata inspector,
     browser-safe cached previews, cache-owned local asset serving, and catalog
     row preview/materialization badges with previewability filtering/sorting
-    plus direct row-level and visible-batch preview URL inspect/open/copy/
-    download actions
+    plus direct row-level and visible-batch preview URL inspect/session-review/
+    open/copy/download actions
     before the raw JSON fallback;
     CLI/MCP `api_ops_browser_status` surfaces the configured canonical
     dashboard URL for operator handoff, with `http://auracall.localhost/ops/browser`

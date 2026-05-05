@@ -726,6 +726,11 @@ export async function createResponsesHttpServer(
         return;
       }
 
+      if (req.method === 'GET' && url.pathname === '/account-mirror/preview-session') {
+        sendHtml(res, 200, createOperatorBrowserDashboardHtml({ activePage: 'preview-session' }));
+        return;
+      }
+
       if (req.method === 'GET' && url.pathname === '/status') {
         const statusQuery = parseStatusQuery(url.searchParams);
         await accountMirrorStatusRegistry.refreshPersistentState?.();
@@ -3345,15 +3350,22 @@ function sendCachedAsset(res: http.ServerResponse, asset: CachedCatalogItemAsset
 }
 
 function createOperatorBrowserDashboardHtml(input: {
-  activePage?: 'browser' | 'account-mirror';
+  activePage?: 'browser' | 'account-mirror' | 'preview-session';
 } = {}): string {
   const activePage = input.activePage ?? 'browser';
   const browserCurrent = activePage === 'browser' ? ' aria-current="page"' : '';
   const accountMirrorCurrent = activePage === 'account-mirror' ? ' aria-current="page"' : '';
-  const pageTitle = activePage === 'account-mirror' ? 'AuraCall Account Mirror' : 'AuraCall Browser Ops';
+  const previewSessionCurrent = activePage === 'preview-session' ? ' aria-current="page"' : '';
+  const pageTitle = activePage === 'account-mirror'
+    ? 'AuraCall Account Mirror'
+    : activePage === 'preview-session'
+      ? 'AuraCall Preview Session'
+      : 'AuraCall Browser Ops';
   const pageDescription = activePage === 'account-mirror'
     ? 'Read-only account mirror navigation backed by cached provider indexes.'
-    : 'Local operator view. Browser diagnostics run only when requested.';
+    : activePage === 'preview-session'
+      ? 'Cache-only review of selected account mirror preview assets.'
+      : 'Local operator view. Browser diagnostics run only when requested.';
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -3601,6 +3613,37 @@ function createOperatorBrowserDashboardHtml(input: {
       width: 100%;
       min-height: 520px;
     }
+    .preview-session-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    .preview-session-item {
+      display: grid;
+      gap: 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #11151a;
+      padding: 10px;
+      min-width: 0;
+    }
+    .preview-session-frame {
+      width: 100%;
+      min-height: 280px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #0b0c0f;
+    }
+    .preview-session-item img,
+    .preview-session-item video,
+    .preview-session-item audio {
+      width: 100%;
+      max-height: 420px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #0b0c0f;
+      object-fit: contain;
+    }
     .severity-healthy { color: var(--accent); }
     .severity-backpressured, .severity-paused { color: var(--warn); }
     .severity-attention-needed { color: var(--bad); }
@@ -3618,6 +3661,7 @@ function createOperatorBrowserDashboardHtml(input: {
     <nav class="nav" aria-label="AuraCall sections">
       <a href="/ops/browser"${browserCurrent}>Browser Ops</a>
       <a href="/account-mirror"${accountMirrorCurrent}>Account Mirror</a>
+      <a href="/account-mirror/preview-session"${previewSessionCurrent}>Preview Session</a>
       <span aria-disabled="true">Agents / Teams</span>
       <span aria-disabled="true">Config</span>
     </nav>
@@ -3690,6 +3734,7 @@ function createOperatorBrowserDashboardHtml(input: {
           </label>
           <button id="loadMirrorCatalog" class="primary">Search Cache</button>
           <button id="showVisibleMirrorCatalogPreviewUrls" type="button">Preview visible URL list</button>
+          <button id="reviewVisibleMirrorCatalogPreviews" type="button">Review visible previews</button>
           <button id="openVisibleMirrorCatalogPreviewUrls" type="button">Open visible previews</button>
           <button id="copyVisibleMirrorCatalogPreviewUrls" type="button">Copy visible preview URLs</button>
           <button id="downloadVisibleMirrorCatalogPreviewUrls" type="button">Download visible preview URL list</button>
@@ -3731,6 +3776,16 @@ function createOperatorBrowserDashboardHtml(input: {
         <div id="mirrorControlNotice" class="notice" role="status" aria-live="polite">No live-follow control action yet.</div>
         <pre id="mirrorTargets">Loading...</pre>
         <pre id="mirrorCompletions">Loading...</pre>
+      </section>
+
+      <section id="mirrorPreviewSessionPanel" class="panel" hidden>
+        <h2>Cached Preview Session</h2>
+        <div id="mirrorPreviewSessionNotice" class="notice" role="status" aria-live="polite">No preview session loaded.</div>
+        <div class="row" style="margin-bottom: 10px;">
+          <button id="copyMirrorPreviewSessionUrls" type="button">Copy session URLs</button>
+          <button id="downloadMirrorPreviewSessionUrls" type="button">Download session URL list</button>
+        </div>
+        <div id="mirrorPreviewSessionGrid" class="preview-session-grid">No previews loaded.</div>
       </section>
 
       <section class="panel wide">
@@ -3795,6 +3850,7 @@ function createOperatorBrowserDashboardHtml(input: {
     let mirrorCatalogRows = [];
     let mirrorCatalogFilteredRows = [];
     let mirrorCatalogCurrentDetail = null;
+    let mirrorPreviewSessionUrls = [];
 
     async function fetchJson(path) {
       const response = await fetch(path, { cache: 'no-store' });
@@ -4517,6 +4573,24 @@ function createOperatorBrowserDashboardHtml(input: {
       setMirrorCatalogBatchNotice('Opened ' + String(Math.min(urls.length, openLimit)) + ' visible preview URL(s).' + suffix, 'ok');
     }
 
+    function reviewVisibleMirrorCatalogPreviews() {
+      const urls = collectVisibleCatalogPreviewUrls();
+      if (!urls.length) {
+        setMirrorCatalogBatchNotice('No visible preview URLs to review.', 'warn');
+        return;
+      }
+      const reviewLimit = 24;
+      const selectedUrls = urls.slice(0, reviewLimit);
+      const sessionId = 'preview-' + String(Date.now()) + '-' + String(Math.random()).slice(2);
+      localStorage.setItem('auracall.previewSession.' + sessionId, JSON.stringify({
+        createdAt: new Date().toISOString(),
+        urls: selectedUrls,
+      }));
+      const suffix = urls.length > reviewLimit ? ' Limited to first ' + String(reviewLimit) + ' of ' + String(urls.length) + '.' : '';
+      window.open('/account-mirror/preview-session?session=' + encodeURIComponent(sessionId), '_blank', 'noopener,noreferrer');
+      setMirrorCatalogBatchNotice('Opened preview session for ' + String(selectedUrls.length) + ' visible preview URL(s).' + suffix, 'ok');
+    }
+
     async function copyVisibleMirrorCatalogPreviewUrls() {
       const urls = collectVisibleCatalogPreviewUrls();
       if (!urls.length) {
@@ -4553,6 +4627,114 @@ function createOperatorBrowserDashboardHtml(input: {
       const kind = $('mirrorCatalogKind').value || 'all';
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       return 'auracall-preview-urls-' + provider + '-' + kind + '-' + timestamp + '.txt';
+    }
+
+    function initializeMirrorPreviewSession() {
+      if (window.location.pathname !== '/account-mirror/preview-session') return;
+      $('mirrorPreviewSessionPanel').hidden = false;
+      const urls = readMirrorPreviewSessionUrls();
+      renderMirrorPreviewSession(urls);
+    }
+
+    function readMirrorPreviewSessionUrls() {
+      const params = new URLSearchParams(window.location.search);
+      const sessionId = params.get('session');
+      if (sessionId) {
+        try {
+          const record = JSON.parse(localStorage.getItem('auracall.previewSession.' + sessionId) || '{}');
+          if (Array.isArray(record.urls)) return normalizeMirrorPreviewSessionUrls(record.urls);
+        } catch {
+          return [];
+        }
+      }
+      const repeatedUrls = params.getAll('url');
+      if (repeatedUrls.length) return normalizeMirrorPreviewSessionUrls(repeatedUrls);
+      const encodedUrls = params.get('urls');
+      if (!encodedUrls) return [];
+      try {
+        return normalizeMirrorPreviewSessionUrls(JSON.parse(encodedUrls));
+      } catch {
+        return [];
+      }
+    }
+
+    function normalizeMirrorPreviewSessionUrls(values) {
+      if (!Array.isArray(values)) return [];
+      return values
+        .map((value) => String(value || '').trim())
+        .filter(isSafePreviewUrl)
+        .map((url) => new URL(url, window.location.origin).href)
+        .filter((url, index, urls) => urls.indexOf(url) === index)
+        .slice(0, 24);
+    }
+
+    function renderMirrorPreviewSession(urls) {
+      const notice = $('mirrorPreviewSessionNotice');
+      const grid = $('mirrorPreviewSessionGrid');
+      mirrorPreviewSessionUrls = urls;
+      if (!urls.length) {
+        notice.textContent = 'No preview session URLs were found. Start from Account Mirror and choose Review visible previews.';
+        notice.className = 'notice notice-warn';
+        grid.innerHTML = 'No previews loaded.';
+        return;
+      }
+      notice.textContent = 'Rendering ' + String(urls.length) + ' cached preview URL(s).';
+      notice.className = 'notice notice-ok';
+      grid.innerHTML = urls.map(renderMirrorPreviewSessionItem).join('');
+    }
+
+    function renderMirrorPreviewSessionItem(url, index) {
+      return '<article class="preview-session-item">'
+        + '<div class="control-title"><strong>Preview ' + String(index + 1) + '</strong><a href="' + escapeHtml(url) + '" target="_blank" rel="noreferrer">Open</a></div>'
+        + renderMirrorPreviewSessionEmbed(url)
+        + '<code>' + escapeHtml(url) + '</code>'
+        + '</article>';
+    }
+
+    function renderMirrorPreviewSessionEmbed(url) {
+      const lower = url.toLowerCase();
+      if (lower.startsWith('data:image/') || /\\.(apng|avif|gif|jpe?g|png|webp)(\\?|#|$)/.test(lower)) {
+        return '<img src="' + escapeHtml(url) + '" alt="Cached preview">';
+      }
+      if (lower.startsWith('data:video/') || /\\.(mp4|mov|m4v|webm)(\\?|#|$)/.test(lower)) {
+        return '<video src="' + escapeHtml(url) + '" controls></video>';
+      }
+      if (lower.startsWith('data:audio/') || /\\.(mp3|m4a|ogg|wav|webm)(\\?|#|$)/.test(lower)) {
+        return '<audio src="' + escapeHtml(url) + '" controls></audio>';
+      }
+      if (lower.startsWith('data:application/pdf') || /\\.pdf(\\?|#|$)/.test(lower)) {
+        return '<iframe class="preview-session-frame" src="' + escapeHtml(url) + '" title="Cached PDF preview"></iframe>';
+      }
+      return '<iframe class="preview-session-frame" src="' + escapeHtml(url) + '" title="Cached preview"></iframe>';
+    }
+
+    async function copyMirrorPreviewSessionUrls() {
+      if (!mirrorPreviewSessionUrls.length) {
+        $('mirrorPreviewSessionNotice').textContent = 'No session URLs to copy.';
+        $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
+        return;
+      }
+      await navigator.clipboard.writeText(mirrorPreviewSessionUrls.join('\\n'));
+      $('mirrorPreviewSessionNotice').textContent = 'Copied ' + String(mirrorPreviewSessionUrls.length) + ' session URL(s).';
+      $('mirrorPreviewSessionNotice').className = 'notice notice-ok';
+    }
+
+    function downloadMirrorPreviewSessionUrls() {
+      if (!mirrorPreviewSessionUrls.length) {
+        $('mirrorPreviewSessionNotice').textContent = 'No session URLs to download.';
+        $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
+        return;
+      }
+      const blob = new Blob([mirrorPreviewSessionUrls.join('\\n') + '\\n'], { type: 'text/plain;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'auracall-preview-session-' + new Date().toISOString().replace(/[:.]/g, '-') + '.txt';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+      $('mirrorPreviewSessionNotice').textContent = 'Downloaded ' + String(mirrorPreviewSessionUrls.length) + ' session URL(s).';
+      $('mirrorPreviewSessionNotice').className = 'notice notice-ok';
     }
 
     function setMirrorCatalogBatchNotice(message, tone) {
@@ -5434,15 +5616,19 @@ function createOperatorBrowserDashboardHtml(input: {
     $('loadMirrorCatalog').addEventListener('click', loadMirrorCatalog);
     $('showVisibleMirrorCatalogPreviewUrls').addEventListener('click', showVisibleMirrorCatalogPreviewUrls);
     $('hideVisibleMirrorCatalogPreviewUrls').addEventListener('click', hideVisibleMirrorCatalogPreviewUrls);
+    $('reviewVisibleMirrorCatalogPreviews').addEventListener('click', reviewVisibleMirrorCatalogPreviews);
     $('openVisibleMirrorCatalogPreviewUrls').addEventListener('click', openVisibleMirrorCatalogPreviewUrls);
     $('copyVisibleMirrorCatalogPreviewUrls').addEventListener('click', copyVisibleMirrorCatalogPreviewUrls);
     $('downloadVisibleMirrorCatalogPreviewUrls').addEventListener('click', downloadVisibleMirrorCatalogPreviewUrls);
+    $('copyMirrorPreviewSessionUrls').addEventListener('click', copyMirrorPreviewSessionUrls);
+    $('downloadMirrorPreviewSessionUrls').addEventListener('click', downloadMirrorPreviewSessionUrls);
     $('mirrorCatalogSearch').addEventListener('keydown', (event) => {
       if (event.key === 'Enter') loadMirrorCatalog();
     });
     $('probeWorkbench').addEventListener('click', probeWorkbench);
     $('probeRun').addEventListener('click', probeRun);
     initializeMirrorCatalogFiltersFromUrl();
+    initializeMirrorPreviewSession();
     refreshStatus();
   </script>
 </body>

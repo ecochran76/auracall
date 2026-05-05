@@ -188,6 +188,7 @@ Terminology note:
   endpoints are:
   - `GET /ops/browser`
   - `GET /account-mirror`
+  - `GET /account-mirror/preview-session`
   - `GET /dashboard` (alias)
   - `GET /status`
   - `GET /status/recovery/{run_id}`
@@ -282,8 +283,8 @@ Terminology note:
   `inline`, and `metadata` assets before opening detail, then filter or sort
   cached rows by previewability without triggering browser work. Previewable
   asset rows also expose `Open Preview` and `Copy URL` actions directly from
-  the catalog table, plus batch actions to inspect, open, copy, or download
-  all visible preview URLs.
+  the catalog table, plus batch actions to inspect, review in one cache-only
+  preview session, open, copy, or download all visible preview URLs.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

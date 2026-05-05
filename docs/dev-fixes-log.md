@@ -15510,3 +15510,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-04: Operators need a bounded way to visually inspect the visible
   preview set. Add an `Open visible previews` action that opens the first eight
   deduplicated visible preview URLs and reports when the set was capped.
+- 2026-05-04: Multi-tab preview review is awkward for larger cached asset sets.
+  Add a cache-only `/account-mirror/preview-session` page and a `Review visible
+  previews` action that renders up to 24 selected preview URLs in one dashboard
+  view.

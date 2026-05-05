@@ -38,6 +38,7 @@ export interface ApiOpsBrowserDashboardSummary {
   hasResumeBinding: boolean;
   hasCancelBinding: boolean;
   hasAccountMirrorCatalogPanel: boolean;
+  hasAccountMirrorPreviewSessionPage: boolean;
   hasCatalogSearchControls: boolean;
   hasCatalogResultsTable: boolean;
   hasAccountMirrorPageLink: boolean;
@@ -56,6 +57,7 @@ export interface ApiOpsBrowserDashboardSummary {
   hasCatalogMaterializationControls: boolean;
   hasCatalogRowPreviewActions: boolean;
   hasCatalogBatchPreviewUrlDrawer: boolean;
+  hasCatalogBatchPreviewSessionReview: boolean;
   hasCatalogBatchPreviewUrlOpen: boolean;
   hasCatalogBatchPreviewUrlCopy: boolean;
   hasCatalogBatchPreviewUrlDownload: boolean;
@@ -111,7 +113,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
     `AuraCall ops browser: ok (${summary.host}:${summary.port}${dashboard.route})`,
     `Dashboard URL: ${summary.dashboardUrl}`,
     `Dashboard service control: nav=${formatBoolean(dashboard.hasNavigationScaffold)} operations=${formatBoolean(dashboard.hasOperationsPanel)} backgroundDrain=${formatBoolean(dashboard.hasBackgroundDrainControls)} scheduler=${formatBoolean(dashboard.hasMirrorSchedulerControls)} runOnce=${formatBoolean(dashboard.hasRunOnceSchedulerControl)}`,
-    `Dashboard cache browse: catalog=${formatBoolean(dashboard.hasAccountMirrorCatalogPanel)} page=${formatBoolean(dashboard.hasAccountMirrorPageLink)} search=${formatBoolean(dashboard.hasCatalogSearchControls)} savedFilters=${formatBoolean(dashboard.hasCatalogSavedFilterState)} table=${formatBoolean(dashboard.hasCatalogResultsTable)} detail=${formatBoolean(dashboard.hasCatalogDetailInspection)} chat=${formatBoolean(dashboard.hasConversationChatDetailView)} transcript=${formatBoolean(dashboard.hasConversationTranscriptAffordance)} transcriptFilter=${formatBoolean(dashboard.hasConversationTranscriptOnlyFilter)} transcriptDownload=${formatBoolean(dashboard.hasConversationTranscriptDownload)} transcriptSearch=${formatBoolean(dashboard.hasConversationTranscriptSearch)} related=${formatBoolean(dashboard.hasConversationRelatedItemNavigation)} assetInspector=${formatBoolean(dashboard.hasCatalogAssetDetailInspector)} assetPreview=${formatBoolean(dashboard.hasCatalogAssetPreview)} localAsset=${formatBoolean(dashboard.hasCatalogLocalAssetRoute)} materialization=${formatBoolean(dashboard.hasCatalogMaterializationBadges)} materializationControls=${formatBoolean(dashboard.hasCatalogMaterializationControls)} rowPreviewActions=${formatBoolean(dashboard.hasCatalogRowPreviewActions)} batchPreviewDrawer=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDrawer)} batchPreviewOpen=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlOpen)} batchPreviewCopy=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlCopy)} batchPreviewDownload=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDownload)} path=${dashboard.usesAccountMirrorCatalogPath ? '/v1/account-mirrors/catalog' : 'unknown'} itemPath=${dashboard.usesAccountMirrorCatalogItemPath ? '/v1/account-mirrors/catalog/items/{id}' : 'unknown'}`,
+    `Dashboard cache browse: catalog=${formatBoolean(dashboard.hasAccountMirrorCatalogPanel)} page=${formatBoolean(dashboard.hasAccountMirrorPageLink)} previewSession=${formatBoolean(dashboard.hasAccountMirrorPreviewSessionPage)} search=${formatBoolean(dashboard.hasCatalogSearchControls)} savedFilters=${formatBoolean(dashboard.hasCatalogSavedFilterState)} table=${formatBoolean(dashboard.hasCatalogResultsTable)} detail=${formatBoolean(dashboard.hasCatalogDetailInspection)} chat=${formatBoolean(dashboard.hasConversationChatDetailView)} transcript=${formatBoolean(dashboard.hasConversationTranscriptAffordance)} transcriptFilter=${formatBoolean(dashboard.hasConversationTranscriptOnlyFilter)} transcriptDownload=${formatBoolean(dashboard.hasConversationTranscriptDownload)} transcriptSearch=${formatBoolean(dashboard.hasConversationTranscriptSearch)} related=${formatBoolean(dashboard.hasConversationRelatedItemNavigation)} assetInspector=${formatBoolean(dashboard.hasCatalogAssetDetailInspector)} assetPreview=${formatBoolean(dashboard.hasCatalogAssetPreview)} localAsset=${formatBoolean(dashboard.hasCatalogLocalAssetRoute)} materialization=${formatBoolean(dashboard.hasCatalogMaterializationBadges)} materializationControls=${formatBoolean(dashboard.hasCatalogMaterializationControls)} rowPreviewActions=${formatBoolean(dashboard.hasCatalogRowPreviewActions)} batchPreviewDrawer=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDrawer)} batchPreviewReview=${formatBoolean(dashboard.hasCatalogBatchPreviewSessionReview)} batchPreviewOpen=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlOpen)} batchPreviewCopy=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlCopy)} batchPreviewDownload=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDownload)} path=${dashboard.usesAccountMirrorCatalogPath ? '/v1/account-mirrors/catalog' : 'unknown'} itemPath=${dashboard.usesAccountMirrorCatalogItemPath ? '/v1/account-mirrors/catalog/items/{id}' : 'unknown'}`,
     `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} attention=${formatBoolean(dashboard.hasAttentionQueue)} activeTable=${formatBoolean(dashboard.hasActiveCompletionTable)} inspect=${formatBoolean(dashboard.hasCompletionInspectAction)} inputInspect=${formatBoolean(dashboard.hasCompletionInputInspectControl)} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} stateAware=${formatBoolean(dashboard.hasStateAwareCompletionActions)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
     summary.status.liveFollow.line,
     `Account mirror completions: active=${formatNullableNumber(summary.status.completions.metrics.active)} paused=${formatNullableNumber(summary.status.completions.metrics.paused)} failed=${formatNullableNumber(summary.status.completions.metrics.failed)} cancelled=${formatNullableNumber(summary.status.completions.metrics.cancelled)} total=${formatNullableNumber(summary.status.completions.metrics.total)}`,
@@ -148,6 +150,7 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
     [summary.hasCancelBinding, 'Expected /ops/browser to bind cancelMirrorCompletion.'],
     [summary.hasAccountMirrorCatalogPanel, 'Expected /ops/browser to include cache-backed account mirror catalog browsing.'],
     [summary.hasAccountMirrorPageLink, 'Expected /ops/browser to link the Account Mirror page route.'],
+    [summary.hasAccountMirrorPreviewSessionPage, 'Expected /ops/browser to link the Account Mirror preview session page route.'],
     [summary.hasCatalogSearchControls, 'Expected /ops/browser to include account mirror catalog search controls.'],
     [summary.hasCatalogSavedFilterState, 'Expected /ops/browser to persist account mirror catalog filters in the URL.'],
     [summary.hasCatalogResultsTable, 'Expected /ops/browser to render cached account mirror catalog rows.'],
@@ -165,6 +168,7 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
     [summary.hasCatalogMaterializationControls, 'Expected /ops/browser catalog rows to filter and sort by asset materialization status.'],
     [summary.hasCatalogRowPreviewActions, 'Expected /ops/browser catalog rows to open and copy cached asset preview URLs.'],
     [summary.hasCatalogBatchPreviewUrlDrawer, 'Expected /ops/browser catalog rows to inspect visible cached asset preview URLs before export.'],
+    [summary.hasCatalogBatchPreviewSessionReview, 'Expected /ops/browser catalog rows to review visible cached asset previews in a dashboard session.'],
     [summary.hasCatalogBatchPreviewUrlOpen, 'Expected /ops/browser catalog rows to open visible cached asset preview URLs.'],
     [summary.hasCatalogBatchPreviewUrlCopy, 'Expected /ops/browser catalog rows to copy visible cached asset preview URLs.'],
     [summary.hasCatalogBatchPreviewUrlDownload, 'Expected /ops/browser catalog rows to download visible cached asset preview URLs.'],
@@ -258,6 +262,14 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('loadMirrorCatalog')
       && html.includes('Search Cache'),
     hasAccountMirrorPageLink: html.includes('href="/account-mirror"') && html.includes('Account Mirror'),
+    hasAccountMirrorPreviewSessionPage: html.includes('href="/account-mirror/preview-session"')
+      && html.includes('Preview Session')
+      && html.includes('mirrorPreviewSessionPanel')
+      && html.includes('initializeMirrorPreviewSession')
+      && html.includes('renderMirrorPreviewSession')
+      && html.includes('readMirrorPreviewSessionUrls')
+      && html.includes('Cached Preview Session')
+      && html.includes('preview-session-grid'),
     hasCatalogSavedFilterState: html.includes('initializeMirrorCatalogFiltersFromUrl')
       && html.includes('updateMirrorCatalogUrl')
       && html.includes('window.history.replaceState')
@@ -370,6 +382,15 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('No visible preview URLs.')
       && html.includes('Previewing ')
       && html.includes("urls.join('\\n')"),
+    hasCatalogBatchPreviewSessionReview: html.includes('reviewVisibleMirrorCatalogPreviews')
+      && html.includes('Review visible previews')
+      && html.includes('/account-mirror/preview-session?session=')
+      && html.includes('auracall.previewSession.')
+      && html.includes('Opened preview session for ')
+      && html.includes('Rendering ')
+      && html.includes('session URL(s)')
+      && html.includes('copyMirrorPreviewSessionUrls')
+      && html.includes('downloadMirrorPreviewSessionUrls'),
     hasCatalogBatchPreviewUrlOpen: html.includes('openVisibleMirrorCatalogPreviewUrls')
       && html.includes('Open visible previews')
       && html.includes("window.open(url, '_blank', 'noopener,noreferrer')")

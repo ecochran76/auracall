@@ -9,6 +9,7 @@ const dashboardHtml = `
 <nav aria-label="AuraCall sections">
   <a href="/ops/browser" aria-current="page">Browser Ops</a>
   <a href="/account-mirror">Account Mirror</a>
+  <a href="/account-mirror/preview-session">Preview Session</a>
   <span>Agents / Teams</span>
   <span>Config</span>
 </nav>
@@ -70,6 +71,11 @@ const dashboardHtml = `
     setMirrorCatalogBatchNotice('Previewing 1 visible preview URL(s).', 'ok');
   }
   function hideVisibleMirrorCatalogPreviewUrls() { mirrorCatalogPreviewUrlDrawer.hidden = true; }
+  function reviewVisibleMirrorCatalogPreviews() {
+    localStorage.setItem('auracall.previewSession.preview-1', JSON.stringify({ urls: collectVisibleCatalogPreviewUrls() }));
+    window.open('/account-mirror/preview-session?session=' + encodeURIComponent('preview-1'), '_blank', 'noopener,noreferrer');
+    setMirrorCatalogBatchNotice('Opened preview session for 1 visible preview URL(s).', 'ok');
+  }
   function openVisibleMirrorCatalogPreviewUrls() {
     if (!collectVisibleCatalogPreviewUrls().length) setMirrorCatalogBatchNotice('No visible preview URLs to open.', 'warn');
     collectVisibleCatalogPreviewUrls().slice(0, 8).forEach((url) => window.open(url, '_blank', 'noopener,noreferrer'));
@@ -82,12 +88,19 @@ const dashboardHtml = `
   }
   function setMirrorCatalogBatchNotice() { mirrorCatalogBatchNotice.textContent = 'Copied'; }
   <button id="showVisibleMirrorCatalogPreviewUrls">Preview visible URL list</button>
+  <button id="reviewVisibleMirrorCatalogPreviews">Review visible previews</button>
   <button id="openVisibleMirrorCatalogPreviewUrls">Open visible previews</button>
   <button id="copyVisibleMirrorCatalogPreviewUrls">Copy visible preview URLs</button>
   <button id="downloadVisibleMirrorCatalogPreviewUrls">Download visible preview URL list</button>
   <button id="hideVisibleMirrorCatalogPreviewUrls">Close</button>
   <div id="mirrorCatalogBatchNotice"></div>
   <div id="mirrorCatalogPreviewUrlDrawer"><strong>Visible preview URLs</strong><pre id="mirrorCatalogPreviewUrlList">No visible preview URLs.</pre></div>
+  <section id="mirrorPreviewSessionPanel"><h2>Cached Preview Session</h2><div id="mirrorPreviewSessionNotice">Rendering 1 session URL(s)</div><div id="mirrorPreviewSessionGrid" class="preview-session-grid"></div></section>
+  function initializeMirrorPreviewSession() {}
+  function readMirrorPreviewSessionUrls() { return []; }
+  function renderMirrorPreviewSession() { return 'Rendering session URL(s)'; }
+  async function copyMirrorPreviewSessionUrls() {}
+  function downloadMirrorPreviewSessionUrls() {}
   function downloadVisibleMirrorCatalogPreviewUrls() {
     new Blob([], { type: 'text/plain;charset=utf-8' });
     URL.createObjectURL(new Blob());
@@ -292,6 +305,7 @@ describe('api ops browser CLI helpers', () => {
       hasCatalogSearchControls: true,
       hasCatalogResultsTable: true,
       hasAccountMirrorPageLink: true,
+      hasAccountMirrorPreviewSessionPage: true,
       hasCatalogSavedFilterState: true,
       hasCatalogDetailInspection: true,
       hasConversationChatDetailView: true,
@@ -307,6 +321,7 @@ describe('api ops browser CLI helpers', () => {
       hasCatalogMaterializationControls: true,
       hasCatalogRowPreviewActions: true,
       hasCatalogBatchPreviewUrlDrawer: true,
+      hasCatalogBatchPreviewSessionReview: true,
       hasCatalogBatchPreviewUrlOpen: true,
       hasCatalogBatchPreviewUrlCopy: true,
       hasCatalogBatchPreviewUrlDownload: true,
@@ -327,7 +342,7 @@ describe('api ops browser CLI helpers', () => {
       'Dashboard service control: nav=ok operations=ok backgroundDrain=ok scheduler=ok runOnce=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard cache browse: catalog=ok page=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok transcriptFilter=ok transcriptDownload=ok transcriptSearch=ok related=ok assetInspector=ok assetPreview=ok localAsset=ok materialization=ok materializationControls=ok rowPreviewActions=ok batchPreviewDrawer=ok batchPreviewOpen=ok batchPreviewCopy=ok batchPreviewDownload=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
+      'Dashboard cache browse: catalog=ok page=ok previewSession=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok transcriptFilter=ok transcriptDownload=ok transcriptSearch=ok related=ok assetInspector=ok assetPreview=ok localAsset=ok materialization=ok materializationControls=ok rowPreviewActions=ok batchPreviewDrawer=ok batchPreviewReview=ok batchPreviewOpen=ok batchPreviewCopy=ok batchPreviewDownload=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok inputInspect=ok input=ok rowActions=ok stateAware=ok feedback=ok pause=ok resume=ok cancel=ok',

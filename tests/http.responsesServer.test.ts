@@ -14637,6 +14637,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('aria-label="AuraCall sections"');
       expect(html).toContain('Account Mirror');
       expect(html).toContain('href="/account-mirror"');
+      expect(html).toContain('Preview Session');
+      expect(html).toContain('href="/account-mirror/preview-session"');
       expect(html).toContain('Agents / Teams');
       expect(html).toContain('<h2>Operations</h2>');
       expect(html).toContain('opsControls');
@@ -14697,6 +14699,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('collectVisibleCatalogPreviewUrls');
       expect(html).toContain('showVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('hideVisibleMirrorCatalogPreviewUrls');
+      expect(html).toContain('reviewVisibleMirrorCatalogPreviews');
       expect(html).toContain('openVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('copyVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('downloadVisibleMirrorCatalogPreviewUrls');
@@ -14705,21 +14708,33 @@ describe('http responses adapter', () => {
       expect(html).toContain('mirrorCatalogBatchNotice');
       expect(html).toContain('mirrorCatalogPreviewUrlDrawer');
       expect(html).toContain('mirrorCatalogPreviewUrlList');
+      expect(html).toContain('mirrorPreviewSessionPanel');
+      expect(html).toContain('mirrorPreviewSessionGrid');
+      expect(html).toContain('initializeMirrorPreviewSession');
+      expect(html).toContain('renderMirrorPreviewSession');
+      expect(html).toContain('readMirrorPreviewSessionUrls');
       expect(html).toContain('data-catalog-preview-url');
       expect(html).toContain('Open Preview');
       expect(html).toContain('Copy URL');
       expect(html).toContain('Preview visible URL list');
       expect(html).toContain('Visible preview URLs');
+      expect(html).toContain('Review visible previews');
+      expect(html).toContain('Cached Preview Session');
       expect(html).toContain('Open visible previews');
       expect(html).toContain('Copy visible preview URLs');
       expect(html).toContain('Download visible preview URL list');
       expect(html).toContain('No visible preview URLs.');
       expect(html).toContain('No visible preview URLs to open.');
       expect(html).toContain('Previewing ');
+      expect(html).toContain('Opened preview session for ');
+      expect(html).toContain('Rendering ');
+      expect(html).toContain('session URL(s)');
       expect(html).toContain('Opened ');
       expect(html).toContain('Limited to first ');
       expect(html).toContain('visible preview URL(s)');
       expect(html).toContain("window.open(url, '_blank', 'noopener,noreferrer')");
+      expect(html).toContain('/account-mirror/preview-session?session=');
+      expect(html).toContain('auracall.previewSession.');
       expect(html).toContain('navigator.clipboard.writeText');
       expect(html).toContain('text/plain;charset=utf-8');
       expect(html).toContain('URL.createObjectURL');
@@ -14887,15 +14902,42 @@ describe('http responses adapter', () => {
       expect(html).toContain('copyCatalogPreviewUrl');
       expect(html).toContain('showVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('hideVisibleMirrorCatalogPreviewUrls');
+      expect(html).toContain('reviewVisibleMirrorCatalogPreviews');
       expect(html).toContain('openVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('copyVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('downloadVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('mirrorCatalogBatchNotice');
       expect(html).toContain('mirrorCatalogPreviewUrlDrawer');
+      expect(html).toContain('mirrorPreviewSessionPanel');
       expect(html).toContain('renderCatalogTranscriptBadge');
       expect(html).toContain('mirrorCatalogWithTranscriptOnly');
       expect(html).toContain('/v1/account-mirrors/catalog');
       expect(html).toContain('/v1/account-mirrors/catalog/items/');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('serves a cache-only account mirror preview session page', async () => {
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/account-mirror/preview-session?url=https%3A%2F%2Fexample.com%2Fasset.png`);
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toContain('text/html');
+      expect(response.headers.get('cache-control')).toContain('no-store');
+      const html = await response.text();
+      expect(html).toContain('AuraCall Preview Session');
+      expect(html).toContain('href="/account-mirror/preview-session" aria-current="page"');
+      expect(html).toContain('Cache-only review of selected account mirror preview assets.');
+      expect(html).toContain('mirrorPreviewSessionPanel');
+      expect(html).toContain('mirrorPreviewSessionGrid');
+      expect(html).toContain('initializeMirrorPreviewSession');
+      expect(html).toContain('readMirrorPreviewSessionUrls');
+      expect(html).toContain('renderMirrorPreviewSessionItem');
+      expect(html).toContain('copyMirrorPreviewSessionUrls');
+      expect(html).toContain('downloadMirrorPreviewSessionUrls');
+      expect(html).toContain('preview-session-grid');
     } finally {
       await server.close();
     }
