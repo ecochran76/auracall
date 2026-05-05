@@ -97,8 +97,12 @@ const dashboardHtml = `
   <button id="hideVisibleMirrorCatalogPreviewUrls">Close</button>
   <div id="mirrorCatalogBatchNotice"></div>
   <div id="mirrorCatalogPreviewUrlDrawer"><strong>Visible preview URLs</strong><pre id="mirrorCatalogPreviewUrlList">No visible preview URLs.</pre></div>
-  <section id="mirrorPreviewSessionPanel"><h2>Cached Preview Session</h2><button id="selectAllMirrorPreviewSessionItems">Select all</button><button id="clearMirrorPreviewSessionSelection">Select none</button><button>Copy selected URLs</button><button>Download selected URL list</button><button>Download selected manifest</button><label>Load manifest <input id="loadMirrorPreviewSessionManifest" type="file"></label><div id="mirrorPreviewSessionNotice">Rendering 1 session URL(s)</div><div id="mirrorPreviewSessionGrid" class="preview-session-grid"></div></section>
+  <section id="mirrorPreviewSessionPanel"><h2>Cached Preview Session</h2><button id="selectAllMirrorPreviewSessionItems">Select all</button><button id="clearMirrorPreviewSessionSelection">Select none</button><button>Copy selected URLs</button><button>Download selected URL list</button><button>Download selected manifest</button><input id="mirrorPreviewSessionName"><button id="saveMirrorPreviewSession">Save named session</button><button id="refreshMirrorPreviewSessionList">Refresh saved sessions</button><select id="savedMirrorPreviewSessions"></select><button id="loadSavedMirrorPreviewSession">Load saved session</button><label>Load manifest <input id="loadMirrorPreviewSessionManifest" type="file"></label><div id="mirrorPreviewSessionNotice">Rendering 1 session URL(s)</div><div id="mirrorPreviewSessionGrid" class="preview-session-grid"></div></section>
   function initializeMirrorPreviewSession() {}
+  async function refreshSavedMirrorPreviewSessions() { await fetchJson('/v1/account-mirrors/preview-sessions?limit=50'); }
+  async function saveMirrorPreviewSession() { await postJson('/v1/account-mirrors/preview-sessions', {}); }
+  async function loadSelectedSavedMirrorPreviewSession() {}
+  async function loadSavedMirrorPreviewSessionById(id) { await fetchJson('/v1/account-mirrors/preview-sessions/' + encodeURIComponent(id)); }
   function readMirrorPreviewSessionUrls() { return []; }
   function normalizeMirrorPreviewSessionManifest() { return []; }
   function normalizeMirrorPreviewSessionItems() { return []; }
@@ -110,6 +114,7 @@ const dashboardHtml = `
   function updateMirrorPreviewSessionSelection() {}
   async function copyMirrorPreviewSessionUrls() {}
   function downloadMirrorPreviewSessionUrls() {}
+  function buildSelectedMirrorPreviewSessionManifest() { return {}; }
   function downloadMirrorPreviewSessionManifest() { return 'auracall.preview-session-manifest.v1'; }
   async function loadMirrorPreviewSessionManifestFile() {}
   function downloadVisibleMirrorCatalogPreviewUrls() {

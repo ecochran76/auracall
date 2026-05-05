@@ -26003,6 +26003,38 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `auracall.preview-session-manifest.v1`
   - `git diff --check`
 
+## Turn 113 | 2026-05-04
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make curated preview-session handoffs durable in the local cache.
+- Change:
+  - added account-mirror cache persistence for named preview-session records
+  - added `POST /v1/account-mirrors/preview-sessions`,
+    `GET /v1/account-mirrors/preview-sessions`, and
+    `GET /v1/account-mirrors/preview-sessions/{id}`
+  - preview-session dashboard can save the selected manifest by name, refresh
+    saved sessions, and reload a saved session into the cache-only grid
+  - dashboard CLI contract now asserts the named save/load path
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror catalog|browser operator dashboard|account mirror dashboard|api ops browser CLI helpers|preview session" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/accountMirror/previewSessionStore.ts src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing lint-warning debt (`noUselessContinue`,
+    `noNonNullAssertion`)
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run install:user-runtime`
+  - installed `/home/ecochran76/.local/bin/auracall api ops-browser-status --json`
+    reports preview-session and batch review contract flags as true
+  - installed `/account-mirror/preview-session?url=https%3A%2F%2Fexample.com%2Fasset.png`
+    includes named-session controls, selectors, save/load handlers, and
+    `/v1/account-mirrors/preview-sessions`
+  - installed `POST /v1/account-mirrors/preview-sessions` persisted an
+    `Installed smoke` record, and installed list/read routes returned the same
+    record with `auracall.preview-session-manifest.v1`
+  - `git diff --check`
+
 ## Turn 104 | 2026-05-04
 
 - Continued implementation plan:

@@ -132,6 +132,7 @@ import {
 } from '../accountMirror/completionService.js';
 import { reconcileConfiguredAccountMirrorLiveFollow } from '../accountMirror/liveFollowReconciler.js';
 import { createAccountMirrorCompletionStore } from '../accountMirror/completionStore.js';
+import { createAccountMirrorPreviewSessionStore } from '../accountMirror/previewSessionStore.js';
 import type { AccountMirrorProvider } from '../accountMirror/politePolicy.js';
 import {
   summarizeLiveFollowHealth,
@@ -328,9 +329,11 @@ interface HttpStatusResponse {
     mediaGenerationsStatusTemplate: string;
     runStatusTemplate: string;
     accountMirrorStatus: string;
-    accountMirrorCatalog: string;
-    accountMirrorCatalogItemTemplate: string;
-    accountMirrorRefresh: string;
+  accountMirrorCatalog: string;
+  accountMirrorCatalogItemTemplate: string;
+  accountMirrorPreviewSessions: string;
+  accountMirrorPreviewSessionTemplate: string;
+  accountMirrorRefresh: string;
     accountMirrorCompletionsCreate: string;
     accountMirrorCompletionsList: string;
     accountMirrorCompletionsGetTemplate: string;
@@ -455,6 +458,9 @@ export async function createResponsesHttpServer(
     config: configuredRuntimeConfig,
   });
   const accountMirrorCompletionStore = createAccountMirrorCompletionStore({
+    config: configuredRuntimeConfig,
+  });
+  const accountMirrorPreviewSessionStore = createAccountMirrorPreviewSessionStore({
     config: configuredRuntimeConfig,
   });
   const initialAccountMirrorCompletions = deps.accountMirrorCompletionService
@@ -835,6 +841,60 @@ export async function createResponsesHttpServer(
           200,
           summarizeAccountMirrorSchedulerHistory(history, { limit }) satisfies HttpAccountMirrorSchedulerHistoryResponse,
         );
+        return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/v1/account-mirrors/preview-sessions') {
+        const body = await readRequestBody(req);
+        const payload = JSON.parse(body || '{}') as {
+          id?: unknown;
+          name?: unknown;
+          manifest?: unknown;
+        };
+        try {
+          const record = await accountMirrorPreviewSessionStore.writeSession({
+            id: typeof payload.id === 'string' ? payload.id : null,
+            name: typeof payload.name === 'string' ? payload.name : null,
+            manifest: payload.manifest,
+            now: now().toISOString(),
+          });
+          sendJson(res, 201, record);
+          return;
+        } catch (error) {
+          sendJson(res, 400, {
+            error: {
+              message: error instanceof Error ? error.message : 'Invalid preview session manifest.',
+              type: 'invalid_request_error',
+            },
+          });
+          return;
+        }
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/account-mirrors/preview-sessions') {
+        const limit = parsePositiveIntegerQuery(url.searchParams.get('limit'));
+        const records = await accountMirrorPreviewSessionStore.listSessions({ limit });
+        sendJson(res, 200, {
+          object: 'list',
+          data: records,
+          count: records.length,
+        });
+        return;
+      }
+
+      const accountMirrorPreviewSessionId = matchAccountMirrorPreviewSessionRoute(url.pathname);
+      if (req.method === 'GET' && accountMirrorPreviewSessionId) {
+        const record = await accountMirrorPreviewSessionStore.readSession(accountMirrorPreviewSessionId);
+        if (!record) {
+          sendJson(res, 404, {
+            error: {
+              message: `Account mirror preview session ${accountMirrorPreviewSessionId} was not found.`,
+              type: 'not_found_error',
+            },
+          });
+          return;
+        }
+        sendJson(res, 200, record);
         return;
       }
 
@@ -1644,7 +1704,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   }
   logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
-    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
+    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   if (serverOptions.dashboardUrl) {
@@ -2075,6 +2135,8 @@ function createHttpStatusResponse(input: {
       accountMirrorStatus: '/v1/account-mirrors/status[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&explicitRefresh=true]',
       accountMirrorCatalog: '/v1/account-mirrors/catalog[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&kind=projects|conversations|artifacts|files|media|all][&limit=50]',
       accountMirrorCatalogItemTemplate: '/v1/account-mirrors/catalog/items/{item_id}?provider={chatgpt|gemini|grok}&runtimeProfile={runtime_profile}&kind={kind}',
+      accountMirrorPreviewSessions: '/v1/account-mirrors/preview-sessions',
+      accountMirrorPreviewSessionTemplate: '/v1/account-mirrors/preview-sessions/{preview_session_id}',
       accountMirrorRefresh: '/v1/account-mirrors/refresh',
       accountMirrorCompletionsCreate: '/v1/account-mirrors/completions',
       accountMirrorCompletionsList: '/v1/account-mirrors/completions[?status=active|queued|running|paused|completed|blocked|failed|cancelled][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&limit=50]',
@@ -3302,6 +3364,11 @@ function matchAccountMirrorCompletionRoute(pathname: string): string | null {
   return match?.[1] ?? null;
 }
 
+function matchAccountMirrorPreviewSessionRoute(pathname: string): string | null {
+  const match = /^\/v1\/account-mirrors\/preview-sessions\/([^/]+)$/.exec(pathname);
+  return match?.[1] ?? null;
+}
+
 function matchStatusRecoveryDetailRoute(pathname: string): string | null {
   const match = /^\/status\/recovery\/([^/]+)$/.exec(pathname);
   return match?.[1] ?? null;
@@ -3787,6 +3854,11 @@ function createOperatorBrowserDashboardHtml(input: {
           <button id="copyMirrorPreviewSessionUrls" type="button">Copy selected URLs</button>
           <button id="downloadMirrorPreviewSessionUrls" type="button">Download selected URL list</button>
           <button id="downloadMirrorPreviewSessionManifest" type="button">Download selected manifest</button>
+          <input id="mirrorPreviewSessionName" placeholder="session name">
+          <button id="saveMirrorPreviewSession" type="button">Save named session</button>
+          <button id="refreshMirrorPreviewSessionList" type="button">Refresh saved sessions</button>
+          <select id="savedMirrorPreviewSessions" aria-label="Saved preview sessions"><option value="">saved sessions</option></select>
+          <button id="loadSavedMirrorPreviewSession" type="button">Load saved session</button>
           <label>Load manifest <input id="loadMirrorPreviewSessionManifest" type="file" accept="application/json,.json"></label>
         </div>
         <div id="mirrorPreviewSessionGrid" class="preview-session-grid">No previews loaded.</div>
@@ -3840,6 +3912,7 @@ function createOperatorBrowserDashboardHtml(input: {
           <dt>Dashboard</dt><dd><a href="/ops/browser">/ops/browser</a></dd>
           <dt>Status</dt><dd><a href="/status">/status</a></dd>
           <dt>Mirror Catalog</dt><dd>/v1/account-mirrors/catalog?kind=all&amp;limit=50</dd>
+          <dt>Preview Sessions</dt><dd>/v1/account-mirrors/preview-sessions</dd>
           <dt>Workbench</dt><dd>/v1/workbench-capabilities?provider=gemini&amp;diagnostics=browser-state</dd>
           <dt>Run Status</dt><dd>/v1/runs/{run_id}/status?diagnostics=browser-state</dd>
           <dt>Runtime Inspect</dt><dd>/v1/runtime-runs/inspect?runId={run_id}&amp;probe=service-state&amp;diagnostics=browser-state</dd>
@@ -3860,6 +3933,25 @@ function createOperatorBrowserDashboardHtml(input: {
 
     async function fetchJson(path) {
       const response = await fetch(path, { cache: 'no-store' });
+      const text = await response.text();
+      let payload;
+      try {
+        payload = text ? JSON.parse(text) : null;
+      } catch {
+        payload = text;
+      }
+      if (!response.ok) {
+        throw new Error(asJson({ status: response.status, payload }));
+      }
+      return payload;
+    }
+
+    async function postJson(path, body) {
+      const response = await fetch(path, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
       const text = await response.text();
       let payload;
       try {
@@ -4653,9 +4745,16 @@ function createOperatorBrowserDashboardHtml(input: {
       return 'auracall-preview-urls-' + provider + '-' + kind + '-' + timestamp + '.txt';
     }
 
-    function initializeMirrorPreviewSession() {
+    async function initializeMirrorPreviewSession() {
       if (window.location.pathname !== '/account-mirror/preview-session') return;
       $('mirrorPreviewSessionPanel').hidden = false;
+      await refreshSavedMirrorPreviewSessions();
+      const params = new URLSearchParams(window.location.search);
+      const savedSessionId = params.get('saved');
+      if (savedSessionId) {
+        await loadSavedMirrorPreviewSessionById(savedSessionId);
+        return;
+      }
       const urls = readMirrorPreviewSessionUrls();
       renderMirrorPreviewSession(urls);
     }
@@ -4799,14 +4898,29 @@ function createOperatorBrowserDashboardHtml(input: {
     }
 
     function downloadMirrorPreviewSessionManifest() {
+      const manifest = buildSelectedMirrorPreviewSessionManifest();
+      if (!manifest) return;
+      const blob = new Blob([JSON.stringify(manifest, null, 2) + '\\n'], { type: 'application/json;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'auracall-preview-session-manifest-' + manifest.generatedAt.replace(/[:.]/g, '-') + '.json';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+      $('mirrorPreviewSessionNotice').textContent = 'Downloaded selected manifest for ' + String(manifest.items.length) + ' session item(s).';
+      $('mirrorPreviewSessionNotice').className = 'notice notice-ok';
+    }
+
+    function buildSelectedMirrorPreviewSessionManifest() {
       const items = selectedMirrorPreviewSessionItems();
       if (!items.length) {
         $('mirrorPreviewSessionNotice').textContent = 'No selected session items to export.';
         $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
-        return;
+        return null;
       }
       const generatedAt = new Date().toISOString();
-      const manifest = {
+      return {
         schema: 'auracall.preview-session-manifest.v1',
         generatedAt,
         count: items.length,
@@ -4822,16 +4936,6 @@ function createOperatorBrowserDashboardHtml(input: {
           url: item.url,
         })),
       };
-      const blob = new Blob([JSON.stringify(manifest, null, 2) + '\\n'], { type: 'application/json;charset=utf-8' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'auracall-preview-session-manifest-' + generatedAt.replace(/[:.]/g, '-') + '.json';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(link.href);
-      $('mirrorPreviewSessionNotice').textContent = 'Downloaded selected manifest for ' + String(items.length) + ' session item(s).';
-      $('mirrorPreviewSessionNotice').className = 'notice notice-ok';
     }
 
     async function loadMirrorPreviewSessionManifestFile(event) {
@@ -4854,6 +4958,70 @@ function createOperatorBrowserDashboardHtml(input: {
         $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
       } finally {
         input.value = '';
+      }
+    }
+
+    async function saveMirrorPreviewSession() {
+      const manifest = buildSelectedMirrorPreviewSessionManifest();
+      if (!manifest) return;
+      const name = $('mirrorPreviewSessionName').value.trim();
+      try {
+        const record = await postJson('/v1/account-mirrors/preview-sessions', {
+          name: name || null,
+          manifest,
+        });
+        $('mirrorPreviewSessionNotice').textContent = 'Saved named preview session ' + record.id + ' with ' + String(record.itemCount || manifest.items.length) + ' item(s).';
+        $('mirrorPreviewSessionNotice').className = 'notice notice-ok';
+        await refreshSavedMirrorPreviewSessions(record.id);
+      } catch (error) {
+        $('mirrorPreviewSessionNotice').textContent = 'Could not save preview session: ' + String(error && error.message ? error.message : error);
+        $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
+      }
+    }
+
+    async function refreshSavedMirrorPreviewSessions(selectedId) {
+      if (window.location.pathname !== '/account-mirror/preview-session') return;
+      const select = $('savedMirrorPreviewSessions');
+      try {
+        const payload = await fetchJson('/v1/account-mirrors/preview-sessions?limit=50');
+        const sessions = Array.isArray(payload.data) ? payload.data : [];
+        select.innerHTML = '<option value="">saved sessions</option>' + sessions.map((session) => {
+          const label = (session.name || session.id || 'preview session') + ' (' + String(session.itemCount || 0) + ')';
+          return '<option value="' + escapeHtml(session.id || '') + '">' + escapeHtml(label) + '</option>';
+        }).join('');
+        if (selectedId) select.value = selectedId;
+      } catch {
+        select.innerHTML = '<option value="">saved sessions unavailable</option>';
+      }
+    }
+
+    async function loadSelectedSavedMirrorPreviewSession() {
+      const id = $('savedMirrorPreviewSessions').value;
+      if (!id) {
+        $('mirrorPreviewSessionNotice').textContent = 'Choose a saved preview session to load.';
+        $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
+        return;
+      }
+      await loadSavedMirrorPreviewSessionById(id);
+    }
+
+    async function loadSavedMirrorPreviewSessionById(id) {
+      try {
+        const record = await fetchJson('/v1/account-mirrors/preview-sessions/' + encodeURIComponent(id));
+        const items = normalizeMirrorPreviewSessionManifest(record.manifest);
+        if (!items.length) {
+          $('mirrorPreviewSessionNotice').textContent = 'Saved preview session has no valid manifest items.';
+          $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
+          return;
+        }
+        renderMirrorPreviewSession(items);
+        $('mirrorPreviewSessionName').value = record.name || '';
+        $('savedMirrorPreviewSessions').value = record.id || '';
+        $('mirrorPreviewSessionNotice').textContent = 'Loaded saved preview session ' + (record.name || record.id) + ' with ' + String(items.length) + ' preview item(s).';
+        $('mirrorPreviewSessionNotice').className = 'notice notice-ok';
+      } catch (error) {
+        $('mirrorPreviewSessionNotice').textContent = 'Could not load saved preview session: ' + String(error && error.message ? error.message : error);
+        $('mirrorPreviewSessionNotice').className = 'notice notice-warn';
       }
     }
 
@@ -5777,6 +5945,9 @@ function createOperatorBrowserDashboardHtml(input: {
     $('copyMirrorPreviewSessionUrls').addEventListener('click', copyMirrorPreviewSessionUrls);
     $('downloadMirrorPreviewSessionUrls').addEventListener('click', downloadMirrorPreviewSessionUrls);
     $('downloadMirrorPreviewSessionManifest').addEventListener('click', downloadMirrorPreviewSessionManifest);
+    $('saveMirrorPreviewSession').addEventListener('click', saveMirrorPreviewSession);
+    $('refreshMirrorPreviewSessionList').addEventListener('click', () => refreshSavedMirrorPreviewSessions());
+    $('loadSavedMirrorPreviewSession').addEventListener('click', loadSelectedSavedMirrorPreviewSession);
     $('loadMirrorPreviewSessionManifest').addEventListener('change', loadMirrorPreviewSessionManifestFile);
     $('mirrorPreviewSessionGrid').addEventListener('change', updateMirrorPreviewSessionSelection);
     $('mirrorCatalogSearch').addEventListener('keydown', (event) => {
@@ -5785,7 +5956,7 @@ function createOperatorBrowserDashboardHtml(input: {
     $('probeWorkbench').addEventListener('click', probeWorkbench);
     $('probeRun').addEventListener('click', probeRun);
     initializeMirrorCatalogFiltersFromUrl();
-    initializeMirrorPreviewSession();
+    void initializeMirrorPreviewSession();
     refreshStatus();
   </script>
 </body>

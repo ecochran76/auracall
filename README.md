@@ -206,6 +206,9 @@ Terminology note:
   - `GET /v1/account-mirrors/status`
   - `GET /v1/account-mirrors/catalog`
   - `GET /v1/account-mirrors/catalog/items/{item_id}`
+  - `POST /v1/account-mirrors/preview-sessions`
+  - `GET /v1/account-mirrors/preview-sessions`
+  - `GET /v1/account-mirrors/preview-sessions/{preview_session_id}`
   - `POST /v1/account-mirrors/refresh`
   - `POST /v1/account-mirrors/completions`
   - `GET /v1/account-mirrors/completions`
@@ -287,7 +290,9 @@ Terminology note:
   preview session with provider/kind/title/item metadata, select reviewed
   items, open, copy, download selected visible preview URLs, or export a
   selected JSON manifest for operator handoff. Exported manifests can be loaded
-  back into the preview-session page for cache-only review.
+  back into the preview-session page for cache-only review, and selected
+  sessions can be saved as named records under the account-mirror cache for
+  later dashboard/API readback.
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs

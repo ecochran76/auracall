@@ -785,4 +785,7 @@ all, select none, or narrow export to a reviewed subset before copying or
 downloading URLs. Operators can also download a selected JSON manifest with the
 same URL plus provider, runtime profile, kind, title, item id, identity, and
 updated timestamp context, and can load that manifest back into the same
-cache-only preview-session renderer.
+cache-only preview-session renderer. The local API now persists named preview
+session records under the account-mirror cache through
+`POST /v1/account-mirrors/preview-sessions`, list/read routes, and matching
+dashboard controls so reviewed preview sets can be reopened by id.

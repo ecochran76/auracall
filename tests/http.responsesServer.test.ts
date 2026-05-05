@@ -14613,6 +14613,12 @@ describe('http responses adapter', () => {
       expect((payload.routes as Record<string, unknown>).accountMirrorCatalogItemTemplate).toContain(
         '/v1/account-mirrors/catalog/items/{item_id}',
       );
+      expect((payload.routes as Record<string, unknown>).accountMirrorPreviewSessions).toBe(
+        '/v1/account-mirrors/preview-sessions',
+      );
+      expect((payload.routes as Record<string, unknown>).accountMirrorPreviewSessionTemplate).toBe(
+        '/v1/account-mirrors/preview-sessions/{preview_session_id}',
+      );
       expect((payload.routes as Record<string, unknown>).operatorBrowserDashboardUrl).toBe(
         'http://auracall.localhost/ops/browser',
       );
@@ -14720,9 +14726,20 @@ describe('http responses adapter', () => {
       expect(html).toContain('Copy selected URLs');
       expect(html).toContain('Download selected URL list');
       expect(html).toContain('Download selected manifest');
+      expect(html).toContain('Save named session');
+      expect(html).toContain('Refresh saved sessions');
+      expect(html).toContain('Load saved session');
+      expect(html).toContain('mirrorPreviewSessionName');
+      expect(html).toContain('savedMirrorPreviewSessions');
+      expect(html).toContain('saveMirrorPreviewSession');
+      expect(html).toContain('refreshSavedMirrorPreviewSessions');
+      expect(html).toContain('loadSelectedSavedMirrorPreviewSession');
+      expect(html).toContain('loadSavedMirrorPreviewSessionById');
+      expect(html).toContain('/v1/account-mirrors/preview-sessions');
       expect(html).toContain('Load manifest');
       expect(html).toContain('loadMirrorPreviewSessionManifest');
       expect(html).toContain('selectedMirrorPreviewSessionItems');
+      expect(html).toContain('buildSelectedMirrorPreviewSessionManifest');
       expect(html).toContain('normalizeMirrorPreviewSessionManifest');
       expect(html).toContain('loadMirrorPreviewSessionManifestFile');
       expect(html).toContain('downloadMirrorPreviewSessionManifest');
@@ -14966,9 +14983,20 @@ describe('http responses adapter', () => {
       expect(html).toContain('Copy selected URLs');
       expect(html).toContain('Download selected URL list');
       expect(html).toContain('Download selected manifest');
+      expect(html).toContain('Save named session');
+      expect(html).toContain('Refresh saved sessions');
+      expect(html).toContain('Load saved session');
+      expect(html).toContain('mirrorPreviewSessionName');
+      expect(html).toContain('savedMirrorPreviewSessions');
+      expect(html).toContain('saveMirrorPreviewSession');
+      expect(html).toContain('refreshSavedMirrorPreviewSessions');
+      expect(html).toContain('loadSelectedSavedMirrorPreviewSession');
+      expect(html).toContain('loadSavedMirrorPreviewSessionById');
+      expect(html).toContain('/v1/account-mirrors/preview-sessions');
       expect(html).toContain('Load manifest');
       expect(html).toContain('loadMirrorPreviewSessionManifest');
       expect(html).toContain('selectedMirrorPreviewSessionItems');
+      expect(html).toContain('buildSelectedMirrorPreviewSessionManifest');
       expect(html).toContain('normalizeMirrorPreviewSessionManifest');
       expect(html).toContain('loadMirrorPreviewSessionManifestFile');
       expect(html).toContain('downloadMirrorPreviewSessionManifest');
@@ -14976,6 +15004,67 @@ describe('http responses adapter', () => {
       expect(html).toContain('copyMirrorPreviewSessionUrls');
       expect(html).toContain('downloadMirrorPreviewSessionUrls');
       expect(html).toContain('preview-session-grid');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('persists named account mirror preview sessions through the local API', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-preview-session-store-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const createResponse = await fetch(`http://127.0.0.1:${server.port}/v1/account-mirrors/preview-sessions`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Reviewed assets',
+          manifest: {
+            schema: 'auracall.preview-session-manifest.v1',
+            generatedAt: '2026-05-04T22:00:00.000Z',
+            count: 1,
+            items: [
+              {
+                provider: 'chatgpt',
+                runtimeProfile: 'default',
+                kind: 'files',
+                title: 'Asset',
+                itemId: 'file_1',
+                boundIdentity: 'ecochran76@gmail.com',
+                updatedAt: '2026-05-04T21:59:00.000Z',
+                url: 'https://example.com/asset.png',
+              },
+            ],
+          },
+        }),
+      });
+      expect(createResponse.status).toBe(201);
+      const created = (await createResponse.json()) as {
+        id: string;
+        name: string;
+        itemCount: number;
+        manifest: { items: Array<{ url: string }> };
+      };
+      expect(created.name).toBe('Reviewed assets');
+      expect(created.itemCount).toBe(1);
+      expect(created.manifest.items[0]?.url).toBe('https://example.com/asset.png');
+
+      const listResponse = await fetch(`http://127.0.0.1:${server.port}/v1/account-mirrors/preview-sessions`);
+      expect(listResponse.status).toBe(200);
+      const list = (await listResponse.json()) as { count: number; data: Array<{ id: string }> };
+      expect(list.count).toBe(1);
+      expect(list.data[0]?.id).toBe(created.id);
+
+      const readResponse = await fetch(`http://127.0.0.1:${server.port}/v1/account-mirrors/preview-sessions/${encodeURIComponent(created.id)}`);
+      expect(readResponse.status).toBe(200);
+      await expect(readResponse.json()).resolves.toMatchObject({
+        id: created.id,
+        object: 'account_mirror_preview_session',
+        name: 'Reviewed assets',
+        itemCount: 1,
+      });
     } finally {
       await server.close();
     }

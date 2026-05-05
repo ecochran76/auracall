@@ -147,7 +147,7 @@ Current State:
     row preview/materialization badges with previewability filtering/sorting
     plus direct row-level and visible-batch preview URL inspect/session-review
     with catalog metadata/selection/open/copy/download/manifest export and
-    manifest load actions
+    manifest load/save actions
     before the raw JSON fallback;
     CLI/MCP `api_ops_browser_status` surfaces the configured canonical
     dashboard URL for operator handoff, with `http://auracall.localhost/ops/browser`
