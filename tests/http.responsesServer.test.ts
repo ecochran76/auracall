@@ -1288,6 +1288,8 @@ describe('http responses adapter', () => {
         },
         routes: {
           recoveryDetailTemplate: '/status/recovery/{run_id}',
+          runtimeRunsRecent:
+            '/v1/runtime-runs/recent[?sourceKind=team-run|direct][&status=planned|running|succeeded|failed|cancelled][&limit=25]',
           runtimeRunInspection:
             '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}][&probe=service-state][&diagnostics=browser-state][&authority=scheduler]',
           responsesGetTemplate: '/v1/responses/{response_id}',
@@ -6015,6 +6017,60 @@ describe('http responses adapter', () => {
       const payload = (await response.json()) as { error: { type: string; message: string } };
       expect(payload.error.type).toBe('invalid_request_error');
       expect(payload.error.message).toContain('--task-run-spec-id, --team-run-id, or --runtime-run-id');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('lists recent runtime runs for the agents operator dashboard over HTTP', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runtime-recent-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const control = createExecutionRuntimeControl();
+    await seedPlannedDirectRun(control, 'runtime_recent_older_direct', '2026-04-14T14:00:00.000Z', 'Older direct run.');
+    await seedPlannedDirectRun(
+      control,
+      'runtime_recent_newer_team',
+      '2026-04-14T15:00:00.000Z',
+      'Newer team run.',
+      'team-run',
+    );
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control });
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/runtime-runs/recent?sourceKind=team-run&limit=5`,
+      );
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as {
+        object: string;
+        count: number;
+        data: Array<{
+          runId: string;
+          sourceKind: string;
+          teamRunId: string | null;
+          status: string;
+          serviceIds: string[];
+          runtimeProfileIds: string[];
+          stepCount: number;
+        }>;
+      };
+      expect(payload).toMatchObject({
+        object: 'list',
+        count: 1,
+        data: [
+          {
+            runId: 'runtime_recent_newer_team',
+            sourceKind: 'team-run',
+            teamRunId: 'runtime_recent_newer_team:team',
+            status: 'planned',
+            serviceIds: ['chatgpt'],
+            runtimeProfileIds: ['default'],
+            stepCount: 1,
+          },
+        ],
+      });
     } finally {
       await server.close();
     }
@@ -14701,6 +14757,12 @@ describe('http responses adapter', () => {
       expect(html).toContain('agentsTeamsPanel');
       expect(html).toContain('inspectAgentsTeamRun');
       expect(html).toContain('inspectAgentsRuntimeRun');
+      expect(html).toContain('agentsRecentRuns');
+      expect(html).toContain('loadAgentsRecentRuns');
+      expect(html).toContain('agentsRecentRunsTable');
+      expect(html).toContain('/v1/runtime-runs/recent?');
+      expect(html).toContain('useAgentsRecentRun');
+      expect(html).toContain('inspectAgentsRecentRuntimeRun');
       expect(html).toContain('/v1/team-runs/inspect?');
       expect(html).toContain('/v1/runtime-runs/inspect?');
       expect(html).toContain('<h2>Operations</h2>');

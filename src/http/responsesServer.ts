@@ -38,6 +38,7 @@ import {
 } from '../runtime/inspection.js';
 import type { ExecutionRuntimeControlContract } from '../runtime/contract.js';
 import { createExecutionRuntimeControl } from '../runtime/control.js';
+import type { ExecutionRunStoredRecord } from '../runtime/store.js';
 import { createConfiguredExecutionRunAffinity } from '../runtime/configuredAffinity.js';
 import { createLocalRunnerCapabilitySummary } from '../runtime/localRunnerCapabilities.js';
 import { createExecutionRequest } from '../runtime/apiModel.js';
@@ -65,7 +66,7 @@ import {
   type ExecutionServiceHost,
   type ExecutionServiceHostDeps,
 } from '../runtime/serviceHost.js';
-import type { ExecutionRunSourceKind, ExecutionRunnerStatus } from '../runtime/types.js';
+import type { ExecutionRunSourceKind, ExecutionRunStatus, ExecutionRunnerStatus } from '../runtime/types.js';
 import {
   probeChatgptBrowserServiceState,
   probeGeminiBrowserServiceState,
@@ -253,6 +254,27 @@ interface HttpRuntimeRunInspectionResponse {
   inspection: RuntimeRunInspectionPayload;
 }
 
+interface HttpRuntimeRunListItem {
+  runId: string;
+  sourceKind: ExecutionRunSourceKind;
+  teamRunId: string | null;
+  taskRunSpecId: string | null;
+  status: ExecutionRunStatus;
+  createdAt: string;
+  updatedAt: string;
+  stepCount: number;
+  runnableStepCount: number;
+  runningStepCount: number;
+  serviceIds: string[];
+  runtimeProfileIds: string[];
+}
+
+interface HttpRuntimeRunListResponse {
+  object: 'list';
+  data: HttpRuntimeRunListItem[];
+  count: number;
+}
+
 interface HttpAccountMirrorRefreshResponse extends AccountMirrorRefreshResult {}
 interface HttpAccountMirrorCatalogResponse extends AccountMirrorCatalogResult {}
 interface HttpAccountMirrorCatalogItemResponse extends AccountMirrorCatalogItemResult {}
@@ -373,6 +395,7 @@ interface HttpStatusResponse {
     recoveryDetailTemplate: string;
     teamRunsCreate: string;
     teamRunInspection: string;
+    runtimeRunsRecent: string;
     runtimeRunInspection: string;
     models: string;
     responsesCreate: string;
@@ -1172,6 +1195,18 @@ export async function createResponsesHttpServer(
         }
       }
 
+      if (req.method === 'GET' && url.pathname === '/v1/runtime-runs/recent') {
+        const query = parseRuntimeRunListQuery(url.searchParams);
+        const records = await control.listRuns(query);
+        const data = records.map(summarizeRuntimeRunListItem);
+        sendJson(res, 200, {
+          object: 'list',
+          data,
+          count: data.length,
+        } satisfies HttpRuntimeRunListResponse);
+        return;
+      }
+
       if (req.method === 'GET' && url.pathname === '/v1/runtime-runs/inspect') {
         try {
           const runtimeInspectQuery = parseRuntimeInspectionQuery(url.searchParams);
@@ -1846,7 +1881,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   }
   logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
-    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
+    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   if (serverOptions.dashboardUrl) {
@@ -2274,6 +2309,7 @@ function createHttpStatusResponse(input: {
       teamRunsCreate: '/v1/team-runs',
       teamRunInspection:
         '/v1/team-runs/inspect?taskRunSpecId={task_run_spec_id}|teamRunId={team_run_id}|runtimeRunId={runtime_run_id}',
+      runtimeRunsRecent: '/v1/runtime-runs/recent[?sourceKind=team-run|direct][&status=planned|running|succeeded|failed|cancelled][&limit=25]',
       runtimeRunInspection:
         '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}][&probe=service-state][&diagnostics=browser-state][&authority=scheduler]',
       models: '/v1/models',
@@ -3062,6 +3098,12 @@ interface ParsedRuntimeInspectionQuery {
   diagnostics?: 'browser-state';
 }
 
+interface ParsedRuntimeRunListQuery {
+  limit?: number;
+  status?: ExecutionRunStatus;
+  sourceKind?: ExecutionRunSourceKind;
+}
+
 interface ParsedRunStatusQuery {
   diagnostics?: 'browser-state';
 }
@@ -3187,6 +3229,46 @@ function parseRuntimeInspectionQuery(searchParams: URLSearchParams): ParsedRunti
     authority: parsed.authority,
     diagnostics: parsed.diagnostics,
   };
+}
+
+function parseRuntimeRunListQuery(searchParams: URLSearchParams): ParsedRuntimeRunListQuery {
+  const raw: Record<string, unknown> = {};
+  if (searchParams.has('limit')) raw.limit = searchParams.get('limit');
+  if (searchParams.has('status')) raw.status = searchParams.get('status');
+  if (searchParams.has('sourceKind')) raw.sourceKind = searchParams.get('sourceKind');
+  const parsed = z.object({
+    limit: z.coerce.number().int().min(0).max(100).optional(),
+    status: z.enum(['planned', 'running', 'succeeded', 'failed', 'cancelled']).optional(),
+    sourceKind: z.enum(['team-run', 'direct']).optional(),
+  }).parse(raw);
+  return {
+    limit: parsed.limit ?? 25,
+    status: parsed.status,
+    sourceKind: parsed.sourceKind,
+  };
+}
+
+function summarizeRuntimeRunListItem(record: ExecutionRunStoredRecord): HttpRuntimeRunListItem {
+  const run = record.bundle.run;
+  const steps = record.bundle.steps;
+  return {
+    runId: run.id,
+    sourceKind: run.sourceKind,
+    teamRunId: run.sourceKind === 'team-run' ? run.sourceId : null,
+    taskRunSpecId: run.taskRunSpecId ?? null,
+    status: run.status,
+    createdAt: run.createdAt,
+    updatedAt: run.updatedAt,
+    stepCount: steps.length,
+    runnableStepCount: steps.filter((step) => step.status === 'runnable').length,
+    runningStepCount: steps.filter((step) => step.status === 'running').length,
+    serviceIds: uniqueStrings(steps.map((step) => step.service).filter(Boolean)),
+    runtimeProfileIds: uniqueStrings(steps.map((step) => step.runtimeProfileId).filter(Boolean)),
+  };
+}
+
+function uniqueStrings(values: Array<string | null | undefined>): string[] {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))].sort();
 }
 
 function parseWorkbenchCapabilityQuery(searchParams: URLSearchParams) {
@@ -4344,6 +4426,30 @@ function createOperatorBrowserDashboardHtml(input: {
         <h2>Agents / Teams</h2>
         <div id="agentsTeamsNotice" class="notice" role="status" aria-live="polite">Enter an id to inspect persisted team/runtime state.</div>
         <div class="row" style="margin-bottom: 10px;">
+          <label>Recent source
+            <select id="agentsRecentRunSourceKind">
+              <option value="">all</option>
+              <option value="team-run">team-run</option>
+              <option value="direct">direct</option>
+            </select>
+          </label>
+          <label>Recent status
+            <select id="agentsRecentRunStatus">
+              <option value="">all</option>
+              <option value="planned">planned</option>
+              <option value="running">running</option>
+              <option value="succeeded">succeeded</option>
+              <option value="failed">failed</option>
+              <option value="cancelled">cancelled</option>
+            </select>
+          </label>
+          <label>Recent limit
+            <input id="agentsRecentRunLimit" type="number" min="0" max="100" step="1" value="25">
+          </label>
+          <button id="loadAgentsRecentRuns" type="button">Load Recent Runs</button>
+        </div>
+        <div id="agentsRecentRuns" class="muted" style="margin-bottom: 10px;">No recent runs loaded.</div>
+        <div class="row" style="margin-bottom: 10px;">
           <label>Task Run Spec ID
             <input id="agentTaskRunSpecId" placeholder="task_spec_id">
           </label>
@@ -4717,6 +4823,70 @@ function createOperatorBrowserDashboardHtml(input: {
         $('agentsTeamsRaw').textContent = String(error.message || error);
         setAgentsTeamsNotice('Runtime inspection failed: ' + String(error.message || error), 'bad');
       }
+    }
+
+    function buildAgentsRecentRunsPath() {
+      const params = new URLSearchParams();
+      const sourceKind = $('agentsRecentRunSourceKind').value;
+      const status = $('agentsRecentRunStatus').value;
+      const limit = $('agentsRecentRunLimit').value;
+      if (sourceKind) params.set('sourceKind', sourceKind);
+      if (status) params.set('status', status);
+      if (limit) params.set('limit', limit);
+      return '/v1/runtime-runs/recent?' + params.toString();
+    }
+
+    async function loadAgentsRecentRuns() {
+      $('agentsRecentRuns').textContent = 'Loading recent runs...';
+      try {
+        const payload = await fetchJson(buildAgentsRecentRunsPath());
+        renderAgentsRecentRuns(payload.data || []);
+        setAgentsTeamsNotice('Loaded ' + String(payload.count || 0) + ' recent runs.', 'ok');
+      } catch (error) {
+        $('agentsRecentRuns').textContent = String(error.message || error);
+        setAgentsTeamsNotice('Failed to load recent runs: ' + String(error.message || error), 'bad');
+      }
+    }
+
+    function renderAgentsRecentRuns(runs) {
+      if (!runs.length) {
+        $('agentsRecentRuns').innerHTML = '<span class="muted">No recent runtime runs matched the filters.</span>';
+        return;
+      }
+      $('agentsRecentRuns').innerHTML = '<div class="table-wrap"><table id="agentsRecentRunsTable"><thead><tr>'
+        + '<th>Run</th><th>Source</th><th>Status</th><th>Updated</th><th>Services</th><th>Steps</th><th>Actions</th>'
+        + '</tr></thead><tbody>'
+        + runs.map((run) => '<tr>'
+          + '<td class="wrap">' + escapeHtml(run.runId || 'unknown') + '</td>'
+          + '<td>' + escapeHtml(run.sourceKind || 'unknown') + '</td>'
+          + '<td>' + escapeHtml(run.status || 'unknown') + '</td>'
+          + '<td>' + escapeHtml(run.updatedAt || 'unknown') + '</td>'
+          + '<td>' + escapeHtml((run.serviceIds || []).join(', ') || 'none') + '</td>'
+          + '<td>' + escapeHtml(String(run.stepCount || 0)) + ' total / ' + escapeHtml(String(run.runningStepCount || 0)) + ' running</td>'
+          + '<td><span class="catalog-row-actions">'
+          + '<button type="button" data-runtime-run-id="' + escapeHtml(run.runId || '') + '" data-team-run-id="' + escapeHtml(run.teamRunId || '') + '" data-task-run-spec-id="' + escapeHtml(run.taskRunSpecId || '') + '" onclick="useAgentsRecentRun(this)">Use</button>'
+          + '<button type="button" data-runtime-run-id="' + escapeHtml(run.runId || '') + '" data-team-run-id="' + escapeHtml(run.teamRunId || '') + '" data-task-run-spec-id="' + escapeHtml(run.taskRunSpecId || '') + '" onclick="inspectAgentsRecentRuntimeRun(this)">Inspect Runtime</button>'
+          + (run.teamRunId ? '<button type="button" data-runtime-run-id="' + escapeHtml(run.runId || '') + '" data-team-run-id="' + escapeHtml(run.teamRunId || '') + '" data-task-run-spec-id="' + escapeHtml(run.taskRunSpecId || '') + '" onclick="inspectAgentsRecentTeamRun(this)">Inspect Team</button>' : '')
+          + '</span></td>'
+          + '</tr>').join('')
+        + '</tbody></table></div>';
+    }
+
+    function useAgentsRecentRun(button) {
+      $('agentRuntimeRunId').value = button.dataset.runtimeRunId || '';
+      $('agentTeamRunId').value = button.dataset.teamRunId || '';
+      $('agentTaskRunSpecId').value = button.dataset.taskRunSpecId || '';
+      setAgentsTeamsNotice('Selected recent run ' + (button.dataset.runtimeRunId || 'unknown') + '.', 'ok');
+    }
+
+    async function inspectAgentsRecentRuntimeRun(button) {
+      useAgentsRecentRun(button);
+      await inspectAgentsRuntimeRun();
+    }
+
+    async function inspectAgentsRecentTeamRun(button) {
+      useAgentsRecentRun(button);
+      await inspectAgentsTeamRun();
     }
 
     function renderMaybeLink(value) {
@@ -7172,6 +7342,7 @@ function createOperatorBrowserDashboardHtml(input: {
     $('savedMirrorPreviewSessionTable').addEventListener('click', handleSavedMirrorPreviewSessionTableClick);
     $('inspectTeamRun').addEventListener('click', inspectAgentsTeamRun);
     $('inspectRuntimeRun').addEventListener('click', inspectAgentsRuntimeRun);
+    $('loadAgentsRecentRuns').addEventListener('click', loadAgentsRecentRuns);
     $('loadMirrorPreviewSessionManifest').addEventListener('change', loadMirrorPreviewSessionManifestFile);
     $('mirrorPreviewSessionGrid').addEventListener('change', updateMirrorPreviewSessionSelection);
     $('mirrorCatalogSearch').addEventListener('keydown', (event) => {

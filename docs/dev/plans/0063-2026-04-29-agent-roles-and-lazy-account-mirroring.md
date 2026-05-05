@@ -542,7 +542,10 @@ Each status payload should include:
   cancel actions require confirmation while start/pause/resume remain one-click.
   `/agents` now turns the disabled Agents / Teams nav item into a read-only
   operator page that calls the existing `GET /v1/team-runs/inspect` and
-  `GET /v1/runtime-runs/inspect` surfaces without adding write paths.
+  `GET /v1/runtime-runs/inspect` surfaces without adding write paths. The same
+  page now includes a recent runtime-run browser backed by
+  `GET /v1/runtime-runs/recent` source/status/limit filters so operators can
+  fill or inspect known local runs without pasting ids.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.

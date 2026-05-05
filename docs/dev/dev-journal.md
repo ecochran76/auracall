@@ -26841,6 +26841,37 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|configured route paths|api ops browser CLI helpers|status endpoint" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
 
+## Turn 130 | 2026-05-05
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make Agents / Teams inspectable without requiring operators to paste
+  run ids.
+- Change:
+  - added `GET /v1/runtime-runs/recent` with source/status/limit filters over
+    existing local runtime control state
+  - `/agents` now renders a recent-run table with Use, Inspect Runtime, and
+    Inspect Team actions
+  - `/status` route discovery and the CLI dashboard contract assert the new
+    read-only recent-run browser
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "runtime runs|browser operator dashboard|configured route paths|api ops browser CLI helpers|status endpoint" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - restarted installed API service on `127.0.0.1:18095` as PID `1979727`
+  - installed `/agents` contains the recent-run browser markers
+  - installed `GET /v1/runtime-runs/recent?limit=5` returned `{ object: "list",
+    count: 5 }`
+  - installed `auracall api ops-browser-status --port 18095 --json` reported
+    `hasAgentsRecentRunsBrowser=true`
+  - installed `/status` advertises `routes.runtimeRunsRecent` and
+    `serviceDiscovery.routing.agentsPath=/agents`
+
 ## Turn 118 | 2026-05-04
 
 - Continued implementation plan:

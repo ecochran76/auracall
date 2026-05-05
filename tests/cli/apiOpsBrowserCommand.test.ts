@@ -38,7 +38,7 @@ const dashboardHtml = `
 <section id="configRoutingPanel"><h2>Config</h2><dl id="configRoutingSummary"></dl><pre id="configRoutingRaw">operatorConfigDashboard publicOperatorBrowserDashboardUrl externalServiceBaseUrl</pre></section>
 <section id="configIdentityPanel"><h2>Bound Identities</h2><div id="configIdentitySummary">expectedIdentityKey detectedIdentityKey accountLevel</div></section>
 <section id="configLiveFollowPanel"><h2>Live Follow Eligibility</h2><div id="configLiveFollowSummary">status.liveFollow desiredState nextAttemptAt mirrorCompleteness data-runtime-profile not live-follow enabled</div></section>
-<section id="agentsTeamsPanel"><h2>Agents / Teams</h2><button id="inspectTeamRun">Inspect Team</button><button id="inspectRuntimeRun">Inspect Runtime</button><pre id="agentsTeamsRaw"></pre></section>
+<section id="agentsTeamsPanel"><h2>Agents / Teams</h2><button id="loadAgentsRecentRuns">Load Recent Runs</button><div id="agentsRecentRuns"><table id="agentsRecentRunsTable"></table></div><button id="inspectTeamRun">Inspect Team</button><button id="inspectRuntimeRun">Inspect Runtime</button><pre id="agentsTeamsRaw"></pre></section>
 <section><h2>Mirror Live Follow</h2></section>
 <div id="mirrorAttentionQueue"><table id="mirrorAttentionItems"></table></div>
 <div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div>
@@ -68,6 +68,9 @@ const dashboardHtml = `
   function isAccountMirrorRoute() {}
   function isPreviewSessionRoute() {}
   function isAgentsTeamsRoute() {}
+  async function loadAgentsRecentRuns() { return fetchJson('/v1/runtime-runs/recent?' + new URLSearchParams({ limit: '25' }).toString()); }
+  function useAgentsRecentRun() {}
+  async function inspectAgentsRecentRuntimeRun() {}
   async function inspectAgentsTeamRun() { return fetchJson('/v1/team-runs/inspect?' + new URLSearchParams({ teamRunId: 'team' }).toString()); }
   async function inspectAgentsRuntimeRun() { return fetchJson('/v1/runtime-runs/inspect?' + new URLSearchParams({ runtimeRunId: 'runtime' }).toString()); }
   function renderAttentionQueue() {}
@@ -378,6 +381,7 @@ describe('api ops browser CLI helpers', () => {
       hasConfigLiveFollowProjection: true,
       hasConfigLiveFollowControls: true,
       hasAgentsTeamsPage: true,
+      hasAgentsRecentRunsBrowser: true,
       hasOperationsPanel: true,
       hasServiceDiscoveryPanel: true,
       hasBackgroundDrainControls: true,
@@ -450,7 +454,7 @@ describe('api ops browser CLI helpers', () => {
       'Service discovery: local=http://auracall.localhost external=https://auracall.ecochran.dyndns.org proxy=http://127.0.0.1:18080 auth=authelia',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard config: page=ok identities=ok liveFollow=ok controls=ok agents=ok',
+      'Dashboard config: page=ok identities=ok liveFollow=ok controls=ok agents=ok recentRuns=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard service control: nav=ok operations=ok backgroundDrain=ok scheduler=ok runOnce=ok',

@@ -13,7 +13,9 @@
   Destructive cancel actions now require confirmation; start, pause, and resume
   stay one-click. `/agents` now turns the disabled Agents / Teams nav item into
   a read-only inspection page backed by the existing team-run/runtime-run
-  inspect endpoints.
+  inspect endpoints. `GET /v1/runtime-runs/recent` and the `/agents` recent-run
+  table let operators browse local runtime-run state by source/status/limit and
+  inspect runs without pasting ids or touching provider browsers.
 
 - 2026-05-05: Account mirror result navigation needs fast keyboard controls.
   The `/account-mirror` page now supports `/` to focus cached catalog search
