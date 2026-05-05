@@ -137,6 +137,12 @@ const dashboardHtml = `
   }
   function renderMirrorCatalogNavigator() { return '<button class="catalog-result-button catalog-nav-selected">Conversation</button>'; }
   function renderMirrorCatalogNavigatorItem() {}
+  function focusMirrorCatalogSearch() {}
+  function handleMirrorCatalogKeyboard(event) {
+    if (event.key === '/') focusMirrorCatalogSearch();
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') showMirrorCatalogDetailByIndex('0');
+  }
+  document.addEventListener('keydown', handleMirrorCatalogKeyboard);
   function setMirrorCatalogKindFilter() {}
   function openDefaultMirrorCatalogDetail() {}
   function renderCatalogTranscriptBadge(row) {

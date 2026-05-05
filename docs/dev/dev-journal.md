@@ -26533,6 +26533,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed `api ops-browser-status --port 18095 --json` reports saved
     filters, catalog, compact table, detail inspection, and chat-detail
     dashboard markers
+
+## Turn 120 | 2026-05-05
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make account mirror result navigation faster from the keyboard.
+- Change:
+  - `/account-mirror` now supports `/` to focus the cached catalog search input
+  - ArrowUp/ArrowDown move through the current result navigator and reuse the
+    same cache-only detail selection path as row and navigator clicks
+  - dashboard CLI contract now asserts the keyboard navigation markers
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror dashboard|api ops browser CLI helpers|browser operator dashboard" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - started the pinned `127.0.0.1:18095` service on PID `110160`
+  - installed `api ops-browser-status --port 18095 --json` reports saved
+    filters, catalog, compact table, detail inspection, and chat-detail
+    dashboard markers
+  - installed `/account-mirror?...` over `127.0.0.1:18095` contains the
+    keyboard navigation markers
+  - observed local hostname follow-up: `auracall.localhost` resolves to `::1`
+    in this WSL environment while the pinned service is currently bound to
+    IPv4 `127.0.0.1`
   - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
     reported only existing warning debt in touched broad files
   - `pnpm run docs:list`

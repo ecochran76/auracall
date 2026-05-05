@@ -3770,8 +3770,13 @@ function createOperatorBrowserDashboardHtml(input: {
       cursor: pointer;
     }
     .catalog-result-button:hover,
+    .catalog-result-button:focus-visible,
     .catalog-result-button.catalog-nav-selected {
       background: #10211f;
+    }
+    .catalog-result-button:focus-visible {
+      outline: 1px solid var(--accent);
+      outline-offset: -1px;
     }
     .catalog-result-button strong,
     .catalog-result-button span {
@@ -5663,6 +5668,44 @@ function createOperatorBrowserDashboardHtml(input: {
       });
     }
 
+    function focusMirrorCatalogSearch() {
+      const input = $('mirrorCatalogSearch');
+      input.focus();
+      input.select();
+    }
+
+    function handleMirrorCatalogKeyboard(event) {
+      if (event.defaultPrevented) return;
+      const target = event.target;
+      const tag = target && target.tagName ? target.tagName.toLowerCase() : '';
+      const isEditable = tag === 'input'
+        || tag === 'textarea'
+        || tag === 'select'
+        || Boolean(target && target.isContentEditable);
+      if (event.key === '/' && !isEditable) {
+        event.preventDefault();
+        focusMirrorCatalogSearch();
+        return;
+      }
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+      const inNavigator = Boolean(target && target.closest && target.closest('#mirrorCatalogNavigator'));
+      if (isEditable && !inNavigator) return;
+      const buttons = Array.from(document.querySelectorAll('#mirrorCatalogNavigator .catalog-result-button[data-catalog-row-index]'));
+      if (!buttons.length) return;
+      event.preventDefault();
+      const selectedIndex = buttons.findIndex((button) => button.classList.contains('catalog-nav-selected'));
+      let nextIndex = selectedIndex;
+      if (nextIndex < 0) {
+        nextIndex = event.key === 'ArrowDown' ? 0 : buttons.length - 1;
+      } else {
+        nextIndex += event.key === 'ArrowDown' ? 1 : -1;
+      }
+      nextIndex = Math.max(0, Math.min(buttons.length - 1, nextIndex));
+      const button = buttons[nextIndex];
+      button.focus();
+      showMirrorCatalogDetailByIndex(button.dataset.catalogRowIndex);
+    }
+
     async function showMirrorCatalogDetailByPath(path, updateUrlFromPath) {
       if (updateUrlFromPath) updateMirrorCatalogDetailUrlFromPath(path);
       $('mirrorCatalogDetailView').className = 'notice notice-warn';
@@ -6425,6 +6468,7 @@ function createOperatorBrowserDashboardHtml(input: {
     $('mirrorCatalogSearch').addEventListener('keydown', (event) => {
       if (event.key === 'Enter') loadMirrorCatalog();
     });
+    document.addEventListener('keydown', handleMirrorCatalogKeyboard);
     $('probeWorkbench').addEventListener('click', probeWorkbench);
     $('probeRun').addEventListener('click', probeRun);
     initializeMirrorCatalogFiltersFromUrl();

@@ -280,7 +280,8 @@ Terminology note:
   relying on transient table state. The detail pane includes a compact result
   navigator for the current filtered rows, allowing operators to move between
   cached conversations, files, artifacts, and media without returning to the
-  table.
+  table. Keyboard navigation supports `/` to focus catalog search and
+  ArrowUp/ArrowDown to move through the result navigator.
   Conversation catalog rows show cached transcript availability and message
   count before opening the row, with a `withTranscript=1` filter for rows that
   will open as chat dialogs.

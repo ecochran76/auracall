@@ -295,7 +295,12 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('renderMirrorCatalogNavigator')
       && html.includes('renderMirrorCatalogNavigatorItem')
       && html.includes('catalog-result-sidebar')
-      && html.includes('catalog-nav-selected'),
+      && html.includes('catalog-nav-selected')
+      && html.includes('focusMirrorCatalogSearch')
+      && html.includes('handleMirrorCatalogKeyboard')
+      && html.includes("event.key === '/'")
+      && html.includes("event.key === 'ArrowDown'")
+      && html.includes("'ArrowUp'"),
     hasCatalogDetailInspection: html.includes('mirrorCatalogDetail')
       && html.includes('mirrorCatalogDetailRaw')
       && html.includes('showMirrorCatalogDetailByIndex')

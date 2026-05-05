@@ -14690,6 +14690,12 @@ describe('http responses adapter', () => {
       expect(html).toContain('renderMirrorCatalogNavigatorItem');
       expect(html).toContain('catalog-result-sidebar');
       expect(html).toContain('catalog-nav-selected');
+      expect(html).toContain('focusMirrorCatalogSearch');
+      expect(html).toContain('handleMirrorCatalogKeyboard');
+      expect(html).toContain("event.key === '/'");
+      expect(html).toContain("event.key === 'ArrowDown'");
+      expect(html).toContain("event.key !== 'ArrowUp'");
+      expect(html).toContain("document.addEventListener('keydown', handleMirrorCatalogKeyboard)");
       expect(html).toContain('mirrorCatalogDetail');
       expect(html).toContain('mirrorCatalogDetailView');
       expect(html).toContain('mirrorCatalogDetailRaw');
