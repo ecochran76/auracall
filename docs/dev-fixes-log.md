@@ -17,7 +17,9 @@
   table let operators browse local runtime-run state by source/status/limit and
   inspect runs without pasting ids or touching provider browsers. MCP
   `runtime_runs_recent` exposes the same local-state list shape so agents can
-  discover recent runs before calling `runtime_inspect`.
+  discover recent runs before calling `runtime_inspect`. Runtime inspection now
+  includes compact stored conversation turns, and `/agents` renders those turns
+  as chat bubbles while keeping raw inspection JSON available.
 
 - 2026-05-05: Account mirror result navigation needs fast keyboard controls.
   The `/account-mirror` page now supports `/` to focus cached catalog search

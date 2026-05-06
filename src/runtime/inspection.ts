@@ -171,6 +171,23 @@ export interface RuntimeRunInspectionRuntimeSummary {
   queueProjection: ExecutionRunQueueProjection;
 }
 
+export interface RuntimeRunInspectionConversationTurn {
+  id: string;
+  stepId: string;
+  role: 'user' | 'assistant' | 'system' | 'tool';
+  content: string;
+  status: ExecutionRunStep['status'];
+  agentId: string;
+  service: ExecutionRunStep['service'];
+  runtimeProfileId: string | null;
+  createdAt: string | null;
+}
+
+export interface RuntimeRunInspectionConversationSummary {
+  turnCount: number;
+  turns: RuntimeRunInspectionConversationTurn[];
+}
+
 export interface RuntimeRunInspectionPayload {
   resolvedBy: 'run-id' | 'runtime-run-id' | 'team-run-id' | 'task-run-spec-id';
   queryId: string;
@@ -179,6 +196,7 @@ export interface RuntimeRunInspectionPayload {
   matchingRuntimeRunIds: string[];
   taskRunSpecSummary: TaskRunSpecInspectionSummary | null;
   runtime: RuntimeRunInspectionRuntimeSummary;
+  conversation?: RuntimeRunInspectionConversationSummary;
   runner: RuntimeRunInspectionRunnerSummary | null;
   serviceState?: RuntimeRunInspectionServiceStateSummary;
   browserDiagnostics?: RuntimeRunInspectionBrowserDiagnosticsSummary;
@@ -337,6 +355,7 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
       updatedAt: runtimeInspection.record.bundle.run.updatedAt,
       queueProjection,
     },
+    conversation: summarizeRuntimeRunConversation(runtimeInspection.record),
     runner: selectedRunner
       ? {
           selectedBy: selectedRunner.selectedBy,
@@ -359,6 +378,75 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
     browserDiagnostics,
     schedulerAuthority,
   };
+}
+
+function summarizeRuntimeRunConversation(
+  record: ExecutionRunStoredRecord,
+): RuntimeRunInspectionConversationSummary {
+  const turns = record.bundle.steps
+    .slice()
+    .sort((left, right) => left.order - right.order)
+    .flatMap((step) => summarizeRuntimeRunStepConversation(step));
+  return {
+    turnCount: turns.length,
+    turns,
+  };
+}
+
+function summarizeRuntimeRunStepConversation(
+  step: ExecutionRunStep,
+): RuntimeRunInspectionConversationTurn[] {
+  const turns: RuntimeRunInspectionConversationTurn[] = [];
+  const inputPrompt = normalizeConversationText(step.input.prompt);
+  if (inputPrompt) {
+    turns.push(createRuntimeConversationTurn(step, 'user', inputPrompt, 'input'));
+  }
+  if (step.output) {
+    const outputText = normalizeConversationText(step.output.summary)
+      ?? normalizeStructuredOutputText(step.output.structuredData)
+      ?? normalizeNotesText(step.output.notes);
+    if (outputText) {
+      turns.push(createRuntimeConversationTurn(step, 'assistant', outputText, 'output'));
+    }
+  }
+  if (step.failure?.message) {
+    turns.push(createRuntimeConversationTurn(step, 'system', step.failure.message, 'failure'));
+  }
+  return turns;
+}
+
+function createRuntimeConversationTurn(
+  step: ExecutionRunStep,
+  role: RuntimeRunInspectionConversationTurn['role'],
+  content: string,
+  suffix: string,
+): RuntimeRunInspectionConversationTurn {
+  return {
+    id: `${step.id}:${suffix}`,
+    stepId: step.id,
+    role,
+    content,
+    status: step.status,
+    agentId: step.agentId,
+    service: step.service,
+    runtimeProfileId: step.runtimeProfileId,
+    createdAt: role === 'user' ? null : step.completedAt ?? step.startedAt,
+  };
+}
+
+function normalizeConversationText(value: string | null | undefined): string | null {
+  const text = typeof value === 'string' ? value.trim() : '';
+  return text || null;
+}
+
+function normalizeNotesText(notes: string[]): string | null {
+  const text = notes.map((note) => note.trim()).filter(Boolean).join('\n');
+  return text || null;
+}
+
+function normalizeStructuredOutputText(value: Record<string, unknown>): string | null {
+  const text = Object.keys(value).length > 0 ? JSON.stringify(value, null, 2) : '';
+  return text || null;
 }
 
 async function inspectRuntimeRunBrowserDiagnostics(input: {

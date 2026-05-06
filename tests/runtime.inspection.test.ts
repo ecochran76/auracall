@@ -100,6 +100,101 @@ describe('runtime inspection', () => {
     await Promise.all(cleanup.splice(0).map((entry) => fs.rm(entry, { recursive: true, force: true })));
   });
 
+  it('projects a compact conversation transcript from runtime step input and output', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-inspection-conversation-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'runtime_inspect_conversation';
+    const createdAt = '2026-05-06T12:00:00.000Z';
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'direct',
+          sourceId: null,
+          status: 'succeeded',
+          createdAt,
+          updatedAt: '2026-05-06T12:02:00.000Z',
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Summarize runtime inspection.',
+          initialInputs: {},
+          sharedStateId: `${runId}:state`,
+          stepIds: [`${runId}:step:1`],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: `${runId}:step:1`,
+            runId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Summarize runtime inspection.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'Runtime inspection is healthy.',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            completedAt: '2026-05-06T12:02:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-05-06T12:02:00.000Z',
+        }),
+        events: [],
+      }),
+    );
+
+    const payload = await inspectRuntimeRun({ runId, control });
+
+    expect(payload.conversation).toMatchObject({
+      turnCount: 2,
+      turns: [
+        {
+          id: `${runId}:step:1:input`,
+          role: 'user',
+          content: 'Summarize runtime inspection.',
+          status: 'succeeded',
+          agentId: 'api-responses',
+          service: 'chatgpt',
+          runtimeProfileId: 'default',
+        },
+        {
+          id: `${runId}:step:1:output`,
+          role: 'assistant',
+          content: 'Runtime inspection is healthy.',
+          status: 'succeeded',
+          agentId: 'api-responses',
+          service: 'chatgpt',
+          runtimeProfileId: 'default',
+          createdAt: '2026-05-06T12:02:00.000Z',
+        },
+      ],
+    });
+  });
+
   it('keeps configured service-account affinity consistent with local claim evaluation', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-inspection-'));
     cleanup.push(homeDir);

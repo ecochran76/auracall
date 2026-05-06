@@ -289,6 +289,8 @@ Terminology note:
   endpoints, with a local-state recent runtime-run browser backed by
   `GET /v1/runtime-runs/recent` source/status/limit filters and row actions
   that fill or inspect existing run ids without touching provider browsers.
+  Runtime inspection also projects compact conversation turns from stored step
+  input/output so `/agents` can render a chat-style run view beside raw JSON.
   The catalog page now renders a compact cached-item browser with kind-count
   quick filters, selected-row highlighting, and a first cached conversation
   drill-in by default on `/account-mirror`. Selecting a cached row also writes

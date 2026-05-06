@@ -26898,6 +26898,44 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `limit: 2`, returning two persisted local runtime runs
   - `pnpm vitest run tests/mcp.schema.test.ts tests/mcp.server.test.ts tests/mcp.runtimeRunsRecent.test.ts --maxWorkers 1`
 
+## Turn 132 | 2026-05-06
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make runtime-run views look like chat dialogs instead of only raw
+  inspection JSON.
+- Change:
+  - added an optional `conversation` projection to runtime inspection using
+    stored step input prompts, output summaries, structured output, notes, and
+    failures
+  - `/agents` now renders runtime inspection conversation turns with the
+    existing chat transcript/bubble styles
+  - raw runtime inspection JSON remains visible for operator debugging
+  - `api ops-browser-status` now asserts the runtime chat markers so dashboard
+    preflight catches drift in the run conversation view
+- Validation:
+  - `pnpm vitest run tests/runtime.inspection.test.ts tests/http.responsesServer.test.ts tests/mcp.runtimeInspect.test.ts -t "conversation transcript|runtime inspection|browser operator dashboard|runtime runs" --maxWorkers 1`
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/http.responsesServer.test.ts tests/runtime.inspection.test.ts -t "api ops browser CLI helpers|browser operator dashboard|conversation transcript|runtime inspection" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/runtime/inspection.ts src/http/responsesServer.ts tests/runtime.inspection.test.ts tests/http.responsesServer.test.ts tests/mcp.runtimeInspect.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm exec biome lint src/cli/apiOpsBrowserCommand.ts tests/cli/apiOpsBrowserCommand.test.ts src/runtime/inspection.ts src/http/responsesServer.ts tests/runtime.inspection.test.ts tests/http.responsesServer.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - pinned API remained available on `127.0.0.1:18095` with PID `403586`
+  - installed `/agents` contains the runtime conversation markers:
+    `agentsTeamsConversation`, `renderAgentsRuntimeConversation`,
+    `renderAgentsRuntimeConversationTurn`, `agents-runtime-conversation`, and
+    `Runtime Conversation`
+  - installed `/v1/runtime-runs/inspect?runtimeRunId=resp_dd3e4048248e4090a5354655be8ac36f`
+    returned `conversation.turnCount=2`
+  - installed `api ops-browser-status --port 18095 --json` reports
+    `hasAgentsRuntimeConversationView=true`
+
 ## Turn 118 | 2026-05-04
 
 - Continued implementation plan:

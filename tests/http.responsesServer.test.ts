@@ -14763,6 +14763,11 @@ describe('http responses adapter', () => {
       expect(html).toContain('/v1/runtime-runs/recent?');
       expect(html).toContain('useAgentsRecentRun');
       expect(html).toContain('inspectAgentsRecentRuntimeRun');
+      expect(html).toContain('agentsTeamsConversation');
+      expect(html).toContain('renderAgentsRuntimeConversation');
+      expect(html).toContain('renderAgentsRuntimeConversationTurn');
+      expect(html).toContain('agents-runtime-conversation');
+      expect(html).toContain('Runtime Conversation');
       expect(html).toContain('/v1/team-runs/inspect?');
       expect(html).toContain('/v1/runtime-runs/inspect?');
       expect(html).toContain('<h2>Operations</h2>');

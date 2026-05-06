@@ -4433,6 +4433,9 @@ function createOperatorBrowserDashboardHtml(input: {
         <dl id="agentsTeamsSummary">
           <dt>Status</dt><dd class="muted">No inspection loaded.</dd>
         </dl>
+        <div id="agentsTeamsConversation" class="catalog-detail">
+          <span class="muted">No runtime conversation loaded.</span>
+        </div>
         <pre id="agentsTeamsRaw">No inspection loaded.</pre>
       </section>
 
@@ -4753,7 +4756,45 @@ function createOperatorBrowserDashboardHtml(input: {
       $('agentsTeamsSummary').innerHTML = fields.map(([key, value]) =>
         '<dt>' + escapeHtml(key) + '</dt><dd>' + escapeHtml(String(value)) + '</dd>'
       ).join('');
+      $('agentsTeamsConversation').innerHTML = kind === 'runtime'
+        ? renderAgentsRuntimeConversation(record)
+        : '<span class="muted">Conversation view is available for runtime inspections.</span>';
       $('agentsTeamsRaw').textContent = asJson(payload);
+    }
+
+    function renderAgentsRuntimeConversation(payload) {
+      const inspection = payload.inspection || payload;
+      const conversation = inspection.conversation || {};
+      const turns = Array.isArray(conversation.turns) ? conversation.turns : [];
+      if (!turns.length) {
+        return '<div class="notice notice-warn">No runtime conversation turns are available for this run yet.</div>';
+      }
+      return '<h3>Runtime Conversation</h3>'
+        + '<div class="chat-transcript agents-runtime-conversation">'
+        + turns.map(renderAgentsRuntimeConversationTurn).join('')
+        + '</div>';
+    }
+
+    function renderAgentsRuntimeConversationTurn(turn) {
+      const role = normalizeAgentsRuntimeConversationRole(turn.role);
+      const meta = [
+        turn.agentId || null,
+        turn.service || null,
+        turn.status || null,
+        turn.runtimeProfileId || null,
+      ].filter(Boolean).join(' / ');
+      return '<div class="chat-turn chat-turn-' + escapeHtml(role) + '" data-runtime-step-id="' + escapeHtml(turn.stepId || '') + '">'
+        + '<div class="chat-role">' + escapeHtml(role) + (meta ? ' <span class="muted">' + escapeHtml(meta) + '</span>' : '') + '</div>'
+        + '<div class="chat-bubble">' + escapeHtml(turn.content || '') + '</div>'
+        + '</div>';
+    }
+
+    function normalizeAgentsRuntimeConversationRole(role) {
+      const normalized = String(role || 'assistant').toLowerCase();
+      if (normalized === 'user' || normalized === 'assistant' || normalized === 'system' || normalized === 'tool') {
+        return normalized;
+      }
+      return 'assistant';
     }
 
     async function inspectAgentsTeamRun() {

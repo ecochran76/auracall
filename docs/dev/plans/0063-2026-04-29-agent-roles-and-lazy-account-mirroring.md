@@ -547,7 +547,9 @@ Each status payload should include:
   `GET /v1/runtime-runs/recent` source/status/limit filters so operators can
   fill or inspect known local runs without pasting ids. MCP
   `runtime_runs_recent` reuses the same compact local-state list shape for
-  agent-side discovery before `runtime_inspect`.
+  agent-side discovery before `runtime_inspect`. Runtime inspection now also
+  carries compact conversation turns derived from stored step input/output so
+  `/agents` can show runtime runs as chat bubbles while preserving raw JSON.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.
