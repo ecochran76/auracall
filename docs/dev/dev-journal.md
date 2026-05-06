@@ -26936,6 +26936,39 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed `api ops-browser-status --port 18095 --json` reports
     `hasAgentsRuntimeConversationView=true`
 
+## Turn 133 | 2026-05-06
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: connect runtime-run chat inspection to cached provider conversation
+  detail.
+- Change:
+  - runtime inspection now dedupes stored `structuredData.browserRun`
+    conversation ids into `conversation.providerConversationRefs`
+  - each provider ref carries provider, runtime/browser profile, project id,
+    provider URL, `/account-mirror` detail URL, and catalog item API path
+  - `/agents` renders those refs above the runtime chat transcript as
+    cache-navigation pills
+  - `api ops-browser-status` now asserts the runtime provider-link markers
+- Validation:
+  - `pnpm vitest run tests/runtime.inspection.test.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "provider browser run metadata|conversation transcript|browser operator dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/runtime/inspection.ts src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/runtime.inspection.test.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run install:user-runtime`
+  - restarted pinned API on `127.0.0.1:18095` with PID `1005952`
+  - installed `/agents` contains the runtime provider conversation link
+    markers
+  - installed `api ops-browser-status --port 18095 --json` reports
+    `hasAgentsRuntimeProviderConversationLinks=true`
+  - installed `/v1/runtime-runs/inspect?runtimeRunId=resp_dd3e4048248e4090a5354655be8ac36f`
+    returned one ChatGPT `providerConversationRefs` entry with both
+    `catalogItemPath` and `accountMirrorPath`
+
 ## Turn 118 | 2026-05-04
 
 - Continued implementation plan:

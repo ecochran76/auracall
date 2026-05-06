@@ -14768,6 +14768,13 @@ describe('http responses adapter', () => {
       expect(html).toContain('renderAgentsRuntimeConversationTurn');
       expect(html).toContain('agents-runtime-conversation');
       expect(html).toContain('Runtime Conversation');
+      expect(html).toContain('providerConversationRefs');
+      expect(html).toContain('renderAgentsRuntimeProviderConversationRefs');
+      expect(html).toContain('renderAgentsRuntimeProviderConversationRef');
+      expect(html).toContain('Cached provider conversations');
+      expect(html).toContain('agents-runtime-provider-conversations');
+      expect(html).toContain('data-runtime-provider-conversation-path');
+      expect(html).toContain('data-runtime-provider-catalog-item-path');
       expect(html).toContain('/v1/team-runs/inspect?');
       expect(html).toContain('/v1/runtime-runs/inspect?');
       expect(html).toContain('<h2>Operations</h2>');

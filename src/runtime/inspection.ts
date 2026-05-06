@@ -186,6 +186,22 @@ export interface RuntimeRunInspectionConversationTurn {
 export interface RuntimeRunInspectionConversationSummary {
   turnCount: number;
   turns: RuntimeRunInspectionConversationTurn[];
+  providerConversationRefs: RuntimeRunInspectionProviderConversationRef[];
+}
+
+export interface RuntimeRunInspectionProviderConversationRef {
+  id: string;
+  stepId: string;
+  provider: Exclude<ExecutionRunStep['service'], null>;
+  service: Exclude<ExecutionRunStep['service'], null>;
+  runtimeProfileId: string | null;
+  browserProfileId: string | null;
+  conversationId: string;
+  projectId: string | null;
+  tabUrl: string | null;
+  configuredUrl: string | null;
+  catalogItemPath: string;
+  accountMirrorPath: string;
 }
 
 export interface RuntimeRunInspectionPayload {
@@ -383,13 +399,14 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
 function summarizeRuntimeRunConversation(
   record: ExecutionRunStoredRecord,
 ): RuntimeRunInspectionConversationSummary {
-  const turns = record.bundle.steps
+  const steps = record.bundle.steps
     .slice()
-    .sort((left, right) => left.order - right.order)
-    .flatMap((step) => summarizeRuntimeRunStepConversation(step));
+    .sort((left, right) => left.order - right.order);
+  const turns = steps.flatMap((step) => summarizeRuntimeRunStepConversation(step));
   return {
     turnCount: turns.length,
     turns,
+    providerConversationRefs: summarizeRuntimeRunProviderConversationRefs(steps),
   };
 }
 
@@ -447,6 +464,105 @@ function normalizeNotesText(notes: string[]): string | null {
 function normalizeStructuredOutputText(value: Record<string, unknown>): string | null {
   const text = Object.keys(value).length > 0 ? JSON.stringify(value, null, 2) : '';
   return text || null;
+}
+
+function summarizeRuntimeRunProviderConversationRefs(
+  steps: ExecutionRunStep[],
+): RuntimeRunInspectionProviderConversationRef[] {
+  const refs: RuntimeRunInspectionProviderConversationRef[] = [];
+  const seen = new Set<string>();
+  for (const step of steps) {
+    const browserRun = isRecord(step.output?.structuredData?.browserRun)
+      ? step.output.structuredData.browserRun
+      : null;
+    if (!browserRun) continue;
+    const provider = normalizeRuntimeProvider(
+      readRecordString(browserRun, ['provider', 'service']) ?? step.service,
+    );
+    const conversationId = readRecordString(browserRun, ['conversationId', 'conversation_id']);
+    if (!provider || !conversationId) continue;
+    const runtimeProfileId =
+      readRecordString(browserRun, ['runtimeProfileId', 'runtimeProfile']) ?? step.runtimeProfileId;
+    const browserProfileId =
+      readRecordString(browserRun, ['browserProfileId', 'browserProfile']) ?? step.browserProfileId;
+    const projectId = readRecordString(browserRun, ['projectId', 'project']);
+    const key = [provider, runtimeProfileId ?? '', conversationId].join(':');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const catalogItemPath = buildRuntimeConversationCatalogItemPath({
+      provider,
+      runtimeProfileId,
+      conversationId,
+    });
+    refs.push({
+      id: `${step.id}:provider-conversation:${provider}:${conversationId}`,
+      stepId: step.id,
+      provider,
+      service: provider,
+      runtimeProfileId,
+      browserProfileId,
+      conversationId,
+      projectId,
+      tabUrl: readRecordString(browserRun, ['tabUrl', 'url']),
+      configuredUrl: readRecordString(browserRun, ['configuredUrl', 'targetUrl']),
+      catalogItemPath,
+      accountMirrorPath: buildRuntimeConversationAccountMirrorPath({
+        provider,
+        runtimeProfileId,
+        conversationId,
+      }),
+    });
+  }
+  return refs;
+}
+
+function buildRuntimeConversationCatalogItemPath(input: {
+  provider: Exclude<ExecutionRunStep['service'], null>;
+  runtimeProfileId: string | null;
+  conversationId: string;
+}): string {
+  const params = new URLSearchParams({
+    provider: input.provider,
+    kind: 'conversations',
+  });
+  if (input.runtimeProfileId) params.set('runtimeProfile', input.runtimeProfileId);
+  return `/v1/account-mirrors/catalog/items/${encodeURIComponent(input.conversationId)}?${params.toString()}`;
+}
+
+function buildRuntimeConversationAccountMirrorPath(input: {
+  provider: Exclude<ExecutionRunStep['service'], null>;
+  runtimeProfileId: string | null;
+  conversationId: string;
+}): string {
+  const params = new URLSearchParams({
+    provider: input.provider,
+    kind: 'conversations',
+    item: input.conversationId,
+    itemKind: 'conversations',
+    itemProvider: input.provider,
+  });
+  if (input.runtimeProfileId) {
+    params.set('runtimeProfile', input.runtimeProfileId);
+    params.set('itemRuntimeProfile', input.runtimeProfileId);
+  }
+  return `/account-mirror?${params.toString()}`;
+}
+
+function normalizeRuntimeProvider(value: unknown): Exclude<ExecutionRunStep['service'], null> | null {
+  if (value === 'chatgpt' || value === 'gemini' || value === 'grok') return value;
+  return null;
+}
+
+function readRecordString(record: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
 async function inspectRuntimeRunBrowserDiagnostics(input: {

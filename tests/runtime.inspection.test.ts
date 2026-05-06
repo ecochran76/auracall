@@ -195,6 +195,106 @@ describe('runtime inspection', () => {
     });
   });
 
+  it('projects cached account-mirror conversation links from provider browser run metadata', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-inspection-provider-refs-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'runtime_inspect_provider_refs';
+    const stepId = `${runId}:step:1`;
+    const createdAt = '2026-05-06T13:00:00.000Z';
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'direct',
+          sourceId: null,
+          status: 'succeeded',
+          createdAt,
+          updatedAt: '2026-05-06T13:03:00.000Z',
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Create an operator-linked browser run.',
+          initialInputs: {},
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'wsl-chrome-3',
+            browserProfileId: 'default',
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Create an operator-linked browser run.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'Browser run completed.',
+              artifacts: [],
+              structuredData: {
+                browserRun: {
+                  provider: 'chatgpt',
+                  conversationId: 'conv_runtime_link',
+                  projectId: 'proj_runtime_link',
+                  runtimeProfileId: 'wsl-chrome-3',
+                  browserProfileId: 'default',
+                  tabUrl: 'https://chatgpt.com/c/conv_runtime_link',
+                  configuredUrl: 'https://chatgpt.com/g/proj_runtime_link',
+                },
+              },
+              notes: [],
+            },
+            completedAt: '2026-05-06T13:03:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-05-06T13:03:00.000Z',
+        }),
+        events: [],
+      }),
+    );
+
+    const payload = await inspectRuntimeRun({ runId, control });
+
+    expect(payload.conversation?.providerConversationRefs).toEqual([
+      {
+        id: `${stepId}:provider-conversation:chatgpt:conv_runtime_link`,
+        stepId,
+        provider: 'chatgpt',
+        service: 'chatgpt',
+        runtimeProfileId: 'wsl-chrome-3',
+        browserProfileId: 'default',
+        conversationId: 'conv_runtime_link',
+        projectId: 'proj_runtime_link',
+        tabUrl: 'https://chatgpt.com/c/conv_runtime_link',
+        configuredUrl: 'https://chatgpt.com/g/proj_runtime_link',
+        catalogItemPath:
+          '/v1/account-mirrors/catalog/items/conv_runtime_link?provider=chatgpt&kind=conversations&runtimeProfile=wsl-chrome-3',
+        accountMirrorPath:
+          '/account-mirror?provider=chatgpt&kind=conversations&item=conv_runtime_link&itemKind=conversations&itemProvider=chatgpt&runtimeProfile=wsl-chrome-3&itemRuntimeProfile=wsl-chrome-3',
+      },
+    ]);
+  });
+
   it('keeps configured service-account affinity consistent with local claim evaluation', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-inspection-'));
     cleanup.push(homeDir);

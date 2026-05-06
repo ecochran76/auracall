@@ -4766,13 +4766,53 @@ function createOperatorBrowserDashboardHtml(input: {
       const inspection = payload.inspection || payload;
       const conversation = inspection.conversation || {};
       const turns = Array.isArray(conversation.turns) ? conversation.turns : [];
+      const providerRefs = Array.isArray(conversation.providerConversationRefs) ? conversation.providerConversationRefs : [];
       if (!turns.length) {
         return '<div class="notice notice-warn">No runtime conversation turns are available for this run yet.</div>';
       }
       return '<h3>Runtime Conversation</h3>'
+        + renderAgentsRuntimeProviderConversationRefs(providerRefs)
         + '<div class="chat-transcript agents-runtime-conversation">'
         + turns.map(renderAgentsRuntimeConversationTurn).join('')
         + '</div>';
+    }
+
+    function renderAgentsRuntimeProviderConversationRefs(refs) {
+      if (!refs.length) return '';
+      return '<div class="notice">'
+        + '<strong>Cached provider conversations</strong>'
+        + '<div class="catalog-detail agents-runtime-provider-conversations">'
+        + refs.map(renderAgentsRuntimeProviderConversationRef).join('')
+        + '</div>'
+        + '</div>';
+    }
+
+    function renderAgentsRuntimeProviderConversationRef(ref) {
+      const title = [
+        ref.provider || ref.service || 'provider',
+        ref.conversationId || 'conversation',
+      ].filter(Boolean).join(' / ');
+      const subtitle = [
+        ref.runtimeProfileId ? 'runtime ' + ref.runtimeProfileId : null,
+        ref.projectId ? 'project ' + ref.projectId : null,
+      ].filter(Boolean).join(' / ');
+      const accountMirrorPath = ref.accountMirrorPath || '';
+      const catalogItemPath = ref.catalogItemPath || '';
+      const providerUrl = ref.tabUrl || ref.configuredUrl || '';
+      return '<span class="pill agents-runtime-provider-conversation">'
+        + (accountMirrorPath
+          ? '<a href="' + escapeHtml(accountMirrorPath) + '" data-runtime-provider-conversation-path="' + escapeHtml(accountMirrorPath) + '">'
+            + escapeHtml(title)
+            + '</a>'
+          : escapeHtml(title))
+        + (subtitle ? ' <span class="muted">' + escapeHtml(subtitle) + '</span>' : '')
+        + (catalogItemPath
+          ? ' <a href="' + escapeHtml(catalogItemPath) + '" data-runtime-provider-catalog-item-path="' + escapeHtml(catalogItemPath) + '">cache item</a>'
+          : '')
+        + (providerUrl
+          ? ' <a href="' + escapeHtml(providerUrl) + '" target="_blank" rel="noreferrer">provider</a>'
+          : '')
+        + '</span>';
     }
 
     function renderAgentsRuntimeConversationTurn(turn) {

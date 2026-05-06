@@ -550,6 +550,9 @@ Each status payload should include:
   agent-side discovery before `runtime_inspect`. Runtime inspection now also
   carries compact conversation turns derived from stored step input/output so
   `/agents` can show runtime runs as chat bubbles while preserving raw JSON.
+  Stored browser-run provider conversation ids are projected into cache-only
+  account-mirror links so operators can jump from execution state to the
+  cached provider transcript/artifacts without provider browser work.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.

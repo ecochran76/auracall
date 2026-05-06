@@ -15586,3 +15586,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-04: Saved preview sessions need a compact browser, not just a
   selector. Add a searchable saved-session table with timestamps, item counts,
   content badges, and one-click load/open actions.
+- 2026-05-06: Runtime chat inspection should bridge into the cache browser.
+  Project stored browser-run provider conversation ids into `/agents` runtime
+  chat views as links to `/account-mirror` and
+  `/v1/account-mirrors/catalog/items/{item_id}` so operators can move from a
+  run to cached transcript/artifact detail without provider browser work.
