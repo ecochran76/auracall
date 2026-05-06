@@ -288,7 +288,8 @@ Terminology note:
   Agents / Teams page for existing team-run and runtime-run inspection
   endpoints, with a local-state recent runtime-run browser backed by
   `GET /v1/runtime-runs/recent` source/status/limit filters and row actions
-  that fill or inspect existing run ids without touching provider browsers.
+  that fill, inspect, or jump directly to linked account-mirror detail for
+  existing run ids without touching provider browsers.
   Runtime inspection also projects compact conversation turns from stored step
   input/output so `/agents` can render a chat-style run view beside raw JSON.
   When stored browser-run metadata includes provider conversation ids, that

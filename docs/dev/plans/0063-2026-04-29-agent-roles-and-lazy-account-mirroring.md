@@ -545,7 +545,8 @@ Each status payload should include:
   `GET /v1/runtime-runs/inspect` surfaces without adding write paths. The same
   page now includes a recent runtime-run browser backed by
   `GET /v1/runtime-runs/recent` source/status/limit filters so operators can
-  fill or inspect known local runs without pasting ids. MCP
+  fill, inspect, or jump directly to linked account-mirror detail for known
+  local runs without pasting ids. MCP
   `runtime_runs_recent` reuses the same compact local-state list shape for
   agent-side discovery before `runtime_inspect`. Runtime inspection now also
   carries compact conversation turns derived from stored step input/output so

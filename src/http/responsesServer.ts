@@ -4912,6 +4912,7 @@ function createOperatorBrowserDashboardHtml(input: {
           + '<td><span class="catalog-row-actions">'
           + '<button type="button" data-runtime-run-id="' + escapeHtml(run.runId || '') + '" data-team-run-id="' + escapeHtml(run.teamRunId || '') + '" data-task-run-spec-id="' + escapeHtml(run.taskRunSpecId || '') + '" onclick="useAgentsRecentRun(this)">Use</button>'
           + '<button type="button" data-runtime-run-id="' + escapeHtml(run.runId || '') + '" data-team-run-id="' + escapeHtml(run.teamRunId || '') + '" data-task-run-spec-id="' + escapeHtml(run.taskRunSpecId || '') + '" onclick="inspectAgentsRecentRuntimeRun(this)">Inspect Runtime</button>'
+          + '<button type="button" data-runtime-run-id="' + escapeHtml(run.runId || '') + '" data-team-run-id="' + escapeHtml(run.teamRunId || '') + '" data-task-run-spec-id="' + escapeHtml(run.taskRunSpecId || '') + '" onclick="openAgentsRecentMirrorDetail(this)">Open Mirror Detail</button>'
           + (run.teamRunId ? '<button type="button" data-runtime-run-id="' + escapeHtml(run.runId || '') + '" data-team-run-id="' + escapeHtml(run.teamRunId || '') + '" data-task-run-spec-id="' + escapeHtml(run.taskRunSpecId || '') + '" onclick="inspectAgentsRecentTeamRun(this)">Inspect Team</button>' : '')
           + '</span></td>'
           + '</tr>').join('')
@@ -4928,6 +4929,37 @@ function createOperatorBrowserDashboardHtml(input: {
     async function inspectAgentsRecentRuntimeRun(button) {
       useAgentsRecentRun(button);
       await inspectAgentsRuntimeRun();
+    }
+
+    async function openAgentsRecentMirrorDetail(button) {
+      useAgentsRecentRun(button);
+      const runtimeRunId = button.dataset.runtimeRunId || '';
+      if (!runtimeRunId) {
+        setAgentsTeamsNotice('Recent run has no runtime run id for mirror detail lookup.', 'warn');
+        return;
+      }
+      setAgentsTeamsNotice('Looking up cached provider conversation for ' + runtimeRunId + '...', 'warn');
+      try {
+        const payload = await fetchJson('/v1/runtime-runs/inspect?runtimeRunId=' + encodeURIComponent(runtimeRunId));
+        const path = readAgentsRuntimeMirrorDetailPath(payload);
+        if (!path) {
+          renderAgentsTeamsInspection('runtime', payload);
+          setAgentsTeamsNotice('Runtime inspection loaded, but no cached provider conversation link was stored for this run.', 'warn');
+          return;
+        }
+        setAgentsTeamsNotice('Opening cached provider conversation detail...', 'ok');
+        window.location.href = path;
+      } catch (error) {
+        setAgentsTeamsNotice('Mirror detail lookup failed: ' + String(error.message || error), 'bad');
+      }
+    }
+
+    function readAgentsRuntimeMirrorDetailPath(payload) {
+      const inspection = payload && (payload.inspection || payload);
+      const conversation = inspection && inspection.conversation ? inspection.conversation : {};
+      const refs = Array.isArray(conversation.providerConversationRefs) ? conversation.providerConversationRefs : [];
+      const ref = refs.find((item) => item && item.accountMirrorPath) || null;
+      return ref ? String(ref.accountMirrorPath || '') : '';
     }
 
     async function inspectAgentsRecentTeamRun(button) {

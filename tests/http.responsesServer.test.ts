@@ -14763,6 +14763,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('/v1/runtime-runs/recent?');
       expect(html).toContain('useAgentsRecentRun');
       expect(html).toContain('inspectAgentsRecentRuntimeRun');
+      expect(html).toContain('openAgentsRecentMirrorDetail');
+      expect(html).toContain('readAgentsRuntimeMirrorDetailPath');
+      expect(html).toContain('Open Mirror Detail');
+      expect(html).toContain('window.location.href = path');
       expect(html).toContain('agentsTeamsConversation');
       expect(html).toContain('renderAgentsRuntimeConversation');
       expect(html).toContain('renderAgentsRuntimeConversationTurn');

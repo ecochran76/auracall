@@ -15591,3 +15591,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   chat views as links to `/account-mirror` and
   `/v1/account-mirrors/catalog/items/{item_id}` so operators can move from a
   run to cached transcript/artifact detail without provider browser work.
+- 2026-05-06: Recent runtime-run rows should not require opening raw
+  inspection before cache review. Add an `Open Mirror Detail` row action that
+  does a read-only runtime inspection, finds the first stored provider
+  conversation ref, and navigates to its `/account-mirror` cache detail URL.
