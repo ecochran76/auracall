@@ -4925,11 +4925,24 @@ function createOperatorBrowserDashboardHtml(input: {
       const count = Number(summary.count || 0);
       if (!count) return '<span class="muted">none</span>';
       const providers = Array.isArray(summary.providers) ? summary.providers.join(', ') : (summary.firstProvider || 'provider');
-      return '<span class="ok" data-agents-recent-mirror-summary="available">'
-        + escapeHtml(String(count)) + ' cached '
-        + escapeHtml(count === 1 ? 'conversation' : 'conversations')
-        + '</span>'
+      const label = escapeHtml(String(count)) + ' cached ' + escapeHtml(count === 1 ? 'conversation' : 'conversations');
+      const summaryLabel = count === 1 && summary.firstAccountMirrorPath
+        ? '<button type="button" class="link-button" data-agents-recent-mirror-summary="available" data-account-mirror-path="' + escapeHtml(summary.firstAccountMirrorPath) + '" onclick="openAgentsRecentMirrorSummary(this)">' + label + '</button>'
+        : '<span class="ok" data-agents-recent-mirror-summary="available">'
+          + label
+          + '</span>';
+      return summaryLabel
         + '<div class="muted">' + escapeHtml(providers || 'provider') + '</div>';
+    }
+
+    function openAgentsRecentMirrorSummary(button) {
+      const path = button.dataset.accountMirrorPath || '';
+      if (!path) {
+        setAgentsTeamsNotice('No cached provider conversation link is available for this summary.', 'warn');
+        return;
+      }
+      setAgentsTeamsNotice('Opening cached provider conversation detail...', 'ok');
+      window.location.href = path;
     }
 
     function hasAgentsRecentMirrorDetail(run) {
@@ -4968,16 +4981,14 @@ function createOperatorBrowserDashboardHtml(input: {
         setAgentsTeamsNotice('Opening cached provider conversation detail...', 'ok');
         window.location.href = path;
       } catch (error) {
-        setAgentsTeamsNotice('Mirror detail lookup failed: ' + String(error.message || error), 'bad');
+        setAgentsTeamsNotice('Failed to open mirror detail: ' + String(error.message || error), 'bad');
       }
     }
 
     function readAgentsRuntimeMirrorDetailPath(payload) {
-      const inspection = payload && (payload.inspection || payload);
-      const conversation = inspection && inspection.conversation ? inspection.conversation : {};
-      const refs = Array.isArray(conversation.providerConversationRefs) ? conversation.providerConversationRefs : [];
-      const ref = refs.find((item) => item && item.accountMirrorPath) || null;
-      return ref ? String(ref.accountMirrorPath || '') : '';
+      const refs = payload?.inspection?.conversation?.providerConversationRefs || [];
+      const first = Array.isArray(refs) ? refs.find((ref) => ref && ref.accountMirrorPath) : null;
+      return first?.accountMirrorPath || null;
     }
 
     async function inspectAgentsRecentTeamRun(button) {

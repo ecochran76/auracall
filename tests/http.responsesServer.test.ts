@@ -14901,10 +14901,13 @@ describe('http responses adapter', () => {
       expect(html).toContain('readAgentsRuntimeMirrorDetailPath');
       expect(html).toContain('Open Mirror Detail');
       expect(html).toContain('renderAgentsRecentMirrorSummary');
+      expect(html).toContain('openAgentsRecentMirrorSummary');
       expect(html).toContain('hasAgentsRecentMirrorDetail');
       expect(html).toContain('data-agents-recent-mirror-summary');
+      expect(html).toContain('data-account-mirror-path');
       expect(html).toContain('data-mirror-detail-available');
       expect(html).toContain('No stored provider conversation link for this run');
+      expect(html).toContain('No cached provider conversation link is available for this summary.');
       expect(html).toContain('<th>Mirror</th>');
       expect(html).toContain('window.location.href = path');
       expect(html).toContain('agentsTeamsConversation');

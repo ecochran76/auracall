@@ -27035,6 +27035,38 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `providerConversationSummary` with one cached conversation and an
     `/account-mirror` path for `wsl-chrome-3`
 
+## Turn 136 | 2026-05-06
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make the recent-run mirror summary directly actionable for the simple
+  one-conversation case.
+- Change:
+  - single cached provider conversations in the `/agents` recent-run `Mirror`
+    column now render as direct cache-only `/account-mirror` links
+  - ambiguous or multi-conversation rows keep the explicit `Open Mirror Detail`
+    inspection path
+  - `api ops-browser-status` now asserts the direct-link summary contract
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "recent runtime runs|browser operator dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run install:user-runtime`
+  - restarted pinned API on `127.0.0.1:18095` with PID `2905534`
+  - installed `/agents` contains `openAgentsRecentMirrorSummary`,
+    `data-account-mirror-path`, `summary.firstAccountMirrorPath`, and the
+    missing-path warning text
+  - installed `api ops-browser-status --port 18095 --json` reports
+    `hasAgentsRecentRunMirrorSummary=true` and
+    `hasAgentsRecentRunMirrorSummaryDirectLink=true`
+  - installed `GET /v1/runtime-runs/recent?limit=1` returned a
+    `firstAccountMirrorPath` for the latest ChatGPT run
+
 ## Turn 118 | 2026-05-04
 
 - Continued implementation plan:

@@ -3,7 +3,9 @@
   `providerConversationSummary` derived from stored browser-run metadata, and
   `/agents` renders a `Mirror` column before row actions. Rows without stored
   provider conversation links disable `Open Mirror Detail` instead of asking the
-  operator to discover that only after inspection.
+  operator to discover that only after inspection. A row with exactly one stored
+  cached conversation now links directly from the `Mirror` summary, avoiding an
+  extra runtime inspection round trip for the common case.
 
 - 2026-05-05: API service routing needs to be discoverable after restart, not
   inferred from a probe. `api.routing` now stores local/external hostnames,
