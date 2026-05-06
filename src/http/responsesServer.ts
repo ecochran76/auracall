@@ -38,7 +38,10 @@ import {
 } from '../runtime/inspection.js';
 import type { ExecutionRuntimeControlContract } from '../runtime/contract.js';
 import { createExecutionRuntimeControl } from '../runtime/control.js';
-import type { ExecutionRunStoredRecord } from '../runtime/store.js';
+import {
+  summarizeExecutionRunListItem,
+  type ExecutionRunListItem,
+} from '../runtime/runListSummary.js';
 import { createConfiguredExecutionRunAffinity } from '../runtime/configuredAffinity.js';
 import { createLocalRunnerCapabilitySummary } from '../runtime/localRunnerCapabilities.js';
 import { createExecutionRequest } from '../runtime/apiModel.js';
@@ -254,24 +257,9 @@ interface HttpRuntimeRunInspectionResponse {
   inspection: RuntimeRunInspectionPayload;
 }
 
-interface HttpRuntimeRunListItem {
-  runId: string;
-  sourceKind: ExecutionRunSourceKind;
-  teamRunId: string | null;
-  taskRunSpecId: string | null;
-  status: ExecutionRunStatus;
-  createdAt: string;
-  updatedAt: string;
-  stepCount: number;
-  runnableStepCount: number;
-  runningStepCount: number;
-  serviceIds: string[];
-  runtimeProfileIds: string[];
-}
-
 interface HttpRuntimeRunListResponse {
   object: 'list';
-  data: HttpRuntimeRunListItem[];
+  data: ExecutionRunListItem[];
   count: number;
 }
 
@@ -1198,7 +1186,7 @@ export async function createResponsesHttpServer(
       if (req.method === 'GET' && url.pathname === '/v1/runtime-runs/recent') {
         const query = parseRuntimeRunListQuery(url.searchParams);
         const records = await control.listRuns(query);
-        const data = records.map(summarizeRuntimeRunListItem);
+        const data = records.map(summarizeExecutionRunListItem);
         sendJson(res, 200, {
           object: 'list',
           data,
@@ -3246,29 +3234,6 @@ function parseRuntimeRunListQuery(searchParams: URLSearchParams): ParsedRuntimeR
     status: parsed.status,
     sourceKind: parsed.sourceKind,
   };
-}
-
-function summarizeRuntimeRunListItem(record: ExecutionRunStoredRecord): HttpRuntimeRunListItem {
-  const run = record.bundle.run;
-  const steps = record.bundle.steps;
-  return {
-    runId: run.id,
-    sourceKind: run.sourceKind,
-    teamRunId: run.sourceKind === 'team-run' ? run.sourceId : null,
-    taskRunSpecId: run.taskRunSpecId ?? null,
-    status: run.status,
-    createdAt: run.createdAt,
-    updatedAt: run.updatedAt,
-    stepCount: steps.length,
-    runnableStepCount: steps.filter((step) => step.status === 'runnable').length,
-    runningStepCount: steps.filter((step) => step.status === 'running').length,
-    serviceIds: uniqueStrings(steps.map((step) => step.service).filter(Boolean)),
-    runtimeProfileIds: uniqueStrings(steps.map((step) => step.runtimeProfileId).filter(Boolean)),
-  };
-}
-
-function uniqueStrings(values: Array<string | null | undefined>): string[] {
-  return [...new Set(values.filter((value): value is string => Boolean(value)))].sort();
 }
 
 function parseWorkbenchCapabilityQuery(searchParams: URLSearchParams) {

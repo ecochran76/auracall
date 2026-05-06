@@ -15,6 +15,7 @@ import { registerRunStatusTool } from './tools/runStatus.js';
 import { registerApiStatusTool } from './tools/apiStatus.js';
 import { registerApiOpsBrowserStatusTool } from './tools/apiOpsBrowserStatus.js';
 import { registerRuntimeInspectTool } from './tools/runtimeInspect.js';
+import { registerRuntimeRunsRecentTool } from './tools/runtimeRunsRecent.js';
 import { registerAccountMirrorStatusTool } from './tools/accountMirrorStatus.js';
 import { registerAccountMirrorRefreshTool } from './tools/accountMirrorRefresh.js';
 import { registerAccountMirrorCatalogTool } from './tools/accountMirrorCatalog.js';
@@ -81,6 +82,7 @@ export async function startMcpServer(): Promise<void> {
   });
   registerApiStatusTool(server);
   registerApiOpsBrowserStatusTool(server);
+  registerRuntimeRunsRecentTool(server);
   registerRuntimeInspectTool(server);
   registerMediaGenerationTool(server, {
     service: services.mediaGenerationService,

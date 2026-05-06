@@ -15,7 +15,9 @@
   a read-only inspection page backed by the existing team-run/runtime-run
   inspect endpoints. `GET /v1/runtime-runs/recent` and the `/agents` recent-run
   table let operators browse local runtime-run state by source/status/limit and
-  inspect runs without pasting ids or touching provider browsers.
+  inspect runs without pasting ids or touching provider browsers. MCP
+  `runtime_runs_recent` exposes the same local-state list shape so agents can
+  discover recent runs before calling `runtime_inspect`.
 
 - 2026-05-05: Account mirror result navigation needs fast keyboard controls.
   The `/account-mirror` page now supports `/` to focus cached catalog search

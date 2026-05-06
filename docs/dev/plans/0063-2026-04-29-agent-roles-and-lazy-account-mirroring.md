@@ -545,7 +545,9 @@ Each status payload should include:
   `GET /v1/runtime-runs/inspect` surfaces without adding write paths. The same
   page now includes a recent runtime-run browser backed by
   `GET /v1/runtime-runs/recent` source/status/limit filters so operators can
-  fill or inspect known local runs without pasting ids.
+  fill or inspect known local runs without pasting ids. MCP
+  `runtime_runs_recent` reuses the same compact local-state list shape for
+  agent-side discovery before `runtime_inspect`.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.

@@ -179,6 +179,17 @@
 - This is read-only and does not expose raw JavaScript evaluation or unfenced
   DevTools access.
 
+### `runtime_runs_recent`
+- Inputs: optional `limit` from 0 to 100, optional
+  `sourceKind: "team-run" | "direct"`, and optional
+  `status: "planned" | "running" | "succeeded" | "failed" | "cancelled"`.
+- Behavior: returns `object = "list"` with the same compact recent runtime-run
+  rows exposed by `GET /v1/runtime-runs/recent` and the `/agents` dashboard:
+  run id, source kind, team/task aliases, status, timestamps, step counts,
+  service ids, and runtime profile ids.
+- This is local-state only. It does not launch browsers, touch provider pages,
+  or acquire dispatcher access.
+
 ### `media_generation`
 - Inputs: `provider: "gemini" | "grok"`, `mediaType: "image" | "music" | "video"`, `prompt`, and optional `model`, `transport`, `count`, `size`, `aspectRatio`, `outputDir`, `wait`, and metadata.
 - Behavior: creates one request through Aura-Call's shared media-generation contract and returns `object = "media_generation"` with durable artifact metadata. `wait = false` returns a running media id immediately so callers can poll `media_generation_status` or `run_status` while browser execution is active. Browser-backed Gemini/Grok media jobs wait through the browser-service operation dispatcher before provider adapters touch CDP; timelines can include `browser_operation_queued` and `browser_operation_acquired` when another operation owns the same managed browser profile or raw DevTools endpoint. Provider execution may still fail when the requested provider capability is unavailable or unsupported. Grok browser image requests are preflighted through `grok.media.imagine_image` on the explicit `/imagine` entrypoint and fail before prompt submission when the account is gated. Grok image requests scrape up to `count` currently visible generated tiles, defaulting to 8, without scrolling the wall to trigger more provider work. Grok browser video requests preflight `grok.media.imagine_video` with `discoveryAction = "grok-imagine-video-mode"`, submit through the active `/imagine` tab, poll the submitted tab for terminal generated-video evidence, and cache the MP4 through the provider download control when available. A diagnostic Grok video readback probe can poll an already-submitted tab when metadata explicitly includes `grokVideoReadbackProbe = true`, `grokVideoReadbackTabTargetId`, and `grokVideoReadbackDevtoolsPort`; it direct-connects to that tab and does not submit, navigate, reload, or fall back to browser-service target resolution.

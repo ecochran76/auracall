@@ -26872,6 +26872,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed `/status` advertises `routes.runtimeRunsRecent` and
     `serviceDiscovery.routing.agentsPath=/agents`
 
+## Turn 131 | 2026-05-05
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: give MCP agents the same local recent-run discovery surface operators
+  have in `/agents`.
+- Change:
+  - moved recent runtime-run row summarization into
+    `src/runtime/runListSummary.ts`
+  - added MCP `runtime_runs_recent` with source/status/limit filters over the
+    existing runtime control `listRuns` seam
+  - registered the tool in `auracall-mcp` so agents can list recent runs before
+    calling `runtime_inspect`
+- Validation:
+  - `pnpm vitest run tests/mcp.runtimeRunsRecent.test.ts tests/mcp.runtimeInspect.test.ts tests/http.responsesServer.test.ts -t "runtime_runs_recent|runtime_inspect|runtime runs" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/runtime/runListSummary.ts src/mcp/tools/runtimeRunsRecent.ts src/mcp/server.ts src/http/responsesServer.ts tests/mcp.runtimeRunsRecent.test.ts tests/http.responsesServer.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - installed MCP SDK smoke listed `runtime_runs_recent` and called it with
+    `limit: 2`, returning two persisted local runtime runs
+  - `pnpm vitest run tests/mcp.schema.test.ts tests/mcp.server.test.ts tests/mcp.runtimeRunsRecent.test.ts --maxWorkers 1`
+
 ## Turn 118 | 2026-05-04
 
 - Continued implementation plan:
