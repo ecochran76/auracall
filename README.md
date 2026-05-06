@@ -289,7 +289,9 @@ Terminology note:
   endpoints, with a local-state recent runtime-run browser backed by
   `GET /v1/runtime-runs/recent` source/status/limit filters and row actions
   that fill, inspect, or jump directly to linked account-mirror detail for
-  existing run ids without touching provider browsers.
+  existing run ids without touching provider browsers. Recent-run rows include
+  a `Mirror` availability summary before the jump action so operators can see
+  whether cached provider detail is available.
   Runtime inspection also projects compact conversation turns from stored step
   input/output so `/agents` can render a chat-style run view beside raw JSON.
   When stored browser-run metadata includes provider conversation ids, that

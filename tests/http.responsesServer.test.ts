@@ -138,6 +138,84 @@ describe('http responses adapter', () => {
     );
   };
 
+  const seedSucceededBrowserRun = async (
+    control: ReturnType<typeof createExecutionRuntimeControl>,
+    runId: string,
+    createdAt: string,
+  ) => {
+    const stepId = `${runId}:step:1`;
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'direct',
+          sourceId: null,
+          status: 'succeeded',
+          createdAt,
+          updatedAt: createdAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Fetch cached mirror detail.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Fetch cached mirror detail.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'Linked browser run complete.',
+              artifacts: [],
+              structuredData: {
+                browserRun: {
+                  provider: 'chatgpt',
+                  conversationId: 'conv_recent_cache',
+                  runtimeProfileId: 'default',
+                  browserProfileId: 'default',
+                  tabUrl: 'https://chatgpt.com/c/conv_recent_cache',
+                },
+              },
+              notes: [],
+            },
+            completedAt: createdAt,
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: createdAt,
+        }),
+        events: [],
+      }),
+    );
+  };
+
   const createMemorySchedulerLedger = (): AccountMirrorSchedulerPassLedger => {
     const entries: AccountMirrorSchedulerPassResult[] = [];
     const readHistory = async () => ({
@@ -6054,6 +6132,13 @@ describe('http responses adapter', () => {
           serviceIds: string[];
           runtimeProfileIds: string[];
           stepCount: number;
+          providerConversationSummary: {
+            count: number;
+            providers: string[];
+            firstConversationId: string | null;
+            firstProvider: string | null;
+            firstAccountMirrorPath: string | null;
+          };
         }>;
       };
       expect(payload).toMatchObject({
@@ -6068,8 +6153,57 @@ describe('http responses adapter', () => {
             serviceIds: ['chatgpt'],
             runtimeProfileIds: ['default'],
             stepCount: 1,
+            providerConversationSummary: {
+              count: 0,
+              providers: [],
+              firstConversationId: null,
+              firstProvider: null,
+              firstAccountMirrorPath: null,
+            },
           },
         ],
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('summarizes linked provider conversations in recent runtime runs over HTTP', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runtime-recent-mirror-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const control = createExecutionRuntimeControl();
+    await seedSucceededBrowserRun(control, 'runtime_recent_mirror_link', '2026-04-14T16:00:00.000Z');
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control });
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/runtime-runs/recent?limit=5`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as {
+        object: string;
+        count: number;
+        data: Array<{
+          runId: string;
+          providerConversationSummary: {
+            count: number;
+            providers: string[];
+            firstConversationId: string | null;
+            firstProvider: string | null;
+            firstAccountMirrorPath: string | null;
+          };
+        }>;
+      };
+      expect(payload.data[0]).toMatchObject({
+        runId: 'runtime_recent_mirror_link',
+        providerConversationSummary: {
+          count: 1,
+          providers: ['chatgpt'],
+          firstConversationId: 'conv_recent_cache',
+          firstProvider: 'chatgpt',
+          firstAccountMirrorPath:
+            '/account-mirror?provider=chatgpt&kind=conversations&item=conv_recent_cache&itemKind=conversations&itemProvider=chatgpt&runtimeProfile=default&itemRuntimeProfile=default',
+        },
       });
     } finally {
       await server.close();
@@ -14766,6 +14900,12 @@ describe('http responses adapter', () => {
       expect(html).toContain('openAgentsRecentMirrorDetail');
       expect(html).toContain('readAgentsRuntimeMirrorDetailPath');
       expect(html).toContain('Open Mirror Detail');
+      expect(html).toContain('renderAgentsRecentMirrorSummary');
+      expect(html).toContain('hasAgentsRecentMirrorDetail');
+      expect(html).toContain('data-agents-recent-mirror-summary');
+      expect(html).toContain('data-mirror-detail-available');
+      expect(html).toContain('No stored provider conversation link for this run');
+      expect(html).toContain('<th>Mirror</th>');
       expect(html).toContain('window.location.href = path');
       expect(html).toContain('agentsTeamsConversation');
       expect(html).toContain('renderAgentsRuntimeConversation');

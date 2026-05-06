@@ -1,3 +1,10 @@
+- 2026-05-06: Recent runtime-run navigation to cached mirror detail needs
+  pre-click visibility. `GET /v1/runtime-runs/recent` now includes a compact
+  `providerConversationSummary` derived from stored browser-run metadata, and
+  `/agents` renders a `Mirror` column before row actions. Rows without stored
+  provider conversation links disable `Open Mirror Detail` instead of asking the
+  operator to discover that only after inspection.
+
 - 2026-05-05: API service routing needs to be discoverable after restart, not
   inferred from a probe. `api.routing` now stores local/external hostnames,
   base URLs, dashboard/account-mirror paths, proxy target, ingress, and auth

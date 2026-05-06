@@ -4900,7 +4900,7 @@ function createOperatorBrowserDashboardHtml(input: {
         return;
       }
       $('agentsRecentRuns').innerHTML = '<div class="table-wrap"><table id="agentsRecentRunsTable"><thead><tr>'
-        + '<th>Run</th><th>Source</th><th>Status</th><th>Updated</th><th>Services</th><th>Steps</th><th>Actions</th>'
+        + '<th>Run</th><th>Source</th><th>Status</th><th>Updated</th><th>Services</th><th>Steps</th><th>Mirror</th><th>Actions</th>'
         + '</tr></thead><tbody>'
         + runs.map((run) => '<tr>'
           + '<td class="wrap">' + escapeHtml(run.runId || 'unknown') + '</td>'
@@ -4909,14 +4909,32 @@ function createOperatorBrowserDashboardHtml(input: {
           + '<td>' + escapeHtml(run.updatedAt || 'unknown') + '</td>'
           + '<td>' + escapeHtml((run.serviceIds || []).join(', ') || 'none') + '</td>'
           + '<td>' + escapeHtml(String(run.stepCount || 0)) + ' total / ' + escapeHtml(String(run.runningStepCount || 0)) + ' running</td>'
+          + '<td>' + renderAgentsRecentMirrorSummary(run) + '</td>'
           + '<td><span class="catalog-row-actions">'
           + '<button type="button" data-runtime-run-id="' + escapeHtml(run.runId || '') + '" data-team-run-id="' + escapeHtml(run.teamRunId || '') + '" data-task-run-spec-id="' + escapeHtml(run.taskRunSpecId || '') + '" onclick="useAgentsRecentRun(this)">Use</button>'
           + '<button type="button" data-runtime-run-id="' + escapeHtml(run.runId || '') + '" data-team-run-id="' + escapeHtml(run.teamRunId || '') + '" data-task-run-spec-id="' + escapeHtml(run.taskRunSpecId || '') + '" onclick="inspectAgentsRecentRuntimeRun(this)">Inspect Runtime</button>'
-          + '<button type="button" data-runtime-run-id="' + escapeHtml(run.runId || '') + '" data-team-run-id="' + escapeHtml(run.teamRunId || '') + '" data-task-run-spec-id="' + escapeHtml(run.taskRunSpecId || '') + '" onclick="openAgentsRecentMirrorDetail(this)">Open Mirror Detail</button>'
+          + '<button type="button" data-runtime-run-id="' + escapeHtml(run.runId || '') + '" data-team-run-id="' + escapeHtml(run.teamRunId || '') + '" data-task-run-spec-id="' + escapeHtml(run.taskRunSpecId || '') + '" data-mirror-detail-available="' + escapeHtml(String(hasAgentsRecentMirrorDetail(run))) + '" onclick="openAgentsRecentMirrorDetail(this)"' + (hasAgentsRecentMirrorDetail(run) ? '' : ' disabled title="No stored provider conversation link for this run"') + '>Open Mirror Detail</button>'
           + (run.teamRunId ? '<button type="button" data-runtime-run-id="' + escapeHtml(run.runId || '') + '" data-team-run-id="' + escapeHtml(run.teamRunId || '') + '" data-task-run-spec-id="' + escapeHtml(run.taskRunSpecId || '') + '" onclick="inspectAgentsRecentTeamRun(this)">Inspect Team</button>' : '')
           + '</span></td>'
           + '</tr>').join('')
         + '</tbody></table></div>';
+    }
+
+    function renderAgentsRecentMirrorSummary(run) {
+      const summary = run.providerConversationSummary || {};
+      const count = Number(summary.count || 0);
+      if (!count) return '<span class="muted">none</span>';
+      const providers = Array.isArray(summary.providers) ? summary.providers.join(', ') : (summary.firstProvider || 'provider');
+      return '<span class="ok" data-agents-recent-mirror-summary="available">'
+        + escapeHtml(String(count)) + ' cached '
+        + escapeHtml(count === 1 ? 'conversation' : 'conversations')
+        + '</span>'
+        + '<div class="muted">' + escapeHtml(providers || 'provider') + '</div>';
+    }
+
+    function hasAgentsRecentMirrorDetail(run) {
+      const summary = run.providerConversationSummary || {};
+      return Boolean(summary.firstAccountMirrorPath || Number(summary.count || 0) > 0);
     }
 
     function useAgentsRecentRun(button) {
