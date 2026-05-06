@@ -4801,7 +4801,7 @@ function createOperatorBrowserDashboardHtml(input: {
       const providerUrl = ref.tabUrl || ref.configuredUrl || '';
       return '<span class="pill agents-runtime-provider-conversation">'
         + (accountMirrorPath
-          ? '<a href="' + escapeHtml(accountMirrorPath) + '" data-runtime-provider-conversation-path="' + escapeHtml(accountMirrorPath) + '">'
+          ? '<a class="link-button" href="' + escapeHtml(accountMirrorPath) + '" data-runtime-provider-conversation-path="' + escapeHtml(accountMirrorPath) + '" data-runtime-provider-conversation-direct-link="true">'
             + escapeHtml(title)
             + '</a>'
           : escapeHtml(title))

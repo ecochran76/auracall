@@ -38,7 +38,7 @@ const dashboardHtml = `
 <section id="configRoutingPanel"><h2>Config</h2><dl id="configRoutingSummary"></dl><pre id="configRoutingRaw">operatorConfigDashboard publicOperatorBrowserDashboardUrl externalServiceBaseUrl</pre></section>
 <section id="configIdentityPanel"><h2>Bound Identities</h2><div id="configIdentitySummary">expectedIdentityKey detectedIdentityKey accountLevel</div></section>
 <section id="configLiveFollowPanel"><h2>Live Follow Eligibility</h2><div id="configLiveFollowSummary">status.liveFollow desiredState nextAttemptAt mirrorCompleteness data-runtime-profile not live-follow enabled</div></section>
-<section id="agentsTeamsPanel"><h2>Agents / Teams</h2><button id="loadAgentsRecentRuns">Load Recent Runs</button><div id="agentsRecentRuns"><table id="agentsRecentRunsTable"><thead><tr><th>Mirror</th></tr></thead><tbody><tr><td><button class="link-button" data-agents-recent-mirror-summary="available" data-account-mirror-path="/account-mirror?item=conv_1" onclick="openAgentsRecentMirrorSummary(this)">1 cached conversation</button></td><td><button data-mirror-detail-available="true" onclick="openAgentsRecentMirrorDetail(this)">Open Mirror Detail</button></td></tr></tbody></table></div><button id="inspectTeamRun">Inspect Team</button><button id="inspectRuntimeRun">Inspect Runtime</button><div id="agentsTeamsConversation" class="agents-runtime-conversation"><div class="agents-runtime-provider-conversations">Cached provider conversations <a data-runtime-provider-conversation-path="/account-mirror?item=conv_1">Conversation</a><a data-runtime-provider-catalog-item-path="/v1/account-mirrors/catalog/items/conv_1">cache item</a></div>Runtime Conversation</div><pre id="agentsTeamsRaw"></pre></section>
+<section id="agentsTeamsPanel"><h2>Agents / Teams</h2><button id="loadAgentsRecentRuns">Load Recent Runs</button><div id="agentsRecentRuns"><table id="agentsRecentRunsTable"><thead><tr><th>Mirror</th></tr></thead><tbody><tr><td><button class="link-button" data-agents-recent-mirror-summary="available" data-account-mirror-path="/account-mirror?item=conv_1" onclick="openAgentsRecentMirrorSummary(this)">1 cached conversation</button></td><td><button data-mirror-detail-available="true" onclick="openAgentsRecentMirrorDetail(this)">Open Mirror Detail</button></td></tr></tbody></table></div><button id="inspectTeamRun">Inspect Team</button><button id="inspectRuntimeRun">Inspect Runtime</button><div id="agentsTeamsConversation" class="agents-runtime-conversation"><div class="agents-runtime-provider-conversations">Cached provider conversations <a class="link-button" data-runtime-provider-conversation-path="/account-mirror?item=conv_1" data-runtime-provider-conversation-direct-link="true">Conversation</a><a data-runtime-provider-catalog-item-path="/v1/account-mirrors/catalog/items/conv_1">cache item</a></div>Runtime Conversation</div><pre id="agentsTeamsRaw"></pre></section>
 <section><h2>Mirror Live Follow</h2></section>
 <div id="mirrorAttentionQueue"><table id="mirrorAttentionItems"></table></div>
 <div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div>
@@ -393,6 +393,7 @@ describe('api ops browser CLI helpers', () => {
       hasAgentsRecentRunsBrowser: true,
       hasAgentsRuntimeConversationView: true,
       hasAgentsRuntimeProviderConversationLinks: true,
+      hasAgentsRuntimeProviderConversationDirectLinks: true,
       hasAgentsRecentRunMirrorDetailAction: true,
       hasAgentsRecentRunMirrorSummary: true,
       hasAgentsRecentRunMirrorSummaryDirectLink: true,
@@ -468,7 +469,7 @@ describe('api ops browser CLI helpers', () => {
       'Service discovery: local=http://auracall.localhost external=https://auracall.ecochran.dyndns.org proxy=http://127.0.0.1:18080 auth=authelia',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard config: page=ok identities=ok liveFollow=ok controls=ok agents=ok recentRuns=ok runtimeChat=ok runtimeProviderLinks=ok recentMirrorDetail=ok recentMirrorSummary=ok recentMirrorDirectLink=ok',
+      'Dashboard config: page=ok identities=ok liveFollow=ok controls=ok agents=ok recentRuns=ok runtimeChat=ok runtimeProviderLinks=ok runtimeProviderDirectLinks=ok recentMirrorDetail=ok recentMirrorSummary=ok recentMirrorDirectLink=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard service control: nav=ok operations=ok backgroundDrain=ok scheduler=ok runOnce=ok',

@@ -27067,6 +27067,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed `GET /v1/runtime-runs/recent?limit=1` returned a
     `firstAccountMirrorPath` for the latest ChatGPT run
 
+## Turn 137 | 2026-05-06
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make runtime inspection cached provider conversation links explicitly
+  direct-actionable like recent-run mirror summaries.
+- Change:
+  - runtime inspection provider conversation links now render with the
+    `link-button` affordance and `data-runtime-provider-conversation-direct-link`
+    marker
+  - `api ops-browser-status` now asserts detailed runtime provider links expose
+    direct cache navigation separately from merely listing cached refs
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run install:user-runtime`
+  - restarted pinned API on `127.0.0.1:18095` with PID `3108401`
+  - installed `/agents` contains
+    `data-runtime-provider-conversation-direct-link`,
+    `data-runtime-provider-conversation-path`, and `link-button`
+  - installed `api ops-browser-status --port 18095 --json` reports
+    `hasAgentsRuntimeProviderConversationLinks=true` and
+    `hasAgentsRuntimeProviderConversationDirectLinks=true`
+
 ## Turn 118 | 2026-05-04
 
 - Continued implementation plan:

@@ -14921,6 +14921,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('Cached provider conversations');
       expect(html).toContain('agents-runtime-provider-conversations');
       expect(html).toContain('data-runtime-provider-conversation-path');
+      expect(html).toContain('data-runtime-provider-conversation-direct-link');
       expect(html).toContain('data-runtime-provider-catalog-item-path');
       expect(html).toContain('/v1/team-runs/inspect?');
       expect(html).toContain('/v1/runtime-runs/inspect?');

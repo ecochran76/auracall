@@ -552,7 +552,7 @@ Each status payload should include:
   carries compact conversation turns derived from stored step input/output so
   `/agents` can show runtime runs as chat bubbles while preserving raw JSON.
   Stored browser-run provider conversation ids are projected into cache-only
-  account-mirror links so operators can jump from execution state to the
+  account-mirror direct links so operators can jump from execution state to the
   cached provider transcript/artifacts without provider browser work. Recent
   runtime-run rows also include a `Mirror` availability summary before the
   open action so operators can tell whether cached provider detail exists, and

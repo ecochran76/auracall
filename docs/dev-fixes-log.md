@@ -5,7 +5,9 @@
   provider conversation links disable `Open Mirror Detail` instead of asking the
   operator to discover that only after inspection. A row with exactly one stored
   cached conversation now links directly from the `Mirror` summary, avoiding an
-  extra runtime inspection round trip for the common case.
+  extra runtime inspection round trip for the common case. Runtime inspection's
+  cached provider conversation list now marks the same cache-only direct
+  navigation path so detailed run views and recent-run rows share the affordance.
 
 - 2026-05-05: API service routing needs to be discoverable after restart, not
   inferred from a probe. `api.routing` now stores local/external hostnames,
