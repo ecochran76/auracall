@@ -446,6 +446,10 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('data-mirror-target-completeness-visible-count')
       && html.includes('applyMirrorTargetCompletenessFilter')
       && html.includes('toneForMirrorCompleteness')
+      && html.includes('formatMirrorTargetAttentionReason')
+      && html.includes('data-mirror-target-attention-reason')
+      && html.includes('backfill remains incomplete')
+      && html.includes('no attention needed')
       && html.includes('data-mirror-target-completeness')
       && html.includes('data-mirror-target-attention'),
     hasActiveCompletionTable: html.includes('mirrorActiveCompletionTable') && html.includes('mirrorActiveCompletions'),

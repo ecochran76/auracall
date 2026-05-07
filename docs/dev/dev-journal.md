@@ -1,3 +1,23 @@
+## Turn 149 | 2026-05-07
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: explain why a live-follow target is in the filtered attention set.
+- Change:
+  - `/ops/browser` live-follow target rows now include an `Attention` column
+  - the explanation is derived from existing target status fields: desired
+    state, actual status, mirror completeness, next attempt, active completion,
+    and latest lifecycle event
+  - no API shape or provider/browser behavior changed
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+
 ## Turn 148 | 2026-05-07
 
 - Continued implementation plan:

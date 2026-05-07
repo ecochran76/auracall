@@ -541,7 +541,8 @@ Each status payload should include:
   do not need to parse raw completion JSON for normal feedback. Destructive
   cancel actions require confirmation while start/pause/resume remain one-click.
   The live-follow target table can filter by mirror completeness or attention
-  state and reports the visible target count after filters apply.
+  state and reports the visible target count after filters apply. Each target
+  row also explains the current attention reason from existing status fields.
   `/agents` now turns the disabled Agents / Teams nav item into a read-only
   operator page that calls the existing `GET /v1/team-runs/inspect` and
   `GET /v1/runtime-runs/inspect` surfaces without adding write paths. The same

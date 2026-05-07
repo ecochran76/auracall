@@ -15023,6 +15023,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('data-mirror-target-completeness-visible-count');
       expect(html).toContain('applyMirrorTargetCompletenessFilter');
       expect(html).toContain('toneForMirrorCompleteness');
+      expect(html).toContain('formatMirrorTargetAttentionReason');
+      expect(html).toContain('data-mirror-target-attention-reason');
+      expect(html).toContain('backfill remains incomplete');
+      expect(html).toContain('no attention needed');
       expect(html).toContain('data-mirror-target-completeness');
       expect(html).toContain('data-mirror-target-attention');
       expect(html).toContain('Target completeness');

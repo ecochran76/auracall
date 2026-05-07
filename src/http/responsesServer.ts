@@ -5526,6 +5526,7 @@ function createOperatorBrowserDashboardHtml(input: {
         'Desired',
         'Status',
         'Completeness',
+        'Attention',
         'Phase',
         'Passes',
         'Next Live-Follow Attempt',
@@ -5546,6 +5547,7 @@ function createOperatorBrowserDashboardHtml(input: {
         '<td>' + renderStatusText(desiredState, toneForDesiredState(desiredState)) + '</td>',
         '<td>' + renderStatusText(status, toneForActualStatus(status)) + '</td>',
         '<td>' + renderStatusText(completeness, toneForMirrorCompleteness(completeness)) + '</td>',
+        '<td class="wrap" data-mirror-target-attention-reason="true">' + escapeHtml(formatMirrorTargetAttentionReason(target)) + '</td>',
         '<td>' + escapeHtml(target.phase || 'none') + '</td>',
         '<td>' + escapeHtml(target.passCount == null ? 'none' : String(target.passCount)) + '</td>',
         '<td class="wrap">' + escapeHtml(target.activeCompletionNextAttemptAt || 'none') + '</td>',
@@ -5584,6 +5586,29 @@ function createOperatorBrowserDashboardHtml(input: {
 
     function isAttentionCompleteness(completeness) {
       return completeness === 'none' || completeness === 'unknown';
+    }
+
+    function formatMirrorTargetAttentionReason(target) {
+      const desiredState = target.desiredState || 'unknown';
+      const status = target.actualStatus || 'unknown';
+      const completeness = target.mirrorCompleteness || 'unknown';
+      if (desiredState === 'missing_identity') return 'expected identity is missing';
+      if (desiredState === 'unsupported') return 'provider/profile is not supported for live follow';
+      if (status === 'blocked') return 'blocked; inspect the active completion or browser state';
+      if (status === 'failed') return 'latest live-follow operation failed';
+      if (status === 'cancelled') return 'latest live-follow operation was cancelled';
+      if (status === 'paused') return 'live-follow operation is paused';
+      if (completeness === 'none') return 'no mirrored metadata has been cached yet';
+      if (completeness === 'unknown') return 'mirror completeness has not been reported';
+      if (completeness === 'in_progress') {
+        if (target.activeCompletionId) return 'backfill is still running or waiting for its next attempt';
+        if (target.routineEligibleAt) return 'backfill remains incomplete; routine crawl is eligible at ' + target.routineEligibleAt;
+        return 'backfill remains incomplete';
+      }
+      const event = target.latestLifecycleEvent || {};
+      if (event.message) return event.message;
+      if (event.type) return 'latest event: ' + event.type;
+      return 'no attention needed';
     }
 
     function renderLiveFollowAccountControls(target) {
