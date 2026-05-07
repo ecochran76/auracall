@@ -291,8 +291,9 @@ Terminology note:
   that fill, inspect, or jump directly to linked account-mirror detail for
   existing run ids without touching provider browsers. Recent-run rows include
   a `Mirror` availability summary before the jump action so operators can see
-  whether cached provider detail is available, and a single cached conversation
-  opens directly from that summary.
+  whether cached provider detail is available, a single cached conversation
+  opens directly from that summary, and the summary hydrates the same
+  cache-only transcript/materialization badge as detailed runtime views.
   Runtime inspection also projects compact conversation turns from stored step
   input/output so `/agents` can render a chat-style run view beside raw JSON.
   When stored browser-run metadata includes provider conversation ids, that

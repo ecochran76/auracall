@@ -38,7 +38,7 @@ const dashboardHtml = `
 <section id="configRoutingPanel"><h2>Config</h2><dl id="configRoutingSummary"></dl><pre id="configRoutingRaw">operatorConfigDashboard publicOperatorBrowserDashboardUrl externalServiceBaseUrl</pre></section>
 <section id="configIdentityPanel"><h2>Bound Identities</h2><div id="configIdentitySummary">expectedIdentityKey detectedIdentityKey accountLevel</div></section>
 <section id="configLiveFollowPanel"><h2>Live Follow Eligibility</h2><div id="configLiveFollowSummary">status.liveFollow desiredState nextAttemptAt mirrorCompleteness data-runtime-profile not live-follow enabled</div></section>
-<section id="agentsTeamsPanel"><h2>Agents / Teams</h2><button id="loadAgentsRecentRuns">Load Recent Runs</button><div id="agentsRecentRuns"><table id="agentsRecentRunsTable"><thead><tr><th>Mirror</th></tr></thead><tbody><tr><td><button class="link-button" data-agents-recent-mirror-summary="available" data-account-mirror-path="/account-mirror?item=conv_1" onclick="openAgentsRecentMirrorSummary(this)">1 cached conversation</button></td><td><button data-mirror-detail-available="true" onclick="openAgentsRecentMirrorDetail(this)">Open Mirror Detail</button></td></tr></tbody></table></div><button id="inspectTeamRun">Inspect Team</button><button id="inspectRuntimeRun">Inspect Runtime</button><div id="agentsTeamsConversation" class="agents-runtime-conversation"><div class="agents-runtime-provider-conversations">Cached provider conversations <a class="link-button" data-runtime-provider-conversation-path="/account-mirror?item=conv_1" data-runtime-provider-conversation-direct-link="true">Conversation</a><span data-runtime-provider-cache-badge="pending" data-runtime-provider-cache-badge-state="pending">checking cache</span><a data-runtime-provider-catalog-item-path="/v1/account-mirrors/catalog/items/conv_1">cache item</a></div>Runtime Conversation</div><pre id="agentsTeamsRaw"></pre></section>
+<section id="agentsTeamsPanel"><h2>Agents / Teams</h2><button id="loadAgentsRecentRuns">Load Recent Runs</button><div id="agentsRecentRuns"><table id="agentsRecentRunsTable"><thead><tr><th>Mirror</th></tr></thead><tbody><tr><td><button class="link-button" data-agents-recent-mirror-summary="available" data-account-mirror-path="/account-mirror?item=conv_1" onclick="openAgentsRecentMirrorSummary(this)">1 cached conversation</button><span data-agents-recent-mirror-cache-badge="pending" data-runtime-provider-cache-badge="pending" data-runtime-provider-cache-badge-state="pending" data-runtime-provider-catalog-item-path="/v1/account-mirrors/catalog/items/conv_1">checking cache</span></td><td><button data-mirror-detail-available="true" onclick="openAgentsRecentMirrorDetail(this)">Open Mirror Detail</button></td></tr></tbody></table></div><button id="inspectTeamRun">Inspect Team</button><button id="inspectRuntimeRun">Inspect Runtime</button><div id="agentsTeamsConversation" class="agents-runtime-conversation"><div class="agents-runtime-provider-conversations">Cached provider conversations <a class="link-button" data-runtime-provider-conversation-path="/account-mirror?item=conv_1" data-runtime-provider-conversation-direct-link="true">Conversation</a><span data-runtime-provider-cache-badge="pending" data-runtime-provider-cache-badge-state="pending">checking cache</span><a data-runtime-provider-catalog-item-path="/v1/account-mirrors/catalog/items/conv_1">cache item</a></div>Runtime Conversation</div><pre id="agentsTeamsRaw"></pre></section>
 <section><h2>Mirror Live Follow</h2></section>
 <div id="mirrorAttentionQueue"><table id="mirrorAttentionItems"></table></div>
 <div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div>
@@ -71,7 +71,8 @@ const dashboardHtml = `
   async function loadAgentsRecentRuns() { return fetchJson('/v1/runtime-runs/recent?' + new URLSearchParams({ limit: '25' }).toString()); }
   function useAgentsRecentRun() {}
   async function inspectAgentsRecentRuntimeRun() {}
-  function renderAgentsRecentMirrorSummary(summary) { return summary.firstAccountMirrorPath + '<button data-account-mirror-path="/account-mirror?item=conv_1" onclick="openAgentsRecentMirrorSummary(this)">1 cached conversation</button>'; }
+  function renderAgentsRecentMirrorSummary(summary) { return summary.firstAccountMirrorPath + summary.firstCatalogItemPath + renderAgentsRecentMirrorCacheBadge(summary) + '<button data-account-mirror-path="/account-mirror?item=conv_1" onclick="openAgentsRecentMirrorSummary(this)">1 cached conversation</button>'; }
+  function renderAgentsRecentMirrorCacheBadge(summary) { return '<span data-agents-recent-mirror-cache-badge="pending" data-runtime-provider-catalog-item-path="' + summary.firstCatalogItemPath + '"></span>'; }
   function openAgentsRecentMirrorSummary(button) { const path = button.dataset.accountMirrorPath || ''; if (!path) return 'No cached provider conversation link is available for this summary.'; window.location.href = path; }
   function hasAgentsRecentMirrorDetail() { return 'No stored provider conversation link for this run'; }
   function renderAgentsRuntimeConversation() {}
@@ -400,6 +401,7 @@ describe('api ops browser CLI helpers', () => {
       hasAgentsRecentRunMirrorDetailAction: true,
       hasAgentsRecentRunMirrorSummary: true,
       hasAgentsRecentRunMirrorSummaryDirectLink: true,
+      hasAgentsRecentRunMirrorCacheBadges: true,
       hasOperationsPanel: true,
       hasServiceDiscoveryPanel: true,
       hasBackgroundDrainControls: true,
@@ -472,7 +474,7 @@ describe('api ops browser CLI helpers', () => {
       'Service discovery: local=http://auracall.localhost external=https://auracall.ecochran.dyndns.org proxy=http://127.0.0.1:18080 auth=authelia',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard config: page=ok identities=ok liveFollow=ok controls=ok agents=ok recentRuns=ok runtimeChat=ok runtimeProviderLinks=ok runtimeProviderDirectLinks=ok runtimeProviderCacheBadges=ok recentMirrorDetail=ok recentMirrorSummary=ok recentMirrorDirectLink=ok',
+      'Dashboard config: page=ok identities=ok liveFollow=ok controls=ok agents=ok recentRuns=ok runtimeChat=ok runtimeProviderLinks=ok runtimeProviderDirectLinks=ok runtimeProviderCacheBadges=ok recentMirrorDetail=ok recentMirrorSummary=ok recentMirrorDirectLink=ok recentMirrorCacheBadges=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard service control: nav=ok operations=ok backgroundDrain=ok scheduler=ok runOnce=ok',

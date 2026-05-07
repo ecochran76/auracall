@@ -22,6 +22,7 @@ export interface ExecutionRunListProviderConversationSummary {
   providers: Array<Exclude<ExecutionRunServiceId, null>>;
   firstConversationId: string | null;
   firstProvider: Exclude<ExecutionRunServiceId, null> | null;
+  firstCatalogItemPath: string | null;
   firstAccountMirrorPath: string | null;
 }
 
@@ -76,8 +77,22 @@ function summarizeProviderConversations(record: ExecutionRunStoredRecord): Execu
     providers: uniqueStrings(refs.map((ref) => ref.provider)) as Array<Exclude<ExecutionRunServiceId, null>>,
     firstConversationId: first?.conversationId ?? null,
     firstProvider: first?.provider ?? null,
+    firstCatalogItemPath: first ? buildCatalogItemPath(first) : null,
     firstAccountMirrorPath: first ? buildAccountMirrorPath(first) : null,
   };
+}
+
+function buildCatalogItemPath(input: {
+  provider: Exclude<ExecutionRunServiceId, null>;
+  conversationId: string;
+  runtimeProfileId: string | null;
+}): string {
+  const params = new URLSearchParams({
+    provider: input.provider,
+    kind: 'conversations',
+  });
+  if (input.runtimeProfileId) params.set('runtimeProfile', input.runtimeProfileId);
+  return `/v1/account-mirrors/catalog/items/${encodeURIComponent(input.conversationId)}?${params.toString()}`;
 }
 
 function buildAccountMirrorPath(input: {

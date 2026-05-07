@@ -27097,6 +27097,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `hasAgentsRuntimeProviderConversationLinks=true` and
     `hasAgentsRuntimeProviderConversationDirectLinks=true`
 
+## Turn 139 | 2026-05-06
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: show the same cache transcript/materialization signal in recent
+  runtime-run `Mirror` rows that detailed runtime provider links already show.
+- Change:
+  - recent runtime-run summaries now include `firstCatalogItemPath`
+  - `/agents` renders a cache badge in the recent-run `Mirror` column and
+    hydrates it through the existing cache-only catalog item API
+  - `api ops-browser-status` now asserts the recent-run mirror cache badge
+    contract
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.runtimeRunsRecent.test.ts -t "runtime-runs/recent|browser operator dashboard|api ops browser CLI helpers|mcp runtime_runs_recent" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+
 ## Turn 138 | 2026-05-06
 
 - Continued implementation plan:

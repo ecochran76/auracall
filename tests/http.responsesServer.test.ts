@@ -6137,6 +6137,7 @@ describe('http responses adapter', () => {
             providers: string[];
             firstConversationId: string | null;
             firstProvider: string | null;
+            firstCatalogItemPath: string | null;
             firstAccountMirrorPath: string | null;
           };
         }>;
@@ -6158,6 +6159,7 @@ describe('http responses adapter', () => {
               providers: [],
               firstConversationId: null,
               firstProvider: null,
+              firstCatalogItemPath: null,
               firstAccountMirrorPath: null,
             },
           },
@@ -6190,6 +6192,7 @@ describe('http responses adapter', () => {
             providers: string[];
             firstConversationId: string | null;
             firstProvider: string | null;
+            firstCatalogItemPath: string | null;
             firstAccountMirrorPath: string | null;
           };
         }>;
@@ -6201,6 +6204,8 @@ describe('http responses adapter', () => {
           providers: ['chatgpt'],
           firstConversationId: 'conv_recent_cache',
           firstProvider: 'chatgpt',
+          firstCatalogItemPath:
+            '/v1/account-mirrors/catalog/items/conv_recent_cache?provider=chatgpt&kind=conversations&runtimeProfile=default',
           firstAccountMirrorPath:
             '/account-mirror?provider=chatgpt&kind=conversations&item=conv_recent_cache&itemKind=conversations&itemProvider=chatgpt&runtimeProfile=default&itemRuntimeProfile=default',
         },
@@ -14901,11 +14906,14 @@ describe('http responses adapter', () => {
       expect(html).toContain('readAgentsRuntimeMirrorDetailPath');
       expect(html).toContain('Open Mirror Detail');
       expect(html).toContain('renderAgentsRecentMirrorSummary');
+      expect(html).toContain('renderAgentsRecentMirrorCacheBadge');
       expect(html).toContain('openAgentsRecentMirrorSummary');
       expect(html).toContain('hasAgentsRecentMirrorDetail');
       expect(html).toContain('data-agents-recent-mirror-summary');
+      expect(html).toContain('data-agents-recent-mirror-cache-badge');
       expect(html).toContain('data-account-mirror-path');
       expect(html).toContain('data-mirror-detail-available');
+      expect(html).toContain('summary.firstCatalogItemPath');
       expect(html).toContain('No stored provider conversation link for this run');
       expect(html).toContain('No cached provider conversation link is available for this summary.');
       expect(html).toContain('<th>Mirror</th>');

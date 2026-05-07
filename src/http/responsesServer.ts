@@ -4930,6 +4930,7 @@ function createOperatorBrowserDashboardHtml(input: {
       try {
         const payload = await fetchJson(buildAgentsRecentRunsPath());
         renderAgentsRecentRuns(payload.data || []);
+        await hydrateAgentsRuntimeProviderCacheBadges();
         setAgentsTeamsNotice('Loaded ' + String(payload.count || 0) + ' recent runs.', 'ok');
       } catch (error) {
         $('agentsRecentRuns').textContent = String(error.message || error);
@@ -4975,7 +4976,16 @@ function createOperatorBrowserDashboardHtml(input: {
           + label
           + '</span>';
       return summaryLabel
+        + renderAgentsRecentMirrorCacheBadge(summary)
         + '<div class="muted">' + escapeHtml(providers || 'provider') + '</div>';
+    }
+
+    function renderAgentsRecentMirrorCacheBadge(summary) {
+      const catalogItemPath = summary.firstCatalogItemPath || '';
+      if (!catalogItemPath) {
+        return ' <span class="pill muted" data-agents-recent-mirror-cache-badge="unavailable" data-runtime-provider-cache-badge-state="unknown">cache status unknown</span>';
+      }
+      return ' <span class="pill muted" data-agents-recent-mirror-cache-badge="pending" data-runtime-provider-cache-badge="pending" data-runtime-provider-cache-badge-state="pending" data-runtime-provider-catalog-item-path="' + escapeHtml(catalogItemPath) + '">checking cache</span>';
     }
 
     function openAgentsRecentMirrorSummary(button) {
