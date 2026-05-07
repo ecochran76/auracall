@@ -14922,6 +14922,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('agents-runtime-provider-conversations');
       expect(html).toContain('data-runtime-provider-conversation-path');
       expect(html).toContain('data-runtime-provider-conversation-direct-link');
+      expect(html).toContain('hydrateAgentsRuntimeProviderCacheBadges');
+      expect(html).toContain('summarizeAgentsRuntimeProviderCacheDetail');
+      expect(html).toContain('data-runtime-provider-cache-badge');
+      expect(html).toContain('data-runtime-provider-cache-badge-state');
       expect(html).toContain('data-runtime-provider-catalog-item-path');
       expect(html).toContain('/v1/team-runs/inspect?');
       expect(html).toContain('/v1/runtime-runs/inspect?');

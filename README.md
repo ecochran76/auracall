@@ -297,7 +297,9 @@ Terminology note:
   input/output so `/agents` can render a chat-style run view beside raw JSON.
   When stored browser-run metadata includes provider conversation ids, that
   chat view also links directly to the matching cache-only `/account-mirror`
-  detail and `GET /v1/account-mirrors/catalog/items/{item_id}` route.
+  detail and `GET /v1/account-mirrors/catalog/items/{item_id}` route, then
+  hydrates a local badge showing whether the cached item has transcript turns,
+  related assets, or metadata only.
   The catalog page now renders a compact cached-item browser with kind-count
   quick filters, selected-row highlighting, and a first cached conversation
   drill-in by default on `/account-mirror`. Selecting a cached row also writes

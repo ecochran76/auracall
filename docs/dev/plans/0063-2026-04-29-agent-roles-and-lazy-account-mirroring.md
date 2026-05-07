@@ -553,10 +553,13 @@ Each status payload should include:
   `/agents` can show runtime runs as chat bubbles while preserving raw JSON.
   Stored browser-run provider conversation ids are projected into cache-only
   account-mirror direct links so operators can jump from execution state to the
-  cached provider transcript/artifacts without provider browser work. Recent
-  runtime-run rows also include a `Mirror` availability summary before the
-  open action so operators can tell whether cached provider detail exists, and
-  a single cached conversation opens directly from that summary.
+  cached provider transcript/artifacts without provider browser work. The same
+  runtime detail list hydrates local cache badges from the catalog item API so
+  operators can distinguish cached transcripts, related assets, and metadata
+  only before opening the detail. Recent runtime-run rows also include a
+  `Mirror` availability summary before the open action so operators can tell
+  whether cached provider detail exists, and a single cached conversation opens
+  directly from that summary.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.

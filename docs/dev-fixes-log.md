@@ -8,6 +8,9 @@
   extra runtime inspection round trip for the common case. Runtime inspection's
   cached provider conversation list now marks the same cache-only direct
   navigation path so detailed run views and recent-run rows share the affordance.
+  Detailed runtime provider rows now also hydrate cache-only badges from the
+  catalog item API, showing cached transcript, metadata plus assets, or metadata
+  only without touching provider browsers.
 
 - 2026-05-05: API service routing needs to be discoverable after restart, not
   inferred from a probe. `api.routing` now stores local/external hostnames,

@@ -27097,6 +27097,38 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `hasAgentsRuntimeProviderConversationLinks=true` and
     `hasAgentsRuntimeProviderConversationDirectLinks=true`
 
+## Turn 138 | 2026-05-06
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: show cache transcript/materialization status beside detailed runtime
+  provider conversation links before opening them.
+- Change:
+  - runtime inspection provider conversation rows now render a pending cache
+    badge beside each account-mirror link
+  - the badge hydrates through the cache-only catalog item API and reports
+    cached transcript count, metadata plus asset count, metadata only, or
+    unavailable
+  - `api ops-browser-status` now asserts the cache badge and hydration contract
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run install:user-runtime`
+  - restarted pinned API on `127.0.0.1:18095` with PID `3569969`
+  - installed `/agents` contains `hydrateAgentsRuntimeProviderCacheBadges`,
+    `summarizeAgentsRuntimeProviderCacheDetail`,
+    `data-runtime-provider-cache-badge`, `checking cache`,
+    `cached transcript`, `metadata + assets`, and `metadata only`
+  - installed `api ops-browser-status --port 18095 --json` reports
+    `hasAgentsRuntimeProviderConversationDirectLinks=true` and
+    `hasAgentsRuntimeProviderConversationCacheBadges=true`
+
 ## Turn 118 | 2026-05-04
 
 - Continued implementation plan:

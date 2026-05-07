@@ -4760,6 +4760,7 @@ function createOperatorBrowserDashboardHtml(input: {
         ? renderAgentsRuntimeConversation(record)
         : '<span class="muted">Conversation view is available for runtime inspections.</span>';
       $('agentsTeamsRaw').textContent = asJson(payload);
+      if (kind === 'runtime') hydrateAgentsRuntimeProviderCacheBadges();
     }
 
     function renderAgentsRuntimeConversation(payload) {
@@ -4807,12 +4808,54 @@ function createOperatorBrowserDashboardHtml(input: {
           : escapeHtml(title))
         + (subtitle ? ' <span class="muted">' + escapeHtml(subtitle) + '</span>' : '')
         + (catalogItemPath
+          ? ' <span class="pill muted" data-runtime-provider-cache-badge="pending" data-runtime-provider-cache-badge-state="pending" data-runtime-provider-catalog-item-path="' + escapeHtml(catalogItemPath) + '">checking cache</span>'
+          : ' <span class="pill muted" data-runtime-provider-cache-badge="metadata-only" data-runtime-provider-cache-badge-state="unknown">cache status unknown</span>')
+        + (catalogItemPath
           ? ' <a href="' + escapeHtml(catalogItemPath) + '" data-runtime-provider-catalog-item-path="' + escapeHtml(catalogItemPath) + '">cache item</a>'
           : '')
         + (providerUrl
           ? ' <a href="' + escapeHtml(providerUrl) + '" target="_blank" rel="noreferrer">provider</a>'
           : '')
         + '</span>';
+    }
+
+    async function hydrateAgentsRuntimeProviderCacheBadges() {
+      const badges = Array.from(document.querySelectorAll('[data-runtime-provider-cache-badge="pending"]'));
+      await Promise.all(badges.map(async (badge) => {
+        const path = badge.dataset.runtimeProviderCatalogItemPath || '';
+        if (!path) {
+          badge.textContent = 'cache status unknown';
+          badge.dataset.runtimeProviderCacheBadgeState = 'unknown';
+          return;
+        }
+        try {
+          const detail = await fetchJson(path);
+          const status = summarizeAgentsRuntimeProviderCacheDetail(detail);
+          badge.textContent = status.label;
+          badge.dataset.runtimeProviderCacheBadgeState = status.state;
+        } catch {
+          badge.textContent = 'cache status unavailable';
+          badge.dataset.runtimeProviderCacheBadgeState = 'unavailable';
+        }
+      }));
+    }
+
+    function summarizeAgentsRuntimeProviderCacheDetail(detail) {
+      const item = detail && detail.item && typeof detail.item === 'object' ? detail.item : {};
+      const messageCount = readNumberField(item, ['messageCount']);
+      const hydratedMessageCount = Array.isArray(item.messages) ? item.messages.length : 0;
+      const transcriptCount = Math.max(messageCount, hydratedMessageCount);
+      if (readBooleanField(item, ['hasCachedTranscript']) || transcriptCount > 0) {
+        return { state: 'transcript', label: 'cached transcript ' + String(transcriptCount || '') };
+      }
+      const assetCount = readNumberField(item, ['cachedFileCount'])
+        + readNumberField(item, ['cachedSourceCount'])
+        + readNumberField(item, ['cachedArtifactCount'])
+        + (Array.isArray(item.files) ? item.files.length : 0)
+        + (Array.isArray(item.sources) ? item.sources.length : 0)
+        + (Array.isArray(item.artifacts) ? item.artifacts.length : 0);
+      if (assetCount > 0) return { state: 'metadata-assets', label: 'metadata + assets ' + String(assetCount) };
+      return { state: 'metadata-only', label: 'metadata only' };
     }
 
     function renderAgentsRuntimeConversationTurn(turn) {

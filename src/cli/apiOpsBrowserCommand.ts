@@ -25,6 +25,7 @@ export interface ApiOpsBrowserDashboardSummary {
   hasAgentsRuntimeConversationView: boolean;
   hasAgentsRuntimeProviderConversationLinks: boolean;
   hasAgentsRuntimeProviderConversationDirectLinks: boolean;
+  hasAgentsRuntimeProviderConversationCacheBadges: boolean;
   hasAgentsRecentRunMirrorDetailAction: boolean;
   hasAgentsRecentRunMirrorSummary: boolean;
   hasAgentsRecentRunMirrorSummaryDirectLink: boolean;
@@ -136,7 +137,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
     `AuraCall ops browser: ok (${summary.host}:${summary.port}${dashboard.route})`,
     `Dashboard URL: ${summary.dashboardUrl}`,
     `Service discovery: local=${summary.serviceDiscovery.localBaseUrl ?? 'unknown'} external=${summary.serviceDiscovery.externalBaseUrl ?? 'none'} proxy=${summary.serviceDiscovery.proxyTarget ?? 'none'} auth=${summary.serviceDiscovery.auth ?? 'none'}`,
-    `Dashboard config: page=${formatBoolean(dashboard.hasConfigPage)} identities=${formatBoolean(dashboard.hasConfigIdentityProjection)} liveFollow=${formatBoolean(dashboard.hasConfigLiveFollowProjection)} controls=${formatBoolean(dashboard.hasConfigLiveFollowControls)} agents=${formatBoolean(dashboard.hasAgentsTeamsPage)} recentRuns=${formatBoolean(dashboard.hasAgentsRecentRunsBrowser)} runtimeChat=${formatBoolean(dashboard.hasAgentsRuntimeConversationView)} runtimeProviderLinks=${formatBoolean(dashboard.hasAgentsRuntimeProviderConversationLinks)} runtimeProviderDirectLinks=${formatBoolean(dashboard.hasAgentsRuntimeProviderConversationDirectLinks)} recentMirrorDetail=${formatBoolean(dashboard.hasAgentsRecentRunMirrorDetailAction)} recentMirrorSummary=${formatBoolean(dashboard.hasAgentsRecentRunMirrorSummary)} recentMirrorDirectLink=${formatBoolean(dashboard.hasAgentsRecentRunMirrorSummaryDirectLink)}`,
+    `Dashboard config: page=${formatBoolean(dashboard.hasConfigPage)} identities=${formatBoolean(dashboard.hasConfigIdentityProjection)} liveFollow=${formatBoolean(dashboard.hasConfigLiveFollowProjection)} controls=${formatBoolean(dashboard.hasConfigLiveFollowControls)} agents=${formatBoolean(dashboard.hasAgentsTeamsPage)} recentRuns=${formatBoolean(dashboard.hasAgentsRecentRunsBrowser)} runtimeChat=${formatBoolean(dashboard.hasAgentsRuntimeConversationView)} runtimeProviderLinks=${formatBoolean(dashboard.hasAgentsRuntimeProviderConversationLinks)} runtimeProviderDirectLinks=${formatBoolean(dashboard.hasAgentsRuntimeProviderConversationDirectLinks)} runtimeProviderCacheBadges=${formatBoolean(dashboard.hasAgentsRuntimeProviderConversationCacheBadges)} recentMirrorDetail=${formatBoolean(dashboard.hasAgentsRecentRunMirrorDetailAction)} recentMirrorSummary=${formatBoolean(dashboard.hasAgentsRecentRunMirrorSummary)} recentMirrorDirectLink=${formatBoolean(dashboard.hasAgentsRecentRunMirrorSummaryDirectLink)}`,
     `Dashboard service control: nav=${formatBoolean(dashboard.hasNavigationScaffold)} operations=${formatBoolean(dashboard.hasOperationsPanel)} backgroundDrain=${formatBoolean(dashboard.hasBackgroundDrainControls)} scheduler=${formatBoolean(dashboard.hasMirrorSchedulerControls)} runOnce=${formatBoolean(dashboard.hasRunOnceSchedulerControl)}`,
     `Dashboard cache browse: catalog=${formatBoolean(dashboard.hasAccountMirrorCatalogPanel)} page=${formatBoolean(dashboard.hasAccountMirrorPageLink)} previewSession=${formatBoolean(dashboard.hasAccountMirrorPreviewSessionPage)} search=${formatBoolean(dashboard.hasCatalogSearchControls)} savedFilters=${formatBoolean(dashboard.hasCatalogSavedFilterState)} table=${formatBoolean(dashboard.hasCatalogResultsTable)} detail=${formatBoolean(dashboard.hasCatalogDetailInspection)} chat=${formatBoolean(dashboard.hasConversationChatDetailView)} transcript=${formatBoolean(dashboard.hasConversationTranscriptAffordance)} transcriptFilter=${formatBoolean(dashboard.hasConversationTranscriptOnlyFilter)} transcriptDownload=${formatBoolean(dashboard.hasConversationTranscriptDownload)} transcriptSearch=${formatBoolean(dashboard.hasConversationTranscriptSearch)} related=${formatBoolean(dashboard.hasConversationRelatedItemNavigation)} assetInspector=${formatBoolean(dashboard.hasCatalogAssetDetailInspector)} assetPreview=${formatBoolean(dashboard.hasCatalogAssetPreview)} localAsset=${formatBoolean(dashboard.hasCatalogLocalAssetRoute)} materialization=${formatBoolean(dashboard.hasCatalogMaterializationBadges)} materializationControls=${formatBoolean(dashboard.hasCatalogMaterializationControls)} rowPreviewActions=${formatBoolean(dashboard.hasCatalogRowPreviewActions)} batchPreviewDrawer=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDrawer)} batchPreviewReview=${formatBoolean(dashboard.hasCatalogBatchPreviewSessionReview)} batchPreviewOpen=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlOpen)} batchPreviewCopy=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlCopy)} batchPreviewDownload=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDownload)} path=${dashboard.usesAccountMirrorCatalogPath ? '/v1/account-mirrors/catalog' : 'unknown'} itemPath=${dashboard.usesAccountMirrorCatalogItemPath ? '/v1/account-mirrors/catalog/items/{id}' : 'unknown'}`,
     `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} attention=${formatBoolean(dashboard.hasAttentionQueue)} activeTable=${formatBoolean(dashboard.hasActiveCompletionTable)} inspect=${formatBoolean(dashboard.hasCompletionInspectAction)} resultToast=${formatBoolean(dashboard.hasCompletionResultToast)} inputInspect=${formatBoolean(dashboard.hasCompletionInputInspectControl)} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} stateAware=${formatBoolean(dashboard.hasStateAwareCompletionActions)} confirmCancel=${formatBoolean(dashboard.hasCancelConfirmation)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
@@ -166,6 +167,10 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
     [
       summary.hasAgentsRuntimeProviderConversationDirectLinks,
       'Expected /ops/browser Agents / Teams runtime provider conversation links to expose direct cache navigation.',
+    ],
+    [
+      summary.hasAgentsRuntimeProviderConversationCacheBadges,
+      'Expected /ops/browser Agents / Teams runtime provider conversation links to expose cache transcript/materialization badges.',
     ],
     [
       summary.hasAgentsRecentRunMirrorDetailAction,
@@ -350,6 +355,14 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
     hasAgentsRuntimeProviderConversationDirectLinks: html.includes('data-runtime-provider-conversation-direct-link')
       && html.includes('data-runtime-provider-conversation-path')
       && html.includes('link-button'),
+    hasAgentsRuntimeProviderConversationCacheBadges: html.includes('hydrateAgentsRuntimeProviderCacheBadges')
+      && html.includes('summarizeAgentsRuntimeProviderCacheDetail')
+      && html.includes('data-runtime-provider-cache-badge')
+      && html.includes('data-runtime-provider-cache-badge-state')
+      && html.includes('checking cache')
+      && html.includes('cached transcript')
+      && html.includes('metadata only')
+      && html.includes('metadata + assets'),
     hasOperationsPanel: html.includes('<h2>Operations</h2>')
       && html.includes('opsControls')
       && html.includes('opsControlNotice')
