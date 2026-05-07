@@ -4838,6 +4838,7 @@ function createOperatorBrowserDashboardHtml(input: {
           badge.dataset.runtimeProviderCacheBadgeState = 'unavailable';
         }
       }));
+      summarizeAgentsRecentMirrorCacheRows();
     }
 
     function summarizeAgentsRuntimeProviderCacheDetail(detail) {
@@ -4977,6 +4978,7 @@ function createOperatorBrowserDashboardHtml(input: {
           + '</span>';
       return summaryLabel
         + renderAgentsRecentMirrorCacheBadge(summary)
+        + renderAgentsRecentMirrorCacheSummary()
         + '<div class="muted">' + escapeHtml(providers || 'provider') + '</div>';
     }
 
@@ -4993,6 +4995,10 @@ function createOperatorBrowserDashboardHtml(input: {
       const visibleRefs = refs.slice(0, 4);
       const badges = visibleRefs.map((ref) => renderAgentsRecentMirrorCacheBadgeButton(ref)).join('');
       return badges + renderAgentsRecentMirrorRefExpansion(refs.slice(4));
+    }
+
+    function renderAgentsRecentMirrorCacheSummary() {
+      return '<div class="muted" data-agents-recent-mirror-cache-summary="pending">cache summary pending</div>';
     }
 
     function renderAgentsRecentMirrorRefExpansion(refs) {
@@ -5017,6 +5023,39 @@ function createOperatorBrowserDashboardHtml(input: {
         ref.runtimeProfileId ? 'runtime ' + ref.runtimeProfileId : '',
       ].filter(Boolean).join(' / ');
       return ' <button type="button" class="link-button pill muted" data-agents-recent-mirror-cache-badge="pending" data-runtime-provider-cache-badge="pending" data-runtime-provider-cache-badge-state="pending" data-runtime-provider-catalog-item-path="' + escapeHtml(catalogItemPath) + '" data-account-mirror-path="' + escapeHtml(accountMirrorPath) + '" title="' + escapeHtml(title) + '" onclick="openAgentsRecentMirrorCacheBadge(this)">checking cache</button>';
+    }
+
+    function summarizeAgentsRecentMirrorCacheRows() {
+      for (const summary of document.querySelectorAll('[data-agents-recent-mirror-cache-summary]')) {
+        const cell = summary.closest('td');
+        const badges = cell ? Array.from(cell.querySelectorAll('[data-agents-recent-mirror-cache-badge]')) : [];
+        if (!badges.length) {
+          summary.textContent = 'cache summary unavailable';
+          summary.dataset.agentsRecentMirrorCacheSummary = 'unavailable';
+          continue;
+        }
+        const counts = badges.reduce((acc, badge) => {
+          const state = badge.dataset.runtimeProviderCacheBadgeState || 'unknown';
+          if (state === 'transcript') acc.transcript += 1;
+          else if (state === 'metadata-assets') acc.assets += 1;
+          else if (state === 'metadata-only') acc.metadata += 1;
+          else if (state === 'unavailable') acc.unavailable += 1;
+          else acc.pending += 1;
+          return acc;
+        }, { transcript: 0, assets: 0, metadata: 0, unavailable: 0, pending: 0 });
+        summary.textContent = formatAgentsRecentMirrorCacheSummary(counts);
+        summary.dataset.agentsRecentMirrorCacheSummary = counts.pending ? 'pending' : 'ready';
+      }
+    }
+
+    function formatAgentsRecentMirrorCacheSummary(counts) {
+      const parts = [];
+      if (counts.transcript) parts.push(String(counts.transcript) + ' transcript');
+      if (counts.assets) parts.push(String(counts.assets) + ' assets');
+      if (counts.metadata) parts.push(String(counts.metadata) + ' metadata only');
+      if (counts.unavailable) parts.push(String(counts.unavailable) + ' unavailable');
+      if (counts.pending) parts.push(String(counts.pending) + ' pending');
+      return parts.length ? parts.join(' / ') : 'cache summary unavailable';
     }
 
     function openAgentsRecentMirrorCacheBadge(button) {

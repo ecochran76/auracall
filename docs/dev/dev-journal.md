@@ -27144,6 +27144,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.runtimeRunsRecent.test.ts -t "runtime-runs/recent|browser operator dashboard|api ops browser CLI helpers|mcp runtime_runs_recent" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
 
+## Turn 142 | 2026-05-06
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make recent-run `Mirror` rows scannable after cache badge hydration.
+- Change:
+  - recent-run rows now include a cache summary placeholder
+  - the shared cache badge hydrator updates each row summary after catalog item
+    lookups complete
+  - summaries count transcript, asset, metadata-only, unavailable, and pending
+    refs without provider/browser work
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.runtimeRunsRecent.test.ts -t "runtime-runs/recent|browser operator dashboard|api ops browser CLI helpers|mcp runtime_runs_recent" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+
 ## Turn 138 | 2026-05-06
 
 - Continued implementation plan:
