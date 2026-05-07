@@ -17,9 +17,9 @@
   conversation, including multi-conversation runs. Rows with more than four
   cached provider conversations now render the overflow as an inline `Mirror`
   refs expansion with the same clickable hydrated cache badges. Recent-run rows
-  now also summarize hydrated badge state counts so operators can scan
-  transcript, asset, metadata-only, unavailable, and pending cache states
-  without opening each badge.
+  and runtime detail provider-conversation blocks now also summarize hydrated
+  badge state counts so operators can scan transcript, asset, metadata-only,
+  unavailable, and pending cache states without opening each badge.
 
 - 2026-05-05: API service routing needs to be discoverable after restart, not
   inferred from a probe. `api.routing` now stores local/external hostnames,

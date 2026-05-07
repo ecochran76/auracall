@@ -565,9 +565,10 @@ Each status payload should include:
   provider conversation even when the run has multiple provider conversations.
   Runs with more than four cached provider conversations keep the overflow in
   an inline `Mirror` refs expansion so every cached conversation remains
-  reachable from the recent-run table. After badge hydration, each recent-run
-  row also renders a compact cache scan summary across transcript, asset,
-  metadata-only, unavailable, and pending refs.
+  reachable from the recent-run table. After badge hydration, recent-run rows
+  and runtime detail provider-conversation blocks also render compact cache
+  scan summaries across transcript, asset, metadata-only, unavailable, and
+  pending refs.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.

@@ -381,9 +381,14 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('link-button'),
     hasAgentsRuntimeProviderConversationCacheBadges: html.includes('hydrateAgentsRuntimeProviderCacheBadges')
       && html.includes('summarizeAgentsRuntimeProviderCacheDetail')
+      && html.includes('renderAgentsRuntimeProviderCacheSummary')
+      && html.includes('summarizeAgentsRuntimeProviderCacheRows')
+      && html.includes('countAgentsRuntimeProviderCacheBadges')
       && html.includes('data-runtime-provider-cache-badge')
       && html.includes('data-runtime-provider-cache-badge-state')
+      && html.includes('data-runtime-provider-cache-summary')
       && html.includes('checking cache')
+      && html.includes('cache summary pending')
       && html.includes('cached transcript')
       && html.includes('metadata only')
       && html.includes('metadata + assets'),

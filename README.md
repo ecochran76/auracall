@@ -297,8 +297,9 @@ Terminology note:
   badges are direct links to their exact cached provider conversation, including
   rows with multiple provider conversations; rows with more than four cached
   conversations keep the overflow in an inline `Mirror` refs expansion. After
-  badge hydration, each recent-run row also shows a compact cache scan summary
-  for transcript, asset, metadata-only, unavailable, and pending refs.
+  badge hydration, recent-run rows and runtime detail provider-conversation
+  blocks also show compact cache scan summaries for transcript, asset,
+  metadata-only, unavailable, and pending refs.
   Runtime inspection also projects compact conversation turns from stored step
   input/output so `/agents` can render a chat-style run view beside raw JSON.
   When stored browser-run metadata includes provider conversation ids, that

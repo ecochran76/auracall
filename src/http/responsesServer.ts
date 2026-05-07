@@ -4783,9 +4783,14 @@ function createOperatorBrowserDashboardHtml(input: {
       return '<div class="notice">'
         + '<strong>Cached provider conversations</strong>'
         + '<div class="catalog-detail agents-runtime-provider-conversations">'
+        + renderAgentsRuntimeProviderCacheSummary()
         + refs.map(renderAgentsRuntimeProviderConversationRef).join('')
         + '</div>'
         + '</div>';
+    }
+
+    function renderAgentsRuntimeProviderCacheSummary() {
+      return '<div class="muted" data-runtime-provider-cache-summary="pending">cache summary pending</div>';
     }
 
     function renderAgentsRuntimeProviderConversationRef(ref) {
@@ -4838,6 +4843,7 @@ function createOperatorBrowserDashboardHtml(input: {
           badge.dataset.runtimeProviderCacheBadgeState = 'unavailable';
         }
       }));
+      summarizeAgentsRuntimeProviderCacheRows();
       summarizeAgentsRecentMirrorCacheRows();
     }
 
@@ -5034,18 +5040,37 @@ function createOperatorBrowserDashboardHtml(input: {
           summary.dataset.agentsRecentMirrorCacheSummary = 'unavailable';
           continue;
         }
-        const counts = badges.reduce((acc, badge) => {
-          const state = badge.dataset.runtimeProviderCacheBadgeState || 'unknown';
-          if (state === 'transcript') acc.transcript += 1;
-          else if (state === 'metadata-assets') acc.assets += 1;
-          else if (state === 'metadata-only') acc.metadata += 1;
-          else if (state === 'unavailable') acc.unavailable += 1;
-          else acc.pending += 1;
-          return acc;
-        }, { transcript: 0, assets: 0, metadata: 0, unavailable: 0, pending: 0 });
+        const counts = countAgentsRuntimeProviderCacheBadges(badges);
         summary.textContent = formatAgentsRecentMirrorCacheSummary(counts);
         summary.dataset.agentsRecentMirrorCacheSummary = counts.pending ? 'pending' : 'ready';
       }
+    }
+
+    function summarizeAgentsRuntimeProviderCacheRows() {
+      for (const summary of document.querySelectorAll('[data-runtime-provider-cache-summary]')) {
+        const container = summary.closest('.agents-runtime-provider-conversations');
+        const badges = container ? Array.from(container.querySelectorAll('[data-runtime-provider-cache-badge]')) : [];
+        if (!badges.length) {
+          summary.textContent = 'cache summary unavailable';
+          summary.dataset.runtimeProviderCacheSummary = 'unavailable';
+          continue;
+        }
+        const counts = countAgentsRuntimeProviderCacheBadges(badges);
+        summary.textContent = formatAgentsRecentMirrorCacheSummary(counts);
+        summary.dataset.runtimeProviderCacheSummary = counts.pending ? 'pending' : 'ready';
+      }
+    }
+
+    function countAgentsRuntimeProviderCacheBadges(badges) {
+      return badges.reduce((acc, badge) => {
+        const state = badge.dataset.runtimeProviderCacheBadgeState || 'unknown';
+        if (state === 'transcript') acc.transcript += 1;
+        else if (state === 'metadata-assets') acc.assets += 1;
+        else if (state === 'metadata-only') acc.metadata += 1;
+        else if (state === 'unavailable') acc.unavailable += 1;
+        else acc.pending += 1;
+        return acc;
+      }, { transcript: 0, assets: 0, metadata: 0, unavailable: 0, pending: 0 });
     }
 
     function formatAgentsRecentMirrorCacheSummary(counts) {
