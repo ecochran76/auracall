@@ -568,7 +568,8 @@ Each status payload should include:
   reachable from the recent-run table. After badge hydration, recent-run rows
   and runtime detail provider-conversation blocks also render compact cache
   scan summaries across transcript, asset, metadata-only, unavailable, and
-  pending refs.
+  pending refs. Operators can filter and sort the recent-run table by those
+  hydrated cache states without refetching runtime data.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.

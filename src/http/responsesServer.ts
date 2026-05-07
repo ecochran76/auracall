@@ -4411,6 +4411,23 @@ function createOperatorBrowserDashboardHtml(input: {
           <label>Recent limit
             <input id="agentsRecentRunLimit" type="number" min="0" max="100" step="1" value="25">
           </label>
+          <label>Mirror cache
+            <select id="agentsRecentMirrorCacheFilter">
+              <option value="">all</option>
+              <option value="pending">pending</option>
+              <option value="unavailable">unavailable</option>
+              <option value="metadata">metadata only</option>
+              <option value="assets">assets</option>
+              <option value="transcript">transcript</option>
+              <option value="none">none</option>
+            </select>
+          </label>
+          <label>Mirror sort
+            <select id="agentsRecentMirrorCacheSort">
+              <option value="">updated</option>
+              <option value="cache-state">cache state</option>
+            </select>
+          </label>
           <button id="loadAgentsRecentRuns" type="button">Load Recent Runs</button>
         </div>
         <div id="agentsRecentRuns" class="muted" style="margin-bottom: 10px;">No recent runs loaded.</div>
@@ -4953,7 +4970,7 @@ function createOperatorBrowserDashboardHtml(input: {
       $('agentsRecentRuns').innerHTML = '<div class="table-wrap"><table id="agentsRecentRunsTable"><thead><tr>'
         + '<th>Run</th><th>Source</th><th>Status</th><th>Updated</th><th>Services</th><th>Steps</th><th>Mirror</th><th>Actions</th>'
         + '</tr></thead><tbody>'
-        + runs.map((run) => '<tr>'
+        + runs.map((run, index) => '<tr data-agents-recent-run-row="true" data-agents-recent-run-index="' + escapeHtml(String(index)) + '" data-agents-recent-mirror-cache-state="pending" data-agents-recent-mirror-cache-rank="0">'
           + '<td class="wrap">' + escapeHtml(run.runId || 'unknown') + '</td>'
           + '<td>' + escapeHtml(run.sourceKind || 'unknown') + '</td>'
           + '<td>' + escapeHtml(run.status || 'unknown') + '</td>'
@@ -4969,12 +4986,13 @@ function createOperatorBrowserDashboardHtml(input: {
           + '</span></td>'
           + '</tr>').join('')
         + '</tbody></table></div>';
+      summarizeAgentsRecentMirrorCacheRows();
     }
 
     function renderAgentsRecentMirrorSummary(run) {
       const summary = run.providerConversationSummary || {};
       const count = Number(summary.count || 0);
-      if (!count) return '<span class="muted">none</span>';
+      if (!count) return '<span class="muted" data-agents-recent-mirror-cache-summary="none">none</span>';
       const providers = Array.isArray(summary.providers) ? summary.providers.join(', ') : (summary.firstProvider || 'provider');
       const label = escapeHtml(String(count)) + ' cached ' + escapeHtml(count === 1 ? 'conversation' : 'conversations');
       const summaryLabel = count === 1 && summary.firstAccountMirrorPath
@@ -5036,14 +5054,16 @@ function createOperatorBrowserDashboardHtml(input: {
         const cell = summary.closest('td');
         const badges = cell ? Array.from(cell.querySelectorAll('[data-agents-recent-mirror-cache-badge]')) : [];
         if (!badges.length) {
-          summary.textContent = 'cache summary unavailable';
-          summary.dataset.agentsRecentMirrorCacheSummary = 'unavailable';
+          const state = summary.dataset.agentsRecentMirrorCacheSummary === 'none' ? 'none' : 'unavailable';
+          summary.textContent = state === 'none' ? 'none' : 'cache summary unavailable';
+          stampAgentsRecentMirrorCacheRowState(summary, state);
           continue;
         }
         const counts = countAgentsRuntimeProviderCacheBadges(badges);
         summary.textContent = formatAgentsRecentMirrorCacheSummary(counts);
-        summary.dataset.agentsRecentMirrorCacheSummary = counts.pending ? 'pending' : 'ready';
+        stampAgentsRecentMirrorCacheRowState(summary, classifyAgentsRecentMirrorCacheCounts(counts));
       }
+      applyAgentsRecentMirrorCacheControls();
     }
 
     function summarizeAgentsRuntimeProviderCacheRows() {
@@ -5071,6 +5091,57 @@ function createOperatorBrowserDashboardHtml(input: {
         else acc.pending += 1;
         return acc;
       }, { transcript: 0, assets: 0, metadata: 0, unavailable: 0, pending: 0 });
+    }
+
+    function classifyAgentsRecentMirrorCacheCounts(counts) {
+      if (counts.pending) return 'pending';
+      if (counts.unavailable) return 'unavailable';
+      if (counts.metadata) return 'metadata';
+      if (counts.assets) return 'assets';
+      if (counts.transcript) return 'transcript';
+      return 'none';
+    }
+
+    function stampAgentsRecentMirrorCacheRowState(summary, state) {
+      summary.dataset.agentsRecentMirrorCacheSummary = state;
+      const row = summary.closest('[data-agents-recent-run-row]');
+      if (!row) return;
+      row.dataset.agentsRecentMirrorCacheState = state;
+      row.dataset.agentsRecentMirrorCacheRank = String(rankAgentsRecentMirrorCacheState(state));
+    }
+
+    function rankAgentsRecentMirrorCacheState(state) {
+      if (state === 'pending') return 0;
+      if (state === 'unavailable') return 1;
+      if (state === 'metadata') return 2;
+      if (state === 'assets') return 3;
+      if (state === 'transcript') return 4;
+      return 5;
+    }
+
+    function applyAgentsRecentMirrorCacheControls() {
+      const table = $('agentsRecentRunsTable');
+      if (!table) return;
+      const tbody = table.tBodies && table.tBodies[0] ? table.tBodies[0] : null;
+      if (!tbody) return;
+      const filter = $('agentsRecentMirrorCacheFilter').value || '';
+      const sort = $('agentsRecentMirrorCacheSort').value || '';
+      const rows = Array.from(tbody.querySelectorAll('[data-agents-recent-run-row]'));
+      for (const row of rows) {
+        const state = row.dataset.agentsRecentMirrorCacheState || 'pending';
+        row.hidden = Boolean(filter && state !== filter);
+      }
+      if (sort === 'cache-state') {
+        rows.sort((left, right) =>
+          Number(left.dataset.agentsRecentMirrorCacheRank || '5') - Number(right.dataset.agentsRecentMirrorCacheRank || '5')
+          || Number(left.dataset.agentsRecentRunIndex || '0') - Number(right.dataset.agentsRecentRunIndex || '0')
+        );
+      } else {
+        rows.sort((left, right) =>
+          Number(left.dataset.agentsRecentRunIndex || '0') - Number(right.dataset.agentsRecentRunIndex || '0')
+        );
+      }
+      for (const row of rows) tbody.appendChild(row);
     }
 
     function formatAgentsRecentMirrorCacheSummary(counts) {
@@ -7608,6 +7679,8 @@ function createOperatorBrowserDashboardHtml(input: {
     $('inspectTeamRun').addEventListener('click', inspectAgentsTeamRun);
     $('inspectRuntimeRun').addEventListener('click', inspectAgentsRuntimeRun);
     $('loadAgentsRecentRuns').addEventListener('click', loadAgentsRecentRuns);
+    $('agentsRecentMirrorCacheFilter').addEventListener('change', applyAgentsRecentMirrorCacheControls);
+    $('agentsRecentMirrorCacheSort').addEventListener('change', applyAgentsRecentMirrorCacheControls);
     $('loadMirrorPreviewSessionManifest').addEventListener('change', loadMirrorPreviewSessionManifestFile);
     $('mirrorPreviewSessionGrid').addEventListener('change', updateMirrorPreviewSessionSelection);
     $('mirrorCatalogSearch').addEventListener('keydown', (event) => {

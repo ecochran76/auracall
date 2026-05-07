@@ -19,7 +19,9 @@
   refs expansion with the same clickable hydrated cache badges. Recent-run rows
   and runtime detail provider-conversation blocks now also summarize hydrated
   badge state counts so operators can scan transcript, asset, metadata-only,
-  unavailable, and pending cache states without opening each badge.
+  unavailable, and pending cache states without opening each badge. Recent-run
+  rows can also be filtered and sorted by those hydrated cache states without
+  refetching runtime data.
 
 - 2026-05-05: API service routing needs to be discoverable after restart, not
   inferred from a probe. `api.routing` now stores local/external hostnames,

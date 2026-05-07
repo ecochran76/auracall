@@ -14919,6 +14919,9 @@ describe('http responses adapter', () => {
       expect(html).toContain('agentsRecentRuns');
       expect(html).toContain('loadAgentsRecentRuns');
       expect(html).toContain('agentsRecentRunsTable');
+      expect(html).toContain('agentsRecentMirrorCacheFilter');
+      expect(html).toContain('agentsRecentMirrorCacheSort');
+      expect(html).toContain('applyAgentsRecentMirrorCacheControls');
       expect(html).toContain('/v1/runtime-runs/recent?');
       expect(html).toContain('useAgentsRecentRun');
       expect(html).toContain('inspectAgentsRecentRuntimeRun');
@@ -14938,6 +14941,9 @@ describe('http responses adapter', () => {
       expect(html).toContain('data-agents-recent-mirror-summary');
       expect(html).toContain('data-agents-recent-mirror-cache-badge');
       expect(html).toContain('data-agents-recent-mirror-cache-summary');
+      expect(html).toContain('data-agents-recent-mirror-cache-state');
+      expect(html).toContain('classifyAgentsRecentMirrorCacheCounts');
+      expect(html).toContain('rankAgentsRecentMirrorCacheState');
       expect(html).toContain('data-agents-recent-mirror-ref-expansion');
       expect(html).toContain('cache summary pending');
       expect(html).toContain('inline-details');
