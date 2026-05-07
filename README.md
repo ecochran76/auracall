@@ -273,8 +273,8 @@ Terminology note:
   confirmation prompt; start, pause, and resume remain one-click controls. The
   target table can filter by mirror completeness or attention state so operators
   can focus on incomplete account mirrors without opening raw status JSON; each
-  target row also explains the current attention reason from existing status
-  fields.
+  target row also explains the current attention reason from existing status,
+  failure-backoff, and recent completion error fields.
   `/account-mirror` is the dedicated read-only account
   mirror page; it includes the same cache-only catalog browser with
   provider/profile/kind/search/limit controls backed by

@@ -1,3 +1,25 @@
+## Turn 150 | 2026-05-07
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: dogfood default Gemini/Grok live-follow target attention.
+- Finding:
+  - default Gemini is active and still in `backfill_history` with incomplete
+    conversation metadata
+  - default Grok is complete in cached metadata but is in failure backoff after
+    repeated metadata collector timeouts
+  - the target rollup previously reported `attentionNeeded: 0` for Grok
+    because failure-backoff and recent completion errors stayed outside the
+    per-target summary
+- Change:
+  - live-follow target accounts now carry status reason, failure timing/count,
+    latest completion status/error, and an explicit attention flag
+  - `/ops/browser` attention filtering and target-row explanations now surface
+    failure-backoff errors directly
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/cli/apiStatusCommand.test.ts -t "live-follow|browser operator dashboard|api ops browser CLI helpers|failed completion retry" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+
 ## Turn 149 | 2026-05-07
 
 - Continued implementation plan:

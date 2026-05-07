@@ -99,6 +99,7 @@ import type { AuraCallRunStatus } from '../runStatus.js';
 import {
   createAccountMirrorStatusRegistry,
   type AccountMirrorStatusRegistry,
+  type AccountMirrorStatusEntry,
   type AccountMirrorStatusSummary,
 } from '../accountMirror/statusRegistry.js';
 import {
@@ -2409,10 +2410,16 @@ function createLiveFollowTargetRollup(
       desiredState: entry.liveFollow.state,
       desiredEnabled: entry.liveFollow.enabled,
       actualStatus: activeOperation?.status ?? (entry.mirrorState.running ? 'refreshing' : entry.status),
+      statusReason: entry.reason,
+      attentionNeeded: isLiveFollowTargetAttentionNeeded(entry, activeOperation, recentOperation),
       activeCompletionId: activeOperation?.id ?? null,
+      latestCompletionStatus: recentOperation?.status ?? null,
+      latestCompletionError: recentOperation?.error?.message ?? null,
       phase: activeOperation?.phase ?? recentOperation?.phase ?? null,
       passCount: activeOperation?.passCount ?? recentOperation?.passCount ?? null,
       routineEligibleAt: entry.eligibleAt,
+      lastFailureAt: entry.lastFailureAt,
+      consecutiveFailureCount: entry.consecutiveFailureCount,
       activeCompletionNextAttemptAt: activeOperation?.nextAttemptAt ?? null,
       nextAttemptAt: activeOperation?.nextAttemptAt ?? entry.eligibleAt,
       mirrorCompleteness: entry.mirrorCompleteness.state,
@@ -2467,11 +2474,7 @@ function createLiveFollowTargetRollup(
         acc.active += 1;
         acc.actual.active += 1;
       }
-      if (
-        account.actualStatus === 'blocked' ||
-        account.actualStatus === 'failed' ||
-        account.actualStatus === 'cancelled'
-      ) {
+      if (account.attentionNeeded) {
         acc.attentionNeeded += 1;
         acc.actual.attentionNeeded += 1;
       }
@@ -2530,6 +2533,18 @@ function createLiveFollowTargetRollup(
       accounts: [],
     },
   );
+}
+
+function isLiveFollowTargetAttentionNeeded(
+  entry: AccountMirrorStatusEntry,
+  activeOperation: AccountMirrorCompletionOperation | null,
+  recentOperation: AccountMirrorCompletionOperation | null,
+): boolean {
+  if (entry.liveFollow.state === 'missing_identity' || entry.liveFollow.state === 'unsupported') return true;
+  const status = activeOperation?.status ?? (entry.mirrorState.running ? 'refreshing' : entry.status);
+  if (status === 'paused' || status === 'blocked' || status === 'failed' || status === 'cancelled') return true;
+  if (entry.status === 'blocked' || entry.reason === 'failure-backoff' || entry.consecutiveFailureCount > 0) return true;
+  return recentOperation?.status === 'blocked' || recentOperation?.status === 'failed' || recentOperation?.status === 'cancelled';
 }
 
 function summarizeCompletionLifecycleEvent(operation: AccountMirrorCompletionOperation | null): LiveFollowTargetAccountSummary['latestLifecycleEvent'] {
@@ -5454,12 +5469,12 @@ function createOperatorBrowserDashboardHtml(input: {
       for (const target of accounts) {
         const desiredState = target.desiredState || 'unknown';
         const status = target.actualStatus || 'unknown';
-        if (isAttentionTarget(desiredState, status)) {
+        if (isAttentionTarget(target)) {
           rows.push({
             kind: 'target',
             target: formatTargetName(target),
             state: desiredState + '/' + status,
-            detail: target.activeCompletionId || target.phase || target.reason || 'attention needed',
+            detail: formatMirrorTargetAttentionReason(target),
             completionId: target.activeCompletionId || null,
             status,
           });
@@ -5484,8 +5499,13 @@ function createOperatorBrowserDashboardHtml(input: {
       return rows;
     }
 
-    function isAttentionTarget(desiredState, status) {
-      return desiredState === 'missing_identity'
+    function isAttentionTarget(targetOrDesiredState, maybeStatus) {
+      const target = typeof targetOrDesiredState === 'object' && targetOrDesiredState ? targetOrDesiredState : null;
+      const desiredState = target ? target.desiredState || 'unknown' : targetOrDesiredState;
+      const status = target ? target.actualStatus || 'unknown' : maybeStatus;
+      return target?.attentionNeeded === true
+        || desiredState === 'missing_identity'
+        || desiredState === 'unsupported'
         || status === 'paused'
         || status === 'blocked'
         || status === 'failed'
@@ -5541,7 +5561,7 @@ function createOperatorBrowserDashboardHtml(input: {
       const desiredState = target.desiredState || 'unknown';
       const completeness = target.mirrorCompleteness || 'unknown';
       const counts = target.metadataCounts || {};
-      const attention = isAttentionTarget(desiredState, status) || isAttentionCompleteness(completeness);
+      const attention = isAttentionTarget(target) || isAttentionCompleteness(completeness);
       return '<tr data-mirror-target-row="true" data-mirror-target-completeness="' + escapeHtml(completeness) + '" data-mirror-target-attention="' + escapeHtml(String(attention)) + '">' + [
         '<td><strong>' + escapeHtml(formatTargetName(target)) + '</strong></td>',
         '<td>' + renderStatusText(desiredState, toneForDesiredState(desiredState)) + '</td>',
@@ -5598,6 +5618,16 @@ function createOperatorBrowserDashboardHtml(input: {
       if (status === 'failed') return 'latest live-follow operation failed';
       if (status === 'cancelled') return 'latest live-follow operation was cancelled';
       if (status === 'paused') return 'live-follow operation is paused';
+      if (target.statusReason === 'failure-backoff') {
+        const detail = target.latestCompletionError || 'latest live-follow operation failed';
+        return 'failure backoff after ' + detail;
+      }
+      if (target.latestCompletionStatus === 'failed') {
+        return target.latestCompletionError || 'latest live-follow operation failed';
+      }
+      if (target.consecutiveFailureCount > 0) {
+        return 'latest live-follow operation failed at ' + (target.lastFailureAt || 'unknown time');
+      }
       if (completeness === 'none') return 'no mirrored metadata has been cached yet';
       if (completeness === 'unknown') return 'mirror completeness has not been reported';
       if (completeness === 'in_progress') {
@@ -5818,10 +5848,16 @@ function createOperatorBrowserDashboardHtml(input: {
         target: [target.provider, target.runtimeProfileId].filter(Boolean).join('/'),
         desiredState: target.desiredState || null,
         status: target.actualStatus || null,
+        statusReason: target.statusReason || null,
+        attentionNeeded: target.attentionNeeded === true,
         activeCompletionId: target.activeCompletionId || null,
+        latestCompletionStatus: target.latestCompletionStatus || null,
+        latestCompletionError: target.latestCompletionError || null,
         phase: target.phase || null,
         passCount: target.passCount || null,
         routineEligibleAt: target.routineEligibleAt || null,
+        lastFailureAt: target.lastFailureAt || null,
+        consecutiveFailureCount: target.consecutiveFailureCount || 0,
         activeCompletionNextAttemptAt: target.activeCompletionNextAttemptAt || null,
         nextAttemptAt: target.nextAttemptAt || null,
         completeness: target.mirrorCompleteness || null,

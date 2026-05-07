@@ -542,7 +542,12 @@ Each status payload should include:
   cancel actions require confirmation while start/pause/resume remain one-click.
   The live-follow target table can filter by mirror completeness or attention
   state and reports the visible target count after filters apply. Each target
-  row also explains the current attention reason from existing status fields.
+  row also explains the current attention reason from existing status,
+  failure-backoff, and recent completion error fields.
+  Default Gemini/Grok dogfood showed why that target-level signal matters:
+  Gemini can be healthy but incomplete, while Grok can have complete cached
+  metadata and still require operator attention because the latest live-follow
+  completion timed out and placed the account in failure backoff.
   `/agents` now turns the disabled Agents / Teams nav item into a read-only
   operator page that calls the existing `GET /v1/team-runs/inspect` and
   `GET /v1/runtime-runs/inspect` surfaces without adding write paths. The same

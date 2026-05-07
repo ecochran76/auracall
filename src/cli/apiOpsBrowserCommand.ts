@@ -448,6 +448,8 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('toneForMirrorCompleteness')
       && html.includes('formatMirrorTargetAttentionReason')
       && html.includes('data-mirror-target-attention-reason')
+      && html.includes('failure backoff after')
+      && html.includes('latestCompletionError')
       && html.includes('backfill remains incomplete')
       && html.includes('no attention needed')
       && html.includes('data-mirror-target-completeness')

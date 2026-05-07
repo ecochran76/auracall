@@ -2035,9 +2035,12 @@ describe('http responses adapter', () => {
             accounts: Array<{
               activeCompletionId: string | null;
               activeCompletionNextAttemptAt: string | null;
+              attentionNeeded: boolean;
               nextAttemptAt: string | null;
               routineEligibleAt: string | null;
               actualStatus: string | null;
+              latestCompletionStatus: string | null;
+              latestCompletionError: string | null;
               phase: string | null;
               passCount: number | null;
             }>;
@@ -2048,14 +2051,17 @@ describe('http responses adapter', () => {
       expect(account).toMatchObject({
         activeCompletionId: null,
         activeCompletionNextAttemptAt: null,
+        attentionNeeded: true,
         nextAttemptAt: account.routineEligibleAt,
         actualStatus: 'delayed',
+        latestCompletionStatus: 'failed',
+        latestCompletionError: 'collector timed out',
         phase: 'backfill_history',
         passCount: 0,
       });
       expect(account.nextAttemptAt).not.toBe('2026-04-30T12:10:00.000Z');
       expect(payload.liveFollow.targets.actual.running).toBe(0);
-      expect(payload.liveFollow.targets.actual.attentionNeeded).toBe(0);
+      expect(payload.liveFollow.targets.actual.attentionNeeded).toBe(1);
     } finally {
       await server.close();
     }
@@ -15025,6 +15031,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('toneForMirrorCompleteness');
       expect(html).toContain('formatMirrorTargetAttentionReason');
       expect(html).toContain('data-mirror-target-attention-reason');
+      expect(html).toContain('failure backoff after');
+      expect(html).toContain('latestCompletionError');
       expect(html).toContain('backfill remains incomplete');
       expect(html).toContain('no attention needed');
       expect(html).toContain('data-mirror-target-completeness');
