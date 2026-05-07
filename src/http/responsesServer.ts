@@ -4350,6 +4350,16 @@ function createOperatorBrowserDashboardHtml(input: {
           <button id="pauseMirrorCompletion">Pause</button>
           <button id="resumeMirrorCompletion">Resume</button>
           <button id="cancelMirrorCompletion">Cancel</button>
+          <label>Target completeness
+            <select id="mirrorTargetCompletenessFilter">
+              <option value="">all</option>
+              <option value="attention">attention</option>
+              <option value="in_progress">in progress</option>
+              <option value="complete">complete</option>
+              <option value="none">none</option>
+            </select>
+          </label>
+          <span id="mirrorTargetCompletenessVisibleCount" class="muted" data-mirror-target-completeness-visible-count="true">showing 0 of 0</span>
         </div>
         <div id="mirrorAttentionQueue" class="muted" style="margin-bottom: 10px;">Loading attention queue...</div>
         <div id="mirrorTargetTable" class="muted" style="margin-bottom: 10px;">Loading target accounts...</div>
@@ -5328,6 +5338,7 @@ function createOperatorBrowserDashboardHtml(input: {
       const targets = status.liveFollow && status.liveFollow.targets ? status.liveFollow.targets : null;
       $('mirrorAttentionQueue').innerHTML = renderAttentionQueue(targets, active, recent);
       $('mirrorTargetTable').innerHTML = renderLiveFollowTargetTable(targets);
+      applyMirrorTargetCompletenessFilter();
       $('mirrorActiveCompletionTable').innerHTML = renderActiveCompletionTable(active);
       $('mirrorTargets').textContent = asJson({
         source: 'status.liveFollow.targets',
@@ -5514,6 +5525,7 @@ function createOperatorBrowserDashboardHtml(input: {
         'Target',
         'Desired',
         'Status',
+        'Completeness',
         'Phase',
         'Passes',
         'Next Live-Follow Attempt',
@@ -5526,11 +5538,14 @@ function createOperatorBrowserDashboardHtml(input: {
     function renderLiveFollowTargetRow(target) {
       const status = target.actualStatus || 'unknown';
       const desiredState = target.desiredState || 'unknown';
+      const completeness = target.mirrorCompleteness || 'unknown';
       const counts = target.metadataCounts || {};
-      return '<tr>' + [
+      const attention = isAttentionTarget(desiredState, status) || isAttentionCompleteness(completeness);
+      return '<tr data-mirror-target-row="true" data-mirror-target-completeness="' + escapeHtml(completeness) + '" data-mirror-target-attention="' + escapeHtml(String(attention)) + '">' + [
         '<td><strong>' + escapeHtml(formatTargetName(target)) + '</strong></td>',
         '<td>' + renderStatusText(desiredState, toneForDesiredState(desiredState)) + '</td>',
         '<td>' + renderStatusText(status, toneForActualStatus(status)) + '</td>',
+        '<td>' + renderStatusText(completeness, toneForMirrorCompleteness(completeness)) + '</td>',
         '<td>' + escapeHtml(target.phase || 'none') + '</td>',
         '<td>' + escapeHtml(target.passCount == null ? 'none' : String(target.passCount)) + '</td>',
         '<td class="wrap">' + escapeHtml(target.activeCompletionNextAttemptAt || 'none') + '</td>',
@@ -5538,6 +5553,37 @@ function createOperatorBrowserDashboardHtml(input: {
         '<td class="wrap">' + escapeHtml(formatMetadataCounts(counts)) + '</td>',
         '<td>' + renderLiveFollowAccountControls(target) + '</td>',
       ].join('') + '</tr>';
+    }
+
+    function applyMirrorTargetCompletenessFilter() {
+      const table = $('mirrorTargetAccounts');
+      const count = $('mirrorTargetCompletenessVisibleCount');
+      if (!table) {
+        if (count) count.textContent = 'showing 0 of 0';
+        return;
+      }
+      const filter = $('mirrorTargetCompletenessFilter').value || '';
+      const rows = Array.from(table.querySelectorAll('[data-mirror-target-row]'));
+      for (const row of rows) {
+        const completeness = row.dataset.mirrorTargetCompleteness || '';
+        const attention = row.dataset.mirrorTargetAttention === 'true';
+        row.hidden = filter === 'attention'
+          ? !attention
+          : Boolean(filter && completeness !== filter);
+      }
+      const visible = rows.filter((row) => !row.hidden).length;
+      if (count) count.textContent = 'showing ' + String(visible) + ' of ' + String(rows.length);
+    }
+
+    function toneForMirrorCompleteness(completeness) {
+      if (completeness === 'complete') return 'ok';
+      if (completeness === 'in_progress') return 'warn';
+      if (completeness === 'none') return 'bad';
+      return 'muted';
+    }
+
+    function isAttentionCompleteness(completeness) {
+      return completeness === 'none' || completeness === 'unknown';
     }
 
     function renderLiveFollowAccountControls(target) {
@@ -7727,6 +7773,7 @@ function createOperatorBrowserDashboardHtml(input: {
     $('pauseMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('pause'));
     $('resumeMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('resume'));
     $('cancelMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('cancel'));
+    $('mirrorTargetCompletenessFilter').addEventListener('change', applyMirrorTargetCompletenessFilter);
     $('loadMirrorCatalog').addEventListener('click', loadMirrorCatalog);
     $('showVisibleMirrorCatalogPreviewUrls').addEventListener('click', showVisibleMirrorCatalogPreviewUrls);
     $('hideVisibleMirrorCatalogPreviewUrls').addEventListener('click', hideVisibleMirrorCatalogPreviewUrls);

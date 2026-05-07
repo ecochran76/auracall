@@ -270,7 +270,9 @@ Terminology note:
   local operator dashboard. Row controls show a compact action-result card with
   the completion id, target, status, and next attempt while keeping raw JSON
   available for debugging. Destructive live-follow cancel actions require a
-  confirmation prompt; start, pause, and resume remain one-click controls.
+  confirmation prompt; start, pause, and resume remain one-click controls. The
+  target table can filter by mirror completeness or attention state so operators
+  can focus on incomplete account mirrors without opening raw status JSON.
   `/account-mirror` is the dedicated read-only account
   mirror page; it includes the same cache-only catalog browser with
   provider/profile/kind/search/limit controls backed by

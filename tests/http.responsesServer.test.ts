@@ -15018,6 +15018,14 @@ describe('http responses adapter', () => {
       expect(html).toContain('nextAttemptAt');
       expect(html).toContain('mirrorCompleteness');
       expect(html).toContain('renderLiveFollowAccountControls');
+      expect(html).toContain('mirrorTargetCompletenessFilter');
+      expect(html).toContain('mirrorTargetCompletenessVisibleCount');
+      expect(html).toContain('data-mirror-target-completeness-visible-count');
+      expect(html).toContain('applyMirrorTargetCompletenessFilter');
+      expect(html).toContain('toneForMirrorCompleteness');
+      expect(html).toContain('data-mirror-target-completeness');
+      expect(html).toContain('data-mirror-target-attention');
+      expect(html).toContain('Target completeness');
       expect(html).toContain('startMirrorCompletionForTarget');
       expect(html).toContain("postJson('/v1/account-mirrors/completions'");
       expect(html).toContain('data-runtime-profile');

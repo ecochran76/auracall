@@ -1,3 +1,23 @@
+## Turn 148 | 2026-05-07
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make live-follow target completeness scannable and filterable from the
+  operator dashboard.
+- Change:
+  - `/ops/browser` live-follow targets now include a completeness column
+  - operators can filter target rows by attention, in-progress, complete, or
+    none
+  - the filter reports the visible target count after filters apply
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "browser operator dashboard|api ops browser CLI helpers" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+
 ## Turn 147 | 2026-05-07
 
 - Continued implementation plan:

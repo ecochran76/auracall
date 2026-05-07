@@ -41,6 +41,7 @@ export interface ApiOpsBrowserDashboardSummary {
   hasLiveFollowTargetsPanel: boolean;
   hasAttentionQueue: boolean;
   hasLiveFollowTargetTable: boolean;
+  hasLiveFollowCompletenessFilter: boolean;
   hasActiveCompletionTable: boolean;
   hasCompletionInspectAction: boolean;
   hasCompletionResultToast: boolean;
@@ -201,6 +202,7 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
     [summary.hasLiveFollowTargetsPanel, 'Expected /ops/browser to render status.liveFollow.targets.'],
     [summary.hasAttentionQueue, 'Expected /ops/browser to render the live-follow attention queue.'],
     [summary.hasLiveFollowTargetTable, 'Expected /ops/browser to render the live-follow target account table.'],
+    [summary.hasLiveFollowCompletenessFilter, 'Expected /ops/browser to filter live-follow targets by completeness.'],
     [summary.hasActiveCompletionTable, 'Expected /ops/browser to render the active completion operations table.'],
     [summary.hasCompletionInspectAction, 'Expected /ops/browser active completion rows to inspect completion detail.'],
     [summary.hasCompletionResultToast, 'Expected /ops/browser completion controls to render compact result feedback.'],
@@ -439,6 +441,13 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('renderAttentionQueue')
       && html.includes('collectAttentionRows'),
     hasLiveFollowTargetTable: html.includes('mirrorTargetTable') && html.includes('mirrorTargetAccounts'),
+    hasLiveFollowCompletenessFilter: html.includes('mirrorTargetCompletenessFilter')
+      && html.includes('mirrorTargetCompletenessVisibleCount')
+      && html.includes('data-mirror-target-completeness-visible-count')
+      && html.includes('applyMirrorTargetCompletenessFilter')
+      && html.includes('toneForMirrorCompleteness')
+      && html.includes('data-mirror-target-completeness')
+      && html.includes('data-mirror-target-attention'),
     hasActiveCompletionTable: html.includes('mirrorActiveCompletionTable') && html.includes('mirrorActiveCompletions'),
     hasCompletionInspectAction: html.includes('inspectMirrorCompletion') && html.includes('/v1/account-mirrors/completions/'),
     hasCompletionResultToast: html.includes('mirrorControlResultToast')

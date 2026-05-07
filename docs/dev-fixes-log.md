@@ -24,6 +24,10 @@
   refetching runtime data, with a visible row count after filters apply and a
   copy action for the currently visible account-mirror links.
 
+- 2026-05-07: Live-follow target tables need an operator-focused completeness
+  view. `/ops/browser` now filters mirror targets by completeness or attention
+  state and reports the visible target count after filters apply.
+
 - 2026-05-05: API service routing needs to be discoverable after restart, not
   inferred from a probe. `api.routing` now stores local/external hostnames,
   base URLs, dashboard/account-mirror paths, proxy target, ingress, and auth
