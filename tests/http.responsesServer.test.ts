@@ -15105,6 +15105,11 @@ describe('http responses adapter', () => {
       expect(html).toContain('hideVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('reviewVisibleMirrorCatalogPreviews');
       expect(html).toContain('openVisibleMirrorCatalogPreviewUrls');
+      expect(html).toContain('copyVisibleMirrorCatalogDetailLinks');
+      expect(html).toContain('collectVisibleCatalogDetailLinks');
+      expect(html).toContain('buildMirrorCatalogAccountMirrorPath');
+      expect(html).toContain('Copy visible detail links');
+      expect(html).toContain('visible detail link(s)');
       expect(html).toContain('copyVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('downloadVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('formatVisibleCatalogPreviewUrlsFilename');
@@ -15396,7 +15401,8 @@ describe('http responses adapter', () => {
       expect(response.headers.get('cache-control')).toContain('no-store');
       const html = await response.text();
       expect(html).toContain('AuraCall Account Mirror');
-      expect(html).toContain('href="/account-mirror" aria-current="page"');
+      expect(html).toContain('id="navAccountMirror" href="/account-mirror"');
+      expect(html).toContain('aria-current="page"');
       expect(html).toContain('href="/ops/browser"');
       expect(html).toContain('mirrorCatalogProvider');
       expect(html).toContain('mirrorCatalogPreviewFilter');
@@ -15418,6 +15424,11 @@ describe('http responses adapter', () => {
       expect(html).toContain('hideVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('reviewVisibleMirrorCatalogPreviews');
       expect(html).toContain('openVisibleMirrorCatalogPreviewUrls');
+      expect(html).toContain('copyVisibleMirrorCatalogDetailLinks');
+      expect(html).toContain('collectVisibleCatalogDetailLinks');
+      expect(html).toContain('buildMirrorCatalogAccountMirrorPath');
+      expect(html).toContain('Copy visible detail links');
+      expect(html).toContain('visible detail link(s)');
       expect(html).toContain('copyVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('downloadVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('mirrorCatalogBatchNotice');

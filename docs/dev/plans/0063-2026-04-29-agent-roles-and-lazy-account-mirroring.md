@@ -807,8 +807,9 @@ depending on transient client row indexes.
 The same detail pane now includes a compact result navigator for the current
 filtered row set, so operators can move between cached conversations, files,
 artifacts, and media while preserving the selected-row highlight and stable
-detail URL params. Keyboard navigation supports `/` to focus catalog search
-and ArrowUp/ArrowDown to move through the result navigator.
+detail URL params. Operators can also copy stable account-mirror detail links
+for the current filtered result set. Keyboard navigation supports `/` to focus
+catalog search and ArrowUp/ArrowDown to move through the result navigator.
 Conversation detail views with cached turns now include a local Markdown
 transcript download action. The export is rendered in the dashboard from the
 already-hydrated cached detail object, so it does not navigate, submit prompts,

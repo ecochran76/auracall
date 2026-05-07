@@ -4301,6 +4301,7 @@ function createOperatorBrowserDashboardHtml(input: {
           <button id="showVisibleMirrorCatalogPreviewUrls" type="button">Preview visible URL list</button>
           <button id="reviewVisibleMirrorCatalogPreviews" type="button">Review visible previews</button>
           <button id="openVisibleMirrorCatalogPreviewUrls" type="button">Open visible previews</button>
+          <button id="copyVisibleMirrorCatalogDetailLinks" type="button">Copy visible detail links</button>
           <button id="copyVisibleMirrorCatalogPreviewUrls" type="button">Copy visible preview URLs</button>
           <button id="downloadVisibleMirrorCatalogPreviewUrls" type="button">Download visible preview URL list</button>
         </div>
@@ -6154,6 +6155,43 @@ function createOperatorBrowserDashboardHtml(input: {
       return entries;
     }
 
+    function buildMirrorCatalogAccountMirrorPath(row) {
+      const params = new URLSearchParams(window.location.search);
+      setOptionalUrlParam(params, 'provider', row.provider || '');
+      setOptionalUrlParam(params, 'runtimeProfile', row.runtimeProfileId || '');
+      setOptionalUrlParam(params, 'kind', row.kind && row.kind !== 'all' ? row.kind : '');
+      setOptionalUrlParam(params, 'item', row.itemId || '');
+      setOptionalUrlParam(params, 'itemKind', row.kind || '');
+      setOptionalUrlParam(params, 'itemProvider', row.provider || '');
+      setOptionalUrlParam(params, 'itemRuntimeProfile', row.runtimeProfileId || '');
+      return routeWithQuery(OPERATOR_DASHBOARD_ROUTES.accountMirrorPath || '/account-mirror', params.toString());
+    }
+
+    function collectVisibleCatalogDetailLinks() {
+      const links = [];
+      for (const row of mirrorCatalogFilteredRows) {
+        const path = buildMirrorCatalogAccountMirrorPath(row);
+        if (!path) continue;
+        const url = new URL(path, window.location.origin).href;
+        if (!links.includes(url)) links.push(url);
+      }
+      return links;
+    }
+
+    async function copyVisibleMirrorCatalogDetailLinks() {
+      const links = collectVisibleCatalogDetailLinks();
+      if (!links.length) {
+        setMirrorCatalogBatchNotice('No visible detail links to copy.', 'warn');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(links.join('\\n'));
+        setMirrorCatalogBatchNotice('Copied ' + String(links.length) + ' visible detail link(s).', 'ok');
+      } catch {
+        setMirrorCatalogBatchNotice('Could not copy visible detail links.', 'bad');
+      }
+    }
+
     function showVisibleMirrorCatalogPreviewUrls() {
       const urls = collectVisibleCatalogPreviewUrls();
       $('mirrorCatalogPreviewUrlDrawer').hidden = false;
@@ -7694,6 +7732,7 @@ function createOperatorBrowserDashboardHtml(input: {
     $('hideVisibleMirrorCatalogPreviewUrls').addEventListener('click', hideVisibleMirrorCatalogPreviewUrls);
     $('reviewVisibleMirrorCatalogPreviews').addEventListener('click', reviewVisibleMirrorCatalogPreviews);
     $('openVisibleMirrorCatalogPreviewUrls').addEventListener('click', openVisibleMirrorCatalogPreviewUrls);
+    $('copyVisibleMirrorCatalogDetailLinks').addEventListener('click', copyVisibleMirrorCatalogDetailLinks);
     $('copyVisibleMirrorCatalogPreviewUrls').addEventListener('click', copyVisibleMirrorCatalogPreviewUrls);
     $('downloadVisibleMirrorCatalogPreviewUrls').addEventListener('click', downloadVisibleMirrorCatalogPreviewUrls);
     $('selectAllMirrorPreviewSessionItems').addEventListener('click', () => setMirrorPreviewSessionSelection(true));

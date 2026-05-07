@@ -119,6 +119,15 @@ const dashboardHtml = `
   async function copyCatalogPreviewUrl() { await navigator.clipboard.writeText('url'); }
   function collectVisibleCatalogPreviewUrls() { return []; }
   function collectVisibleCatalogPreviewEntries() { return [{ url: 'https://example.com/asset.png', provider: 'chatgpt', kind: 'artifacts', title: 'Example Asset', itemId: 'artifact_1', boundIdentity: 'default', updatedAt: '2026-05-04T00:00:00.000Z' }]; }
+  function buildMirrorCatalogAccountMirrorPath(row) { return '/account-mirror?item=' + row.itemId; }
+  function collectVisibleCatalogDetailLinks() { return ['http://auracall.localhost/account-mirror?item=artifact_1']; }
+  async function copyVisibleMirrorCatalogDetailLinks() {
+    const links = collectVisibleCatalogDetailLinks();
+    if (!links.length) setMirrorCatalogBatchNotice('No visible detail links to copy.', 'warn');
+    await navigator.clipboard.writeText(links.join('\\n'));
+    setMirrorCatalogBatchNotice('Copied ' + String(links.length) + ' visible detail link(s).', 'ok');
+    return 'Could not copy visible detail links.';
+  }
   function showVisibleMirrorCatalogPreviewUrls() {
     mirrorCatalogPreviewUrlDrawer.hidden = false;
     mirrorCatalogPreviewUrlList.textContent = collectVisibleCatalogPreviewUrls().join('\\n') || 'No visible preview URLs.';
@@ -145,6 +154,7 @@ const dashboardHtml = `
   <button id="showVisibleMirrorCatalogPreviewUrls">Preview visible URL list</button>
   <button id="reviewVisibleMirrorCatalogPreviews">Review visible previews</button>
   <button id="openVisibleMirrorCatalogPreviewUrls">Open visible previews</button>
+  <button id="copyVisibleMirrorCatalogDetailLinks">Copy visible detail links</button>
   <button id="copyVisibleMirrorCatalogPreviewUrls">Copy visible preview URLs</button>
   <button id="downloadVisibleMirrorCatalogPreviewUrls">Download visible preview URL list</button>
   <button id="hideVisibleMirrorCatalogPreviewUrls">Close</button>
@@ -494,7 +504,7 @@ describe('api ops browser CLI helpers', () => {
       'Dashboard service control: nav=ok operations=ok backgroundDrain=ok scheduler=ok runOnce=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard cache browse: catalog=ok page=ok previewSession=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok transcriptFilter=ok transcriptDownload=ok transcriptSearch=ok related=ok assetInspector=ok assetPreview=ok localAsset=ok materialization=ok materializationControls=ok rowPreviewActions=ok batchPreviewDrawer=ok batchPreviewReview=ok batchPreviewOpen=ok batchPreviewCopy=ok batchPreviewDownload=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
+      'Dashboard cache browse: catalog=ok page=ok previewSession=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok transcriptFilter=ok transcriptDownload=ok transcriptSearch=ok related=ok assetInspector=ok assetPreview=ok localAsset=ok materialization=ok materializationControls=ok rowPreviewActions=ok batchPreviewDrawer=ok batchPreviewReview=ok batchPreviewOpen=ok batchDetailCopy=ok batchPreviewCopy=ok batchPreviewDownload=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok resultToast=ok inputInspect=ok input=ok rowActions=ok stateAware=ok confirmCancel=ok feedback=ok pause=ok resume=ok cancel=ok',

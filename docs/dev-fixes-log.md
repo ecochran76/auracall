@@ -50,7 +50,8 @@
 - 2026-05-05: Account mirror result navigation needs fast keyboard controls.
   The `/account-mirror` page now supports `/` to focus cached catalog search
   and ArrowUp/ArrowDown to move through the current result navigator using the
-  same cache-only detail selection path as row clicks.
+  same cache-only detail selection path as row clicks. The current filtered
+  result set can also copy stable account-mirror detail links for handoff.
 
 - 2026-05-04: Account mirror detail review needs local result-to-result
   navigation. The `/account-mirror` detail pane now includes a compact result
