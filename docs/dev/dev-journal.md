@@ -27219,6 +27219,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run plans:audit -- --keep 63`
   - `git diff --check`
 
+## Turn 146 | 2026-05-06
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: let operators hand off filtered recent-run mirror links.
+- Change:
+  - `/agents` recent-run controls now include `Copy visible mirror links`
+  - the action collects account-mirror links from currently visible rows,
+    de-duplicates them, and copies newline-separated absolute URLs
+  - empty and clipboard failure states report through the Agents notice
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.runtimeRunsRecent.test.ts -t "runtime-runs/recent|browser operator dashboard|api ops browser CLI helpers|mcp runtime_runs_recent" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+
 ## Turn 138 | 2026-05-06
 
 - Continued implementation plan:

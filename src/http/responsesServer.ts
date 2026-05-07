@@ -4429,6 +4429,7 @@ function createOperatorBrowserDashboardHtml(input: {
             </select>
           </label>
           <button id="loadAgentsRecentRuns" type="button">Load Recent Runs</button>
+          <button id="copyVisibleAgentsRecentMirrorLinks" type="button">Copy visible mirror links</button>
           <span id="agentsRecentMirrorCacheVisibleCount" class="muted" data-agents-recent-mirror-cache-visible-count="true">showing 0 of 0</span>
         </div>
         <div id="agentsRecentRuns" class="muted" style="margin-bottom: 10px;">No recent runs loaded.</div>
@@ -5146,6 +5147,34 @@ function createOperatorBrowserDashboardHtml(input: {
         );
       }
       for (const row of rows) tbody.appendChild(row);
+    }
+
+    function collectVisibleAgentsRecentMirrorLinks() {
+      const table = $('agentsRecentRunsTable');
+      if (!table) return [];
+      const rows = Array.from(table.querySelectorAll('[data-agents-recent-run-row]')).filter((row) => !row.hidden);
+      const links = [];
+      for (const row of rows) {
+        for (const node of row.querySelectorAll('[data-account-mirror-path]')) {
+          const path = node.dataset.accountMirrorPath || '';
+          if (path) links.push(new URL(path, window.location.origin).href);
+        }
+      }
+      return Array.from(new Set(links));
+    }
+
+    async function copyVisibleAgentsRecentMirrorLinks() {
+      const links = collectVisibleAgentsRecentMirrorLinks();
+      if (!links.length) {
+        setAgentsTeamsNotice('No visible mirror links to copy.', 'warn');
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(links.join('\\n'));
+        setAgentsTeamsNotice('Copied ' + String(links.length) + ' visible mirror link(s).', 'ok');
+      } catch {
+        setAgentsTeamsNotice('Could not copy visible mirror links.', 'bad');
+      }
     }
 
     function formatAgentsRecentMirrorCacheSummary(counts) {
@@ -7683,6 +7712,7 @@ function createOperatorBrowserDashboardHtml(input: {
     $('inspectTeamRun').addEventListener('click', inspectAgentsTeamRun);
     $('inspectRuntimeRun').addEventListener('click', inspectAgentsRuntimeRun);
     $('loadAgentsRecentRuns').addEventListener('click', loadAgentsRecentRuns);
+    $('copyVisibleAgentsRecentMirrorLinks').addEventListener('click', copyVisibleAgentsRecentMirrorLinks);
     $('agentsRecentMirrorCacheFilter').addEventListener('change', applyAgentsRecentMirrorCacheControls);
     $('agentsRecentMirrorCacheSort').addEventListener('change', applyAgentsRecentMirrorCacheControls);
     $('loadMirrorPreviewSessionManifest').addEventListener('change', loadMirrorPreviewSessionManifestFile);

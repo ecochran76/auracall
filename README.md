@@ -301,7 +301,8 @@ Terminology note:
   blocks also show compact cache scan summaries for transcript, asset,
   metadata-only, unavailable, and pending refs. The recent-runs table can filter
   and sort by those hydrated cache states without refetching runtime data; the
-  table also reports the visible count after filters apply.
+  table also reports the visible count after filters apply and can copy the
+  currently visible account-mirror links for handoff.
   Runtime inspection also projects compact conversation turns from stored step
   input/output so `/agents` can render a chat-style run view beside raw JSON.
   When stored browser-run metadata includes provider conversation ids, that

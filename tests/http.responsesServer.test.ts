@@ -14924,6 +14924,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('agentsRecentMirrorCacheVisibleCount');
       expect(html).toContain('data-agents-recent-mirror-cache-visible-count');
       expect(html).toContain('showing 0 of 0');
+      expect(html).toContain('copyVisibleAgentsRecentMirrorLinks');
+      expect(html).toContain('collectVisibleAgentsRecentMirrorLinks');
+      expect(html).toContain('Copy visible mirror links');
+      expect(html).toContain('visible mirror link(s)');
       expect(html).toContain('applyAgentsRecentMirrorCacheControls');
       expect(html).toContain('/v1/runtime-runs/recent?');
       expect(html).toContain('useAgentsRecentRun');

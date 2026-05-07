@@ -570,7 +570,8 @@ Each status payload should include:
   scan summaries across transcript, asset, metadata-only, unavailable, and
   pending refs. Operators can filter and sort the recent-run table by those
   hydrated cache states without refetching runtime data, and the table reports
-  the visible row count after filters apply.
+  the visible row count after filters apply. The same filtered view can copy
+  the visible account-mirror links for handoff.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.
