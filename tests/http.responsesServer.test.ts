@@ -6137,6 +6137,7 @@ describe('http responses adapter', () => {
             providers: string[];
             firstConversationId: string | null;
             firstProvider: string | null;
+            conversations: unknown[];
             firstCatalogItemPath: string | null;
             firstAccountMirrorPath: string | null;
           };
@@ -6157,6 +6158,7 @@ describe('http responses adapter', () => {
             providerConversationSummary: {
               count: 0,
               providers: [],
+              conversations: [],
               firstConversationId: null,
               firstProvider: null,
               firstCatalogItemPath: null,
@@ -6192,6 +6194,13 @@ describe('http responses adapter', () => {
             providers: string[];
             firstConversationId: string | null;
             firstProvider: string | null;
+            conversations: Array<{
+              provider: string;
+              conversationId: string;
+              runtimeProfileId: string | null;
+              catalogItemPath: string;
+              accountMirrorPath: string;
+            }>;
             firstCatalogItemPath: string | null;
             firstAccountMirrorPath: string | null;
           };
@@ -6202,6 +6211,17 @@ describe('http responses adapter', () => {
         providerConversationSummary: {
           count: 1,
           providers: ['chatgpt'],
+          conversations: [
+            {
+              provider: 'chatgpt',
+              conversationId: 'conv_recent_cache',
+              runtimeProfileId: 'default',
+              catalogItemPath:
+                '/v1/account-mirrors/catalog/items/conv_recent_cache?provider=chatgpt&kind=conversations&runtimeProfile=default',
+              accountMirrorPath:
+                '/account-mirror?provider=chatgpt&kind=conversations&item=conv_recent_cache&itemKind=conversations&itemProvider=chatgpt&runtimeProfile=default&itemRuntimeProfile=default',
+            },
+          ],
           firstConversationId: 'conv_recent_cache',
           firstProvider: 'chatgpt',
           firstCatalogItemPath:
@@ -14907,6 +14927,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('Open Mirror Detail');
       expect(html).toContain('renderAgentsRecentMirrorSummary');
       expect(html).toContain('renderAgentsRecentMirrorCacheBadge');
+      expect(html).toContain('renderAgentsRecentMirrorCacheBadgeButton');
+      expect(html).toContain('openAgentsRecentMirrorCacheBadge');
       expect(html).toContain('openAgentsRecentMirrorSummary');
       expect(html).toContain('hasAgentsRecentMirrorDetail');
       expect(html).toContain('data-agents-recent-mirror-summary');
@@ -14914,8 +14936,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('data-account-mirror-path');
       expect(html).toContain('data-mirror-detail-available');
       expect(html).toContain('summary.firstCatalogItemPath');
+      expect(html).toContain('summary.conversations');
       expect(html).toContain('No stored provider conversation link for this run');
       expect(html).toContain('No cached provider conversation link is available for this summary.');
+      expect(html).toContain('No cached provider conversation link is available for this badge.');
       expect(html).toContain('<th>Mirror</th>');
       expect(html).toContain('window.location.href = path');
       expect(html).toContain('agentsTeamsConversation');

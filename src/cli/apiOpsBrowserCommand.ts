@@ -346,9 +346,13 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes("window.location.href = path")
       && html.includes('No cached provider conversation link is available for this summary.'),
     hasAgentsRecentRunMirrorCacheBadges: html.includes('renderAgentsRecentMirrorCacheBadge')
+      && html.includes('renderAgentsRecentMirrorCacheBadgeButton')
+      && html.includes('openAgentsRecentMirrorCacheBadge')
       && html.includes('data-agents-recent-mirror-cache-badge')
       && html.includes('summary.firstCatalogItemPath')
+      && html.includes('summary.conversations')
       && html.includes('data-runtime-provider-catalog-item-path')
+      && html.includes('data-account-mirror-path')
       && html.includes('hydrateAgentsRuntimeProviderCacheBadges'),
     hasAgentsRuntimeConversationView: html.includes('agentsTeamsConversation')
       && html.includes('renderAgentsRuntimeConversation')

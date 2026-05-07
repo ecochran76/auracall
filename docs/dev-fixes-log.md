@@ -12,7 +12,9 @@
   catalog item API, showing cached transcript, metadata plus assets, or metadata
   only without touching provider browsers. Recent-run `Mirror` summary rows now
   reuse the same catalog-item badge hydration, so list and detail views expose
-  the same transcript/materialization signal.
+  the same transcript/materialization signal. Those recent-run badges now keep
+  per-conversation account-mirror links and open their exact cached provider
+  conversation, including multi-conversation runs.
 
 - 2026-05-05: API service routing needs to be discoverable after restart, not
   inferred from a probe. `api.routing` now stores local/external hostnames,

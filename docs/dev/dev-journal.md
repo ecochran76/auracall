@@ -27113,6 +27113,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.runtimeRunsRecent.test.ts -t "runtime-runs/recent|browser operator dashboard|api ops browser CLI helpers|mcp runtime_runs_recent" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
 
+## Turn 140 | 2026-05-06
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: let recent-run `Mirror` cache badges open exact cached provider
+  conversations, including runs with multiple provider conversation refs.
+- Change:
+  - recent runtime-run summaries now include per-conversation cache refs
+  - `/agents` renders up to four clickable hydrated cache badges per recent
+    run and each badge navigates to its exact account-mirror item route
+  - `api ops-browser-status` now asserts the clickable recent mirror badge
+    contract
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.runtimeRunsRecent.test.ts -t "runtime-runs/recent|browser operator dashboard|api ops browser CLI helpers|mcp runtime_runs_recent" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+
 ## Turn 138 | 2026-05-06
 
 - Continued implementation plan:

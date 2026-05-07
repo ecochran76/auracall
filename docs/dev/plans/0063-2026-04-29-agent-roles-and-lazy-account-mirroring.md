@@ -560,7 +560,9 @@ Each status payload should include:
   `Mirror` availability summary before the open action so operators can tell
   whether cached provider detail exists, a single cached conversation opens
   directly from that summary, and the row hydrates the same cache-only
-  transcript/materialization badge as detailed runtime views.
+  transcript/materialization badge as detailed runtime views. The row now keeps
+  per-conversation cache links so each hydrated badge opens its exact cached
+  provider conversation even when the run has multiple provider conversations.
 - `pnpm run smoke:mcp-ops-browser` verifies the installed `auracall-mcp`
   binary lists and calls `api_ops_browser_status` against a paused live-follow
   fixture API server without browser/provider work.

@@ -20,10 +20,19 @@ export interface ExecutionRunListItem {
 export interface ExecutionRunListProviderConversationSummary {
   count: number;
   providers: Array<Exclude<ExecutionRunServiceId, null>>;
+  conversations: ExecutionRunListProviderConversationRef[];
   firstConversationId: string | null;
   firstProvider: Exclude<ExecutionRunServiceId, null> | null;
   firstCatalogItemPath: string | null;
   firstAccountMirrorPath: string | null;
+}
+
+export interface ExecutionRunListProviderConversationRef {
+  provider: Exclude<ExecutionRunServiceId, null>;
+  conversationId: string;
+  runtimeProfileId: string | null;
+  catalogItemPath: string;
+  accountMirrorPath: string;
 }
 
 export function summarizeExecutionRunListItem(record: ExecutionRunStoredRecord): ExecutionRunListItem {
@@ -75,6 +84,11 @@ function summarizeProviderConversations(record: ExecutionRunStoredRecord): Execu
   return {
     count: refs.length,
     providers: uniqueStrings(refs.map((ref) => ref.provider)) as Array<Exclude<ExecutionRunServiceId, null>>,
+    conversations: refs.map((ref) => ({
+      ...ref,
+      catalogItemPath: buildCatalogItemPath(ref),
+      accountMirrorPath: buildAccountMirrorPath(ref),
+    })),
     firstConversationId: first?.conversationId ?? null,
     firstProvider: first?.provider ?? null,
     firstCatalogItemPath: first ? buildCatalogItemPath(first) : null,

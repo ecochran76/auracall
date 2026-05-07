@@ -4981,11 +4981,43 @@ function createOperatorBrowserDashboardHtml(input: {
     }
 
     function renderAgentsRecentMirrorCacheBadge(summary) {
-      const catalogItemPath = summary.firstCatalogItemPath || '';
-      if (!catalogItemPath) {
+      const refs = Array.isArray(summary.conversations) && summary.conversations.length
+        ? summary.conversations
+        : [{
+            provider: summary.firstProvider || '',
+            conversationId: summary.firstConversationId || '',
+            runtimeProfileId: '',
+            catalogItemPath: summary.firstCatalogItemPath || '',
+            accountMirrorPath: summary.firstAccountMirrorPath || '',
+          }];
+      const visibleRefs = refs.slice(0, 4);
+      const hiddenCount = Math.max(0, refs.length - visibleRefs.length);
+      const badges = visibleRefs.map((ref) => renderAgentsRecentMirrorCacheBadgeButton(ref)).join('');
+      return badges + (hiddenCount ? ' <span class="muted">+' + escapeHtml(String(hiddenCount)) + ' more</span>' : '');
+    }
+
+    function renderAgentsRecentMirrorCacheBadgeButton(ref) {
+      const catalogItemPath = ref.catalogItemPath || '';
+      const accountMirrorPath = ref.accountMirrorPath || '';
+      if (!catalogItemPath || !accountMirrorPath) {
         return ' <span class="pill muted" data-agents-recent-mirror-cache-badge="unavailable" data-runtime-provider-cache-badge-state="unknown">cache status unknown</span>';
       }
-      return ' <span class="pill muted" data-agents-recent-mirror-cache-badge="pending" data-runtime-provider-cache-badge="pending" data-runtime-provider-cache-badge-state="pending" data-runtime-provider-catalog-item-path="' + escapeHtml(catalogItemPath) + '">checking cache</span>';
+      const title = [
+        ref.provider || 'provider',
+        ref.conversationId || 'conversation',
+        ref.runtimeProfileId ? 'runtime ' + ref.runtimeProfileId : '',
+      ].filter(Boolean).join(' / ');
+      return ' <button type="button" class="link-button pill muted" data-agents-recent-mirror-cache-badge="pending" data-runtime-provider-cache-badge="pending" data-runtime-provider-cache-badge-state="pending" data-runtime-provider-catalog-item-path="' + escapeHtml(catalogItemPath) + '" data-account-mirror-path="' + escapeHtml(accountMirrorPath) + '" title="' + escapeHtml(title) + '" onclick="openAgentsRecentMirrorCacheBadge(this)">checking cache</button>';
+    }
+
+    function openAgentsRecentMirrorCacheBadge(button) {
+      const path = button.dataset.accountMirrorPath || '';
+      if (!path) {
+        setAgentsTeamsNotice('No cached provider conversation link is available for this badge.', 'warn');
+        return;
+      }
+      setAgentsTeamsNotice('Opening cached provider conversation detail...', 'ok');
+      window.location.href = path;
     }
 
     function openAgentsRecentMirrorSummary(button) {
