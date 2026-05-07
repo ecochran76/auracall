@@ -72,7 +72,8 @@ const dashboardHtml = `
   function useAgentsRecentRun() {}
   async function inspectAgentsRecentRuntimeRun() {}
   function renderAgentsRecentMirrorSummary(summary) { return summary.firstAccountMirrorPath + summary.firstCatalogItemPath + summary.conversations + renderAgentsRecentMirrorCacheBadge(summary) + '<button data-account-mirror-path="/account-mirror?item=conv_1" onclick="openAgentsRecentMirrorSummary(this)">1 cached conversation</button>'; }
-  function renderAgentsRecentMirrorCacheBadge(summary) { return '<span data-agents-recent-mirror-cache-badge="pending" data-runtime-provider-catalog-item-path="' + summary.firstCatalogItemPath + '"></span>'; }
+  function renderAgentsRecentMirrorCacheBadge(summary) { return '<span data-agents-recent-mirror-cache-badge="pending" data-runtime-provider-catalog-item-path="' + summary.firstCatalogItemPath + '"></span>' + renderAgentsRecentMirrorRefExpansion(summary.conversations); }
+  function renderAgentsRecentMirrorRefExpansion(refs) { return '<details class="inline-details" data-agents-recent-mirror-ref-expansion="true"><summary class="link-button">+' + refs.length + ' more</summary></details>'; }
   function renderAgentsRecentMirrorCacheBadgeButton(ref) { return '<button data-account-mirror-path="' + ref.accountMirrorPath + '"></button>'; }
   function openAgentsRecentMirrorCacheBadge(button) { window.location.href = button.dataset.accountMirrorPath; }
   function openAgentsRecentMirrorSummary(button) { const path = button.dataset.accountMirrorPath || ''; if (!path) return 'No cached provider conversation link is available for this summary.'; window.location.href = path; }

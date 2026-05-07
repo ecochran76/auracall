@@ -27129,6 +27129,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.runtimeRunsRecent.test.ts -t "runtime-runs/recent|browser operator dashboard|api ops browser CLI helpers|mcp runtime_runs_recent" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
 
+## Turn 141 | 2026-05-06
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: keep every cached provider conversation reachable from recent-run
+  rows without requiring runtime detail inspection.
+- Change:
+  - `/agents` now renders the first four recent-run `Mirror` cache refs inline
+  - overflow refs render in an inline `Mirror` refs expansion using the same
+    hydrated clickable cache badges
+  - `api ops-browser-status` now asserts the overflow expansion contract
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.runtimeRunsRecent.test.ts -t "runtime-runs/recent|browser operator dashboard|api ops browser CLI helpers|mcp runtime_runs_recent" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+
 ## Turn 138 | 2026-05-06
 
 - Continued implementation plan:

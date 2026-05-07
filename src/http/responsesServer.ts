@@ -4991,9 +4991,18 @@ function createOperatorBrowserDashboardHtml(input: {
             accountMirrorPath: summary.firstAccountMirrorPath || '',
           }];
       const visibleRefs = refs.slice(0, 4);
-      const hiddenCount = Math.max(0, refs.length - visibleRefs.length);
       const badges = visibleRefs.map((ref) => renderAgentsRecentMirrorCacheBadgeButton(ref)).join('');
-      return badges + (hiddenCount ? ' <span class="muted">+' + escapeHtml(String(hiddenCount)) + ' more</span>' : '');
+      return badges + renderAgentsRecentMirrorRefExpansion(refs.slice(4));
+    }
+
+    function renderAgentsRecentMirrorRefExpansion(refs) {
+      if (!refs.length) return '';
+      return ' <details class="inline-details" data-agents-recent-mirror-ref-expansion="true">'
+        + '<summary class="link-button">+' + escapeHtml(String(refs.length)) + ' more</summary>'
+        + '<span class="catalog-row-actions">'
+        + refs.map((ref) => renderAgentsRecentMirrorCacheBadgeButton(ref)).join('')
+        + '</span>'
+        + '</details>';
     }
 
     function renderAgentsRecentMirrorCacheBadgeButton(ref) {

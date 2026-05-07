@@ -14,7 +14,9 @@
   reuse the same catalog-item badge hydration, so list and detail views expose
   the same transcript/materialization signal. Those recent-run badges now keep
   per-conversation account-mirror links and open their exact cached provider
-  conversation, including multi-conversation runs.
+  conversation, including multi-conversation runs. Rows with more than four
+  cached provider conversations now render the overflow as an inline `Mirror`
+  refs expansion with the same clickable hydrated cache badges.
 
 - 2026-05-05: API service routing needs to be discoverable after restart, not
   inferred from a probe. `api.routing` now stores local/external hostnames,

@@ -14927,12 +14927,15 @@ describe('http responses adapter', () => {
       expect(html).toContain('Open Mirror Detail');
       expect(html).toContain('renderAgentsRecentMirrorSummary');
       expect(html).toContain('renderAgentsRecentMirrorCacheBadge');
+      expect(html).toContain('renderAgentsRecentMirrorRefExpansion');
       expect(html).toContain('renderAgentsRecentMirrorCacheBadgeButton');
       expect(html).toContain('openAgentsRecentMirrorCacheBadge');
       expect(html).toContain('openAgentsRecentMirrorSummary');
       expect(html).toContain('hasAgentsRecentMirrorDetail');
       expect(html).toContain('data-agents-recent-mirror-summary');
       expect(html).toContain('data-agents-recent-mirror-cache-badge');
+      expect(html).toContain('data-agents-recent-mirror-ref-expansion');
+      expect(html).toContain('inline-details');
       expect(html).toContain('data-account-mirror-path');
       expect(html).toContain('data-mirror-detail-available');
       expect(html).toContain('summary.firstCatalogItemPath');

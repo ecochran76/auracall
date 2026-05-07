@@ -295,7 +295,8 @@ Terminology note:
   opens directly from that summary, and the summary hydrates the same
   cache-only transcript/materialization badge as detailed runtime views. Those
   badges are direct links to their exact cached provider conversation, including
-  rows with multiple provider conversations.
+  rows with multiple provider conversations; rows with more than four cached
+  conversations keep the overflow in an inline `Mirror` refs expansion.
   Runtime inspection also projects compact conversation turns from stored step
   input/output so `/agents` can render a chat-style run view beside raw JSON.
   When stored browser-run metadata includes provider conversation ids, that
