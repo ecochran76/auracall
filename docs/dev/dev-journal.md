@@ -27201,6 +27201,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run plans:audit -- --keep 63`
   - `git diff --check`
 
+## Turn 145 | 2026-05-06
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make recent-run mirror cache filters visibly auditable.
+- Change:
+  - `/agents` recent-run mirror cache controls now include a visible count
+  - the filter/sort path updates the count as `showing n of total`
+  - dashboard contract checks assert the count marker
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.runtimeRunsRecent.test.ts -t "runtime-runs/recent|browser operator dashboard|api ops browser CLI helpers|mcp runtime_runs_recent" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in touched broad files
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+
 ## Turn 138 | 2026-05-06
 
 - Continued implementation plan:

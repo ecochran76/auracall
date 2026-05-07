@@ -4429,6 +4429,7 @@ function createOperatorBrowserDashboardHtml(input: {
             </select>
           </label>
           <button id="loadAgentsRecentRuns" type="button">Load Recent Runs</button>
+          <span id="agentsRecentMirrorCacheVisibleCount" class="muted" data-agents-recent-mirror-cache-visible-count="true">showing 0 of 0</span>
         </div>
         <div id="agentsRecentRuns" class="muted" style="margin-bottom: 10px;">No recent runs loaded.</div>
         <div class="row" style="margin-bottom: 10px;">
@@ -5131,6 +5132,9 @@ function createOperatorBrowserDashboardHtml(input: {
         const state = row.dataset.agentsRecentMirrorCacheState || 'pending';
         row.hidden = Boolean(filter && state !== filter);
       }
+      const visibleCount = rows.filter((row) => !row.hidden).length;
+      const count = $('agentsRecentMirrorCacheVisibleCount');
+      if (count) count.textContent = 'showing ' + String(visibleCount) + ' of ' + String(rows.length);
       if (sort === 'cache-state') {
         rows.sort((left, right) =>
           Number(left.dataset.agentsRecentMirrorCacheRank || '5') - Number(right.dataset.agentsRecentMirrorCacheRank || '5')
