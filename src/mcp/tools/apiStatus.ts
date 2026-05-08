@@ -87,7 +87,7 @@ const apiStatusLiveFollowTargetAccountShape = z.object({
     files: z.number(),
     media: z.number(),
   }).nullable(),
-});
+}).catchall(z.unknown());
 
 const apiStatusLiveFollowTargetsShape = z.object({
   total: z.number(),

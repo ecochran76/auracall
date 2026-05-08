@@ -113,6 +113,10 @@ import {
   readApiOpsBrowserStatusForCli,
 } from '../src/cli/apiOpsBrowserCommand.js';
 import {
+  formatApiLogTailCliSummary,
+  readApiLogTailForCli,
+} from '../src/cli/apiLogTailCommand.js';
+import {
   formatApiSchedulerHistoryCliSummary,
   readApiSchedulerHistoryForCli,
 } from '../src/cli/apiSchedulerHistoryCommand.js';
@@ -1142,6 +1146,34 @@ apiCommand
       return;
     }
     console.log(formatApiOpsBrowserStatusCliSummary(summary));
+  });
+
+apiCommand
+  .command('logs-tail')
+  .description('Read the bounded local AuraCall API service log tail.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--max-bytes <bytes>', 'Maximum log bytes to return, clamped to 262144.', parseIntOption, 32768)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const summary = await readApiLogTailForCli({
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+      maxBytes: commandOptions.maxBytes,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(summary, null, 2));
+      return;
+    }
+    console.log(formatApiLogTailCliSummary(summary));
   });
 
 apiCommand

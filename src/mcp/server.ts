@@ -12,6 +12,7 @@ import { registerResponseCreateTool } from './tools/responseCreate.js';
 import { registerMediaGenerationTool } from './tools/mediaGeneration.js';
 import { registerWorkbenchCapabilitiesTool } from './tools/workbenchCapabilities.js';
 import { registerRunStatusTool } from './tools/runStatus.js';
+import { registerApiLogTailTool } from './tools/apiLogTail.js';
 import { registerApiStatusTool } from './tools/apiStatus.js';
 import { registerApiOpsBrowserStatusTool } from './tools/apiOpsBrowserStatus.js';
 import { registerRuntimeInspectTool } from './tools/runtimeInspect.js';
@@ -80,6 +81,7 @@ export async function startMcpServer(): Promise<void> {
     responsesService: services.responsesService,
     mediaGenerationService: services.mediaGenerationService,
   });
+  registerApiLogTailTool(server);
   registerApiStatusTool(server);
   registerApiOpsBrowserStatusTool(server);
   registerRuntimeRunsRecentTool(server);

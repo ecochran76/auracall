@@ -156,13 +156,28 @@ async function callApiStatusThroughMcp(input: {
   });
   try {
     await client.connect(transport);
-    return await client.callTool({
+    const tools = await client.listTools(undefined, { timeout: 10_000 });
+    if (!tools.tools.some((tool) => tool.name === 'api_status')) {
+      throw new Error('Installed MCP did not list api_status.');
+    }
+    if (!tools.tools.some((tool) => tool.name === 'api_log_tail')) {
+      throw new Error('Installed MCP did not list api_log_tail.');
+    }
+    const apiStatus = await client.callTool({
       name: 'api_status',
       arguments: {
         port: input.port,
         expectedAccountMirrorPosture: input.expectedPosture,
       },
     }, undefined, { timeout: 10_000 });
+    const apiLogTail = await client.callTool({
+      name: 'api_log_tail',
+      arguments: {
+        port: input.port,
+        maxBytes: 4096,
+      },
+    }, undefined, { timeout: 10_000 });
+    return { apiStatus, apiLogTail };
   } finally {
     await client.close().catch(() => {});
     transport.close?.();
@@ -193,7 +208,7 @@ async function runCase(options: Options, smokeCase: SmokeCase): Promise<void> {
       port: smokeCase.port,
       expectedPosture: smokeCase.expectedPosture,
     });
-    const structuredContent = result.structuredContent as {
+    const structuredContent = result.apiStatus.structuredContent as {
       api?: {
         process?: { pid?: unknown };
         managedService?: { logPath?: unknown };
@@ -225,7 +240,24 @@ async function runCase(options: Options, smokeCase: SmokeCase): Promise<void> {
     if (logTailRoute !== '/v1/api/logs/tail[?maxBytes=32768]') {
       throw new Error(`Expected api.logTailRoute for ${smokeCase.name}, got ${String(logTailRoute)}.`);
     }
-    console.log(`${smokeCase.name}: posture=${String(posture)} state=${String(state)} port=${smokeCase.port} pid=${pid} log=${logPath}`);
+    const logTail = result.apiLogTail.structuredContent as {
+      logTail?: {
+        logPath?: unknown;
+        exists?: unknown;
+        maxBytes?: unknown;
+        content?: unknown;
+      };
+    } | undefined;
+    if (typeof logTail?.logTail?.exists !== 'boolean') {
+      throw new Error(`Expected api_log_tail exists boolean for ${smokeCase.name}, got ${String(logTail?.logTail?.exists)}.`);
+    }
+    if (logTail.logTail.maxBytes !== 4096) {
+      throw new Error(`Expected api_log_tail maxBytes=4096 for ${smokeCase.name}, got ${String(logTail.logTail.maxBytes)}.`);
+    }
+    if (typeof logTail.logTail.logPath !== 'string' || !logTail.logTail.logPath.includes(`api-${smokeCase.port}.log`)) {
+      throw new Error(`Expected api_log_tail logPath for ${smokeCase.name}, got ${String(logTail.logTail.logPath)}.`);
+    }
+    console.log(`${smokeCase.name}: posture=${String(posture)} state=${String(state)} port=${smokeCase.port} pid=${pid} log=${logPath} logTail=ok`);
   } finally {
     if (apiProcess && !apiProcess.killed) {
       apiProcess.kill('SIGTERM');

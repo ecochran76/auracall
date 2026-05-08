@@ -917,3 +917,7 @@ CLI and MCP status surfaces now reuse the same API service projection:
 `api status`, `api_status`, and `api_ops_browser_status` expose or verify the
 serving PID, managed unit, log path, and log-tail route alongside live-follow
 health so terminal, MCP, API, and dashboard operators see the same facts.
+Operators can also fetch the bounded service log tail directly with
+`auracall api logs-tail` or MCP `api_log_tail`; both call the same
+`GET /v1/api/logs/tail` endpoint and do not open browsers or provider
+workbenches.
