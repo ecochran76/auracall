@@ -51,3 +51,41 @@ state stays in the normal user state directory:
 
 That means the installed runtime can reuse the same signed-in managed browser
 profiles that repo dogfooding used.
+
+## User API Service
+
+Install or refresh the local API service after installing the user runtime:
+
+```bash
+pnpm run install:user-api-service
+```
+
+The command writes `~/.config/systemd/user/auracall-api.service`, enables it,
+and restarts it. The unit runs:
+
+```bash
+~/.local/bin/auracall api serve
+```
+
+`api serve` reads host, port, dashboard URLs, and the account mirror scheduler
+from `~/.auracall/config.json`, so the service stays pinned to the configured
+operator surface. Logs append to:
+
+```bash
+~/.auracall/logs/api-18095.log
+```
+
+Verify:
+
+```bash
+systemctl --user status auracall-api.service
+curl http://127.0.0.1:18095/status
+```
+
+Useful options:
+
+```bash
+pnpm run install:user-api-service -- --dry-run
+pnpm run install:user-api-service -- --no-start
+pnpm run install:user-api-service -- --log ~/.auracall/logs/api-18095.log
+```

@@ -26800,6 +26800,37 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed `api ops-browser-status --timeout-ms 20000 --expect-live-follow-severity healthy --json`
     reports live-follow `healthy` with zero target attention
 
+## Turn 154 | 2026-05-08
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: stop relying on ad hoc background shells for the pinned AuraCall API.
+- Change:
+  - added `scripts/install-user-api-service.ts`
+  - added `pnpm run install:user-api-service`
+  - documented the user-scoped `auracall-api.service` in
+    `docs/user-scoped-runtime.md`
+  - the unit runs the installed `~/.local/bin/auracall api serve`, lets config
+    provide host/port/dashboard/scheduler settings, restarts on failure, and
+    appends logs under `~/.auracall/logs/api-18095.log`
+- Validation:
+  - `pnpm run install:user-api-service -- --dry-run`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint scripts/install-user-api-service.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run install:user-api-service` wrote and enabled
+    `~/.config/systemd/user/auracall-api.service`
+  - `systemctl --user status auracall-api.service` reports active running with
+    main PID `64379`
+  - only the managed service owns `127.0.0.1:18095`
+  - installed `/status` reports scheduler enabled/scheduled and live-follow
+    `healthy` with zero target attention
+  - installed `api ops-browser-status --timeout-ms 20000 --expect-live-follow-severity healthy --json`
+    reports live-follow `healthy` and dashboard live-follow controls present
+
 ## Turn 121 | 2026-05-05
 
 - Continued implementation plan:

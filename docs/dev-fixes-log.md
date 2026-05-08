@@ -15653,3 +15653,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-08: Manual scheduler run-once should not hide a queued cadence
   timer. After a manual pass, `/status` now keeps `state=scheduled` when the
   scheduler still has a timer queued.
+- 2026-05-08: Ad hoc `setsid` API launches are not durable enough for the
+  pinned dashboard. Added a user-scoped systemd installer for
+  `auracall-api.service` that runs the installed `auracall api serve`, restarts
+  on failure, and appends logs under `~/.auracall/logs/`.

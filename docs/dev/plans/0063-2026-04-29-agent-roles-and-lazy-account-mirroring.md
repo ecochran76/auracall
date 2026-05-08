@@ -896,3 +896,8 @@ but `/status.accountMirrorScheduler.operatorStatus.posture` reports
 scheduled/healthy unless the pass yielded to queued browser work or was blocked
 by browser contention. Manual scheduler runs also preserve `state=scheduled`
 when the cadence timer remains queued.
+The pinned local API now has a user-scoped service installer:
+`pnpm run install:user-api-service` writes and starts
+`~/.config/systemd/user/auracall-api.service`, running the installed
+`~/.local/bin/auracall api serve` with config-derived host, port, dashboard,
+and scheduler settings plus restart-on-failure and durable logs.
