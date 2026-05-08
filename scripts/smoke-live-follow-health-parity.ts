@@ -139,7 +139,7 @@ const yieldedPass: AccountMirrorSchedulerPassResult = {
   error: null,
 };
 
-const pausedCompletion: AccountMirrorCompletionOperation = {
+let currentCompletion: AccountMirrorCompletionOperation = {
   object: 'account_mirror_completion',
   id: 'acctmirror_health_parity',
   provider: 'chatgpt',
@@ -195,17 +195,25 @@ function createInjectedCompletionService(): AccountMirrorCompletionService {
       throw new Error('live-follow parity smoke must not start provider work');
     },
     read(id: string) {
-      return id === pausedCompletion.id ? pausedCompletion : null;
+      return id === currentCompletion.id ? currentCompletion : null;
     },
     list(request: AccountMirrorCompletionListRequest = {}) {
-      if (request.provider && request.provider !== pausedCompletion.provider) return [];
-      if (request.runtimeProfileId && request.runtimeProfileId !== pausedCompletion.runtimeProfileId) return [];
-      if (request.status && request.status !== 'active' && request.status !== pausedCompletion.status) return [];
-      if (request.activeOnly === true && !['queued', 'running', 'paused'].includes(pausedCompletion.status)) return [];
-      return [pausedCompletion];
+      if (request.provider && request.provider !== currentCompletion.provider) return [];
+      if (request.runtimeProfileId && request.runtimeProfileId !== currentCompletion.runtimeProfileId) return [];
+      if (request.status && request.status !== 'active' && request.status !== currentCompletion.status) return [];
+      if (request.activeOnly === true && !['queued', 'running', 'paused'].includes(currentCompletion.status)) return [];
+      return [currentCompletion];
     },
-    control(_request: AccountMirrorCompletionControlRequest) {
-      throw new Error('live-follow parity smoke must not control provider work');
+    control(request: AccountMirrorCompletionControlRequest) {
+      if (request.id !== currentCompletion.id || request.action !== 'cancel') {
+        throw new Error('live-follow parity smoke must not control provider work');
+      }
+      currentCompletion = {
+        ...currentCompletion,
+        status: 'cancelled',
+        completedAt: '2026-05-01T12:11:00.000Z',
+      };
+      return currentCompletion;
     },
   };
 }
@@ -262,6 +270,17 @@ async function main(): Promise<void> {
 
     const cliSummary = await readApiStatusForCli({ port: server.port });
     assertLiveFollow(cliSummary.liveFollow, 'CLI api status');
+    assertEqual(cliSummary.api.process.pid, process.pid, 'CLI api status process pid');
+    assertEqual(
+      cliSummary.api.logTailRoute,
+      '/v1/api/logs/tail[?maxBytes=32768]',
+      'CLI api status log-tail route',
+    );
+    assertIncludes(
+      formatApiStatusCliSummary(cliSummary),
+      'API service: pid=',
+      'CLI formatted status',
+    );
     assertIncludes(
       formatApiStatusCliSummary(cliSummary),
       'Live follow health: severity=paused',
@@ -274,8 +293,17 @@ async function main(): Promise<void> {
       expectedCompletionPaused: 1,
     });
     if (mcpResult.isError) throw new Error('MCP api_status returned an error result.');
-    const mcpStructured = mcpResult.structuredContent as { liveFollow: LiveFollowHealthSummary };
+    const mcpStructured = mcpResult.structuredContent as {
+      api: Awaited<ReturnType<typeof readApiStatusForCli>>['api'];
+      liveFollow: LiveFollowHealthSummary;
+    };
     assertLiveFollow(mcpStructured.liveFollow, 'MCP api_status');
+    assertEqual(mcpStructured.api.process.pid, process.pid, 'MCP api_status process pid');
+    assertEqual(
+      mcpStructured.api.logTailRoute,
+      '/v1/api/logs/tail[?maxBytes=32768]',
+      'MCP api_status log-tail route',
+    );
 
     const dashboard = await fetchText(`${baseUrl}/ops/browser`);
     assertIncludes(dashboard, 'Live Follow Severity', 'dashboard label');

@@ -913,3 +913,7 @@ The same dashboard now includes a read-only API Service control card with the
 unit, log path, and status/restart commands, plus a bounded
 `GET /v1/api/logs/tail` endpoint and `Refresh API Log Tail` control for
 inspecting the pinned service log without direct shell access.
+CLI and MCP status surfaces now reuse the same API service projection:
+`api status`, `api_status`, and `api_ops_browser_status` expose or verify the
+serving PID, managed unit, log path, and log-tail route alongside live-follow
+health so terminal, MCP, API, and dashboard operators see the same facts.

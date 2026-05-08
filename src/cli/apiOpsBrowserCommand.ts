@@ -31,6 +31,8 @@ export interface ApiOpsBrowserDashboardSummary {
   hasAgentsRecentRunMirrorSummaryDirectLink: boolean;
   hasAgentsRecentRunMirrorCacheBadges: boolean;
   hasOperationsPanel: boolean;
+  hasApiServiceControls: boolean;
+  hasApiLogTailControl: boolean;
   hasServiceDiscoveryPanel: boolean;
   hasBackgroundDrainControls: boolean;
   hasMirrorSchedulerControls: boolean;
@@ -141,7 +143,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
     `Dashboard URL: ${summary.dashboardUrl}`,
     `Service discovery: local=${summary.serviceDiscovery.localBaseUrl ?? 'unknown'} external=${summary.serviceDiscovery.externalBaseUrl ?? 'none'} proxy=${summary.serviceDiscovery.proxyTarget ?? 'none'} auth=${summary.serviceDiscovery.auth ?? 'none'}`,
     `Dashboard config: page=${formatBoolean(dashboard.hasConfigPage)} identities=${formatBoolean(dashboard.hasConfigIdentityProjection)} liveFollow=${formatBoolean(dashboard.hasConfigLiveFollowProjection)} controls=${formatBoolean(dashboard.hasConfigLiveFollowControls)} agents=${formatBoolean(dashboard.hasAgentsTeamsPage)} recentRuns=${formatBoolean(dashboard.hasAgentsRecentRunsBrowser)} runtimeChat=${formatBoolean(dashboard.hasAgentsRuntimeConversationView)} runtimeProviderLinks=${formatBoolean(dashboard.hasAgentsRuntimeProviderConversationLinks)} runtimeProviderDirectLinks=${formatBoolean(dashboard.hasAgentsRuntimeProviderConversationDirectLinks)} runtimeProviderCacheBadges=${formatBoolean(dashboard.hasAgentsRuntimeProviderConversationCacheBadges)} recentMirrorDetail=${formatBoolean(dashboard.hasAgentsRecentRunMirrorDetailAction)} recentMirrorSummary=${formatBoolean(dashboard.hasAgentsRecentRunMirrorSummary)} recentMirrorDirectLink=${formatBoolean(dashboard.hasAgentsRecentRunMirrorSummaryDirectLink)} recentMirrorCacheBadges=${formatBoolean(dashboard.hasAgentsRecentRunMirrorCacheBadges)}`,
-    `Dashboard service control: nav=${formatBoolean(dashboard.hasNavigationScaffold)} operations=${formatBoolean(dashboard.hasOperationsPanel)} backgroundDrain=${formatBoolean(dashboard.hasBackgroundDrainControls)} scheduler=${formatBoolean(dashboard.hasMirrorSchedulerControls)} runOnce=${formatBoolean(dashboard.hasRunOnceSchedulerControl)}`,
+    `Dashboard service control: nav=${formatBoolean(dashboard.hasNavigationScaffold)} operations=${formatBoolean(dashboard.hasOperationsPanel)} apiService=${formatBoolean(dashboard.hasApiServiceControls)} apiLogTail=${formatBoolean(dashboard.hasApiLogTailControl)} backgroundDrain=${formatBoolean(dashboard.hasBackgroundDrainControls)} scheduler=${formatBoolean(dashboard.hasMirrorSchedulerControls)} runOnce=${formatBoolean(dashboard.hasRunOnceSchedulerControl)}`,
     `Dashboard cache browse: catalog=${formatBoolean(dashboard.hasAccountMirrorCatalogPanel)} page=${formatBoolean(dashboard.hasAccountMirrorPageLink)} previewSession=${formatBoolean(dashboard.hasAccountMirrorPreviewSessionPage)} search=${formatBoolean(dashboard.hasCatalogSearchControls)} savedFilters=${formatBoolean(dashboard.hasCatalogSavedFilterState)} table=${formatBoolean(dashboard.hasCatalogResultsTable)} detail=${formatBoolean(dashboard.hasCatalogDetailInspection)} chat=${formatBoolean(dashboard.hasConversationChatDetailView)} transcript=${formatBoolean(dashboard.hasConversationTranscriptAffordance)} transcriptFilter=${formatBoolean(dashboard.hasConversationTranscriptOnlyFilter)} transcriptDownload=${formatBoolean(dashboard.hasConversationTranscriptDownload)} transcriptSearch=${formatBoolean(dashboard.hasConversationTranscriptSearch)} related=${formatBoolean(dashboard.hasConversationRelatedItemNavigation)} assetInspector=${formatBoolean(dashboard.hasCatalogAssetDetailInspector)} assetPreview=${formatBoolean(dashboard.hasCatalogAssetPreview)} localAsset=${formatBoolean(dashboard.hasCatalogLocalAssetRoute)} materialization=${formatBoolean(dashboard.hasCatalogMaterializationBadges)} materializationControls=${formatBoolean(dashboard.hasCatalogMaterializationControls)} rowPreviewActions=${formatBoolean(dashboard.hasCatalogRowPreviewActions)} batchPreviewDrawer=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDrawer)} batchPreviewReview=${formatBoolean(dashboard.hasCatalogBatchPreviewSessionReview)} batchPreviewOpen=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlOpen)} batchDetailCopy=${formatBoolean(dashboard.hasCatalogBatchDetailLinkCopy)} batchPreviewCopy=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlCopy)} batchPreviewDownload=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDownload)} path=${dashboard.usesAccountMirrorCatalogPath ? '/v1/account-mirrors/catalog' : 'unknown'} itemPath=${dashboard.usesAccountMirrorCatalogItemPath ? '/v1/account-mirrors/catalog/items/{id}' : 'unknown'}`,
     `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} attention=${formatBoolean(dashboard.hasAttentionQueue)} activeTable=${formatBoolean(dashboard.hasActiveCompletionTable)} inspect=${formatBoolean(dashboard.hasCompletionInspectAction)} resultToast=${formatBoolean(dashboard.hasCompletionResultToast)} inputInspect=${formatBoolean(dashboard.hasCompletionInputInspectControl)} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} stateAware=${formatBoolean(dashboard.hasStateAwareCompletionActions)} confirmCancel=${formatBoolean(dashboard.hasCancelConfirmation)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
     summary.status.liveFollow.line,
@@ -192,6 +194,8 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
       'Expected /ops/browser Agents / Teams recent-run mirror summaries to hydrate cache transcript/materialization badges.',
     ],
     [summary.hasOperationsPanel, 'Expected /ops/browser to include the Operations panel.'],
+    [summary.hasApiServiceControls, 'Expected /ops/browser to include API service controls.'],
+    [summary.hasApiLogTailControl, 'Expected /ops/browser to include API log-tail controls.'],
     [summary.hasServiceDiscoveryPanel, 'Expected /ops/browser to include the Service Discovery panel.'],
     [summary.hasBackgroundDrainControls, 'Expected /ops/browser to include background drain controls.'],
     [summary.hasMirrorSchedulerControls, 'Expected /ops/browser to include mirror scheduler controls.'],
@@ -413,6 +417,15 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('opsControls')
       && html.includes('opsControlNotice')
       && html.includes('renderOpsControls'),
+    hasApiServiceControls: html.includes('apiServiceControls')
+      && html.includes('API Service')
+      && html.includes('statusCommand')
+      && html.includes('restartCommand')
+      && html.includes('managedService'),
+    hasApiLogTailControl: html.includes('loadApiLogTail')
+      && html.includes('loadApiLogTailInline')
+      && html.includes('/v1/api/logs/tail?maxBytes=32768')
+      && html.includes('apiLogTail'),
     hasServiceDiscoveryPanel: html.includes('<h2>Service Discovery</h2>')
       && html.includes('serviceDiscoverySummary')
       && html.includes('renderServiceDiscovery')

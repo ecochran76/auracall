@@ -17,6 +17,8 @@ const apiOpsBrowserStatusInputShape = {
 
 const apiOpsBrowserDashboardShape = z.object({
   route: z.literal('/ops/browser'),
+  hasApiServiceControls: z.boolean(),
+  hasApiLogTailControl: z.boolean(),
   hasMirrorLiveFollowPanel: z.boolean(),
   hasLiveFollowTargetsPanel: z.boolean(),
   hasAttentionQueue: z.boolean(),
@@ -33,12 +35,20 @@ const apiOpsBrowserDashboardShape = z.object({
   hasPauseBinding: z.boolean(),
   hasResumeBinding: z.boolean(),
   hasCancelBinding: z.boolean(),
+}).catchall(z.boolean());
+
+const apiOpsBrowserServiceDiscoveryShape = z.object({
+  localBaseUrl: z.string().optional(),
+  externalBaseUrl: z.string().optional(),
+  proxyTarget: z.string().optional(),
+  auth: z.string().optional(),
 });
 
 const apiOpsBrowserStatusOutputShape = {
   host: z.string(),
   port: z.number().int().positive(),
   dashboardUrl: z.string(),
+  serviceDiscovery: apiOpsBrowserServiceDiscoveryShape,
   dashboard: apiOpsBrowserDashboardShape,
   status: z.unknown(),
 } satisfies z.ZodRawShape;
@@ -84,7 +94,7 @@ export function createApiOpsBrowserStatusToolHandler(
       content: [
         {
           type: 'text' as const,
-          text: `AuraCall ops browser ${summary.host}:${summary.port} is ok; dashboard=${summary.dashboardUrl}; dashboard completion controls use /status; ${summary.status.liveFollow.line}`,
+          text: `AuraCall ops browser ${summary.host}:${summary.port} is ok; dashboard=${summary.dashboardUrl}; apiService=${summary.dashboard.hasApiServiceControls ? 'ok' : 'missing'}; apiLogTail=${summary.dashboard.hasApiLogTailControl ? 'ok' : 'missing'}; dashboard completion controls use /status; ${summary.status.liveFollow.line}`,
         },
       ],
       structuredContent: summary as typeof summary & Record<string, unknown>,

@@ -55,6 +55,30 @@ export interface ApiStatusLiveFollowSeverityExpectation {
   expectedSeverity?: ApiStatusLiveFollowSeverity | null;
 }
 
+export interface ApiStatusApiProcessSummary {
+  pid: number | null;
+  ppid: number | null;
+  uptimeSeconds: number | null;
+  cwd: string | null;
+  execPath: string | null;
+  nodeVersion: string | null;
+}
+
+export interface ApiStatusManagedServiceSummary {
+  manager: string | null;
+  unitName: string | null;
+  logPath: string | null;
+  installCommand: string | null;
+  restartCommand: string | null;
+  statusCommand: string | null;
+}
+
+export interface ApiStatusApiSummary {
+  process: ApiStatusApiProcessSummary;
+  managedService: ApiStatusManagedServiceSummary;
+  logTailRoute: string | null;
+}
+
 export interface ApiStatusBackpressureSummary {
   reason: ApiStatusBackpressureReason | 'unknown';
   message: string | null;
@@ -122,6 +146,7 @@ export interface ApiStatusCliSummary {
   ok: boolean | null;
   host: string;
   port: number;
+  api: ApiStatusApiSummary;
   scheduler: ApiStatusSchedulerSummary;
   completions: ApiStatusCompletionControlSummary;
   liveFollow: ApiStatusLiveFollowHealthSummary;
@@ -174,6 +199,7 @@ export function summarizeApiStatusPayload(
   const completions = summarizeAccountMirrorCompletions(record.accountMirrorCompletions);
   const rawLiveFollow = isRecord(record.liveFollow) ? record.liveFollow : {};
   const targets = summarizeLiveFollowTargets(rawLiveFollow.targets);
+  const routes = isRecord(record.routes) ? record.routes : {};
   const schedulerSummary: ApiStatusSchedulerSummary = {
     enabled: typeof scheduler.enabled === 'boolean' ? scheduler.enabled : null,
     state: readString(scheduler.state),
@@ -196,6 +222,7 @@ export function summarizeApiStatusPayload(
     ok: typeof record.ok === 'boolean' ? record.ok : null,
     host: source.host,
     port: source.port,
+    api: summarizeApiRuntime(record.api, routes),
     scheduler: schedulerSummary,
     completions,
     liveFollow: summarizeLiveFollowHealth(schedulerSummary, completions, targets),
@@ -270,6 +297,7 @@ export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string 
   const operatorStatus = scheduler.operatorStatus;
   const lines = [
     `AuraCall API status: ${summary.ok === null ? 'unknown' : summary.ok ? 'ok' : 'not-ok'} (${summary.host}:${summary.port})`,
+    formatApiRuntimeLine(summary.api),
     summary.liveFollow.line,
     `Account mirror scheduler: state=${scheduler.state ?? 'unknown'} enabled=${formatNullableBoolean(scheduler.enabled)} dryRun=${formatNullableBoolean(scheduler.dryRun)}`,
     `Account mirror posture: ${operatorStatus.posture}${operatorStatus.reason ? ` - ${operatorStatus.reason}` : ''}`,
@@ -303,6 +331,18 @@ export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string 
     lines.push(recentLine);
   }
   return lines.join('\n');
+}
+
+function formatApiRuntimeLine(api: ApiStatusApiSummary): string {
+  const process = api.process;
+  const service = api.managedService;
+  return [
+    'API service:',
+    `pid=${formatNullableNumber(process.pid)}`,
+    `unit=${service.unitName ?? 'unknown'}`,
+    `log=${service.logPath ?? 'unknown'}`,
+    `tail=${api.logTailRoute ?? 'unknown'}`,
+  ].join(' ');
 }
 
 function formatLiveFollowTargetLine(targets: ApiStatusLiveFollowHealthSummary['targets']): string | null {
@@ -409,6 +449,31 @@ function formatNullableBoolean(value: boolean | null): string {
 
 function readString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function summarizeApiRuntime(value: unknown, routes: Record<string, unknown>): ApiStatusApiSummary {
+  const api = isRecord(value) ? value : {};
+  const process = isRecord(api.process) ? api.process : {};
+  const managedService = isRecord(api.managedService) ? api.managedService : {};
+  return {
+    process: {
+      pid: readNumber(process.pid),
+      ppid: readNumber(process.ppid),
+      uptimeSeconds: readNumber(process.uptimeSeconds),
+      cwd: readString(process.cwd),
+      execPath: readString(process.execPath),
+      nodeVersion: readString(process.nodeVersion),
+    },
+    managedService: {
+      manager: readString(managedService.manager),
+      unitName: readString(managedService.unitName),
+      logPath: readString(managedService.logPath),
+      installCommand: readString(managedService.installCommand),
+      restartCommand: readString(managedService.restartCommand),
+      statusCommand: readString(managedService.statusCommand),
+    },
+    logTailRoute: readString(routes.apiLogTail),
+  };
 }
 
 function summarizeLatestYield(

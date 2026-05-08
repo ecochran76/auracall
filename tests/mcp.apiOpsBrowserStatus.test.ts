@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { createResponsesHttpServer } from '../src/http/responsesServer.js';
 import { createApiOpsBrowserStatusToolHandler } from '../src/mcp/tools/apiOpsBrowserStatus.js';
 
 const dashboardHtml = `
+<section><h2>Operations</h2><div id="opsControls"><div id="apiServiceControls">API Service managedService statusCommand restartCommand</div><button id="loadApiLogTailInline" onclick="loadApiLogTail()">Refresh Log Tail</button></div></section>
+<section><h2>Server</h2><button id="loadApiLogTail">Refresh API Log Tail</button><pre id="apiLogTail">/v1/api/logs/tail?maxBytes=32768</pre></section>
 <section><h2>Mirror Live Follow</h2></section>
 <div id="mirrorAttentionQueue"><table id="mirrorAttentionItems"></table></div>
 <div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div>
@@ -16,6 +19,7 @@ const dashboardHtml = `
 <pre id="mirrorTargets">status.liveFollow.targets</pre>
 <script>
   function setMirrorControlNotice(message, tone) {}
+  async function loadApiLogTail() { return fetchJson('/v1/api/logs/tail?maxBytes=32768'); }
   function renderAttentionQueue() {}
   function collectAttentionRows() {}
   function completionActionsForStatus(status) {
@@ -94,6 +98,7 @@ const statusPayload = {
 
 describe('mcp api_ops_browser_status tool', () => {
   it('checks dashboard control wiring and linked status expectations', async () => {
+    const dashboardHtml = await readRealDashboardHtml();
     const handler = createApiOpsBrowserStatusToolHandler({
       fetchImpl: async (input: string | URL | Request) => {
         const url = String(input);
@@ -122,7 +127,7 @@ describe('mcp api_ops_browser_status tool', () => {
       content: [
         {
           type: 'text',
-          text: 'AuraCall ops browser 127.0.0.1:18080 is ok; dashboard=http://127.0.0.1:18080/ops/browser; dashboard completion controls use /status; Live follow health: severity=paused posture=healthy state=idle active=1 paused=1 failed=0 cancelled=0 backpressure=none latestYield=none',
+          text: 'AuraCall ops browser 127.0.0.1:18080 is ok; dashboard=http://127.0.0.1:18080/ops/browser; apiService=ok; apiLogTail=ok; dashboard completion controls use /status; Live follow health: severity=paused posture=healthy state=idle active=1 paused=1 failed=0 cancelled=0 backpressure=none latestYield=none',
         },
       ],
       structuredContent: {
@@ -131,6 +136,8 @@ describe('mcp api_ops_browser_status tool', () => {
         dashboardUrl: 'http://127.0.0.1:18080/ops/browser',
         dashboard: {
           route: '/ops/browser',
+          hasApiServiceControls: true,
+          hasApiLogTailControl: true,
           hasMirrorLiveFollowPanel: true,
           hasLiveFollowTargetsPanel: true,
           hasAttentionQueue: true,
@@ -164,11 +171,12 @@ describe('mcp api_ops_browser_status tool', () => {
   });
 
   it('fails when dashboard control wiring drifts', async () => {
+    const dashboardHtml = (await readRealDashboardHtml()).replaceAll("fetch('/status'", "fetch('/wrong-status'");
     const handler = createApiOpsBrowserStatusToolHandler({
       fetchImpl: async (input: string | URL | Request) => {
         const url = String(input);
         if (url.endsWith('/ops/browser')) {
-          return new Response(`<h2>Mirror Live Follow</h2><div id="mirrorAttentionQueue"><table id="mirrorAttentionItems"></table></div><div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div><div id="mirrorActiveCompletionTable"><table id="mirrorActiveCompletions"></table></div><button id="inspectMirrorCompletionById">Inspect</button><button data-completion-id="acctmirror_paused" onclick="fillMirrorCompletionId(this.dataset.completionId)">Use ID</button><button data-completion-id="acctmirror_paused" onclick="inspectMirrorCompletion(this.dataset.completionId)">Inspect</button><button data-completion-id="acctmirror_paused" data-completion-action="pause" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Pause</button><button data-completion-id="acctmirror_paused" data-completion-action="resume" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Resume</button><button data-completion-id="acctmirror_paused" data-completion-action="cancel" onclick="controlMirrorCompletionById(this.dataset.completionId, this.dataset.completionAction)">Cancel</button><div id="mirrorControlNotice" role="status" aria-live="polite"></div><script>function setMirrorControlNotice(message, tone) {} function renderAttentionQueue() {} function collectAttentionRows() {} function inspectMirrorCompletion(id) { return fetch('/v1/account-mirrors/completions/' + encodeURIComponent(id)); } function inspectSelectedMirrorCompletion() { return inspectMirrorCompletion('acctmirror_paused'); } $('inspectMirrorCompletionById').addEventListener('click', inspectSelectedMirrorCompletion); function completionActionsForStatus(status) { if (status === 'paused') return ['resume', 'cancel']; if (status === 'queued' || status === 'running' || status === 'refreshing') return ['pause', 'cancel']; return []; }</script><pre id="mirrorTargets">status.liveFollow.targets</pre>`, {
+          return new Response(dashboardHtml, {
             status: 200,
             headers: { 'content-type': 'text/html' },
           });
@@ -182,3 +190,13 @@ describe('mcp api_ops_browser_status tool', () => {
     );
   });
 });
+
+async function readRealDashboardHtml(): Promise<string> {
+  const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+  try {
+    const response = await fetch(`http://127.0.0.1:${server.port}/ops/browser`);
+    return await response.text();
+  } finally {
+    await server.close();
+  }
+}

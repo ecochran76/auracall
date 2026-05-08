@@ -3,6 +3,27 @@ import { createApiStatusToolHandler } from '../src/mcp/tools/apiStatus.js';
 
 const statusPayload = {
   ok: true,
+  api: {
+    process: {
+      pid: 5151,
+      ppid: 100,
+      uptimeSeconds: 45,
+      cwd: '/home/ecochran76',
+      execPath: '/usr/bin/node',
+      nodeVersion: 'v25.8.0',
+    },
+    managedService: {
+      manager: 'systemd-user',
+      unitName: 'auracall-api.service',
+      logPath: '/home/ecochran76/.auracall/logs/api-18080.log',
+      installCommand: 'pnpm run install:user-runtime-service',
+      restartCommand: 'systemctl --user restart auracall-api.service',
+      statusCommand: 'systemctl --user status auracall-api.service',
+    },
+  },
+  routes: {
+    apiLogTail: '/v1/api/logs/tail[?maxBytes=32768]',
+  },
   accountMirrorScheduler: {
     enabled: true,
     state: 'idle',
@@ -163,13 +184,26 @@ describe('mcp api_status tool', () => {
       content: [
         {
           type: 'text',
-          text: 'AuraCall API 127.0.0.1:18080 is ok; mirror posture backpressured; scheduler state idle; Live follow health: severity=attention-needed posture=backpressured state=idle enabled=1 active=1 paused=0 attention=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
+          text: 'AuraCall API 127.0.0.1:18080 is ok; pid=5151; log=/home/ecochran76/.auracall/logs/api-18080.log; mirror posture backpressured; scheduler state idle; Live follow health: severity=attention-needed posture=backpressured state=idle enabled=1 active=1 paused=0 attention=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
         },
       ],
       structuredContent: {
         ok: true,
         host: '127.0.0.1',
         port: 18080,
+        api: {
+          process: {
+            pid: 5151,
+            ppid: 100,
+            uptimeSeconds: 45,
+          },
+          managedService: {
+            unitName: 'auracall-api.service',
+            logPath: '/home/ecochran76/.auracall/logs/api-18080.log',
+            restartCommand: 'systemctl --user restart auracall-api.service',
+          },
+          logTailRoute: '/v1/api/logs/tail[?maxBytes=32768]',
+        },
         scheduler: {
           enabled: true,
           state: 'idle',

@@ -15667,3 +15667,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   bounded `/v1/api/logs/tail` route and dashboard controls that show the
   managed unit/log path/status/restart commands and refresh the service log
   tail on demand.
+- 2026-05-08: API service observability must be consistent across operator
+  surfaces. Extended the shared CLI status parser and MCP `api_status` /
+  `api_ops_browser_status` tools to expose or verify API PID, managed unit, log
+  path, and the log-tail route.

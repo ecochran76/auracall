@@ -97,7 +97,15 @@ function createCases(options: Options): SmokeCase[] {
     name: 'disabled',
     port: options.port,
     expectedPosture: 'disabled',
-    args: ['api', 'serve', '--port', String(options.port), '--no-recover-runs-on-start'],
+    args: [
+      'api',
+      'serve',
+      '--port',
+      String(options.port),
+      '--no-recover-runs-on-start',
+      '--account-mirror-scheduler-interval-ms',
+      '0',
+    ],
   };
   const enabledPort = options.mode === 'enabled' ? options.port : options.port + 1;
   const enabled: SmokeCase = {
@@ -186,6 +194,11 @@ async function runCase(options: Options, smokeCase: SmokeCase): Promise<void> {
       expectedPosture: smokeCase.expectedPosture,
     });
     const structuredContent = result.structuredContent as {
+      api?: {
+        process?: { pid?: unknown };
+        managedService?: { logPath?: unknown };
+        logTailRoute?: unknown;
+      };
       scheduler?: {
         state?: unknown;
         operatorStatus?: { posture?: unknown };
@@ -200,7 +213,19 @@ async function runCase(options: Options, smokeCase: SmokeCase): Promise<void> {
     if (posture !== smokeCase.expectedPosture) {
       throw new Error(`Expected ${smokeCase.expectedPosture} posture for ${smokeCase.name}, got ${String(posture)}.`);
     }
-    console.log(`${smokeCase.name}: posture=${String(posture)} state=${String(state)} port=${smokeCase.port}`);
+    const pid = structuredContent?.api?.process?.pid;
+    const logPath = structuredContent?.api?.managedService?.logPath;
+    const logTailRoute = structuredContent?.api?.logTailRoute;
+    if (typeof pid !== 'number' || pid <= 0) {
+      throw new Error(`Expected api.process.pid for ${smokeCase.name}, got ${String(pid)}.`);
+    }
+    if (typeof logPath !== 'string' || !logPath.includes(`api-${smokeCase.port}.log`)) {
+      throw new Error(`Expected api.managedService.logPath for ${smokeCase.name}, got ${String(logPath)}.`);
+    }
+    if (logTailRoute !== '/v1/api/logs/tail[?maxBytes=32768]') {
+      throw new Error(`Expected api.logTailRoute for ${smokeCase.name}, got ${String(logTailRoute)}.`);
+    }
+    console.log(`${smokeCase.name}: posture=${String(posture)} state=${String(state)} port=${smokeCase.port} pid=${pid} log=${logPath}`);
   } finally {
     if (apiProcess && !apiProcess.killed) {
       apiProcess.kill('SIGTERM');

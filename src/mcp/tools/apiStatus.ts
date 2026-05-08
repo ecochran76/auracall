@@ -131,6 +131,25 @@ const apiStatusOutputShape = {
   ok: z.boolean().nullable(),
   host: z.string(),
   port: z.number().int().positive(),
+  api: z.object({
+    process: z.object({
+      pid: z.number().nullable(),
+      ppid: z.number().nullable(),
+      uptimeSeconds: z.number().nullable(),
+      cwd: z.string().nullable(),
+      execPath: z.string().nullable(),
+      nodeVersion: z.string().nullable(),
+    }),
+    managedService: z.object({
+      manager: z.string().nullable(),
+      unitName: z.string().nullable(),
+      logPath: z.string().nullable(),
+      installCommand: z.string().nullable(),
+      restartCommand: z.string().nullable(),
+      statusCommand: z.string().nullable(),
+    }),
+    logTailRoute: z.string().nullable(),
+  }),
   scheduler: z.object({
     enabled: z.boolean().nullable(),
     state: z.string().nullable(),
@@ -220,12 +239,14 @@ export function createApiStatusToolHandler(deps: RegisterApiStatusToolDeps = {})
     });
     const posture = summary.scheduler.operatorStatus.posture;
     const state = summary.scheduler.state ?? 'unknown';
+    const pid = summary.api.process.pid ?? 'unknown';
+    const logPath = summary.api.managedService.logPath ?? 'unknown';
     return {
       isError: false,
       content: [
         {
           type: 'text' as const,
-          text: `AuraCall API ${summary.host}:${summary.port} is ${summary.ok === false ? 'not-ok' : summary.ok === true ? 'ok' : 'unknown'}; mirror posture ${posture}; scheduler state ${state}; ${summary.liveFollow.line}`,
+          text: `AuraCall API ${summary.host}:${summary.port} is ${summary.ok === false ? 'not-ok' : summary.ok === true ? 'ok' : 'unknown'}; pid=${pid}; log=${logPath}; mirror posture ${posture}; scheduler state ${state}; ${summary.liveFollow.line}`,
         },
       ],
       structuredContent: summary as typeof summary & Record<string, unknown>,
