@@ -228,8 +228,8 @@
       - compact lazy-live-follow operator preflight:
         `pnpm run preflight:lazy-live-follow`; it runs the completion-control,
         completion-hydration, live-follow-health, ops-browser-control, user
-        runtime install, and installed MCP status smokes in sequence before
-        live dogfood
+        runtime install, installed MCP status, and API log-tail smokes in
+        sequence before live dogfood
       - execute one pass only when the server was started with
         `--account-mirror-scheduler-execute`:
         `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"run-once","dryRun":false}}'`

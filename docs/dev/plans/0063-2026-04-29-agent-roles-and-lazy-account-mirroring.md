@@ -589,7 +589,7 @@ Each status payload should include:
 - `pnpm run preflight:lazy-live-follow` is the compact operator gate for this
   surface. It runs completion-control, completion-hydration,
   live-follow-health, ops-browser-control, user-runtime install, and installed
-  MCP status smokes in sequence.
+  MCP status/log-tail smokes in sequence.
 - Installed default-ChatGPT dogfood on port `18095` proved the start/status/
   pause control plane through API, MCP `api_status`, MCP
   `api_ops_browser_status`, and `/ops/browser`. It also found and fixed a

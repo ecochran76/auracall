@@ -34,7 +34,7 @@ const steps: Step[] = [
     args: ['run', 'install:user-runtime'],
   },
   {
-    label: 'installed MCP api_status',
+    label: 'installed MCP api_status and api_log_tail',
     command: 'pnpm',
     args: ['run', 'smoke:mcp-api-status'],
   },

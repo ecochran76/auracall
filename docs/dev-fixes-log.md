@@ -15675,3 +15675,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `auracall api logs-tail` and MCP `api_log_tail`, both backed by the bounded
   `/v1/api/logs/tail` endpoint, and extended the installed MCP smoke to prove
   the tool is listed and callable.
+- 2026-05-08: The lazy-live-follow preflight should name every operator
+  contract it verifies. Updated `pnpm run preflight:lazy-live-follow` and
+  release/testing docs to include direct API log-tail retrieval alongside API
+  status and dashboard status.

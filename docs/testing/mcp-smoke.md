@@ -121,7 +121,7 @@ expectations. It does not launch provider browsers.
 For a release-ready lazy-live-follow gate, run
 `pnpm run preflight:lazy-live-follow`. It includes this installed MCP smoke
 after the no-browser completion-control, hydration, health parity, dashboard,
-and user-runtime install checks.
+user-runtime install, and direct API log-tail checks.
 
 ## Claude Code smoke (tmux + cli)
 

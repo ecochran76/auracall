@@ -118,7 +118,7 @@
 - Lazy-live-follow operator preflight: run
   `pnpm run preflight:lazy-live-follow` to execute the no-browser completion,
   hydration, health, dashboard, user-runtime install, and installed MCP status
-  checks as one release gate before live dogfood.
+  plus log-tail checks as one release gate before live dogfood.
 
 ### `api_ops_browser_status`
 - Inputs: `port` for the local `auracall api serve` listener; optional `host`,
