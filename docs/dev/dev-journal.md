@@ -26766,11 +26766,39 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed `api ops-browser-status --port 18095 --json` reports saved
     filters, catalog, compact table, detail inspection, and chat-detail
     dashboard markers
-  - installed `/account-mirror?...` over `127.0.0.1:18095` contains the
-    keyboard navigation markers
-  - observed local hostname follow-up: `auracall.localhost` resolves to `::1`
-    in this WSL environment while the pinned service is currently bound to
-    IPv4 `127.0.0.1`
+
+## Turn 153 | 2026-05-08
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make scheduler status distinguish normal polite waiting from real
+  browser/backpressure contention.
+- Change:
+  - `/status.accountMirrorScheduler.operatorStatus` now treats
+    `routine-delayed` as a scheduled/healthy wait posture instead of
+    `backpressured`
+  - the raw `backpressureReason` remains `routine-delayed` so operators and
+    automated checks can still explain why no provider work was launched
+  - `blocked-by-browser-work` and `yielded-to-queued-work` remain real
+    backpressure states
+  - manual scheduler runs now preserve `state=scheduled` when an existing
+    cadence timer is still queued
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "nudges lazy account mirror follow-up after media generation settles|reports dry-run lazy account mirror scheduler passes through /status" --maxWorkers 1`
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts -t "routine-delayed|Live follow health|backpressure|mirror posture" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+- Installed dogfood:
+  - restarted pinned API on `127.0.0.1:18095` as PID `2748949`
+  - installed dry-run scheduler `POST /status` reports `state=scheduled`,
+    `operatorStatus.posture=scheduled`, `backpressureReason=routine-delayed`,
+    and live-follow `severity=healthy`
+  - installed `api ops-browser-status --timeout-ms 20000 --expect-live-follow-severity healthy --json`
+    reports live-follow `healthy` with zero target attention
 
 ## Turn 121 | 2026-05-05
 

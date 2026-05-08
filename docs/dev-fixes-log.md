@@ -15647,3 +15647,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   write left trailing bytes. Runner store reads now skip or recover corrupt
   JSON snapshots, and runner writes use atomic temp-file replacement with a
   per-runner in-process queue.
+- 2026-05-08: Routine mirror delay is not operational backpressure. Scheduler
+  operator posture now reports `routine-delayed` passes as scheduled/healthy
+  wait state while preserving the backpressure reason for timing diagnostics.
+- 2026-05-08: Manual scheduler run-once should not hide a queued cadence
+  timer. After a manual pass, `/status` now keeps `state=scheduled` when the
+  scheduler still has a timer queued.

@@ -890,3 +890,9 @@ Runner heartbeat records now tolerate prior write corruption: corrupt
 `record.json` files recover from the last valid `runner.json`, corrupt runner
 snapshots are skipped during topology listing, and future runner writes use
 atomic temp-file replacement plus a per-runner in-process queue.
+Routine scheduler delay is now reported as normal wait state rather than
+operator backpressure: `routine-delayed` keeps its raw reason for diagnostics,
+but `/status.accountMirrorScheduler.operatorStatus.posture` reports
+scheduled/healthy unless the pass yielded to queued browser work or was blocked
+by browser contention. Manual scheduler runs also preserve `state=scheduled`
+when the cadence timer remains queued.

@@ -3168,8 +3168,8 @@ describe('http responses adapter', () => {
       expect(status.accountMirrorScheduler.lastWakeReason).toBe('media-generation-settled');
       expect(status.accountMirrorScheduler.lastWakeAt).toEqual(expect.any(String));
       expect(status.accountMirrorScheduler.operatorStatus).toMatchObject({
-        posture: 'backpressured',
-        reason: 'routine delay',
+        posture: 'scheduled',
+        reason: 'latest scheduler pass is waiting on routine cadence: routine delay',
         backpressureReason: 'routine-delayed',
       });
       expect(status.accountMirrorScheduler.lastPass).toMatchObject({

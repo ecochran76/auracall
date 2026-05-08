@@ -731,11 +731,13 @@ export async function createResponsesHttpServer(
       accountMirrorSchedulerState.lastCompletedAt = now().toISOString();
       accountMirrorSchedulerState.state = closed
         ? 'disabled'
-        : accountMirrorSchedulerPaused
-          ? 'paused'
-          : accountMirrorSchedulerIntervalMs > 0
-            ? 'idle'
-            : 'disabled';
+          : accountMirrorSchedulerPaused
+            ? 'paused'
+            : accountMirrorSchedulerIntervalMs > 0
+              ? accountMirrorSchedulerScheduled
+                ? 'scheduled'
+                : 'idle'
+              : 'disabled';
     }
     return true;
   };
@@ -2822,6 +2824,15 @@ function createAccountMirrorSchedulerOperatorStatus(
     };
   }
   const backpressureReason = scheduler.lastPass?.backpressure?.reason ?? null;
+  if (backpressureReason === 'routine-delayed') {
+    return {
+      posture: scheduler.state === 'scheduled' ? 'scheduled' : 'healthy',
+      reason: scheduler.lastPass?.backpressure?.message
+        ? `latest scheduler pass is waiting on routine cadence: ${scheduler.lastPass.backpressure.message}`
+        : 'latest scheduler pass found only routine-delayed targets and is waiting for the next cadence',
+      backpressureReason,
+    };
+  }
   if (backpressureReason && backpressureReason !== 'none') {
     return {
       posture: 'backpressured',
