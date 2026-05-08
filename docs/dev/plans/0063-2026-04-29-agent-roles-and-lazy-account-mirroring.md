@@ -871,3 +871,9 @@ surface also supports `PATCH` rename and `DELETE` removal for saved preview
 sessions, with dashboard controls wired to the saved-session selector. The
 Preview Session page also includes a compact saved-session browser with search,
 created/updated timestamps, item counts, content badges, and load/open actions.
+
+Pinned API startup now treats `api.accountMirrorScheduler` as part of the same
+operator routing config as host, port, and dashboard URLs. When CLI scheduler
+flags are omitted, `api serve` uses the configured live-follow cadence and
+execute/dry-run mode, preventing manual restarts from silently returning the
+scheduler to `disabled`.

@@ -26610,6 +26610,39 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror dashboard|api ops browser CLI helpers|browser operator dashboard" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
+
+## Turn 151 | 2026-05-08
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make the pinned API service restart with live-follow scheduler cadence
+  from config instead of relying on remembered shell flags.
+- Change:
+  - `api serve` now reads `api.accountMirrorScheduler.intervalMs`,
+    `execute`, and `dryRun` from resolved config when CLI scheduler flags are
+    omitted
+  - removed the CLI hard default that forced an omitted scheduler interval to
+    `0`
+  - documented the config-backed scheduler settings beside the pinned
+    dashboard routing config
+  - updated the live `~/.auracall/config.json` to set
+    `api.accountMirrorScheduler.intervalMs = 600000` and `execute = true`
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "loads account mirror scheduler cadence from api config" --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "loads account mirror scheduler cadence from api config|account mirror scheduler" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint bin/auracall.ts src/http/responsesServer.ts src/schema/types.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run install:user-runtime`
+  - restarted pinned API on `127.0.0.1:18095` as PID `1871697` with command
+    `auracall api serve` and no scheduler CLI flags
+  - `/status.accountMirrorScheduler` reports `enabled=true`, `dryRun=false`,
+    `intervalMs=600000`, and `state=scheduled`
+  - `/status.liveFollow` reports `severity=healthy`, three enabled active
+    targets, and zero attention-needed targets
   - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
     reported only existing warning debt in touched broad files
   - `pnpm run docs:list`

@@ -15631,3 +15631,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   inspection before cache review. Add an `Open Mirror Detail` row action that
   does a read-only runtime inspection, finds the first stored provider
   conversation ref, and navigates to its `/account-mirror` cache detail URL.
+- 2026-05-08: Pinned API restarts should not silently disable lazy live-follow.
+  `api serve` now reads `api.accountMirrorScheduler.intervalMs`, `execute`, and
+  `dryRun` from config when CLI scheduler flags are omitted, and the live
+  `~/.auracall/config.json` pins a 10 minute execute-enabled scheduler cadence.

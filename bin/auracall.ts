@@ -996,7 +996,6 @@ apiCommand
     '--account-mirror-scheduler-interval-ms <ms>',
     'Enable lazy account mirror scheduler passes at this interval. Defaults disabled.',
     parseIntOption,
-    0,
   )
   .option(
     '--account-mirror-scheduler-execute',
@@ -1015,7 +1014,9 @@ apiCommand
       recoverRunsOnStartSourceKind: commandOptions.recoverRunsOnStartSource,
       backgroundDrainIntervalMs: commandOptions.backgroundDrainIntervalMs,
       accountMirrorSchedulerIntervalMs: commandOptions.accountMirrorSchedulerIntervalMs,
-      accountMirrorSchedulerDryRun: !commandOptions.accountMirrorSchedulerExecute,
+      accountMirrorSchedulerDryRun: commandOptions.accountMirrorSchedulerExecute === undefined
+        ? undefined
+        : !commandOptions.accountMirrorSchedulerExecute,
     });
   });
 

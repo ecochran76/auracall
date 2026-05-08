@@ -36,6 +36,11 @@ export const ApiServerConfigSchema = z.object({
   port: z.number().int().positive().optional(),
   dashboardUrl: z.string().optional(),
   publicDashboardUrl: z.string().optional(),
+  accountMirrorScheduler: z.object({
+    intervalMs: z.number().int().nonnegative().optional(),
+    execute: z.boolean().optional(),
+    dryRun: z.boolean().optional(),
+  }).optional(),
   routing: z.object({
     localHostname: z.string().optional(),
     externalHostname: z.string().optional(),

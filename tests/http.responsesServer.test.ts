@@ -546,6 +546,76 @@ describe('http responses adapter', () => {
     await servePromise;
   };
 
+  it('loads account mirror scheduler cadence from api config when CLI flags are omitted', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-api-scheduler-config-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    await fs.writeFile(
+      path.join(homeDir, 'config.json'),
+      JSON.stringify({
+        version: 2,
+        api: {
+          accountMirrorScheduler: {
+            intervalMs: 600_000,
+            execute: true,
+          },
+        },
+        browser: {},
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+          },
+        },
+      }),
+      'utf8',
+    );
+
+    let resolvePort: (port: number) => void = () => {};
+    const portPromise = new Promise<number>((resolve) => {
+      resolvePort = resolve;
+    });
+    const servePromise = serveResponsesHttp({
+      host: '127.0.0.1',
+      port: 0,
+      recoverRunsOnStart: false,
+      executeStoredRunStep: async () => ({
+        output: {
+          summary: 'test stub executor',
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+      }),
+      logger: (message) => {
+        const match = /AuraCall responses server bound on 127\.0\.0\.1:(\d+)/.exec(message);
+        if (match) {
+          resolvePort(Number(match[1]));
+        }
+      },
+    });
+
+    try {
+      const port = await portPromise;
+      const response = await fetch(`http://127.0.0.1:${port}/status`);
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        accountMirrorScheduler: {
+          enabled: true,
+          dryRun: false,
+          intervalMs: 600_000,
+          state: 'scheduled',
+        },
+      });
+    } finally {
+      process.emit('SIGINT');
+      await servePromise;
+    }
+  });
+
   it('creates and retrieves persisted bounded responses', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
     cleanup.push(homeDir);

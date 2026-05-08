@@ -95,6 +95,10 @@ dashboard URLs:
     port: 18095,
     dashboardUrl: "http://auracall.localhost/ops/browser",
     publicDashboardUrl: "https://auracall.ecochran.dyndns.org/ops/browser",
+    accountMirrorScheduler: {
+      intervalMs: 600000,
+      execute: true,
+    },
     routing: {
       localHostname: "auracall.localhost",
       externalHostname: "auracall.ecochran.dyndns.org",
@@ -110,8 +114,9 @@ dashboard URLs:
 }
 ```
 
-`auracall api serve` defaults to `api.host` and `api.port` when CLI flags are
-omitted. `/status.routes.operatorBrowserDashboardUrl`, CLI
+`auracall api serve` defaults to `api.host`, `api.port`, and
+`api.accountMirrorScheduler` when CLI flags are omitted. CLI scheduler flags
+still win for one-off runs. `/status.routes.operatorBrowserDashboardUrl`, CLI
 `api ops-browser-status`, and MCP `api_ops_browser_status` report the canonical
 dashboard URL when configured. `/status.serviceDiscovery` reports the
 configured bind URL, local hostname/base URL, external hostname/base URL,

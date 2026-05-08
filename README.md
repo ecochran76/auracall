@@ -227,11 +227,14 @@ Terminology note:
   cached rows can be read with
   `GET /v1/account-mirrors/catalog/items/{item_id}?provider=chatgpt&runtimeProfile=default&kind=conversations`;
   item reads use the same cache catalog and do not enqueue browser work. Lazy mirror
-  scheduling is disabled by default; start `api serve` with
-  `--account-mirror-scheduler-interval-ms <ms>` to record dry-run eligibility
-  passes in `/status.accountMirrorScheduler`, and add
+  scheduling is disabled unless `api.accountMirrorScheduler.intervalMs` is set
+  in config or `api serve` starts with
+  `--account-mirror-scheduler-interval-ms <ms>`. That records eligibility
+  passes in `/status.accountMirrorScheduler`; set
+  `api.accountMirrorScheduler.execute: true` or pass
   `--account-mirror-scheduler-execute` only when the service should request
-  eligible default-ChatGPT metadata refreshes. Operator controls share
+  eligible metadata refreshes. CLI flags win over config for one-off runs.
+  Operator controls share
   `POST /status`: `{"accountMirrorScheduler":{"action":"pause"}}`,
   `{"accountMirrorScheduler":{"action":"resume"}}`, or
   `{"accountMirrorScheduler":{"action":"run-once"}}`. Manual `run-once`

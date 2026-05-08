@@ -1815,6 +1815,10 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   serverOptions.dashboardUrl = serverOptions.dashboardUrl ?? apiConfig.dashboardUrl;
   serverOptions.publicDashboardUrl = serverOptions.publicDashboardUrl ?? apiConfig.publicDashboardUrl;
   serverOptions.serviceRouting = serverOptions.serviceRouting ?? apiConfig.routing;
+  serverOptions.accountMirrorSchedulerIntervalMs =
+    serverOptions.accountMirrorSchedulerIntervalMs ?? apiConfig.accountMirrorSchedulerIntervalMs;
+  serverOptions.accountMirrorSchedulerDryRun =
+    serverOptions.accountMirrorSchedulerDryRun ?? apiConfig.accountMirrorSchedulerDryRun;
   assertResponsesHostAllowed(serverOptions.host, options.listenPublic ?? false);
   await terminateSamePortApiServeProcesses({
     port: serverOptions.port,
@@ -1985,9 +1989,7 @@ async function removeBrowserOperationLocksForOwnerPids(input: {
       if (typeof parsed.ownerPid !== 'number' || !ownerPids.has(parsed.ownerPid)) continue;
       await fs.rm(lockPath, { force: true });
       removed += 1;
-    } catch {
-      continue;
-    }
+    } catch {}
   }
   if (removed > 0) {
     input.logger?.(`Removed ${removed} browser operation lock${removed === 1 ? '' : 's'} owned by terminated api serve process.`);
@@ -2016,9 +2018,7 @@ async function removeStaleBrowserOperationLocks(input: {
       if (typeof parsed.ownerPid !== 'number' || input.isProcessAlive(parsed.ownerPid)) continue;
       await fs.rm(lockPath, { force: true });
       removed += 1;
-    } catch {
-      continue;
-    }
+    } catch {}
   }
   if (removed > 0) {
     input.logger?.(`Removed ${removed} stale browser operation lock${removed === 1 ? '' : 's'}.`);
@@ -2598,17 +2598,35 @@ function readApiServerConfig(config: Record<string, unknown>): {
   port?: number;
   dashboardUrl?: string;
   publicDashboardUrl?: string;
+  accountMirrorSchedulerIntervalMs?: number;
+  accountMirrorSchedulerDryRun?: boolean;
   routing?: ApiServiceRoutingConfig;
 } {
   const api = config.api;
   if (!isRecord(api)) return {};
+  const accountMirrorScheduler = isRecord(api.accountMirrorScheduler)
+    ? api.accountMirrorScheduler
+    : null;
   return {
     host: readNonEmptyString(api.host),
     port: readPositiveInteger(api.port),
     dashboardUrl: readNonEmptyString(api.dashboardUrl),
     publicDashboardUrl: readNonEmptyString(api.publicDashboardUrl),
+    accountMirrorSchedulerIntervalMs: accountMirrorScheduler
+      ? readNonNegativeInteger(accountMirrorScheduler.intervalMs)
+      : undefined,
+    accountMirrorSchedulerDryRun: accountMirrorScheduler
+      ? readApiAccountMirrorSchedulerDryRun(accountMirrorScheduler)
+      : undefined,
     routing: readApiServiceRoutingConfig(api.routing),
   };
+}
+
+function readApiAccountMirrorSchedulerDryRun(value: Record<string, unknown>): boolean | undefined {
+  const dryRun = readBoolean(value.dryRun);
+  if (dryRun !== undefined) return dryRun;
+  const execute = readBoolean(value.execute);
+  return execute === undefined ? undefined : !execute;
 }
 
 function readApiServiceRoutingConfig(value: unknown): ApiServiceRoutingConfig | undefined {
@@ -2761,6 +2779,15 @@ function readNonEmptyString(value: unknown): string | undefined {
 function readPositiveInteger(value: unknown): number | undefined {
   if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) return undefined;
   return value;
+}
+
+function readNonNegativeInteger(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) return undefined;
+  return value;
+}
+
+function readBoolean(value: unknown): boolean | undefined {
+  return typeof value === 'boolean' ? value : undefined;
 }
 
 function createAccountMirrorSchedulerOperatorStatus(
