@@ -15635,3 +15635,15 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `api serve` now reads `api.accountMirrorScheduler.intervalMs`, `execute`, and
   `dryRun` from config when CLI scheduler flags are omitted, and the live
   `~/.auracall/config.json` pins a 10 minute execute-enabled scheduler cadence.
+- 2026-05-08: Failure backoff should be useful signal, not noise, when the
+  live-follow completion is already running. Active queued/running/refreshing
+  completions now suppress the target attention flag for prior
+  `failure-backoff`; inactive failed completions still require attention.
+- 2026-05-08: Config-derived `api serve` restarts need the same orphan cleanup
+  as explicit `--port` launches. Same-port termination now treats an old
+  `auracall api serve` process with no `--port` as matching when the new
+  service is binding the configured API port.
+- 2026-05-08: Runner heartbeat records must not crash the API when a prior
+  write left trailing bytes. Runner store reads now skip or recover corrupt
+  JSON snapshots, and runner writes use atomic temp-file replacement with a
+  per-runner in-process queue.

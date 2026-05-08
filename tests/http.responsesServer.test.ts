@@ -2137,6 +2137,111 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('does not require attention for a live-follow target while active completion is running through failure backoff', async () => {
+    const config = {
+      model: 'gpt-5.2',
+      browser: {},
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+          services: {
+            chatgpt: {
+              identity: {
+                email: 'ecochran76@gmail.com',
+              },
+              liveFollow: {
+                enabled: true,
+                mode: 'metadata-first',
+                priority: 'background',
+              },
+            },
+          },
+        },
+      },
+    };
+    const registry = createAccountMirrorStatusRegistry({
+      config,
+      now: () => new Date('2026-04-30T12:00:00.000Z'),
+      initialState: {
+        'chatgpt:default': {
+          detectedIdentityKey: 'ecochran76@gmail.com',
+          lastAttemptAtMs: Date.parse('2026-04-30T11:50:00.000Z'),
+          lastFailureAtMs: Date.parse('2026-04-30T11:59:00.000Z'),
+          consecutiveFailureCount: 1,
+          metadataCounts: {
+            projects: 5,
+            conversations: 304,
+            artifacts: 532,
+            files: 65,
+            media: 0,
+          },
+        },
+      },
+    });
+    const runningOperation: AccountMirrorCompletionOperation = {
+      object: 'account_mirror_completion',
+      id: 'acctmirror_running_backoff',
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      mode: 'live_follow',
+      phase: 'steady_follow',
+      status: 'running',
+      startedAt: '2026-04-30T11:55:00.000Z',
+      completedAt: null,
+      nextAttemptAt: '2026-04-30T12:10:00.000Z',
+      maxPasses: null,
+      passCount: 7,
+      lastRefresh: null,
+      mirrorCompleteness: completeAccountMirror,
+      error: null,
+    };
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        config,
+        accountMirrorStatusRegistry: registry,
+        accountMirrorCompletionService: {
+          start: vi.fn(() => runningOperation),
+          read: vi.fn(() => runningOperation),
+          list: vi.fn((request) => request?.status === 'active' ? [runningOperation] : [runningOperation]),
+          control: vi.fn(() => runningOperation),
+        },
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+      const body = await response.json();
+      expect(response.status, JSON.stringify(body)).toBe(200);
+      expect(body).toMatchObject({
+        liveFollow: {
+          severity: 'healthy',
+          targets: {
+            active: 1,
+            attentionNeeded: 0,
+            actual: {
+              running: 1,
+              attentionNeeded: 0,
+            },
+            accounts: [
+              {
+                actualStatus: 'running',
+                statusReason: 'failure-backoff',
+                attentionNeeded: false,
+                activeCompletionId: 'acctmirror_running_backoff',
+                latestCompletionStatus: 'running',
+                consecutiveFailureCount: 1,
+              },
+            ],
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('parks active account mirror completions during server close when supported', async () => {
     const activeOperation: AccountMirrorCompletionOperation = {
       object: 'account_mirror_completion',
@@ -2283,6 +2388,62 @@ describe('http responses adapter', () => {
     await expect(fs.access(path.join(operationLockRoot, 'matched.json'))).rejects.toThrow();
     await expect(fs.access(path.join(operationLockRoot, 'other.json'))).resolves.toBeUndefined();
     await expect(fs.access(path.join(operationLockRoot, 'stale.json'))).rejects.toThrow();
+  });
+
+  it('terminates config-derived port orphan api serve processes before binding', async () => {
+    const procRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-proc-config-port-'));
+    cleanup.push(procRoot);
+    await fs.mkdir(path.join(procRoot, '111'));
+    await fs.mkdir(path.join(procRoot, '112'));
+    await fs.mkdir(path.join(procRoot, '113'));
+    await fs.writeFile(
+      path.join(procRoot, '111', 'cmdline'),
+      ['node', '/home/user/.auracall/user-runtime/node_modules/auracall/dist/bin/auracall.js', 'api', 'serve'].join('\0'),
+    );
+    await fs.writeFile(
+      path.join(procRoot, '112', 'cmdline'),
+      ['node', '/home/user/.auracall/user-runtime/node_modules/auracall/dist/bin/auracall.js', 'api', 'serve', '--port', '18096'].join('\0'),
+    );
+    await fs.writeFile(
+      path.join(procRoot, '113', 'cmdline'),
+      ['node', '/home/user/.auracall/user-runtime/node_modules/auracall/dist/bin/auracall.js', 'api', 'serve'].join('\0'),
+    );
+    const terminated: Array<{ pid: number; signal: NodeJS.Signals }> = [];
+
+    await expect(terminateSamePortApiServeProcesses({
+      port: 18095,
+      currentPid: 113,
+      procRoot,
+      includeConfigDerivedPort: true,
+      isProcessAlive: (pid) => pid === 112,
+      sleep: async () => undefined,
+      terminateProcess: (pid, signal) => {
+        terminated.push({ pid, signal });
+      },
+    })).resolves.toEqual([111]);
+
+    expect(terminated).toEqual([{ pid: 111, signal: 'SIGTERM' }]);
+  });
+
+  it('does not terminate config-derived port api serve processes unless requested', async () => {
+    const procRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-proc-config-port-disabled-'));
+    cleanup.push(procRoot);
+    await fs.mkdir(path.join(procRoot, '121'));
+    await fs.writeFile(
+      path.join(procRoot, '121', 'cmdline'),
+      ['node', '/home/user/.auracall/user-runtime/node_modules/auracall/dist/bin/auracall.js', 'api', 'serve'].join('\0'),
+    );
+    const terminateProcess = vi.fn();
+
+    await expect(terminateSamePortApiServeProcesses({
+      port: 18095,
+      currentPid: 999,
+      procRoot,
+      sleep: async () => undefined,
+      terminateProcess,
+    })).resolves.toEqual([]);
+
+    expect(terminateProcess).not.toHaveBeenCalled();
   });
 
   it('escalates orphan api serve termination when SIGTERM does not stop the process', async () => {

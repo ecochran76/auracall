@@ -130,4 +130,57 @@ describe('runtime runner store', () => {
       /revision mismatch/,
     );
   });
+
+  it('recovers from a corrupt stored record by falling back to the runner snapshot', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-runners-store-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const runner = createExecutionRunnerRecord({
+      id: 'runner:corrupt-record',
+      hostId: 'host:wsl-dev-1',
+      startedAt: '2026-04-11T10:00:00.000Z',
+      lastHeartbeatAt: '2026-04-11T10:00:00.000Z',
+      expiresAt: '2026-04-11T10:01:00.000Z',
+      serviceIds: ['chatgpt'],
+      runtimeProfileIds: ['default'],
+    });
+
+    await writeExecutionRunnerStoredRecord(runner);
+    await fs.appendFile(getExecutionRunnerRecordPath(runner.id), 'trailing-bytes', 'utf8');
+
+    const recovered = await readExecutionRunnerStoredRecord(runner.id);
+    expect(recovered?.revision).toBe(0);
+    expect(recovered?.runner.id).toBe(runner.id);
+
+    const nextRunner = createExecutionRunnerRecord({
+      ...runner,
+      startedAt: runner.startedAt,
+      lastHeartbeatAt: '2026-04-11T10:00:30.000Z',
+      expiresAt: '2026-04-11T10:01:30.000Z',
+    });
+    const repaired = await writeExecutionRunnerStoredRecord(nextRunner, { expectedRevision: 0 });
+    expect(repaired.revision).toBe(1);
+    expect(JSON.parse(await fs.readFile(getExecutionRunnerRecordPath(runner.id), 'utf8')).runner.id).toBe(runner.id);
+  });
+
+  it('does not leave temp files behind for runner writes', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-runners-store-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const runner = createExecutionRunnerRecord({
+      id: 'runner:atomic-write',
+      hostId: 'host:wsl-dev-1',
+      startedAt: '2026-04-11T10:00:00.000Z',
+      expiresAt: '2026-04-11T10:01:00.000Z',
+      serviceIds: ['chatgpt'],
+      runtimeProfileIds: ['default'],
+    });
+
+    await writeExecutionRunnerStoredRecord(runner);
+
+    const files = await fs.readdir(path.dirname(getExecutionRunnerRecordPath(runner.id)));
+    expect(files.sort()).toEqual(['record.json', 'runner.json']);
+  });
 });

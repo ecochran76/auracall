@@ -1824,6 +1824,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
     port: serverOptions.port,
     logger,
     terminateProcess: terminateProcessOverride,
+    includeConfigDerivedPort: options.port === undefined && apiConfig.port === serverOptions.port,
   });
   const configuredStoredStepExecutor = createConfiguredStoredStepExecutor(
     resolvedUserConfig as Record<string, unknown>,
@@ -1917,6 +1918,7 @@ export async function terminateSamePortApiServeProcesses(input: {
   currentPid?: number;
   procRoot?: string;
   operationLockRoot?: string;
+  includeConfigDerivedPort?: boolean;
 }): Promise<number[]> {
   const port = normalizeApiServePort(input.port);
   if (port === null) return [];
@@ -1929,6 +1931,7 @@ export async function terminateSamePortApiServeProcesses(input: {
     port,
     currentPid,
     procRoot,
+    includeConfigDerivedPort: input.includeConfigDerivedPort === true,
   });
   const terminatedPids: number[] = [];
   for (const match of matches) {
@@ -2030,6 +2033,7 @@ async function findSamePortApiServeProcesses(input: {
   port: number;
   currentPid: number;
   procRoot: string;
+  includeConfigDerivedPort?: boolean;
 }): Promise<Array<{ pid: number; commandLine: string }>> {
   let entries: string[];
   try {
@@ -2044,7 +2048,7 @@ async function findSamePortApiServeProcesses(input: {
     if (!Number.isSafeInteger(pid) || pid <= 0 || pid === input.currentPid) continue;
     const commandLine = await readProcCommandLine(input.procRoot, pid);
     if (!commandLine) continue;
-    if (isSamePortApiServeCommand(commandLine, input.port)) {
+    if (isSamePortApiServeCommand(commandLine, input.port, input.includeConfigDerivedPort === true)) {
       matches.push({ pid, commandLine });
     }
   }
@@ -2060,11 +2064,12 @@ async function readProcCommandLine(procRoot: string, pid: number): Promise<strin
   }
 }
 
-function isSamePortApiServeCommand(commandLine: string, port: number): boolean {
+function isSamePortApiServeCommand(commandLine: string, port: number, includeConfigDerivedPort = false): boolean {
   if (!/^node\s+/.test(commandLine)) return false;
   if (!commandLine.includes('/auracall.js') && !/\bauracall\.js\b/.test(commandLine)) return false;
   if (!/\bapi\s+serve\b/.test(commandLine)) return false;
-  return commandLine.includes(`--port ${port}`) || commandLine.includes(`--port=${port}`);
+  if (commandLine.includes(`--port ${port}`) || commandLine.includes(`--port=${port}`)) return true;
+  return includeConfigDerivedPort && !/\s--port(?:\s|=)/.test(commandLine);
 }
 
 function normalizeApiServePort(value: number | null | undefined): number | null {
@@ -2543,6 +2548,7 @@ function isLiveFollowTargetAttentionNeeded(
   if (entry.liveFollow.state === 'missing_identity' || entry.liveFollow.state === 'unsupported') return true;
   const status = activeOperation?.status ?? (entry.mirrorState.running ? 'refreshing' : entry.status);
   if (status === 'paused' || status === 'blocked' || status === 'failed' || status === 'cancelled') return true;
+  if (status === 'queued' || status === 'running' || status === 'refreshing') return false;
   if (entry.status === 'blocked' || entry.reason === 'failure-backoff' || entry.consecutiveFailureCount > 0) return true;
   return recentOperation?.status === 'blocked' || recentOperation?.status === 'failed' || recentOperation?.status === 'cancelled';
 }

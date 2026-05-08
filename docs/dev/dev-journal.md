@@ -26643,6 +26643,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `intervalMs=600000`, and `state=scheduled`
   - `/status.liveFollow` reports `severity=healthy`, three enabled active
     targets, and zero attention-needed targets
+
+## Turn 152 | 2026-05-08
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: reduce false operator attention after the scheduler proved config
+  cadence was working.
+- Change:
+  - live-follow target attention no longer treats `failure-backoff` or a prior
+    consecutive failure as attention-needed while the corresponding completion
+    is actively queued, running, or refreshing
+  - inactive failed completions still surface as attention-needed
+  - same-port orphan cleanup now recognizes config-derived `api serve`
+    processes launched without an explicit `--port` flag when the replacement
+    service is binding the configured API port
+  - runner heartbeat store reads recover from corrupt `record.json` by falling
+    back to the last valid `runner.json`, skip corrupt runner snapshots during
+    listing, and write future snapshots through atomic temp-file replacement
+    with a per-runner in-process queue
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "does not require attention for a live-follow target while active completion is running through failure backoff|does not report failed completion retry timestamps" --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "config-derived port orphan|same-port orphan|active completion is running through failure backoff" --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.runnersStore.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts`
   - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
     reported only existing warning debt in touched broad files
   - `pnpm run docs:list`
@@ -26706,6 +26731,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed `api ops-browser-status --port 18095 --json` reports saved
     filters, catalog, compact table, detail inspection, and chat-detail
     dashboard markers
+  - reinstalled user runtime and restarted pinned API on `127.0.0.1:18095` as
+    PID `2711369`
+  - installed `/status` reports scheduler `enabled=true`, `dryRun=false`,
+    `intervalMs=600000`, `state=scheduled`, live-follow `severity=healthy`,
+    three active/running targets, and zero attention-needed targets
+  - installed `api ops-browser-status --timeout-ms 20000 --expect-live-follow-severity healthy --json`
+    reports live-follow `healthy`, target attention `0`, and dashboard
+    live-follow target/completeness controls present
+  - live runtime runner snapshots under `~/.auracall/runtime/runners` parse
+    cleanly after startup repaired the corrupt pinned runner files
 
 ## Turn 120 | 2026-05-05
 

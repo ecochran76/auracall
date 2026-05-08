@@ -8,6 +8,7 @@ import type { ExecutionRunnerRecord, ExecutionRunnerServiceId, ExecutionRunnerSt
 const RUNNERS_DIRNAME = 'runners';
 const RUNNER_FILENAME = 'runner.json';
 const RECORD_FILENAME = 'record.json';
+const runnerWriteQueues = new Map<string, Promise<unknown>>();
 
 export interface ListExecutionRunnerRecordOptions {
   limit?: number;
@@ -63,6 +64,7 @@ export async function readExecutionRunnerStoredRecord(runnerId: string): Promise
     return parseStoredRunnerRecord(JSON.parse(raw));
   } catch (error) {
     if (isMissingFileError(error)) return null;
+    if (isInvalidJsonError(error)) return readLegacyRunnerRecordAsStoredRecord(runnerId);
     throw error;
   }
 }
@@ -75,12 +77,19 @@ export async function readExecutionRunnerRecord(runnerId: string): Promise<Execu
     const raw = await fs.readFile(runnerPath, 'utf8');
     return ExecutionRunnerRecordSchema.parse(JSON.parse(raw));
   } catch (error) {
-    if (isMissingFileError(error)) return null;
+    if (isMissingFileError(error) || isInvalidJsonError(error)) return null;
     throw error;
   }
 }
 
 export async function writeExecutionRunnerStoredRecord(
+  runner: ExecutionRunnerRecord,
+  options: WriteExecutionRunnerRecordOptions = {},
+): Promise<ExecutionRunnerStoredRecord> {
+  return withRunnerWriteQueue(runner.id, () => writeExecutionRunnerStoredRecordNow(runner, options));
+}
+
+async function writeExecutionRunnerStoredRecordNow(
   runner: ExecutionRunnerRecord,
   options: WriteExecutionRunnerRecordOptions = {},
 ): Promise<ExecutionRunnerStoredRecord> {
@@ -105,8 +114,8 @@ export async function writeExecutionRunnerStoredRecord(
 
   const runnerDir = getExecutionRunnerDir(parsedRunner.id);
   await fs.mkdir(runnerDir, { recursive: true });
-  await fs.writeFile(getExecutionRunnerRecordPath(parsedRunner.id), `${JSON.stringify(nextRecord, null, 2)}\n`, 'utf8');
-  await fs.writeFile(getExecutionRunnerPath(parsedRunner.id), `${JSON.stringify(parsedRunner, null, 2)}\n`, 'utf8');
+  await writeJsonFileAtomically(getExecutionRunnerRecordPath(parsedRunner.id), nextRecord);
+  await writeJsonFileAtomically(getExecutionRunnerPath(parsedRunner.id), parsedRunner);
   return nextRecord;
 }
 
@@ -156,6 +165,47 @@ export function createExecutionRunnerRecordStore(): ExecutionRunnerRecordStore {
 
 function isMissingFileError(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'ENOENT';
+}
+
+function isInvalidJsonError(error: unknown): boolean {
+  return error instanceof SyntaxError;
+}
+
+async function readLegacyRunnerRecordAsStoredRecord(runnerId: string): Promise<ExecutionRunnerStoredRecord | null> {
+  const runnerPath = getExecutionRunnerPath(runnerId);
+  let runner: ExecutionRunnerRecord;
+  try {
+    const raw = await fs.readFile(runnerPath, 'utf8');
+    runner = ExecutionRunnerRecordSchema.parse(JSON.parse(raw));
+  } catch (error) {
+    if (isMissingFileError(error) || isInvalidJsonError(error)) return null;
+    throw error;
+  }
+  if (!runner) return null;
+  return {
+    runnerId: runner.id,
+    revision: 0,
+    persistedAt: runner.lastHeartbeatAt,
+    runner,
+  };
+}
+
+async function writeJsonFileAtomically(filePath: string, value: unknown): Promise<void> {
+  const tempPath = `${filePath}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`;
+  await fs.writeFile(tempPath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  await fs.rename(tempPath, filePath);
+}
+
+async function withRunnerWriteQueue<T>(runnerId: string, write: () => Promise<T>): Promise<T> {
+  const previous = runnerWriteQueues.get(runnerId) ?? Promise.resolve();
+  const next = previous.then(write, write);
+  const settled = next.catch(() => undefined).finally(() => {
+    if (runnerWriteQueues.get(runnerId) === settled) {
+      runnerWriteQueues.delete(runnerId);
+    }
+  });
+  runnerWriteQueues.set(runnerId, settled);
+  return next;
 }
 
 function parseStoredRunnerRecord(value: unknown): ExecutionRunnerStoredRecord {

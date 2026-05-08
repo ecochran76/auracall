@@ -877,3 +877,16 @@ operator routing config as host, port, and dashboard URLs. When CLI scheduler
 flags are omitted, `api serve` uses the configured live-follow cadence and
 execute/dry-run mode, preventing manual restarts from silently returning the
 scheduler to `disabled`.
+Target attention now distinguishes self-recovering active work from stale
+failures: a target in `failure-backoff` remains visible in status, but it does
+not mark live-follow attention-needed while the completion is actively queued,
+running, or refreshing. Failed inactive completions still require operator
+attention.
+Config-derived pinned API restarts also participate in same-port orphan
+cleanup: when the replacement service binds the configured API port, an older
+`auracall api serve` process launched without `--port` is treated as a
+same-port process and terminated before binding.
+Runner heartbeat records now tolerate prior write corruption: corrupt
+`record.json` files recover from the last valid `runner.json`, corrupt runner
+snapshots are skipped during topology listing, and future runner writes use
+atomic temp-file replacement plus a per-runner in-process queue.
