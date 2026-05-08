@@ -15660,3 +15660,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-08: Runtime installs and API restarts should be one operator habit.
   Added `pnpm run install:user-runtime-service` to install the user runtime and
   then install/restart the managed API service in a single command.
+- 2026-05-08: `/status` should identify the process serving the pinned
+  endpoint. Added `api.process` and `api.managedService` status metadata plus
+  dashboard summary rows for API PID and log path.

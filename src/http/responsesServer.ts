@@ -372,6 +372,25 @@ interface HttpStatusResponse {
   ok: true;
   version: string;
   mode: 'development';
+  api: {
+    process: {
+      pid: number;
+      ppid: number;
+      uptimeSeconds: number;
+      argv: string[];
+      execPath: string;
+      cwd: string;
+      nodeVersion: string;
+    };
+    managedService: {
+      manager: 'systemd-user';
+      unitName: string;
+      logPath: string;
+      installCommand: string;
+      restartCommand: string;
+      statusCommand: string;
+    };
+  };
   binding: {
     host: string;
     port: number;
@@ -2292,6 +2311,7 @@ function createHttpStatusResponse(input: {
     ok: true,
     version: getCliVersion(),
     mode: 'development',
+    api: createApiRuntimeStatus(input.port),
     binding: {
       host: input.host,
       port: input.port,
@@ -2367,6 +2387,28 @@ function createHttpStatusResponse(input: {
       bodyObject: 'auracall',
     },
     controlResult: input.controlResult,
+  };
+}
+
+function createApiRuntimeStatus(port: number): HttpStatusResponse['api'] {
+  return {
+    process: {
+      pid: process.pid,
+      ppid: process.ppid,
+      uptimeSeconds: Math.round(process.uptime()),
+      argv: process.argv,
+      execPath: process.execPath,
+      cwd: process.cwd(),
+      nodeVersion: process.version,
+    },
+    managedService: {
+      manager: 'systemd-user',
+      unitName: 'auracall-api.service',
+      logPath: path.join(getAuracallHomeDir(), 'logs', `api-${port}.log`),
+      installCommand: 'pnpm run install:user-runtime-service',
+      restartCommand: 'systemctl --user restart auracall-api.service',
+      statusCommand: 'systemctl --user status auracall-api.service',
+    },
   };
 }
 
@@ -4677,10 +4719,15 @@ function createOperatorBrowserDashboardHtml(input: {
       const completionMetrics = completions.metrics || {};
       const liveFollow = status.liveFollow || {};
       const targets = liveFollow.targets || {};
+      const api = status.api || {};
+      const apiProcess = api.process || {};
+      const apiService = api.managedService || {};
       const dashboard = status.routes && status.routes.operatorBrowserDashboard;
       $('serverSummary').innerHTML = [
         ['Status', status.ok ? '<span class="ok">ok</span>' : '<span class="bad">not ok</span>'],
         ['Version', status.version || 'unknown'],
+        ['API PID', apiProcess.pid ? escapeHtml(String(apiProcess.pid)) : 'unknown'],
+        ['API Log', escapeHtml(apiService.logPath || 'unknown')],
         ['Binding', [binding.host, binding.port].filter(Boolean).join(':') || 'unknown'],
         ['Local Only', binding.localOnly ? '<span class="ok">true</span>' : '<span class="warn">false</span>'],
         ['Runner', runner.status || 'unknown'],

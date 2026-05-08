@@ -1354,6 +1354,25 @@ describe('http responses adapter', () => {
         ok: true,
         version: expect.any(String),
         mode: 'development',
+        api: {
+          process: {
+            pid: process.pid,
+            ppid: process.ppid,
+            uptimeSeconds: expect.any(Number),
+            argv: expect.any(Array),
+            execPath: process.execPath,
+            cwd: process.cwd(),
+            nodeVersion: process.version,
+          },
+          managedService: {
+            manager: 'systemd-user',
+            unitName: 'auracall-api.service',
+            logPath: path.join(homeDir, 'logs', `api-${server.port}.log`),
+            installCommand: 'pnpm run install:user-runtime-service',
+            restartCommand: 'systemctl --user restart auracall-api.service',
+            statusCommand: 'systemctl --user status auracall-api.service',
+          },
+        },
         binding: {
           host: '127.0.0.1',
           port: server.port,
@@ -15132,6 +15151,8 @@ describe('http responses adapter', () => {
       expect(response.headers.get('cache-control')).toContain('no-store');
       const html = await response.text();
       expect(html).toContain('AuraCall Browser Ops');
+      expect(html).toContain('API PID');
+      expect(html).toContain('API Log');
       expect(html).toContain('aria-label="AuraCall sections"');
       expect(html).toContain('Account Mirror');
       expect(html).toContain('href="/account-mirror"');

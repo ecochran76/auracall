@@ -904,3 +904,8 @@ and scheduler settings plus restart-on-failure and durable logs.
 The preferred local upgrade path is now `pnpm run install:user-runtime-service`,
 which refreshes the user runtime and then installs/restarts the managed API
 service in one command.
+`GET /status` now also reports `api.process` and `api.managedService`, including
+the serving PID, Node/process details, expected `auracall-api.service` unit,
+durable log path, and install/restart/status commands. The browser operator
+dashboard surfaces the API PID and log path in its server summary so operators
+can identify the pinned endpoint without shelling out first.
