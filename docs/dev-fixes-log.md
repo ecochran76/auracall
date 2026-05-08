@@ -15663,3 +15663,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-08: `/status` should identify the process serving the pinned
   endpoint. Added `api.process` and `api.managedService` status metadata plus
   dashboard summary rows for API PID and log path.
+- 2026-05-08: Operators need API service evidence without shell access. Added a
+  bounded `/v1/api/logs/tail` route and dashboard controls that show the
+  managed unit/log path/status/restart commands and refresh the service log
+  tail on demand.

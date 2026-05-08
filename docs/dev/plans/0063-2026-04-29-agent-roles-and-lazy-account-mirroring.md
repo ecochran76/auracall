@@ -909,3 +909,7 @@ the serving PID, Node/process details, expected `auracall-api.service` unit,
 durable log path, and install/restart/status commands. The browser operator
 dashboard surfaces the API PID and log path in its server summary so operators
 can identify the pinned endpoint without shelling out first.
+The same dashboard now includes a read-only API Service control card with the
+unit, log path, and status/restart commands, plus a bounded
+`GET /v1/api/logs/tail` endpoint and `Refresh API Log Tail` control for
+inspecting the pinned service log without direct shell access.

@@ -15141,6 +15141,35 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('returns a bounded tail of the managed API log', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-api-log-tail-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const logPath = path.join(homeDir, 'logs', `api-${server.port}.log`);
+      await fs.mkdir(path.dirname(logPath), { recursive: true });
+      await fs.writeFile(logPath, 'first line\nsecond line\nthird line\n', 'utf8');
+
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/api/logs/tail?maxBytes=16`);
+      expect(response.status).toBe(200);
+      const payload = await response.json();
+      expect(payload).toMatchObject({
+        object: 'api_log_tail',
+        logPath,
+        exists: true,
+        sizeBytes: 34,
+        maxBytes: 16,
+        truncated: true,
+        content: 'line\nthird line\n',
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('serves a read-only browser operator dashboard', async () => {
     const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
 
@@ -15153,6 +15182,9 @@ describe('http responses adapter', () => {
       expect(html).toContain('AuraCall Browser Ops');
       expect(html).toContain('API PID');
       expect(html).toContain('API Log');
+      expect(html).toContain('apiServiceControls');
+      expect(html).toContain('loadApiLogTail');
+      expect(html).toContain('/v1/api/logs/tail?maxBytes=32768');
       expect(html).toContain('aria-label="AuraCall sections"');
       expect(html).toContain('Account Mirror');
       expect(html).toContain('href="/account-mirror"');

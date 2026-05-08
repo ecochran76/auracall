@@ -412,6 +412,7 @@ interface HttpStatusResponse {
     mediaGenerationsGetTemplate: string;
     mediaGenerationsStatusTemplate: string;
     runStatusTemplate: string;
+    apiLogTail: string;
     accountMirrorStatus: string;
   accountMirrorCatalog: string;
   accountMirrorCatalogItemTemplate: string;
@@ -499,6 +500,16 @@ interface HttpStatusResponse {
         status: AccountMirrorCompletionOperation['status'];
       }
     | ExecutionServiceHostOperatorControlResult;
+}
+
+interface HttpApiLogTailResponse {
+  object: 'api_log_tail';
+  logPath: string;
+  exists: boolean;
+  sizeBytes: number;
+  maxBytes: number;
+  truncated: boolean;
+  content: string;
 }
 
 export async function createResponsesHttpServer(
@@ -894,6 +905,14 @@ export async function createResponsesHttpServer(
           accountMirrorCompletions: createAccountMirrorCompletionStatusSummary(accountMirrorCompletionService, now),
         });
         sendJson(res, 200, statusResponse);
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/api/logs/tail') {
+        const address = server.address();
+        const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
+        const query = parseApiLogTailQuery(url.searchParams);
+        sendJson(res, 200, await readApiLogTail({ port: boundPort, maxBytes: query.maxBytes }));
         return;
       }
 
@@ -1896,7 +1915,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   }
   logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
-    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
+    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   if (serverOptions.dashboardUrl) {
@@ -2335,6 +2354,7 @@ function createHttpStatusResponse(input: {
       mediaGenerationsGetTemplate: '/v1/media-generations/{media_generation_id}',
       mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
       runStatusTemplate: '/v1/runs/{run_id}/status[?diagnostics=browser-state]',
+      apiLogTail: '/v1/api/logs/tail[?maxBytes=32768]',
       accountMirrorStatus: '/v1/account-mirrors/status[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&explicitRefresh=true]',
       accountMirrorCatalog: '/v1/account-mirrors/catalog[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&kind=projects|conversations|artifacts|files|media|all][&limit=50]',
       accountMirrorCatalogItemTemplate: '/v1/account-mirrors/catalog/items/{item_id}?provider={chatgpt|gemini|grok}&runtimeProfile={runtime_profile}&kind={kind}',
@@ -2410,6 +2430,52 @@ function createApiRuntimeStatus(port: number): HttpStatusResponse['api'] {
       statusCommand: 'systemctl --user status auracall-api.service',
     },
   };
+}
+
+function parseApiLogTailQuery(params: URLSearchParams): { maxBytes: number } {
+  const raw = params.get('maxBytes');
+  const parsed = raw ? Number.parseInt(raw, 10) : 32_768;
+  const maxBytes = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), 262_144) : 32_768;
+  return { maxBytes };
+}
+
+async function readApiLogTail(input: { port: number; maxBytes: number }): Promise<HttpApiLogTailResponse> {
+  const logPath = path.join(getAuracallHomeDir(), 'logs', `api-${input.port}.log`);
+  try {
+    const stat = await fs.stat(logPath);
+    const maxBytes = Math.min(input.maxBytes, stat.size);
+    const start = Math.max(0, stat.size - maxBytes);
+    const handle = await fs.open(logPath, 'r');
+    try {
+      const buffer = Buffer.alloc(maxBytes);
+      const result = await handle.read(buffer, 0, maxBytes, start);
+      return {
+        object: 'api_log_tail',
+        logPath,
+        exists: true,
+        sizeBytes: stat.size,
+        maxBytes: input.maxBytes,
+        truncated: start > 0,
+        content: buffer.subarray(0, result.bytesRead).toString('utf8'),
+      };
+    } finally {
+      await handle.close();
+    }
+  } catch (error) {
+    const code = error instanceof Error && 'code' in error ? String((error as NodeJS.ErrnoException).code) : '';
+    if (code !== 'ENOENT') {
+      throw error;
+    }
+    return {
+      object: 'api_log_tail',
+      logPath,
+      exists: false,
+      sizeBytes: 0,
+      maxBytes: input.maxBytes,
+      truncated: false,
+      content: '',
+    };
+  }
 }
 
 function createLiveFollowHealthSummary(
@@ -4319,6 +4385,10 @@ function createOperatorBrowserDashboardHtml(input: {
         <dl id="serverSummary">
           <dt>Status</dt><dd class="muted">Loading...</dd>
         </dl>
+        <div class="row" style="margin-top: 10px;">
+          <button id="loadApiLogTail" type="button">Refresh API Log Tail</button>
+        </div>
+        <pre id="apiLogTail">API log tail not loaded.</pre>
       </section>
 
       <section class="panel">
@@ -5462,11 +5532,29 @@ function createOperatorBrowserDashboardHtml(input: {
       const backgroundDrain = status.backgroundDrain || {};
       const scheduler = status.accountMirrorScheduler || {};
       const liveFollow = status.liveFollow || {};
+      const api = status.api || {};
       $('opsControls').innerHTML = [
+        renderApiServiceControl(api),
         renderBackgroundDrainControl(backgroundDrain),
         renderMirrorSchedulerControl(scheduler),
         renderLiveFollowControlSummary(liveFollow),
       ].join('');
+    }
+
+    function renderApiServiceControl(api) {
+      const process = api.process || {};
+      const service = api.managedService || {};
+      return '<div class="control-card" id="apiServiceControls"><div class="control-title"><strong>API Service</strong>'
+        + renderStatusText(process.pid ? 'running' : 'unknown', process.pid ? 'ok' : 'warn')
+        + '</div><dl>'
+        + '<dt>PID</dt><dd>' + escapeHtml(process.pid ? String(process.pid) : 'unknown') + '</dd>'
+        + '<dt>Unit</dt><dd>' + escapeHtml(service.unitName || 'unknown') + '</dd>'
+        + '<dt>Log</dt><dd>' + escapeHtml(service.logPath || 'unknown') + '</dd>'
+        + '<dt>Status</dt><dd><code>' + escapeHtml(service.statusCommand || 'unknown') + '</code></dd>'
+        + '<dt>Restart</dt><dd><code>' + escapeHtml(service.restartCommand || 'unknown') + '</code></dd>'
+        + '</dl><div class="row">'
+        + '<button id="loadApiLogTailInline" type="button" onclick="loadApiLogTail()">Refresh Log Tail</button>'
+        + '</div></div>';
     }
 
     function renderBackgroundDrainControl(backgroundDrain) {
@@ -7833,6 +7921,29 @@ function createOperatorBrowserDashboardHtml(input: {
       await loadMirrorCatalog();
     }
 
+    async function loadApiLogTail() {
+      const button = $('loadApiLogTail');
+      const inlineButton = document.getElementById('loadApiLogTailInline');
+      button.disabled = true;
+      if (inlineButton) inlineButton.disabled = true;
+      $('apiLogTail').textContent = 'Loading API log tail...';
+      try {
+        const payload = await fetchJson('/v1/api/logs/tail?maxBytes=32768');
+        $('apiLogTail').textContent = asJson({
+          logPath: payload.logPath,
+          exists: payload.exists,
+          sizeBytes: payload.sizeBytes,
+          truncated: payload.truncated,
+          content: payload.content || '',
+        });
+      } catch (error) {
+        $('apiLogTail').textContent = String(error.message || error);
+      } finally {
+        button.disabled = false;
+        if (inlineButton) inlineButton.disabled = false;
+      }
+    }
+
     async function postStatusControl(payload) {
       const response = await fetch('/status', {
         method: 'POST',
@@ -7921,6 +8032,7 @@ function createOperatorBrowserDashboardHtml(input: {
     }
 
     $('refreshStatus').addEventListener('click', refreshStatus);
+    $('loadApiLogTail').addEventListener('click', loadApiLogTail);
     $('inspectMirrorCompletionById').addEventListener('click', inspectSelectedMirrorCompletion);
     $('pauseMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('pause'));
     $('resumeMirrorCompletion').addEventListener('click', () => controlMirrorCompletion('resume'));
