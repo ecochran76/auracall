@@ -15657,3 +15657,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   pinned dashboard. Added a user-scoped systemd installer for
   `auracall-api.service` that runs the installed `auracall api serve`, restarts
   on failure, and appends logs under `~/.auracall/logs/`.
+- 2026-05-08: Runtime installs and API restarts should be one operator habit.
+  Added `pnpm run install:user-runtime-service` to install the user runtime and
+  then install/restart the managed API service in a single command.

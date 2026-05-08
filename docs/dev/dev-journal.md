@@ -26831,6 +26831,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed `api ops-browser-status --timeout-ms 20000 --expect-live-follow-severity healthy --json`
     reports live-follow `healthy` and dashboard live-follow controls present
 
+## Turn 155 | 2026-05-08
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make the runtime upgrade and managed-service restart one repeatable
+  operator command.
+- Change:
+  - added `pnpm run install:user-runtime-service`
+  - updated `docs/user-scoped-runtime.md` to make the composed runtime install
+    plus API-service restart the default local upgrade path
+
 ## Turn 121 | 2026-05-05
 
 - Continued implementation plan:

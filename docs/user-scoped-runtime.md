@@ -1,11 +1,34 @@
 # User-Scoped Runtime
 
-Use this when you want the day-to-day `auracall` command to run from an
-installed user-owned package copy instead of from the live repo checkout.
-This is the primary dogfood/install path while public npm distribution is
-deferred.
+Use this when you want the day-to-day `auracall` command and local API service
+to run from an installed user-owned package copy instead of from the live repo
+checkout. This is the primary dogfood/install path while public npm
+distribution is deferred.
+
+## Install Runtime And API Service
+
+Use this as the default local upgrade path:
+
+```bash
+pnpm run install:user-runtime-service
+```
+
+The command installs the current checkout into `~/.auracall/user-runtime`,
+refreshes the `~/.local/bin/auracall` wrappers, installs or updates the
+`auracall-api.service` user unit, and restarts the API service from the new
+runtime.
+
+Verify:
+
+```bash
+systemctl --user status auracall-api.service
+curl http://127.0.0.1:18095/status
+```
 
 ## Install From The Current Checkout
+
+Use this lower-level command only when you want to refresh the installed CLI
+without touching the API service:
 
 ```bash
 pnpm run install:user-runtime
@@ -54,7 +77,7 @@ profiles that repo dogfooding used.
 
 ## User API Service
 
-Install or refresh the local API service after installing the user runtime:
+Install or refresh only the local API service:
 
 ```bash
 pnpm run install:user-api-service

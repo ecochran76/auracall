@@ -901,3 +901,6 @@ The pinned local API now has a user-scoped service installer:
 `~/.config/systemd/user/auracall-api.service`, running the installed
 `~/.local/bin/auracall api serve` with config-derived host, port, dashboard,
 and scheduler settings plus restart-on-failure and durable logs.
+The preferred local upgrade path is now `pnpm run install:user-runtime-service`,
+which refreshes the user runtime and then installs/restarts the managed API
+service in one command.
