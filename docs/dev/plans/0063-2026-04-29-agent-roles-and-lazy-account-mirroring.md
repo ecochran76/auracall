@@ -548,6 +548,9 @@ Each status payload should include:
   Gemini can be healthy but incomplete, while Grok can have complete cached
   metadata and still require operator attention because the latest live-follow
   completion timed out and placed the account in failure backoff.
+  Metadata collector timeouts now abort the collector signal, and Grok
+  account-file listing closes its CDP client on abort, preserving the browser
+  operation control-plane boundary when a file-page read hangs.
   `/agents` now turns the disabled Agents / Teams nav item into a read-only
   operator page that calls the existing `GET /v1/team-runs/inspect` and
   `GET /v1/runtime-runs/inspect` surfaces without adding write paths. The same

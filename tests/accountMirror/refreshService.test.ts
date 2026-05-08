@@ -613,6 +613,7 @@ describe('account mirror refresh service', () => {
   });
 
   test('times out a stuck metadata collector and releases the browser operation', async () => {
+    let collectAbortSignal: AbortSignal | null = null;
     const dispatcher = createBrowserOperationDispatcher({
       now: () => new Date('2026-05-02T20:05:00.000Z'),
     });
@@ -625,10 +626,10 @@ describe('account mirror refresh service', () => {
       registry,
       dispatcher,
       metadataCollector: {
-        collect: vi.fn(
-          (_input: AccountMirrorMetadataCollectorInput) =>
-            new Promise<AccountMirrorMetadataCollectorResult>(() => {}),
-        ),
+        collect: vi.fn((input: AccountMirrorMetadataCollectorInput) => {
+          collectAbortSignal = input.abortSignal ?? null;
+          return new Promise<AccountMirrorMetadataCollectorResult>(() => {});
+        }),
       },
       persistence: createNoopPersistence(),
       now: () => new Date('2026-05-02T20:05:00.000Z'),
@@ -642,6 +643,7 @@ describe('account mirror refresh service', () => {
         collectorTimeoutMs: 5,
       }),
     ).rejects.toThrow('Account mirror metadata collector timed out for chatgpt/default.');
+    expect((collectAbortSignal as AbortSignal | null)?.aborted).toBe(true);
 
     const entry = registry.readStatus({
       provider: 'chatgpt',

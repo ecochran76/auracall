@@ -230,6 +230,7 @@ export function createAccountMirrorRefreshService(input: {
 
       let collection: AccountMirrorMetadataCollectorResult;
       let latestYieldCause: AccountMirrorYieldCause | null = null;
+      const collectorAbort = new AbortController();
       try {
         collection = await withTimeout(
           metadataCollector.collect({
@@ -242,6 +243,7 @@ export function createAccountMirrorRefreshService(input: {
               maxArtifactRowsPerCycle: target.limits.maxArtifactRowsPerCycle,
             },
             previousEvidence: target.metadataEvidence,
+            abortSignal: collectorAbort.signal,
             shouldYield: () => {
               const cause = getAccountMirrorYieldCause(acquired);
               if (cause) {
@@ -253,6 +255,7 @@ export function createAccountMirrorRefreshService(input: {
           }),
           normalizePositiveInteger(request.collectorTimeoutMs, 120_000),
           `Account mirror metadata collector timed out for ${provider}/${runtimeProfileId}.`,
+          collectorAbort,
         );
         collection = withYieldCause(collection, latestYieldCause);
         const collectionWithPriorManifests = await mergeCollectionWithPersistedCatalog({
@@ -353,10 +356,19 @@ export function createAccountMirrorRefreshService(input: {
   };
 }
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  message: string,
+  abortController?: AbortController,
+): Promise<T> {
   let timeout: NodeJS.Timeout | null = null;
   return new Promise<T>((resolve, reject) => {
-    timeout = setTimeout(() => reject(new Error(message)), timeoutMs);
+    timeout = setTimeout(() => {
+      const error = new Error(message);
+      abortController?.abort(error);
+      reject(error);
+    }, timeoutMs);
     promise.then(
       (value) => {
         if (timeout) clearTimeout(timeout);

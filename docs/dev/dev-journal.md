@@ -16,9 +16,18 @@
     latest completion status/error, and an explicit attention flag
   - `/ops/browser` attention filtering and target-row explanations now surface
     failure-backoff errors directly
+  - account-mirror metadata collection now receives an abort signal on
+    collector timeout; Grok account-file collection closes its CDP client on
+    abort so the browser-operation lock is not released while stale file-page
+    work keeps running
 - Validation:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/cli/apiStatusCommand.test.ts -t "live-follow|browser operator dashboard|api ops browser CLI helpers|failed completion retry" --maxWorkers 1`
+  - `pnpm vitest run tests/accountMirror/refreshService.test.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/cli/apiStatusCommand.test.ts -t "times out a stuck metadata collector|live-follow|browser operator dashboard|api ops browser CLI helpers|failed completion retry" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/accountMirror/chatgptMetadataCollector.ts src/accountMirror/refreshService.ts src/browser/providers/types.ts src/browser/providers/grokAdapter.ts tests/accountMirror/refreshService.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
 
 ## Turn 149 | 2026-05-07
 

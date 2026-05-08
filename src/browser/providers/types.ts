@@ -49,6 +49,7 @@ export interface BrowserProviderListOptions {
   expectedUserIdentity?: ProviderUserIdentity | null;
   expectedServiceAccountId?: string | null;
   identityPreflightFallbackIdentity?: ProviderUserIdentity | null;
+  abortSignal?: AbortSignal;
 }
 
 export interface ProviderUserIdentity {

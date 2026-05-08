@@ -4992,6 +4992,18 @@ export function createGrokAdapter(): Pick<
     ): Promise<FileRef[]> {
       const connection = await connectToGrokTab(options, GROK_FILES_URL);
       const { client, targetId, shouldClose, host, port } = connection;
+      const abortSignal = options?.abortSignal;
+      const abortHandler = () => {
+        void client.close().catch(() => undefined);
+      };
+      if (abortSignal?.aborted) {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+        throw readAbortReason(abortSignal);
+      }
+      abortSignal?.addEventListener('abort', abortHandler, { once: true });
       try {
         const files = await withUiDiagnostics(
           client.Runtime,
@@ -5024,6 +5036,7 @@ export function createGrokAdapter(): Pick<
           remoteUrl: file.remoteUrl,
         }));
       } finally {
+        abortSignal?.removeEventListener('abort', abortHandler);
         await client.close();
         if (shouldClose && targetId) {
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
@@ -10876,4 +10889,9 @@ function extractChatIdFromUrl(rawUrl: string): string | null {
     const match = rawUrl.match(/\/c\/([^/?#]+)/);
     return match?.[1] ?? null;
   }
+}
+
+function readAbortReason(signal: AbortSignal): Error {
+  const reason = signal.reason;
+  return reason instanceof Error ? reason : new Error('Grok browser operation was aborted.');
 }

@@ -28,7 +28,10 @@
   view. `/ops/browser` now filters mirror targets by completeness or attention
   state, reports the visible target count after filters apply, and explains the
   current attention reason per target row from existing status, failure-backoff,
-  and recent completion error fields.
+  and recent completion error fields. Metadata collector timeouts now also
+  abort the collector signal, and Grok account-file listing closes its CDP
+  client on abort so stale file-page work does not outlive the browser-operation
+  lock.
 
 - 2026-05-05: API service routing needs to be discoverable after restart, not
   inferred from a probe. `api.routing` now stores local/external hostnames,
