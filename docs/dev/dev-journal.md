@@ -1,3 +1,34 @@
+## Turn 158 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: keep scheduler wait-row completion inspection in local context.
+- Change:
+  - Mirror Scheduler card now includes a local completion detail panel
+  - `Inspect completion` populates that panel with compact completion details
+    while preserving the existing raw completion block
+  - CLI/MCP dashboard contracts now assert the local scheduler completion
+    detail affordance
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1 -t "browser operator dashboard|api ops browser"`
+  - `pnpm vitest run tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts src/mcp/tools/apiOpsBrowserStatus.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+    reported only existing non-null assertion warning debt in
+    `tests/http.responsesServer.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run build && pnpm run install:user-runtime-service`
+- Installed dogfood:
+  - installed `api ops-browser-status --port 18095` reports
+    `schedulerCompletionDetail=ok`
+  - installed `/ops/browser` contains `mirrorSchedulerCompletionDetail`,
+    `setMirrorSchedulerCompletionDetail`, `Select a scheduler wait row
+    completion`, and `selectedCompletion`
+  - installed completion lookup returned compact fields for active
+    `acctmirror_completion_ca52cebf-2129-478c-b3f0-8f977805bb9a`
+
 ## Turn 157 | 2026-05-09
 
 - Continued implementation plan:

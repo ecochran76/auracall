@@ -1,3 +1,8 @@
+- 2026-05-09: Scheduler wait-row completion inspection should keep the
+  operator in the scheduler context. The Mirror Scheduler card now has a local
+  completion detail panel populated by `Inspect completion`, while the existing
+  raw completion block remains available.
+
 - 2026-05-09: Scheduler wait rows should lead to evidence without creating
   accidental mutation paths. The Mirror Scheduler wait table now adds read-only
   row actions to inspect an active completion and open the matching

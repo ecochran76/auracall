@@ -967,3 +967,7 @@ the operator dashboard.
 The wait table rows now include read-only operator actions. Operators can
 inspect the active completion when present or open the matching provider/runtime
 account-mirror cache view, while mutation controls remain outside the table.
+Completion inspection from a scheduler wait row now also writes a compact detail
+summary into a local panel in the Mirror Scheduler card. This keeps the
+scheduler wait table as the operator's working context while preserving the
+existing raw completion readout.

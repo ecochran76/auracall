@@ -5788,7 +5788,8 @@ function createOperatorBrowserDashboardHtml(input: {
         + '<button id="dryRunMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'run-once'" + ', true)" ' + disabledAttr(running) + '>Dry Run</button>'
         + '<button id="pauseMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'pause'" + ')" ' + disabledAttr(!enabled || paused) + '>Pause</button>'
         + '<button id="resumeMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'resume'" + ')" ' + disabledAttr(!enabled || running && !paused) + '>Resume</button>'
-        + '</div><div id="mirrorSchedulerWaitTable" class="mini-table">' + waitRows + '</div></div>';
+        + '</div><div id="mirrorSchedulerWaitTable" class="mini-table">' + waitRows + '</div>'
+        + '<pre id="mirrorSchedulerCompletionDetail">Select a scheduler wait row completion to inspect details.</pre></div>';
     }
 
     function renderMirrorSchedulerWaitTable(liveFollow) {
@@ -8221,9 +8222,20 @@ function createOperatorBrowserDashboardHtml(input: {
       if (!id) return;
       setMirrorControlNotice('Inspecting ' + id + '...', 'warn');
       $('mirrorCompletions').textContent = 'Inspecting ' + id + '...';
+      setMirrorSchedulerCompletionDetail('Inspecting ' + id + '...');
       try {
         const detail = await fetchJson('/v1/account-mirrors/completions/' + encodeURIComponent(id));
         $('mirrorCompletions').textContent = asJson({ selectedCompletion: detail });
+        setMirrorSchedulerCompletionDetail(asJson({
+          id: detail.id || id,
+          provider: detail.provider || null,
+          runtimeProfileId: detail.runtimeProfileId || null,
+          status: detail.status || null,
+          phase: detail.phase || null,
+          nextAttemptAt: detail.nextAttemptAt || null,
+          passCount: detail.passCount ?? null,
+          error: detail.error || null,
+        }));
         setMirrorControlResultToast({
           title: 'Completion detail loaded',
           action: 'inspect',
@@ -8236,6 +8248,7 @@ function createOperatorBrowserDashboardHtml(input: {
       } catch (error) {
         const message = String(error.message || error);
         $('mirrorCompletions').textContent = message;
+        setMirrorSchedulerCompletionDetail(message);
         setMirrorControlResultToast({
           title: 'Completion inspect failed',
           action: 'inspect',
@@ -8246,6 +8259,11 @@ function createOperatorBrowserDashboardHtml(input: {
         });
         setMirrorControlNotice('Failed to inspect ' + id + ': ' + message, 'bad');
       }
+    }
+
+    function setMirrorSchedulerCompletionDetail(value) {
+      const panel = document.getElementById('mirrorSchedulerCompletionDetail');
+      if (panel) panel.textContent = value;
     }
 
     async function refreshStatus() {
