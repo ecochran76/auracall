@@ -62,6 +62,13 @@ const apiStatusCompletionOperationShape = z.object({
   }).nullable(),
 });
 
+const apiStatusSchedulerDiagnosticsHintShape = z.object({
+  provider: z.string().nullable(),
+  runtimeProfileId: z.string().nullable(),
+  completionId: z.string().nullable(),
+  command: z.string(),
+});
+
 const apiStatusLiveFollowTargetAccountShape = z.object({
   provider: z.string(),
   runtimeProfileId: z.string(),
@@ -190,6 +197,7 @@ const apiStatusOutputShape = {
     latestYield: apiStatusLatestYieldShape.nullable(),
     targets: apiStatusLiveFollowTargetsShape.nullable(),
   }),
+  schedulerDiagnosticsHints: z.array(apiStatusSchedulerDiagnosticsHintShape),
   raw: z.unknown(),
 } satisfies z.ZodRawShape;
 
@@ -241,15 +249,31 @@ export function createApiStatusToolHandler(deps: RegisterApiStatusToolDeps = {})
     const state = summary.scheduler.state ?? 'unknown';
     const pid = summary.api.process.pid ?? 'unknown';
     const logPath = summary.api.managedService.logPath ?? 'unknown';
+    const diagnosticsText = formatApiStatusDiagnosticsText(summary.schedulerDiagnosticsHints);
     return {
       isError: false,
       content: [
         {
           type: 'text' as const,
-          text: `AuraCall API ${summary.host}:${summary.port} is ${summary.ok === false ? 'not-ok' : summary.ok === true ? 'ok' : 'unknown'}; pid=${pid}; log=${logPath}; mirror posture ${posture}; scheduler state ${state}; ${summary.liveFollow.line}`,
+          text: `AuraCall API ${summary.host}:${summary.port} is ${summary.ok === false ? 'not-ok' : summary.ok === true ? 'ok' : 'unknown'}; pid=${pid}; log=${logPath}; mirror posture ${posture}; scheduler state ${state}; ${summary.liveFollow.line}${diagnosticsText ? `\n${diagnosticsText}` : ''}`,
         },
       ],
       structuredContent: summary as typeof summary & Record<string, unknown>,
     };
   };
+}
+
+function formatApiStatusDiagnosticsText(hints: Array<{
+  provider: string | null;
+  runtimeProfileId: string | null;
+  command: string;
+}>): string {
+  if (!hints.length) return '';
+  return [
+    `Scheduler diagnostics: available=${hints.length}`,
+    ...hints.map((hint, index) => {
+      const label = [hint.provider, hint.runtimeProfileId].filter(Boolean).join('/');
+      return `Scheduler diagnostics command ${index + 1}${label ? ` (${label})` : ''}: ${JSON.stringify(hint.command)}`;
+    }),
+  ].join('\n');
 }

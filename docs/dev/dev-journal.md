@@ -1,3 +1,29 @@
+## Turn 169 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make MCP `api_status` expose every scheduler diagnostics command in
+  the text response and schema.
+- Change:
+  - MCP `api_status` text now appends the same scheduler diagnostics count and
+    numbered provider/runtime command lines as the CLI status surfaces
+  - MCP `api_status` output schema now declares `schedulerDiagnosticsHints`
+  - the MCP status test now covers multiple active diagnostics commands
+- Validation:
+  - `pnpm vitest run tests/mcp.apiStatus.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/mcp/tools/apiStatus.ts tests/mcp.apiStatus.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - installed MCP `api_status` on port `18095` prints
+    `Scheduler diagnostics: available=3` plus separate numbered commands for
+    `grok/default`, `chatgpt/default`, and `gemini/default`
+  - installed MCP `api_status` structured content exposes
+    `schedulerDiagnosticsHints` with `3` entries
+
 ## Turn 168 | 2026-05-09
 
 - Continued implementation plan:

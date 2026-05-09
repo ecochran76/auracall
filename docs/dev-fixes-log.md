@@ -1,3 +1,8 @@
+- 2026-05-09: MCP `api_status` should expose the same multi-command
+  scheduler diagnostics handoff as the CLI status surfaces. Its text response
+  now includes the diagnostics count and numbered provider/runtime commands,
+  and its output schema declares `schedulerDiagnosticsHints`.
+
 - 2026-05-09: `api status` should not collapse scheduler diagnostics command
   discovery to the first active completion. It now matches
   `api ops-browser-status` by printing every diagnostics command as a numbered
