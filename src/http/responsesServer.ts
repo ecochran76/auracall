@@ -6030,11 +6030,20 @@ function createOperatorBrowserDashboardHtml(input: {
     function buildMirrorSchedulerDiagnosticsHint(liveFollow) {
       const hints = collectMirrorSchedulerDiagnosticsHints(liveFollow);
       if (!hints.length) return '<span class="muted">none</span>';
-      const command = formatMirrorSchedulerDiagnosticsCommand(hints[0]);
-      return '<code data-mirror-scheduler-diagnostics-command="true">' + escapeHtml(command) + '</code>'
+      return '<div data-mirror-scheduler-diagnostics-command-list="true">'
+        + hints.map(renderMirrorSchedulerDiagnosticsCommandHint).join('')
+        + '</div>';
+    }
+
+    function renderMirrorSchedulerDiagnosticsCommandHint(hint) {
+      const command = formatMirrorSchedulerDiagnosticsCommand(hint);
+      const label = [hint.provider, hint.runtimeProfileId].filter(Boolean).join('/');
+      return '<div class="inline-actions" data-mirror-scheduler-diagnostics-command-row="true">'
+        + (label ? '<span class="muted">' + escapeHtml(label) + '</span> ' : '')
+        + '<code data-mirror-scheduler-diagnostics-command="true">' + escapeHtml(command) + '</code>'
         + ' <button type="button" class="link-button" data-mirror-scheduler-diagnostics-command-copy-button="true"'
         + ' data-command="' + escapeHtml(command) + '" onclick="copyMirrorSchedulerDiagnosticsCommand(this)">Copy command</button>'
-        + (hints.length > 1 ? ' <span class="muted">+' + escapeHtml(String(hints.length - 1)) + ' more</span>' : '');
+        + '</div>';
     }
 
     function collectMirrorSchedulerDiagnosticsHints(liveFollow) {

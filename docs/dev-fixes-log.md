@@ -1,3 +1,8 @@
+- 2026-05-09: The dashboard diagnostics hint should not hide secondary active
+  mirror completions behind a `+N more` count. The Mirror Scheduler card now
+  renders every active provider/runtime diagnostics command as its own copyable
+  row.
+
 - 2026-05-09: Browser dashboard scheduler diagnostics command hints should be
   copyable without forcing operators to select terminal text. The Mirror
   Scheduler card now includes a `Copy command` action that also writes the

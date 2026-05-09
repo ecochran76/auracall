@@ -15630,10 +15630,13 @@ describe('http responses adapter', () => {
       expect(html).toContain('openMirrorSchedulerDiagnostics');
       expect(html).toContain('loadMirrorSchedulerDiagnosticsText');
       expect(html).toContain('buildMirrorSchedulerDiagnosticsHint');
+      expect(html).toContain('renderMirrorSchedulerDiagnosticsCommandHint');
       expect(html).toContain('formatMirrorSchedulerDiagnosticsCommand');
       expect(html).toContain('mirrorSchedulerDiagnosticsBundle');
       expect(html).toContain('mirrorSchedulerDiagnosticsHint');
       expect(html).toContain('scheduler-diagnostics');
+      expect(html).toContain('data-mirror-scheduler-diagnostics-command-list');
+      expect(html).toContain('data-mirror-scheduler-diagnostics-command-row');
       expect(html).toContain('data-mirror-scheduler-diagnostics-command');
       expect(html).toContain('data-mirror-scheduler-diagnostics-command-copy-button');
       expect(html).toContain('data-mirror-scheduler-diagnostics-open-button');

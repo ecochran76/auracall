@@ -1,3 +1,33 @@
+## Turn 166 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: expose every active scheduler diagnostics command in the dashboard.
+- Change:
+  - the Mirror Scheduler `Diagnostics` row now renders a compact command list
+    instead of only the first command plus a hidden `+N more` count
+  - each provider/runtime command row has its own `Copy command` action
+  - dashboard contract checks now assert the command-list and command-row
+    markers
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts --maxWorkers 1 -t "browser operator dashboard|api ops browser"`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in `tests/http.responsesServer.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - installed `/ops/browser` contains
+    `data-mirror-scheduler-diagnostics-command-list`,
+    `data-mirror-scheduler-diagnostics-command-row`,
+    `renderMirrorSchedulerDiagnosticsCommandHint`, and `Copy command`
+  - installed `api ops-browser-status --port 18095` reports
+    `schedulerDiagnostics=ok`
+  - installed `api status --port 18095 --json` currently reports `3`
+    scheduler diagnostics hints
+
 ## Turn 165 | 2026-05-09
 
 - Continued implementation plan:

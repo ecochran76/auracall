@@ -1001,3 +1001,8 @@ The dashboard command hint now has a `Copy command` action with the same local
 detail-panel fallback used by diagnostics bundle inspection. This keeps the
 operator path short: status shows the exact CLI command, and the browser can
 copy or visibly stage that command without leaving the scheduler card.
+When several active mirror completions are present, the dashboard now renders
+all scheduler diagnostics commands as copyable provider/runtime rows rather
+than showing only the first command and a collapsed count. This keeps multi-
+account live-follow triage visible without asking the operator to inspect raw
+status JSON.

@@ -82,7 +82,8 @@ const dashboardHtml = `
   function classifyMirrorSchedulerTargetWait() { return 'retry delay routine cadence'; }
   function renderMirrorSchedulerWaitRowActions() { return '<button>Inspect completion</button><button data-mirror-scheduler-diagnostics-open-button="true">Open diagnostics</button><button data-mirror-scheduler-diagnostics-button="true">Copy diagnostics</button><a data-mirror-scheduler-cache-link="true">Open cache</a>'; }
   function buildMirrorSchedulerAccountMirrorPath() { return '/account-mirror?provider=chatgpt&runtimeProfile=default&kind=all'; }
-  function buildMirrorSchedulerDiagnosticsHint() { return '<code data-mirror-scheduler-diagnostics-command="true">' + formatMirrorSchedulerDiagnosticsCommand({ completionId: 'acctmirror_paused' }) + '</code><button data-mirror-scheduler-diagnostics-command-copy-button="true" onclick="copyMirrorSchedulerDiagnosticsCommand(this)">Copy command</button>'; }
+  function buildMirrorSchedulerDiagnosticsHint() { return '<div data-mirror-scheduler-diagnostics-command-list="true">' + renderMirrorSchedulerDiagnosticsCommandHint({ completionId: 'acctmirror_paused' }) + renderMirrorSchedulerDiagnosticsCommandHint({ completionId: 'acctmirror_running' }) + '</div>'; }
+  function renderMirrorSchedulerDiagnosticsCommandHint(hint) { return '<div data-mirror-scheduler-diagnostics-command-row="true"><code data-mirror-scheduler-diagnostics-command="true">' + formatMirrorSchedulerDiagnosticsCommand(hint) + '</code><button data-mirror-scheduler-diagnostics-command-copy-button="true" onclick="copyMirrorSchedulerDiagnosticsCommand(this)">Copy command</button></div>'; }
   function formatMirrorSchedulerDiagnosticsCommand() { return 'auracall api scheduler-diagnostics --port 18080 --provider chatgpt --runtime-profile default --completion-id acctmirror_paused'; }
   const mirrorSchedulerWaitTable = 'Wait';
   const mirrorSchedulerCompletionDetail = 'Select a scheduler wait row completion';
