@@ -80,7 +80,7 @@ const dashboardHtml = `
   function latestMirrorSchedulerPass(status) { return status.accountMirrorScheduler.history.entries[0]; }
   function renderMirrorSchedulerWaitTable(status) { return status.liveFollow.targets.accounts.map(classifyMirrorSchedulerTargetWait); }
   function classifyMirrorSchedulerTargetWait() { return 'retry delay routine cadence'; }
-  function renderMirrorSchedulerWaitRowActions() { return '<button>Inspect completion</button><button data-mirror-scheduler-diagnostics-button="true">Copy diagnostics</button><a data-mirror-scheduler-cache-link="true">Open cache</a>'; }
+  function renderMirrorSchedulerWaitRowActions() { return '<button>Inspect completion</button><button data-mirror-scheduler-diagnostics-open-button="true">Open diagnostics</button><button data-mirror-scheduler-diagnostics-button="true">Copy diagnostics</button><a data-mirror-scheduler-cache-link="true">Open cache</a>'; }
   function buildMirrorSchedulerAccountMirrorPath() { return '/account-mirror?provider=chatgpt&runtimeProfile=default&kind=all'; }
   const mirrorSchedulerWaitTable = 'Wait';
   const mirrorSchedulerCompletionDetail = 'Select a scheduler wait row completion';
@@ -333,9 +333,16 @@ const dashboardHtml = `
     await fetch('/v1/account-mirrors/completions/' + encodeURIComponent(id));
   }
   function setMirrorSchedulerCompletionDetail(value) { return value; }
+  async function openMirrorSchedulerDiagnostics() {
+    setMirrorSchedulerCompletionDetail(await loadMirrorSchedulerDiagnosticsText({ completionId: 'acctmirror_paused' }));
+  }
   async function copyMirrorSchedulerDiagnostics() {
+    const text = await loadMirrorSchedulerDiagnosticsText({ completionId: 'acctmirror_paused' });
+    await navigator.clipboard.writeText(text);
+  }
+  async function loadMirrorSchedulerDiagnosticsText() {
     await fetch('/v1/account-mirrors/scheduler/diagnostics?completionId=acctmirror_paused');
-    await navigator.clipboard.writeText(mirrorSchedulerDiagnosticsBundle);
+    return mirrorSchedulerDiagnosticsBundle;
   }
   async function inspectSelectedMirrorCompletion() {
     await inspectMirrorCompletion($('mirrorCompletionId').value.trim());

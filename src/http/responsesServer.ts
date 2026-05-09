@@ -6060,6 +6060,11 @@ function createOperatorBrowserDashboardHtml(input: {
       }
       const wait = classifyMirrorSchedulerTargetWait(account);
       const cachePath = buildMirrorSchedulerAccountMirrorPath(account);
+      actions.push('<button type="button" class="link-button" data-mirror-scheduler-diagnostics-open-button="true"'
+        + ' data-provider="' + escapeHtml(account.provider || '') + '"'
+        + ' data-runtime-profile-id="' + escapeHtml(account.runtimeProfileId || '') + '"'
+        + ' data-completion-id="' + escapeHtml(account.activeCompletionId || '') + '"'
+        + ' onclick="openMirrorSchedulerDiagnostics(this)">Open diagnostics</button>');
       actions.push('<button type="button" class="link-button" data-mirror-scheduler-diagnostics-button="true"'
         + ' data-provider="' + escapeHtml(account.provider || '') + '"'
         + ' data-runtime-profile-id="' + escapeHtml(account.runtimeProfileId || '') + '"'
@@ -8504,6 +8509,19 @@ function createOperatorBrowserDashboardHtml(input: {
       }
     }
 
+    async function openMirrorSchedulerDiagnostics(button) {
+      const data = button && button.dataset ? button.dataset : {};
+      const provider = data.provider || null;
+      const runtimeProfileId = data.runtimeProfileId || null;
+      try {
+        const text = await loadMirrorSchedulerDiagnosticsText(data);
+        setMirrorSchedulerCompletionDetail(text);
+        setMirrorControlNotice('Loaded scheduler diagnostics for ' + [provider, runtimeProfileId].filter(Boolean).join('/') + '.', 'ok');
+      } catch (error) {
+        setMirrorControlNotice('Could not load scheduler diagnostics: ' + String(error.message || error), 'bad');
+      }
+    }
+
     function setMirrorSchedulerCompletionDetail(value) {
       const panel = document.getElementById('mirrorSchedulerCompletionDetail');
       if (panel) panel.textContent = value;
@@ -8516,18 +8534,25 @@ function createOperatorBrowserDashboardHtml(input: {
       const runtimeProfileId = data.runtimeProfileId || null;
       setMirrorControlNotice('Preparing scheduler diagnostics...', 'warn');
       try {
-        const params = new URLSearchParams();
-        if (provider) params.set('provider', provider);
-        if (runtimeProfileId) params.set('runtimeProfile', runtimeProfileId);
-        if (completionId) params.set('completionId', completionId);
-        const bundle = await fetchJson('/v1/account-mirrors/scheduler/diagnostics?' + params.toString());
-        const text = asJson({ mirrorSchedulerDiagnosticsBundle: bundle });
+        const text = await loadMirrorSchedulerDiagnosticsText(data);
         setMirrorSchedulerCompletionDetail(text);
         await navigator.clipboard.writeText(text);
         setMirrorControlNotice('Copied scheduler diagnostics for ' + [provider, runtimeProfileId].filter(Boolean).join('/') + '.', 'ok');
       } catch (error) {
         setMirrorControlNotice('Could not copy scheduler diagnostics: ' + String(error.message || error), 'bad');
       }
+    }
+
+    async function loadMirrorSchedulerDiagnosticsText(data) {
+      const completionId = data.completionId || '';
+      const provider = data.provider || null;
+      const runtimeProfileId = data.runtimeProfileId || null;
+      const params = new URLSearchParams();
+      if (provider) params.set('provider', provider);
+      if (runtimeProfileId) params.set('runtimeProfile', runtimeProfileId);
+      if (completionId) params.set('completionId', completionId);
+      const bundle = await fetchJson('/v1/account-mirrors/scheduler/diagnostics?' + params.toString());
+      return asJson({ mirrorSchedulerDiagnosticsBundle: bundle });
     }
 
     async function refreshStatus() {

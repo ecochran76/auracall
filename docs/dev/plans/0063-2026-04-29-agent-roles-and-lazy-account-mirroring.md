@@ -981,3 +981,7 @@ The same scheduler diagnostics bundle is now available without a browser through
 `account_mirror_scheduler_diagnostics`. Operators and agents can fetch the
 target/wait/cache/completion/latest-event payload by provider/runtime or
 completion id, keeping dashboard handoffs and API/MCP workflows aligned.
+Dashboard scheduler wait rows now also expose `Open diagnostics` beside `Copy
+diagnostics`. Both actions share the same API-backed bundle loader, so an
+operator can inspect the payload in the local scheduler detail panel before
+copying it or when clipboard access is unavailable.

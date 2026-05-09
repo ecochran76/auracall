@@ -1,3 +1,8 @@
+- 2026-05-09: Scheduler diagnostics inspection should not depend on clipboard
+  availability. Dashboard wait rows now include `Open diagnostics`, which
+  renders the same API-backed diagnostics bundle locally while `Copy
+  diagnostics` keeps the handoff clipboard path.
+
 - 2026-05-09: Scheduler diagnostics should not depend on a browser clipboard.
   Added `GET /v1/account-mirrors/scheduler/diagnostics` plus MCP
   `account_mirror_scheduler_diagnostics`, returning the same compact

@@ -27782,6 +27782,40 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run plans:audit -- --keep 63`
   - `git diff --check`
 
+## Turn 161 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: inspect scheduler diagnostics in the dashboard without depending on
+  clipboard success.
+- Change:
+  - scheduler wait rows now expose `Open diagnostics` beside `Copy diagnostics`
+  - both actions use the same API-backed diagnostics bundle helper and render
+    the payload into the local scheduler completion panel
+  - `api ops-browser-status` now asserts the open/copy diagnostics dashboard
+    contract and the shared diagnostics endpoint marker
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1 -t "browser operator dashboard|api ops browser"`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm vitest run tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+    reported only existing warning debt in `tests/http.responsesServer.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - installed `api ops-browser-status --port 18095` reports
+    `schedulerDiagnostics=ok`
+  - installed `/ops/browser` contains `openMirrorSchedulerDiagnostics`,
+    `loadMirrorSchedulerDiagnosticsText`,
+    `data-mirror-scheduler-diagnostics-open-button`, and
+    `/v1/account-mirrors/scheduler/diagnostics`
+  - installed
+    `/v1/account-mirrors/scheduler/diagnostics?provider=chatgpt&runtimeProfile=default`
+    returns
+    `account_mirror_scheduler_diagnostics_bundle chatgpt/default`
+
 ## Turn 138 | 2026-05-06
 
 - Continued implementation plan:
