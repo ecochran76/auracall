@@ -1,3 +1,36 @@
+## Turn 160 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make scheduler diagnostics available without the browser clipboard.
+- Change:
+  - added `GET /v1/account-mirrors/scheduler/diagnostics`
+  - the endpoint returns the same compact target/wait/cache/completion/latest
+    scheduler-event bundle used by the dashboard copy action
+  - added CLI read/format helpers and MCP
+    `account_mirror_scheduler_diagnostics`
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/cli/apiSchedulerDiagnosticsCommand.test.ts tests/mcp.accountMirrorSchedulerDiagnostics.test.ts --maxWorkers 1 -t "browser operator dashboard|api ops browser|scheduler diagnostics|status response"`
+  - `pnpm vitest run tests/mcp.accountMirrorSchedulerDiagnostics.test.ts tests/cli/apiSchedulerDiagnosticsCommand.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts src/cli/apiSchedulerDiagnosticsCommand.ts src/mcp/tools/accountMirrorSchedulerDiagnostics.ts src/mcp/server.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/cli/apiSchedulerDiagnosticsCommand.test.ts tests/mcp.accountMirrorSchedulerDiagnostics.test.ts`
+    reported only existing non-null assertion warning debt in
+    `tests/http.responsesServer.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm run build && pnpm run install:user-runtime-service`
+- Installed dogfood:
+  - installed `/status.routes.accountMirrorSchedulerDiagnostics` reports
+    `/v1/account-mirrors/scheduler/diagnostics[...]`
+  - installed scheduler diagnostics endpoint returns
+    `account_mirror_scheduler_diagnostics_bundle` for active completion
+    `acctmirror_completion_ca52cebf-2129-478c-b3f0-8f977805bb9a`
+  - installed `/ops/browser` status still reports `schedulerDiagnostics=ok`
+  - installed `/ops/browser` copy action contains
+    `/v1/account-mirrors/scheduler/diagnostics`
+  - installed MCP bundle registers `account_mirror_scheduler_diagnostics`
+
 ## Turn 159 | 2026-05-09
 
 - Continued implementation plan:

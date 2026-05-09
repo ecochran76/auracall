@@ -333,8 +333,10 @@ const dashboardHtml = `
     await fetch('/v1/account-mirrors/completions/' + encodeURIComponent(id));
   }
   function setMirrorSchedulerCompletionDetail(value) { return value; }
-  async function copyMirrorSchedulerDiagnostics() { await navigator.clipboard.writeText(mirrorSchedulerDiagnosticsBundle); }
-  function latestMirrorSchedulerDiagnosticsEvent() { return {}; }
+  async function copyMirrorSchedulerDiagnostics() {
+    await fetch('/v1/account-mirrors/scheduler/diagnostics?completionId=acctmirror_paused');
+    await navigator.clipboard.writeText(mirrorSchedulerDiagnosticsBundle);
+  }
   async function inspectSelectedMirrorCompletion() {
     await inspectMirrorCompletion($('mirrorCompletionId').value.trim());
   }

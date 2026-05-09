@@ -1,3 +1,9 @@
+- 2026-05-09: Scheduler diagnostics should not depend on a browser clipboard.
+  Added `GET /v1/account-mirrors/scheduler/diagnostics` plus MCP
+  `account_mirror_scheduler_diagnostics`, returning the same compact
+  target/wait/cache/completion/latest-event bundle used by the dashboard copy
+  action.
+
 - 2026-05-09: Scheduler wait-row triage should be easy to hand off without
   asking operators to collect raw JSON from multiple panels. The Mirror
   Scheduler wait table now has a read-only `Copy diagnostics` action that

@@ -2998,6 +2998,103 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('returns scheduler diagnostics bundles through the API surface', async () => {
+    const pass: AccountMirrorSchedulerPassResult = {
+      object: 'account_mirror_scheduler_pass',
+      mode: 'execute',
+      action: 'refresh-completed',
+      startedAt: '2026-05-09T12:00:00.000Z',
+      completedAt: '2026-05-09T12:00:05.000Z',
+      selectedTarget: {
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        status: 'eligible',
+        reason: 'eligible',
+        eligibleAt: '2026-05-09T12:00:00.000Z',
+        mirrorCompleteness: completeAccountMirror,
+      },
+      backpressure: {
+        reason: 'none',
+        message: null,
+      },
+      metrics: {
+        totalTargets: 1,
+        eligibleTargets: 1,
+        delayedTargets: 0,
+        blockedTargets: 0,
+        defaultChatgptEligibleTargets: 1,
+        defaultChatgptDelayedTargets: 0,
+        inProgressEligibleTargets: 0,
+      },
+      refresh: null,
+      error: null,
+    };
+    const operation: AccountMirrorCompletionOperation = {
+      object: 'account_mirror_completion',
+      id: 'acctmirror_diagnostics_1',
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      mode: 'live_follow',
+      phase: 'backfill_history',
+      status: 'running',
+      startedAt: '2026-05-09T12:00:01.000Z',
+      completedAt: null,
+      nextAttemptAt: '2026-05-09T12:03:00.000Z',
+      maxPasses: null,
+      passCount: 2,
+      lastRefresh: null,
+      mirrorCompleteness: completeAccountMirror,
+      error: null,
+    };
+    const ledger = createMemorySchedulerLedger();
+    await ledger.appendPass(pass);
+    const read = vi.fn(() => operation);
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        accountMirrorSchedulerLedger: ledger,
+        accountMirrorCompletionService: {
+          start: vi.fn(() => operation),
+          read,
+          list: vi.fn(() => [operation]),
+          control: vi.fn(() => operation),
+        },
+      },
+    );
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/account-mirrors/scheduler/diagnostics?completionId=acctmirror_diagnostics_1`,
+      );
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        object: 'account_mirror_scheduler_diagnostics_bundle',
+        target: {
+          provider: 'chatgpt',
+          runtimeProfileId: 'default',
+          cachePath: '/account-mirror?provider=chatgpt&runtimeProfile=default&kind=all',
+        },
+        wait: {
+          activeCompletionId: 'acctmirror_diagnostics_1',
+        },
+        completion: {
+          id: 'acctmirror_diagnostics_1',
+          status: 'running',
+          phase: 'backfill_history',
+          passCount: 2,
+        },
+        latestSchedulerEvent: {
+          event: 'refresh-completed',
+          detail: 'chatgpt/default backpressure=none',
+        },
+      });
+      expect(read).toHaveBeenCalledWith('acctmirror_diagnostics_1');
+    } finally {
+      await server.close();
+    }
+  });
+
   it('pauses, resumes, and manually triggers lazy account mirror scheduler through POST /status', async () => {
     const runOnce = vi.fn(async (input: { dryRun: boolean }): Promise<AccountMirrorSchedulerPassResult> => ({
       object: 'account_mirror_scheduler_pass',
@@ -15242,6 +15339,9 @@ describe('http responses adapter', () => {
       expect((payload.routes as Record<string, unknown>).accountMirrorPreviewSessionTemplate).toBe(
         '/v1/account-mirrors/preview-sessions/{preview_session_id}',
       );
+      expect((payload.routes as Record<string, unknown>).accountMirrorSchedulerDiagnostics).toContain(
+        '/v1/account-mirrors/scheduler/diagnostics',
+      );
       expect((payload.routes as Record<string, unknown>).operatorBrowserDashboardUrl).toBe(
         'http://auracall.localhost/ops/browser',
       );
@@ -15528,7 +15628,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('copyMirrorSchedulerDiagnostics');
       expect(html).toContain('mirrorSchedulerDiagnosticsBundle');
       expect(html).toContain('data-mirror-scheduler-diagnostics-button');
-      expect(html).toContain('latestMirrorSchedulerDiagnosticsEvent');
+      expect(html).toContain('/v1/account-mirrors/scheduler/diagnostics');
       expect(html).toContain('renderOpsControls');
       expect(html).toContain('controlBackgroundDrain');
       expect(html).toContain('controlMirrorScheduler');

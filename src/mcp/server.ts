@@ -21,6 +21,7 @@ import { registerAccountMirrorStatusTool } from './tools/accountMirrorStatus.js'
 import { registerAccountMirrorRefreshTool } from './tools/accountMirrorRefresh.js';
 import { registerAccountMirrorCatalogTool } from './tools/accountMirrorCatalog.js';
 import { registerAccountMirrorSchedulerHistoryTool } from './tools/accountMirrorSchedulerHistory.js';
+import { registerAccountMirrorSchedulerDiagnosticsTool } from './tools/accountMirrorSchedulerDiagnostics.js';
 import { registerAccountMirrorCompletionTools } from './tools/accountMirrorCompletion.js';
 import { resolveConfig } from '../schema/resolver.js';
 import type { ResolvedUserConfig } from '../config.js';
@@ -102,6 +103,7 @@ export async function startMcpServer(): Promise<void> {
     service: services.accountMirrorCatalogService,
   });
   registerAccountMirrorSchedulerHistoryTool(server);
+  registerAccountMirrorSchedulerDiagnosticsTool(server);
   registerAccountMirrorCompletionTools(server, {
     service: services.accountMirrorCompletionService,
   });

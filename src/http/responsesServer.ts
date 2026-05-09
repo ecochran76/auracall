@@ -434,6 +434,7 @@ interface HttpStatusResponse {
     accountMirrorCompletionsGetTemplate: string;
     accountMirrorCompletionsControlTemplate: string;
     accountMirrorSchedulerHistory: string;
+    accountMirrorSchedulerDiagnostics: string;
     workbenchCapabilitiesList: string;
     operatorBrowserDashboard: string;
     accountMirrorDashboard: string;
@@ -1034,6 +1035,29 @@ export async function createResponsesHttpServer(
           200,
           summarizeAccountMirrorSchedulerHistory(history, { limit }) satisfies HttpAccountMirrorSchedulerHistoryResponse,
         );
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/account-mirrors/scheduler/diagnostics') {
+        const query = parseAccountMirrorSchedulerDiagnosticsQuery(url.searchParams);
+        const result = createAccountMirrorSchedulerDiagnosticsBundle({
+          query,
+          scheduler: accountMirrorSchedulerState,
+          status: accountMirrorStatusRegistry.readStatus(),
+          completions: createAccountMirrorCompletionStatusSummary(accountMirrorCompletionService, now),
+          readCompletion: (id) => accountMirrorCompletionService.read(id),
+          now,
+        });
+        if (!result.ok) {
+          sendJson(res, result.status, {
+            error: {
+              message: result.message,
+              type: result.type,
+            },
+          });
+          return;
+        }
+        sendJson(res, 200, result.bundle);
         return;
       }
 
@@ -2437,6 +2461,7 @@ function createHttpStatusResponse(input: {
       accountMirrorCompletionsGetTemplate: '/v1/account-mirrors/completions/{completion_id}',
       accountMirrorCompletionsControlTemplate: 'POST /v1/account-mirrors/completions/{completion_id} {"action":"pause|resume|cancel"}',
       accountMirrorSchedulerHistory: '/v1/account-mirrors/scheduler/history[?limit=10]',
+      accountMirrorSchedulerDiagnostics: '/v1/account-mirrors/scheduler/diagnostics[?provider={chatgpt|gemini|grok}&runtimeProfile={runtime_profile}|completionId={completion_id}]',
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
       operatorBrowserDashboard: serviceDiscovery.routing.dashboardPath,
@@ -2615,6 +2640,212 @@ function createLiveFollowHealthSummary(
       : null,
     targets: createLiveFollowTargetRollup(status, completions),
   });
+}
+
+interface AccountMirrorSchedulerDiagnosticsQuery {
+  provider: string | null;
+  runtimeProfileId: string | null;
+  completionId: string | null;
+}
+
+type AccountMirrorSchedulerDiagnosticsResult =
+  | { ok: true; bundle: AccountMirrorSchedulerDiagnosticsBundle }
+  | { ok: false; status: 400 | 404; type: 'invalid_request_error' | 'not_found_error'; message: string };
+
+interface AccountMirrorSchedulerDiagnosticsBundle {
+  object: 'account_mirror_scheduler_diagnostics_bundle';
+  capturedAt: string;
+  scheduler: {
+    state: string;
+    posture: string;
+    reason: string;
+    lastWakeReason: string | null;
+    lastWakeAt: string | null;
+  };
+  target: {
+    provider: string | null;
+    runtimeProfileId: string | null;
+    cachePath: string;
+  };
+  wait: {
+    kind: string | null;
+    label: string | null;
+    nextAttemptAt: string | null;
+    routineEligibleAt: string | null;
+    activeCompletionId: string | null;
+  };
+  completion: ReturnType<typeof compactAccountMirrorSchedulerCompletion> | null;
+  latestSchedulerEvent: ReturnType<typeof latestAccountMirrorSchedulerDiagnosticsEvent>;
+}
+
+function parseAccountMirrorSchedulerDiagnosticsQuery(params: URLSearchParams): AccountMirrorSchedulerDiagnosticsQuery {
+  return {
+    provider: normalizeOptionalQueryString(params.get('provider')),
+    runtimeProfileId: normalizeOptionalQueryString(params.get('runtimeProfile')),
+    completionId: normalizeOptionalQueryString(params.get('completionId')),
+  };
+}
+
+function createAccountMirrorSchedulerDiagnosticsBundle(input: {
+  query: AccountMirrorSchedulerDiagnosticsQuery;
+  scheduler: HttpStatusResponse['accountMirrorScheduler'];
+  status: AccountMirrorStatusSummary;
+  completions: AccountMirrorCompletionStatusSummary;
+  readCompletion: (id: string) => AccountMirrorCompletionOperation | null;
+  now: () => Date;
+}): AccountMirrorSchedulerDiagnosticsResult {
+  const scheduler = {
+    ...input.scheduler,
+    operatorStatus: createAccountMirrorSchedulerOperatorStatus(input.scheduler),
+  };
+  const liveFollow = createLiveFollowHealthSummary(scheduler, input.completions, input.status);
+  let completion: AccountMirrorCompletionOperation | null = null;
+  if (input.query.completionId) {
+    completion = input.readCompletion(input.query.completionId);
+    if (!completion) {
+      return {
+        ok: false,
+        status: 404,
+        type: 'not_found_error',
+        message: `Account mirror completion ${input.query.completionId} was not found.`,
+      };
+    }
+  }
+  const provider = input.query.provider ?? completion?.provider ?? null;
+  const runtimeProfileId = input.query.runtimeProfileId ?? completion?.runtimeProfileId ?? null;
+  const account = findLiveFollowDiagnosticsTarget(liveFollow, {
+    provider,
+    runtimeProfileId,
+    completionId: input.query.completionId,
+  });
+  if (!account && !completion && (provider || runtimeProfileId || input.query.completionId)) {
+    return {
+      ok: false,
+      status: 404,
+      type: 'not_found_error',
+      message: `No live-follow scheduler target matched ${provider ?? '*'} / ${runtimeProfileId ?? '*'}${input.query.completionId ? ` / ${input.query.completionId}` : ''}.`,
+    };
+  }
+  const selectedProvider = account?.provider ?? provider ?? null;
+  const selectedRuntimeProfileId = account?.runtimeProfileId ?? runtimeProfileId ?? null;
+  if (!completion && account?.activeCompletionId) {
+    completion = input.readCompletion(account.activeCompletionId);
+  }
+  const wait = account ? classifyAccountMirrorSchedulerDiagnosticsWait(account) : null;
+  return {
+    ok: true,
+    bundle: {
+      object: 'account_mirror_scheduler_diagnostics_bundle',
+      capturedAt: input.now().toISOString(),
+      scheduler: {
+        state: scheduler.state,
+        posture: scheduler.operatorStatus.posture,
+        reason: scheduler.operatorStatus.reason,
+        lastWakeReason: scheduler.lastWakeReason,
+        lastWakeAt: scheduler.lastWakeAt,
+      },
+      target: {
+        provider: selectedProvider,
+        runtimeProfileId: selectedRuntimeProfileId,
+        cachePath: buildAccountMirrorDashboardPath({
+          provider: selectedProvider,
+          runtimeProfileId: selectedRuntimeProfileId,
+        }),
+      },
+      wait: {
+        kind: wait?.kind ?? null,
+        label: wait?.label ?? null,
+        nextAttemptAt: account?.nextAttemptAt ?? null,
+        routineEligibleAt: account?.routineEligibleAt ?? null,
+        activeCompletionId: completion?.id ?? account?.activeCompletionId ?? input.query.completionId ?? null,
+      },
+      completion: completion ? compactAccountMirrorSchedulerCompletion(completion) : null,
+      latestSchedulerEvent: latestAccountMirrorSchedulerDiagnosticsEvent(scheduler),
+    },
+  };
+}
+
+function findLiveFollowDiagnosticsTarget(
+  liveFollow: LiveFollowHealthSummary,
+  query: { provider: string | null; runtimeProfileId: string | null; completionId: string | null },
+): LiveFollowTargetAccountSummary | null {
+  const accounts = liveFollow.targets?.accounts ?? [];
+  return accounts.find((account) =>
+    (!query.provider || account.provider === query.provider)
+    && (!query.runtimeProfileId || account.runtimeProfileId === query.runtimeProfileId)
+    && (!query.completionId || account.activeCompletionId === query.completionId)
+  ) ?? accounts.find((account) => account.desiredState === 'enabled') ?? null;
+}
+
+function classifyAccountMirrorSchedulerDiagnosticsWait(account: LiveFollowTargetAccountSummary): { kind: string; label: string } {
+  if (account.latestCompletionError) {
+    return { kind: 'backoff', label: 'backoff' };
+  }
+  if (account.activeCompletionId) {
+    return { kind: 'active', label: 'active' };
+  }
+  const nextAttemptTime = Date.parse(account.nextAttemptAt || '');
+  if (Number.isFinite(nextAttemptTime) && nextAttemptTime > Date.now()) {
+    return { kind: 'retry-delay', label: 'retry delay' };
+  }
+  const routineEligibleTime = Date.parse(account.routineEligibleAt || '');
+  if (Number.isFinite(routineEligibleTime) && routineEligibleTime > Date.now()) {
+    return { kind: 'routine-cadence', label: 'routine cadence' };
+  }
+  return { kind: 'eligible', label: 'eligible' };
+}
+
+function compactAccountMirrorSchedulerCompletion(operation: AccountMirrorCompletionOperation): {
+  id: string;
+  provider: string;
+  runtimeProfileId: string;
+  status: string;
+  phase: string;
+  nextAttemptAt: string | null;
+  passCount: number;
+  error: AccountMirrorCompletionOperation['error'];
+} {
+  return {
+    id: operation.id,
+    provider: operation.provider,
+    runtimeProfileId: operation.runtimeProfileId,
+    status: operation.status,
+    phase: operation.phase,
+    nextAttemptAt: operation.nextAttemptAt,
+    passCount: operation.passCount,
+    error: operation.error,
+  };
+}
+
+function latestAccountMirrorSchedulerDiagnosticsEvent(
+  scheduler: HttpStatusResponse['accountMirrorScheduler'],
+): {
+  at: string | null;
+  event: string | null;
+  detail: string | null;
+  schedulerDetail: unknown;
+} | null {
+  const latest = summarizeAccountMirrorSchedulerHistory(scheduler.history, { limit: 1 }).entries[0] ?? null;
+  if (!latest) return null;
+  return {
+    at: latest.completedAt,
+    event: latest.action,
+    detail: `${latest.provider ?? 'unknown'}/${latest.runtimeProfileId ?? 'unknown'} backpressure=${latest.backpressureReason}`,
+    schedulerDetail: latest,
+  };
+}
+
+function buildAccountMirrorDashboardPath(input: { provider: string | null; runtimeProfileId: string | null }): string {
+  const params = new URLSearchParams();
+  if (input.provider) params.set('provider', input.provider);
+  if (input.runtimeProfileId) params.set('runtimeProfile', input.runtimeProfileId);
+  params.set('kind', 'all');
+  return `/account-mirror?${params.toString()}`;
+}
+
+function normalizeOptionalQueryString(value: string | null): string | null {
+  const trimmed = String(value ?? '').trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 function createLiveFollowTargetRollup(
@@ -4856,7 +5087,6 @@ function createOperatorBrowserDashboardHtml(input: {
     let mirrorPreviewSessionItems = [];
     let mirrorPreviewSessionSelectedUrls = new Set();
     let savedMirrorPreviewSessionsCache = [];
-    let lastOpsStatus = null;
 
     async function fetchJson(path) {
       const response = await fetch(path, { cache: 'no-store' });
@@ -8284,75 +8514,20 @@ function createOperatorBrowserDashboardHtml(input: {
       const completionId = data.completionId || '';
       const provider = data.provider || null;
       const runtimeProfileId = data.runtimeProfileId || null;
-      const cachePath = data.cachePath || buildMirrorSchedulerAccountMirrorPath({ provider, runtimeProfileId });
       setMirrorControlNotice('Preparing scheduler diagnostics...', 'warn');
-      let completion = null;
-      if (completionId) {
-        try {
-          const detail = await fetchJson('/v1/account-mirrors/completions/' + encodeURIComponent(completionId));
-          completion = compactMirrorSchedulerCompletion(detail, completionId);
-        } catch (error) {
-          completion = {
-            id: completionId,
-            error: String(error.message || error),
-          };
-        }
-      }
-      const bundle = {
-        capturedAt: new Date().toISOString(),
-        dashboardUrl: window.location.href,
-        target: {
-          provider,
-          runtimeProfileId,
-          cacheUrl: new URL(cachePath, window.location.origin).href,
-        },
-        wait: {
-          kind: data.waitKind || null,
-          label: data.waitLabel || null,
-          nextAttemptAt: data.nextAttemptAt || null,
-          routineEligibleAt: data.routineEligibleAt || null,
-          activeCompletionId: completionId || null,
-        },
-        completion,
-        latestSchedulerEvent: latestMirrorSchedulerDiagnosticsEvent(),
-      };
-      const text = asJson({ mirrorSchedulerDiagnosticsBundle: bundle });
-      setMirrorSchedulerCompletionDetail(text);
       try {
+        const params = new URLSearchParams();
+        if (provider) params.set('provider', provider);
+        if (runtimeProfileId) params.set('runtimeProfile', runtimeProfileId);
+        if (completionId) params.set('completionId', completionId);
+        const bundle = await fetchJson('/v1/account-mirrors/scheduler/diagnostics?' + params.toString());
+        const text = asJson({ mirrorSchedulerDiagnosticsBundle: bundle });
+        setMirrorSchedulerCompletionDetail(text);
         await navigator.clipboard.writeText(text);
         setMirrorControlNotice('Copied scheduler diagnostics for ' + [provider, runtimeProfileId].filter(Boolean).join('/') + '.', 'ok');
       } catch (error) {
         setMirrorControlNotice('Could not copy scheduler diagnostics: ' + String(error.message || error), 'bad');
       }
-    }
-
-    function compactMirrorSchedulerCompletion(detail, fallbackId) {
-      return {
-        id: detail.id || fallbackId || null,
-        provider: detail.provider || null,
-        runtimeProfileId: detail.runtimeProfileId || null,
-        status: detail.status || null,
-        phase: detail.phase || null,
-        nextAttemptAt: detail.nextAttemptAt || null,
-        passCount: detail.passCount ?? null,
-        error: detail.error || null,
-      };
-    }
-
-    function latestMirrorSchedulerDiagnosticsEvent() {
-      const event = recentServiceEventDetails.find((item) => item && item.source === 'scheduler');
-      if (event) {
-        return {
-          at: event.at || null,
-          event: event.event || null,
-          detail: event.detail || null,
-          schedulerDetail: event.schedulerDetail || null,
-        };
-      }
-      const latestPass = lastOpsStatus && lastOpsStatus.accountMirrorScheduler
-        ? latestMirrorSchedulerPass(lastOpsStatus.accountMirrorScheduler)
-        : null;
-      return latestPass ? compactSchedulerEventDetail(latestPass) : null;
     }
 
     async function refreshStatus() {
@@ -8371,7 +8546,6 @@ function createOperatorBrowserDashboardHtml(input: {
       $('mirrorCompletions').textContent = 'Loading...';
       try {
         const status = await fetchJson('/status');
-        lastOpsStatus = status;
         renderOpsControls(status);
         renderServerSummary(status);
         renderServiceDiscovery(status);

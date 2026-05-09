@@ -976,3 +976,8 @@ bundle joins the provider/runtime target, wait classification, cache URL, active
 completion summary when available, and the latest scheduler-event evidence, so
 operator handoffs can start from one copied payload instead of several raw
 dashboard panels.
+The same scheduler diagnostics bundle is now available without a browser through
+`GET /v1/account-mirrors/scheduler/diagnostics` and MCP
+`account_mirror_scheduler_diagnostics`. Operators and agents can fetch the
+target/wait/cache/completion/latest-event payload by provider/runtime or
+completion id, keeping dashboard handoffs and API/MCP workflows aligned.
