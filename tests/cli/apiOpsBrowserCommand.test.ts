@@ -82,8 +82,11 @@ const dashboardHtml = `
   function classifyMirrorSchedulerTargetWait() { return 'retry delay routine cadence'; }
   function renderMirrorSchedulerWaitRowActions() { return '<button>Inspect completion</button><button data-mirror-scheduler-diagnostics-open-button="true">Open diagnostics</button><button data-mirror-scheduler-diagnostics-button="true">Copy diagnostics</button><a data-mirror-scheduler-cache-link="true">Open cache</a>'; }
   function buildMirrorSchedulerAccountMirrorPath() { return '/account-mirror?provider=chatgpt&runtimeProfile=default&kind=all'; }
+  function buildMirrorSchedulerDiagnosticsHint() { return '<code>' + formatMirrorSchedulerDiagnosticsCommand({ completionId: 'acctmirror_paused' }) + '</code>'; }
+  function formatMirrorSchedulerDiagnosticsCommand() { return 'auracall api scheduler-diagnostics --port 18080 --provider chatgpt --runtime-profile default --completion-id acctmirror_paused'; }
   const mirrorSchedulerWaitTable = 'Wait';
   const mirrorSchedulerCompletionDetail = 'Select a scheduler wait row completion';
+  const mirrorSchedulerDiagnosticsHint = 'mirrorSchedulerDiagnosticsHint';
   const mirrorSchedulerDiagnosticsBundle = 'mirrorSchedulerDiagnosticsBundle';
   const dataMirrorSchedulerWaitRow = 'data-mirror-scheduler-wait-row';
   const mirrorSchedulerExplanation = 'Why';

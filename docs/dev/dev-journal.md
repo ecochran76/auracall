@@ -1,3 +1,33 @@
+## Turn 164 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: show the scheduler diagnostics command directly in the browser
+  dashboard.
+- Change:
+  - the Mirror Scheduler card now renders a `Diagnostics` row with an exact
+    `auracall api scheduler-diagnostics` command when active live-follow
+    completions are present
+  - the command is derived from `/status.serviceDiscovery.routing.proxyTarget`
+    so external dashboard views still point operators at the local API target
+  - dashboard contract checks now assert the diagnostics hint builder and
+    command marker
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts --maxWorkers 1 -t "browser operator dashboard|api ops browser"`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in `tests/http.responsesServer.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - installed `/ops/browser` contains `mirrorSchedulerDiagnosticsHint`,
+    `buildMirrorSchedulerDiagnosticsHint`,
+    `formatMirrorSchedulerDiagnosticsCommand`, and `scheduler-diagnostics`
+  - installed `api ops-browser-status --port 18095` reports
+    `schedulerDiagnostics=ok` and a `Scheduler diagnostics` command hint
+
 ## Turn 163 | 2026-05-09
 
 - Continued implementation plan:

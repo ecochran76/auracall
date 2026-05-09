@@ -993,3 +993,7 @@ the same non-browser diagnostics payload.
 diagnostics` command hint when active mirror completions or live-follow target
 rows expose a completion id, making the detailed bundle discoverable from the
 normal status workflow.
+The Mirror Scheduler dashboard card now renders the same command hint in the
+browser. It derives host/port from the configured API proxy target, so an
+operator viewing the dashboard through a local alias or external route still
+gets a command pointed at the correct local API listener.

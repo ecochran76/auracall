@@ -1,3 +1,8 @@
+- 2026-05-09: Browser dashboard operators should see the same scheduler
+  diagnostics command surfaced by CLI status. The Mirror Scheduler card now
+  renders a `Diagnostics` command hint from active live-follow completions,
+  using the configured API proxy target for the command host and port.
+
 - 2026-05-09: Operators should not need to remember the diagnostics command
   after seeing a scheduler wait or active mirror completion. `api status` and
   `api ops-browser-status` now print a compact `Scheduler diagnostics` hint

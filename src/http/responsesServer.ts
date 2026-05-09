@@ -5077,6 +5077,7 @@ function createOperatorBrowserDashboardHtml(input: {
     const $ = (id) => document.getElementById(id);
     const asJson = (value) => JSON.stringify(value, null, 2);
     const OPERATOR_DASHBOARD_ROUTES = ${JSON.stringify(routes)};
+    let OPERATOR_DASHBOARD_SERVICE_DISCOVERY = {};
     const RECENT_SERVICE_EVENT_FILTER_STORAGE_KEY = 'auracall.opsBrowser.recentServiceEvents.filter';
     const RECENT_SERVICE_EVENT_SELECTED_STORAGE_KEY = 'auracall.opsBrowser.recentServiceEvents.selected';
     let recentServiceEventDetails = [];
@@ -5206,6 +5207,7 @@ function createOperatorBrowserDashboardHtml(input: {
 
     function renderServiceDiscovery(status) {
       const discovery = status.serviceDiscovery || {};
+      OPERATOR_DASHBOARD_SERVICE_DISCOVERY = discovery;
       const bind = discovery.bind || {};
       const local = discovery.local || {};
       const external = discovery.external || {};
@@ -6004,6 +6006,7 @@ function createOperatorBrowserDashboardHtml(input: {
       const paused = scheduler.paused === true || scheduler.state === 'paused';
       const running = scheduler.state === 'running';
       const explanation = buildMirrorSchedulerExplanation(scheduler, liveFollow);
+      const diagnosticsHint = buildMirrorSchedulerDiagnosticsHint(liveFollow);
       const waitRows = renderMirrorSchedulerWaitTable(liveFollow);
       return '<div class="control-card" id="mirrorSchedulerControls"><div class="control-title"><strong>Mirror Scheduler</strong>'
         + renderStatusText(scheduler.state || 'unknown', toneForActualStatus(scheduler.state || 'unknown'))
@@ -6014,6 +6017,7 @@ function createOperatorBrowserDashboardHtml(input: {
         + '<dt>Why</dt><dd id="mirrorSchedulerExplanation">' + escapeHtml(explanation.summary) + '</dd>'
         + '<dt>Next Retry</dt><dd id="mirrorSchedulerNextRetry">' + escapeHtml(explanation.nextRetry) + '</dd>'
         + '<dt>Routine Eligible</dt><dd id="mirrorSchedulerRoutineEligible">' + escapeHtml(explanation.routineEligible) + '</dd>'
+        + '<dt>Diagnostics</dt><dd id="mirrorSchedulerDiagnosticsHint">' + diagnosticsHint + '</dd>'
         + '</dl><div class="row">'
         + '<button id="runMirrorScheduler" class="primary" type="button" onclick="controlMirrorScheduler(' + "'run-once'" + ', false)" ' + disabledAttr(running) + '>Run Now</button>'
         + '<button id="dryRunMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'run-once'" + ', true)" ' + disabledAttr(running) + '>Dry Run</button>'
@@ -6021,6 +6025,79 @@ function createOperatorBrowserDashboardHtml(input: {
         + '<button id="resumeMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'resume'" + ')" ' + disabledAttr(!enabled || running && !paused) + '>Resume</button>'
         + '</div><div id="mirrorSchedulerWaitTable" class="mini-table">' + waitRows + '</div>'
         + '<pre id="mirrorSchedulerCompletionDetail">Select a scheduler wait row completion to inspect details.</pre></div>';
+    }
+
+    function buildMirrorSchedulerDiagnosticsHint(liveFollow) {
+      const hints = collectMirrorSchedulerDiagnosticsHints(liveFollow);
+      if (!hints.length) return '<span class="muted">none</span>';
+      const command = formatMirrorSchedulerDiagnosticsCommand(hints[0]);
+      return '<code>' + escapeHtml(command) + '</code>'
+        + (hints.length > 1 ? ' <span class="muted">+' + escapeHtml(String(hints.length - 1)) + ' more</span>' : '');
+    }
+
+    function collectMirrorSchedulerDiagnosticsHints(liveFollow) {
+      const accounts = liveFollow && liveFollow.targets && Array.isArray(liveFollow.targets.accounts)
+        ? liveFollow.targets.accounts
+        : [];
+      const seen = new Set();
+      const hints = [];
+      for (const account of accounts) {
+        if (!account.activeCompletionId) continue;
+        const provider = normalizeDashboardCommandPart(account.provider);
+        const runtimeProfileId = normalizeDashboardCommandPart(account.runtimeProfileId);
+        const completionId = normalizeDashboardCommandPart(account.activeCompletionId);
+        const key = [provider, runtimeProfileId, completionId].join('\\0');
+        if (seen.has(key)) continue;
+        seen.add(key);
+        hints.push({ provider, runtimeProfileId, completionId });
+      }
+      return hints;
+    }
+
+    function formatMirrorSchedulerDiagnosticsCommand(hint) {
+      const apiTarget = resolveDashboardApiCommandTarget();
+      const args = ['auracall', 'api', 'scheduler-diagnostics'];
+      if (apiTarget.host && apiTarget.host !== '127.0.0.1') {
+        args.push('--host', apiTarget.host);
+      }
+      if (apiTarget.port) {
+        args.push('--port', apiTarget.port);
+      }
+      if (hint.provider) args.push('--provider', hint.provider);
+      if (hint.runtimeProfileId) args.push('--runtime-profile', hint.runtimeProfileId);
+      if (hint.completionId) args.push('--completion-id', hint.completionId);
+      return args.map(quoteDashboardCommandArg).join(' ');
+    }
+
+    function resolveDashboardApiCommandTarget() {
+      const target = OPERATOR_DASHBOARD_SERVICE_DISCOVERY
+        && OPERATOR_DASHBOARD_SERVICE_DISCOVERY.routing
+        ? OPERATOR_DASHBOARD_SERVICE_DISCOVERY.routing.proxyTarget
+        : '';
+      try {
+        const parsed = new URL(target || window.location.href);
+        return {
+          host: parsed.hostname || window.location.hostname || '127.0.0.1',
+          port: parsed.port || window.location.port || '',
+        };
+      } catch {
+        return {
+          host: window.location.hostname || '127.0.0.1',
+          port: window.location.port || '',
+        };
+      }
+    }
+
+    function normalizeDashboardCommandPart(value) {
+      const text = String(value || '').trim();
+      return text || null;
+    }
+
+    function quoteDashboardCommandArg(value) {
+      const text = String(value || '');
+      return /^[A-Za-z0-9_./:@=-]+$/.test(text)
+        ? text
+        : "'" + text.replaceAll("'", "'\\\\''") + "'";
     }
 
     function renderMirrorSchedulerWaitTable(liveFollow) {
