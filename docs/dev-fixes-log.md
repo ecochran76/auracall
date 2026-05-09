@@ -1,3 +1,8 @@
+- 2026-05-09: `api ops-browser-status` should match the dashboard when
+  several active mirror completions have diagnostics commands. It now prints
+  every scheduler diagnostics command as a numbered provider/runtime line
+  instead of only the first command.
+
 - 2026-05-09: The dashboard diagnostics hint should not hide secondary active
   mirror completions behind a `+N more` count. The Mirror Scheduler card now
   renders every active provider/runtime diagnostics command as its own copyable

@@ -411,8 +411,8 @@ const statusPayload = {
     object: 'account_mirror_completion_summary',
     generatedAt: '2026-05-01T12:00:00.000Z',
     metrics: {
-      total: 1,
-      active: 1,
+      total: 2,
+      active: 2,
       queued: 0,
       running: 0,
       paused: 1,
@@ -433,6 +433,19 @@ const statusPayload = {
         completedAt: null,
         nextAttemptAt: '2026-05-01T12:05:00.000Z',
         passCount: 3,
+        error: null,
+      },
+      {
+        id: 'acctmirror_running',
+        provider: 'grok',
+        runtimeProfileId: 'default',
+        mode: 'live_follow',
+        phase: 'steady_follow',
+        status: 'running',
+        startedAt: '2026-05-01T11:30:00.000Z',
+        completedAt: null,
+        nextAttemptAt: null,
+        passCount: 2,
         error: null,
       },
     ],
@@ -544,7 +557,7 @@ describe('api ops browser CLI helpers', () => {
     expect(summary.status.liveFollow.severity).toBe('paused');
     expect(() => assertApiOpsBrowserStatus(summary, {
       expectedSeverity: 'paused',
-      expectedActive: 1,
+      expectedActive: 2,
       expectedPaused: 1,
     })).not.toThrow();
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
@@ -566,7 +579,13 @@ describe('api ops browser CLI helpers', () => {
       'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok resultToast=ok inputInspect=ok input=ok rowActions=ok stateAware=ok confirmCancel=ok feedback=ok pause=ok resume=ok cancel=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Scheduler diagnostics: available=1 command="auracall api scheduler-diagnostics --port 18080 --provider chatgpt --runtime-profile default --completion-id acctmirror_paused"',
+      'Scheduler diagnostics: available=2',
+    );
+    expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
+      'Scheduler diagnostics command 1 (chatgpt/default): "auracall api scheduler-diagnostics --port 18080 --provider chatgpt --runtime-profile default --completion-id acctmirror_paused"',
+    );
+    expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
+      'Scheduler diagnostics command 2 (grok/default): "auracall api scheduler-diagnostics --port 18080 --provider grok --runtime-profile default --completion-id acctmirror_running"',
     );
   });
 

@@ -169,7 +169,11 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
 function formatSchedulerDiagnosticsHintLines(hints: ApiStatusCliSummary['schedulerDiagnosticsHints']): string[] {
   if (hints.length === 0) return [];
   return [
-    `Scheduler diagnostics: available=${hints.length} command=${JSON.stringify(hints[0].command)}`,
+    `Scheduler diagnostics: available=${hints.length}`,
+    ...hints.map((hint, index) => {
+      const label = [hint.provider, hint.runtimeProfileId].filter(Boolean).join('/');
+      return `Scheduler diagnostics command ${index + 1}${label ? ` (${label})` : ''}: ${JSON.stringify(hint.command)}`;
+    }),
   ];
 }
 

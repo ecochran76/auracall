@@ -1006,3 +1006,7 @@ all scheduler diagnostics commands as copyable provider/runtime rows rather
 than showing only the first command and a collapsed count. This keeps multi-
 account live-follow triage visible without asking the operator to inspect raw
 status JSON.
+`api ops-browser-status` now mirrors that multi-command dashboard behavior by
+printing a scheduler diagnostics count plus one numbered provider/runtime
+command per active hint. CLI operators no longer need to fall back to raw JSON
+or the browser dashboard to discover secondary active diagnostics commands.
