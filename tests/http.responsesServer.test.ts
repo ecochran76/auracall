@@ -4,6 +4,7 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
+import { writeLazyLiveFollowPreflightStatus } from '../src/preflightStatus.js';
 import {
   assertResponsesHostAllowed,
   createDefaultRuntimeRunServiceStateProbe,
@@ -1340,6 +1341,16 @@ describe('http responses adapter', () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-posture-'));
     cleanup.push(homeDir);
     setAuracallHomeDirOverrideForTest(homeDir);
+    await writeLazyLiveFollowPreflightStatus({
+      object: 'auracall_preflight_status',
+      name: 'lazy-live-follow',
+      status: 'passed',
+      startedAt: '2026-05-08T20:00:00.000Z',
+      completedAt: '2026-05-08T20:00:03.000Z',
+      durationMs: 3000,
+      failedStep: null,
+      errorMessage: null,
+    });
 
     const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
 
@@ -1384,6 +1395,18 @@ describe('http responses adapter', () => {
           chatCompletions: false,
           streaming: false,
           auth: false,
+        },
+        preflight: {
+          lazyLiveFollow: {
+            object: 'auracall_preflight_status',
+            name: 'lazy-live-follow',
+            status: 'passed',
+            startedAt: '2026-05-08T20:00:00.000Z',
+            completedAt: '2026-05-08T20:00:03.000Z',
+            durationMs: 3000,
+            failedStep: null,
+            errorMessage: null,
+          },
         },
         localClaimSummary: {
           sourceKind: 'direct',
@@ -15182,6 +15205,8 @@ describe('http responses adapter', () => {
       expect(html).toContain('AuraCall Browser Ops');
       expect(html).toContain('API PID');
       expect(html).toContain('API Log');
+      expect(html).toContain('Preflight Completed');
+      expect(html).toContain('renderPreflightStatus');
       expect(html).toContain('apiServiceControls');
       expect(html).toContain('loadApiLogTail');
       expect(html).toContain('/v1/api/logs/tail?maxBytes=32768');

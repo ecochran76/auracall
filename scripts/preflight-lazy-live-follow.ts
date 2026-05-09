@@ -1,5 +1,6 @@
 #!/usr/bin/env tsx
 import { spawn } from 'node:child_process';
+import { writeLazyLiveFollowPreflightStatus } from '../src/preflightStatus.js';
 
 interface Step {
   label: string;
@@ -66,9 +67,36 @@ function runStep(step: Step): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  const startedAt = new Date();
   for (const step of steps) {
-    await runStep(step);
+    try {
+      await runStep(step);
+    } catch (error) {
+      const completedAt = new Date();
+      await writeLazyLiveFollowPreflightStatus({
+        object: 'auracall_preflight_status',
+        name: 'lazy-live-follow',
+        status: 'failed',
+        startedAt: startedAt.toISOString(),
+        completedAt: completedAt.toISOString(),
+        durationMs: completedAt.getTime() - startedAt.getTime(),
+        failedStep: step.label,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
+  const completedAt = new Date();
+  await writeLazyLiveFollowPreflightStatus({
+    object: 'auracall_preflight_status',
+    name: 'lazy-live-follow',
+    status: 'passed',
+    startedAt: startedAt.toISOString(),
+    completedAt: completedAt.toISOString(),
+    durationMs: completedAt.getTime() - startedAt.getTime(),
+    failedStep: null,
+    errorMessage: null,
+  });
   console.log('\nlazy-live-follow preflight: pass');
 }
 

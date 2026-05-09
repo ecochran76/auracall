@@ -15679,3 +15679,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   contract it verifies. Updated `pnpm run preflight:lazy-live-follow` and
   release/testing docs to include direct API log-tail retrieval alongside API
   status and dashboard status.
+- 2026-05-08: Operators need to know whether the pinned service is
+  release-ready from the dashboard. `pnpm run preflight:lazy-live-follow` now
+  writes a persisted pass/fail record under `~/.auracall/preflight/`,
+  `/status` projects it as `preflight.lazyLiveFollow`, and `/ops/browser`
+  renders the latest status/timestamp in the Server summary.

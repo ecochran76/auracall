@@ -921,3 +921,8 @@ Operators can also fetch the bounded service log tail directly with
 `auracall api logs-tail` or MCP `api_log_tail`; both call the same
 `GET /v1/api/logs/tail` endpoint and do not open browsers or provider
 workbenches.
+`pnpm run preflight:lazy-live-follow` now writes the latest pass/fail record to
+`~/.auracall/preflight/lazy-live-follow.json`. `/status` projects that record
+under `preflight.lazyLiveFollow`, and `/ops/browser` renders it in the Server
+summary so operators can see the last release-readiness result from the
+dashboard.

@@ -15,7 +15,7 @@ const dashboardHtml = `
 </nav>
 <h1>AuraCall Config</h1>
 <section><h2>Operations</h2><div id="opsControlNotice"></div><div id="opsControls"><div id="apiServiceControls">API Service managedService statusCommand restartCommand</div><button id="loadApiLogTailInline" onclick="loadApiLogTail()">Refresh Log Tail</button></div></section>
-<section><h2>Server</h2><button id="loadApiLogTail">Refresh API Log Tail</button><pre id="apiLogTail">/v1/api/logs/tail?maxBytes=32768</pre></section>
+<section><h2>Server</h2><dl><dt>Preflight Completed</dt><dd>never</dd></dl><button id="loadApiLogTail">Refresh API Log Tail</button><pre id="apiLogTail">/v1/api/logs/tail?maxBytes=32768</pre></section>
 <section><h2>Account Mirrors</h2>
   <select id="mirrorCatalogProvider"></select>
   <input id="mirrorCatalogRuntimeProfile">
@@ -105,6 +105,7 @@ const dashboardHtml = `
   async function inspectAgentsTeamRun() { return fetchJson('/v1/team-runs/inspect?' + new URLSearchParams({ teamRunId: 'team' }).toString()); }
   async function inspectAgentsRuntimeRun() { return fetchJson('/v1/runtime-runs/inspect?' + new URLSearchParams({ runtimeRunId: 'runtime' }).toString()); }
   function renderAttentionQueue() {}
+  function renderPreflightStatus(status) { return status.preflight.lazyLiveFollow; }
   function collectAttentionRows() {}
   function flattenMirrorCatalogEntries() {}
   function filterMirrorCatalogRows() {}
@@ -434,6 +435,7 @@ describe('api ops browser CLI helpers', () => {
       hasOperationsPanel: true,
       hasApiServiceControls: true,
       hasApiLogTailControl: true,
+      hasPreflightStatusPanel: true,
       hasServiceDiscoveryPanel: true,
       hasBackgroundDrainControls: true,
       hasMirrorSchedulerControls: true,
@@ -508,7 +510,7 @@ describe('api ops browser CLI helpers', () => {
       'Dashboard config: page=ok identities=ok liveFollow=ok controls=ok agents=ok recentRuns=ok runtimeChat=ok runtimeProviderLinks=ok runtimeProviderDirectLinks=ok runtimeProviderCacheBadges=ok recentMirrorDetail=ok recentMirrorSummary=ok recentMirrorDirectLink=ok recentMirrorCacheBadges=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard service control: nav=ok operations=ok apiService=ok apiLogTail=ok backgroundDrain=ok scheduler=ok runOnce=ok',
+      'Dashboard service control: nav=ok operations=ok apiService=ok apiLogTail=ok preflight=ok backgroundDrain=ok scheduler=ok runOnce=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard cache browse: catalog=ok page=ok previewSession=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok transcriptFilter=ok transcriptDownload=ok transcriptSearch=ok related=ok assetInspector=ok assetPreview=ok localAsset=ok materialization=ok materializationControls=ok rowPreviewActions=ok batchPreviewDrawer=ok batchPreviewReview=ok batchPreviewOpen=ok batchDetailCopy=ok batchPreviewCopy=ok batchPreviewDownload=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',

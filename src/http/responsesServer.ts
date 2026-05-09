@@ -8,6 +8,7 @@ import type { OptionValues } from 'commander';
 import { MODEL_CONFIGS } from '../oracle/config.js';
 import { getCliVersion } from '../version.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
+import { readPreflightStatusSummary, type PreflightStatusSummary } from '../preflightStatus.js';
 import type { ResolvedUserConfig } from '../config.js';
 import { resolveConfig } from '../schema/resolver.js';
 import { resolveHostLocalActionExecutionPolicy } from '../config/model.js';
@@ -441,6 +442,7 @@ interface HttpStatusResponse {
     streaming: false;
     auth: false;
   };
+  preflight: PreflightStatusSummary;
   recoverySummary?: ExecutionServiceHostRecoverySummary;
   localClaimSummary?: ExecutionServiceHostLocalClaimSummary;
   runnerTopology: ExecutionServiceHostRunnerTopologySummary;
@@ -903,6 +905,7 @@ export async function createResponsesHttpServer(
           accountMirrorScheduler: accountMirrorSchedulerState,
           accountMirrorStatus: accountMirrorStatusRegistry.readStatus(),
           accountMirrorCompletions: createAccountMirrorCompletionStatusSummary(accountMirrorCompletionService, now),
+          preflight: await readPreflightStatusSummary(),
         });
         sendJson(res, 200, statusResponse);
         return;
@@ -2312,6 +2315,7 @@ function createHttpStatusResponse(input: {
   accountMirrorScheduler: HttpStatusResponse['accountMirrorScheduler'];
   accountMirrorStatus: AccountMirrorStatusSummary;
   accountMirrorCompletions: AccountMirrorCompletionStatusSummary;
+  preflight?: PreflightStatusSummary;
   controlResult?: HttpStatusResponse['controlResult'];
 }): HttpStatusResponse {
   const accountMirrorScheduler = {
@@ -2384,6 +2388,7 @@ function createHttpStatusResponse(input: {
       streaming: false,
       auth: false,
     },
+    preflight: input.preflight ?? { lazyLiveFollow: null },
     recoverySummary: input.recoverySummary,
     localClaimSummary: input.localClaimSummary,
     runnerTopology: input.runnerTopology,
@@ -4792,12 +4797,16 @@ function createOperatorBrowserDashboardHtml(input: {
       const api = status.api || {};
       const apiProcess = api.process || {};
       const apiService = api.managedService || {};
+      const preflight = status.preflight || {};
+      const lazyLiveFollowPreflight = preflight.lazyLiveFollow || null;
       const dashboard = status.routes && status.routes.operatorBrowserDashboard;
       $('serverSummary').innerHTML = [
         ['Status', status.ok ? '<span class="ok">ok</span>' : '<span class="bad">not ok</span>'],
         ['Version', status.version || 'unknown'],
         ['API PID', apiProcess.pid ? escapeHtml(String(apiProcess.pid)) : 'unknown'],
         ['API Log', escapeHtml(apiService.logPath || 'unknown')],
+        ['Preflight', renderPreflightStatus(lazyLiveFollowPreflight)],
+        ['Preflight Completed', lazyLiveFollowPreflight ? escapeHtml(lazyLiveFollowPreflight.completedAt || 'unknown') : 'never'],
         ['Binding', [binding.host, binding.port].filter(Boolean).join(':') || 'unknown'],
         ['Local Only', binding.localOnly ? '<span class="ok">true</span>' : '<span class="warn">false</span>'],
         ['Runner', runner.status || 'unknown'],
@@ -4813,6 +4822,15 @@ function createOperatorBrowserDashboardHtml(input: {
         ['Completion Records', formatCompletionHistory(completionMetrics, targets)],
         ['Dashboard Route', dashboard || '/ops/browser'],
       ].map(([key, value]) => '<dt>' + key + '</dt><dd>' + value + '</dd>').join('');
+    }
+
+    function renderPreflightStatus(preflight) {
+      if (!preflight) return renderStatusText('unknown', 'warn');
+      const status = preflight.status || 'unknown';
+      const tone = status === 'passed' ? 'ok' : status === 'failed' ? 'bad' : 'warn';
+      const duration = typeof preflight.durationMs === 'number' ? ' in ' + preflight.durationMs + 'ms' : '';
+      const failedStep = preflight.failedStep ? ' step=' + preflight.failedStep : '';
+      return renderStatusText(status, tone) + escapeHtml(duration + failedStep);
     }
 
     function renderServiceDiscovery(status) {
