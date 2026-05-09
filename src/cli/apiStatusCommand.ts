@@ -329,10 +329,7 @@ export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string 
     );
   }
   lines.push(formatCompletionControlLine(summary.completions));
-  const diagnosticsLine = formatSchedulerDiagnosticsHintLine(summary.schedulerDiagnosticsHints);
-  if (diagnosticsLine) {
-    lines.push(diagnosticsLine);
-  }
+  lines.push(...formatSchedulerDiagnosticsHintLines(summary.schedulerDiagnosticsHints));
   const targetLine = formatLiveFollowTargetLine(summary.liveFollow.targets);
   if (targetLine) {
     lines.push(targetLine);
@@ -352,14 +349,15 @@ export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string 
   return lines.join('\n');
 }
 
-function formatSchedulerDiagnosticsHintLine(hints: ApiStatusSchedulerDiagnosticsHint[]): string | null {
-  if (hints.length === 0) return null;
-  const first = hints[0];
+function formatSchedulerDiagnosticsHintLines(hints: ApiStatusSchedulerDiagnosticsHint[]): string[] {
+  if (hints.length === 0) return [];
   return [
-    'Scheduler diagnostics:',
-    `available=${hints.length}`,
-    `command=${JSON.stringify(first.command)}`,
-  ].join(' ');
+    `Scheduler diagnostics: available=${hints.length}`,
+    ...hints.map((hint, index) => {
+      const label = [hint.provider, hint.runtimeProfileId].filter(Boolean).join('/');
+      return `Scheduler diagnostics command ${index + 1}${label ? ` (${label})` : ''}: ${JSON.stringify(hint.command)}`;
+    }),
+  ];
 }
 
 function formatApiRuntimeLine(api: ApiStatusApiSummary): string {

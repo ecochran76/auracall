@@ -1,3 +1,28 @@
+## Turn 168 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make `api status` print every scheduler diagnostics command.
+- Change:
+  - `api status` now uses the same scheduler diagnostics output shape as
+    `api ops-browser-status`: one availability line plus numbered
+    provider/runtime command lines
+  - the CLI status test now covers multiple active diagnostics hints
+- Validation:
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/cli/apiStatusCommand.ts tests/cli/apiStatusCommand.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - installed `api status --port 18095` now prints
+    `Scheduler diagnostics: available=3` plus separate numbered commands for
+    `grok/default`, `chatgpt/default`, and `gemini/default`
+  - installed `api status --port 18095 --json` reports `3` scheduler
+    diagnostics hints
+
 ## Turn 167 | 2026-05-09
 
 - Continued implementation plan:

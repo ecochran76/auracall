@@ -1010,3 +1010,6 @@ status JSON.
 printing a scheduler diagnostics count plus one numbered provider/runtime
 command per active hint. CLI operators no longer need to fall back to raw JSON
 or the browser dashboard to discover secondary active diagnostics commands.
+`api status` now uses the same multi-command diagnostics output, so the base
+status command, ops-browser status, and dashboard all expose secondary active
+provider/runtime diagnostics commands without requiring raw JSON inspection.

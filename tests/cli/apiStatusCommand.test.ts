@@ -87,7 +87,7 @@ const statusPayload = {
     generatedAt: '2026-04-29T12:00:02.000Z',
     metrics: {
       total: 3,
-      active: 1,
+      active: 2,
       queued: 0,
       running: 0,
       paused: 1,
@@ -108,6 +108,19 @@ const statusPayload = {
         completedAt: null,
         nextAttemptAt: '2026-04-29T12:05:00.000Z',
         passCount: 7,
+        error: null,
+      },
+      {
+        id: 'acctmirror_running',
+        provider: 'grok',
+        runtimeProfileId: 'default',
+        mode: 'live_follow',
+        phase: 'steady_follow',
+        status: 'running',
+        startedAt: '2026-04-29T11:30:00.000Z',
+        completedAt: null,
+        nextAttemptAt: null,
+        passCount: 2,
         error: null,
       },
     ],
@@ -148,7 +161,7 @@ const statusPayload = {
       unconfigured: 1,
       missingIdentity: 0,
       unsupported: 0,
-      active: 1,
+      active: 2,
       queued: 0,
       running: 0,
       paused: 1,
@@ -177,6 +190,25 @@ const statusPayload = {
             media: 0,
           },
         },
+        {
+          provider: 'grok',
+          runtimeProfileId: 'default',
+          desiredState: 'enabled',
+          desiredEnabled: true,
+          actualStatus: 'running',
+          activeCompletionId: 'acctmirror_running',
+          phase: 'steady_follow',
+          passCount: 2,
+          nextAttemptAt: null,
+          mirrorCompleteness: 'in_progress',
+          metadataCounts: {
+            projects: 0,
+            conversations: 4,
+            artifacts: 0,
+            files: 0,
+            media: 0,
+          },
+        },
       ],
       desired: {
         total: 3,
@@ -187,7 +219,7 @@ const statusPayload = {
         unsupported: 0,
       },
       actual: {
-        active: 1,
+        active: 2,
         queued: 0,
         running: 0,
         paused: 1,
@@ -259,7 +291,7 @@ describe('api status CLI helpers', () => {
         generatedAt: '2026-04-29T12:00:02.000Z',
         metrics: {
           total: 3,
-          active: 1,
+          active: 2,
           queued: 0,
           running: 0,
           paused: 1,
@@ -275,6 +307,13 @@ describe('api status CLI helpers', () => {
             runtimeProfileId: 'default',
             status: 'paused',
             nextAttemptAt: '2026-04-29T12:05:00.000Z',
+          },
+          {
+            id: 'acctmirror_running',
+            provider: 'grok',
+            runtimeProfileId: 'default',
+            status: 'running',
+            nextAttemptAt: null,
           },
         ],
         recentControlled: [
@@ -294,14 +333,21 @@ describe('api status CLI helpers', () => {
           command:
             'auracall api scheduler-diagnostics --port 18080 --provider chatgpt --runtime-profile default --completion-id acctmirror_paused',
         },
+        {
+          provider: 'grok',
+          runtimeProfileId: 'default',
+          completionId: 'acctmirror_running',
+          command:
+            'auracall api scheduler-diagnostics --port 18080 --provider grok --runtime-profile default --completion-id acctmirror_running',
+        },
       ],
       liveFollow: {
-        line: 'Live follow health: severity=attention-needed posture=backpressured state=idle enabled=2 active=1 paused=1 attention=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
+        line: 'Live follow health: severity=attention-needed posture=backpressured state=idle enabled=2 active=2 paused=1 attention=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
         severity: 'attention-needed',
         schedulerPosture: 'backpressured',
         schedulerState: 'idle',
         backpressureReason: 'routine-delayed',
-        activeCompletions: 1,
+        activeCompletions: 2,
         pausedCompletions: 1,
         failedCompletions: 0,
         cancelledCompletions: 1,
@@ -314,7 +360,7 @@ describe('api status CLI helpers', () => {
         targets: {
           total: 3,
           enabled: 2,
-          active: 1,
+          active: 2,
           attentionNeeded: 1,
           complete: 1,
           inProgress: 1,
@@ -329,6 +375,16 @@ describe('api status CLI helpers', () => {
                 conversations: 10,
               },
             },
+            {
+              provider: 'grok',
+              runtimeProfileId: 'default',
+              desiredState: 'enabled',
+              actualStatus: 'running',
+              activeCompletionId: 'acctmirror_running',
+              metadataCounts: {
+                conversations: 4,
+              },
+            },
           ],
         },
       },
@@ -337,7 +393,7 @@ describe('api status CLI helpers', () => {
       'API service: pid=4242 unit=auracall-api.service log=/home/ecochran76/.auracall/logs/api-18080.log tail=/v1/api/logs/tail[?maxBytes=32768]',
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
-      'Live follow health: severity=attention-needed posture=backpressured state=idle enabled=2 active=1 paused=1 attention=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
+      'Live follow health: severity=attention-needed posture=backpressured state=idle enabled=2 active=2 paused=1 attention=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
       'Latest lazy mirror backpressure: routine-delayed - minimum interval has not elapsed',
@@ -352,16 +408,22 @@ describe('api status CLI helpers', () => {
       'Latest lazy mirror yield: chatgpt/default at 2026-04-29T11:55:00.000Z queued=media-generation:chatgpt:image remaining=4',
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
-      'Account mirror completions: active=1 queued=0 running=0 paused=1 failed=0 cancelled=1 total=3',
+      'Account mirror completions: active=2 queued=0 running=0 paused=1 failed=0 cancelled=1 total=3',
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
-      'Scheduler diagnostics: available=1 command="auracall api scheduler-diagnostics --port 18080 --provider chatgpt --runtime-profile default --completion-id acctmirror_paused"',
+      'Scheduler diagnostics: available=2',
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
-      'Live follow targets: total=3 enabled=2 active=1 complete=1 in_progress=1 attention=1',
+      'Scheduler diagnostics command 1 (chatgpt/default): "auracall api scheduler-diagnostics --port 18080 --provider chatgpt --runtime-profile default --completion-id acctmirror_paused"',
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
-      'Live follow desired/actual: desired_enabled=2 desired_disabled=0 desired_missing_identity=0 actual_active=1 actual_complete=1 actual_attention=1',
+      'Scheduler diagnostics command 2 (grok/default): "auracall api scheduler-diagnostics --port 18080 --provider grok --runtime-profile default --completion-id acctmirror_running"',
+    );
+    expect(formatApiStatusCliSummary(summary)).toContain(
+      'Live follow targets: total=3 enabled=2 active=2 complete=1 in_progress=1 attention=1',
+    );
+    expect(formatApiStatusCliSummary(summary)).toContain(
+      'Live follow desired/actual: desired_enabled=2 desired_disabled=0 desired_missing_identity=0 actual_active=2 actual_complete=1 actual_attention=1',
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
       'Active mirror completion: acctmirror_paused chatgpt/default status=paused phase=steady_follow next=2026-04-29T12:05:00.000Z',
@@ -410,7 +472,7 @@ describe('api status CLI helpers', () => {
     });
 
     expect(() => assertApiStatusCompletionMetrics(summary, {
-      expectedActive: 1,
+      expectedActive: 2,
       expectedPaused: 1,
       expectedCancelled: 1,
       expectedFailed: 0,

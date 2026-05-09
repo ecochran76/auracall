@@ -1,3 +1,8 @@
+- 2026-05-09: `api status` should not collapse scheduler diagnostics command
+  discovery to the first active completion. It now matches
+  `api ops-browser-status` by printing every diagnostics command as a numbered
+  provider/runtime line.
+
 - 2026-05-09: `api ops-browser-status` should match the dashboard when
   several active mirror completions have diagnostics commands. It now prints
   every scheduler diagnostics command as a numbered provider/runtime line
