@@ -80,6 +80,8 @@ const dashboardHtml = `
   function latestMirrorSchedulerPass(status) { return status.accountMirrorScheduler.history.entries[0]; }
   function renderMirrorSchedulerWaitTable(status) { return status.liveFollow.targets.accounts.map(classifyMirrorSchedulerTargetWait); }
   function classifyMirrorSchedulerTargetWait() { return 'retry delay routine cadence'; }
+  function renderMirrorSchedulerWaitRowActions() { return '<button>Inspect completion</button><a data-mirror-scheduler-cache-link="true">Open cache</a>'; }
+  function buildMirrorSchedulerAccountMirrorPath() { return '/account-mirror?provider=chatgpt&runtimeProfile=default&kind=all'; }
   const mirrorSchedulerWaitTable = 'Wait';
   const dataMirrorSchedulerWaitRow = 'data-mirror-scheduler-wait-row';
   const mirrorSchedulerExplanation = 'Why';
@@ -533,7 +535,7 @@ describe('api ops browser CLI helpers', () => {
       'Dashboard config: page=ok identities=ok liveFollow=ok controls=ok agents=ok recentRuns=ok runtimeChat=ok runtimeProviderLinks=ok runtimeProviderDirectLinks=ok runtimeProviderCacheBadges=ok recentMirrorDetail=ok recentMirrorSummary=ok recentMirrorDirectLink=ok recentMirrorCacheBadges=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard service control: nav=ok operations=ok apiService=ok apiLogTail=ok recentEvents=ok recentEventActions=ok recentEventFilters=ok recentSchedulerDetail=ok recentEventPersistence=ok preflight=ok preflightRun=ok preflightHistory=ok preflightLog=ok backgroundDrain=ok scheduler=ok schedulerWhy=ok schedulerWaitTable=ok runOnce=ok',
+      'Dashboard service control: nav=ok operations=ok apiService=ok apiLogTail=ok recentEvents=ok recentEventActions=ok recentEventFilters=ok recentSchedulerDetail=ok recentEventPersistence=ok preflight=ok preflightRun=ok preflightHistory=ok preflightLog=ok backgroundDrain=ok scheduler=ok schedulerWhy=ok schedulerWaitTable=ok schedulerWaitActions=ok runOnce=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard cache browse: catalog=ok page=ok previewSession=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok transcriptFilter=ok transcriptDownload=ok transcriptSearch=ok related=ok assetInspector=ok assetPreview=ok localAsset=ok materialization=ok materializationControls=ok rowPreviewActions=ok batchPreviewDrawer=ok batchPreviewReview=ok batchPreviewOpen=ok batchDetailCopy=ok batchPreviewCopy=ok batchPreviewDownload=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',

@@ -1,3 +1,33 @@
+## Turn 157 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make scheduler wait rows actionable without adding mutation controls.
+- Change:
+  - per-target scheduler wait rows now include read-only operator actions
+  - rows can inspect the active account-mirror completion when one exists
+  - rows can open the provider/runtime account-mirror cache view
+  - CLI/MCP dashboard contracts now assert scheduler wait row actions
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1 -t "browser operator dashboard|api ops browser"`
+  - `pnpm vitest run tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts src/mcp/tools/apiOpsBrowserStatus.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+    reported only existing non-null assertion warning debt in
+    `tests/http.responsesServer.test.ts`
+  - `pnpm run build && pnpm run install:user-runtime-service`
+- Installed dogfood:
+  - installed `/ops/browser` contains `renderMirrorSchedulerWaitRowActions`,
+    `buildMirrorSchedulerAccountMirrorPath`, `Inspect completion`,
+    `Open cache`, and `data-mirror-scheduler-cache-link`
+  - installed `api ops-browser-status --port 18095` reports
+    `schedulerWaitActions=ok`
+  - installed `/account-mirror?provider=chatgpt&runtimeProfile=default&kind=all`
+    loads the Account Mirror page
+
 ## Turn 156 | 2026-05-09
 
 - Continued implementation plan:

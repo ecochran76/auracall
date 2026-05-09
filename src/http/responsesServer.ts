@@ -5803,7 +5803,7 @@ function createOperatorBrowserDashboardHtml(input: {
       if (!eligibleAccounts.length) {
         return '<p class="muted" id="mirrorSchedulerWaitTableEmpty">No live-follow-enabled targets are configured.</p>';
       }
-      return '<table><thead><tr><th>Target</th><th>Wait</th><th>Next Retry</th><th>Routine Eligible</th><th>Completion</th></tr></thead><tbody>'
+      return '<table><thead><tr><th>Target</th><th>Wait</th><th>Next Retry</th><th>Routine Eligible</th><th>Completion</th><th>Actions</th></tr></thead><tbody>'
         + eligibleAccounts.map(renderMirrorSchedulerWaitRow).join('')
         + '</tbody></table>';
     }
@@ -5817,7 +5817,25 @@ function createOperatorBrowserDashboardHtml(input: {
         + '<td>' + escapeHtml(account.nextAttemptAt || 'none') + '</td>'
         + '<td>' + escapeHtml(account.routineEligibleAt || 'none') + '</td>'
         + '<td>' + escapeHtml(account.activeCompletionId || 'none') + '</td>'
+        + '<td>' + renderMirrorSchedulerWaitRowActions(account) + '</td>'
         + '</tr>';
+    }
+
+    function renderMirrorSchedulerWaitRowActions(account) {
+      const actions = [];
+      if (account.activeCompletionId) {
+        actions.push('<button type="button" class="link-button" data-completion-id="' + escapeHtml(account.activeCompletionId) + '" onclick="inspectMirrorCompletion(this.dataset.completionId)">Inspect completion</button>');
+      }
+      actions.push('<a class="link-button" data-mirror-scheduler-cache-link="true" href="' + escapeHtml(buildMirrorSchedulerAccountMirrorPath(account)) + '">Open cache</a>');
+      return actions.join(' ');
+    }
+
+    function buildMirrorSchedulerAccountMirrorPath(account) {
+      const params = new URLSearchParams();
+      if (account.provider) params.set('provider', account.provider);
+      if (account.runtimeProfileId) params.set('runtimeProfile', account.runtimeProfileId);
+      params.set('kind', 'all');
+      return '/account-mirror?' + params.toString();
     }
 
     function classifyMirrorSchedulerTargetWait(account) {

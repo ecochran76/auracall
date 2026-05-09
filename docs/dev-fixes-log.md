@@ -1,3 +1,8 @@
+- 2026-05-09: Scheduler wait rows should lead to evidence without creating
+  accidental mutation paths. The Mirror Scheduler wait table now adds read-only
+  row actions to inspect an active completion and open the matching
+  provider/runtime account-mirror cache view.
+
 - 2026-05-09: Scheduler wait explanations should identify the affected
   provider profiles, not only summarize the aggregate state. The Mirror
   Scheduler control now includes a compact per-target wait table classifying

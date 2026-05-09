@@ -964,3 +964,6 @@ enabled provider profiles. Rows classify each target as eligible, active, retry
 delay, routine cadence, or backoff and show the next retry, routine eligibility,
 and active completion id, making account-specific waiting states visible from
 the operator dashboard.
+The wait table rows now include read-only operator actions. Operators can
+inspect the active completion when present or open the matching provider/runtime
+account-mirror cache view, while mutation controls remain outside the table.
