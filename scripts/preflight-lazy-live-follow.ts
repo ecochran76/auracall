@@ -15,7 +15,7 @@ interface Step {
 const steps: Step[] = [
   createScriptStep('completion controls', 'smoke:completion-control', 'smoke-account-mirror-completion-control'),
   createScriptStep('completion hydration', 'smoke:completion-hydration', 'smoke-account-mirror-completion-hydration'),
-  createScriptStep('live-follow health parity', 'smoke:live-follow-health', 'smoke-live-follow-health-parity'),
+  createScriptStep('live-follow health and diagnostics parity', 'smoke:live-follow-health', 'smoke-live-follow-health-parity'),
   createScriptStep('ops-browser dashboard controls', 'smoke:ops-browser-control', 'smoke-ops-browser-completion-control'),
   createInstallRuntimeStep(),
   createScriptStep('installed MCP api_status and api_log_tail', 'smoke:mcp-api-status', 'smoke-api-status-mcp'),

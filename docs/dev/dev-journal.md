@@ -1,3 +1,30 @@
+## Turn 172 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make the lazy-live-follow preflight advertise the diagnostics parity
+  gate it already runs.
+- Change:
+  - preflight step output now labels `smoke:live-follow-health` as
+    `live-follow health and diagnostics parity`
+  - `docs/testing.md` describes diagnostics parity as part of the compact
+    lazy-live-follow operator preflight
+  - plan and fixes log now record that the release/preflight path is wired to
+    the strengthened diagnostics handoff smoke
+- Validation:
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint scripts/preflight-lazy-live-follow.ts`
+  - `pnpm run smoke:live-follow-health`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run preflight:lazy-live-follow`
+  - preflight passed and printed the renamed
+    `live-follow health and diagnostics parity` step with
+    `schedulerDiagnostics=1`; installed MCP status smoke still reported
+    `schedulerDiagnostics=3` for both disabled and enabled API cases
+
 ## Turn 171 | 2026-05-09
 
 - Continued implementation plan:

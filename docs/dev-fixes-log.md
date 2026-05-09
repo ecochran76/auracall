@@ -1,3 +1,8 @@
+- 2026-05-09: Lazy-live-follow preflight should advertise the same contract it
+  enforces. Its live-follow parity step is now labeled as health and
+  diagnostics parity, and testing docs describe that diagnostics handoff drift
+  is part of the compact preflight gate.
+
 - 2026-05-09: Live-follow health parity should fail if scheduler diagnostics
   handoff drifts between CLI and MCP status. The parity smoke now checks the
   derived CLI status hint, MCP `api_status` structured hint, and both text

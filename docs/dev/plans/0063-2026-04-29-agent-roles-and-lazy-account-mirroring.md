@@ -1024,4 +1024,7 @@ diagnostics hints.
 The broader live-follow health parity smoke now also enforces the contract for
 the normal operator summaries: it checks CLI status and MCP `api_status`
 structured hints plus their text command lines while keeping raw `/status` as
-the live-follow health source.
+the live-follow health source. The lazy-live-follow preflight already runs that
+smoke; its operator step label and testing docs now call out health and
+diagnostics parity explicitly so release/preflight output reflects the stronger
+gate.
