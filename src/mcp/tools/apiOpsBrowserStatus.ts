@@ -29,6 +29,7 @@ const apiOpsBrowserDashboardShape = z.object({
   hasPreflightRunHistoryPanel: z.boolean(),
   hasPreflightRunLogControl: z.boolean(),
   hasMirrorLiveFollowPanel: z.boolean(),
+  hasMirrorSchedulerExplanation: z.boolean(),
   hasLiveFollowTargetsPanel: z.boolean(),
   hasAttentionQueue: z.boolean(),
   hasLiveFollowTargetTable: z.boolean(),
@@ -103,7 +104,7 @@ export function createApiOpsBrowserStatusToolHandler(
       content: [
         {
           type: 'text' as const,
-          text: `AuraCall ops browser ${summary.host}:${summary.port} is ok; dashboard=${summary.dashboardUrl}; apiService=${summary.dashboard.hasApiServiceControls ? 'ok' : 'missing'}; apiLogTail=${summary.dashboard.hasApiLogTailControl ? 'ok' : 'missing'}; recentEvents=${summary.dashboard.hasRecentServiceEventsPanel ? 'ok' : 'missing'}; recentEventFilters=${summary.dashboard.hasRecentServiceEventFilters ? 'ok' : 'missing'}; recentSchedulerDetail=${summary.dashboard.hasRecentServiceEventSchedulerDetail ? 'ok' : 'missing'}; recentEventPersistence=${summary.dashboard.hasRecentServiceEventPersistence ? 'ok' : 'missing'}; preflight=${summary.dashboard.hasPreflightStatusPanel ? 'ok' : 'missing'}; preflightRun=${summary.dashboard.hasPreflightRunControl ? 'ok' : 'missing'}; preflightHistory=${summary.dashboard.hasPreflightRunHistoryPanel ? 'ok' : 'missing'}; preflightLog=${summary.dashboard.hasPreflightRunLogControl ? 'ok' : 'missing'}; dashboard completion controls use /status; ${summary.status.liveFollow.line}`,
+          text: `AuraCall ops browser ${summary.host}:${summary.port} is ok; dashboard=${summary.dashboardUrl}; apiService=${summary.dashboard.hasApiServiceControls ? 'ok' : 'missing'}; apiLogTail=${summary.dashboard.hasApiLogTailControl ? 'ok' : 'missing'}; recentEvents=${summary.dashboard.hasRecentServiceEventsPanel ? 'ok' : 'missing'}; recentEventFilters=${summary.dashboard.hasRecentServiceEventFilters ? 'ok' : 'missing'}; recentSchedulerDetail=${summary.dashboard.hasRecentServiceEventSchedulerDetail ? 'ok' : 'missing'}; recentEventPersistence=${summary.dashboard.hasRecentServiceEventPersistence ? 'ok' : 'missing'}; schedulerWhy=${summary.dashboard.hasMirrorSchedulerExplanation ? 'ok' : 'missing'}; preflight=${summary.dashboard.hasPreflightStatusPanel ? 'ok' : 'missing'}; preflightRun=${summary.dashboard.hasPreflightRunControl ? 'ok' : 'missing'}; preflightHistory=${summary.dashboard.hasPreflightRunHistoryPanel ? 'ok' : 'missing'}; preflightLog=${summary.dashboard.hasPreflightRunLogControl ? 'ok' : 'missing'}; dashboard completion controls use /status; ${summary.status.liveFollow.line}`,
         },
       ],
       structuredContent: summary as typeof summary & Record<string, unknown>,

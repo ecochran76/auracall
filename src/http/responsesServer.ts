@@ -5696,7 +5696,7 @@ function createOperatorBrowserDashboardHtml(input: {
         renderApiServiceControl(api),
         renderPreflightControl(preflight),
         renderBackgroundDrainControl(backgroundDrain),
-        renderMirrorSchedulerControl(scheduler),
+        renderMirrorSchedulerControl(scheduler, liveFollow),
         renderLiveFollowControlSummary(liveFollow),
       ].join('');
     }
@@ -5768,22 +5768,108 @@ function createOperatorBrowserDashboardHtml(input: {
         + '</div></div>';
     }
 
-    function renderMirrorSchedulerControl(scheduler) {
+    function renderMirrorSchedulerControl(scheduler, liveFollow) {
       const enabled = scheduler.enabled === true;
       const paused = scheduler.paused === true || scheduler.state === 'paused';
       const running = scheduler.state === 'running';
+      const explanation = buildMirrorSchedulerExplanation(scheduler, liveFollow);
       return '<div class="control-card" id="mirrorSchedulerControls"><div class="control-title"><strong>Mirror Scheduler</strong>'
         + renderStatusText(scheduler.state || 'unknown', toneForActualStatus(scheduler.state || 'unknown'))
         + '</div><dl>'
         + '<dt>Mode</dt><dd>' + escapeHtml(scheduler.dryRun ? 'dry run' : 'execute') + '</dd>'
         + '<dt>Wake</dt><dd>' + escapeHtml(scheduler.lastWakeReason || 'none') + '</dd>'
         + '<dt>Wake At</dt><dd>' + escapeHtml(scheduler.lastWakeAt || 'never') + '</dd>'
+        + '<dt>Why</dt><dd id="mirrorSchedulerExplanation">' + escapeHtml(explanation.summary) + '</dd>'
+        + '<dt>Next Retry</dt><dd id="mirrorSchedulerNextRetry">' + escapeHtml(explanation.nextRetry) + '</dd>'
+        + '<dt>Routine Eligible</dt><dd id="mirrorSchedulerRoutineEligible">' + escapeHtml(explanation.routineEligible) + '</dd>'
         + '</dl><div class="row">'
         + '<button id="runMirrorScheduler" class="primary" type="button" onclick="controlMirrorScheduler(' + "'run-once'" + ', false)" ' + disabledAttr(running) + '>Run Now</button>'
         + '<button id="dryRunMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'run-once'" + ', true)" ' + disabledAttr(running) + '>Dry Run</button>'
         + '<button id="pauseMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'pause'" + ')" ' + disabledAttr(!enabled || paused) + '>Pause</button>'
         + '<button id="resumeMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'resume'" + ')" ' + disabledAttr(!enabled || running && !paused) + '>Resume</button>'
         + '</div></div>';
+    }
+
+    function buildMirrorSchedulerExplanation(scheduler, liveFollow) {
+      if (scheduler.enabled !== true) {
+        return {
+          summary: 'Disabled: scheduler cadence is not configured.',
+          nextRetry: 'none',
+          routineEligible: 'none',
+        };
+      }
+      if (scheduler.paused === true || scheduler.state === 'paused') {
+        return {
+          summary: 'Paused by operator control.',
+          nextRetry: 'paused',
+          routineEligible: 'paused',
+        };
+      }
+      if (scheduler.state === 'running') {
+        return {
+          summary: 'Running now: a scheduler pass is currently executing.',
+          nextRetry: 'running',
+          routineEligible: 'running',
+        };
+      }
+      const latestPass = latestMirrorSchedulerPass(scheduler);
+      const accounts = liveFollow && liveFollow.targets && Array.isArray(liveFollow.targets.accounts)
+        ? liveFollow.targets.accounts
+        : [];
+      const enabledAccounts = accounts.filter((account) => account.desiredState === 'enabled');
+      const retryTarget = earliestTargetDate(enabledAccounts, 'nextAttemptAt');
+      const routineTarget = earliestTargetDate(enabledAccounts, 'routineEligibleAt');
+      const metrics = latestPass && latestPass.metrics ? latestPass.metrics : {};
+      const active = Number(liveFollow && liveFollow.targets ? liveFollow.targets.active || 0 : 0);
+      const delayed = Number(metrics.liveFollowDelayedTargets || 0);
+      const eligible = Number(metrics.liveFollowEligibleTargets || 0);
+      const backpressure = latestPass && latestPass.backpressure ? latestPass.backpressure : null;
+      if (backpressure && backpressure.reason && backpressure.reason !== 'none') {
+        const reason = backpressure.message
+          ? backpressure.reason + ': ' + backpressure.message
+          : backpressure.reason;
+        return {
+          summary: 'Waiting: last pass was skipped for ' + reason + '. Live-follow targets: ' + String(active) + ' active, ' + String(eligible) + ' eligible, ' + String(delayed) + ' delayed.',
+          nextRetry: formatTargetDate(retryTarget),
+          routineEligible: formatTargetDate(routineTarget),
+        };
+      }
+      const operatorReason = scheduler.operatorStatus && scheduler.operatorStatus.reason
+        ? scheduler.operatorStatus.reason
+        : 'Scheduler is waiting on its cadence timer.';
+      return {
+        summary: operatorReason + ' Live-follow targets: ' + String(active) + ' active.',
+        nextRetry: formatTargetDate(retryTarget),
+        routineEligible: formatTargetDate(routineTarget),
+      };
+    }
+
+    function latestMirrorSchedulerPass(scheduler) {
+      if (scheduler.lastPass) return scheduler.lastPass;
+      if (scheduler.history && Array.isArray(scheduler.history.entries) && scheduler.history.entries.length) {
+        return scheduler.history.entries[0];
+      }
+      return null;
+    }
+
+    function earliestTargetDate(accounts, field) {
+      let selected = null;
+      for (const account of accounts) {
+        const value = account[field];
+        const time = Date.parse(value || '');
+        if (!Number.isFinite(time)) continue;
+        if (!selected || time < selected.time) {
+          selected = { time, value, account };
+        }
+      }
+      return selected;
+    }
+
+    function formatTargetDate(selection) {
+      if (!selection) return 'none';
+      const account = selection.account || {};
+      const label = [account.provider, account.runtimeProfileId].filter(Boolean).join('/') || 'target';
+      return label + ' at ' + selection.value;
     }
 
     function renderLiveFollowControlSummary(liveFollow) {

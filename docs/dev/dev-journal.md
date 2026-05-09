@@ -1,3 +1,36 @@
+## Turn 155 | 2026-05-08
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: explain why the live-follow scheduler is waiting without raw JSON.
+- Change:
+  - Mirror Scheduler control now shows a compact `Why` explanation
+  - the same card shows earliest live-follow `Next Retry` and `Routine
+    Eligible` target timestamps
+  - the explanation is derived from scheduler posture, latest pass
+    backpressure, pass metrics, and live-follow target timing
+  - CLI/MCP dashboard contracts now assert the scheduler explanation affordance
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1 -t "browser operator dashboard|api ops browser"`
+  - `pnpm vitest run tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts src/mcp/tools/apiOpsBrowserStatus.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+    reported only existing non-null assertion warning debt in
+    `tests/http.responsesServer.test.ts`
+  - `pnpm run build && pnpm run install:user-runtime-service`
+- Installed dogfood:
+  - installed `/ops/browser` contains `mirrorSchedulerExplanation`,
+    `buildMirrorSchedulerExplanation`, `latestMirrorSchedulerPass`,
+    `mirrorSchedulerNextRetry`, and `mirrorSchedulerRoutineEligible`
+  - installed `api ops-browser-status --port 18095` reports
+    `schedulerWhy=ok`
+  - installed `/status` currently shows scheduler state `scheduled`, latest
+    scheduler-history backpressure `routine-delayed/minimum-interval`, and
+    live follow severity `healthy`
+
 ## Turn 154 | 2026-05-08
 
 - Continued implementation plan:

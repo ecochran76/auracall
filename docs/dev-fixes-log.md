@@ -1,3 +1,9 @@
+- 2026-05-08: Operators need a plain answer for why live follow is scheduled
+  or waiting. The Mirror Scheduler control on `/ops/browser` now renders a
+  compact `Why`, `Next Retry`, and `Routine Eligible` explanation from
+  scheduler posture, latest pass backpressure, pass metrics, and live-follow
+  target timing.
+
 - 2026-05-08: Recent service event triage context should survive ordinary
   dashboard refreshes. `/ops/browser` now persists the source filter and the
   selected scheduler detail key in browser-local preferences, then restores

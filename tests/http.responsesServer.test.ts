@@ -15506,6 +15506,11 @@ describe('http responses adapter', () => {
       expect(html).toContain('dryRunMirrorScheduler');
       expect(html).toContain('pauseMirrorScheduler');
       expect(html).toContain('resumeMirrorScheduler');
+      expect(html).toContain('mirrorSchedulerExplanation');
+      expect(html).toContain('buildMirrorSchedulerExplanation');
+      expect(html).toContain('latestMirrorSchedulerPass');
+      expect(html).toContain('mirrorSchedulerNextRetry');
+      expect(html).toContain('mirrorSchedulerRoutineEligible');
       expect(html).toContain('renderOpsControls');
       expect(html).toContain('controlBackgroundDrain');
       expect(html).toContain('controlMirrorScheduler');

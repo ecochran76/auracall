@@ -954,3 +954,8 @@ in dashboard-local browser preferences. When the status refresh still contains
 the same scheduler event, `/ops/browser` restores the compact detail view and
 highlights the selected row so operator handoffs do not lose local triage
 context.
+The Mirror Scheduler control now includes a compact wait-state explanation:
+`Why`, `Next Retry`, and `Routine Eligible`. These fields are derived from the
+scheduler posture, latest scheduler pass/backpressure, pass metrics, and
+live-follow target timing, so the dashboard can explain scheduled/waiting states
+without forcing operators into raw `/status` JSON.
