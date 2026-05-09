@@ -1,3 +1,32 @@
+## Turn 152 | 2026-05-08
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make the Browser Ops dashboard start with one useful local event
+  chronology instead of separate raw status/log blocks.
+- Change:
+  - `/ops/browser` now renders `Recent Service Events`
+  - the strip merges API service state, recent preflight run history, and recent
+    account-mirror scheduler passes already present in `/status`
+  - event rows can open the bounded API log or preflight run log readers when
+    log-backed evidence exists
+  - CLI/MCP dashboard contracts now assert the recent-events panel and log
+    actions
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1 -t "browser operator dashboard|api ops browser"`
+  - `pnpm vitest run tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts src/mcp/tools/apiOpsBrowserStatus.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+    returned only pre-existing non-null-assertion warning debt in
+    `tests/http.responsesServer.test.ts`.
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - installed dashboard contract on port `18095` reports
+    `recentEvents=ok recentEventActions=ok`, and live `/status` has one
+    preflight history entry plus 50 scheduler history entries for the strip.
+
 ## Turn 151 | 2026-05-08
 
 - Continued implementation plan:

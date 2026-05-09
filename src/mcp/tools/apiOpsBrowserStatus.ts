@@ -19,6 +19,8 @@ const apiOpsBrowserDashboardShape = z.object({
   route: z.literal('/ops/browser'),
   hasApiServiceControls: z.boolean(),
   hasApiLogTailControl: z.boolean(),
+  hasRecentServiceEventsPanel: z.boolean(),
+  hasRecentServiceEventActions: z.boolean(),
   hasPreflightStatusPanel: z.boolean(),
   hasPreflightRunControl: z.boolean(),
   hasPreflightRunHistoryPanel: z.boolean(),
@@ -98,7 +100,7 @@ export function createApiOpsBrowserStatusToolHandler(
       content: [
         {
           type: 'text' as const,
-          text: `AuraCall ops browser ${summary.host}:${summary.port} is ok; dashboard=${summary.dashboardUrl}; apiService=${summary.dashboard.hasApiServiceControls ? 'ok' : 'missing'}; apiLogTail=${summary.dashboard.hasApiLogTailControl ? 'ok' : 'missing'}; preflight=${summary.dashboard.hasPreflightStatusPanel ? 'ok' : 'missing'}; preflightRun=${summary.dashboard.hasPreflightRunControl ? 'ok' : 'missing'}; preflightHistory=${summary.dashboard.hasPreflightRunHistoryPanel ? 'ok' : 'missing'}; preflightLog=${summary.dashboard.hasPreflightRunLogControl ? 'ok' : 'missing'}; dashboard completion controls use /status; ${summary.status.liveFollow.line}`,
+          text: `AuraCall ops browser ${summary.host}:${summary.port} is ok; dashboard=${summary.dashboardUrl}; apiService=${summary.dashboard.hasApiServiceControls ? 'ok' : 'missing'}; apiLogTail=${summary.dashboard.hasApiLogTailControl ? 'ok' : 'missing'}; recentEvents=${summary.dashboard.hasRecentServiceEventsPanel ? 'ok' : 'missing'}; preflight=${summary.dashboard.hasPreflightStatusPanel ? 'ok' : 'missing'}; preflightRun=${summary.dashboard.hasPreflightRunControl ? 'ok' : 'missing'}; preflightHistory=${summary.dashboard.hasPreflightRunHistoryPanel ? 'ok' : 'missing'}; preflightLog=${summary.dashboard.hasPreflightRunLogControl ? 'ok' : 'missing'}; dashboard completion controls use /status; ${summary.status.liveFollow.line}`,
         },
       ],
       structuredContent: summary as typeof summary & Record<string, unknown>,

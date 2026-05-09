@@ -15335,6 +15335,15 @@ describe('http responses adapter', () => {
       expect(html).toContain('apiServiceControls');
       expect(html).toContain('loadApiLogTail');
       expect(html).toContain('/v1/api/logs/tail?maxBytes=32768');
+      expect(html).toContain('recentServiceEventsPanel');
+      expect(html).toContain('Recent Service Events');
+      expect(html).toContain('renderRecentServiceEvents');
+      expect(html).toContain('collectRecentServiceEvents');
+      expect(html).toContain('renderRecentServiceEventRow');
+      expect(html).toContain('recentServiceEventsTable');
+      expect(html).toContain('data-recent-service-event-source');
+      expect(html).toContain('Open API Log');
+      expect(html).toContain('Open Preflight Log');
       expect(html).toContain('aria-label="AuraCall sections"');
       expect(html).toContain('Account Mirror');
       expect(html).toContain('href="/account-mirror"');

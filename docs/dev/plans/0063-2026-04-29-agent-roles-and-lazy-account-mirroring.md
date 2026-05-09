@@ -938,3 +938,9 @@ with bounded per-run log readback through
 `GET /v1/preflight/lazy-live-follow/runs/{run_id}/log`. This keeps release
 preflight evidence available after service refreshes without asking operators
 to copy raw JSON or shell into the runtime.
+The same Browser Ops page now renders a compact `Recent Service Events` strip
+that merges local API service state, recent preflight runs, and recent account
+mirror scheduler passes from `/status`. Event rows open the existing bounded
+API/preflight log readers when log-backed evidence is available, so operator
+triage starts from a chronological local view rather than separate raw JSON
+blocks.

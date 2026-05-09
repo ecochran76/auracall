@@ -1,3 +1,9 @@
+- 2026-05-08: Browser Ops diagnosis should start from a chronological local
+  view. `/ops/browser` now renders `Recent Service Events` by composing API
+  service state, recent preflight run history, and account-mirror scheduler
+  history already exposed by `/status`; rows open the existing bounded API or
+  preflight log readers when a local log is available.
+
 - 2026-05-08: Dashboard-triggered lazy-live-follow preflight needs durable
   operator evidence, not only an in-memory latest run. Preflight runs now
   upsert a bounded recent history under `~/.auracall/preflight`, `/status`

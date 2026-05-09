@@ -4516,6 +4516,11 @@ function createOperatorBrowserDashboardHtml(input: {
         <pre id="apiLogTail">API log tail not loaded.</pre>
       </section>
 
+      <section class="panel" id="recentServiceEventsPanel">
+        <h2>Recent Service Events</h2>
+        <div id="recentServiceEvents">Loading service events...</div>
+      </section>
+
       <section class="panel">
         <h2>Service Discovery</h2>
         <dl id="serviceDiscoverySummary">
@@ -8076,6 +8081,7 @@ function createOperatorBrowserDashboardHtml(input: {
         renderConfigIdentityProjection(status);
         renderConfigLiveFollowProjection(status);
         renderMirrorCompletions(status);
+        renderRecentServiceEvents(status);
       } catch (error) {
         $('serverSummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
         $('serviceDiscoverySummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
@@ -8088,6 +8094,7 @@ function createOperatorBrowserDashboardHtml(input: {
         $('mirrorActiveCompletionTable').textContent = String(error.message || error);
         $('mirrorTargets').textContent = String(error.message || error);
         $('mirrorCompletions').textContent = String(error.message || error);
+        $('recentServiceEvents').textContent = String(error.message || error);
       }
       try {
         $('mirrorStatus').textContent = asJson(await fetchJson('/v1/account-mirrors/status'));
@@ -8137,6 +8144,85 @@ function createOperatorBrowserDashboardHtml(input: {
       } catch (error) {
         target.textContent = String(error.message || error);
       }
+    }
+
+    function renderRecentServiceEvents(status) {
+      const events = collectRecentServiceEvents(status);
+      if (!events.length) {
+        $('recentServiceEvents').innerHTML = '<p class="muted">No recent service events recorded.</p>';
+        return;
+      }
+      $('recentServiceEvents').innerHTML = '<table id="recentServiceEventsTable"><thead><tr><th>When</th><th>Source</th><th>Event</th><th>Detail</th><th>Action</th></tr></thead><tbody>'
+        + events.slice(0, 10).map(renderRecentServiceEventRow).join('')
+        + '</tbody></table>';
+    }
+
+    function collectRecentServiceEvents(status) {
+      const events = [];
+      const api = status.api || {};
+      const process = api.process || {};
+      const managedService = api.managedService || {};
+      if (process.pid || managedService.logPath) {
+        events.push({
+          at: process.startedAt || status.generatedAt || '',
+          source: 'api',
+          event: process.pid ? 'service running' : 'service status unknown',
+          detail: managedService.logPath || 'API log path unavailable',
+          action: 'api-log',
+        });
+      }
+      const preflightHistory = status.preflight && Array.isArray(status.preflight.lazyLiveFollowRunHistory)
+        ? status.preflight.lazyLiveFollowRunHistory
+        : [];
+      for (const run of preflightHistory.slice(0, 5)) {
+        events.push({
+          at: run.completedAt || run.startedAt || '',
+          source: 'preflight',
+          event: run.status || 'unknown',
+          detail: run.id || run.logPath || 'preflight run',
+          action: 'preflight-log',
+          runId: run.id || '',
+        });
+      }
+      const schedulerEntries = status.accountMirrorScheduler
+        && status.accountMirrorScheduler.history
+        && Array.isArray(status.accountMirrorScheduler.history.entries)
+        ? status.accountMirrorScheduler.history.entries
+        : [];
+      for (const entry of schedulerEntries.slice(0, 5)) {
+        events.push({
+          at: entry.completedAt || entry.startedAt || '',
+          source: 'scheduler',
+          event: entry.action || entry.mode || 'pass',
+          detail: formatSchedulerEventDetail(entry),
+          action: 'none',
+        });
+      }
+      return events.sort((left, right) => Date.parse(right.at || '') - Date.parse(left.at || ''));
+    }
+
+    function renderRecentServiceEventRow(event) {
+      const action = event.action === 'api-log'
+        ? '<button type="button" class="link-button" onclick="loadApiLogTail()">Open API Log</button>'
+        : event.action === 'preflight-log'
+          ? '<button type="button" class="link-button" data-preflight-run-id="' + escapeHtml(event.runId || '') + '" onclick="loadPreflightRunLog(this.dataset.preflightRunId)">Open Preflight Log</button>'
+          : '<span class="muted">status only</span>';
+      return '<tr data-recent-service-event-source="' + escapeHtml(event.source || 'unknown') + '">'
+        + '<td><code>' + escapeHtml(event.at || 'unknown') + '</code></td>'
+        + '<td>' + escapeHtml(event.source || 'unknown') + '</td>'
+        + '<td>' + escapeHtml(event.event || 'unknown') + '</td>'
+        + '<td>' + escapeHtml(event.detail || '') + '</td>'
+        + '<td>' + action + '</td>'
+        + '</tr>';
+    }
+
+    function formatSchedulerEventDetail(entry) {
+      const target = entry.selectedTarget || {};
+      const provider = target.provider || 'no-provider';
+      const runtime = target.runtimeProfileId || 'no-runtime';
+      const backpressure = entry.backpressure && entry.backpressure.reason ? entry.backpressure.reason : 'none';
+      const error = entry.error && entry.error.message ? ' error=' + entry.error.message : '';
+      return provider + '/' + runtime + ' backpressure=' + backpressure + error;
     }
 
     async function postStatusControl(payload) {

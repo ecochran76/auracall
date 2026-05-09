@@ -33,6 +33,8 @@ export interface ApiOpsBrowserDashboardSummary {
   hasOperationsPanel: boolean;
   hasApiServiceControls: boolean;
   hasApiLogTailControl: boolean;
+  hasRecentServiceEventsPanel: boolean;
+  hasRecentServiceEventActions: boolean;
   hasPreflightStatusPanel: boolean;
   hasPreflightRunControl: boolean;
   hasPreflightRunHistoryPanel: boolean;
@@ -147,7 +149,7 @@ export function formatApiOpsBrowserStatusCliSummary(summary: ApiOpsBrowserStatus
     `Dashboard URL: ${summary.dashboardUrl}`,
     `Service discovery: local=${summary.serviceDiscovery.localBaseUrl ?? 'unknown'} external=${summary.serviceDiscovery.externalBaseUrl ?? 'none'} proxy=${summary.serviceDiscovery.proxyTarget ?? 'none'} auth=${summary.serviceDiscovery.auth ?? 'none'}`,
     `Dashboard config: page=${formatBoolean(dashboard.hasConfigPage)} identities=${formatBoolean(dashboard.hasConfigIdentityProjection)} liveFollow=${formatBoolean(dashboard.hasConfigLiveFollowProjection)} controls=${formatBoolean(dashboard.hasConfigLiveFollowControls)} agents=${formatBoolean(dashboard.hasAgentsTeamsPage)} recentRuns=${formatBoolean(dashboard.hasAgentsRecentRunsBrowser)} runtimeChat=${formatBoolean(dashboard.hasAgentsRuntimeConversationView)} runtimeProviderLinks=${formatBoolean(dashboard.hasAgentsRuntimeProviderConversationLinks)} runtimeProviderDirectLinks=${formatBoolean(dashboard.hasAgentsRuntimeProviderConversationDirectLinks)} runtimeProviderCacheBadges=${formatBoolean(dashboard.hasAgentsRuntimeProviderConversationCacheBadges)} recentMirrorDetail=${formatBoolean(dashboard.hasAgentsRecentRunMirrorDetailAction)} recentMirrorSummary=${formatBoolean(dashboard.hasAgentsRecentRunMirrorSummary)} recentMirrorDirectLink=${formatBoolean(dashboard.hasAgentsRecentRunMirrorSummaryDirectLink)} recentMirrorCacheBadges=${formatBoolean(dashboard.hasAgentsRecentRunMirrorCacheBadges)}`,
-    `Dashboard service control: nav=${formatBoolean(dashboard.hasNavigationScaffold)} operations=${formatBoolean(dashboard.hasOperationsPanel)} apiService=${formatBoolean(dashboard.hasApiServiceControls)} apiLogTail=${formatBoolean(dashboard.hasApiLogTailControl)} preflight=${formatBoolean(dashboard.hasPreflightStatusPanel)} preflightRun=${formatBoolean(dashboard.hasPreflightRunControl)} preflightHistory=${formatBoolean(dashboard.hasPreflightRunHistoryPanel)} preflightLog=${formatBoolean(dashboard.hasPreflightRunLogControl)} backgroundDrain=${formatBoolean(dashboard.hasBackgroundDrainControls)} scheduler=${formatBoolean(dashboard.hasMirrorSchedulerControls)} runOnce=${formatBoolean(dashboard.hasRunOnceSchedulerControl)}`,
+    `Dashboard service control: nav=${formatBoolean(dashboard.hasNavigationScaffold)} operations=${formatBoolean(dashboard.hasOperationsPanel)} apiService=${formatBoolean(dashboard.hasApiServiceControls)} apiLogTail=${formatBoolean(dashboard.hasApiLogTailControl)} recentEvents=${formatBoolean(dashboard.hasRecentServiceEventsPanel)} recentEventActions=${formatBoolean(dashboard.hasRecentServiceEventActions)} preflight=${formatBoolean(dashboard.hasPreflightStatusPanel)} preflightRun=${formatBoolean(dashboard.hasPreflightRunControl)} preflightHistory=${formatBoolean(dashboard.hasPreflightRunHistoryPanel)} preflightLog=${formatBoolean(dashboard.hasPreflightRunLogControl)} backgroundDrain=${formatBoolean(dashboard.hasBackgroundDrainControls)} scheduler=${formatBoolean(dashboard.hasMirrorSchedulerControls)} runOnce=${formatBoolean(dashboard.hasRunOnceSchedulerControl)}`,
     `Dashboard cache browse: catalog=${formatBoolean(dashboard.hasAccountMirrorCatalogPanel)} page=${formatBoolean(dashboard.hasAccountMirrorPageLink)} previewSession=${formatBoolean(dashboard.hasAccountMirrorPreviewSessionPage)} search=${formatBoolean(dashboard.hasCatalogSearchControls)} savedFilters=${formatBoolean(dashboard.hasCatalogSavedFilterState)} table=${formatBoolean(dashboard.hasCatalogResultsTable)} detail=${formatBoolean(dashboard.hasCatalogDetailInspection)} chat=${formatBoolean(dashboard.hasConversationChatDetailView)} transcript=${formatBoolean(dashboard.hasConversationTranscriptAffordance)} transcriptFilter=${formatBoolean(dashboard.hasConversationTranscriptOnlyFilter)} transcriptDownload=${formatBoolean(dashboard.hasConversationTranscriptDownload)} transcriptSearch=${formatBoolean(dashboard.hasConversationTranscriptSearch)} related=${formatBoolean(dashboard.hasConversationRelatedItemNavigation)} assetInspector=${formatBoolean(dashboard.hasCatalogAssetDetailInspector)} assetPreview=${formatBoolean(dashboard.hasCatalogAssetPreview)} localAsset=${formatBoolean(dashboard.hasCatalogLocalAssetRoute)} materialization=${formatBoolean(dashboard.hasCatalogMaterializationBadges)} materializationControls=${formatBoolean(dashboard.hasCatalogMaterializationControls)} rowPreviewActions=${formatBoolean(dashboard.hasCatalogRowPreviewActions)} batchPreviewDrawer=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDrawer)} batchPreviewReview=${formatBoolean(dashboard.hasCatalogBatchPreviewSessionReview)} batchPreviewOpen=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlOpen)} batchDetailCopy=${formatBoolean(dashboard.hasCatalogBatchDetailLinkCopy)} batchPreviewCopy=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlCopy)} batchPreviewDownload=${formatBoolean(dashboard.hasCatalogBatchPreviewUrlDownload)} path=${dashboard.usesAccountMirrorCatalogPath ? '/v1/account-mirrors/catalog' : 'unknown'} itemPath=${dashboard.usesAccountMirrorCatalogItemPath ? '/v1/account-mirrors/catalog/items/{id}' : 'unknown'}`,
     `Dashboard completion control: path=${dashboard.usesStatusControlPath ? '/status' : 'unknown'} payload=${dashboard.usesAccountMirrorCompletionPayload ? 'accountMirrorCompletion' : 'unknown'} attention=${formatBoolean(dashboard.hasAttentionQueue)} activeTable=${formatBoolean(dashboard.hasActiveCompletionTable)} inspect=${formatBoolean(dashboard.hasCompletionInspectAction)} resultToast=${formatBoolean(dashboard.hasCompletionResultToast)} inputInspect=${formatBoolean(dashboard.hasCompletionInputInspectControl)} input=${formatBoolean(dashboard.hasCompletionIdFillControl)} rowActions=${formatBoolean(dashboard.hasInlineCompletionActionControls)} stateAware=${formatBoolean(dashboard.hasStateAwareCompletionActions)} confirmCancel=${formatBoolean(dashboard.hasCancelConfirmation)} feedback=${formatBoolean(dashboard.hasControlFeedbackNotice)} pause=${formatBoolean(dashboard.hasPauseBinding)} resume=${formatBoolean(dashboard.hasResumeBinding)} cancel=${formatBoolean(dashboard.hasCancelBinding)}`,
     summary.status.liveFollow.line,
@@ -200,6 +202,8 @@ function assertDashboardContract(summary: ApiOpsBrowserDashboardSummary): void {
     [summary.hasOperationsPanel, 'Expected /ops/browser to include the Operations panel.'],
     [summary.hasApiServiceControls, 'Expected /ops/browser to include API service controls.'],
     [summary.hasApiLogTailControl, 'Expected /ops/browser to include API log-tail controls.'],
+    [summary.hasRecentServiceEventsPanel, 'Expected /ops/browser to include recent service events.'],
+    [summary.hasRecentServiceEventActions, 'Expected /ops/browser recent service events to open local logs.'],
     [summary.hasPreflightStatusPanel, 'Expected /ops/browser to include preflight status readback.'],
     [summary.hasPreflightRunControl, 'Expected /ops/browser to include a queued preflight run control.'],
     [summary.hasPreflightRunHistoryPanel, 'Expected /ops/browser to include recent preflight run history.'],
@@ -434,6 +438,15 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('loadApiLogTailInline')
       && html.includes('/v1/api/logs/tail?maxBytes=32768')
       && html.includes('apiLogTail'),
+    hasRecentServiceEventsPanel: html.includes('recentServiceEventsPanel')
+      && html.includes('Recent Service Events')
+      && html.includes('renderRecentServiceEvents')
+      && html.includes('collectRecentServiceEvents')
+      && html.includes('recentServiceEventsTable'),
+    hasRecentServiceEventActions: html.includes('renderRecentServiceEventRow')
+      && html.includes('Open API Log')
+      && html.includes('Open Preflight Log')
+      && html.includes('data-recent-service-event-source'),
     hasPreflightStatusPanel: html.includes('Preflight Completed')
       && html.includes('renderPreflightStatus')
       && html.includes('lazyLiveFollow'),
