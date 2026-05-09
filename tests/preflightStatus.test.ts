@@ -47,6 +47,7 @@ describe('preflight status persistence', () => {
         failedStep: null,
         errorMessage: null,
       },
+      lazyLiveFollowRun: null,
     });
   });
 
@@ -60,6 +61,7 @@ describe('preflight status persistence', () => {
 
     await expect(readPreflightStatusSummary()).resolves.toEqual({
       lazyLiveFollow: null,
+      lazyLiveFollowRun: null,
     });
   });
 });

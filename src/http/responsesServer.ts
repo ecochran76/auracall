@@ -8,7 +8,12 @@ import type { OptionValues } from 'commander';
 import { MODEL_CONFIGS } from '../oracle/config.js';
 import { getCliVersion } from '../version.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
-import { readPreflightStatusSummary, type PreflightStatusSummary } from '../preflightStatus.js';
+import {
+  createLazyLiveFollowPreflightRunner,
+  readPreflightStatusSummary,
+  type LazyLiveFollowPreflightRunner,
+  type PreflightStatusSummary,
+} from '../preflightStatus.js';
 import type { ResolvedUserConfig } from '../config.js';
 import { resolveConfig } from '../schema/resolver.js';
 import { resolveHostLocalActionExecutionPolicy } from '../config/model.js';
@@ -190,6 +195,7 @@ export interface ResponsesHttpServerDeps {
   accountMirrorSchedulerService?: AccountMirrorSchedulerPassService;
   accountMirrorSchedulerLedger?: AccountMirrorSchedulerPassLedger;
   accountMirrorCompletionService?: AccountMirrorCompletionService;
+  preflightRunner?: LazyLiveFollowPreflightRunner;
   terminateProcess?: (pid: number, signal: NodeJS.Signals) => void;
 }
 
@@ -501,6 +507,15 @@ interface HttpStatusResponse {
         id: string;
         status: AccountMirrorCompletionOperation['status'];
       }
+    | {
+        kind: 'preflight';
+        action: 'run';
+        accepted: boolean;
+        reason: 'started' | 'already-running';
+        id: string;
+        status: string;
+        logPath: string;
+      }
     | ExecutionServiceHostOperatorControlResult;
 }
 
@@ -579,6 +594,7 @@ export async function createResponsesHttpServer(
       logger(`Account mirror completion ${operation.id} persist failed: ${error instanceof Error ? error.message : String(error)}`);
     },
   });
+  const preflightRunner = deps.preflightRunner ?? createLazyLiveFollowPreflightRunner();
   const reconcileAccountMirrorLiveFollow = async () => {
     await reconcileConfiguredAccountMirrorLiveFollow({
       registry: accountMirrorStatusRegistry,
@@ -905,7 +921,7 @@ export async function createResponsesHttpServer(
           accountMirrorScheduler: accountMirrorSchedulerState,
           accountMirrorStatus: accountMirrorStatusRegistry.readStatus(),
           accountMirrorCompletions: createAccountMirrorCompletionStatusSummary(accountMirrorCompletionService, now),
-          preflight: await readPreflightStatusSummary(),
+          preflight: await readPreflightStatusSummary(preflightRunner),
         });
         sendJson(res, 200, statusResponse);
         return;
@@ -1391,6 +1407,17 @@ export async function createResponsesHttpServer(
             id,
             status: operation.status,
           };
+        } else if ('preflight' in payload) {
+          const result = await preflightRunner.start();
+          controlResult = {
+            kind: 'preflight',
+            action: payload.preflight.action,
+            accepted: result.accepted,
+            reason: result.reason,
+            id: result.run.id,
+            status: result.run.status,
+            logPath: result.run.logPath,
+          };
         } else {
           const result = await host.controlOperatorAction(createServiceHostOperatorControlInput(payload));
           if (!isSuccessfulServiceHostOperatorControlResult(result)) {
@@ -1420,6 +1447,7 @@ export async function createResponsesHttpServer(
           accountMirrorScheduler: accountMirrorSchedulerState,
           accountMirrorStatus: accountMirrorStatusRegistry.readStatus(),
           accountMirrorCompletions: createAccountMirrorCompletionStatusSummary(accountMirrorCompletionService, now),
+          preflight: await readPreflightStatusSummary(preflightRunner),
           controlResult,
         });
         sendJson(res, 200, statusResponse);
@@ -1828,7 +1856,11 @@ export async function createResponsesHttpServer(
       cancelActiveAccountMirrorCompletions(accountMirrorCompletionService);
       await host.waitForDrainQueue().catch(() => null);
       if (!deps.executionHost && runnerState.id) {
-        const staleRunner = await host.markLocalRunnerStale(localRunnerLifecycleOptions);
+        const staleRunner = await host.markLocalRunnerStale(localRunnerLifecycleOptions).catch((error) => {
+          const message = error instanceof Error ? error.message : String(error);
+          if (message.includes('revision mismatch')) return null;
+          throw error;
+        });
         if (staleRunner) {
           updateRunnerState(staleRunner);
         }
@@ -2388,7 +2420,7 @@ function createHttpStatusResponse(input: {
       streaming: false,
       auth: false,
     },
-    preflight: input.preflight ?? { lazyLiveFollow: null },
+    preflight: input.preflight ?? { lazyLiveFollow: null, lazyLiveFollowRun: null },
     recoverySummary: input.recoverySummary,
     localClaimSummary: input.localClaimSummary,
     runnerTopology: input.runnerTopology,
@@ -3143,6 +3175,12 @@ const STATUS_CONTROL_REQUEST_SCHEMA = z.union([
     }),
   }),
   z.object({
+    preflight: z.object({
+      action: z.literal('run'),
+      name: z.literal('lazy-live-follow').default('lazy-live-follow'),
+    }),
+  }),
+  z.object({
     localActionControl: z.object({
       action: z.literal('resolve-request'),
       runId: z.string().min(1),
@@ -3196,7 +3234,10 @@ type StatusControlRequest = z.infer<typeof STATUS_CONTROL_REQUEST_SCHEMA>;
 
 type ServiceHostStatusControlRequest = Exclude<
   StatusControlRequest,
-  { backgroundDrain: unknown } | { accountMirrorScheduler: unknown } | { accountMirrorCompletion: unknown }
+  | { backgroundDrain: unknown }
+  | { accountMirrorScheduler: unknown }
+  | { accountMirrorCompletion: unknown }
+  | { preflight: unknown }
 >;
 
 function createServiceHostOperatorControlInput(payload: ServiceHostStatusControlRequest): ExecutionServiceHostOperatorControlInput {
@@ -5551,8 +5592,10 @@ function createOperatorBrowserDashboardHtml(input: {
       const scheduler = status.accountMirrorScheduler || {};
       const liveFollow = status.liveFollow || {};
       const api = status.api || {};
+      const preflight = status.preflight || {};
       $('opsControls').innerHTML = [
         renderApiServiceControl(api),
+        renderPreflightControl(preflight),
         renderBackgroundDrainControl(backgroundDrain),
         renderMirrorSchedulerControl(scheduler),
         renderLiveFollowControlSummary(liveFollow),
@@ -5572,6 +5615,25 @@ function createOperatorBrowserDashboardHtml(input: {
         + '<dt>Restart</dt><dd><code>' + escapeHtml(service.restartCommand || 'unknown') + '</code></dd>'
         + '</dl><div class="row">'
         + '<button id="loadApiLogTailInline" type="button" onclick="loadApiLogTail()">Refresh Log Tail</button>'
+        + '</div></div>';
+    }
+
+    function renderPreflightControl(preflight) {
+      const latest = preflight.lazyLiveFollow || null;
+      const run = preflight.lazyLiveFollowRun || null;
+      const running = run && (run.status === 'queued' || run.status === 'running');
+      const status = running ? run.status : latest ? latest.status : 'unknown';
+      const tone = status === 'passed' ? 'ok' : status === 'failed' ? 'bad' : status === 'running' || status === 'queued' ? 'warn' : 'muted';
+      const completedAt = latest ? latest.completedAt || 'unknown' : 'never';
+      const runDetail = run ? run.id + ' ' + run.status : 'none';
+      return '<div class="control-card" id="preflightControls"><div class="control-title"><strong>Preflight</strong>'
+        + renderStatusText(status, tone)
+        + '</div><dl>'
+        + '<dt>Latest</dt><dd>' + escapeHtml(completedAt) + '</dd>'
+        + '<dt>Active Run</dt><dd>' + escapeHtml(runDetail) + '</dd>'
+        + '<dt>Log</dt><dd>' + escapeHtml(run && run.logPath ? run.logPath : 'none') + '</dd>'
+        + '</dl><div class="row">'
+        + '<button id="runLazyLiveFollowPreflight" class="primary" type="button" onclick="runLazyLiveFollowPreflight()" ' + disabledAttr(running) + '>Run Preflight</button>'
         + '</div></div>';
     }
 
@@ -7985,6 +8047,10 @@ function createOperatorBrowserDashboardHtml(input: {
         body.accountMirrorScheduler.dryRun = dryRun;
       }
       await controlService('mirror scheduler', () => postStatusControl(body));
+    }
+
+    async function runLazyLiveFollowPreflight() {
+      await controlService('lazy-live-follow preflight', () => postStatusControl({ preflight: { action: 'run', name: 'lazy-live-follow' } }));
     }
 
     async function controlService(label, task) {

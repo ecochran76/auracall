@@ -230,7 +230,9 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error: unknown) => {
+main().then(() => {
+  process.exit(0);
+}).catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
+  process.exit(1);
 });

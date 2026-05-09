@@ -1,57 +1,69 @@
 #!/usr/bin/env tsx
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { writeLazyLiveFollowPreflightStatus } from '../src/preflightStatus.js';
 
 interface Step {
   label: string;
   command: string;
   args: string[];
+  cwd?: string;
 }
 
 const steps: Step[] = [
-  {
-    label: 'completion controls',
+  createScriptStep('completion controls', 'smoke:completion-control', 'smoke-account-mirror-completion-control'),
+  createScriptStep('completion hydration', 'smoke:completion-hydration', 'smoke-account-mirror-completion-hydration'),
+  createScriptStep('live-follow health parity', 'smoke:live-follow-health', 'smoke-live-follow-health-parity'),
+  createScriptStep('ops-browser dashboard controls', 'smoke:ops-browser-control', 'smoke-ops-browser-completion-control'),
+  createInstallRuntimeStep(),
+  createScriptStep('installed MCP api_status and api_log_tail', 'smoke:mcp-api-status', 'smoke-api-status-mcp'),
+  createScriptStep('installed MCP api_ops_browser_status', 'smoke:mcp-ops-browser', 'smoke-ops-browser-mcp'),
+];
+
+function createScriptStep(label: string, packageScript: string, scriptName: string): Step {
+  const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+  const compiledScript = path.join(scriptDir, `${scriptName}.js`);
+  if (existsSync(compiledScript)) {
+    return {
+      label,
+      command: process.execPath,
+      args: [compiledScript],
+      cwd: path.resolve(scriptDir, '..'),
+    };
+  }
+  return {
+    label,
     command: 'pnpm',
-    args: ['run', 'smoke:completion-control'],
-  },
-  {
-    label: 'completion hydration',
-    command: 'pnpm',
-    args: ['run', 'smoke:completion-hydration'],
-  },
-  {
-    label: 'live-follow health parity',
-    command: 'pnpm',
-    args: ['run', 'smoke:live-follow-health'],
-  },
-  {
-    label: 'ops-browser dashboard controls',
-    command: 'pnpm',
-    args: ['run', 'smoke:ops-browser-control'],
-  },
-  {
+    args: ['run', packageScript],
+  };
+}
+
+function createInstallRuntimeStep(): Step {
+  const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+  const installedCli = path.join(scriptDir, '..', 'bin', 'auracall.js');
+  if (existsSync(installedCli)) {
+    return {
+      label: 'installed user runtime version',
+      command: process.execPath,
+      args: [installedCli, '--version'],
+      cwd: path.resolve(scriptDir, '..'),
+    };
+  }
+  return {
     label: 'install user runtime',
     command: 'pnpm',
     args: ['run', 'install:user-runtime'],
-  },
-  {
-    label: 'installed MCP api_status and api_log_tail',
-    command: 'pnpm',
-    args: ['run', 'smoke:mcp-api-status'],
-  },
-  {
-    label: 'installed MCP api_ops_browser_status',
-    command: 'pnpm',
-    args: ['run', 'smoke:mcp-ops-browser'],
-  },
-];
+  };
+}
 
 function runStep(step: Step): Promise<void> {
   return new Promise((resolve, reject) => {
     console.log(`\n==== ${step.label} ====`);
     console.log(`>> ${[step.command, ...step.args].join(' ')}`);
     const child = spawn(step.command, step.args, {
-      cwd: process.cwd(),
+      cwd: step.cwd ?? process.cwd(),
       env: process.env,
       stdio: 'inherit',
     });

@@ -20,6 +20,7 @@ const apiOpsBrowserDashboardShape = z.object({
   hasApiServiceControls: z.boolean(),
   hasApiLogTailControl: z.boolean(),
   hasPreflightStatusPanel: z.boolean(),
+  hasPreflightRunControl: z.boolean(),
   hasMirrorLiveFollowPanel: z.boolean(),
   hasLiveFollowTargetsPanel: z.boolean(),
   hasAttentionQueue: z.boolean(),
@@ -95,7 +96,7 @@ export function createApiOpsBrowserStatusToolHandler(
       content: [
         {
           type: 'text' as const,
-          text: `AuraCall ops browser ${summary.host}:${summary.port} is ok; dashboard=${summary.dashboardUrl}; apiService=${summary.dashboard.hasApiServiceControls ? 'ok' : 'missing'}; apiLogTail=${summary.dashboard.hasApiLogTailControl ? 'ok' : 'missing'}; preflight=${summary.dashboard.hasPreflightStatusPanel ? 'ok' : 'missing'}; dashboard completion controls use /status; ${summary.status.liveFollow.line}`,
+          text: `AuraCall ops browser ${summary.host}:${summary.port} is ok; dashboard=${summary.dashboardUrl}; apiService=${summary.dashboard.hasApiServiceControls ? 'ok' : 'missing'}; apiLogTail=${summary.dashboard.hasApiLogTailControl ? 'ok' : 'missing'}; preflight=${summary.dashboard.hasPreflightStatusPanel ? 'ok' : 'missing'}; preflightRun=${summary.dashboard.hasPreflightRunControl ? 'ok' : 'missing'}; dashboard completion controls use /status; ${summary.status.liveFollow.line}`,
         },
       ],
       structuredContent: summary as typeof summary & Record<string, unknown>,

@@ -1407,6 +1407,7 @@ describe('http responses adapter', () => {
             failedStep: null,
             errorMessage: null,
           },
+          lazyLiveFollowRun: null,
         },
         localClaimSummary: {
           sourceKind: 'direct',
@@ -2610,6 +2611,75 @@ describe('http responses adapter', () => {
       expect(await missingResponse.json()).toMatchObject({
         error: {
           type: 'not_found_error',
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('starts lazy-live-follow preflight through the status control path without blocking', async () => {
+    const run = {
+      object: 'auracall_preflight_run' as const,
+      id: 'preflight_lazy_live_follow_test',
+      name: 'lazy-live-follow' as const,
+      status: 'queued' as const,
+      command: 'node',
+      args: ['/tmp/preflight.js'],
+      cwd: '/tmp',
+      logPath: '/tmp/preflight.log',
+      startedAt: '2026-05-08T20:00:00.000Z',
+      completedAt: null,
+      durationMs: null,
+      exitCode: null,
+      signal: null,
+      errorMessage: null,
+    };
+    const start = vi.fn(async () => ({
+      object: 'auracall_preflight_start_result' as const,
+      accepted: true,
+      reason: 'started' as const,
+      run,
+    }));
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        preflightRunner: {
+          start,
+          readRun: () => run,
+        },
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          preflight: {
+            action: 'run',
+            name: 'lazy-live-follow',
+          },
+        }),
+      });
+      expect(response.status).toBe(200);
+      expect(start).toHaveBeenCalledTimes(1);
+      expect(await response.json()).toMatchObject({
+        controlResult: {
+          kind: 'preflight',
+          action: 'run',
+          accepted: true,
+          reason: 'started',
+          id: 'preflight_lazy_live_follow_test',
+          status: 'queued',
+          logPath: '/tmp/preflight.log',
+        },
+        preflight: {
+          lazyLiveFollowRun: {
+            id: 'preflight_lazy_live_follow_test',
+            status: 'queued',
+            logPath: '/tmp/preflight.log',
+          },
         },
       });
     } finally {
@@ -15207,6 +15277,9 @@ describe('http responses adapter', () => {
       expect(html).toContain('API Log');
       expect(html).toContain('Preflight Completed');
       expect(html).toContain('renderPreflightStatus');
+      expect(html).toContain('preflightControls');
+      expect(html).toContain('runLazyLiveFollowPreflight');
+      expect(html).toContain("preflight: { action: 'run', name: 'lazy-live-follow' }");
       expect(html).toContain('apiServiceControls');
       expect(html).toContain('loadApiLogTail');
       expect(html).toContain('/v1/api/logs/tail?maxBytes=32768');

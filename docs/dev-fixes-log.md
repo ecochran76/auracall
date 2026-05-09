@@ -15684,3 +15684,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   writes a persisted pass/fail record under `~/.auracall/preflight/`,
   `/status` projects it as `preflight.lazyLiveFollow`, and `/ops/browser`
   renders the latest status/timestamp in the Server summary.
+- 2026-05-08: Operators need to refresh release readiness without a terminal.
+  `/ops/browser` now has a Run Preflight control backed by `POST /status`
+  `{ "preflight": { "action": "run", "name": "lazy-live-follow" } }`. The
+  control returns immediately with a run id/log path, and `/status` reports the
+  active run as `preflight.lazyLiveFollowRun`.

@@ -3,8 +3,8 @@ import { createResponsesHttpServer } from '../src/http/responsesServer.js';
 import { createApiOpsBrowserStatusToolHandler } from '../src/mcp/tools/apiOpsBrowserStatus.js';
 
 const dashboardHtml = `
-<section><h2>Operations</h2><div id="opsControls"><div id="apiServiceControls">API Service managedService statusCommand restartCommand</div><button id="loadApiLogTailInline" onclick="loadApiLogTail()">Refresh Log Tail</button></div></section>
-<section><h2>Server</h2><button id="loadApiLogTail">Refresh API Log Tail</button><pre id="apiLogTail">/v1/api/logs/tail?maxBytes=32768</pre></section>
+<section><h2>Operations</h2><div id="opsControls"><div id="apiServiceControls">API Service managedService statusCommand restartCommand</div><button id="loadApiLogTailInline" onclick="loadApiLogTail()">Refresh Log Tail</button><div id="preflightControls"><button id="runLazyLiveFollowPreflight" onclick="runLazyLiveFollowPreflight()">Run Preflight</button></div></div></section>
+<section><h2>Server</h2><dl><dt>Preflight Completed</dt><dd>never</dd></dl><button id="loadApiLogTail">Refresh API Log Tail</button><pre id="apiLogTail">/v1/api/logs/tail?maxBytes=32768</pre></section>
 <section><h2>Mirror Live Follow</h2></section>
 <div id="mirrorAttentionQueue"><table id="mirrorAttentionItems"></table></div>
 <div id="mirrorTargetTable"><table id="mirrorTargetAccounts"></table></div>
@@ -20,6 +20,8 @@ const dashboardHtml = `
 <script>
   function setMirrorControlNotice(message, tone) {}
   async function loadApiLogTail() { return fetchJson('/v1/api/logs/tail?maxBytes=32768'); }
+  function renderPreflightStatus(status) { return status.preflight.lazyLiveFollow; }
+  async function runLazyLiveFollowPreflight() { return postStatusControl({ preflight: { action: 'run', name: 'lazy-live-follow' } }); }
   function renderAttentionQueue() {}
   function collectAttentionRows() {}
   function completionActionsForStatus(status) {
@@ -127,7 +129,7 @@ describe('mcp api_ops_browser_status tool', () => {
       content: [
         {
           type: 'text',
-          text: 'AuraCall ops browser 127.0.0.1:18080 is ok; dashboard=http://127.0.0.1:18080/ops/browser; apiService=ok; apiLogTail=ok; preflight=ok; dashboard completion controls use /status; Live follow health: severity=paused posture=healthy state=idle active=1 paused=1 failed=0 cancelled=0 backpressure=none latestYield=none',
+          text: 'AuraCall ops browser 127.0.0.1:18080 is ok; dashboard=http://127.0.0.1:18080/ops/browser; apiService=ok; apiLogTail=ok; preflight=ok; preflightRun=ok; dashboard completion controls use /status; Live follow health: severity=paused posture=healthy state=idle active=1 paused=1 failed=0 cancelled=0 backpressure=none latestYield=none',
         },
       ],
       structuredContent: {
@@ -139,6 +141,7 @@ describe('mcp api_ops_browser_status tool', () => {
           hasApiServiceControls: true,
           hasApiLogTailControl: true,
           hasPreflightStatusPanel: true,
+          hasPreflightRunControl: true,
           hasMirrorLiveFollowPanel: true,
           hasLiveFollowTargetsPanel: true,
           hasAttentionQueue: true,

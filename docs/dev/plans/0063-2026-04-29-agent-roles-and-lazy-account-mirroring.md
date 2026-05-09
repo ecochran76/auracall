@@ -926,3 +926,8 @@ workbenches.
 under `preflight.lazyLiveFollow`, and `/ops/browser` renders it in the Server
 summary so operators can see the last release-readiness result from the
 dashboard.
+The Browser Ops dashboard can now queue the same lazy-live-follow preflight
+through `POST /status` with `{ "preflight": { "action": "run", "name":
+"lazy-live-follow" } }`. The API returns immediately with a preflight run id
+and log path, while `/status` exposes `preflight.lazyLiveFollowRun` for
+polling.
