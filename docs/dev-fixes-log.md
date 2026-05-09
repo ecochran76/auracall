@@ -1,3 +1,8 @@
+- 2026-05-09: Browser dashboard scheduler diagnostics command hints should be
+  copyable without forcing operators to select terminal text. The Mirror
+  Scheduler card now includes a `Copy command` action that also writes the
+  command into the local detail panel as a clipboard fallback.
+
 - 2026-05-09: Browser dashboard operators should see the same scheduler
   diagnostics command surfaced by CLI status. The Mirror Scheduler card now
   renders a `Diagnostics` command hint from active live-follow completions,

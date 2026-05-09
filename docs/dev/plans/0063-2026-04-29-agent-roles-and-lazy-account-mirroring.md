@@ -997,3 +997,7 @@ The Mirror Scheduler dashboard card now renders the same command hint in the
 browser. It derives host/port from the configured API proxy target, so an
 operator viewing the dashboard through a local alias or external route still
 gets a command pointed at the correct local API listener.
+The dashboard command hint now has a `Copy command` action with the same local
+detail-panel fallback used by diagnostics bundle inspection. This keeps the
+operator path short: status shows the exact CLI command, and the browser can
+copy or visibly stage that command without leaving the scheduler card.

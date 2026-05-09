@@ -6031,7 +6031,9 @@ function createOperatorBrowserDashboardHtml(input: {
       const hints = collectMirrorSchedulerDiagnosticsHints(liveFollow);
       if (!hints.length) return '<span class="muted">none</span>';
       const command = formatMirrorSchedulerDiagnosticsCommand(hints[0]);
-      return '<code>' + escapeHtml(command) + '</code>'
+      return '<code data-mirror-scheduler-diagnostics-command="true">' + escapeHtml(command) + '</code>'
+        + ' <button type="button" class="link-button" data-mirror-scheduler-diagnostics-command-copy-button="true"'
+        + ' data-command="' + escapeHtml(command) + '" onclick="copyMirrorSchedulerDiagnosticsCommand(this)">Copy command</button>'
         + (hints.length > 1 ? ' <span class="muted">+' + escapeHtml(String(hints.length - 1)) + ' more</span>' : '');
     }
 
@@ -8617,6 +8619,22 @@ function createOperatorBrowserDashboardHtml(input: {
         setMirrorControlNotice('Copied scheduler diagnostics for ' + [provider, runtimeProfileId].filter(Boolean).join('/') + '.', 'ok');
       } catch (error) {
         setMirrorControlNotice('Could not copy scheduler diagnostics: ' + String(error.message || error), 'bad');
+      }
+    }
+
+    async function copyMirrorSchedulerDiagnosticsCommand(button) {
+      const data = button && button.dataset ? button.dataset : {};
+      const command = data.command || '';
+      if (!command) {
+        setMirrorControlNotice('No scheduler diagnostics command is available to copy.', 'warn');
+        return;
+      }
+      setMirrorSchedulerCompletionDetail(command);
+      try {
+        await navigator.clipboard.writeText(command);
+        setMirrorControlNotice('Copied scheduler diagnostics command.', 'ok');
+      } catch (error) {
+        setMirrorControlNotice('Could not copy scheduler diagnostics command: ' + String(error.message || error), 'bad');
       }
     }
 

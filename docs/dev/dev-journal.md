@@ -1,3 +1,34 @@
+## Turn 165 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make the dashboard scheduler diagnostics command directly copyable.
+- Change:
+  - the Mirror Scheduler `Diagnostics` row now includes `Copy command` beside
+    the generated `auracall api scheduler-diagnostics` hint
+  - copy writes the command into the scheduler detail panel before clipboard
+    access, preserving a visible fallback when browser clipboard permissions
+    fail
+  - dashboard contract checks now assert the command marker, copy button, and
+    copy function
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts --maxWorkers 1 -t "browser operator dashboard|api ops browser"`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+    reported only existing warning debt in `tests/http.responsesServer.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - installed `/ops/browser` contains `copyMirrorSchedulerDiagnosticsCommand`,
+    `data-mirror-scheduler-diagnostics-command-copy-button`,
+    `data-mirror-scheduler-diagnostics-command`, and `Copy command`
+  - installed `api ops-browser-status --port 18095` reports
+    `schedulerDiagnostics=ok` and the current `Scheduler diagnostics` hint
+  - installed `api status --port 18095 --json` exposes a
+    `schedulerDiagnosticsHints[0].command` for the active mirror completion
+
 ## Turn 164 | 2026-05-09
 
 - Continued implementation plan:

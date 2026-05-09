@@ -537,14 +537,18 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('selectedCompletion'),
     hasMirrorSchedulerDiagnosticsBundle: html.includes('openMirrorSchedulerDiagnostics')
       && html.includes('copyMirrorSchedulerDiagnostics')
+      && html.includes('copyMirrorSchedulerDiagnosticsCommand')
       && html.includes('loadMirrorSchedulerDiagnosticsText')
       && html.includes('buildMirrorSchedulerDiagnosticsHint')
       && html.includes('formatMirrorSchedulerDiagnosticsCommand')
       && html.includes('mirrorSchedulerDiagnosticsBundle')
       && html.includes('mirrorSchedulerDiagnosticsHint')
       && html.includes('scheduler-diagnostics')
+      && html.includes('data-mirror-scheduler-diagnostics-command')
+      && html.includes('data-mirror-scheduler-diagnostics-command-copy-button')
       && html.includes('data-mirror-scheduler-diagnostics-open-button')
       && html.includes('data-mirror-scheduler-diagnostics-button')
+      && html.includes('Copy command')
       && html.includes('/v1/account-mirrors/scheduler/diagnostics'),
     hasRunOnceSchedulerControl: html.includes('runMirrorScheduler')
       && html.includes('dryRunMirrorScheduler')
