@@ -1,3 +1,28 @@
+## Turn 170 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make the installed MCP API status smoke assert scheduler diagnostics
+  parity.
+- Change:
+  - `scripts/smoke-api-status-mcp.ts` now requires
+    `structuredContent.schedulerDiagnosticsHints` to be an array
+  - when hints exist, the smoke asserts the MCP text contains the diagnostics
+    count and every numbered provider/runtime command
+  - when hints do not exist, the smoke asserts no diagnostics text is emitted
+- Validation:
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint scripts/smoke-api-status-mcp.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - `pnpm tsx scripts/smoke-api-status-mcp.ts --mode both --port 18081`
+  - installed MCP smoke passed for the disabled and enabled temporary APIs,
+    each reporting `schedulerDiagnostics=3`, which exercised the structured
+    hint and text command assertions
+
 ## Turn 169 | 2026-05-09
 
 - Continued implementation plan:

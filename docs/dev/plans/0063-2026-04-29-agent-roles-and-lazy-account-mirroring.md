@@ -1017,3 +1017,7 @@ MCP `api_status` now follows the same operator contract: its text response
 includes the diagnostics count and numbered provider/runtime commands, and its
 structured output schema declares `schedulerDiagnosticsHints` for agents that
 prefer machine-readable routing.
+The installed MCP smoke now enforces that contract: it requires
+`schedulerDiagnosticsHints` to be present in structured content and verifies
+the text count/numbered command lines whenever the target API has active
+diagnostics hints.

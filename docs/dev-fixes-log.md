@@ -1,3 +1,8 @@
+- 2026-05-09: Installed MCP smoke coverage should fail if `api_status`
+  diagnostics parity drifts. `smoke-api-status-mcp` now validates the
+  structured `schedulerDiagnosticsHints` array and cross-checks MCP text
+  command lines whenever hints are present.
+
 - 2026-05-09: MCP `api_status` should expose the same multi-command
   scheduler diagnostics handoff as the CLI status surfaces. Its text response
   now includes the diagnostics count and numbered provider/runtime commands,

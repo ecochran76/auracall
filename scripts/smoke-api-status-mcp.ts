@@ -223,6 +223,8 @@ async function runCase(options: Options, smokeCase: SmokeCase): Promise<void> {
       state?: unknown;
       operatorStatus?: { posture?: unknown };
     } | undefined;
+    const diagnosticsHints = readSchedulerDiagnosticsHints(structuredContent);
+    const statusText = readMcpTextContent(result.apiStatus.content);
     const posture = scheduler?.operatorStatus?.posture;
     const state = scheduler?.state;
     if (posture !== smokeCase.expectedPosture) {
@@ -240,6 +242,11 @@ async function runCase(options: Options, smokeCase: SmokeCase): Promise<void> {
     if (logTailRoute !== '/v1/api/logs/tail[?maxBytes=32768]') {
       throw new Error(`Expected api.logTailRoute for ${smokeCase.name}, got ${String(logTailRoute)}.`);
     }
+    assertSchedulerDiagnosticsText({
+      caseName: smokeCase.name,
+      hints: diagnosticsHints,
+      text: statusText,
+    });
     const logTail = result.apiLogTail.structuredContent as {
       logTail?: {
         logPath?: unknown;
@@ -257,13 +264,88 @@ async function runCase(options: Options, smokeCase: SmokeCase): Promise<void> {
     if (typeof logTail.logTail.logPath !== 'string' || !logTail.logTail.logPath.includes(`api-${smokeCase.port}.log`)) {
       throw new Error(`Expected api_log_tail logPath for ${smokeCase.name}, got ${String(logTail.logTail.logPath)}.`);
     }
-    console.log(`${smokeCase.name}: posture=${String(posture)} state=${String(state)} port=${smokeCase.port} pid=${pid} log=${logPath} logTail=ok`);
+    console.log(`${smokeCase.name}: posture=${String(posture)} state=${String(state)} port=${smokeCase.port} pid=${pid} log=${logPath} schedulerDiagnostics=${diagnosticsHints.length} logTail=ok`);
   } finally {
     if (apiProcess && !apiProcess.killed) {
       apiProcess.kill('SIGTERM');
       await new Promise((resolve) => apiProcess?.once('exit', resolve));
     }
   }
+}
+
+function readMcpTextContent(content: unknown): string {
+  if (!Array.isArray(content)) return '';
+  return content
+    .filter((item): item is { type: string; text: string } =>
+      Boolean(item)
+      && typeof item === 'object'
+      && (item as { type?: unknown }).type === 'text'
+      && typeof (item as { text?: unknown }).text === 'string')
+    .map((item) => item.text)
+    .join('\n');
+}
+
+function readSchedulerDiagnosticsHints(structuredContent: unknown): Array<{
+  provider: string | null;
+  runtimeProfileId: string | null;
+  command: string;
+}> {
+  const hints = (structuredContent as { schedulerDiagnosticsHints?: unknown } | undefined)?.schedulerDiagnosticsHints;
+  if (!Array.isArray(hints)) {
+    throw new Error('Expected MCP api_status structuredContent.schedulerDiagnosticsHints array.');
+  }
+  return hints.map((hint, index) => {
+    if (!hint || typeof hint !== 'object') {
+      throw new Error(`Expected schedulerDiagnosticsHints[${index}] object.`);
+    }
+    const record = hint as {
+      provider?: unknown;
+      runtimeProfileId?: unknown;
+      command?: unknown;
+    };
+    if (record.provider !== null && typeof record.provider !== 'string') {
+      throw new Error(`Expected schedulerDiagnosticsHints[${index}].provider string/null.`);
+    }
+    if (record.runtimeProfileId !== null && typeof record.runtimeProfileId !== 'string') {
+      throw new Error(`Expected schedulerDiagnosticsHints[${index}].runtimeProfileId string/null.`);
+    }
+    if (typeof record.command !== 'string' || !record.command.includes('auracall api scheduler-diagnostics')) {
+      throw new Error(`Expected schedulerDiagnosticsHints[${index}].command diagnostics CLI command.`);
+    }
+    return {
+      provider: record.provider ?? null,
+      runtimeProfileId: record.runtimeProfileId ?? null,
+      command: record.command,
+    };
+  });
+}
+
+function assertSchedulerDiagnosticsText(input: {
+  caseName: string;
+  hints: Array<{
+    provider: string | null;
+    runtimeProfileId: string | null;
+    command: string;
+  }>;
+  text: string;
+}): void {
+  if (!input.hints.length) {
+    if (input.text.includes('Scheduler diagnostics:')) {
+      throw new Error(`Expected no scheduler diagnostics text for ${input.caseName} without hints.`);
+    }
+    return;
+  }
+  const countLine = `Scheduler diagnostics: available=${input.hints.length}`;
+  if (!input.text.includes(countLine)) {
+    throw new Error(`Expected MCP api_status text to include ${JSON.stringify(countLine)} for ${input.caseName}.`);
+  }
+  input.hints.forEach((hint, index) => {
+    const label = [hint.provider, hint.runtimeProfileId].filter(Boolean).join('/');
+    const commandLine = `Scheduler diagnostics command ${index + 1}${label ? ` (${label})` : ''}: ${JSON.stringify(hint.command)}`;
+    if (!input.text.includes(commandLine)) {
+      throw new Error(`Expected MCP api_status text to include ${JSON.stringify(commandLine)} for ${input.caseName}.`);
+    }
+  });
 }
 
 async function main(): Promise<void> {
