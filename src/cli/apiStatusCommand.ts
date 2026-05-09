@@ -150,7 +150,15 @@ export interface ApiStatusCliSummary {
   scheduler: ApiStatusSchedulerSummary;
   completions: ApiStatusCompletionControlSummary;
   liveFollow: ApiStatusLiveFollowHealthSummary;
+  schedulerDiagnosticsHints: ApiStatusSchedulerDiagnosticsHint[];
   raw: unknown;
+}
+
+export interface ApiStatusSchedulerDiagnosticsHint {
+  provider: string | null;
+  runtimeProfileId: string | null;
+  completionId: string | null;
+  command: string;
 }
 
 export interface ApiStatusSchedulerYieldSummary {
@@ -218,6 +226,7 @@ export function summarizeApiStatusPayload(
     },
     latestYield,
   };
+  const liveFollow = summarizeLiveFollowHealth(schedulerSummary, completions, targets);
   return {
     ok: typeof record.ok === 'boolean' ? record.ok : null,
     host: source.host,
@@ -225,7 +234,13 @@ export function summarizeApiStatusPayload(
     api: summarizeApiRuntime(record.api, routes),
     scheduler: schedulerSummary,
     completions,
-    liveFollow: summarizeLiveFollowHealth(schedulerSummary, completions, targets),
+    liveFollow,
+    schedulerDiagnosticsHints: buildSchedulerDiagnosticsHints({
+      host: source.host,
+      port: source.port,
+      completions,
+      targets,
+    }),
     raw,
   };
 }
@@ -314,6 +329,10 @@ export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string 
     );
   }
   lines.push(formatCompletionControlLine(summary.completions));
+  const diagnosticsLine = formatSchedulerDiagnosticsHintLine(summary.schedulerDiagnosticsHints);
+  if (diagnosticsLine) {
+    lines.push(diagnosticsLine);
+  }
   const targetLine = formatLiveFollowTargetLine(summary.liveFollow.targets);
   if (targetLine) {
     lines.push(targetLine);
@@ -331,6 +350,16 @@ export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string 
     lines.push(recentLine);
   }
   return lines.join('\n');
+}
+
+function formatSchedulerDiagnosticsHintLine(hints: ApiStatusSchedulerDiagnosticsHint[]): string | null {
+  if (hints.length === 0) return null;
+  const first = hints[0];
+  return [
+    'Scheduler diagnostics:',
+    `available=${hints.length}`,
+    `command=${JSON.stringify(first.command)}`,
+  ].join(' ');
 }
 
 function formatApiRuntimeLine(api: ApiStatusApiSummary): string {
@@ -639,6 +668,94 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
         }
       : null,
   };
+}
+
+function buildSchedulerDiagnosticsHints(input: {
+  host: string;
+  port: number;
+  completions: ApiStatusCompletionControlSummary;
+  targets: ApiStatusLiveFollowHealthSummary['targets'];
+}): ApiStatusSchedulerDiagnosticsHint[] {
+  const candidates: Array<{
+    provider: string | null;
+    runtimeProfileId: string | null;
+    completionId: string | null;
+  }> = [];
+  for (const completion of input.completions.active) {
+    candidates.push({
+      provider: completion.provider,
+      runtimeProfileId: completion.runtimeProfileId,
+      completionId: completion.id,
+    });
+  }
+  for (const account of input.targets?.accounts ?? []) {
+    if (!account.activeCompletionId) continue;
+    candidates.push({
+      provider: account.provider,
+      runtimeProfileId: account.runtimeProfileId,
+      completionId: account.activeCompletionId,
+    });
+  }
+
+  const seen = new Set<string>();
+  const hints: ApiStatusSchedulerDiagnosticsHint[] = [];
+  for (const candidate of candidates) {
+    const provider = normalizeOptionalValue(candidate.provider);
+    const runtimeProfileId = normalizeOptionalValue(candidate.runtimeProfileId);
+    const completionId = normalizeOptionalValue(candidate.completionId);
+    if (!provider && !runtimeProfileId && !completionId) continue;
+    const key = [provider ?? '', runtimeProfileId ?? '', completionId ?? ''].join('\0');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    hints.push({
+      provider,
+      runtimeProfileId,
+      completionId,
+      command: formatSchedulerDiagnosticsCommand({
+        host: input.host,
+        port: input.port,
+        provider,
+        runtimeProfileId,
+        completionId,
+      }),
+    });
+  }
+  return hints;
+}
+
+function formatSchedulerDiagnosticsCommand(input: {
+  host: string;
+  port: number;
+  provider: string | null;
+  runtimeProfileId: string | null;
+  completionId: string | null;
+}): string {
+  const args = ['auracall', 'api', 'scheduler-diagnostics'];
+  if (input.host && input.host !== '127.0.0.1') {
+    args.push('--host', input.host);
+  }
+  args.push('--port', String(input.port));
+  if (input.provider) {
+    args.push('--provider', input.provider);
+  }
+  if (input.runtimeProfileId) {
+    args.push('--runtime-profile', input.runtimeProfileId);
+  }
+  if (input.completionId) {
+    args.push('--completion-id', input.completionId);
+  }
+  return args.map(quoteCliArg).join(' ');
+}
+
+function quoteCliArg(value: string): string {
+  return /^[A-Za-z0-9_./:@=-]+$/.test(value)
+    ? value
+    : `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+function normalizeOptionalValue(value: string | null | undefined): string | null {
+  const trimmed = String(value ?? '').trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 function summarizeCompletionOperation(value: unknown): ApiStatusCompletionOperationSummary {

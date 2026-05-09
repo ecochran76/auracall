@@ -1,3 +1,32 @@
+## Turn 163 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make the scheduler diagnostics command discoverable from higher-level
+  status surfaces.
+- Change:
+  - `api status` now derives scheduler diagnostics hints from active mirror
+    completions and live-follow target rows
+  - `api ops-browser-status` prints the same compact hint from its linked
+    `/status` payload
+  - the hint includes the exact `auracall api scheduler-diagnostics` command
+    with host/port and provider/runtime/completion filters
+- Validation:
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/cli/apiOpsBrowserCommand.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/cli/apiStatusCommand.ts src/cli/apiOpsBrowserCommand.ts tests/cli/apiStatusCommand.test.ts tests/cli/apiOpsBrowserCommand.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - installed `api status --port 18095` prints
+    `Scheduler diagnostics: available=3`
+  - installed `api ops-browser-status --port 18095` prints the same
+    diagnostics hint
+  - installed `api status --port 18095 --json` exposes the exact
+    `auracall api scheduler-diagnostics --port 18095 ...` command
+
 ## Turn 162 | 2026-05-09
 
 - Continued implementation plan:

@@ -1,3 +1,9 @@
+- 2026-05-09: Operators should not need to remember the diagnostics command
+  after seeing a scheduler wait or active mirror completion. `api status` and
+  `api ops-browser-status` now print a compact `Scheduler diagnostics` hint
+  with the exact `auracall api scheduler-diagnostics` command for the first
+  active provider/runtime completion.
+
 - 2026-05-09: Scheduler diagnostics had API/MCP/dashboard access but no
   terminal command. Added `auracall api scheduler-diagnostics` so shell
   operators can fetch the same non-browser bundle by provider/runtime profile

@@ -286,6 +286,15 @@ describe('api status CLI helpers', () => {
           },
         ],
       },
+      schedulerDiagnosticsHints: [
+        {
+          provider: 'chatgpt',
+          runtimeProfileId: 'default',
+          completionId: 'acctmirror_paused',
+          command:
+            'auracall api scheduler-diagnostics --port 18080 --provider chatgpt --runtime-profile default --completion-id acctmirror_paused',
+        },
+      ],
       liveFollow: {
         line: 'Live follow health: severity=attention-needed posture=backpressured state=idle enabled=2 active=1 paused=1 attention=1 backpressure=routine-delayed latestYield=chatgpt/default remaining=4 queued=media-generation:chatgpt:image',
         severity: 'attention-needed',
@@ -344,6 +353,9 @@ describe('api status CLI helpers', () => {
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
       'Account mirror completions: active=1 queued=0 running=0 paused=1 failed=0 cancelled=1 total=3',
+    );
+    expect(formatApiStatusCliSummary(summary)).toContain(
+      'Scheduler diagnostics: available=1 command="auracall api scheduler-diagnostics --port 18080 --provider chatgpt --runtime-profile default --completion-id acctmirror_paused"',
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
       'Live follow targets: total=3 enabled=2 active=1 complete=1 in_progress=1 attention=1',

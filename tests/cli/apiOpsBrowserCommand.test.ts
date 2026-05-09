@@ -558,6 +558,9 @@ describe('api ops browser CLI helpers', () => {
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok resultToast=ok inputInspect=ok input=ok rowActions=ok stateAware=ok confirmCancel=ok feedback=ok pause=ok resume=ok cancel=ok',
     );
+    expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
+      'Scheduler diagnostics: available=1 command="auracall api scheduler-diagnostics --port 18080 --provider chatgpt --runtime-profile default --completion-id acctmirror_paused"',
+    );
   });
 
   it('prefers the configured dashboard URL advertised by status', async () => {

@@ -989,3 +989,7 @@ The same diagnostics bundle now has CLI parity through
 `auracall api scheduler-diagnostics`, with optional provider/runtime-profile or
 completion-id filters. Dashboard, CLI, API, and MCP operators therefore inspect
 the same non-browser diagnostics payload.
+`api status` and `api ops-browser-status` now also print a compact `Scheduler
+diagnostics` command hint when active mirror completions or live-follow target
+rows expose a completion id, making the detailed bundle discoverable from the
+normal status workflow.
