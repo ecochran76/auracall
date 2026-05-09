@@ -1,3 +1,8 @@
+- 2026-05-09: Scheduler diagnostics had API/MCP/dashboard access but no
+  terminal command. Added `auracall api scheduler-diagnostics` so shell
+  operators can fetch the same non-browser bundle by provider/runtime profile
+  or completion id.
+
 - 2026-05-09: Scheduler diagnostics inspection should not depend on clipboard
   availability. Dashboard wait rows now include `Open diagnostics`, which
   renders the same API-backed diagnostics bundle locally while `Copy

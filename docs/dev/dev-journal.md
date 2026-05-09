@@ -1,3 +1,33 @@
+## Turn 162 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: give shell operators the same scheduler diagnostics bundle already
+  exposed through API, MCP, and the dashboard.
+- Change:
+  - added `auracall api scheduler-diagnostics`
+  - the command accepts provider, runtime-profile, and completion-id filters
+    and reads `GET /v1/account-mirrors/scheduler/diagnostics`
+  - added a real command-parser test proving the CLI hits the expected API
+    route
+  - documented CLI parity in README, testing docs, MCP docs, the fixes log,
+    and the lazy account mirroring plan
+- Validation:
+  - `pnpm vitest run tests/cli/apiSchedulerDiagnosticsCommand.test.ts tests/mcp.accountMirrorSchedulerDiagnostics.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint bin/auracall.ts src/cli/apiSchedulerDiagnosticsCommand.ts tests/cli/apiSchedulerDiagnosticsCommand.test.ts docs/mcp.md docs/testing.md README.md`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - installed `auracall api scheduler-diagnostics --help` exposes
+    `--provider`, `--runtime-profile`, `--completion-id`, and `--json`
+  - installed compact output reports `Target: chatgpt/default` and the active
+    scheduler completion
+  - installed JSON output reports
+    `account_mirror_scheduler_diagnostics_bundle chatgpt/default`
+
 ## Turn 160 | 2026-05-09
 
 - Continued implementation plan:

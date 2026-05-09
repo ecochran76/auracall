@@ -142,6 +142,16 @@
   latest cooperative-yield event, resume cursor, or no-yield proof without
   parsing `/status`.
 
+### `account_mirror_scheduler_diagnostics`
+- Inputs: `port` for the local `auracall api serve` listener; optional `host`,
+  `timeoutMs`, `provider`, `runtimeProfile`, and `completionId`.
+- Behavior: reads `GET /v1/account-mirrors/scheduler/diagnostics` from the
+  running API service and returns the same target/wait/cache/completion/latest
+  event bundle used by the dashboard and
+  `auracall api scheduler-diagnostics`.
+- Use this when an MCP operator needs a compact handoff bundle for one
+  scheduler wait row without opening `/ops/browser` or touching provider pages.
+
 ### `account_mirror_completion_start`, `account_mirror_completion_list`, `account_mirror_completion_status`, and `account_mirror_completion_control`
 - Inputs: start accepts optional `provider`, `runtimeProfile`, and debug-only
   `maxPasses`; list accepts optional `provider`, `runtimeProfile`, `status`,

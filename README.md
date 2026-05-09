@@ -266,6 +266,9 @@ Terminology note:
   `auracall api mirror-completion-control <id> pause|resume|cancel` controls a
   live-follow operation without killing the API service or touching provider
   browser state.
+  `auracall api scheduler-diagnostics --provider chatgpt --runtime-profile default`
+  reads the same scheduler diagnostics bundle exposed by the dashboard and MCP,
+  without relying on browser clipboard access.
   `/status.accountMirrorCompletions` reports completion metrics plus active and
   recent records, and `/ops/browser` renders the same live-follow posture plus
   service controls for the background drain, mirror scheduler run-once,

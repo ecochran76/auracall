@@ -985,3 +985,7 @@ Dashboard scheduler wait rows now also expose `Open diagnostics` beside `Copy
 diagnostics`. Both actions share the same API-backed bundle loader, so an
 operator can inspect the payload in the local scheduler detail panel before
 copying it or when clipboard access is unavailable.
+The same diagnostics bundle now has CLI parity through
+`auracall api scheduler-diagnostics`, with optional provider/runtime-profile or
+completion-id filters. Dashboard, CLI, API, and MCP operators therefore inspect
+the same non-browser diagnostics payload.

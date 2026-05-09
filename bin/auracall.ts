@@ -121,6 +121,10 @@ import {
   readApiSchedulerHistoryForCli,
 } from '../src/cli/apiSchedulerHistoryCommand.js';
 import {
+  formatApiSchedulerDiagnosticsCliSummary,
+  readApiSchedulerDiagnosticsForCli,
+} from '../src/cli/apiSchedulerDiagnosticsCommand.js';
+import {
   controlApiMirrorCompletionForCli,
   formatApiMirrorCompletionListCliSummary,
   formatApiMirrorCompletionCliSummary,
@@ -1328,6 +1332,38 @@ apiCommand
       return;
     }
     console.log(formatApiSchedulerHistoryCliSummary(summary));
+  });
+
+apiCommand
+  .command('scheduler-diagnostics')
+  .description('Read lazy account mirror scheduler diagnostics from the local API.')
+  .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--provider <provider>', 'Filter diagnostics by provider.')
+  .option('--runtime-profile <profile>', 'Filter diagnostics by runtime profile.')
+  .option('--completion-id <id>', 'Filter diagnostics by active account mirror completion id.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const summary = await readApiSchedulerDiagnosticsForCli({
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+      provider: commandOptions.provider,
+      runtimeProfile: commandOptions.runtimeProfile,
+      completionId: commandOptions.completionId,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(summary.diagnostics, null, 2));
+      return;
+    }
+    console.log(formatApiSchedulerDiagnosticsCliSummary(summary));
   });
 
 apiCommand

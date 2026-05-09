@@ -163,6 +163,9 @@
       - CLI parity is available with
         `auracall api scheduler-history --port 8080 --limit 10`
       - MCP parity is available with `account_mirror_scheduler_history`
+      - scheduler diagnostics parity is available with
+        `auracall api scheduler-diagnostics --port 8080 --provider chatgpt --runtime-profile default`
+        and MCP `account_mirror_scheduler_diagnostics`
       - compact history reports `latestYield`, `yieldEvents[]`,
         queued-work owner/kind, resume cursor, and remaining detail surfaces
       - nonblocking completion is available with
