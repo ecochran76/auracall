@@ -1,3 +1,33 @@
+## Turn 159 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make scheduler wait-row state easy to hand off.
+- Change:
+  - Mirror Scheduler wait rows now include a read-only `Copy diagnostics`
+    action
+  - the copied bundle includes target identity, wait state, cache URL, active
+    completion summary when available, and the latest scheduler event
+  - CLI/MCP dashboard contracts now assert the scheduler diagnostics bundle
+    affordance
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1 -t "browser operator dashboard|api ops browser"`
+  - `pnpm vitest run tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts src/mcp/tools/apiOpsBrowserStatus.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+    reported only existing non-null assertion warning debt in
+    `tests/http.responsesServer.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `pnpm run build && pnpm run install:user-runtime-service`
+- Installed dogfood:
+  - installed `api ops-browser-status --port 18095` reports
+    `schedulerDiagnostics=ok`
+  - installed `/ops/browser` contains `copyMirrorSchedulerDiagnostics`,
+    `mirrorSchedulerDiagnosticsBundle`,
+    `data-mirror-scheduler-diagnostics-button`, and
+    `latestMirrorSchedulerDiagnosticsEvent`
+
 ## Turn 158 | 2026-05-09
 
 - Continued implementation plan:

@@ -971,3 +971,8 @@ Completion inspection from a scheduler wait row now also writes a compact detail
 summary into a local panel in the Mirror Scheduler card. This keeps the
 scheduler wait table as the operator's working context while preserving the
 existing raw completion readout.
+Scheduler wait rows now also expose a read-only `Copy diagnostics` action. The
+bundle joins the provider/runtime target, wait classification, cache URL, active
+completion summary when available, and the latest scheduler-event evidence, so
+operator handoffs can start from one copied payload instead of several raw
+dashboard panels.

@@ -4856,6 +4856,7 @@ function createOperatorBrowserDashboardHtml(input: {
     let mirrorPreviewSessionItems = [];
     let mirrorPreviewSessionSelectedUrls = new Set();
     let savedMirrorPreviewSessionsCache = [];
+    let lastOpsStatus = null;
 
     async function fetchJson(path) {
       const response = await fetch(path, { cache: 'no-store' });
@@ -5827,7 +5828,19 @@ function createOperatorBrowserDashboardHtml(input: {
       if (account.activeCompletionId) {
         actions.push('<button type="button" class="link-button" data-completion-id="' + escapeHtml(account.activeCompletionId) + '" onclick="inspectMirrorCompletion(this.dataset.completionId)">Inspect completion</button>');
       }
-      actions.push('<a class="link-button" data-mirror-scheduler-cache-link="true" href="' + escapeHtml(buildMirrorSchedulerAccountMirrorPath(account)) + '">Open cache</a>');
+      const wait = classifyMirrorSchedulerTargetWait(account);
+      const cachePath = buildMirrorSchedulerAccountMirrorPath(account);
+      actions.push('<button type="button" class="link-button" data-mirror-scheduler-diagnostics-button="true"'
+        + ' data-provider="' + escapeHtml(account.provider || '') + '"'
+        + ' data-runtime-profile-id="' + escapeHtml(account.runtimeProfileId || '') + '"'
+        + ' data-wait-kind="' + escapeHtml(wait.kind) + '"'
+        + ' data-wait-label="' + escapeHtml(wait.label) + '"'
+        + ' data-next-attempt-at="' + escapeHtml(account.nextAttemptAt || '') + '"'
+        + ' data-routine-eligible-at="' + escapeHtml(account.routineEligibleAt || '') + '"'
+        + ' data-completion-id="' + escapeHtml(account.activeCompletionId || '') + '"'
+        + ' data-cache-path="' + escapeHtml(cachePath) + '"'
+        + ' onclick="copyMirrorSchedulerDiagnostics(this)">Copy diagnostics</button>');
+      actions.push('<a class="link-button" data-mirror-scheduler-cache-link="true" href="' + escapeHtml(cachePath) + '">Open cache</a>');
       return actions.join(' ');
     }
 
@@ -8266,6 +8279,82 @@ function createOperatorBrowserDashboardHtml(input: {
       if (panel) panel.textContent = value;
     }
 
+    async function copyMirrorSchedulerDiagnostics(button) {
+      const data = button && button.dataset ? button.dataset : {};
+      const completionId = data.completionId || '';
+      const provider = data.provider || null;
+      const runtimeProfileId = data.runtimeProfileId || null;
+      const cachePath = data.cachePath || buildMirrorSchedulerAccountMirrorPath({ provider, runtimeProfileId });
+      setMirrorControlNotice('Preparing scheduler diagnostics...', 'warn');
+      let completion = null;
+      if (completionId) {
+        try {
+          const detail = await fetchJson('/v1/account-mirrors/completions/' + encodeURIComponent(completionId));
+          completion = compactMirrorSchedulerCompletion(detail, completionId);
+        } catch (error) {
+          completion = {
+            id: completionId,
+            error: String(error.message || error),
+          };
+        }
+      }
+      const bundle = {
+        capturedAt: new Date().toISOString(),
+        dashboardUrl: window.location.href,
+        target: {
+          provider,
+          runtimeProfileId,
+          cacheUrl: new URL(cachePath, window.location.origin).href,
+        },
+        wait: {
+          kind: data.waitKind || null,
+          label: data.waitLabel || null,
+          nextAttemptAt: data.nextAttemptAt || null,
+          routineEligibleAt: data.routineEligibleAt || null,
+          activeCompletionId: completionId || null,
+        },
+        completion,
+        latestSchedulerEvent: latestMirrorSchedulerDiagnosticsEvent(),
+      };
+      const text = asJson({ mirrorSchedulerDiagnosticsBundle: bundle });
+      setMirrorSchedulerCompletionDetail(text);
+      try {
+        await navigator.clipboard.writeText(text);
+        setMirrorControlNotice('Copied scheduler diagnostics for ' + [provider, runtimeProfileId].filter(Boolean).join('/') + '.', 'ok');
+      } catch (error) {
+        setMirrorControlNotice('Could not copy scheduler diagnostics: ' + String(error.message || error), 'bad');
+      }
+    }
+
+    function compactMirrorSchedulerCompletion(detail, fallbackId) {
+      return {
+        id: detail.id || fallbackId || null,
+        provider: detail.provider || null,
+        runtimeProfileId: detail.runtimeProfileId || null,
+        status: detail.status || null,
+        phase: detail.phase || null,
+        nextAttemptAt: detail.nextAttemptAt || null,
+        passCount: detail.passCount ?? null,
+        error: detail.error || null,
+      };
+    }
+
+    function latestMirrorSchedulerDiagnosticsEvent() {
+      const event = recentServiceEventDetails.find((item) => item && item.source === 'scheduler');
+      if (event) {
+        return {
+          at: event.at || null,
+          event: event.event || null,
+          detail: event.detail || null,
+          schedulerDetail: event.schedulerDetail || null,
+        };
+      }
+      const latestPass = lastOpsStatus && lastOpsStatus.accountMirrorScheduler
+        ? latestMirrorSchedulerPass(lastOpsStatus.accountMirrorScheduler)
+        : null;
+      return latestPass ? compactSchedulerEventDetail(latestPass) : null;
+    }
+
     async function refreshStatus() {
       $('serverSummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
       $('serviceDiscoverySummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
@@ -8282,6 +8371,7 @@ function createOperatorBrowserDashboardHtml(input: {
       $('mirrorCompletions').textContent = 'Loading...';
       try {
         const status = await fetchJson('/status');
+        lastOpsStatus = status;
         renderOpsControls(status);
         renderServerSummary(status);
         renderServiceDiscovery(status);

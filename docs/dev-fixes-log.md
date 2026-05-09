@@ -1,3 +1,9 @@
+- 2026-05-09: Scheduler wait-row triage should be easy to hand off without
+  asking operators to collect raw JSON from multiple panels. The Mirror
+  Scheduler wait table now has a read-only `Copy diagnostics` action that
+  copies target identity, wait state, cache URL, active completion summary, and
+  latest scheduler-event evidence as one compact bundle.
+
 - 2026-05-09: Scheduler wait-row completion inspection should keep the
   operator in the scheduler context. The Mirror Scheduler card now has a local
   completion detail panel populated by `Inspect completion`, while the existing

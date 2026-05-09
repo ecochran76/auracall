@@ -15525,6 +15525,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('mirrorSchedulerCompletionDetail');
       expect(html).toContain('setMirrorSchedulerCompletionDetail');
       expect(html).toContain('Select a scheduler wait row completion');
+      expect(html).toContain('copyMirrorSchedulerDiagnostics');
+      expect(html).toContain('mirrorSchedulerDiagnosticsBundle');
+      expect(html).toContain('data-mirror-scheduler-diagnostics-button');
+      expect(html).toContain('latestMirrorSchedulerDiagnosticsEvent');
       expect(html).toContain('renderOpsControls');
       expect(html).toContain('controlBackgroundDrain');
       expect(html).toContain('controlMirrorScheduler');
