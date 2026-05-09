@@ -19,6 +19,8 @@ import type { LiveFollowHealthSummary } from '../src/status/liveFollowHealth.js'
 const expectedSeverity = 'paused';
 const expectedOwner = 'media-generation:chatgpt:image';
 const expectedRemaining = 4;
+const expectedDiagnosticsFilterFragment =
+  '--provider chatgpt --runtime-profile default --completion-id acctmirror_health_parity';
 
 const yieldedPass: AccountMirrorSchedulerPassResult = {
   object: 'account_mirror_scheduler_pass',
@@ -251,6 +253,39 @@ function assertLiveFollow(summary: LiveFollowHealthSummary, label: string): void
   assertEqual(summary.latestYield?.remainingDetailSurfaces, expectedRemaining, `${label} latest yield remaining`);
 }
 
+function readMcpTextContent(content: unknown): string {
+  if (!Array.isArray(content)) return '';
+  return content
+    .filter((item): item is { type: string; text: string } =>
+      Boolean(item)
+      && typeof item === 'object'
+      && (item as { type?: unknown }).type === 'text'
+      && typeof (item as { text?: unknown }).text === 'string')
+    .map((item) => item.text)
+    .join('\n');
+}
+
+function assertSchedulerDiagnosticsHints(
+  hints: Array<{ provider: string | null; runtimeProfileId: string | null; completionId: string | null; command: string }>,
+  formattedText: string,
+  label: string,
+): void {
+  assertEqual(hints.length, 1, `${label} diagnostics hint count`);
+  const hint = hints[0];
+  if (!hint) throw new Error(`${label} diagnostics hint missing.`);
+  assertEqual(hint.provider, 'chatgpt', `${label} diagnostics provider`);
+  assertEqual(hint.runtimeProfileId, 'default', `${label} diagnostics runtime profile`);
+  assertEqual(hint.completionId, currentCompletion.id, `${label} diagnostics completion id`);
+  assertIncludes(hint.command, 'auracall api scheduler-diagnostics', `${label} diagnostics command`);
+  assertIncludes(hint.command, expectedDiagnosticsFilterFragment, `${label} diagnostics command filters`);
+  assertIncludes(formattedText, 'Scheduler diagnostics: available=1', `${label} diagnostics text`);
+  assertIncludes(
+    formattedText,
+    `Scheduler diagnostics command 1 (chatgpt/default): ${JSON.stringify(hint.command)}`,
+    `${label} diagnostics command text`,
+  );
+}
+
 async function main(): Promise<void> {
   const server = await createResponsesHttpServer(
     {
@@ -276,16 +311,10 @@ async function main(): Promise<void> {
       '/v1/api/logs/tail[?maxBytes=32768]',
       'CLI api status log-tail route',
     );
-    assertIncludes(
-      formatApiStatusCliSummary(cliSummary),
-      'API service: pid=',
-      'CLI formatted status',
-    );
-    assertIncludes(
-      formatApiStatusCliSummary(cliSummary),
-      'Live follow health: severity=paused',
-      'CLI formatted status',
-    );
+    const cliText = formatApiStatusCliSummary(cliSummary);
+    assertIncludes(cliText, 'API service: pid=', 'CLI formatted status');
+    assertIncludes(cliText, 'Live follow health: severity=paused', 'CLI formatted status');
+    assertSchedulerDiagnosticsHints(cliSummary.schedulerDiagnosticsHints, cliText, 'CLI scheduler diagnostics');
 
     const mcpResult = await createApiStatusToolHandler()({
       port: server.port,
@@ -296,13 +325,25 @@ async function main(): Promise<void> {
     const mcpStructured = mcpResult.structuredContent as {
       api: Awaited<ReturnType<typeof readApiStatusForCli>>['api'];
       liveFollow: LiveFollowHealthSummary;
+      schedulerDiagnosticsHints: Array<{
+        provider: string | null;
+        runtimeProfileId: string | null;
+        completionId: string | null;
+        command: string;
+      }>;
     };
+    const mcpText = readMcpTextContent(mcpResult.content);
     assertLiveFollow(mcpStructured.liveFollow, 'MCP api_status');
     assertEqual(mcpStructured.api.process.pid, process.pid, 'MCP api_status process pid');
     assertEqual(
       mcpStructured.api.logTailRoute,
       '/v1/api/logs/tail[?maxBytes=32768]',
       'MCP api_status log-tail route',
+    );
+    assertSchedulerDiagnosticsHints(
+      mcpStructured.schedulerDiagnosticsHints,
+      mcpText,
+      'MCP api_status scheduler diagnostics',
     );
 
     const dashboard = await fetchText(`${baseUrl}/ops/browser`);
@@ -316,6 +357,7 @@ async function main(): Promise<void> {
       `paused=${httpStatus.liveFollow.pausedCompletions ?? 'unknown'}`,
       `latestYield.owner=${httpStatus.liveFollow.latestYield?.queuedOwnerCommand ?? 'unknown'}`,
       `latestYield.remaining=${httpStatus.liveFollow.latestYield?.remainingDetailSurfaces ?? 'unknown'}`,
+      `schedulerDiagnostics=${cliSummary.schedulerDiagnosticsHints.length}`,
       'providerWork=none',
     ].join('\n'));
   } finally {

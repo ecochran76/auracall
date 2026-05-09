@@ -1021,3 +1021,7 @@ The installed MCP smoke now enforces that contract: it requires
 `schedulerDiagnosticsHints` to be present in structured content and verifies
 the text count/numbered command lines whenever the target API has active
 diagnostics hints.
+The broader live-follow health parity smoke now also enforces the contract for
+the normal operator summaries: it checks CLI status and MCP `api_status`
+structured hints plus their text command lines while keeping raw `/status` as
+the live-follow health source.

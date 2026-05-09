@@ -1,3 +1,26 @@
+## Turn 171 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make the live-follow health parity smoke assert scheduler diagnostics
+  parity across the operator summaries.
+- Change:
+  - `scripts/smoke-live-follow-health-parity.ts` now asserts the CLI status
+    summary derives one scheduler diagnostics hint for the active mirror
+    completion and prints the matching numbered command line
+  - MCP `api_status` parity now asserts the same structured
+    `schedulerDiagnosticsHints` entry and text command line
+  - raw `/status.liveFollow` remains the API health source, while diagnostics
+    hints are checked at the CLI/MCP operator-summary layer where they are
+    intentionally derived
+- Validation:
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint scripts/smoke-live-follow-health-parity.ts`
+  - `pnpm tsx scripts/smoke-live-follow-health-parity.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+
 ## Turn 170 | 2026-05-09
 
 - Continued implementation plan:

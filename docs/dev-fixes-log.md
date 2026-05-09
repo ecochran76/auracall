@@ -1,3 +1,8 @@
+- 2026-05-09: Live-follow health parity should fail if scheduler diagnostics
+  handoff drifts between CLI and MCP status. The parity smoke now checks the
+  derived CLI status hint, MCP `api_status` structured hint, and both text
+  command lines for the active mirror completion.
+
 - 2026-05-09: Installed MCP smoke coverage should fail if `api_status`
   diagnostics parity drifts. `smoke-api-status-mcp` now validates the
   structured `schedulerDiagnosticsHints` array and cross-checks MCP text
