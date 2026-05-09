@@ -944,3 +944,8 @@ mirror scheduler passes from `/status`. Event rows open the existing bounded
 API/preflight log readers when log-backed evidence is available, so operator
 triage starts from a chronological local view rather than separate raw JSON
 blocks.
+The event strip now includes `All/API/Preflight/Scheduler` source filters, a
+visible row count, and an `Inspect Scheduler` action that opens a compact
+scheduler-pass summary. This keeps scheduler triage on the dashboard without
+requiring operators to read the full `/status.accountMirrorScheduler.history`
+payload first.

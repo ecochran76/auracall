@@ -1,3 +1,37 @@
+## Turn 153 | 2026-05-08
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make the recent service event strip directly usable for local
+  dashboard triage.
+- Change:
+  - recent service events can now be filtered by `all`, `api`, `preflight`, or
+    `scheduler`
+  - the panel shows the visible row count after filtering
+  - scheduler rows expose an `Inspect Scheduler` action with compact target,
+    backpressure, metrics, refresh, and error details
+  - CLI/MCP dashboard contracts now assert source filters and scheduler detail
+    affordances
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1 -t "browser operator dashboard|api ops browser"`
+  - `pnpm vitest run tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts src/mcp/tools/apiOpsBrowserStatus.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+    reported only existing non-null assertion warning debt in
+    `tests/http.responsesServer.test.ts`
+  - `pnpm run build && pnpm run install:user-runtime-service`
+- Installed dogfood:
+  - installed `/ops/browser` contains `recentServiceEventFilter`,
+    `filterRecentServiceEvents`, `recentServiceEventVisibleCount`,
+    `recentServiceEventDetail`, and `Inspect Scheduler`
+  - installed `api ops-browser-status --port 18095` reports
+    `recentEventFilters=ok` and `recentSchedulerDetail=ok`
+  - installed `/status` reports `preflightHistory=1`, `schedulerHistory=50`,
+    and healthy live follow posture
+
 ## Turn 152 | 2026-05-08
 
 - Continued implementation plan:

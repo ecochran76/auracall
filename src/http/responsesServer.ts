@@ -4518,7 +4518,18 @@ function createOperatorBrowserDashboardHtml(input: {
 
       <section class="panel" id="recentServiceEventsPanel">
         <h2>Recent Service Events</h2>
+        <div class="row">
+          <label for="recentServiceEventFilter">Source</label>
+          <select id="recentServiceEventFilter" onchange="filterRecentServiceEvents()">
+            <option value="all">All</option>
+            <option value="api">API</option>
+            <option value="preflight">Preflight</option>
+            <option value="scheduler">Scheduler</option>
+          </select>
+          <span id="recentServiceEventVisibleCount" class="muted">0 shown</span>
+        </div>
         <div id="recentServiceEvents">Loading service events...</div>
+        <pre id="recentServiceEventDetail">Select a scheduler event to inspect details.</pre>
       </section>
 
       <section class="panel">
@@ -4834,6 +4845,7 @@ function createOperatorBrowserDashboardHtml(input: {
     const $ = (id) => document.getElementById(id);
     const asJson = (value) => JSON.stringify(value, null, 2);
     const OPERATOR_DASHBOARD_ROUTES = ${JSON.stringify(routes)};
+    let recentServiceEventDetails = [];
     let mirrorCatalogRows = [];
     let mirrorCatalogFilteredRows = [];
     let mirrorCatalogCurrentDetail = null;
@@ -8148,13 +8160,16 @@ function createOperatorBrowserDashboardHtml(input: {
 
     function renderRecentServiceEvents(status) {
       const events = collectRecentServiceEvents(status);
+      recentServiceEventDetails = events;
       if (!events.length) {
         $('recentServiceEvents').innerHTML = '<p class="muted">No recent service events recorded.</p>';
+        $('recentServiceEventVisibleCount').textContent = '0 shown';
         return;
       }
       $('recentServiceEvents').innerHTML = '<table id="recentServiceEventsTable"><thead><tr><th>When</th><th>Source</th><th>Event</th><th>Detail</th><th>Action</th></tr></thead><tbody>'
-        + events.slice(0, 10).map(renderRecentServiceEventRow).join('')
+        + events.slice(0, 10).map((event, index) => renderRecentServiceEventRow(event, index)).join('')
         + '</tbody></table>';
+      filterRecentServiceEvents();
     }
 
     function collectRecentServiceEvents(status) {
@@ -8195,19 +8210,22 @@ function createOperatorBrowserDashboardHtml(input: {
           source: 'scheduler',
           event: entry.action || entry.mode || 'pass',
           detail: formatSchedulerEventDetail(entry),
-          action: 'none',
+          action: 'scheduler-detail',
+          schedulerDetail: compactSchedulerEventDetail(entry),
         });
       }
       return events.sort((left, right) => Date.parse(right.at || '') - Date.parse(left.at || ''));
     }
 
-    function renderRecentServiceEventRow(event) {
+    function renderRecentServiceEventRow(event, index) {
       const action = event.action === 'api-log'
         ? '<button type="button" class="link-button" onclick="loadApiLogTail()">Open API Log</button>'
         : event.action === 'preflight-log'
           ? '<button type="button" class="link-button" data-preflight-run-id="' + escapeHtml(event.runId || '') + '" onclick="loadPreflightRunLog(this.dataset.preflightRunId)">Open Preflight Log</button>'
-          : '<span class="muted">status only</span>';
-      return '<tr data-recent-service-event-source="' + escapeHtml(event.source || 'unknown') + '">'
+          : event.action === 'scheduler-detail'
+            ? '<button type="button" class="link-button" data-service-event-index="' + escapeHtml(String(index)) + '" onclick="showRecentServiceEventDetail(this.dataset.serviceEventIndex)">Inspect Scheduler</button>'
+            : '<span class="muted">status only</span>';
+      return '<tr data-recent-service-event-source="' + escapeHtml(event.source || 'unknown') + '" data-service-event-index="' + escapeHtml(String(index)) + '">'
         + '<td><code>' + escapeHtml(event.at || 'unknown') + '</code></td>'
         + '<td>' + escapeHtml(event.source || 'unknown') + '</td>'
         + '<td>' + escapeHtml(event.event || 'unknown') + '</td>'
@@ -8223,6 +8241,58 @@ function createOperatorBrowserDashboardHtml(input: {
       const backpressure = entry.backpressure && entry.backpressure.reason ? entry.backpressure.reason : 'none';
       const error = entry.error && entry.error.message ? ' error=' + entry.error.message : '';
       return provider + '/' + runtime + ' backpressure=' + backpressure + error;
+    }
+
+    function compactSchedulerEventDetail(entry) {
+      const target = entry.selectedTarget || {};
+      return {
+        action: entry.action || null,
+        mode: entry.mode || null,
+        startedAt: entry.startedAt || null,
+        completedAt: entry.completedAt || null,
+        target: {
+          provider: target.provider || null,
+          runtimeProfileId: target.runtimeProfileId || null,
+          browserProfileId: target.browserProfileId || null,
+          status: target.status || null,
+          reason: target.reason || null,
+          eligibleAt: target.eligibleAt || null,
+        },
+        backpressure: entry.backpressure || null,
+        metrics: entry.metrics || null,
+        refresh: entry.refresh ? {
+          status: entry.refresh.status || null,
+          provider: entry.refresh.provider || null,
+          runtimeProfileId: entry.refresh.runtimeProfileId || null,
+          error: entry.refresh.error || null,
+        } : null,
+        error: entry.error || null,
+      };
+    }
+
+    function filterRecentServiceEvents() {
+      const filter = $('recentServiceEventFilter') ? $('recentServiceEventFilter').value : 'all';
+      const rows = Array.from(document.querySelectorAll('#recentServiceEventsTable tbody tr'));
+      let visible = 0;
+      for (const row of rows) {
+        const source = row.dataset.recentServiceEventSource || '';
+        const shouldShow = filter === 'all' || source === filter;
+        row.style.display = shouldShow ? '' : 'none';
+        if (shouldShow) visible += 1;
+      }
+      if ($('recentServiceEventVisibleCount')) {
+        $('recentServiceEventVisibleCount').textContent = String(visible) + ' shown';
+      }
+    }
+
+    function showRecentServiceEventDetail(index) {
+      const parsed = Number(index);
+      const event = Number.isFinite(parsed) ? recentServiceEventDetails[parsed] : null;
+      if (!event || !event.schedulerDetail) {
+        $('recentServiceEventDetail').textContent = 'No scheduler detail is available for this event.';
+        return;
+      }
+      $('recentServiceEventDetail').textContent = asJson(event.schedulerDetail);
     }
 
     async function postStatusControl(payload) {

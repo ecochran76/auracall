@@ -1,3 +1,8 @@
+- 2026-05-08: Recent service events need dashboard-local triage, not just a
+  merged list. `/ops/browser` now filters the event strip by API, preflight, or
+  scheduler source and exposes a compact scheduler-pass detail action for
+  target, backpressure, metrics, refresh, and error inspection.
+
 - 2026-05-08: Browser Ops diagnosis should start from a chronological local
   view. `/ops/browser` now renders `Recent Service Events` by composing API
   service state, recent preflight run history, and account-mirror scheduler
