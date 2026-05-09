@@ -4,7 +4,10 @@ import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
-import { writeLazyLiveFollowPreflightStatus } from '../src/preflightStatus.js';
+import {
+  recordLazyLiveFollowPreflightRun,
+  writeLazyLiveFollowPreflightStatus,
+} from '../src/preflightStatus.js';
 import {
   assertResponsesHostAllowed,
   createDefaultRuntimeRunServiceStateProbe,
@@ -1408,6 +1411,7 @@ describe('http responses adapter', () => {
             errorMessage: null,
           },
           lazyLiveFollowRun: null,
+          lazyLiveFollowRunHistory: [],
         },
         localClaimSummary: {
           sourceKind: 'direct',
@@ -2681,6 +2685,50 @@ describe('http responses adapter', () => {
             logPath: '/tmp/preflight.log',
           },
         },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('serves a bounded preflight run log from recorded history', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-preflight-log-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const logPath = path.join(homeDir, 'logs', 'preflight-lazy-live-follow-test.log');
+    await fs.mkdir(path.dirname(logPath), { recursive: true });
+    await fs.writeFile(logPath, 'first line\nsecond line\n', 'utf8');
+    await recordLazyLiveFollowPreflightRun({
+      object: 'auracall_preflight_run',
+      id: 'preflight_lazy_live_follow_log_test',
+      name: 'lazy-live-follow',
+      status: 'passed',
+      command: 'node',
+      args: ['/tmp/preflight.js'],
+      cwd: '/tmp',
+      logPath,
+      startedAt: '2026-05-08T20:00:00.000Z',
+      completedAt: '2026-05-08T20:00:01.000Z',
+      durationMs: 1000,
+      exitCode: 0,
+      signal: null,
+      errorMessage: null,
+    });
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/preflight/lazy-live-follow/runs/preflight_lazy_live_follow_log_test/log?maxBytes=12`,
+      );
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        object: 'preflight_run_log_tail',
+        id: 'preflight_lazy_live_follow_log_test',
+        logPath,
+        exists: true,
+        maxBytes: 12,
+        truncated: true,
+        content: 'second line\n',
       });
     } finally {
       await server.close();
@@ -15279,6 +15327,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('renderPreflightStatus');
       expect(html).toContain('preflightControls');
       expect(html).toContain('runLazyLiveFollowPreflight');
+      expect(html).toContain('preflightRunHistory');
+      expect(html).toContain('renderPreflightRunHistory');
+      expect(html).toContain('loadPreflightRunLog');
+      expect(html).toContain('/v1/preflight/lazy-live-follow/runs/');
       expect(html).toContain("preflight: { action: 'run', name: 'lazy-live-follow' }");
       expect(html).toContain('apiServiceControls');
       expect(html).toContain('loadApiLogTail');

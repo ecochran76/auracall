@@ -20,6 +20,7 @@ export interface LazyLiveFollowPreflightStatus {
 export interface PreflightStatusSummary {
   lazyLiveFollow: LazyLiveFollowPreflightStatus | null;
   lazyLiveFollowRun: LazyLiveFollowPreflightRun | null;
+  lazyLiveFollowRunHistory: LazyLiveFollowPreflightRun[];
 }
 
 export type LazyLiveFollowPreflightRunStatus = 'queued' | 'running' | 'passed' | 'failed';
@@ -41,6 +42,12 @@ export interface LazyLiveFollowPreflightRun {
   errorMessage: string | null;
 }
 
+interface LazyLiveFollowPreflightRunHistoryFile {
+  object: 'auracall_preflight_run_history';
+  name: 'lazy-live-follow';
+  runs: LazyLiveFollowPreflightRun[];
+}
+
 export interface LazyLiveFollowPreflightStartResult {
   object: 'auracall_preflight_start_result';
   accepted: boolean;
@@ -57,12 +64,21 @@ export function getLazyLiveFollowPreflightStatusPath(): string {
   return path.join(getAuracallHomeDir(), 'preflight', 'lazy-live-follow.json');
 }
 
+export function getLazyLiveFollowPreflightRunHistoryPath(): string {
+  return path.join(getAuracallHomeDir(), 'preflight', 'lazy-live-follow-runs.json');
+}
+
 export async function readPreflightStatusSummary(
   runner?: Pick<LazyLiveFollowPreflightRunner, 'readRun'>,
 ): Promise<PreflightStatusSummary> {
+  const activeRun = runner?.readRun() ?? null;
   return {
     lazyLiveFollow: await readLazyLiveFollowPreflightStatus(),
-    lazyLiveFollowRun: runner?.readRun() ?? null,
+    lazyLiveFollowRun: activeRun,
+    lazyLiveFollowRunHistory: mergeActivePreflightRunHistory(
+      await readLazyLiveFollowPreflightRunHistory(),
+      activeRun,
+    ),
   };
 }
 
@@ -83,6 +99,37 @@ export async function writeLazyLiveFollowPreflightStatus(
   const statusPath = getLazyLiveFollowPreflightStatusPath();
   await fs.mkdir(path.dirname(statusPath), { recursive: true });
   await fs.writeFile(statusPath, `${JSON.stringify(status, null, 2)}\n`, 'utf8');
+}
+
+export async function readLazyLiveFollowPreflightRunHistory(
+  limit = 10,
+): Promise<LazyLiveFollowPreflightRun[]> {
+  try {
+    const raw = await fs.readFile(getLazyLiveFollowPreflightRunHistoryPath(), 'utf8');
+    const parsed = parseLazyLiveFollowPreflightRunHistory(JSON.parse(raw));
+    return parsed.slice(0, Math.max(1, limit));
+  } catch (error) {
+    const code = error instanceof Error && 'code' in error ? String((error as NodeJS.ErrnoException).code) : '';
+    if (code === 'ENOENT' || error instanceof SyntaxError) return [];
+    throw error;
+  }
+}
+
+export async function recordLazyLiveFollowPreflightRun(
+  run: LazyLiveFollowPreflightRun,
+): Promise<void> {
+  const historyPath = getLazyLiveFollowPreflightRunHistoryPath();
+  const existing = await readLazyLiveFollowPreflightRunHistory(25);
+  const runs = [cloneLazyLiveFollowPreflightRun(run), ...existing.filter((entry) => entry.id !== run.id)]
+    .sort((left, right) => comparePreflightRunsNewestFirst(left, right))
+    .slice(0, 20);
+  const payload: LazyLiveFollowPreflightRunHistoryFile = {
+    object: 'auracall_preflight_run_history',
+    name: 'lazy-live-follow',
+    runs,
+  };
+  await fs.mkdir(path.dirname(historyPath), { recursive: true });
+  await fs.writeFile(historyPath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 }
 
 export function createLazyLiveFollowPreflightRunner(): LazyLiveFollowPreflightRunner {
@@ -118,6 +165,7 @@ export function createLazyLiveFollowPreflightRunner(): LazyLiveFollowPreflightRu
         errorMessage: null,
       };
       latestRun = run;
+      await recordLazyLiveFollowPreflightRun(run);
       queueMicrotask(() => {
         startLazyLiveFollowPreflightProcess(run, () => active, (next) => {
           active = next;
@@ -126,6 +174,7 @@ export function createLazyLiveFollowPreflightRunner(): LazyLiveFollowPreflightRu
             status: 'failed',
             errorMessage: error instanceof Error ? error.message : String(error),
           });
+          recordLazyLiveFollowPreflightRun(run).catch(() => null);
           active = null;
         });
       });
@@ -158,6 +207,7 @@ async function startLazyLiveFollowPreflightProcess(
   logStream.write(`AuraCall lazy-live-follow preflight ${run.id}\n`);
   logStream.write(`$ ${[run.command, ...run.args].join(' ')}\n`);
   run.status = 'running';
+  await recordLazyLiveFollowPreflightRun(run);
   const child = spawn(run.command, run.args, {
     cwd: run.cwd,
     env: process.env,
@@ -171,6 +221,7 @@ async function startLazyLiveFollowPreflightProcess(
       status: 'failed',
       errorMessage: error.message,
     });
+    recordLazyLiveFollowPreflightRun(run).catch(() => null);
     setActive(null);
     logStream.end(`\npreflight process error: ${error.message}\n`);
   });
@@ -181,6 +232,7 @@ async function startLazyLiveFollowPreflightProcess(
       signal,
       errorMessage: code === 0 ? null : `preflight exited with code=${code ?? 'null'} signal=${signal ?? 'null'}`,
     });
+    recordLazyLiveFollowPreflightRun(run).catch(() => null);
     setActive(null);
     logStream.end(`\npreflight ${run.status}: code=${code ?? 'null'} signal=${signal ?? 'null'}\n`);
   });
@@ -247,6 +299,83 @@ function parseLazyLiveFollowPreflightStatus(raw: unknown): LazyLiveFollowPreflig
     failedStep: readString(record.failedStep),
     errorMessage: readString(record.errorMessage),
   };
+}
+
+function parseLazyLiveFollowPreflightRunHistory(raw: unknown): LazyLiveFollowPreflightRun[] {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return [];
+  const record = raw as Record<string, unknown>;
+  if (record.object !== 'auracall_preflight_run_history' || record.name !== 'lazy-live-follow') {
+    return [];
+  }
+  if (!Array.isArray(record.runs)) return [];
+  return record.runs
+    .map(parseLazyLiveFollowPreflightRun)
+    .filter((run): run is LazyLiveFollowPreflightRun => Boolean(run))
+    .sort((left, right) => comparePreflightRunsNewestFirst(left, right));
+}
+
+function parseLazyLiveFollowPreflightRun(raw: unknown): LazyLiveFollowPreflightRun | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const record = raw as Record<string, unknown>;
+  const id = readString(record.id);
+  const status = readEnum(record.status, ['queued', 'running', 'passed', 'failed']);
+  const command = readString(record.command);
+  const cwd = readString(record.cwd);
+  const logPath = readString(record.logPath);
+  const startedAt = readString(record.startedAt);
+  if (
+    record.object !== 'auracall_preflight_run' ||
+    record.name !== 'lazy-live-follow' ||
+    !id ||
+    !status ||
+    !command ||
+    !cwd ||
+    !logPath ||
+    !startedAt ||
+    !Array.isArray(record.args)
+  ) {
+    return null;
+  }
+  return {
+    object: 'auracall_preflight_run',
+    id,
+    name: 'lazy-live-follow',
+    status,
+    command,
+    args: record.args.filter((entry): entry is string => typeof entry === 'string'),
+    cwd,
+    logPath,
+    startedAt,
+    completedAt: readString(record.completedAt),
+    durationMs: readNumber(record.durationMs),
+    exitCode: readNumber(record.exitCode),
+    signal: readString(record.signal),
+    errorMessage: readString(record.errorMessage),
+  };
+}
+
+function mergeActivePreflightRunHistory(
+  history: LazyLiveFollowPreflightRun[],
+  activeRun: LazyLiveFollowPreflightRun | null,
+): LazyLiveFollowPreflightRun[] {
+  if (!activeRun) return history;
+  return [cloneLazyLiveFollowPreflightRun(activeRun), ...history.filter((entry) => entry.id !== activeRun.id)]
+    .sort((left, right) => comparePreflightRunsNewestFirst(left, right))
+    .slice(0, 10);
+}
+
+function cloneLazyLiveFollowPreflightRun(run: LazyLiveFollowPreflightRun): LazyLiveFollowPreflightRun {
+  return {
+    ...run,
+    args: [...run.args],
+  };
+}
+
+function comparePreflightRunsNewestFirst(
+  left: LazyLiveFollowPreflightRun,
+  right: LazyLiveFollowPreflightRun,
+): number {
+  return Date.parse(right.startedAt) - Date.parse(left.startedAt);
 }
 
 function readString(value: unknown): string | null {

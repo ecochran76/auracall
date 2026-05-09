@@ -4,8 +4,11 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import {
+  getLazyLiveFollowPreflightRunHistoryPath,
   getLazyLiveFollowPreflightStatusPath,
+  readLazyLiveFollowPreflightRunHistory,
   readPreflightStatusSummary,
+  recordLazyLiveFollowPreflightRun,
   writeLazyLiveFollowPreflightStatus,
 } from '../src/preflightStatus.js';
 
@@ -48,6 +51,7 @@ describe('preflight status persistence', () => {
         errorMessage: null,
       },
       lazyLiveFollowRun: null,
+      lazyLiveFollowRunHistory: [],
     });
   });
 
@@ -62,6 +66,65 @@ describe('preflight status persistence', () => {
     await expect(readPreflightStatusSummary()).resolves.toEqual({
       lazyLiveFollow: null,
       lazyLiveFollowRun: null,
+      lazyLiveFollowRunHistory: [],
+    });
+  });
+
+  it('stores recent lazy-live-follow preflight runs by id', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-preflight-runs-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    await recordLazyLiveFollowPreflightRun({
+      object: 'auracall_preflight_run',
+      id: 'preflight_lazy_live_follow_1',
+      name: 'lazy-live-follow',
+      status: 'queued',
+      command: 'node',
+      args: ['preflight.js'],
+      cwd: '/tmp',
+      logPath: path.join(homeDir, 'logs', 'preflight-lazy-live-follow-1.log'),
+      startedAt: '2026-05-08T20:00:00.000Z',
+      completedAt: null,
+      durationMs: null,
+      exitCode: null,
+      signal: null,
+      errorMessage: null,
+    });
+    await recordLazyLiveFollowPreflightRun({
+      object: 'auracall_preflight_run',
+      id: 'preflight_lazy_live_follow_1',
+      name: 'lazy-live-follow',
+      status: 'passed',
+      command: 'node',
+      args: ['preflight.js'],
+      cwd: '/tmp',
+      logPath: path.join(homeDir, 'logs', 'preflight-lazy-live-follow-1.log'),
+      startedAt: '2026-05-08T20:00:00.000Z',
+      completedAt: '2026-05-08T20:00:01.000Z',
+      durationMs: 1000,
+      exitCode: 0,
+      signal: null,
+      errorMessage: null,
+    });
+
+    await expect(fs.stat(getLazyLiveFollowPreflightRunHistoryPath())).resolves.toMatchObject({
+      isFile: expect.any(Function),
+    });
+    await expect(readLazyLiveFollowPreflightRunHistory()).resolves.toEqual([
+      expect.objectContaining({
+        id: 'preflight_lazy_live_follow_1',
+        status: 'passed',
+        exitCode: 0,
+      }),
+    ]);
+    await expect(readPreflightStatusSummary()).resolves.toMatchObject({
+      lazyLiveFollowRunHistory: [
+        {
+          id: 'preflight_lazy_live_follow_1',
+          status: 'passed',
+        },
+      ],
     });
   });
 });

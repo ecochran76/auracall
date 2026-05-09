@@ -1,3 +1,33 @@
+## Turn 151 | 2026-05-08
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make dashboard-triggered lazy-live-follow preflight runs inspectable
+  after the request returns.
+- Change:
+  - preflight runs now persist a compact recent history under AuraCall home
+  - `/status.preflight.lazyLiveFollowRunHistory` reports recent queued,
+    running, passed, and failed runs
+  - `/ops/browser` renders the recent run list and can open a bounded log tail
+    through `GET /v1/preflight/lazy-live-follow/runs/{run_id}/log`
+  - CLI/MCP dashboard status contracts now assert the history and log controls
+- Validation:
+  - `pnpm vitest run tests/preflightStatus.test.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1 -t "preflight|browser operator dashboard|api ops browser"`
+  - `pnpm vitest run tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm exec biome lint src/preflightStatus.ts src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts src/mcp/tools/apiOpsBrowserStatus.ts tests/preflightStatus.test.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+    returned only pre-existing non-null-assertion warning debt in
+    `tests/http.responsesServer.test.ts`.
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - live installed API on port `18095` accepted dashboard-style preflight run
+    `preflight_lazy_live_follow_20260509041132359_5d417b90`, reported it as
+    `passed` in `/status.preflight.lazyLiveFollowRunHistory`, and served its
+    bounded log through
+    `/v1/preflight/lazy-live-follow/runs/preflight_lazy_live_follow_20260509041132359_5d417b90/log`.
+
 ## Turn 150 | 2026-05-07
 
 - Continued implementation plan:

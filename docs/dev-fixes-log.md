@@ -1,3 +1,9 @@
+- 2026-05-08: Dashboard-triggered lazy-live-follow preflight needs durable
+  operator evidence, not only an in-memory latest run. Preflight runs now
+  upsert a bounded recent history under `~/.auracall/preflight`, `/status`
+  exposes that history, and `/ops/browser` can open a bounded per-run log tail
+  through a safe preflight-log API route.
+
 - 2026-05-06: Recent runtime-run navigation to cached mirror detail needs
   pre-click visibility. `GET /v1/runtime-runs/recent` now includes a compact
   `providerConversationSummary` derived from stored browser-run metadata, and

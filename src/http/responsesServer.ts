@@ -10,7 +10,9 @@ import { getCliVersion } from '../version.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
 import {
   createLazyLiveFollowPreflightRunner,
+  readLazyLiveFollowPreflightRunHistory,
   readPreflightStatusSummary,
+  type LazyLiveFollowPreflightRun,
   type LazyLiveFollowPreflightRunner,
   type PreflightStatusSummary,
 } from '../preflightStatus.js';
@@ -420,6 +422,7 @@ interface HttpStatusResponse {
     mediaGenerationsStatusTemplate: string;
     runStatusTemplate: string;
     apiLogTail: string;
+    preflightRunLogTemplate: string;
     accountMirrorStatus: string;
   accountMirrorCatalog: string;
   accountMirrorCatalogItemTemplate: string;
@@ -521,6 +524,17 @@ interface HttpStatusResponse {
 
 interface HttpApiLogTailResponse {
   object: 'api_log_tail';
+  logPath: string;
+  exists: boolean;
+  sizeBytes: number;
+  maxBytes: number;
+  truncated: boolean;
+  content: string;
+}
+
+interface HttpPreflightRunLogTailResponse {
+  object: 'preflight_run_log_tail';
+  id: string;
   logPath: string;
   exists: boolean;
   sizeBytes: number;
@@ -932,6 +946,26 @@ export async function createResponsesHttpServer(
         const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
         const query = parseApiLogTailQuery(url.searchParams);
         sendJson(res, 200, await readApiLogTail({ port: boundPort, maxBytes: query.maxBytes }));
+        return;
+      }
+
+      const preflightRunLogId = matchPreflightRunLogRoute(url.pathname);
+      if (req.method === 'GET' && preflightRunLogId) {
+        const query = parseApiLogTailQuery(url.searchParams);
+        const payload = await readLazyLiveFollowPreflightRunLogTail({
+          id: preflightRunLogId,
+          maxBytes: query.maxBytes,
+        });
+        if (!payload) {
+          sendJson(res, 404, {
+            error: {
+              message: `Lazy live-follow preflight run ${preflightRunLogId} was not found.`,
+              type: 'not_found_error',
+            },
+          });
+          return;
+        }
+        sendJson(res, 200, payload);
         return;
       }
 
@@ -2391,6 +2425,7 @@ function createHttpStatusResponse(input: {
       mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
       runStatusTemplate: '/v1/runs/{run_id}/status[?diagnostics=browser-state]',
       apiLogTail: '/v1/api/logs/tail[?maxBytes=32768]',
+      preflightRunLogTemplate: '/v1/preflight/lazy-live-follow/runs/{run_id}/log[?maxBytes=32768]',
       accountMirrorStatus: '/v1/account-mirrors/status[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&explicitRefresh=true]',
       accountMirrorCatalog: '/v1/account-mirrors/catalog[?provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&kind=projects|conversations|artifacts|files|media|all][&limit=50]',
       accountMirrorCatalogItemTemplate: '/v1/account-mirrors/catalog/items/{item_id}?provider={chatgpt|gemini|grok}&runtimeProfile={runtime_profile}&kind={kind}',
@@ -2420,7 +2455,11 @@ function createHttpStatusResponse(input: {
       streaming: false,
       auth: false,
     },
-    preflight: input.preflight ?? { lazyLiveFollow: null, lazyLiveFollowRun: null },
+    preflight: input.preflight ?? {
+      lazyLiveFollow: null,
+      lazyLiveFollowRun: null,
+      lazyLiveFollowRunHistory: [],
+    },
     recoverySummary: input.recoverySummary,
     localClaimSummary: input.localClaimSummary,
     runnerTopology: input.runnerTopology,
@@ -2478,20 +2517,49 @@ function parseApiLogTailQuery(params: URLSearchParams): { maxBytes: number } {
 
 async function readApiLogTail(input: { port: number; maxBytes: number }): Promise<HttpApiLogTailResponse> {
   const logPath = path.join(getAuracallHomeDir(), 'logs', `api-${input.port}.log`);
+  const tail = await readBoundedLogTail(logPath, input.maxBytes);
+  return {
+    object: 'api_log_tail',
+    logPath,
+    ...tail,
+  };
+}
+
+async function readLazyLiveFollowPreflightRunLogTail(input: {
+  id: string;
+  maxBytes: number;
+}): Promise<HttpPreflightRunLogTailResponse | null> {
+  const history = await readLazyLiveFollowPreflightRunHistory(20);
+  const run = history.find((entry) => entry.id === input.id);
+  if (!run || !isSafePreflightLogPath(run)) return null;
+  const tail = await readBoundedLogTail(run.logPath, input.maxBytes);
+  return {
+    object: 'preflight_run_log_tail',
+    id: run.id,
+    logPath: run.logPath,
+    ...tail,
+  };
+}
+
+async function readBoundedLogTail(logPath: string, maxBytesInput: number): Promise<{
+  exists: boolean;
+  sizeBytes: number;
+  maxBytes: number;
+  truncated: boolean;
+  content: string;
+}> {
   try {
     const stat = await fs.stat(logPath);
-    const maxBytes = Math.min(input.maxBytes, stat.size);
+    const maxBytes = Math.min(maxBytesInput, stat.size);
     const start = Math.max(0, stat.size - maxBytes);
     const handle = await fs.open(logPath, 'r');
     try {
       const buffer = Buffer.alloc(maxBytes);
       const result = await handle.read(buffer, 0, maxBytes, start);
       return {
-        object: 'api_log_tail',
-        logPath,
         exists: true,
         sizeBytes: stat.size,
-        maxBytes: input.maxBytes,
+        maxBytes: maxBytesInput,
         truncated: start > 0,
         content: buffer.subarray(0, result.bytesRead).toString('utf8'),
       };
@@ -2504,15 +2572,21 @@ async function readApiLogTail(input: { port: number; maxBytes: number }): Promis
       throw error;
     }
     return {
-      object: 'api_log_tail',
-      logPath,
       exists: false,
       sizeBytes: 0,
-      maxBytes: input.maxBytes,
+      maxBytes: maxBytesInput,
       truncated: false,
       content: '',
     };
   }
+}
+
+function isSafePreflightLogPath(run: LazyLiveFollowPreflightRun): boolean {
+  const logsDir = path.resolve(getAuracallHomeDir(), 'logs');
+  const logPath = path.resolve(run.logPath);
+  return logPath.startsWith(`${logsDir}${path.sep}`)
+    && path.basename(logPath).startsWith('preflight-lazy-live-follow-')
+    && path.extname(logPath) === '.log';
 }
 
 function createLiveFollowHealthSummary(
@@ -3923,6 +3997,11 @@ function matchAccountMirrorCompletionRoute(pathname: string): string | null {
 
 function matchAccountMirrorPreviewSessionRoute(pathname: string): string | null {
   const match = /^\/v1\/account-mirrors\/preview-sessions\/([^/]+)$/.exec(pathname);
+  return match?.[1] ?? null;
+}
+
+function matchPreflightRunLogRoute(pathname: string): string | null {
+  const match = /^\/v1\/preflight\/lazy-live-follow\/runs\/([^/]+)\/log$/.exec(pathname);
   return match?.[1] ?? null;
 }
 
@@ -5621,6 +5700,7 @@ function createOperatorBrowserDashboardHtml(input: {
     function renderPreflightControl(preflight) {
       const latest = preflight.lazyLiveFollow || null;
       const run = preflight.lazyLiveFollowRun || null;
+      const history = Array.isArray(preflight.lazyLiveFollowRunHistory) ? preflight.lazyLiveFollowRunHistory.slice(0, 5) : [];
       const running = run && (run.status === 'queued' || run.status === 'running');
       const status = running ? run.status : latest ? latest.status : 'unknown';
       const tone = status === 'passed' ? 'ok' : status === 'failed' ? 'bad' : status === 'running' || status === 'queued' ? 'warn' : 'muted';
@@ -5634,7 +5714,23 @@ function createOperatorBrowserDashboardHtml(input: {
         + '<dt>Log</dt><dd>' + escapeHtml(run && run.logPath ? run.logPath : 'none') + '</dd>'
         + '</dl><div class="row">'
         + '<button id="runLazyLiveFollowPreflight" class="primary" type="button" onclick="runLazyLiveFollowPreflight()" ' + disabledAttr(running) + '>Run Preflight</button>'
-        + '</div></div>';
+        + '</div><div id="preflightRunHistory" class="mini-table">' + renderPreflightRunHistory(history) + '</div>'
+        + '<pre id="preflightRunLog">Preflight log not loaded.</pre></div>';
+    }
+
+    function renderPreflightRunHistory(history) {
+      if (!history.length) return '<p class="muted">No preflight runs recorded.</p>';
+      return '<table><thead><tr><th>Status</th><th>Started</th><th>Duration</th><th>Log</th></tr></thead><tbody>'
+        + history.map((entry) => {
+          const duration = entry.durationMs === null || entry.durationMs === undefined ? 'running' : String(entry.durationMs) + ' ms';
+          return '<tr>'
+            + '<td>' + renderStatusText(entry.status || 'unknown', toneForActualStatus(entry.status || 'unknown')) + '</td>'
+            + '<td><code>' + escapeHtml(entry.startedAt || 'unknown') + '</code></td>'
+            + '<td>' + escapeHtml(duration) + '</td>'
+            + '<td><button type="button" class="link-button" data-preflight-run-id="' + escapeHtml(entry.id || '') + '" onclick="loadPreflightRunLog(this.dataset.preflightRunId)">Open Log</button></td>'
+            + '</tr>';
+        }).join('')
+        + '</tbody></table>';
     }
 
     function renderBackgroundDrainControl(backgroundDrain) {
@@ -8021,6 +8117,25 @@ function createOperatorBrowserDashboardHtml(input: {
       } finally {
         button.disabled = false;
         if (inlineButton) inlineButton.disabled = false;
+      }
+    }
+
+    async function loadPreflightRunLog(id) {
+      if (!id) return;
+      const target = document.getElementById('preflightRunLog') || $('apiLogTail');
+      target.textContent = 'Loading preflight run log...';
+      try {
+        const payload = await fetchJson('/v1/preflight/lazy-live-follow/runs/' + encodeURIComponent(id) + '/log?maxBytes=32768');
+        target.textContent = asJson({
+          id: payload.id,
+          logPath: payload.logPath,
+          exists: payload.exists,
+          sizeBytes: payload.sizeBytes,
+          truncated: payload.truncated,
+          content: payload.content || '',
+        });
+      } catch (error) {
+        target.textContent = String(error.message || error);
       }
     }
 

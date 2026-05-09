@@ -931,3 +931,10 @@ through `POST /status` with `{ "preflight": { "action": "run", "name":
 "lazy-live-follow" } }`. The API returns immediately with a preflight run id
 and log path, while `/status` exposes `preflight.lazyLiveFollowRun` for
 polling.
+Preflight runs are also persisted as a compact recent-run history under
+`~/.auracall/preflight/lazy-live-follow-runs.json`, exposed through
+`/status.preflight.lazyLiveFollowRunHistory`, and rendered in `/ops/browser`
+with bounded per-run log readback through
+`GET /v1/preflight/lazy-live-follow/runs/{run_id}/log`. This keeps release
+preflight evidence available after service refreshes without asking operators
+to copy raw JSON or shell into the runtime.
