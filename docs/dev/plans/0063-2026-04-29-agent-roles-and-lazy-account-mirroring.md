@@ -949,3 +949,8 @@ visible row count, and an `Inspect Scheduler` action that opens a compact
 scheduler-pass summary. This keeps scheduler triage on the dashboard without
 requiring operators to read the full `/status.accountMirrorScheduler.history`
 payload first.
+The recent-service-events filter and selected scheduler detail are now persisted
+in dashboard-local browser preferences. When the status refresh still contains
+the same scheduler event, `/ops/browser` restores the compact detail view and
+highlights the selected row so operator handoffs do not lose local triage
+context.

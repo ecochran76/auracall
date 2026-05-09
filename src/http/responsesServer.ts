@@ -4259,6 +4259,7 @@ function createOperatorBrowserDashboardHtml(input: {
     th { color: var(--muted); font-size: 12px; font-weight: 600; background: #11151a; }
     tr:last-child td { border-bottom: 0; }
     tr.catalog-row-selected td { background: #10211f; }
+    tr.service-event-row-selected td { background: #111f2c; }
     td.wrap { white-space: normal; min-width: 180px; }
     pre {
       margin: 0;
@@ -4845,6 +4846,8 @@ function createOperatorBrowserDashboardHtml(input: {
     const $ = (id) => document.getElementById(id);
     const asJson = (value) => JSON.stringify(value, null, 2);
     const OPERATOR_DASHBOARD_ROUTES = ${JSON.stringify(routes)};
+    const RECENT_SERVICE_EVENT_FILTER_STORAGE_KEY = 'auracall.opsBrowser.recentServiceEvents.filter';
+    const RECENT_SERVICE_EVENT_SELECTED_STORAGE_KEY = 'auracall.opsBrowser.recentServiceEvents.selected';
     let recentServiceEventDetails = [];
     let mirrorCatalogRows = [];
     let mirrorCatalogFilteredRows = [];
@@ -8161,6 +8164,7 @@ function createOperatorBrowserDashboardHtml(input: {
     function renderRecentServiceEvents(status) {
       const events = collectRecentServiceEvents(status);
       recentServiceEventDetails = events;
+      restoreRecentServiceEventFilter();
       if (!events.length) {
         $('recentServiceEvents').innerHTML = '<p class="muted">No recent service events recorded.</p>';
         $('recentServiceEventVisibleCount').textContent = '0 shown';
@@ -8170,6 +8174,7 @@ function createOperatorBrowserDashboardHtml(input: {
         + events.slice(0, 10).map((event, index) => renderRecentServiceEventRow(event, index)).join('')
         + '</tbody></table>';
       filterRecentServiceEvents();
+      restoreRecentServiceEventSelection();
     }
 
     function collectRecentServiceEvents(status) {
@@ -8214,7 +8219,12 @@ function createOperatorBrowserDashboardHtml(input: {
           schedulerDetail: compactSchedulerEventDetail(entry),
         });
       }
-      return events.sort((left, right) => Date.parse(right.at || '') - Date.parse(left.at || ''));
+      return events
+        .sort((left, right) => Date.parse(right.at || '') - Date.parse(left.at || ''))
+        .map((event) => ({
+          ...event,
+          key: makeRecentServiceEventKey(event),
+        }));
     }
 
     function renderRecentServiceEventRow(event, index) {
@@ -8225,7 +8235,7 @@ function createOperatorBrowserDashboardHtml(input: {
           : event.action === 'scheduler-detail'
             ? '<button type="button" class="link-button" data-service-event-index="' + escapeHtml(String(index)) + '" onclick="showRecentServiceEventDetail(this.dataset.serviceEventIndex)">Inspect Scheduler</button>'
             : '<span class="muted">status only</span>';
-      return '<tr data-recent-service-event-source="' + escapeHtml(event.source || 'unknown') + '" data-service-event-index="' + escapeHtml(String(index)) + '">'
+      return '<tr data-recent-service-event-source="' + escapeHtml(event.source || 'unknown') + '" data-service-event-index="' + escapeHtml(String(index)) + '" data-service-event-key="' + escapeHtml(event.key || '') + '">'
         + '<td><code>' + escapeHtml(event.at || 'unknown') + '</code></td>'
         + '<td>' + escapeHtml(event.source || 'unknown') + '</td>'
         + '<td>' + escapeHtml(event.event || 'unknown') + '</td>'
@@ -8241,6 +8251,15 @@ function createOperatorBrowserDashboardHtml(input: {
       const backpressure = entry.backpressure && entry.backpressure.reason ? entry.backpressure.reason : 'none';
       const error = entry.error && entry.error.message ? ' error=' + entry.error.message : '';
       return provider + '/' + runtime + ' backpressure=' + backpressure + error;
+    }
+
+    function makeRecentServiceEventKey(event) {
+      return [
+        event.source || 'unknown',
+        event.at || 'unknown',
+        event.event || 'unknown',
+        event.detail || '',
+      ].join('|');
     }
 
     function compactSchedulerEventDetail(entry) {
@@ -8272,6 +8291,7 @@ function createOperatorBrowserDashboardHtml(input: {
 
     function filterRecentServiceEvents() {
       const filter = $('recentServiceEventFilter') ? $('recentServiceEventFilter').value : 'all';
+      persistRecentServiceEventFilter(filter);
       const rows = Array.from(document.querySelectorAll('#recentServiceEventsTable tbody tr'));
       let visible = 0;
       for (const row of rows) {
@@ -8285,7 +8305,7 @@ function createOperatorBrowserDashboardHtml(input: {
       }
     }
 
-    function showRecentServiceEventDetail(index) {
+    function showRecentServiceEventDetail(index, options) {
       const parsed = Number(index);
       const event = Number.isFinite(parsed) ? recentServiceEventDetails[parsed] : null;
       if (!event || !event.schedulerDetail) {
@@ -8293,6 +8313,58 @@ function createOperatorBrowserDashboardHtml(input: {
         return;
       }
       $('recentServiceEventDetail').textContent = asJson(event.schedulerDetail);
+      markRecentServiceEventSelection(event.key || '');
+      if (!options || options.persist !== false) {
+        persistRecentServiceEventSelection(event.key || '');
+      }
+    }
+
+    function restoreRecentServiceEventFilter() {
+      const select = $('recentServiceEventFilter');
+      if (!select) return;
+      try {
+        const saved = localStorage.getItem(RECENT_SERVICE_EVENT_FILTER_STORAGE_KEY);
+        if (saved && Array.from(select.options).some((option) => option.value === saved)) {
+          select.value = saved;
+        }
+      } catch (_error) {
+        // localStorage can be unavailable in hardened browser contexts.
+      }
+    }
+
+    function persistRecentServiceEventFilter(filter) {
+      try {
+        localStorage.setItem(RECENT_SERVICE_EVENT_FILTER_STORAGE_KEY, filter || 'all');
+      } catch (_error) {
+        // localStorage can be unavailable in hardened browser contexts.
+      }
+    }
+
+    function restoreRecentServiceEventSelection() {
+      try {
+        const selectedKey = localStorage.getItem(RECENT_SERVICE_EVENT_SELECTED_STORAGE_KEY);
+        if (!selectedKey) return;
+        const index = recentServiceEventDetails.findIndex((event) => event.key === selectedKey && event.schedulerDetail);
+        if (index >= 0) {
+          showRecentServiceEventDetail(String(index), { persist: false });
+        }
+      } catch (_error) {
+        // localStorage can be unavailable in hardened browser contexts.
+      }
+    }
+
+    function persistRecentServiceEventSelection(key) {
+      try {
+        if (key) localStorage.setItem(RECENT_SERVICE_EVENT_SELECTED_STORAGE_KEY, key);
+      } catch (_error) {
+        // localStorage can be unavailable in hardened browser contexts.
+      }
+    }
+
+    function markRecentServiceEventSelection(key) {
+      for (const row of Array.from(document.querySelectorAll('#recentServiceEventsTable tbody tr'))) {
+        row.classList.toggle('service-event-row-selected', Boolean(key) && row.dataset.serviceEventKey === key);
+      }
     }
 
     async function postStatusControl(payload) {

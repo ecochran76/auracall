@@ -1,3 +1,36 @@
+## Turn 154 | 2026-05-08
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: keep Browser Ops recent-event triage context across dashboard refreshes.
+- Change:
+  - recent service event source filter is now stored in browser-local dashboard
+    preferences
+  - selected scheduler detail is stored by stable event key and restored when
+    the same event is still present
+  - selected scheduler rows are highlighted after restore
+  - CLI/MCP dashboard contracts now assert recent-event preference persistence
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1 -t "browser operator dashboard|api ops browser"`
+  - `pnpm vitest run tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts src/mcp/tools/apiOpsBrowserStatus.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+    reported only existing non-null assertion warning debt in
+    `tests/http.responsesServer.test.ts`
+  - `pnpm run build && pnpm run install:user-runtime-service`
+- Installed dogfood:
+  - installed `/ops/browser` contains `RECENT_SERVICE_EVENT_FILTER_STORAGE_KEY`,
+    `RECENT_SERVICE_EVENT_SELECTED_STORAGE_KEY`,
+    `restoreRecentServiceEventFilter`, `restoreRecentServiceEventSelection`,
+    and `service-event-row-selected`
+  - installed `api ops-browser-status --port 18095` reports
+    `recentEventPersistence=ok`
+  - installed `/status` reports `preflightHistory=1`, `schedulerHistory=50`,
+    and healthy live follow posture
+
 ## Turn 153 | 2026-05-08
 
 - Continued implementation plan:

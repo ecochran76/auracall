@@ -15351,6 +15351,12 @@ describe('http responses adapter', () => {
       expect(html).toContain('showRecentServiceEventDetail');
       expect(html).toContain('compactSchedulerEventDetail');
       expect(html).toContain('Inspect Scheduler');
+      expect(html).toContain('RECENT_SERVICE_EVENT_FILTER_STORAGE_KEY');
+      expect(html).toContain('RECENT_SERVICE_EVENT_SELECTED_STORAGE_KEY');
+      expect(html).toContain('restoreRecentServiceEventFilter');
+      expect(html).toContain('restoreRecentServiceEventSelection');
+      expect(html).toContain('persistRecentServiceEventSelection');
+      expect(html).toContain('service-event-row-selected');
       expect(html).toContain('aria-label="AuraCall sections"');
       expect(html).toContain('Account Mirror');
       expect(html).toContain('href="/account-mirror"');

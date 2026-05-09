@@ -1,3 +1,9 @@
+- 2026-05-08: Recent service event triage context should survive ordinary
+  dashboard refreshes. `/ops/browser` now persists the source filter and the
+  selected scheduler detail key in browser-local preferences, then restores
+  matching scheduler detail with selected-row highlighting when the event is
+  still present.
+
 - 2026-05-08: Recent service events need dashboard-local triage, not just a
   merged list. `/ops/browser` now filters the event strip by API, preflight, or
   scheduler source and exposes a compact scheduler-pass detail action for
