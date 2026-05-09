@@ -959,3 +959,8 @@ The Mirror Scheduler control now includes a compact wait-state explanation:
 scheduler posture, latest scheduler pass/backpressure, pass metrics, and
 live-follow target timing, so the dashboard can explain scheduled/waiting states
 without forcing operators into raw `/status` JSON.
+The scheduler card now also includes a per-target wait table for live-follow
+enabled provider profiles. Rows classify each target as eligible, active, retry
+delay, routine cadence, or backoff and show the next retry, routine eligibility,
+and active completion id, making account-specific waiting states visible from
+the operator dashboard.

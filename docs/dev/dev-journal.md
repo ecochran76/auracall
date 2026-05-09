@@ -1,3 +1,35 @@
+## Turn 156 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: show which live-follow targets are waiting and why.
+- Change:
+  - Mirror Scheduler control now includes a compact per-target wait table
+  - wait rows classify live-follow-enabled targets as `eligible`, `active`,
+    `retry delay`, `routine cadence`, or `backoff`
+  - rows show provider/runtime, next retry, routine eligibility, and active
+    completion id
+  - CLI/MCP dashboard contracts now assert the scheduler wait table
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1 -t "browser operator dashboard|api ops browser"`
+  - `pnpm vitest run tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+  - `pnpm exec biome lint src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts src/mcp/tools/apiOpsBrowserStatus.ts tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+    reported only existing non-null assertion warning debt in
+    `tests/http.responsesServer.test.ts`
+  - `pnpm run build && pnpm run install:user-runtime-service`
+- Installed dogfood:
+  - installed `/ops/browser` contains `mirrorSchedulerWaitTable`,
+    `renderMirrorSchedulerWaitTable`, `classifyMirrorSchedulerTargetWait`,
+    `data-mirror-scheduler-wait-row`, `routine cadence`, and `retry delay`
+  - installed `api ops-browser-status --port 18095` reports
+    `schedulerWaitTable=ok`
+  - installed `/status` currently shows three live-follow-enabled profiles:
+    default ChatGPT, Gemini, and Grok
+
 ## Turn 155 | 2026-05-08
 
 - Continued implementation plan:

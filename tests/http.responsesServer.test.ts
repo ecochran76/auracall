@@ -15511,6 +15511,12 @@ describe('http responses adapter', () => {
       expect(html).toContain('latestMirrorSchedulerPass');
       expect(html).toContain('mirrorSchedulerNextRetry');
       expect(html).toContain('mirrorSchedulerRoutineEligible');
+      expect(html).toContain('mirrorSchedulerWaitTable');
+      expect(html).toContain('renderMirrorSchedulerWaitTable');
+      expect(html).toContain('classifyMirrorSchedulerTargetWait');
+      expect(html).toContain('data-mirror-scheduler-wait-row');
+      expect(html).toContain('routine cadence');
+      expect(html).toContain('retry delay');
       expect(html).toContain('renderOpsControls');
       expect(html).toContain('controlBackgroundDrain');
       expect(html).toContain('controlMirrorScheduler');

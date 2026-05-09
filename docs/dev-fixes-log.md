@@ -1,3 +1,9 @@
+- 2026-05-09: Scheduler wait explanations should identify the affected
+  provider profiles, not only summarize the aggregate state. The Mirror
+  Scheduler control now includes a compact per-target wait table classifying
+  live-follow-enabled accounts as eligible, active, retry delay, routine
+  cadence, or backoff, with next retry and routine eligibility timestamps.
+
 - 2026-05-08: Operators need a plain answer for why live follow is scheduled
   or waiting. The Mirror Scheduler control on `/ops/browser` now renders a
   compact `Why`, `Next Retry`, and `Routine Eligible` explanation from

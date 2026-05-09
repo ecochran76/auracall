@@ -5773,6 +5773,7 @@ function createOperatorBrowserDashboardHtml(input: {
       const paused = scheduler.paused === true || scheduler.state === 'paused';
       const running = scheduler.state === 'running';
       const explanation = buildMirrorSchedulerExplanation(scheduler, liveFollow);
+      const waitRows = renderMirrorSchedulerWaitTable(liveFollow);
       return '<div class="control-card" id="mirrorSchedulerControls"><div class="control-title"><strong>Mirror Scheduler</strong>'
         + renderStatusText(scheduler.state || 'unknown', toneForActualStatus(scheduler.state || 'unknown'))
         + '</div><dl>'
@@ -5787,7 +5788,77 @@ function createOperatorBrowserDashboardHtml(input: {
         + '<button id="dryRunMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'run-once'" + ', true)" ' + disabledAttr(running) + '>Dry Run</button>'
         + '<button id="pauseMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'pause'" + ')" ' + disabledAttr(!enabled || paused) + '>Pause</button>'
         + '<button id="resumeMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'resume'" + ')" ' + disabledAttr(!enabled || running && !paused) + '>Resume</button>'
-        + '</div></div>';
+        + '</div><div id="mirrorSchedulerWaitTable" class="mini-table">' + waitRows + '</div></div>';
+    }
+
+    function renderMirrorSchedulerWaitTable(liveFollow) {
+      const accounts = liveFollow && liveFollow.targets && Array.isArray(liveFollow.targets.accounts)
+        ? liveFollow.targets.accounts
+        : [];
+      const eligibleAccounts = accounts
+        .filter((account) => account.desiredState === 'enabled')
+        .slice()
+        .sort(compareMirrorSchedulerWaitRows)
+        .slice(0, 8);
+      if (!eligibleAccounts.length) {
+        return '<p class="muted" id="mirrorSchedulerWaitTableEmpty">No live-follow-enabled targets are configured.</p>';
+      }
+      return '<table><thead><tr><th>Target</th><th>Wait</th><th>Next Retry</th><th>Routine Eligible</th><th>Completion</th></tr></thead><tbody>'
+        + eligibleAccounts.map(renderMirrorSchedulerWaitRow).join('')
+        + '</tbody></table>';
+    }
+
+    function renderMirrorSchedulerWaitRow(account) {
+      const wait = classifyMirrorSchedulerTargetWait(account);
+      const target = [account.provider, account.runtimeProfileId].filter(Boolean).join('/') || 'unknown';
+      return '<tr data-mirror-scheduler-wait-row="true" data-mirror-scheduler-wait="' + escapeHtml(wait.kind) + '">'
+        + '<td>' + escapeHtml(target) + '</td>'
+        + '<td>' + renderStatusText(wait.label, wait.tone) + '</td>'
+        + '<td>' + escapeHtml(account.nextAttemptAt || 'none') + '</td>'
+        + '<td>' + escapeHtml(account.routineEligibleAt || 'none') + '</td>'
+        + '<td>' + escapeHtml(account.activeCompletionId || 'none') + '</td>'
+        + '</tr>';
+    }
+
+    function classifyMirrorSchedulerTargetWait(account) {
+      if (account.latestCompletionError) {
+        return { kind: 'backoff', label: 'backoff', tone: 'warn' };
+      }
+      const now = Date.now();
+      const nextAttempt = Date.parse(account.nextAttemptAt || '');
+      const routineEligible = Date.parse(account.routineEligibleAt || '');
+      if (Number.isFinite(nextAttempt) && nextAttempt > now) {
+        return { kind: 'retry-delay', label: 'retry delay', tone: 'warn' };
+      }
+      if (Number.isFinite(routineEligible) && routineEligible > now) {
+        return { kind: 'routine-cadence', label: 'routine cadence', tone: 'warn' };
+      }
+      if (account.activeCompletionId) {
+        return { kind: 'active', label: 'active', tone: 'ok' };
+      }
+      return { kind: 'eligible', label: 'eligible', tone: 'ok' };
+    }
+
+    function compareMirrorSchedulerWaitRows(left, right) {
+      const leftRank = mirrorSchedulerWaitRank(classifyMirrorSchedulerTargetWait(left).kind);
+      const rightRank = mirrorSchedulerWaitRank(classifyMirrorSchedulerTargetWait(right).kind);
+      if (leftRank !== rightRank) return leftRank - rightRank;
+      return firstTargetTime(left) - firstTargetTime(right);
+    }
+
+    function mirrorSchedulerWaitRank(kind) {
+      if (kind === 'eligible') return 0;
+      if (kind === 'active') return 1;
+      if (kind === 'retry-delay') return 2;
+      if (kind === 'routine-cadence') return 3;
+      if (kind === 'backoff') return 4;
+      return 5;
+    }
+
+    function firstTargetTime(account) {
+      const candidates = [Date.parse(account.nextAttemptAt || ''), Date.parse(account.routineEligibleAt || '')]
+        .filter(Number.isFinite);
+      return candidates.length ? Math.min(...candidates) : Number.MAX_SAFE_INTEGER;
     }
 
     function buildMirrorSchedulerExplanation(scheduler, liveFollow) {
