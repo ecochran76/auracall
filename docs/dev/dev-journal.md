@@ -1,3 +1,32 @@
+## Turn 178 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: surface preflight release-gate health in the Browser Ops header instead
+  of requiring operators to scroll into the control card.
+- Change:
+  - `/ops/browser` now renders a top preflight health strip with the selected
+    run id, status, timing, and per-step badges from the active run or latest
+    persisted run history
+  - `smoke:ops-browser-preflight-run-detail` now asserts that header summary
+    with `agent-browser` before clicking `Open Run`
+- Validation:
+  - `pnpm run smoke:ops-browser-preflight-run-detail`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 -t "serves a read-only browser operator dashboard|preflight run|status control path"`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts scripts/smoke-ops-browser-preflight-run-detail.ts docs/testing.md docs/dev/dev-journal.md docs/dev-fixes-log.md docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user is-active auracall-api.service`
+  - live `/ops/browser` includes `preflightHeaderSummary`,
+    `renderPreflightHeaderSummary`, and `data-preflight-header-step-status`
+  - `agent-browser` read the installed dashboard header summary from
+    `http://127.0.0.1:18095/ops/browser`
+
 ## Turn 177 | 2026-05-09
 
 - Continued implementation plan:

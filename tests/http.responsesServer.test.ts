@@ -15516,6 +15516,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('API Log');
       expect(html).toContain('Preflight Completed');
       expect(html).toContain('renderPreflightStatus');
+      expect(html).toContain('preflightHeaderSummary');
+      expect(html).toContain('renderPreflightHeaderSummary');
+      expect(html).toContain('selectPreflightDisplayRun');
+      expect(html).toContain('data-preflight-header-step-status');
       expect(html).toContain('preflightControls');
       expect(html).toContain('runLazyLiveFollowPreflight');
       expect(html).toContain('Preflight Step');

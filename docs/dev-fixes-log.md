@@ -1,3 +1,8 @@
+- 2026-05-09: Browser Ops operators should see preflight release-gate health
+  before scrolling into the controls. The dashboard now has a top preflight
+  health strip with run status, timing, and step badges, and the browser-backed
+  run-detail smoke asserts that header before opening the structured run view.
+
 - 2026-05-09: The compact lazy-live-follow preflight should cover the actual
   Browser Ops `Open Run` click path. `scripts/preflight-lazy-live-follow.ts`
   now runs `smoke:ops-browser-preflight-run-detail` after the dashboard control

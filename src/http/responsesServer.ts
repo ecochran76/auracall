@@ -4397,6 +4397,34 @@ function createOperatorBrowserDashboardHtml(input: {
       border-color: var(--accent);
       color: var(--accent);
     }
+    .health-strip {
+      display: grid;
+      gap: 8px;
+      margin: -4px 0 16px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #11151a;
+    }
+    .health-strip-title {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+    }
+    .health-strip-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .health-strip-steps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
     .catalog-detail {
       margin-top: 10px;
       display: grid;
@@ -4753,6 +4781,9 @@ function createOperatorBrowserDashboardHtml(input: {
       <a id="navConfig" href="${configPath}" data-route-key="configPath"${configCurrent}>Config</a>
       <a id="navAgentsTeams" href="${agentsPath}" data-route-key="agentsPath"${agentsCurrent}>Agents / Teams</a>
     </nav>
+    <div id="preflightHeaderSummary" class="health-strip" role="status" aria-live="polite">
+      <div class="health-strip-title"><strong>Preflight</strong><span class="muted">Loading...</span></div>
+    </div>
 
     <div class="grid">
       <section class="panel half">
@@ -6004,6 +6035,55 @@ function createOperatorBrowserDashboardHtml(input: {
         + '</div><div id="preflightRunHistory" class="mini-table">' + renderPreflightRunHistory(history) + '</div>'
         + '<pre id="preflightRunDetail">Preflight run detail not loaded.</pre>'
         + '<pre id="preflightRunLog">Preflight log not loaded.</pre></div>';
+    }
+
+    function renderPreflightHeaderSummary(preflight) {
+      const latest = preflight && preflight.lazyLiveFollow ? preflight.lazyLiveFollow : null;
+      const run = selectPreflightDisplayRun(preflight);
+      const status = run && run.status ? run.status : latest && latest.status ? latest.status : 'unknown';
+      const tone = status === 'passed' ? 'ok' : status === 'failed' ? 'bad' : status === 'running' || status === 'queued' ? 'warn' : 'muted';
+      const startedAt = run && run.startedAt ? run.startedAt : 'unknown';
+      const completedAt = run && run.completedAt ? run.completedAt : latest && latest.completedAt ? latest.completedAt : 'pending';
+      const duration = run && typeof run.durationMs === 'number'
+        ? String(run.durationMs) + ' ms'
+        : latest && typeof latest.durationMs === 'number'
+          ? String(latest.durationMs) + ' ms'
+          : 'pending';
+      const steps = run && Array.isArray(run.steps) ? run.steps : [];
+      return '<div class="health-strip-title"><strong>Preflight</strong>' + renderStatusText(status, tone) + '</div>'
+        + '<div class="health-strip-meta">'
+        + '<span>Run: <code>' + escapeHtml(run && run.id ? run.id : 'none') + '</code></span>'
+        + '<span>Started: ' + escapeHtml(startedAt) + '</span>'
+        + '<span>Completed: ' + escapeHtml(completedAt) + '</span>'
+        + '<span>Duration: ' + escapeHtml(duration) + '</span>'
+        + '</div>'
+        + '<div class="health-strip-steps">'
+        + renderPreflightHeaderSteps(steps)
+        + '</div>';
+    }
+
+    function selectPreflightDisplayRun(preflight) {
+      if (!preflight) return null;
+      if (preflight.lazyLiveFollowRun) return preflight.lazyLiveFollowRun;
+      const history = Array.isArray(preflight.lazyLiveFollowRunHistory) ? preflight.lazyLiveFollowRunHistory : [];
+      return history[0] || null;
+    }
+
+    function renderPreflightHeaderSteps(steps) {
+      if (!steps.length) return '<span class="muted">No preflight step progress recorded.</span>';
+      return steps.map((step) => {
+        const status = step.status || 'unknown';
+        return '<span class="badge badge-' + badgeToneForStatus(status) + '" data-preflight-header-step-status="' + escapeHtml(status) + '">'
+          + escapeHtml(step.label || 'unknown') + ': ' + escapeHtml(status)
+          + '</span>';
+      }).join('');
+    }
+
+    function badgeToneForStatus(status) {
+      if (status === 'passed' || status === 'succeeded') return 'ok';
+      if (status === 'failed' || status === 'cancelled') return 'bad';
+      if (status === 'running' || status === 'queued' || status === 'paused') return 'warn';
+      return 'muted';
     }
 
     function renderPreflightStepProgress(run) {
@@ -8716,6 +8796,7 @@ function createOperatorBrowserDashboardHtml(input: {
     }
 
     async function refreshStatus() {
+      $('preflightHeaderSummary').innerHTML = '<div class="health-strip-title"><strong>Preflight</strong><span class="muted">Loading...</span></div>';
       $('serverSummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
       $('serviceDiscoverySummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
       $('configRoutingSummary').innerHTML = '<dt>Status</dt><dd class="muted">Loading...</dd>';
@@ -8731,6 +8812,7 @@ function createOperatorBrowserDashboardHtml(input: {
       $('mirrorCompletions').textContent = 'Loading...';
       try {
         const status = await fetchJson('/status');
+        $('preflightHeaderSummary').innerHTML = renderPreflightHeaderSummary(status.preflight || null);
         renderOpsControls(status);
         renderServerSummary(status);
         renderServiceDiscovery(status);
@@ -8740,6 +8822,7 @@ function createOperatorBrowserDashboardHtml(input: {
         renderMirrorCompletions(status);
         renderRecentServiceEvents(status);
       } catch (error) {
+        $('preflightHeaderSummary').innerHTML = '<div class="health-strip-title"><strong>Preflight</strong><span class="bad">' + escapeHtml(String(error.message || error)) + '</span></div>';
         $('serverSummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
         $('serviceDiscoverySummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';
         $('configRoutingSummary').innerHTML = '<dt>Status</dt><dd class="bad">' + String(error.message || error) + '</dd>';

@@ -1047,3 +1047,8 @@ detail-panel update are validated beyond static HTML checks.
 The compact `pnpm run preflight:lazy-live-follow` gate now includes that
 browser-backed run-detail smoke immediately after the Browser Ops control
 smoke, before installed-runtime validation.
+The Browser Ops page now also promotes the latest preflight result into a
+header health strip with run status, timing, and step badges. The same
+browser-backed smoke asserts that strip before opening the structured run
+detail, so release-gate visibility is covered by frontend behavior rather than
+only by static HTML checks.

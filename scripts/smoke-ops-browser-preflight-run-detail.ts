@@ -66,6 +66,13 @@ async function main(): Promise<void> {
   try {
     const baseUrl = `http://127.0.0.1:${server.port}`;
     await runAgentBrowser(['open', `${baseUrl}/ops/browser`]);
+    await runAgentBrowser(['wait', '#preflightHeaderSummary']);
+    const header = await runAgentBrowser(['get', 'text', '#preflightHeaderSummary']);
+    for (const expected of [runId, 'passed', 'browser dashboard run detail']) {
+      if (!header.includes(expected)) {
+        throw new Error(`preflight header summary did not include ${expected}.\n${header}`);
+      }
+    }
     await runAgentBrowser(['wait', `button[data-preflight-run-id="${runId}"][onclick^="loadPreflightRunDetail"]`]);
     await runAgentBrowser(['click', `button[data-preflight-run-id="${runId}"][onclick^="loadPreflightRunDetail"]`]);
     await runAgentBrowser(['wait', '500']);
@@ -79,6 +86,7 @@ async function main(): Promise<void> {
       `ops-browser preflight-run-detail smoke: pass port=${server.port}`,
       `dashboardUrl=${baseUrl}/ops/browser`,
       `runId=${runId}`,
+      'header=ok',
       'openRun=ok',
       'detailPanel=ok',
       'providerWork=none',
