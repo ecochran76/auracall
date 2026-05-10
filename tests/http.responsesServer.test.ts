@@ -15538,6 +15538,113 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('requires configured API keys for protected v1 routes', async () => {
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        config: {
+          api: {
+            auth: {
+              required: true,
+              keys: [{ id: 'client-app', secret: 'secret-key' }],
+            },
+          },
+        },
+      },
+    );
+
+    try {
+      const statusResponse = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(statusResponse.status).toBe(200);
+      const statusPayload = (await statusResponse.json()) as JsonObject;
+      expect(statusPayload).toMatchObject({
+        binding: { unauthenticated: false },
+        auth: {
+          required: true,
+          scheme: 'bearer',
+          keyCount: 1,
+        },
+        compatibility: { auth: true },
+      });
+
+      const deniedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/models`);
+      expect(deniedResponse.status).toBe(401);
+      expect(await deniedResponse.json()).toMatchObject({
+        error: {
+          type: 'authentication_error',
+        },
+      });
+
+      const allowedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/models`, {
+        headers: { Authorization: 'Bearer secret-key' },
+      });
+      expect(allowedResponse.status).toBe(200);
+      const allowedPayload = (await allowedResponse.json()) as { object: string };
+      expect(allowedPayload.object).toBe('list');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('enforces API key execution scopes for response creation', async () => {
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        config: {
+          api: {
+            auth: {
+              required: true,
+              keys: [
+                {
+                  id: 'researcher-client',
+                  secret: 'scoped-secret',
+                  agents: ['researcher'],
+                  services: ['chatgpt'],
+                  runtimeProfiles: ['default'],
+                },
+              ],
+            },
+          },
+          browserProfiles: { default: {} },
+          runtimeProfiles: {
+            default: { browserProfile: 'default', defaultService: 'chatgpt' },
+          },
+          agents: {
+            researcher: { runtimeProfile: 'default', service: 'chatgpt' },
+            reviewer: { runtimeProfile: 'default', service: 'chatgpt' },
+          },
+        },
+      },
+    );
+
+    try {
+      const deniedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/responses`, {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer scoped-secret',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'agent:reviewer',
+          input: 'This should be rejected by scoped auth.',
+          auracall: {
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+        }),
+      });
+      expect(deniedResponse.status).toBe(403);
+      expect(await deniedResponse.json()).toMatchObject({
+        error: {
+          type: 'permission_error',
+          message: 'API key is not authorized for agent "reviewer".',
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('configures AuraCall agents and teams through the local API', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-config-entities-'));
     cleanup.push(homeDir);

@@ -41,6 +41,20 @@ export const ApiServerConfigSchema = z.object({
     execute: z.boolean().optional(),
     dryRun: z.boolean().optional(),
   }).optional(),
+  auth: z.object({
+    required: z.boolean().optional(),
+    enabled: z.boolean().optional(),
+    keys: z.array(z.object({
+      id: z.string().optional(),
+      secret: z.string().optional(),
+      key: z.string().optional(),
+      token: z.string().optional(),
+      agents: z.array(z.string()).optional(),
+      teams: z.array(z.string()).optional(),
+      services: z.array(z.string()).optional(),
+      runtimeProfiles: z.array(z.string()).optional(),
+    })).optional(),
+  }).optional(),
   routing: z.object({
     localHostname: z.string().optional(),
     externalHostname: z.string().optional(),

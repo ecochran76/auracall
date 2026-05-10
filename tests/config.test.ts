@@ -88,6 +88,41 @@ describe('loadUserConfig', () => {
     expect(result.config.profiles?.default?.defaultService).toBe('chatgpt');
   });
 
+  it('parses scoped API auth config for local client access', async () => {
+    const configPath = path.join(tempDir, 'config.json');
+    await fs.writeFile(
+      configPath,
+      `{
+        api: {
+          auth: {
+            required: true,
+            keys: [{
+              id: "local-app",
+              secret: "test-secret",
+              agents: ["researcher"],
+              teams: ["ops"],
+              services: ["chatgpt"],
+              runtimeProfiles: ["default"]
+            }]
+          }
+        }
+      }`,
+      'utf8',
+    );
+
+    const result = await loadUserConfig(tempDir);
+    expect(result.loaded).toBe(true);
+    expect(result.config.api?.auth?.required).toBe(true);
+    expect(result.config.api?.auth?.keys?.[0]).toMatchObject({
+      id: 'local-app',
+      secret: 'test-secret',
+      agents: ['researcher'],
+      teams: ['ops'],
+      services: ['chatgpt'],
+      runtimeProfiles: ['default'],
+    });
+  });
+
   it('parses optional team role metadata for future task-aware planning', async () => {
     const configPath = path.join(tempDir, 'config.json');
     await fs.writeFile(

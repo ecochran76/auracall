@@ -84,6 +84,10 @@ auracall features diff --target gemini --json
 # Local dev-only OpenAI-compatible responses server
 auracall api serve
 
+# Optional local API key gate from ~/.auracall/config.json
+# api.auth.required=true protects /v1/* routes; /status remains observable.
+curl -H "Authorization: Bearer <key>" http://auracall.localhost/v1/models
+
 # Serve against a non-default AuraCall runtime profile
 auracall --profile auracall-gemini-pro api serve
 
@@ -221,6 +225,30 @@ Terminology note:
   `chatgpt:pro-extended` include `metadata.kind="semantic_model_selector"` and
   `metadata.executionReady` so clients can distinguish execution-ready selectors
   from planned Gemini/Grok selectors.
+- Optional local API-key authorization can be enabled in config:
+  ```json
+  {
+    "api": {
+      "auth": {
+        "required": true,
+        "keys": [
+          {
+            "id": "local-app",
+            "secret": "replace-with-a-random-token",
+            "agents": ["researcher"],
+            "teams": ["ops"],
+            "services": ["chatgpt"],
+            "runtimeProfiles": ["default"]
+          }
+        ]
+      }
+    }
+  }
+  ```
+  When enabled, `/v1/*` routes require `Authorization: Bearer <secret>` or
+  `X-AuraCall-API-Key: <secret>`. `/status` remains unauthenticated so local
+  operators can discover the service posture. Scoped keys are enforced on
+  `/v1/responses` for agent, team, service, and runtime-profile selectors.
 - Account mirror refreshes are metadata-first and identity-gated. Successful
   refreshes persist the mirror snapshot in the existing provider cache under
   `provider + boundIdentity`; runtime/browser profile ids are retained as
@@ -841,7 +869,7 @@ Terminology note:
     - `X-AuraCall-Agent`
     - `X-AuraCall-Team`
     - `X-AuraCall-Service`
-  - no auth
+  - optional local API-key auth for `/v1/*`; no auth unless configured
   - no streaming
   - no `chat/completions` adapter yet
   - runner self-registration + heartbeat now exist for the local `api serve`

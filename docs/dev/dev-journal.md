@@ -1,3 +1,18 @@
+## Turn 187 | 2026-05-10
+
+- Continued implementation plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: protect local OpenAI-compatible API clients with scoped API keys.
+- Change:
+  - added optional bearer-key authorization for `/v1/*` routes
+  - `/status` remains open and reports whether API auth is required
+  - scoped keys are enforced for `/v1/responses` agent, team, service, and
+    runtime-profile selectors
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "API key|model" --maxWorkers 1`
+  - `pnpm vitest run tests/config.test.ts -t "api auth|API auth" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+
 ## Turn 186 | 2026-05-10
 
 - Continued implementation plan:

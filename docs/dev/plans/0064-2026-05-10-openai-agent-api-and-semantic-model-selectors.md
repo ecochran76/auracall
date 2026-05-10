@@ -36,6 +36,8 @@ prefer semantic intent and keep exact provider-version pins as escape hatches.
   - static provider model ids
   - configured AuraCall agents as `agent:<agent_id>`
   - semantic provider selectors with execution-readiness metadata
+- Optional local API-key authorization now protects `/v1/*` routes and can
+  scope `/v1/responses` calls by agent, team, service, and runtime profile.
 
 ## Current State
 
@@ -61,12 +63,15 @@ Implemented:
   client-side discovery. ChatGPT semantic selectors are marked
   `executionReady=true`; Gemini/Grok selector entries are visible but remain
   `executionReady=false` until their provider adapters resolve them.
+- `api.auth.required=true` with `api.auth.keys[]` enables bearer-key
+  authorization for `/v1/*`. `/status` remains open for operator discovery and
+  reports the active auth posture. Keys may carry `agents`, `teams`,
+  `services`, and `runtimeProfiles` allow-lists for `/v1/responses`.
 
 Remaining:
 
 - Grok and Gemini semantic `modelSelector` execution still needs
   provider-adapter resolution
-- API key authorization is not implemented
 - `/v1/chat/completions` compatibility is deferred
 
 ## Acceptance Criteria
@@ -82,13 +87,14 @@ Remaining:
   control plane without hand-editing config files.
 - Client apps can discover configured agent model ids and semantic selector
   readiness from `/v1/models`.
+- Client apps can be required to present an API key, and scoped keys cannot
+  create `/v1/responses` runs outside their configured agent/team/service/runtime
+  allow-lists.
 
 ## Next Work
 
 - Resolve Grok and Gemini `modelSelector` values through provider-specific
   browser adapters rather than feeding semantic tokens directly into raw model
   selection.
-- Add API key policy so client apps can be allowed to call specific agents,
-  teams, services, and runtime profiles.
 - Add the `/v1/chat/completions` adapter after `/v1/responses` agent routing is
   proven.

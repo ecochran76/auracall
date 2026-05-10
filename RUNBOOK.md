@@ -3032,3 +3032,18 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "model" --maxWorkers 1`
   - `pnpm vitest run tests/config/modelSelector.test.ts tests/runtime.configuredExecutor.test.ts -t "semantic|selector|model" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
+
+## Turn 112 | 2026-05-10
+
+- Goal: add the first API-key policy for local OpenAI-compatible clients.
+- Change:
+  - `api.auth.required=true` now requires bearer-key auth for `/v1/*` routes
+  - `/status` stays open and reports `auth.required`, key count, and whether
+    any key has execution scopes
+  - `/v1/responses` rejects scoped keys that try to use unauthorized agents,
+    teams, services, or runtime profiles
+  - README and plan 0064 now document the API key config and request headers
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "API key|model" --maxWorkers 1`
+  - `pnpm vitest run tests/config.test.ts -t "api auth|API auth" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`

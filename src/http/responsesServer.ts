@@ -400,6 +400,25 @@ interface ApiServiceRoutingConfig {
   ingress?: string;
 }
 
+interface ApiAuthKeyPolicy {
+  id: string;
+  secret: string;
+  agents?: string[];
+  teams?: string[];
+  services?: string[];
+  runtimeProfiles?: string[];
+}
+
+interface ApiAuthPolicy {
+  required: boolean;
+  keys: ApiAuthKeyPolicy[];
+}
+
+interface ApiAuthContext {
+  policy: ApiAuthPolicy;
+  key: ApiAuthKeyPolicy | null;
+}
+
 interface OperatorDashboardRoutes {
   dashboardPath: string;
   accountMirrorPath: string;
@@ -469,6 +488,12 @@ interface HttpStatusResponse {
     localOnly: boolean;
     unauthenticated: boolean;
   };
+  auth: {
+    required: boolean;
+    scheme: 'none' | 'bearer';
+    keyCount: number;
+    scoped: boolean;
+  };
   serviceDiscovery: ApiServiceDiscovery;
   routes: {
     status: string;
@@ -515,7 +540,7 @@ interface HttpStatusResponse {
     openai: true;
     chatCompletions: false;
     streaming: false;
-    auth: false;
+    auth: boolean;
   };
   preflight: PreflightStatusSummary;
   recoverySummary?: ExecutionServiceHostRecoverySummary;
@@ -632,6 +657,7 @@ export async function createResponsesHttpServer(
   const accountMirrorSchedulerIntervalMs = Math.max(0, options.accountMirrorSchedulerIntervalMs ?? 0);
   const accountMirrorSchedulerDryRun = options.accountMirrorSchedulerDryRun ?? true;
   const configuredRuntimeConfig = deps.config;
+  const apiAuthPolicy = readApiAuthPolicy(configuredRuntimeConfig);
   const agentTeamConfigService = createAgentTeamConfigService({
     activeConfig: configuredRuntimeConfig ?? null,
   });
@@ -932,6 +958,16 @@ export async function createResponsesHttpServer(
   server.on('request', async (req, res) => {
     try {
       const url = new URL(req.url ?? '/', 'http://127.0.0.1');
+      const apiAuthContext = authorizeApiRequest(req, apiAuthPolicy, url.pathname);
+      if (!apiAuthContext) {
+        sendJson(res, 401, {
+          error: {
+            message: 'Missing or invalid AuraCall API key.',
+            type: 'authentication_error',
+          },
+        } satisfies HttpErrorPayload);
+        return;
+      }
 
       if (
         req.method === 'GET'
@@ -1012,6 +1048,7 @@ export async function createResponsesHttpServer(
           accountMirrorStatus: accountMirrorStatusRegistry.readStatus(),
           accountMirrorCompletions: createAccountMirrorCompletionStatusSummary(accountMirrorCompletionService, now),
           preflight: await readPreflightStatusSummary(preflightRunner),
+          auth: apiAuthPolicy,
         });
         sendJson(res, 200, statusResponse);
         return;
@@ -1624,6 +1661,7 @@ export async function createResponsesHttpServer(
           accountMirrorCompletions: createAccountMirrorCompletionStatusSummary(accountMirrorCompletionService, now),
           preflight: await readPreflightStatusSummary(preflightRunner),
           controlResult,
+          auth: apiAuthPolicy,
         });
         sendJson(res, 200, statusResponse);
         return;
@@ -1749,6 +1787,16 @@ export async function createResponsesHttpServer(
         const body = await readRequestBody(req);
         const parsedBody = JSON.parse(body) as ExecutionRequest;
         const request = createExecutionRequest(mergeExecutionRequestHints(parsedBody, req.headers));
+        const authorizationError = authorizeExecutionRequest(apiAuthContext, request);
+        if (authorizationError) {
+          sendJson(res, 403, {
+            error: {
+              message: authorizationError,
+              type: 'permission_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
         const createdResponse = await responsesService.createResponse(request);
         if (backgroundDrainIntervalMs > 0) {
           accountMirrorFollowUpAfterNextDrain = true;
@@ -2592,6 +2640,7 @@ function createHttpStatusResponse(input: {
   accountMirrorCompletions: AccountMirrorCompletionStatusSummary;
   preflight?: PreflightStatusSummary;
   controlResult?: HttpStatusResponse['controlResult'];
+  auth: ApiAuthPolicy;
 }): HttpStatusResponse {
   const accountMirrorScheduler = {
     ...input.accountMirrorScheduler,
@@ -2614,7 +2663,15 @@ function createHttpStatusResponse(input: {
       host: input.host,
       port: input.port,
       localOnly: isLoopbackHost(input.host),
-      unauthenticated: true,
+      unauthenticated: !input.auth.required,
+    },
+    auth: {
+      required: input.auth.required,
+      scheme: input.auth.required ? 'bearer' : 'none',
+      keyCount: input.auth.keys.length,
+      scoped: input.auth.keys.some((key) =>
+        Boolean(key.agents?.length || key.teams?.length || key.services?.length || key.runtimeProfiles?.length),
+      ),
     },
     serviceDiscovery,
     routes: {
@@ -2665,7 +2722,7 @@ function createHttpStatusResponse(input: {
       openai: true,
       chatCompletions: false,
       streaming: false,
-      auth: false,
+      auth: input.auth.required,
     },
     preflight: input.preflight ?? {
       lazyLiveFollow: null,
@@ -3392,6 +3449,84 @@ function readApiServerConfig(config: Record<string, unknown>): {
   };
 }
 
+function readApiAuthPolicy(config: Record<string, unknown> | null | undefined): ApiAuthPolicy {
+  const api = isRecord(config?.api) ? config.api : null;
+  const auth = isRecord(api?.auth) ? api.auth : null;
+  if (!auth) {
+    return { required: false, keys: [] };
+  }
+  const rawKeys = Array.isArray(auth.keys) ? auth.keys : [];
+  const keys = rawKeys.flatMap((entry, index): ApiAuthKeyPolicy[] => {
+    if (!isRecord(entry)) return [];
+    const secret =
+      readNonEmptyString(entry.secret)
+      ?? readNonEmptyString(entry.key)
+      ?? readNonEmptyString(entry.token);
+    if (!secret) return [];
+    return [
+      {
+        id: readNonEmptyString(entry.id) ?? `key-${String(index + 1)}`,
+        secret,
+        agents: readStringList(entry.agents),
+        teams: readStringList(entry.teams),
+        services: readStringList(entry.services),
+        runtimeProfiles: readStringList(entry.runtimeProfiles),
+      },
+    ];
+  });
+  return {
+    required: readBoolean(auth.required) ?? readBoolean(auth.enabled) ?? keys.length > 0,
+    keys,
+  };
+}
+
+function authorizeApiRequest(
+  req: http.IncomingMessage,
+  policy: ApiAuthPolicy,
+  pathname: string,
+): ApiAuthContext | null {
+  if (!policy.required || !pathname.startsWith('/v1/')) {
+    return { policy, key: null };
+  }
+  const token = readBearerToken(req.headers.authorization) ?? readSingleHeader(req.headers['x-auracall-api-key']);
+  if (!token) return null;
+  const key = policy.keys.find((candidate) => candidate.secret === token) ?? null;
+  return key ? { policy, key } : null;
+}
+
+function authorizeExecutionRequest(context: ApiAuthContext, request: ExecutionRequest): string | null {
+  const key = context.key;
+  if (!context.policy.required || !key) return null;
+  const auracall = request.auracall ?? {};
+  const agent = typeof auracall.agent === 'string' ? auracall.agent : null;
+  const team = typeof auracall.team === 'string' ? auracall.team : null;
+  const service = typeof auracall.service === 'string' ? auracall.service : null;
+  const runtimeProfile = typeof auracall.runtimeProfile === 'string' ? auracall.runtimeProfile : null;
+  return (
+    authorizeScopedValue('agent', agent, key.agents)
+    ?? authorizeScopedValue('team', team, key.teams)
+    ?? authorizeScopedValue('service', service, key.services)
+    ?? authorizeScopedValue('runtime profile', runtimeProfile, key.runtimeProfiles)
+  );
+}
+
+function authorizeScopedValue(
+  label: string,
+  value: string | null,
+  allowed: string[] | undefined,
+): string | null {
+  if (!allowed?.length) return null;
+  if (value && allowed.includes(value)) return null;
+  return `API key is not authorized for ${label}${value ? ` "${value}"` : ' selection'}.`;
+}
+
+function readBearerToken(value: string | string[] | undefined): string | null {
+  const header = readSingleHeader(value);
+  if (!header) return null;
+  const match = /^Bearer\s+(.+)$/i.exec(header);
+  return match?.[1]?.trim() || null;
+}
+
 function readApiAccountMirrorSchedulerDryRun(value: Record<string, unknown>): boolean | undefined {
   const dryRun = readBoolean(value.dryRun);
   if (dryRun !== undefined) return dryRun;
@@ -3544,6 +3679,15 @@ function readNonEmptyString(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function readStringList(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const entries = value.flatMap((entry): string[] => {
+    const normalized = readNonEmptyString(entry);
+    return normalized ? [normalized] : [];
+  });
+  return entries.length > 0 ? [...new Set(entries)] : undefined;
 }
 
 function readPositiveInteger(value: unknown): number | undefined {

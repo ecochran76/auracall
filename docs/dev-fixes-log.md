@@ -15898,3 +15898,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   model ids. `/v1/models` now lists configured agents as `agent:<agent_id>` and
   semantic provider selectors with execution-readiness metadata so callers can
   discover safe agent entrypoints before posting to `/v1/responses`.
+- 2026-05-10: Client app access needs an explicit local boundary before broader
+  OpenAI-compatible adoption. `api.auth.required=true` now gates `/v1/*` with
+  bearer keys while leaving `/status` discoverable, and `/v1/responses` enforces
+  per-key agent/team/service/runtime-profile scopes.
