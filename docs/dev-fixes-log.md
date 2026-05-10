@@ -1,3 +1,9 @@
+- 2026-05-10: WSL managed Chrome launches should not be able to block behind
+  desktop keyring unlock prompts. The browser-service launcher now adds
+  `--use-mock-keychain` alongside `--password-store=basic` for every
+  non-Windows managed Chrome launch, and WSL docs/tests cover the keyring
+  bypass contract.
+
 - 2026-05-09: Browser Ops operators should see preflight release-gate health
   before scrolling into the controls. The dashboard now has a top preflight
   health strip with run status, timing, and step badges, and the browser-backed

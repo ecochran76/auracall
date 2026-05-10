@@ -60,23 +60,26 @@ describe('chromeLifecycle (package)', () => {
   });
 
   test.runIf(process.platform !== 'win32')(
-    'buildChromeFlags uses the basic password store for minimal managed launches',
+    'buildChromeFlags bypasses desktop keyring prompts for minimal managed launches',
     () => {
       const flags = buildChromeFlags(false, null, 'Profile 1', { minimal: true });
 
       expect(flags).toContain('--password-store=basic');
+      expect(flags).toContain('--use-mock-keychain');
       expect(flags.filter((flag) => flag === '--password-store=basic')).toHaveLength(1);
+      expect(flags.filter((flag) => flag === '--use-mock-keychain')).toHaveLength(1);
     },
   );
 
   test.runIf(process.platform !== 'win32')(
-    'buildChromeFlags keeps basic password store enabled inside WSL',
+    'buildChromeFlags keeps desktop keyring bypass enabled inside WSL',
     () => {
       process.env.WSL_DISTRO_NAME = 'Ubuntu';
 
       const flags = buildChromeFlags(false, null, 'Profile 1', { minimal: true });
 
       expect(flags).toContain('--password-store=basic');
+      expect(flags).toContain('--use-mock-keychain');
     },
   );
 });

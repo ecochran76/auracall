@@ -125,9 +125,9 @@ Current browser-mode default posture:
   `manualLoginProfileDir = managedProfileRoot + auracallProfile + service`
 - set `manualLogin: false` explicitly when you need to suppress that managed
   profile path
-- non-Windows managed Chrome launches include `--password-store=basic` so
-  Linux/WSL automation profiles do not block behind desktop keyring prompts,
-  including visible auth-mode launches
+- non-Windows managed Chrome launches include `--password-store=basic` and
+  `--use-mock-keychain` so Linux/WSL automation profiles do not block behind
+  desktop keyring prompts, including visible auth-mode launches
 - stored team/API browser runs are non-interactive: if ChatGPT shows a logged
   out surface, Aura-Call fails fast and prints an auth-mode command such as
   `auracall --profile <name> login --target chatgpt` instead of waiting in the

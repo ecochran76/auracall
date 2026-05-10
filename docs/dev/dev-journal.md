@@ -1,3 +1,24 @@
+## Turn 179 | 2026-05-10
+
+- Goal: recover from WSL Chrome keyring unlock modals blocking managed provider
+  browsers.
+- Change:
+  - `buildChromeFlags(...)` now adds `--use-mock-keychain` with
+    `--password-store=basic` for every non-Windows managed Chrome launch
+  - browser-service tests now assert both keyring-bypass flags for minimal and
+    WSL launches
+  - README and WSL ChatGPT runbook now document the stronger launch contract
+- Validation:
+  - `pnpm vitest run tests/browser-service/chromeLifecycle.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint packages/browser-service/src/chromeLifecycle.ts tests/browser-service/chromeLifecycle.test.ts README.md docs/wsl-chatgpt-runbook.md docs/dev/dev-journal.md docs/dev-fixes-log.md`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - `auracall login --target chatgpt` launched managed WSL Chrome with both
+    `--password-store=basic` and `--use-mock-keychain`; DevTools responded on
+    the assigned port without requiring keyring unlock.
+
 ## Turn 178 | 2026-05-09
 
 - Continued implementation plan:

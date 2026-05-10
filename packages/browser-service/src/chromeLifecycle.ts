@@ -1475,9 +1475,7 @@ export function buildChromeFlags(
 
   if (process.platform !== 'win32') {
     flags.push('--password-store=basic');
-    if (process.platform === 'darwin') {
-      flags.push('--use-mock-keychain');
-    }
+    flags.push('--use-mock-keychain');
   }
 
   if (debugBindAddress) {
