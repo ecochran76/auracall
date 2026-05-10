@@ -101,6 +101,14 @@ export interface LiveFollowTargetAccountSummary {
   consecutiveFailureCount: number;
   activeCompletionNextAttemptAt: string | null;
   nextAttemptAt: string | null;
+  providerGuard: {
+    state: string;
+    kind: string | null;
+    summary: string | null;
+    cooldownUntil: string | null;
+    url: string | null;
+    action: string | null;
+  } | null;
   mirrorCompleteness: string | null;
   latestLifecycleEvent: {
     at: string | null;

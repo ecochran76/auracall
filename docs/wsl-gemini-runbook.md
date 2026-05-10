@@ -65,6 +65,10 @@ auracall --engine browser --model gemini-3-pro --profile gemini-windows-brave --
   interaction to clear.
 - Do not keep retrying automated commands against that same managed browser
   profile while the block is active.
+- Lazy live follow records this as a provider guard. After you clear the live
+  browser manually, use Browser Ops `Clear guard` or POST `/status` with
+  `accountMirrorProviderGuard.clear`; AuraCall will wait through a quiet
+  cooldown before touching that provider/profile again.
 - Clear it manually in the live browser first, then resume with the
   lowest-churn path:
   - one real AuraCall command

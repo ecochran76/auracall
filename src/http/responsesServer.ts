@@ -109,6 +109,7 @@ import {
   type AccountMirrorStatusRegistry,
   type AccountMirrorStatusEntry,
   type AccountMirrorStatusSummary,
+  type AccountMirrorStatusState,
 } from '../accountMirror/statusRegistry.js';
 import {
   AccountMirrorRefreshError,
@@ -155,6 +156,7 @@ import {
 } from '../status/liveFollowHealth.js';
 
 export const DEFAULT_BACKGROUND_DRAIN_INTERVAL_MS = 60_000;
+export const DEFAULT_ACCOUNT_MIRROR_PROVIDER_GUARD_CLEAR_COOLDOWN_MS = 30 * 60_000;
 
 export interface ResponsesHttpServerOptions {
   host?: string;
@@ -505,6 +507,13 @@ interface HttpStatusResponse {
         kind: 'account-mirror-scheduler';
         action: 'pause' | 'resume' | 'run-once';
         dryRun: boolean;
+      }
+    | {
+        kind: 'account-mirror-provider-guard';
+        action: 'clear';
+        provider: AccountMirrorProvider;
+        runtimeProfileId: string;
+        cooldownUntil: string | null;
       }
     | {
         kind: 'account-mirror-completion';
@@ -1465,6 +1474,48 @@ export async function createResponsesHttpServer(
               dryRun,
             };
           }
+        } else if ('accountMirrorProviderGuard' in payload) {
+          const nowMs = now().getTime();
+          const cooldownMs = payload.accountMirrorProviderGuard.cooldownMs ??
+            DEFAULT_ACCOUNT_MIRROR_PROVIDER_GUARD_CLEAR_COOLDOWN_MS;
+          const cooldownUntilMs = cooldownMs > 0 ? nowMs + cooldownMs : null;
+          const prior = accountMirrorStatusRegistry.readStatus({
+            provider: payload.accountMirrorProviderGuard.provider,
+            runtimeProfileId: payload.accountMirrorProviderGuard.runtimeProfile,
+          }).entries[0]?.providerGuard;
+          const priorDetectedAtMs = prior?.detectedAt ? Date.parse(prior.detectedAt) : NaN;
+          const providerGuard: AccountMirrorStatusState['providerGuard'] = cooldownUntilMs
+            ? {
+                state: 'cooldown',
+                kind: prior?.kind ?? 'unknown',
+                summary: 'Operator cleared provider guard; quiet cooldown before automation resumes.',
+                detectedAtMs: Number.isFinite(priorDetectedAtMs) ? priorDetectedAtMs : nowMs,
+                clearedAtMs: nowMs,
+                cooldownUntilMs,
+                url: prior?.url ?? null,
+                action: 'operator-clear',
+              }
+            : null;
+          accountMirrorStatusRegistry.mergeState(
+            {
+              provider: payload.accountMirrorProviderGuard.provider,
+              runtimeProfileId: payload.accountMirrorProviderGuard.runtimeProfile,
+            },
+            {
+              providerGuard,
+              providerHardStopAtMs: null,
+              providerCooldownUntilMs: cooldownUntilMs,
+              queued: false,
+              running: false,
+            },
+          );
+          controlResult = {
+            kind: 'account-mirror-provider-guard',
+            action: 'clear',
+            provider: payload.accountMirrorProviderGuard.provider,
+            runtimeProfileId: payload.accountMirrorProviderGuard.runtimeProfile,
+            cooldownUntil: cooldownUntilMs ? new Date(cooldownUntilMs).toISOString() : null,
+          };
         } else if ('accountMirrorCompletion' in payload) {
           const { id, action } = payload.accountMirrorCompletion;
           const operation = accountMirrorCompletionService.control({ id, action });
@@ -2898,6 +2949,7 @@ function createLiveFollowTargetRollup(
       consecutiveFailureCount: entry.consecutiveFailureCount,
       activeCompletionNextAttemptAt: activeOperation?.nextAttemptAt ?? null,
       nextAttemptAt: activeOperation?.nextAttemptAt ?? entry.eligibleAt,
+      providerGuard: entry.providerGuard.state === 'clear' ? null : entry.providerGuard,
       mirrorCompleteness: entry.mirrorCompleteness.state,
       latestLifecycleEvent: summarizeCompletionLifecycleEvent(activeOperation ?? recentOperation),
       metadataCounts: entry.metadataCounts,
@@ -3493,6 +3545,14 @@ const STATUS_CONTROL_REQUEST_SCHEMA = z.union([
     }),
   }),
   z.object({
+    accountMirrorProviderGuard: z.object({
+      action: z.literal('clear'),
+      provider: z.enum(['chatgpt', 'gemini', 'grok']),
+      runtimeProfile: z.string().trim().min(1).default('default'),
+      cooldownMs: z.number().int().nonnegative().optional(),
+    }),
+  }),
+  z.object({
     accountMirrorCompletion: z.object({
       action: z.enum(['pause', 'resume', 'cancel']),
       id: z.string().min(1),
@@ -3560,6 +3620,7 @@ type ServiceHostStatusControlRequest = Exclude<
   StatusControlRequest,
   | { backgroundDrain: unknown }
   | { accountMirrorScheduler: unknown }
+  | { accountMirrorProviderGuard: unknown }
   | { accountMirrorCompletion: unknown }
   | { preflight: unknown }
 >;
@@ -6284,6 +6345,12 @@ function createOperatorBrowserDashboardHtml(input: {
       }
       const wait = classifyMirrorSchedulerTargetWait(account);
       const cachePath = buildMirrorSchedulerAccountMirrorPath(account);
+      if (account.providerGuard && account.providerGuard.state === 'manual_clear_required') {
+        actions.push('<button type="button" class="link-button"'
+          + ' data-provider="' + escapeHtml(account.provider || '') + '"'
+          + ' data-runtime-profile-id="' + escapeHtml(account.runtimeProfileId || '') + '"'
+          + ' onclick="clearMirrorProviderGuard(this)">Clear guard</button>');
+      }
       actions.push('<button type="button" class="link-button" data-mirror-scheduler-diagnostics-open-button="true"'
         + ' data-provider="' + escapeHtml(account.provider || '') + '"'
         + ' data-runtime-profile-id="' + escapeHtml(account.runtimeProfileId || '') + '"'
@@ -6315,6 +6382,12 @@ function createOperatorBrowserDashboardHtml(input: {
       if (account.latestCompletionError) {
         return { kind: 'backoff', label: 'backoff', tone: 'warn' };
       }
+      if (account.providerGuard && account.providerGuard.state === 'manual_clear_required') {
+        return { kind: 'provider-guard', label: 'manual clear', tone: 'bad' };
+      }
+      if (account.providerGuard && account.providerGuard.state === 'cooldown') {
+        return { kind: 'provider-cooldown', label: 'guard cooldown', tone: 'warn' };
+      }
       const now = Date.now();
       const nextAttempt = Date.parse(account.nextAttemptAt || '');
       const routineEligible = Date.parse(account.routineEligibleAt || '');
@@ -6340,10 +6413,12 @@ function createOperatorBrowserDashboardHtml(input: {
     function mirrorSchedulerWaitRank(kind) {
       if (kind === 'eligible') return 0;
       if (kind === 'active') return 1;
-      if (kind === 'retry-delay') return 2;
-      if (kind === 'routine-cadence') return 3;
-      if (kind === 'backoff') return 4;
-      return 5;
+      if (kind === 'provider-guard') return 2;
+      if (kind === 'provider-cooldown') return 3;
+      if (kind === 'retry-delay') return 4;
+      if (kind === 'routine-cadence') return 5;
+      if (kind === 'backoff') return 6;
+      return 7;
     }
 
     function firstTargetTime(account) {
@@ -6637,6 +6712,12 @@ function createOperatorBrowserDashboardHtml(input: {
       const completeness = target.mirrorCompleteness || 'unknown';
       if (desiredState === 'missing_identity') return 'expected identity is missing';
       if (desiredState === 'unsupported') return 'provider/profile is not supported for live follow';
+      if (target.providerGuard && target.providerGuard.state === 'manual_clear_required') {
+        return target.providerGuard.summary || 'provider requires manual clearance';
+      }
+      if (target.providerGuard && target.providerGuard.state === 'cooldown') {
+        return 'provider guard cleared; cooldown until ' + (target.providerGuard.cooldownUntil || 'unknown time');
+      }
       if (status === 'blocked') return 'blocked; inspect the active completion or browser state';
       if (status === 'failed') return 'latest live-follow operation failed';
       if (status === 'cancelled') return 'latest live-follow operation was cancelled';
@@ -9138,6 +9219,18 @@ function createOperatorBrowserDashboardHtml(input: {
         body.accountMirrorScheduler.dryRun = dryRun;
       }
       await controlService('mirror scheduler', () => postStatusControl(body));
+    }
+
+    async function clearMirrorProviderGuard(button) {
+      const provider = button && button.dataset ? button.dataset.provider : '';
+      const runtimeProfile = button && button.dataset ? button.dataset.runtimeProfileId : '';
+      await controlService('mirror provider guard', () => postStatusControl({
+        accountMirrorProviderGuard: {
+          action: 'clear',
+          provider,
+          runtimeProfile,
+        },
+      }));
     }
 
     async function runLazyLiveFollowPreflight() {

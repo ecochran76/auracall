@@ -21,6 +21,10 @@ import {
 } from '../browser/operationQueueObservations.js';
 import type { AccountMirrorProvider } from './politePolicy.js';
 import type {
+  AccountMirrorProviderGuardKind,
+  AccountMirrorProviderGuardState,
+} from './politePolicy.js';
+import type {
   AccountMirrorMetadataEvidence,
   AccountMirrorMetadataCounts,
   AccountMirrorStatusEntry,
@@ -326,6 +330,7 @@ export function createAccountMirrorRefreshService(input: {
       } catch (error) {
         const completedAt = now();
         const isIdentityMismatch = error instanceof AccountMirrorIdentityMismatchError;
+        const providerGuard = isIdentityMismatch ? null : extractProviderGuard(error, completedAt.getTime());
         registry.mergeState({ provider, runtimeProfileId }, {
           queued: false,
           running: false,
@@ -333,6 +338,8 @@ export function createAccountMirrorRefreshService(input: {
           lastFailureAtMs: completedAt.getTime(),
           lastCompletedAtMs: completedAt.getTime(),
           consecutiveFailureCount: 1,
+          providerHardStopAtMs: providerGuard ? completedAt.getTime() : undefined,
+          providerGuard: providerGuard ?? undefined,
         });
         if (isIdentityMismatch) {
           throw new AccountMirrorRefreshError(
@@ -345,6 +352,18 @@ export function createAccountMirrorRefreshService(input: {
               detectedProvider: error.provider,
               expectedIdentityKey: error.expectedIdentityKey,
               detectedIdentityKey: error.detectedIdentityKey,
+            },
+          );
+        }
+        if (providerGuard) {
+          throw new AccountMirrorRefreshError(
+            409,
+            'account_mirror_provider_guard',
+            `${providerGuard.summary} Manual clearance is required before ${provider}/${runtimeProfileId} live follow can continue.`,
+            {
+              provider,
+              runtimeProfileId,
+              providerGuard,
             },
           );
         }
@@ -441,6 +460,75 @@ function withYieldCause(
       },
     },
   };
+}
+
+function extractProviderGuard(error: unknown, detectedAtMs: number): AccountMirrorProviderGuardState | null {
+  const detailsGuard = findProviderGuardInError(error, new Set());
+  if (detailsGuard) {
+    return {
+      state: 'manual_clear_required',
+      kind: detailsGuard.kind,
+      summary: detailsGuard.summary,
+      detectedAtMs,
+      url: detailsGuard.url,
+      action: 'account-mirror-refresh',
+    };
+  }
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  if (/google\.com\/sorry|unusual traffic|not a robot/i.test(message)) {
+    return {
+      state: 'manual_clear_required',
+      kind: 'google-sorry',
+      summary: 'Google unusual-traffic interstitial detected (google.com/sorry).',
+      detectedAtMs,
+      action: 'account-mirror-refresh',
+    };
+  }
+  if (/captcha|recaptcha|human verification|anti-bot/i.test(message)) {
+    return {
+      state: 'manual_clear_required',
+      kind: 'human-verification',
+      summary: 'Provider human-verification gate detected.',
+      detectedAtMs,
+      action: 'account-mirror-refresh',
+    };
+  }
+  return null;
+}
+
+function findProviderGuardInError(
+  value: unknown,
+  seen: Set<unknown>,
+): { kind: AccountMirrorProviderGuardKind; summary: string; url: string | null } | null {
+  if (!value || typeof value !== 'object' || seen.has(value)) return null;
+  seen.add(value);
+  const record = value as Record<string, unknown>;
+  const details = isRecord(record.details) ? record.details : null;
+  const blockingState = details && isRecord(details.blockingState) ? details.blockingState : null;
+  if (blockingState) {
+    const rawKind = String(blockingState.kind ?? '').trim();
+    const kind = normalizeProviderGuardKind(rawKind);
+    const summary = String(blockingState.summary ?? '').trim() || 'Provider human-verification gate detected.';
+    const url = typeof details?.url === 'string' && details.url.trim().length > 0 ? details.url.trim() : null;
+    return { kind, summary, url };
+  }
+  const cause = record.cause;
+  const causeGuard = findProviderGuardInError(cause, seen);
+  if (causeGuard) return causeGuard;
+  const originalError = record.originalError;
+  return findProviderGuardInError(originalError, seen);
+}
+
+function normalizeProviderGuardKind(value: string): AccountMirrorProviderGuardKind {
+  switch (value) {
+    case 'google-sorry':
+    case 'captcha':
+    case 'cloudflare':
+    case 'human-verification':
+      return value;
+    default:
+      return 'unknown';
+  }
 }
 
 async function mergeCollectionWithPersistedCatalog(input: {

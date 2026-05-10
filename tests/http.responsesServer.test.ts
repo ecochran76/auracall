@@ -3341,6 +3341,126 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('clears an account mirror provider guard through POST /status', async () => {
+    const registry = createAccountMirrorStatusRegistry({
+      config: {
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'gemini',
+            services: {
+              gemini: {
+                identity: {
+                  email: 'ecochran76@gmail.com',
+                },
+                liveFollow: {
+                  enabled: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      initialState: {
+        'gemini:default': {
+          detectedIdentityKey: 'ecochran76@gmail.com',
+          providerGuard: {
+            state: 'manual_clear_required',
+            kind: 'google-sorry',
+            summary: 'Google unusual-traffic interstitial detected (google.com/sorry).',
+            detectedAtMs: Date.parse('2026-04-29T11:55:00.000Z'),
+            url: 'https://www.google.com/sorry/index',
+            action: 'account-mirror-refresh',
+          },
+          providerHardStopAtMs: Date.parse('2026-04-29T11:55:00.000Z'),
+        },
+      },
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+    });
+    const server = await createResponsesHttpServer(
+      {
+        host: '127.0.0.1',
+        port: 0,
+        accountMirrorSchedulerIntervalMs: 1000,
+        accountMirrorSchedulerDryRun: true,
+      },
+      {
+        now: () => new Date('2026-04-29T12:00:00.000Z'),
+        accountMirrorStatusRegistry: registry,
+        accountMirrorSchedulerService: {
+          runOnce: vi.fn(async (): Promise<AccountMirrorSchedulerPassResult> => ({
+            object: 'account_mirror_scheduler_pass',
+            mode: 'dry-run',
+            action: 'skipped',
+            startedAt: '2026-04-29T12:00:00.000Z',
+            completedAt: '2026-04-29T12:00:00.000Z',
+            selectedTarget: null,
+            backpressure: {
+              reason: 'provider-guard',
+              message: 'Google unusual-traffic interstitial detected (google.com/sorry).',
+            },
+            metrics: {
+              totalTargets: 1,
+              eligibleTargets: 0,
+              delayedTargets: 0,
+              blockedTargets: 1,
+              liveFollowEnabledTargets: 1,
+              liveFollowEligibleTargets: 0,
+              liveFollowDelayedTargets: 0,
+              defaultChatgptEligibleTargets: 0,
+              defaultChatgptDelayedTargets: 0,
+              inProgressEligibleTargets: 0,
+            },
+            refresh: null,
+            error: null,
+          })),
+        },
+        accountMirrorSchedulerLedger: createMemorySchedulerLedger(),
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accountMirrorProviderGuard: {
+            action: 'clear',
+            provider: 'gemini',
+            runtimeProfile: 'default',
+            cooldownMs: 600_000,
+          },
+        }),
+      });
+      expect(response.status).toBe(200);
+      const payload = await response.json() as {
+        controlResult: unknown;
+        accountMirrorStatus: AccountMirrorStatusSummary;
+      };
+      expect(payload.controlResult).toMatchObject({
+        kind: 'account-mirror-provider-guard',
+        action: 'clear',
+        provider: 'gemini',
+        runtimeProfileId: 'default',
+        cooldownUntil: '2026-04-29T12:10:00.000Z',
+      });
+      expect(payload.accountMirrorStatus.entries[0]).toMatchObject({
+        provider: 'gemini',
+        runtimeProfileId: 'default',
+        status: 'delayed',
+        reason: 'provider-guard-cooldown',
+        providerGuard: expect.objectContaining({
+          state: 'cooldown',
+          kind: 'google-sorry',
+          cooldownUntil: '2026-04-29T12:10:00.000Z',
+          action: 'operator-clear',
+        }),
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('allows an execute-enabled manual account mirror scheduler pass through POST /status', async () => {
     const runOnce = vi.fn(async (input: { dryRun: boolean }): Promise<AccountMirrorSchedulerPassResult> => ({
       object: 'account_mirror_scheduler_pass',

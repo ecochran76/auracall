@@ -4,6 +4,8 @@ import {
 } from '../config/model.js';
 import type {
   AccountMirrorPolitenessDecision,
+  AccountMirrorProviderGuardKind,
+  AccountMirrorProviderGuardState,
   AccountMirrorProvider,
 } from './politePolicy.js';
 import { evaluateAccountMirrorPoliteness } from './politePolicy.js';
@@ -21,6 +23,7 @@ export type AccountMirrorStatusState = {
   consecutiveFailureCount?: number | null;
   providerCooldownUntilMs?: number | null;
   providerHardStopAtMs?: number | null;
+  providerGuard?: AccountMirrorProviderGuardState | null;
   queued?: boolean;
   running?: boolean;
   lastRefreshRequestId?: string | null;
@@ -105,6 +108,16 @@ export type AccountMirrorStatusEntry = {
     lastDispatcherKey: string | null;
     lastDispatcherOperationId: string | null;
     lastDispatcherBlockedBy: Record<string, unknown> | null;
+  };
+  providerGuard: {
+    state: 'clear' | 'manual_clear_required' | 'cooldown';
+    kind: AccountMirrorProviderGuardKind | null;
+    summary: string | null;
+    detectedAt: string | null;
+    clearedAt: string | null;
+    cooldownUntil: string | null;
+    url: string | null;
+    action: string | null;
   };
   metadataCounts: AccountMirrorMetadataCounts;
   metadataEvidence: AccountMirrorMetadataEvidence | null;
@@ -250,6 +263,7 @@ export function createAccountMirrorStatusSummary(input: {
         consecutiveFailureCount: state.consecutiveFailureCount,
         providerCooldownUntilMs: state.providerCooldownUntilMs,
         providerHardStopAtMs: state.providerHardStopAtMs,
+        providerGuard: state.providerGuard,
         queued: state.queued,
         running: state.running,
         explicitRefresh: input.explicitRefresh,
@@ -343,6 +357,7 @@ function createStatusEntry(
       lastDispatcherOperationId: readString(state.lastDispatcherOperationId),
       lastDispatcherBlockedBy: isRecord(state.lastDispatcherBlockedBy) ? state.lastDispatcherBlockedBy : null,
     },
+    providerGuard: normalizeProviderGuardForStatus(state.providerGuard),
     metadataCounts,
     metadataEvidence,
     mirrorCompleteness: deriveMirrorCompleteness(metadataCounts, metadataEvidence),
@@ -533,6 +548,33 @@ function normalizeAttachmentInventoryEvidence(
     scannedConversations: normalizeCount(value.scannedConversations),
     yielded: value.yielded === true,
     yieldCause: normalizeAttachmentInventoryYieldCause(value.yieldCause),
+  };
+}
+
+function normalizeProviderGuardForStatus(
+  value: AccountMirrorProviderGuardState | null | undefined,
+): AccountMirrorStatusEntry['providerGuard'] {
+  if (!value) {
+    return {
+      state: 'clear',
+      kind: null,
+      summary: null,
+      detectedAt: null,
+      clearedAt: null,
+      cooldownUntil: null,
+      url: null,
+      action: null,
+    };
+  }
+  return {
+    state: value.state === 'manual_clear_required' || value.state === 'cooldown' ? value.state : 'clear',
+    kind: value.kind ?? 'unknown',
+    summary: readString(value.summary) ?? 'Provider guard is active.',
+    detectedAt: timestampToIso(value.detectedAtMs),
+    clearedAt: timestampToIso(value.clearedAtMs),
+    cooldownUntil: timestampToIso(value.cooldownUntilMs),
+    url: readString(value.url),
+    action: readString(value.action),
   };
 }
 

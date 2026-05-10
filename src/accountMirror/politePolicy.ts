@@ -8,10 +8,30 @@ export type AccountMirrorDelayReason =
   | 'already-queued'
   | 'expected-identity-missing'
   | 'identity-mismatch'
+  | 'provider-manual-clear-required'
+  | 'provider-guard-cooldown'
   | 'provider-hard-stop'
   | 'provider-cooldown'
   | 'minimum-interval'
   | 'failure-backoff';
+
+export type AccountMirrorProviderGuardKind =
+  | 'google-sorry'
+  | 'captcha'
+  | 'cloudflare'
+  | 'human-verification'
+  | 'unknown';
+
+export type AccountMirrorProviderGuardState = {
+  state: 'manual_clear_required' | 'cooldown';
+  kind: AccountMirrorProviderGuardKind;
+  summary: string;
+  detectedAtMs: number;
+  clearedAtMs?: number | null;
+  cooldownUntilMs?: number | null;
+  url?: string | null;
+  action?: string | null;
+};
 
 export interface AccountMirrorProviderPolitenessPolicy {
   provider: AccountMirrorProvider;
@@ -38,6 +58,7 @@ export interface AccountMirrorPolitenessInput {
   consecutiveFailureCount?: number | null;
   providerCooldownUntilMs?: number | null;
   providerHardStopAtMs?: number | null;
+  providerGuard?: AccountMirrorProviderGuardState | null;
   queued?: boolean;
   running?: boolean;
   explicitRefresh?: boolean;
@@ -176,7 +197,13 @@ function createDecision(
   const failureCooldownMs = getFailureCooldownMs(policy, input.consecutiveFailureCount ?? 0);
   const delayMs = eligibleAtMs === null ? 0 : Math.max(0, eligibleAtMs - nowMs);
   return {
-    posture: reason === 'eligible' ? 'eligible' : reason === 'expected-identity-missing' || reason === 'identity-mismatch' ? 'blocked' : 'delay',
+    posture: reason === 'eligible'
+      ? 'eligible'
+      : reason === 'expected-identity-missing' ||
+          reason === 'identity-mismatch' ||
+          reason === 'provider-manual-clear-required'
+        ? 'blocked'
+        : 'delay',
     reason,
     provider: input.provider,
     runtimeProfileId: input.runtimeProfileId,
@@ -224,6 +251,17 @@ export function evaluateAccountMirrorPoliteness(
     return createDecision(input, policy, 'already-queued', null, zeroJitter);
   }
 
+  const providerGuard = normalizeProviderGuard(input.providerGuard);
+  if (providerGuard?.state === 'manual_clear_required') {
+    return createDecision(input, policy, 'provider-manual-clear-required', null, zeroJitter);
+  }
+  if (providerGuard?.state === 'cooldown') {
+    const cooldownUntilMs = normalizeTimestamp(providerGuard.cooldownUntilMs);
+    if (cooldownUntilMs && cooldownUntilMs > nowMs) {
+      return createDecision(input, policy, 'provider-guard-cooldown', cooldownUntilMs, zeroJitter);
+    }
+  }
+
   const providerCooldownUntilMs = normalizeTimestamp(input.providerCooldownUntilMs);
   if (providerCooldownUntilMs && providerCooldownUntilMs > nowMs) {
     return createDecision(input, policy, 'provider-cooldown', providerCooldownUntilMs, zeroJitter);
@@ -268,6 +306,26 @@ export function evaluateAccountMirrorPoliteness(
   }
 
   return createDecision(input, policy, 'eligible', nowMs, zeroJitter);
+}
+
+function normalizeProviderGuard(
+  value: AccountMirrorProviderGuardState | null | undefined,
+): AccountMirrorProviderGuardState | null {
+  if (!value) return null;
+  const state = value.state === 'manual_clear_required' || value.state === 'cooldown'
+    ? value.state
+    : null;
+  if (!state) return null;
+  return {
+    state,
+    kind: value.kind ?? 'unknown',
+    summary: String(value.summary ?? '').trim() || 'Provider guard is active.',
+    detectedAtMs: normalizeTimestamp(value.detectedAtMs) ?? Date.now(),
+    clearedAtMs: normalizeTimestamp(value.clearedAtMs),
+    cooldownUntilMs: normalizeTimestamp(value.cooldownUntilMs),
+    url: typeof value.url === 'string' && value.url.trim().length > 0 ? value.url.trim() : null,
+    action: typeof value.action === 'string' && value.action.trim().length > 0 ? value.action.trim() : null,
+  };
 }
 
 export function getDefaultAccountMirrorPolitenessPolicy(

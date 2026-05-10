@@ -172,6 +172,7 @@ describe('account mirror refresh service', () => {
         maxArtifactRowsPerCycle: 80,
       },
       previousEvidence: null,
+      abortSignal: expect.any(AbortSignal),
     });
     const collectCalls = metadataCollector.collect.mock.calls as unknown as [AccountMirrorMetadataCollectorInput][];
     const collectInput = collectCalls[0]?.[0];
@@ -703,6 +704,70 @@ describe('account mirror refresh service', () => {
       detectedIdentityKey: 'wrong@example.com',
       status: 'blocked',
       reason: 'identity-mismatch',
+    });
+  });
+
+  test('records provider guard state when the collector hits a Google sorry gate', async () => {
+    const registry = createAccountMirrorStatusRegistry({
+      config,
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+    });
+    const gateError = Object.assign(new Error('Manual clearance required.'), {
+      details: {
+        url: 'https://www.google.com/sorry/index',
+        blockingState: {
+          kind: 'google-sorry',
+          summary: 'Google unusual-traffic interstitial detected (google.com/sorry).',
+          requiresHuman: true,
+        },
+      },
+    });
+    const service = createAccountMirrorRefreshService({
+      config,
+      registry,
+      dispatcher: createBrowserOperationDispatcher({
+        now: () => new Date('2026-04-29T12:00:00.000Z'),
+      }),
+      metadataCollector: {
+        collect: vi.fn(async () => {
+          throw gateError;
+        }),
+      },
+      persistence: createNoopPersistence(),
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+    });
+
+    await expect(
+      service.requestRefresh({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        explicitRefresh: true,
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 409,
+      code: 'account_mirror_provider_guard',
+      details: {
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        providerGuard: expect.objectContaining({
+          state: 'manual_clear_required',
+          kind: 'google-sorry',
+        }),
+      },
+    } satisfies Partial<AccountMirrorRefreshError>);
+    expect(registry.readStatus({
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      explicitRefresh: true,
+    }).entries[0]).toMatchObject({
+      status: 'blocked',
+      reason: 'provider-manual-clear-required',
+      providerGuard: expect.objectContaining({
+        state: 'manual_clear_required',
+        kind: 'google-sorry',
+        detectedAt: '2026-04-29T12:00:00.000Z',
+        url: 'https://www.google.com/sorry/index',
+      }),
     });
   });
 });

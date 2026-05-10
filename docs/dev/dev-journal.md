@@ -1,3 +1,23 @@
+## Turn 180 | 2026-05-10
+
+- Goal: stop live-follow from repeatedly touching a provider/account after
+  Google `sorry` or similar human-verification is detected.
+- Change:
+  - account-mirror status now carries a provider guard with manual-clear and
+    cooldown states
+  - refresh failures that include browser-service blocking-page evidence become
+    `account_mirror_provider_guard` errors and block only that provider/profile
+  - scheduler backpressure reports `provider-guard`
+  - `/status` accepts `accountMirrorProviderGuard.clear` and the dashboard row
+    exposes a `Clear guard` action that resumes through a quiet cooldown
+- Validation:
+  - `pnpm exec tsc --noEmit`
+  - `pnpm vitest run tests/accountMirror/refreshService.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/schedulerService.test.ts`
+  - `pnpm vitest run tests/accountMirror/statusRegistry.test.ts tests/accountMirror/schedulerService.test.ts tests/accountMirror/refreshService.test.ts tests/http.responsesServer.test.ts -t "provider guard|Google sorry|live-follow needs manual clearance|clears an account mirror provider guard"`
+  - Full `tests/http.responsesServer.test.ts` still has unrelated startup
+    recovery timeout flakes when run wholesale; the new provider-guard HTTP
+    control passes in isolation.
+
 ## Turn 179 | 2026-05-10
 
 - Goal: recover from WSL Chrome keyring unlock modals blocking managed provider

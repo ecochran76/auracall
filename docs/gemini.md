@@ -181,6 +181,10 @@ Notes:
   human-verification state, stop automated retries on that managed browser
   profile. Until captcha automation exists, a human must clear that page
   before Aura-Call should resume Gemini automation on that session.
+- Lazy live follow records a detected Google `sorry` / human-verification page
+  as a provider guard for the affected provider/profile. Operators can clear
+  that guard from Browser Ops or POST `/status`; the target remains in a quiet
+  cooldown before routine automation resumes.
 - `auracall login --target gemini`, `auracall setup --target gemini`,
   `auracall doctor --target gemini`, `auracall features --target gemini`, and
   the shared browser-run path now all surface that blocking state explicitly

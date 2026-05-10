@@ -26,6 +26,7 @@ export interface AccountMirrorSchedulerSelectedTarget {
 export type AccountMirrorSchedulerBackpressureReason =
   | 'none'
   | 'routine-delayed'
+  | 'provider-guard'
   | 'blocked-by-browser-work'
   | 'yielded-to-queued-work';
 
@@ -186,6 +187,15 @@ export function createAccountMirrorSchedulerPassService(input: {
 }
 
 function deriveSkippedBackpressure(entries: AccountMirrorStatusEntry[]): AccountMirrorSchedulerBackpressure {
+  const guarded = entries.find((entry) =>
+    entry.reason === 'provider-manual-clear-required' || entry.reason === 'provider-guard-cooldown'
+  );
+  if (guarded) {
+    return {
+      reason: 'provider-guard',
+      message: guarded.providerGuard.summary ?? guarded.reason,
+    };
+  }
   const delayed = entries.find((entry) => entry.status === 'delayed');
   if (delayed) {
     return {

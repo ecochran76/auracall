@@ -381,6 +381,47 @@ describe('account mirror scheduler pass service', () => {
     });
   });
 
+  test('reports provider-guard backpressure when live-follow needs manual clearance', async () => {
+    const requestRefresh = vi.fn(async () => createRefreshResult());
+    const service = createAccountMirrorSchedulerPassService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        initialState: {
+          'chatgpt:default': {
+            detectedIdentityKey: 'ecochran76@gmail.com',
+            providerGuard: {
+              state: 'manual_clear_required',
+              kind: 'google-sorry',
+              summary: 'Google unusual-traffic interstitial detected (google.com/sorry).',
+              detectedAtMs: Date.parse('2026-04-29T11:59:00.000Z'),
+              action: 'account-mirror-refresh',
+            },
+          },
+        },
+        now: () => new Date('2026-04-29T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+    });
+
+    const result = await service.runOnce({ dryRun: false });
+
+    expect(requestRefresh).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      action: 'skipped',
+      selectedTarget: null,
+      backpressure: {
+        reason: 'provider-guard',
+        message: 'Google unusual-traffic interstitial detected (google.com/sorry).',
+      },
+      metrics: {
+        liveFollowEligibleTargets: 0,
+      },
+    });
+  });
+
   test('reports yielded backpressure when a refresh stops for queued browser work', async () => {
     const yieldedRefresh = createRefreshResult();
     yieldedRefresh.metadataEvidence = {

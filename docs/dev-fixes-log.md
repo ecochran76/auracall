@@ -1,3 +1,9 @@
+- 2026-05-10: Live follow should not keep navigating a provider after a
+  Google `sorry` / human-verification page is detected. Account-mirror refresh
+  now records a provider guard, scheduler status reports `provider-guard`, and
+  `/status` plus Browser Ops can clear the guard into a quiet cooldown once a
+  human has handled the browser.
+
 - 2026-05-10: WSL managed Chrome launches should not be able to block behind
   desktop keyring unlock prompts. The browser-service launcher now adds
   `--use-mock-keychain` alongside `--password-store=basic` for every

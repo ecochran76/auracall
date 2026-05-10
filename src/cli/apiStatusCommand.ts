@@ -654,6 +654,7 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
     consecutiveFailureCount: readNumber(account.consecutiveFailureCount) ?? 0,
     activeCompletionNextAttemptAt: readString(account.activeCompletionNextAttemptAt),
     nextAttemptAt: readString(account.nextAttemptAt),
+    providerGuard: summarizeLiveFollowProviderGuard(account.providerGuard),
     mirrorCompleteness: readString(account.mirrorCompleteness),
     latestLifecycleEvent: readLatestCompletionLifecycleEvent(account.latestLifecycleEvent),
     metadataCounts: metadataCounts
@@ -665,6 +666,19 @@ function summarizeLiveFollowTargetAccount(value: unknown) {
           media: readNumber(metadataCounts.media) ?? 0,
         }
       : null,
+  };
+}
+
+function summarizeLiveFollowProviderGuard(value: unknown) {
+  const guard = isRecord(value) ? value : null;
+  if (!guard) return null;
+  return {
+    state: readString(guard.state) ?? 'unknown',
+    kind: readString(guard.kind),
+    summary: readString(guard.summary),
+    cooldownUntil: readString(guard.cooldownUntil),
+    url: readString(guard.url),
+    action: readString(guard.action),
   };
 }
 

@@ -129,6 +129,81 @@ describe('account mirror status registry', () => {
     );
   });
 
+  test('blocks a live-follow target when a provider guard needs manual clearance', () => {
+    const status = createAccountMirrorStatusSummary({
+      config,
+      now: new Date('2026-04-29T12:00:00.000Z'),
+      states: {
+        'gemini:default': {
+          detectedIdentityKey: 'ecochran76@gmail.com',
+          providerGuard: {
+            state: 'manual_clear_required',
+            kind: 'google-sorry',
+            summary: 'Google unusual-traffic interstitial detected (google.com/sorry).',
+            detectedAtMs: Date.parse('2026-04-29T11:59:00.000Z'),
+            url: 'https://www.google.com/sorry/index',
+            action: 'account-mirror-refresh',
+          },
+        },
+      },
+    });
+
+    expect(status.entries).toContainEqual(
+      expect.objectContaining({
+        provider: 'gemini',
+        runtimeProfileId: 'default',
+        status: 'blocked',
+        reason: 'provider-manual-clear-required',
+        eligibleAt: null,
+        providerGuard: {
+          state: 'manual_clear_required',
+          kind: 'google-sorry',
+          summary: 'Google unusual-traffic interstitial detected (google.com/sorry).',
+          detectedAt: '2026-04-29T11:59:00.000Z',
+          clearedAt: null,
+          cooldownUntil: null,
+          url: 'https://www.google.com/sorry/index',
+          action: 'account-mirror-refresh',
+        },
+      }),
+    );
+  });
+
+  test('delays a live-follow target during provider guard cooldown', () => {
+    const status = createAccountMirrorStatusSummary({
+      config,
+      now: new Date('2026-04-29T12:00:00.000Z'),
+      states: {
+        'gemini:default': {
+          detectedIdentityKey: 'ecochran76@gmail.com',
+          providerGuard: {
+            state: 'cooldown',
+            kind: 'google-sorry',
+            summary: 'Operator cleared provider guard; quiet cooldown before automation resumes.',
+            detectedAtMs: Date.parse('2026-04-29T11:50:00.000Z'),
+            clearedAtMs: Date.parse('2026-04-29T11:55:00.000Z'),
+            cooldownUntilMs: Date.parse('2026-04-29T12:25:00.000Z'),
+            action: 'operator-clear',
+          },
+        },
+      },
+    });
+
+    expect(status.entries).toContainEqual(
+      expect.objectContaining({
+        provider: 'gemini',
+        runtimeProfileId: 'default',
+        status: 'delayed',
+        reason: 'provider-guard-cooldown',
+        eligibleAt: '2026-04-29T12:25:00.000Z',
+        providerGuard: expect.objectContaining({
+          state: 'cooldown',
+          cooldownUntil: '2026-04-29T12:25:00.000Z',
+        }),
+      }),
+    );
+  });
+
   test('reports missing identity when live follow is enabled without a bound account', () => {
     const status = createAccountMirrorStatusSummary({
       config: {
