@@ -19,7 +19,12 @@ import {
 } from '../preflightStatus.js';
 import type { ResolvedUserConfig } from '../config.js';
 import { resolveConfig } from '../schema/resolver.js';
-import { resolveHostLocalActionExecutionPolicy } from '../config/model.js';
+import {
+  projectConfigModel,
+  resolveHostLocalActionExecutionPolicy,
+  type ProjectedAgent,
+} from '../config/model.js';
+import { SEMANTIC_MODEL_SELECTORS } from '../config/modelSelector.js';
 import {
   agentConfigUpsertInputSchema,
   createAgentTeamConfigService,
@@ -246,6 +251,14 @@ interface HttpModelDescriptor {
   object: 'model';
   created: number;
   owned_by: string;
+  metadata?: {
+    kind: 'provider_model' | 'agent' | 'semantic_model_selector';
+    provider?: string;
+    service?: string;
+    executionReady?: boolean;
+    agent?: ProjectedAgent;
+    label?: string;
+  };
 }
 
 interface HttpModelListResponse {
@@ -1617,7 +1630,7 @@ export async function createResponsesHttpServer(
       }
 
       if (req.method === 'GET' && url.pathname === '/v1/models') {
-        sendJson(res, 200, createHttpModelListResponse());
+        sendJson(res, 200, createHttpModelListResponse(configuredRuntimeConfig));
         return;
       }
 
@@ -2523,15 +2536,43 @@ export function assertResponsesHostAllowed(host: string | undefined, listenPubli
   );
 }
 
-function createHttpModelListResponse(): HttpModelListResponse {
+function createHttpModelListResponse(config: Record<string, unknown> | null | undefined): HttpModelListResponse {
+  const providerModels: HttpModelDescriptor[] = Object.entries(MODEL_CONFIGS).map(([id, config]) => ({
+    id,
+    object: 'model',
+    created: 0,
+    owned_by: config.provider ?? 'other',
+    metadata: {
+      kind: 'provider_model',
+      provider: config.provider ?? 'other',
+    },
+  }));
+  const semanticSelectors: HttpModelDescriptor[] = SEMANTIC_MODEL_SELECTORS.map((selector) => ({
+    id: selector.id,
+    object: 'model',
+    created: 0,
+    owned_by: `auracall:${selector.service}`,
+    metadata: {
+      kind: 'semantic_model_selector',
+      service: selector.service,
+      label: selector.label,
+      executionReady: selector.executionReady,
+    },
+  }));
+  const configuredAgents: HttpModelDescriptor[] = projectConfigModel(config ?? {}).agents.map((agent) => ({
+    id: `agent:${agent.id}`,
+    object: 'model',
+    created: 0,
+    owned_by: 'auracall:agent',
+    metadata: {
+      kind: 'agent',
+      service: agent.service ?? agent.defaultService ?? undefined,
+      agent,
+    },
+  }));
   return {
     object: 'list',
-    data: Object.entries(MODEL_CONFIGS).map(([id, config]) => ({
-      id,
-      object: 'model',
-      created: 0,
-      owned_by: config.provider ?? 'other',
-    })),
+    data: [...providerModels, ...semanticSelectors, ...configuredAgents],
   };
 }
 

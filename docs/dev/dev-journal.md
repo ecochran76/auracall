@@ -1,3 +1,19 @@
+## Turn 186 | 2026-05-10
+
+- Continued implementation plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: make OpenAI-compatible API clients discover configured AuraCall agents
+  and semantic selector readiness from the model catalog.
+- Change:
+  - `/v1/models` now includes configured agents as `agent:<agent_id>` entries
+  - semantic provider selectors are listed with `metadata.executionReady`
+  - ChatGPT semantic selectors are marked ready; Gemini/Grok selectors remain
+    visible but not execution-ready until their adapters are implemented
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "model" --maxWorkers 1`
+  - `pnpm vitest run tests/config/modelSelector.test.ts tests/runtime.configuredExecutor.test.ts -t "semantic|selector|model" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+
 ## Turn 185 | 2026-05-10
 
 - Continued implementation plan:

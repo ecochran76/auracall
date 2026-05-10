@@ -215,6 +215,12 @@ Terminology note:
   - `POST /v1/account-mirrors/completions`
   - `GET /v1/account-mirrors/completions`
   - `GET /v1/account-mirrors/completions/{completion_id}`
+- `GET /v1/models` returns the static provider model catalog plus AuraCall
+  discovery entries. Configured agents appear as `agent:<agent_id>` model ids
+  usable with `/v1/responses`; semantic provider selectors such as
+  `chatgpt:pro-extended` include `metadata.kind="semantic_model_selector"` and
+  `metadata.executionReady` so clients can distinguish execution-ready selectors
+  from planned Gemini/Grok selectors.
 - Account mirror refreshes are metadata-first and identity-gated. Successful
   refreshes persist the mirror snapshot in the existing provider cache under
   `provider + boundIdentity`; runtime/browser profile ids are retained as

@@ -32,6 +32,10 @@ prefer semantic intent and keep exact provider-version pins as escape hatches.
   noise.
 - Agents and teams can be created, updated, listed, and deleted through the
   local API and MCP config tools.
+- `/v1/models` now publishes:
+  - static provider model ids
+  - configured AuraCall agents as `agent:<agent_id>`
+  - semantic provider selectors with execution-readiness metadata
 
 ## Current State
 
@@ -53,6 +57,10 @@ Implemented:
   - `GET|PUT|DELETE /v1/config/teams`
   - MCP tools `config_entities_list`, `config_agent_upsert`,
     `config_agent_delete`, `config_team_upsert`, and `config_team_delete`
+- `/v1/models` includes configured agents and semantic selector entries for
+  client-side discovery. ChatGPT semantic selectors are marked
+  `executionReady=true`; Gemini/Grok selector entries are visible but remain
+  `executionReady=false` until their provider adapters resolve them.
 
 Remaining:
 
@@ -72,14 +80,14 @@ Remaining:
   ChatGPT is the first implemented provider for this criterion.
 - Agents and teams can be maintained by other local agents through the API/MCP
   control plane without hand-editing config files.
+- Client apps can discover configured agent model ids and semantic selector
+  readiness from `/v1/models`.
 
 ## Next Work
 
 - Resolve Grok and Gemini `modelSelector` values through provider-specific
   browser adapters rather than feeding semantic tokens directly into raw model
   selection.
-- Publish `/v1/models` entries for configured agents and semantic provider
-  selectors.
 - Add API key policy so client apps can be allowed to call specific agents,
   teams, services, and runtime profiles.
 - Add the `/v1/chat/completions` adapter after `/v1/responses` agent routing is

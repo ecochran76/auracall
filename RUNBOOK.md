@@ -3017,3 +3017,18 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification:
   - `pnpm vitest run tests/config/modelSelector.test.ts tests/runtime.configuredExecutor.test.ts --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
+
+## Turn 111 | 2026-05-10
+
+- Goal: make OpenAI-compatible client discovery show configured AuraCall agents
+  and semantic selector readiness.
+- Change:
+  - `/v1/models` now includes static provider models, semantic selector entries,
+    and configured agents as `agent:<agent_id>` model ids
+  - ChatGPT selectors are marked execution-ready; Gemini/Grok selectors are
+    listed as planned until provider adapters resolve them
+  - README and plan 0064 now document the `/v1/models` discovery contract
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "model" --maxWorkers 1`
+  - `pnpm vitest run tests/config/modelSelector.test.ts tests/runtime.configuredExecutor.test.ts -t "semantic|selector|model" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`

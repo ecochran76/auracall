@@ -15894,3 +15894,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `{ "preflight": { "action": "run", "name": "lazy-live-follow" } }`. The
   control returns immediately with a run id/log path, and `/status` reports the
   active run as `preflight.lazyLiveFollowRun`.
+- 2026-05-10: OpenAI-compatible clients should not need hand-written AuraCall
+  model ids. `/v1/models` now lists configured agents as `agent:<agent_id>` and
+  semantic provider selectors with execution-readiness metadata so callers can
+  discover safe agent entrypoints before posting to `/v1/responses`.

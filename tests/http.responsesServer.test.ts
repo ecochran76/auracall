@@ -15472,6 +15472,67 @@ describe('http responses adapter', () => {
       expect(payload.object).toBe('list');
       expect(payload.data.some((entry) => entry.id === 'gpt-5.2')).toBe(true);
       expect(payload.data.some((entry) => entry.id === 'gemini-3-pro')).toBe(true);
+      expect(payload.data.some((entry) => entry.id === 'chatgpt:pro-extended')).toBe(true);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('lists configured agents as OpenAI-compatible model entries', async () => {
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        config: {
+          browserProfiles: { default: {} },
+          runtimeProfiles: {
+            default: { browserProfile: 'default', defaultService: 'chatgpt' },
+          },
+          agents: {
+            researcher: {
+              runtimeProfile: 'default',
+              service: 'chatgpt',
+              modelSelector: 'chatgpt:pro-extended',
+              projectId: 'proj_123',
+            },
+          },
+        },
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/models`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as {
+        object: string;
+        data: Array<{ id: string; metadata?: Record<string, unknown> }>;
+      };
+      expect(payload.object).toBe('list');
+      const agentEntry = payload.data.find((entry) => entry.id === 'agent:researcher');
+      expect(agentEntry).toMatchObject({
+        id: 'agent:researcher',
+        object: 'model',
+        owned_by: 'auracall:agent',
+        metadata: {
+          kind: 'agent',
+          service: 'chatgpt',
+          agent: {
+            id: 'researcher',
+            runtimeProfileId: 'default',
+            defaultService: 'chatgpt',
+            service: 'chatgpt',
+            modelSelector: 'chatgpt:pro-extended',
+            projectId: 'proj_123',
+          },
+        },
+      });
+      const selectorEntry = payload.data.find((entry) => entry.id === 'chatgpt:pro-extended');
+      expect(selectorEntry).toMatchObject({
+        metadata: {
+          kind: 'semantic_model_selector',
+          service: 'chatgpt',
+          executionReady: true,
+        },
+      });
     } finally {
       await server.close();
     }
