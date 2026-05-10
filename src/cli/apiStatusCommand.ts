@@ -108,6 +108,7 @@ export interface ApiStatusCompletionMetricsSummary {
   active: number | null;
   queued: number | null;
   running: number | null;
+  idleWaiting: number | null;
   paused: number | null;
   completed: number | null;
   blocked: number | null;
@@ -550,6 +551,7 @@ function summarizeAccountMirrorCompletions(value: unknown): ApiStatusCompletionC
       active: readNumber(metrics.active),
       queued: readNumber(metrics.queued),
       running: readNumber(metrics.running),
+      idleWaiting: readNumber(metrics.idle_waiting),
       paused: readNumber(metrics.paused),
       completed: readNumber(metrics.completed),
       blocked: readNumber(metrics.blocked),
@@ -814,6 +816,7 @@ function formatCompletionControlLine(summary: ApiStatusCompletionControlSummary)
     `active=${formatNullableNumber(metrics.active)}`,
     `queued=${formatNullableNumber(metrics.queued)}`,
     `running=${formatNullableNumber(metrics.running)}`,
+    `idle_waiting=${formatNullableNumber(metrics.idleWaiting)}`,
     `paused=${formatNullableNumber(metrics.paused)}`,
     `failed=${formatNullableNumber(metrics.failed)}`,
     `cancelled=${formatNullableNumber(metrics.cancelled)}`,

@@ -28378,6 +28378,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     returns
     `account_mirror_scheduler_diagnostics_bundle chatgpt/default`
 
+## Turn 186 | 2026-05-10
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make live-follow status and managed browser tab hygiene match actual
+  work.
+- Change:
+  - added `idle_waiting` for live-follow completions sleeping until a polite
+    retry/cadence time
+  - kept `idle_waiting` active/runnable for scheduler and operator controls
+    without counting it as a running refresh
+  - service-managed browser launches now use `blankTabLimit: 0` so the initial
+    launch `about:blank` target is removed after the real service tab opens
+  - API/MCP/CLI completion status schemas now accept `idle_waiting`
+- Validation:
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/browser-service/browserServiceCore.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/browser-service/browserServiceCore.test.ts tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/accountMirror/completionService.ts src/accountMirror/completionStore.ts src/http/responsesServer.ts src/mcp/tools/accountMirrorCompletion.ts src/cli/apiStatusCommand.ts packages/browser-service/src/service/browserService.ts tests/accountMirror/completionService.test.ts tests/browser-service/browserServiceCore.test.ts tests/cli/apiStatusCommand.test.ts docs/mcp.md docs/testing.md`
+
 ## Turn 185 | 2026-05-10
 
 - Continued implementation plan:

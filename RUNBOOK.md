@@ -2872,6 +2872,23 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
   - `pnpm typecheck`
 
+## Turn 112 | 2026-05-10
+
+- Goal: distinguish live-follow waiting from active refresh work and stop
+  retained service-launch blank tabs.
+- Change:
+  - live-follow completions now use `idle_waiting` while sleeping until the
+    next eligible attempt
+  - active/runnable filters still include `idle_waiting`
+  - API, MCP, CLI, and docs expose the new status
+  - BrowserService-managed launches pass `blankTabLimit: 0` to close the
+    initial `about:blank` after a real service target is selected
+- Verification:
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/browser-service/browserServiceCore.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/browser-service/browserServiceCore.test.ts tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/accountMirror/completionService.ts src/accountMirror/completionStore.ts src/http/responsesServer.ts src/mcp/tools/accountMirrorCompletion.ts src/cli/apiStatusCommand.ts packages/browser-service/src/service/browserService.ts tests/accountMirror/completionService.test.ts tests/browser-service/browserServiceCore.test.ts tests/cli/apiStatusCommand.test.ts docs/mcp.md docs/testing.md`
+
 ## Turn 111 | 2026-05-10
 
 - Goal: expose agent/team configuration through API and MCP for agent-managed

@@ -15792,6 +15792,13 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-04: Preview-session manifest handoff should be reversible. Add a
   client-side manifest loader that validates `auracall.preview-session-manifest.v1`
   and rerenders selected items without provider browser work.
+- 2026-05-10: Live-follow completions should not look actively refreshing
+  while they are sleeping through polite cadence. Added `idle_waiting` as an
+  active/runnable completion status for cooldown waits, and updated API/MCP/CLI
+  schemas accordingly.
+- 2026-05-10: Managed service browser launches should not retain the initial
+  launch `about:blank` after opening the real provider surface. BrowserService
+  now launches managed service targets with `blankTabLimit: 0`.
 - 2026-05-10: Agents need to configure AuraCall agents and teams through the
   control plane, not by hand-editing JSON. Added shared writable config service,
   local API `/v1/config/agents` and `/v1/config/teams` routes, and MCP

@@ -89,7 +89,7 @@ export class BrowserService {
         debugPort: launchDebugPort.debugPort,
         debugPortStrategy: launchDebugPort.debugPortStrategy,
         serviceTabLimit: this.resolvedConfig.serviceTabLimit ?? undefined,
-        blankTabLimit: this.resolvedConfig.blankTabLimit ?? undefined,
+        blankTabLimit: 0,
         collapseDisposableWindows: this.resolvedConfig.collapseDisposableWindows,
         detach: true,
       });

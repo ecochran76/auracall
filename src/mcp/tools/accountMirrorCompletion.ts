@@ -20,7 +20,7 @@ const accountMirrorCompletionStatusInputShape = {
 const accountMirrorCompletionListInputShape = {
   provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
   runtimeProfile: z.string().min(1).optional(),
-  status: z.enum(['active', 'queued', 'running', 'paused', 'completed', 'blocked', 'failed', 'cancelled']).optional(),
+  status: z.enum(['active', 'queued', 'running', 'idle_waiting', 'paused', 'completed', 'blocked', 'failed', 'cancelled']).optional(),
   activeOnly: z.boolean().optional(),
   limit: z.number().int().positive().max(500).optional(),
 } satisfies z.ZodRawShape;
@@ -37,7 +37,7 @@ const accountMirrorCompletionOutputShape = {
   runtimeProfileId: z.string(),
   mode: z.enum(['live_follow', 'bounded']),
   phase: z.enum(['backfill_history', 'steady_follow']),
-  status: z.enum(['queued', 'running', 'paused', 'completed', 'blocked', 'failed', 'cancelled']),
+  status: z.enum(['queued', 'running', 'idle_waiting', 'paused', 'completed', 'blocked', 'failed', 'cancelled']),
   startedAt: z.string(),
   completedAt: z.string().nullable(),
   nextAttemptAt: z.string().nullable(),
@@ -59,8 +59,8 @@ const accountMirrorCompletionOutputShape = {
       'operator_resumed',
       'operator_cancelled',
     ]),
-    status: z.enum(['queued', 'running', 'paused', 'completed', 'blocked', 'failed', 'cancelled']),
-    previousStatus: z.enum(['queued', 'running', 'paused', 'completed', 'blocked', 'failed', 'cancelled']).nullable(),
+    status: z.enum(['queued', 'running', 'idle_waiting', 'paused', 'completed', 'blocked', 'failed', 'cancelled']),
+    previousStatus: z.enum(['queued', 'running', 'idle_waiting', 'paused', 'completed', 'blocked', 'failed', 'cancelled']).nullable(),
     processPid: z.number(),
     message: z.string(),
   })).optional(),

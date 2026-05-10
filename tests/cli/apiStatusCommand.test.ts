@@ -408,7 +408,7 @@ describe('api status CLI helpers', () => {
       'Latest lazy mirror yield: chatgpt/default at 2026-04-29T11:55:00.000Z queued=media-generation:chatgpt:image remaining=4',
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
-      'Account mirror completions: active=2 queued=0 running=0 paused=1 failed=0 cancelled=1 total=3',
+      'Account mirror completions: active=2 queued=0 running=0 idle_waiting=unknown paused=1 failed=0 cancelled=1 total=3',
     );
     expect(formatApiStatusCliSummary(summary)).toContain(
       'Scheduler diagnostics: available=2',

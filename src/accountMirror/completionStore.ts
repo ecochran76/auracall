@@ -183,6 +183,7 @@ function readStatus(value: unknown): AccountMirrorCompletionOperation['status'] 
 function isKnownStatus(value: unknown): value is AccountMirrorCompletionOperation['status'] {
   if (
     value === 'running'
+    || value === 'idle_waiting'
     || value === 'paused'
     || value === 'completed'
     || value === 'blocked'
@@ -237,7 +238,7 @@ function normalizeLimit(value: number | null | undefined): number | null {
 }
 
 function isActiveOperation(operation: AccountMirrorCompletionOperation): boolean {
-  return operation.status === 'queued' || operation.status === 'running' || operation.status === 'paused';
+  return operation.status === 'queued' || operation.status === 'running' || operation.status === 'idle_waiting' || operation.status === 'paused';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

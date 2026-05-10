@@ -49,6 +49,7 @@ describe('BrowserService core launch port handling', () => {
         userDataDir: '/tmp/auracall/default/grok',
         debugPort: undefined,
         debugPortStrategy: 'auto',
+        blankTabLimit: 0,
       }),
     );
   });
@@ -84,6 +85,7 @@ describe('BrowserService core launch port handling', () => {
       expect.objectContaining({
         debugPort: 45011,
         debugPortStrategy: 'fixed',
+        blankTabLimit: 0,
       }),
     );
   });

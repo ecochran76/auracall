@@ -324,6 +324,7 @@ interface AccountMirrorCompletionStatusSummary {
     active: number;
     queued: number;
     running: number;
+    idle_waiting: number;
     paused: number;
     completed: number;
     blocked: number;
@@ -2551,7 +2552,7 @@ function createHttpStatusResponse(input: {
       accountMirrorPreviewSessionTemplate: '/v1/account-mirrors/preview-sessions/{preview_session_id}',
       accountMirrorRefresh: '/v1/account-mirrors/refresh',
       accountMirrorCompletionsCreate: '/v1/account-mirrors/completions',
-      accountMirrorCompletionsList: '/v1/account-mirrors/completions[?status=active|queued|running|paused|completed|blocked|failed|cancelled][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&limit=50]',
+      accountMirrorCompletionsList: '/v1/account-mirrors/completions[?status=active|queued|running|idle_waiting|paused|completed|blocked|failed|cancelled][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&limit=50]',
       accountMirrorCompletionsGetTemplate: '/v1/account-mirrors/completions/{completion_id}',
       accountMirrorCompletionsControlTemplate: 'POST /v1/account-mirrors/completions/{completion_id} {"action":"pause|resume|cancel"}',
       accountMirrorSchedulerHistory: '/v1/account-mirrors/scheduler/history[?limit=10]',
@@ -3020,6 +3021,7 @@ function createLiveFollowTargetRollup(
       if (
         account.actualStatus === 'queued' ||
         account.actualStatus === 'running' ||
+        account.actualStatus === 'idle_waiting' ||
         account.actualStatus === 'refreshing' ||
         account.actualStatus === 'paused'
       ) {
@@ -3095,7 +3097,7 @@ function isLiveFollowTargetAttentionNeeded(
   if (entry.liveFollow.state === 'missing_identity' || entry.liveFollow.state === 'unsupported') return true;
   const status = activeOperation?.status ?? (entry.mirrorState.running ? 'refreshing' : entry.status);
   if (status === 'paused' || status === 'blocked' || status === 'failed' || status === 'cancelled') return true;
-  if (status === 'queued' || status === 'running' || status === 'refreshing') return false;
+  if (status === 'queued' || status === 'running' || status === 'idle_waiting' || status === 'refreshing') return false;
   if (entry.status === 'blocked' || entry.reason === 'failure-backoff' || entry.consecutiveFailureCount > 0) return true;
   return recentOperation?.status === 'blocked' || recentOperation?.status === 'failed' || recentOperation?.status === 'cancelled';
 }
@@ -3120,7 +3122,12 @@ function createAccountMirrorCompletionStatusSummary(
     (acc, operation) => {
       acc.total += 1;
       acc[operation.status] += 1;
-      if (operation.status === 'queued' || operation.status === 'running' || operation.status === 'paused') {
+      if (
+        operation.status === 'queued'
+        || operation.status === 'running'
+        || operation.status === 'idle_waiting'
+        || operation.status === 'paused'
+      ) {
         acc.active += 1;
       }
       return acc;
@@ -3130,6 +3137,7 @@ function createAccountMirrorCompletionStatusSummary(
       active: 0,
       queued: 0,
       running: 0,
+      idle_waiting: 0,
       paused: 0,
       completed: 0,
       blocked: 0,
@@ -4010,7 +4018,7 @@ function parseAccountMirrorCompletionListQuery(searchParams: URLSearchParams): P
   const parsed = z.object({
     provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
     runtimeProfile: z.string().trim().min(1).optional(),
-    status: z.enum(['active', 'queued', 'running', 'paused', 'completed', 'blocked', 'failed', 'cancelled']).optional(),
+    status: z.enum(['active', 'queued', 'running', 'idle_waiting', 'paused', 'completed', 'blocked', 'failed', 'cancelled']).optional(),
     activeOnly: z
       .enum(['0', '1', 'true', 'false'])
       .transform((value) => value === '1' || value.toLowerCase() === 'true')

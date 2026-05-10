@@ -1062,3 +1062,12 @@ The same operator action is available without the dashboard through
 `auracall api mirror-provider-guard-clear --provider <provider>
 --runtime-profile <profile>`. The command posts the bounded `/status` control
 payload and prints the target plus cooldown result.
+Live-follow completions now distinguish actual provider work from polite
+waiting. The completion status `idle_waiting` means the unbounded live-follow
+operation is still active/runnable, but no refresh is currently executing; it
+is sleeping until `nextAttemptAt`. API, MCP, CLI, and status summaries accept
+that status so operators do not mistake cadence waits for active browser
+traffic.
+Service-managed browser launches now pass `blankTabLimit: 0` when opening a
+provider target, so the initial Chrome `about:blank` target is cleaned up after
+the real ChatGPT/Gemini/Grok tab is selected.

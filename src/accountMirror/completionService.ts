@@ -52,7 +52,7 @@ export interface AccountMirrorCompletionOperation {
   runtimeProfileId: string;
   mode: 'live_follow' | 'bounded';
   phase: 'backfill_history' | 'steady_follow';
-  status: 'queued' | 'running' | 'paused' | 'completed' | 'blocked' | 'failed' | 'cancelled';
+  status: 'queued' | 'running' | 'idle_waiting' | 'paused' | 'completed' | 'blocked' | 'failed' | 'cancelled';
   startedAt: string;
   completedAt: string | null;
   nextAttemptAt: string | null;
@@ -130,7 +130,10 @@ export function createAccountMirrorCompletionService(input: {
     return next;
   };
 
-  const shouldContinue = (id: string): boolean => operations.get(id)?.status === 'running';
+  const shouldContinue = (id: string): boolean => {
+    const status = operations.get(id)?.status;
+    return status === 'running' || status === 'idle_waiting';
+  };
 
   const launch = (id: string) => {
     if (activeRuns.has(id)) return;
@@ -146,8 +149,9 @@ export function createAccountMirrorCompletionService(input: {
       const operation = operations.get(id);
       if (!operation) return;
       if (operation.nextAttemptAt) {
+        update(id, { status: 'idle_waiting' });
         if (!(await sleepUntilAttempt(id, operation.nextAttemptAt))) return;
-        update(id, { nextAttemptAt: null });
+        update(id, { status: 'running', nextAttemptAt: null });
       }
       let pass = operation.passCount;
       while (operation.maxPasses === null || pass < operation.maxPasses) {
@@ -187,12 +191,13 @@ export function createAccountMirrorCompletionService(input: {
             await input.registry.refreshPersistentState?.();
             const entry = findTargetEntry(input.registry, operation.provider, operation.runtimeProfileId);
             update(id, {
-              status: 'running',
+              status: 'idle_waiting',
               nextAttemptAt: eligibleAt,
               mirrorCompleteness: entry?.mirrorCompleteness ?? operations.get(id)?.mirrorCompleteness ?? null,
               error: null,
             });
             if (!(await sleepUntilAttempt(id, eligibleAt))) return;
+            update(id, { status: 'running', nextAttemptAt: null });
             continue;
           }
           throw error;
@@ -422,11 +427,11 @@ function appendLifecycleEventToList(
 }
 
 function isActiveOperation(operation: AccountMirrorCompletionOperation): boolean {
-  return operation.status === 'queued' || operation.status === 'running' || operation.status === 'paused';
+  return operation.status === 'queued' || operation.status === 'running' || operation.status === 'idle_waiting' || operation.status === 'paused';
 }
 
 function isRunnableOperation(operation: AccountMirrorCompletionOperation): boolean {
-  return operation.status === 'queued' || operation.status === 'running';
+  return operation.status === 'queued' || operation.status === 'running' || operation.status === 'idle_waiting';
 }
 
 function isTerminalOperation(operation: AccountMirrorCompletionOperation): boolean {
@@ -465,6 +470,7 @@ function readCompletionStatus(value: AccountMirrorCompletionListRequest['status'
   if (
     value === 'queued'
     || value === 'running'
+    || value === 'idle_waiting'
     || value === 'paused'
     || value === 'completed'
     || value === 'blocked'

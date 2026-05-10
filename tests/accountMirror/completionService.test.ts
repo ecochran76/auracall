@@ -160,7 +160,7 @@ describe('account mirror completion service', () => {
     await waitFor(() => sleep.mock.calls.length > 0);
 
     expect(service.read('acctmirror_hydrated')).toMatchObject({
-      status: 'running',
+      status: 'idle_waiting',
       phase: 'steady_follow',
       nextAttemptAt: '2026-04-30T12:10:00.000Z',
       passCount: 1,
@@ -341,7 +341,7 @@ describe('account mirror completion service', () => {
     expect(requestRefresh).toHaveBeenCalledTimes(2);
     expect(sleep).toHaveBeenCalledWith(60_000);
     expect(service.read('acctmirror_live_follow')).toMatchObject({
-      status: 'running',
+      status: 'idle_waiting',
       mode: 'live_follow',
       phase: 'steady_follow',
       passCount: 1,
@@ -451,7 +451,7 @@ describe('account mirror completion service', () => {
     expect(requestRefresh).toHaveBeenCalledTimes(3);
     expect(sleep).toHaveBeenNthCalledWith(1, 60_000);
     expect(service.read('acctmirror_live_follow_cadence')).toMatchObject({
-      status: 'running',
+      status: 'idle_waiting',
       mode: 'live_follow',
       passCount: 1,
       lastRefresh: {
@@ -522,7 +522,7 @@ describe('account mirror completion service', () => {
     await waitFor(() => service.read('acctmirror_restart_slice')?.nextAttemptAt === '2026-04-30T12:13:00.000Z');
     expect(requestRefresh.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(service.read('acctmirror_restart_slice')).toMatchObject({
-      status: 'running',
+      status: 'idle_waiting',
       nextAttemptAt: '2026-04-30T12:13:00.000Z',
       passCount: 5,
       phase: 'steady_follow',
