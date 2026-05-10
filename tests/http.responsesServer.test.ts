@@ -15544,7 +15544,7 @@ describe('http responses adapter', () => {
     setAuracallHomeDirOverrideForTest(homeDir);
 
     const server = await createResponsesHttpServer(
-      { host: '127.0.0.1', port: 0 },
+      { host: '127.0.0.1', port: 0, backgroundDrainIntervalMs: 60_000 },
       {
         now: () => new Date('2026-05-10T21:45:00.000Z'),
         generateResponseId: () => 'chatcmpl_resp_1',

@@ -39,8 +39,8 @@ prefer semantic intent and keep exact provider-version pins as escape hatches.
 - Optional local API-key authorization now protects `/v1/*` routes and can
   scope `/v1/responses` calls by agent, team, service, and runtime profile.
 - Non-streaming `/v1/chat/completions` requests now adapt OpenAI-style chat
-  messages into the existing `/v1/responses` runtime path and return a standard
-  `chat.completion` object.
+  messages into the existing `/v1/responses` runtime path, drain one host-owned
+  run synchronously, and return a standard `chat.completion` object.
 
 ## Current State
 
@@ -72,7 +72,9 @@ Implemented:
   `services`, and `runtimeProfiles` allow-lists for `/v1/responses`.
 - `/v1/chat/completions` is implemented for non-streaming calls. It reuses the
   same execution authorization, agent shorthand, response drain, and stored-run
-  readback as `/v1/responses`.
+  readback as `/v1/responses`, but blocks for the one created run before
+  returning so ordinary OpenAI-style clients receive content in the initial
+  response.
 
 Remaining:
 

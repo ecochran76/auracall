@@ -1848,19 +1848,13 @@ export async function createResponsesHttpServer(
           return;
         }
         const createdResponse = await responsesService.createResponse(request);
-        let response = createdResponse;
-        if (backgroundDrainIntervalMs > 0) {
-          accountMirrorFollowUpAfterNextDrain = true;
-          scheduleBackgroundDrain(0);
-        } else {
-          await drainThroughServerHost({
-            runId: createdResponse.id,
-            maxRuns: 1,
-            trigger: 'request-create',
-          });
-          scheduleAccountMirrorSchedulerFollowUp(0, 'response-drain-completed');
-          response = (await responsesService.readResponse(createdResponse.id)) ?? createdResponse;
-        }
+        await drainThroughServerHost({
+          runId: createdResponse.id,
+          maxRuns: 1,
+          trigger: 'request-create',
+        });
+        scheduleAccountMirrorSchedulerFollowUp(0, 'response-drain-completed');
+        const response = (await responsesService.readResponse(createdResponse.id)) ?? createdResponse;
         sendJson(res, 200, createChatCompletionResponse(response, now));
         return;
       }

@@ -1,8 +1,9 @@
 - 2026-05-10: Basic OpenAI-style client apps can now use the same configured
   AuraCall agent path as `/v1/responses`. `POST /v1/chat/completions` accepts
   non-streaming chat messages, maps system content to instructions, reuses the
-  response runtime/authorization path, and rejects `stream: true` explicitly
-  instead of silently pretending streaming exists.
+  response runtime/authorization path, drains synchronously before returning,
+  and rejects `stream: true` explicitly instead of silently pretending streaming
+  exists.
 
 - 2026-05-10: Browser Ops now separates Chrome launch-argument evidence from
   live DevTools target state. `GET /v1/browser/processes` reports

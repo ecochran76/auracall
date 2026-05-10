@@ -222,9 +222,9 @@ Terminology note:
   - `GET /v1/account-mirrors/completions/{completion_id}`
 - `POST /v1/chat/completions` accepts non-streaming OpenAI-style chat requests,
   maps `system` messages to instructions, joins the remaining chat messages
-  into the existing `/v1/responses` runtime path, and returns a standard
-  `chat.completion` object. `stream: true` is rejected explicitly until the
-  streaming adapter is implemented.
+  into the existing `/v1/responses` runtime path, drains one host-owned run
+  before returning, and returns a standard `chat.completion` object. `stream:
+  true` is rejected explicitly until the streaming adapter is implemented.
 - `GET /v1/models` returns the static provider model catalog plus AuraCall
   discovery entries. Configured agents appear as `agent:<agent_id>` model ids
   usable with `/v1/responses` and non-streaming `/v1/chat/completions`;
@@ -879,7 +879,8 @@ Terminology note:
   - optional local API-key auth for `/v1/*`; no auth unless configured
   - no streaming
   - bounded non-streaming `/v1/chat/completions` compatibility routes through
-    the existing `/v1/responses` runtime path
+    the existing `/v1/responses` runtime path and drains synchronously before
+    returning
   - runner self-registration + heartbeat now exist for the local `api serve`
     host, but there is still no broader multi-runner claim/reassignment mode
   - direct-run responses now include bounded execution readback under

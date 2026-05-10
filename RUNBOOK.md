@@ -10,6 +10,8 @@
   - added non-streaming `POST /v1/chat/completions`
   - chat messages map into the existing `/v1/responses` execution path, including
     `model: "agent:<agent_id>"` and scoped API-key checks
+  - chat completions drain the created run synchronously before returning, even
+    when background response drain is enabled
   - `stream: true` returns an explicit unsupported-request error
 - Verification target:
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "chat completions|development-only posture" --maxWorkers 1`

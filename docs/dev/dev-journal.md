@@ -7,6 +7,8 @@
 - Change:
   - added bounded non-streaming `POST /v1/chat/completions`
   - chat requests adapt into the existing `/v1/responses` runtime path
+  - chat completions now drain the created run synchronously even when response
+    background drain is enabled
   - streaming chat completions are rejected explicitly until implemented
   - README and Plan 0064 now document the adapter as implemented
 - Validation:

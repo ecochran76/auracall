@@ -183,8 +183,9 @@ Current State:
     hand-editing the user config file
   - optional scoped API-key policy now protects `/v1/*` routes when configured
   - non-streaming `/v1/chat/completions` now adapts OpenAI-style chat requests
-    into the same configured-agent `/v1/responses` runtime path; streaming
-    remains deferred until basic client dogfooding is proven
+    into the same configured-agent `/v1/responses` runtime path and drains
+    synchronously before returning; streaming remains deferred until basic
+    client dogfooding is proven
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local
