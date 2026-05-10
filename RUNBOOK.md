@@ -1,5 +1,24 @@
 # RUNBOOK
 
+## Turn 117 | 2026-05-10
+
+- Active plan:
+  `docs/dev/plans/0065-2026-05-10-db-backed-agent-registry.md`
+- Goal: define the migration from config-file-backed agents to a user-scoped
+  registry suitable for many operational agents.
+- Result:
+  - added Plan 0065 for a DB-backed agent/team registry under `~/.auracall`
+  - kept `~/.auracall/config.json` as bootstrap/source config for runtime
+    profiles, browser bindings, API settings, and optional pinned/core agents
+  - defined compatibility behavior for existing `/v1/config/agents`,
+    `/v1/config/teams`, MCP config tools, and `/v1/models`
+  - identified the first implementation slice as read-model foundation before
+    changing write behavior
+- Verification target:
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 65`
+  - `git diff --check`
+
 ## Turn 116 | 2026-05-10
 
 - Active plan:

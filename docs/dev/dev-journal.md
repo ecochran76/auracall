@@ -1,3 +1,20 @@
+## Turn 190 | 2026-05-10
+
+- Continued implementation plan:
+  `docs/dev/plans/0065-2026-05-10-db-backed-agent-registry.md`
+- Goal: plan the agent store migration before accumulating more agents in
+  `~/.auracall/config.json`.
+- Change:
+  - added a DB-backed agent registry plan with `Status: OPEN`
+  - defined `config.json` as bootstrap/source config and the registry as the
+    normal mutable store for many agents and teams
+  - scoped the first implementation slice to a read-model foundation before
+    changing API/MCP write behavior
+- Validation:
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 65`
+  - `git diff --check`
+
 ## Turn 189 | 2026-05-10
 
 - Continued implementation plan:

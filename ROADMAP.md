@@ -186,6 +186,16 @@ Current State:
     into the same configured-agent `/v1/responses` runtime path and drains
     synchronously before returning; streaming remains deferred until basic
     client dogfooding is proven
+- DB-backed agent registry migration is now scoped in
+  [docs/dev/plans/0065-2026-05-10-db-backed-agent-registry.md](docs/dev/plans/0065-2026-05-10-db-backed-agent-registry.md):
+  - `~/.auracall/config.json` remains bootstrap/source config for runtime
+    profiles, browser bindings, API service settings, and optional pinned/core
+    agents
+  - a user-scoped registry under `~/.auracall` becomes the normal mutable store
+    for large numbers of agents and teams
+  - current `/v1/config/agents`, `/v1/config/teams`, and MCP config tools stay
+    compatibility surfaces while their backing store migrates toward registry
+    records with source, enabled state, revisions, and export/import support
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local
