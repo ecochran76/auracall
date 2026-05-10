@@ -1,3 +1,8 @@
+- 2026-05-09: Browser Ops `Open Run` needs browser-backed coverage, not only
+  HTML string assertions. Added `smoke:ops-browser-preflight-run-detail`, which
+  uses `agent-browser` against a fixture local API server and confirms the
+  structured preflight detail panel renders after clicking `Open Run`.
+
 - 2026-05-09: Browser Ops should prefer structured preflight run readback
   before asking operators to inspect logs. Preflight history rows now provide
   `Open Run` for `GET /v1/preflight/lazy-live-follow/runs/{run_id}` plus the

@@ -241,6 +241,11 @@
         `/v1/preflight/lazy-live-follow/runs/{run_id}/log`. Browser Ops
         mirrors this order with `Open Run` for structured details and
         `Open Log` for the bounded tail.
+      - browser-backed dashboard run-detail smoke:
+        `pnpm run smoke:ops-browser-preflight-run-detail`; it starts a fixture
+        local API server, opens `/ops/browser` with `agent-browser`, clicks
+        `Open Run`, and asserts the structured detail panel renders the run id,
+        status, step, and log path without provider work.
       - execute one pass only when the server was started with
         `--account-mirror-scheduler-execute`:
         `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"run-once","dryRun":false}}'`

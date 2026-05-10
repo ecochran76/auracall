@@ -1041,3 +1041,6 @@ inspected directly.
 The Browser Ops dashboard now uses that readback path directly: preflight
 history rows provide `Open Run` for structured run/step details and keep
 `Open Log` as the secondary tail view.
+`pnpm run smoke:ops-browser-preflight-run-detail` now covers that frontend path
+with `agent-browser` against a fixture API server, so the button click and
+detail-panel update are validated beyond static HTML checks.

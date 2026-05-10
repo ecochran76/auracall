@@ -1,3 +1,20 @@
+## Turn 176 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: test the Browser Ops `Open Run` path as real frontend behavior.
+- Change:
+  - added `pnpm run smoke:ops-browser-preflight-run-detail`
+  - the smoke starts a fixture local API server, opens `/ops/browser` with
+    `agent-browser`, clicks the preflight `Open Run` button, and asserts the
+    detail panel contains the structured run id, status, step, and log path
+  - documented the smoke in `docs/testing.md`
+- Validation:
+  - `pnpm run smoke:ops-browser-preflight-run-detail`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint scripts/smoke-ops-browser-preflight-run-detail.ts package.json docs/testing.md docs/dev/dev-journal.md docs/dev-fixes-log.md docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 -t "serves a read-only browser operator dashboard|preflight run|status control path"`
+
 ## Turn 175 | 2026-05-09
 
 - Continued implementation plan:
