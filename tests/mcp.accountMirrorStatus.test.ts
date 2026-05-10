@@ -49,6 +49,11 @@ describe('mcp account_mirror_status tool', () => {
             accountLevel: 'Business',
             status: 'eligible',
             reason: 'eligible',
+            providerGuard: {
+              state: 'clear',
+              kind: null,
+              cooldownUntil: null,
+            },
           },
         ],
       },

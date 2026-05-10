@@ -109,8 +109,11 @@ import {
   type AccountMirrorStatusRegistry,
   type AccountMirrorStatusEntry,
   type AccountMirrorStatusSummary,
-  type AccountMirrorStatusState,
 } from '../accountMirror/statusRegistry.js';
+import {
+  clearAccountMirrorProviderGuard,
+  DEFAULT_ACCOUNT_MIRROR_PROVIDER_GUARD_CLEAR_COOLDOWN_MS,
+} from '../accountMirror/providerGuardControl.js';
 import {
   AccountMirrorRefreshError,
   createAccountMirrorRefreshService,
@@ -156,7 +159,6 @@ import {
 } from '../status/liveFollowHealth.js';
 
 export const DEFAULT_BACKGROUND_DRAIN_INTERVAL_MS = 60_000;
-export const DEFAULT_ACCOUNT_MIRROR_PROVIDER_GUARD_CLEAR_COOLDOWN_MS = 30 * 60_000;
 
 export interface ResponsesHttpServerOptions {
   host?: string;
@@ -1475,46 +1477,20 @@ export async function createResponsesHttpServer(
             };
           }
         } else if ('accountMirrorProviderGuard' in payload) {
-          const nowMs = now().getTime();
-          const cooldownMs = payload.accountMirrorProviderGuard.cooldownMs ??
-            DEFAULT_ACCOUNT_MIRROR_PROVIDER_GUARD_CLEAR_COOLDOWN_MS;
-          const cooldownUntilMs = cooldownMs > 0 ? nowMs + cooldownMs : null;
-          const prior = accountMirrorStatusRegistry.readStatus({
+          const guardClear = clearAccountMirrorProviderGuard({
+            registry: accountMirrorStatusRegistry,
             provider: payload.accountMirrorProviderGuard.provider,
             runtimeProfileId: payload.accountMirrorProviderGuard.runtimeProfile,
-          }).entries[0]?.providerGuard;
-          const priorDetectedAtMs = prior?.detectedAt ? Date.parse(prior.detectedAt) : NaN;
-          const providerGuard: AccountMirrorStatusState['providerGuard'] = cooldownUntilMs
-            ? {
-                state: 'cooldown',
-                kind: prior?.kind ?? 'unknown',
-                summary: 'Operator cleared provider guard; quiet cooldown before automation resumes.',
-                detectedAtMs: Number.isFinite(priorDetectedAtMs) ? priorDetectedAtMs : nowMs,
-                clearedAtMs: nowMs,
-                cooldownUntilMs,
-                url: prior?.url ?? null,
-                action: 'operator-clear',
-              }
-            : null;
-          accountMirrorStatusRegistry.mergeState(
-            {
-              provider: payload.accountMirrorProviderGuard.provider,
-              runtimeProfileId: payload.accountMirrorProviderGuard.runtimeProfile,
-            },
-            {
-              providerGuard,
-              providerHardStopAtMs: null,
-              providerCooldownUntilMs: cooldownUntilMs,
-              queued: false,
-              running: false,
-            },
-          );
+            cooldownMs: payload.accountMirrorProviderGuard.cooldownMs ??
+              DEFAULT_ACCOUNT_MIRROR_PROVIDER_GUARD_CLEAR_COOLDOWN_MS,
+            now,
+          });
           controlResult = {
-            kind: 'account-mirror-provider-guard',
-            action: 'clear',
-            provider: payload.accountMirrorProviderGuard.provider,
-            runtimeProfileId: payload.accountMirrorProviderGuard.runtimeProfile,
-            cooldownUntil: cooldownUntilMs ? new Date(cooldownUntilMs).toISOString() : null,
+            kind: guardClear.kind,
+            action: guardClear.action,
+            provider: guardClear.provider,
+            runtimeProfileId: guardClear.runtimeProfileId,
+            cooldownUntil: guardClear.cooldownUntil,
           };
         } else if ('accountMirrorCompletion' in payload) {
           const { id, action } = payload.accountMirrorCompletion;

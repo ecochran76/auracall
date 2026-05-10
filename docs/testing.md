@@ -174,10 +174,13 @@
       - CLI parity is available with
         `auracall api mirror-complete --port 8080` and
         `auracall api mirror-completion-status <id> --port 8080`
+      - provider guard clearance is available with
+        `auracall api mirror-provider-guard-clear --port 8080 --provider gemini --runtime-profile default`
+        and MCP `account_mirror_provider_guard_clear`
       - omitted `--max-passes` means unbounded live follow; `--max-passes`
         is only a debug/test cap
       - `accountMirrorScheduler.lastPass.selectedTarget.mirrorCompleteness`
-      - `accountMirrorScheduler.lastPass.backpressure.reason = none|routine-delayed|blocked-by-browser-work|yielded-to-queued-work`
+      - `accountMirrorScheduler.lastPass.backpressure.reason = none|routine-delayed|blocked-by-browser-work|yielded-to-queued-work|provider-guard`
       - `accountMirrorScheduler.lastPass.metrics.inProgressEligibleTargets`
       - `accountMirrorScheduler.lastPass.metrics.delayedTargets`
       - `accountMirrorScheduler.lastPass.metrics.blockedTargets`

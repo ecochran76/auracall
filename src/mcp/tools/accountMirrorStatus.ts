@@ -28,6 +28,17 @@ const mirrorCompletenessShape = z.object({
   }),
 });
 
+const accountMirrorProviderGuardShape = z.object({
+  state: z.enum(['clear', 'manual_clear_required', 'cooldown']),
+  kind: z.enum(['google-sorry', 'captcha', 'cloudflare', 'human-verification', 'unknown']).nullable(),
+  summary: z.string().nullable(),
+  detectedAt: z.string().nullable(),
+  clearedAt: z.string().nullable(),
+  cooldownUntil: z.string().nullable(),
+  url: z.string().nullable(),
+  action: z.string().nullable(),
+});
+
 const accountMirrorStatusEntryShape = z.object({
   provider: z.enum(['chatgpt', 'gemini', 'grok']),
   runtimeProfileId: z.string(),
@@ -54,6 +65,7 @@ const accountMirrorStatusEntryShape = z.object({
     lastDispatcherOperationId: z.string().nullable(),
     lastDispatcherBlockedBy: z.record(z.string(), z.unknown()).nullable(),
   }),
+  providerGuard: accountMirrorProviderGuardShape,
   metadataCounts: z.object({
     projects: z.number(),
     conversations: z.number(),

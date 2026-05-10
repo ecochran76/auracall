@@ -69,6 +69,17 @@ const apiStatusSchedulerDiagnosticsHintShape = z.object({
   command: z.string(),
 });
 
+const apiStatusProviderGuardShape = z.object({
+  state: z.enum(['clear', 'manual_clear_required', 'cooldown']),
+  kind: z.string().nullable(),
+  summary: z.string().nullable(),
+  detectedAt: z.string().nullable(),
+  clearedAt: z.string().nullable(),
+  cooldownUntil: z.string().nullable(),
+  url: z.string().nullable(),
+  action: z.string().nullable(),
+}).nullable();
+
 const apiStatusLiveFollowTargetAccountShape = z.object({
   provider: z.string(),
   runtimeProfileId: z.string(),
@@ -82,6 +93,7 @@ const apiStatusLiveFollowTargetAccountShape = z.object({
   activeCompletionNextAttemptAt: z.string().nullable().optional(),
   nextAttemptAt: z.string().nullable(),
   mirrorCompleteness: z.string().nullable(),
+  providerGuard: apiStatusProviderGuardShape.optional(),
   latestLifecycleEvent: z.object({
     at: z.string().nullable(),
     type: z.string().nullable(),
