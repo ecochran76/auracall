@@ -1,3 +1,23 @@
+## Turn 191 | 2026-05-10
+
+- Continued implementation plan:
+  `docs/dev/plans/0065-2026-05-10-db-backed-agent-registry.md`
+- Goal: build the first registry foundation without changing the live
+  `/v1/config/agents` write path yet.
+- Change:
+  - added a user-scoped agent/team registry store with SQLite schema init,
+    enablement flags, revision metadata, and JSON fallback
+  - added an effective catalog merger for config plus registry agents/teams
+  - duplicate ids are deterministic and currently resolve `config-wins` with a
+    conflict record
+- Validation:
+  - `pnpm vitest run tests/config/agentRegistryStore.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/config/agentRegistryStore.ts src/config/agentRegistryCatalog.ts tests/config/agentRegistryStore.test.ts --max-diagnostics 40`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 65`
+  - `git diff --check`
+
 ## Turn 190 | 2026-05-10
 
 - Continued implementation plan:

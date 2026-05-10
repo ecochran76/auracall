@@ -1,5 +1,23 @@
 # RUNBOOK
 
+## Turn 118 | 2026-05-10
+
+- Active plan:
+  `docs/dev/plans/0065-2026-05-10-db-backed-agent-registry.md`
+- Goal: implement the DB-backed agent registry read-model foundation without
+  changing API/MCP write behavior.
+- Result:
+  - added `src/config/agentRegistryStore.ts` with SQLite schema initialization,
+    agent/team persistence, enablement flags, revisions, and JSON fallback
+  - added `src/config/agentRegistryCatalog.ts` to merge config and registry
+    agents/teams with source metadata and config-wins conflict reporting
+  - added focused tests for registry persistence, disabled-record filtering, and
+    effective catalog merging
+- Verification target:
+  - `pnpm vitest run tests/config/agentRegistryStore.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/config/agentRegistryStore.ts src/config/agentRegistryCatalog.ts tests/config/agentRegistryStore.test.ts`
+
 ## Turn 117 | 2026-05-10
 
 - Active plan:

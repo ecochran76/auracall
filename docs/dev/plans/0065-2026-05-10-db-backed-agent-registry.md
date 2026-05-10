@@ -25,6 +25,13 @@ Implemented:
   payload shape.
 - `createAgentTeamConfigService(...)` backs API/MCP config entity CRUD by
   reading and rewriting the user config file.
+- `createAgentRegistryStore(...)` initializes a user-scoped registry store at
+  `~/.auracall/registry/agents.sqlite`, persists agent/team records with
+  enablement and revision metadata, and has a JSON fallback for test/runtime
+  environments where `node:sqlite` is unavailable.
+- `createEffectiveAgentCatalog(...)` merges config-defined and registry-defined
+  agents/teams into one deterministic read projection with source metadata,
+  disabled-record filtering, and config-wins duplicate conflict reporting.
 - `projectConfigModel(...)` projects config-defined agents and teams for
   `/v1/models`, `/v1/config/agents`, `/v1/config/teams`, CLI config inspection,
   and runtime selection.
@@ -116,12 +123,14 @@ Add explicit registry routes only after compatibility is working:
 ## Migration Plan
 
 1. Read-model foundation
-   - add a registry store module with SQLite schema init and JSON fallback only
-     if `node:sqlite` is unavailable during tests
-   - add projection merger: config agents + registry agents -> effective agent
-     catalog
-   - add tests for empty registry, config-only compatibility, registry-only
-     entries, duplicate ids, disabled records, and source metadata
+   - [x] add a registry store module with SQLite schema init and JSON fallback
+     only if `node:sqlite` is unavailable during tests
+   - [x] add projection merger: config agents + registry agents -> effective
+     agent catalog
+   - [x] add tests for registry entries, duplicate ids, disabled records, and
+     source metadata
+   - [ ] wire merged read projection into `/v1/config/agents` and `/v1/models`
+     after the read model stays stable
 
 2. API/MCP write-path migration
    - change `createAgentTeamConfigService(...)` or replace it with
@@ -170,9 +179,9 @@ Add explicit registry routes only after compatibility is working:
 
 Build the read-model foundation:
 
-- create the registry store module and schema init
-- add effective catalog merge helpers
+- create the registry store module and schema init - complete
+- add effective catalog merge helpers - complete
 - keep current config write behavior untouched until the merged read model is
-  tested
+  tested - complete
 - update `/v1/config/agents` listing and `/v1/models` only after the merge
   helpers are stable
