@@ -15792,6 +15792,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-05-04: Preview-session manifest handoff should be reversible. Add a
   client-side manifest loader that validates `auracall.preview-session-manifest.v1`
   and rerenders selected items without provider browser work.
+- 2026-05-10: Agents need to configure AuraCall agents and teams through the
+  control plane, not by hand-editing JSON. Added shared writable config service,
+  local API `/v1/config/agents` and `/v1/config/teams` routes, and MCP
+  config-entity tools.
 - 2026-05-04: Preview-session handoffs should not depend on loose local files.
   Add account-mirror cache persistence for named preview-session records plus
   local API create/list/read routes and dashboard save/load controls.

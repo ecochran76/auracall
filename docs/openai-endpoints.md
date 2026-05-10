@@ -38,6 +38,12 @@ Current endpoints:
 - `GET /v1/team-runs/inspect`
 - `GET /v1/runtime-runs/inspect`
 - `GET /v1/models`
+- `GET /v1/config/agents`
+- `PUT /v1/config/agents/{agent_id}`
+- `DELETE /v1/config/agents/{agent_id}`
+- `GET /v1/config/teams`
+- `PUT /v1/config/teams/{team_id}`
+- `DELETE /v1/config/teams/{team_id}`
 - `POST /v1/responses`
 - `GET /v1/responses/{response_id}`
 
@@ -71,6 +77,15 @@ Current limits:
     behavior
   - sectioned public task-run-spec envelopes, background worker pools, and
     parallel team execution are intentionally deferred
+- `/v1/config/agents` and `/v1/config/teams` expose trusted local config
+  management for agents and teams:
+  - `GET` lists projected configured entries
+  - `PUT /v1/config/agents/{agent_id}` accepts one raw agent config object
+  - `PUT /v1/config/teams/{team_id}` accepts one raw team config object
+  - `DELETE` removes the selected entry
+  - writes update the user config file and the running server's in-memory
+    config when `api serve` has a resolved config object
+  - this is a local control-plane surface until API-key policy lands
 - startup recovery can re-run bounded stale persisted direct runs before readback; keep
   this enabled by default, or disable with `--no-recover-runs-on-start`.
   - control source scope with `--recover-runs-on-start-source <direct|team-run|all>`
@@ -325,6 +340,9 @@ Current limits:
   - ChatGPT browser-backed execution currently resolves those ChatGPT selectors
     into the model picker plus Standard/Extended thinking controls; Grok and
     Gemini semantic execution remain follow-up work
+- MCP exposes the same trusted local agent/team config surface through
+  `config_entities_list`, `config_agent_upsert`, `config_agent_delete`,
+  `config_team_upsert`, and `config_team_delete`
 - no auth
 - no streaming/SSE
 - no `POST /v1/chat/completions` adapter yet

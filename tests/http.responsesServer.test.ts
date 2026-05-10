@@ -15477,6 +15477,93 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('configures AuraCall agents and teams through the local API', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-config-entities-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const userConfigPath = path.join(homeDir, 'config.json');
+    const activeConfig: Record<string, unknown> = {
+      browserProfiles: { default: {} },
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+      },
+    };
+    await fs.writeFile(userConfigPath, JSON.stringify(activeConfig), 'utf8');
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      { config: activeConfig },
+    );
+
+    try {
+      const agentResponse = await fetch(`http://127.0.0.1:${server.port}/v1/config/agents/researcher`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          runtimeProfile: 'default',
+          service: 'chatgpt',
+          modelSelector: 'chatgpt:pro-extended',
+          projectId: 'proj_123',
+        }),
+      });
+      expect(agentResponse.status).toBe(200);
+      const agentPayload = (await agentResponse.json()) as JsonObject;
+      expect(agentPayload).toMatchObject({
+        object: 'auracall_config_entity',
+        kind: 'agent',
+        action: 'upsert',
+        id: 'researcher',
+        agents: [
+          expect.objectContaining({
+            id: 'researcher',
+            modelSelector: 'chatgpt:pro-extended',
+            projectId: 'proj_123',
+          }),
+        ],
+      });
+
+      const teamResponse = await fetch(`http://127.0.0.1:${server.port}/v1/config/teams/ops`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          agents: ['researcher'],
+          instructions: 'Coordinate one configured agent.',
+        }),
+      });
+      expect(teamResponse.status).toBe(200);
+      const teamPayload = (await teamResponse.json()) as JsonObject;
+      expect(teamPayload).toMatchObject({
+        object: 'auracall_config_entity',
+        kind: 'team',
+        action: 'upsert',
+        id: 'ops',
+        teams: [
+          expect.objectContaining({
+            id: 'ops',
+            agentIds: ['researcher'],
+          }),
+        ],
+      });
+
+      const saved = JSON.parse(await fs.readFile(userConfigPath, 'utf8')) as Record<string, unknown>;
+      expect(saved).toMatchObject({
+        agents: {
+          researcher: {
+            modelSelector: 'chatgpt:pro-extended',
+            projectId: 'proj_123',
+          },
+        },
+        teams: {
+          ops: {
+            agents: ['researcher'],
+          },
+        },
+      });
+      expect(activeConfig).toMatchObject(saved);
+    } finally {
+      await server.close();
+    }
+  });
+
   it('reports development-only posture through the status endpoint', async () => {
     const server = await createResponsesHttpServer(
       {

@@ -30,6 +30,8 @@ prefer semantic intent and keep exact provider-version pins as escape hatches.
   configured execution.
 - Config projection reports only configured agent fields, avoiding null/false
   noise.
+- Agents and teams can be created, updated, listed, and deleted through the
+  local API and MCP config tools.
 
 ## Current State
 
@@ -46,6 +48,11 @@ Implemented:
   - `chatgpt:thinking-extended` -> `Thinking` + `extended`
   - `chatgpt:pro-standard` -> `Pro` + `standard`
   - `chatgpt:pro-extended` -> `Pro` + `extended`
+- local config writes are available at:
+  - `GET|PUT|DELETE /v1/config/agents`
+  - `GET|PUT|DELETE /v1/config/teams`
+  - MCP tools `config_entities_list`, `config_agent_upsert`,
+    `config_agent_delete`, `config_team_upsert`, and `config_team_delete`
 
 Remaining:
 
@@ -63,6 +70,8 @@ Remaining:
 - Provider-specific adapters resolve semantic selectors against current
   workbench UI modes before AuraCall treats them as execution-ready defaults.
   ChatGPT is the first implemented provider for this criterion.
+- Agents and teams can be maintained by other local agents through the API/MCP
+  control plane without hand-editing config files.
 
 ## Next Work
 

@@ -18,6 +18,7 @@ import { registerApiStatusTool } from './tools/apiStatus.js';
 import { registerApiOpsBrowserStatusTool } from './tools/apiOpsBrowserStatus.js';
 import { registerRuntimeInspectTool } from './tools/runtimeInspect.js';
 import { registerRuntimeRunsRecentTool } from './tools/runtimeRunsRecent.js';
+import { registerConfigEntityTools } from './tools/configEntities.js';
 import { registerAccountMirrorStatusTool } from './tools/accountMirrorStatus.js';
 import { registerAccountMirrorRefreshTool } from './tools/accountMirrorRefresh.js';
 import { registerAccountMirrorCatalogTool } from './tools/accountMirrorCatalog.js';
@@ -41,8 +42,10 @@ import { createAccountMirrorPersistence } from '../accountMirror/cachePersistenc
 import { createAccountMirrorCatalogService } from '../accountMirror/catalogService.js';
 import { createAccountMirrorCompletionService } from '../accountMirror/completionService.js';
 import { createAccountMirrorCompletionStore } from '../accountMirror/completionStore.js';
+import { createAgentTeamConfigService } from '../config/agentConfigService.js';
 
 export interface McpServiceBundle {
+  resolvedUserConfig: ResolvedUserConfig;
   responsesService: ReturnType<typeof createExecutionResponsesService>;
   mediaGenerationService: ReturnType<typeof createMediaGenerationService>;
   workbenchCapabilityReporter: ReturnType<typeof createWorkbenchCapabilityService>;
@@ -90,6 +93,11 @@ export async function startMcpServer(): Promise<void> {
   registerApiOpsBrowserStatusTool(server);
   registerRuntimeRunsRecentTool(server);
   registerRuntimeInspectTool(server);
+  registerConfigEntityTools(server, {
+    service: createAgentTeamConfigService({
+      activeConfig: services.resolvedUserConfig as Record<string, unknown>,
+    }),
+  });
   registerMediaGenerationTool(server, {
     service: services.mediaGenerationService,
   });
@@ -203,6 +211,7 @@ export async function createMcpServicesFromConfig(
     resumeActiveOperations: true,
   });
   return {
+    resolvedUserConfig,
     responsesService,
     mediaGenerationService,
     workbenchCapabilityReporter,

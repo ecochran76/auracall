@@ -2872,6 +2872,26 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
   - `pnpm typecheck`
 
+## Turn 111 | 2026-05-10
+
+- Goal: expose agent/team configuration through API and MCP for agent-managed
+  control-plane setup.
+- Change:
+  - added a writable agent/team config service backed by the user config file
+  - added local API routes under `/v1/config/agents` and `/v1/config/teams`
+  - added MCP tools for config list/upsert/delete operations
+  - updated plan, roadmap, and endpoint docs
+- Verification:
+  - `pnpm vitest run tests/config/agentConfigService.test.ts tests/mcp.configEntities.test.ts tests/http.responsesServer.test.ts -t "configures AuraCall agents" --maxWorkers 1`
+  - `pnpm vitest run tests/config/agentConfigService.test.ts tests/mcp.configEntities.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/config/agentConfigService.ts src/http/responsesServer.ts src/mcp/server.ts src/mcp/tools/configEntities.ts tests/config/agentConfigService.test.ts tests/mcp.configEntities.test.ts tests/http.responsesServer.test.ts --max-diagnostics 40`
+    reported only existing `tests/http.responsesServer.test.ts` non-null
+    assertion warning debt
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 64`
+  - `git diff --check`
+
 ## Turn 106 | 2026-05-03
 
 - Goal: make pasted live-follow completion ids inspectable from the manual

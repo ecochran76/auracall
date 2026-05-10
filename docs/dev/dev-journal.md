@@ -28378,6 +28378,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     returns
     `account_mirror_scheduler_diagnostics_bundle chatgpt/default`
 
+## Turn 185 | 2026-05-10
+
+- Continued implementation plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: let agents configure AuraCall agents and teams through API/MCP.
+- Change:
+  - added a shared writable agent/team config service
+  - added local API routes for listing, upserting, and deleting configured
+    agents and teams
+  - added MCP config tools for the same operations
+  - documented the control-plane surface and its API-key-policy gap
+- Validation:
+  - `pnpm vitest run tests/config/agentConfigService.test.ts tests/mcp.configEntities.test.ts tests/http.responsesServer.test.ts -t "configures AuraCall agents" --maxWorkers 1`
+  - `pnpm vitest run tests/config/agentConfigService.test.ts tests/mcp.configEntities.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/config/agentConfigService.ts src/http/responsesServer.ts src/mcp/server.ts src/mcp/tools/configEntities.ts tests/config/agentConfigService.test.ts tests/mcp.configEntities.test.ts tests/http.responsesServer.test.ts --max-diagnostics 40`
+    reported only existing `tests/http.responsesServer.test.ts` non-null
+    assertion warning debt
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 64`
+  - `git diff --check`
+
 ## Turn 138 | 2026-05-06
 
 - Continued implementation plan:

@@ -175,6 +175,9 @@ Current State:
   - ChatGPT semantic selectors now execute through current browser model and
     thinking controls; Grok/Gemini semantic execution remains the next provider
     follow-through
+  - local API and MCP tools can now configure agents and teams without
+    hand-editing the user config file; API-key policy remains the next safety
+    gate before broad client use
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local

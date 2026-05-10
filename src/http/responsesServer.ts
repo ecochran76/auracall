@@ -20,6 +20,11 @@ import type { ResolvedUserConfig } from '../config.js';
 import { resolveConfig } from '../schema/resolver.js';
 import { resolveHostLocalActionExecutionPolicy } from '../config/model.js';
 import {
+  agentConfigUpsertInputSchema,
+  createAgentTeamConfigService,
+  teamConfigUpsertInputSchema,
+} from '../config/agentConfigService.js';
+import {
   inspectTeamRunLinkage,
   TeamRunInspectionError,
   type TeamRunInspectionPayload,
@@ -572,6 +577,9 @@ export async function createResponsesHttpServer(
   const accountMirrorSchedulerIntervalMs = Math.max(0, options.accountMirrorSchedulerIntervalMs ?? 0);
   const accountMirrorSchedulerDryRun = options.accountMirrorSchedulerDryRun ?? true;
   const configuredRuntimeConfig = deps.config;
+  const agentTeamConfigService = createAgentTeamConfigService({
+    activeConfig: configuredRuntimeConfig ?? null,
+  });
   const resolvedUserConfig = asResolvedUserConfig(configuredRuntimeConfig);
   const accountMirrorPersistence = createAccountMirrorPersistence({
     config: configuredRuntimeConfig,
@@ -1559,6 +1567,46 @@ export async function createResponsesHttpServer(
 
       if (req.method === 'GET' && url.pathname === '/v1/models') {
         sendJson(res, 200, createHttpModelListResponse());
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/config/agents') {
+        sendJson(res, 200, await agentTeamConfigService.list('agent'));
+        return;
+      }
+
+      const configAgentId = matchConfigEntityRoute(url.pathname, 'agents');
+      if (configAgentId && req.method === 'PUT') {
+        const body = await readRequestBody(req);
+        const payload = agentConfigUpsertInputSchema.parse({
+          id: configAgentId,
+          config: JSON.parse(body || '{}'),
+        });
+        sendJson(res, 200, await agentTeamConfigService.upsertAgent(payload));
+        return;
+      }
+      if (configAgentId && req.method === 'DELETE') {
+        sendJson(res, 200, await agentTeamConfigService.deleteAgent(configAgentId));
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/config/teams') {
+        sendJson(res, 200, await agentTeamConfigService.list('team'));
+        return;
+      }
+
+      const configTeamId = matchConfigEntityRoute(url.pathname, 'teams');
+      if (configTeamId && req.method === 'PUT') {
+        const body = await readRequestBody(req);
+        const payload = teamConfigUpsertInputSchema.parse({
+          id: configTeamId,
+          config: JSON.parse(body || '{}'),
+        });
+        sendJson(res, 200, await agentTeamConfigService.upsertTeam(payload));
+        return;
+      }
+      if (configTeamId && req.method === 'DELETE') {
+        sendJson(res, 200, await agentTeamConfigService.deleteTeam(configTeamId));
         return;
       }
 
@@ -4260,6 +4308,11 @@ function isLoopbackHost(host: string): boolean {
 function matchResponseRoute(pathname: string): string | null {
   const match = /^\/v1\/responses\/([^/]+)$/.exec(pathname);
   return match?.[1] ?? null;
+}
+
+function matchConfigEntityRoute(pathname: string, kind: 'agents' | 'teams'): string | null {
+  const match = new RegExp(`^/v1/config/${kind}/([^/]+)$`).exec(pathname);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
 function matchMediaGenerationRoute(pathname: string): string | null {
