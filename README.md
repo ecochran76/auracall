@@ -232,7 +232,8 @@ Terminology note:
   `chatgpt:pro-extended` include `metadata.kind="semantic_model_selector"` and
   `metadata.executionReady` so clients can distinguish execution-ready selectors
   from planned Gemini/Grok selectors.
-- Optional local API-key authorization can be enabled in config:
+- Optional local API-key authorization can be enabled in config or through the
+  user-scoped service dotenv file:
   ```json
   {
     "api": {
@@ -252,6 +253,16 @@ Terminology note:
     }
   }
   ```
+  The installed user service also reads `~/.auracall/api.env` through systemd
+  `EnvironmentFile`. `pnpm run install:user-api-service` creates that file with
+  `AURACALL_API_KEY`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`, and
+  `AURACALL_MODEL` when it does not already exist, so OpenAI-compatible clients
+  can point at the same file without copying secrets into the repo. The service
+  accepts `AURACALL_API_KEY` plus optional `AURACALL_API_KEY_AGENTS`,
+  `AURACALL_API_KEY_TEAMS`, `AURACALL_API_KEY_SERVICES`, and
+  `AURACALL_API_KEY_RUNTIME_PROFILES` comma/space-delimited scopes; additional
+  keys can be declared with `AURACALL_API_KEY_IDS` and matching
+  `AURACALL_API_KEY_<ID>` variables.
   When enabled, `/v1/*` routes require `Authorization: Bearer <secret>` or
   `X-AuraCall-API-Key: <secret>`. `/status` remains unauthenticated so local
   operators can discover the service posture. Scoped keys are enforced on

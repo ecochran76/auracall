@@ -1,3 +1,24 @@
+## Turn 189 | 2026-05-10
+
+- Continued implementation plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: make local API keys consumable by other agents without committing
+  secrets to the repo.
+- Change:
+  - installed `auracall-api.service` now loads `~/.auracall/api.env`
+  - the service installer creates that dotenv file with a random local bearer
+    key and OpenAI-compatible client defaults when it is missing
+  - HTTP auth merges `AURACALL_API_KEY` environment keys with config-defined
+    keys and preserves optional agent/team/service/runtime-profile scopes
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "API key|service environment" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts scripts/install-user-api-service.ts tests/http.responsesServer.test.ts`
+    reported only existing test non-null assertion warning debt
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 64`
+  - `git diff --check`
+
 ## Turn 188 | 2026-05-10
 
 - Continued implementation plan:

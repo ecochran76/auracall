@@ -85,7 +85,16 @@ Current limits:
   - `DELETE` removes the selected entry
   - writes update the user config file and the running server's in-memory
     config when `api serve` has a resolved config object
-  - this is a local control-plane surface until API-key policy lands
+  - protect this local control-plane surface with API-key auth before exposing
+    it to any non-loopback client
+- API-key authorization can be configured in `~/.auracall/config.json` or
+  through the installed service dotenv file at `~/.auracall/api.env`. The
+  service recognizes `AURACALL_API_KEY` as a bearer key and optional
+  comma/space-delimited scopes in `AURACALL_API_KEY_AGENTS`,
+  `AURACALL_API_KEY_TEAMS`, `AURACALL_API_KEY_SERVICES`, and
+  `AURACALL_API_KEY_RUNTIME_PROFILES`. `pnpm run install:user-api-service`
+  creates the dotenv file with `OPENAI_BASE_URL`, `OPENAI_API_KEY`, and
+  `AURACALL_MODEL` defaults for client agents when the file does not exist.
 - startup recovery can re-run bounded stale persisted direct runs before readback; keep
   this enabled by default, or disable with `--no-recover-runs-on-start`.
   - control source scope with `--recover-runs-on-start-source <direct|team-run|all>`

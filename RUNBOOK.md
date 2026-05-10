@@ -1,5 +1,23 @@
 # RUNBOOK
 
+## Turn 116 | 2026-05-10
+
+- Active plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: store local API credentials in user-scoped runtime state other agents
+  can load.
+- Result:
+  - installed `auracall-api.service` loads `~/.auracall/api.env`
+  - `pnpm run install:user-api-service` creates the dotenv file with a random
+    bearer key, `OPENAI_BASE_URL`, `OPENAI_API_KEY`, and `AURACALL_MODEL` if it
+    is missing
+  - HTTP auth accepts `AURACALL_API_KEY` environment keys in addition to
+    config-defined `api.auth.keys[]`
+- Verification target:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "API key|service environment" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run install:user-runtime-service`
+
 ## Turn 115 | 2026-05-10
 
 - Active plan:

@@ -38,6 +38,8 @@ prefer semantic intent and keep exact provider-version pins as escape hatches.
   - semantic provider selectors with execution-readiness metadata
 - Optional local API-key authorization now protects `/v1/*` routes and can
   scope `/v1/responses` calls by agent, team, service, and runtime profile.
+  Keys can live in config or in the user-scoped service dotenv file at
+  `~/.auracall/api.env`.
 - Non-streaming `/v1/chat/completions` requests now adapt OpenAI-style chat
   messages into the existing `/v1/responses` runtime path, drain one host-owned
   run synchronously, and return a standard `chat.completion` object.
@@ -70,6 +72,9 @@ Implemented:
   authorization for `/v1/*`. `/status` remains open for operator discovery and
   reports the active auth posture. Keys may carry `agents`, `teams`,
   `services`, and `runtimeProfiles` allow-lists for `/v1/responses`.
+- `~/.auracall/api.env` is loaded by the installed user service and can define
+  `AURACALL_API_KEY`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`, and `AURACALL_MODEL`
+  for local client agents without storing secrets in the repo.
 - `/v1/chat/completions` is implemented for non-streaming calls. It reuses the
   same execution authorization, agent shorthand, response drain, and stored-run
   readback as `/v1/responses`, but blocks for the one created run before
@@ -101,6 +106,8 @@ Remaining:
 - Client apps can be required to present an API key, and scoped keys cannot
   create `/v1/responses` runs outside their configured agent/team/service/runtime
   allow-lists.
+- Client apps can load the user-scoped dotenv file and call AuraCall with
+  normal OpenAI-compatible `base_url`, `api_key`, and `model` settings.
 
 ## Next Work
 

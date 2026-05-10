@@ -98,6 +98,31 @@ operator surface. Logs append to:
 ~/.auracall/logs/api-18095.log
 ```
 
+The installer also creates a user-scoped dotenv file when it is missing:
+
+```bash
+~/.auracall/api.env
+```
+
+The systemd unit loads that file with `EnvironmentFile=-%h/.auracall/api.env`.
+The generated file is `0600` and contains a random local API key plus
+OpenAI-compatible client defaults:
+
+```bash
+AURACALL_API_AUTH_REQUIRED=1
+AURACALL_API_KEY_ID=local-agent
+AURACALL_API_KEY=...
+AURACALL_BASE_URL=http://127.0.0.1:18095/v1
+AURACALL_MODEL=agent:instant-chatgpt-ecochran76
+OPENAI_BASE_URL=http://127.0.0.1:18095/v1
+OPENAI_API_KEY=...
+```
+
+Other local agents can load this file directly and call the AuraCall API with
+the standard OpenAI client knobs. Keep the file outside the repo; rotate it by
+editing or deleting `~/.auracall/api.env` and reinstalling/restarting the user
+API service.
+
 Verify:
 
 ```bash
@@ -110,5 +135,6 @@ Useful options:
 ```bash
 pnpm run install:user-api-service -- --dry-run
 pnpm run install:user-api-service -- --no-start
+pnpm run install:user-api-service -- --env ~/.auracall/api.env
 pnpm run install:user-api-service -- --log ~/.auracall/logs/api-18095.log
 ```

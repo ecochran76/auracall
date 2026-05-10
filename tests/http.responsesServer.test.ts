@@ -15698,6 +15698,47 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('loads local API keys from the user-scoped service environment', async () => {
+    const savedEnv = {
+      AURACALL_API_AUTH_REQUIRED: process.env.AURACALL_API_AUTH_REQUIRED,
+      AURACALL_API_KEY: process.env.AURACALL_API_KEY,
+      AURACALL_API_KEY_ID: process.env.AURACALL_API_KEY_ID,
+    };
+    process.env.AURACALL_API_AUTH_REQUIRED = '1';
+    process.env.AURACALL_API_KEY = 'env-secret-key';
+    process.env.AURACALL_API_KEY_ID = 'env-client';
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const statusResponse = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(statusResponse.status).toBe(200);
+      const statusPayload = (await statusResponse.json()) as JsonObject;
+      expect(statusPayload).toMatchObject({
+        auth: {
+          required: true,
+          keyCount: 1,
+        },
+      });
+
+      const deniedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/models`);
+      expect(deniedResponse.status).toBe(401);
+
+      const allowedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/models`, {
+        headers: { 'X-AuraCall-API-Key': 'env-secret-key' },
+      });
+      expect(allowedResponse.status).toBe(200);
+    } finally {
+      await server.close();
+      for (const [key, value] of Object.entries(savedEnv)) {
+        if (value === undefined) {
+          delete process.env[key];
+        } else {
+          process.env[key] = value;
+        }
+      }
+    }
+  });
+
   it('enforces API key execution scopes for response creation', async () => {
     const server = await createResponsesHttpServer(
       { host: '127.0.0.1', port: 0 },

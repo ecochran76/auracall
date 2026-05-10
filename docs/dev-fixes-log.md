@@ -15909,3 +15909,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   OpenAI-compatible adoption. `api.auth.required=true` now gates `/v1/*` with
   bearer keys while leaving `/status` discoverable, and `/v1/responses` enforces
   per-key agent/team/service/runtime-profile scopes.
+- 2026-05-10: API credentials should be user-scoped runtime state, not repo
+  config churn. The installed user API service now creates and loads
+  `~/.auracall/api.env`, and the HTTP auth policy merges `AURACALL_API_KEY`
+  entries from that service environment with any config-defined keys.

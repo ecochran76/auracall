@@ -457,6 +457,8 @@ interface ApiAuthContext {
   key: ApiAuthKeyPolicy | null;
 }
 
+type ApiAuthEnv = Record<string, string | undefined>;
+
 interface OperatorDashboardRoutes {
   dashboardPath: string;
   accountMirrorPath: string;
@@ -3526,14 +3528,14 @@ function readApiServerConfig(config: Record<string, unknown>): {
   };
 }
 
-function readApiAuthPolicy(config: Record<string, unknown> | null | undefined): ApiAuthPolicy {
+function readApiAuthPolicy(
+  config: Record<string, unknown> | null | undefined,
+  env: ApiAuthEnv = process.env,
+): ApiAuthPolicy {
   const api = isRecord(config?.api) ? config.api : null;
   const auth = isRecord(api?.auth) ? api.auth : null;
-  if (!auth) {
-    return { required: false, keys: [] };
-  }
-  const rawKeys = Array.isArray(auth.keys) ? auth.keys : [];
-  const keys = rawKeys.flatMap((entry, index): ApiAuthKeyPolicy[] => {
+  const rawKeys = auth && Array.isArray(auth.keys) ? auth.keys : [];
+  const configKeys = rawKeys.flatMap((entry, index): ApiAuthKeyPolicy[] => {
     if (!isRecord(entry)) return [];
     const secret =
       readNonEmptyString(entry.secret)
@@ -3551,10 +3553,66 @@ function readApiAuthPolicy(config: Record<string, unknown> | null | undefined): 
       },
     ];
   });
+  const envKeys = readApiAuthEnvKeys(env);
+  const keys = [...configKeys, ...envKeys];
   return {
-    required: readBoolean(auth.required) ?? readBoolean(auth.enabled) ?? keys.length > 0,
+    required:
+      readBoolean(auth?.required)
+      ?? readBoolean(auth?.enabled)
+      ?? readBoolean(env.AURACALL_API_AUTH_REQUIRED)
+      ?? readBoolean(env.AURACALL_API_AUTH_ENABLED)
+      ?? keys.length > 0,
     keys,
   };
+}
+
+function readApiAuthEnvKeys(env: ApiAuthEnv): ApiAuthKeyPolicy[] {
+  const keys: ApiAuthKeyPolicy[] = [];
+  const primarySecret = readNonEmptyString(env.AURACALL_API_KEY);
+  if (primarySecret) {
+    keys.push({
+      id: readNonEmptyString(env.AURACALL_API_KEY_ID) ?? 'env',
+      secret: primarySecret,
+      agents: readDelimitedEnvList(env.AURACALL_API_KEY_AGENTS),
+      teams: readDelimitedEnvList(env.AURACALL_API_KEY_TEAMS),
+      services: readDelimitedEnvList(env.AURACALL_API_KEY_SERVICES),
+      runtimeProfiles: readDelimitedEnvList(env.AURACALL_API_KEY_RUNTIME_PROFILES),
+    });
+  }
+
+  for (const rawId of readDelimitedEnvList(env.AURACALL_API_KEY_IDS) ?? []) {
+    const suffix = toApiAuthEnvSuffix(rawId);
+    if (!suffix) continue;
+    const secret = readNonEmptyString(env[`AURACALL_API_KEY_${suffix}`]);
+    if (!secret) continue;
+    keys.push({
+      id: readNonEmptyString(env[`AURACALL_API_KEY_${suffix}_ID`]) ?? rawId,
+      secret,
+      agents: readDelimitedEnvList(env[`AURACALL_API_KEY_${suffix}_AGENTS`]),
+      teams: readDelimitedEnvList(env[`AURACALL_API_KEY_${suffix}_TEAMS`]),
+      services: readDelimitedEnvList(env[`AURACALL_API_KEY_${suffix}_SERVICES`]),
+      runtimeProfiles: readDelimitedEnvList(env[`AURACALL_API_KEY_${suffix}_RUNTIME_PROFILES`]),
+    });
+  }
+
+  return keys;
+}
+
+function readDelimitedEnvList(value: string | undefined): string[] | undefined {
+  const items = (value ?? '')
+    .split(/[,\s]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return items.length > 0 ? items : undefined;
+}
+
+function toApiAuthEnvSuffix(value: string): string | null {
+  const suffix = value
+    .trim()
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toUpperCase();
+  return suffix || null;
 }
 
 function authorizeApiRequest(
