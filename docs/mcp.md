@@ -79,7 +79,10 @@
   backpressure, or fail fast on live-follow control posture, without shelling
   out to the CLI. `account_mirror_status` remains the cache-only per-target
   mirror status tool; `api_status` is specifically for the running API service
-  posture.
+  posture. Per-target mirror status includes the effective politeness limits,
+  including `maxBrowserInteractionsPerMinute`; Gemini's default status should
+  show the slower six-interaction-per-minute browser pacing unless service
+  `liveFollow` config overrides it.
 - Smoke: after `pnpm run install:user-runtime`, run
   `pnpm run smoke:mcp-api-status` to start short-lived local API servers and
   verify installed MCP `api_status` reports `disabled` and `scheduled` mirror

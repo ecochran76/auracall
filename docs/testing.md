@@ -191,6 +191,11 @@
         inventory should check for queued browser work between
         project/conversation detail reads; a yield marks the inventory
         truncated and preserves the cursor for the next pass
+      - mirror collector browser reads are paced by
+        `limits.maxBrowserInteractionsPerMinute`; Gemini defaults to six
+        interactions per minute, four page-read batches, 80 conversation rows,
+        and 24 artifact rows per cycle unless the service `liveFollow` config
+        overrides those fields
       - the scheduler is disabled unless
         `--account-mirror-scheduler-interval-ms <ms>` is set
       - without `--account-mirror-scheduler-execute`, scheduler passes are

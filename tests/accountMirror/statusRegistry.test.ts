@@ -27,6 +27,8 @@ const config = {
           },
           liveFollow: {
             enabled: true,
+            maxBrowserInteractionsPerMinute: 3,
+            maxConversationRowsPerCycle: 25,
           },
         },
       },
@@ -107,6 +109,10 @@ describe('account mirror status registry', () => {
         expect.objectContaining({
           provider: 'gemini',
           runtimeProfileId: 'default',
+          limits: expect.objectContaining({
+            maxBrowserInteractionsPerMinute: 3,
+            maxConversationRowsPerCycle: 25,
+          }),
           liveFollow: expect.objectContaining({
             configured: true,
             enabled: true,

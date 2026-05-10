@@ -136,5 +136,24 @@ describe('account mirror polite policy', () => {
     expect(decision.limits.maxPageReadsPerCycle).toBe(12);
     expect(decision.limits.maxConversationRowsPerCycle).toBe(250);
     expect(decision.limits.maxArtifactRowsPerCycle).toBe(80);
+    expect(decision.limits.maxBrowserInteractionsPerMinute).toBe(20);
+  });
+
+  test('uses slower Gemini defaults for bot-sensitive live follow', () => {
+    const policy = getDefaultAccountMirrorPolitenessPolicy('gemini');
+    const decision = evaluateAccountMirrorPoliteness({
+      provider: 'gemini',
+      runtimeProfileId: 'default',
+      browserProfileId: 'default',
+      expectedIdentityKey: 'ecochran76@gmail.com',
+      nowMs: 1_000,
+    });
+
+    expect(policy.minIntervalMs).toBe(18 * 60 * 60_000);
+    expect(policy.explicitRefreshMinIntervalMs).toBe(45 * 60_000);
+    expect(decision.limits.maxBrowserInteractionsPerMinute).toBe(6);
+    expect(decision.limits.maxPageReadsPerCycle).toBe(4);
+    expect(decision.limits.maxConversationRowsPerCycle).toBe(80);
+    expect(decision.limits.maxArtifactRowsPerCycle).toBe(24);
   });
 });

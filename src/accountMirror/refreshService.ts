@@ -245,6 +245,7 @@ export function createAccountMirrorRefreshService(input: {
               maxPageReadsPerCycle: target.limits.maxPageReadsPerCycle,
               maxConversationRowsPerCycle: target.limits.maxConversationRowsPerCycle,
               maxArtifactRowsPerCycle: target.limits.maxArtifactRowsPerCycle,
+              maxBrowserInteractionsPerMinute: target.limits.maxBrowserInteractionsPerMinute,
             },
             previousEvidence: target.metadataEvidence,
             abortSignal: collectorAbort.signal,

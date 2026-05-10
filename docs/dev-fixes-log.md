@@ -15809,6 +15809,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   control plane, not by hand-editing JSON. Added shared writable config service,
   local API `/v1/config/agents` and `/v1/config/teams` routes, and MCP
   config-entity tools.
+- 2026-05-10: Gemini live-follow needs a calmer post-gate operating envelope.
+  Add `maxBrowserInteractionsPerMinute` to mirror politeness limits, pace
+  collector browser reads, slow Gemini defaults, and allow per-service
+  `liveFollow` overrides for cadence, cooldown, row budgets, and interaction
+  rate.
 - 2026-05-04: Preview-session handoffs should not depend on loose local files.
   Add account-mirror cache persistence for named preview-session records plus
   local API create/list/read routes and dashboard save/load controls.

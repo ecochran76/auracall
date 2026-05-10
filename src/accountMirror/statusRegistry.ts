@@ -4,6 +4,7 @@ import {
 } from '../config/model.js';
 import type {
   AccountMirrorPolitenessDecision,
+  AccountMirrorProviderPolitenessPolicy,
   AccountMirrorProviderGuardKind,
   AccountMirrorProviderGuardState,
   AccountMirrorProvider,
@@ -268,6 +269,7 @@ export function createAccountMirrorStatusSummary(input: {
         running: state.running,
         explicitRefresh: input.explicitRefresh,
         nowMs: input.now.getTime(),
+        policy: target.policy ?? undefined,
       });
       return createStatusEntry(target, state, decision);
     });
@@ -295,6 +297,7 @@ export function discoverConfiguredAccountMirrorTargets(
   browserProfileId: string | null;
   expectedIdentityKey: string | null;
   accountLevel: string | null;
+  policy: Partial<AccountMirrorProviderPolitenessPolicy> | null;
   liveFollow: AccountMirrorLiveFollowDesiredState;
 }> {
   if (!config) return [];
@@ -311,6 +314,7 @@ export function discoverConfiguredAccountMirrorTargets(
         browserProfileId,
         expectedIdentityKey: readIdentityKey(service),
         accountLevel: readAccountLevel(service),
+        policy: readLiveFollowPolitenessPolicy(provider, service),
         liveFollow: readLiveFollowDesiredState(provider, service),
       }];
     });
@@ -324,6 +328,7 @@ function createStatusEntry(
     browserProfileId: string | null;
     expectedIdentityKey: string | null;
     accountLevel: string | null;
+    policy: Partial<AccountMirrorProviderPolitenessPolicy> | null;
     liveFollow: AccountMirrorLiveFollowDesiredState;
   },
   state: AccountMirrorStatusState,
@@ -438,6 +443,48 @@ function readLiveFollowDesiredState(
     mode,
     priority,
   };
+}
+
+function readLiveFollowPolitenessPolicy(
+  provider: AccountMirrorProvider,
+  service: MutableRecord,
+): Partial<AccountMirrorProviderPolitenessPolicy> | null {
+  const liveFollow = isRecord(service.liveFollow) ? service.liveFollow : null;
+  if (!liveFollow) return null;
+  const policy: Partial<AccountMirrorProviderPolitenessPolicy> = { provider };
+  copyNonNegativeInteger(liveFollow, policy, 'minIntervalMs');
+  copyNonNegativeInteger(liveFollow, policy, 'explicitRefreshMinIntervalMs');
+  copyNonNegativeInteger(liveFollow, policy, 'jitterMaxMs');
+  copyNonNegativeInteger(liveFollow, policy, 'failureBaseCooldownMs');
+  copyNonNegativeInteger(liveFollow, policy, 'failureMaxCooldownMs');
+  copyNonNegativeInteger(liveFollow, policy, 'hardStopCooldownMs');
+  copyPositiveInteger(liveFollow, policy, 'maxBrowserInteractionsPerMinute');
+  copyNonNegativeInteger(liveFollow, policy, 'maxPageReadsPerCycle');
+  copyNonNegativeInteger(liveFollow, policy, 'maxConversationRowsPerCycle');
+  copyNonNegativeInteger(liveFollow, policy, 'maxArtifactRowsPerCycle');
+  return Object.keys(policy).length > 1 ? policy : null;
+}
+
+function copyNonNegativeInteger<K extends keyof AccountMirrorProviderPolitenessPolicy>(
+  source: MutableRecord,
+  target: Partial<AccountMirrorProviderPolitenessPolicy>,
+  key: K,
+): void {
+  const value = source[key];
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+    target[key] = Math.trunc(value) as AccountMirrorProviderPolitenessPolicy[K];
+  }
+}
+
+function copyPositiveInteger<K extends keyof AccountMirrorProviderPolitenessPolicy>(
+  source: MutableRecord,
+  target: Partial<AccountMirrorProviderPolitenessPolicy>,
+  key: K,
+): void {
+  const value = source[key];
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    target[key] = Math.trunc(value) as AccountMirrorProviderPolitenessPolicy[K];
+  }
 }
 
 function normalizeMetadataCounts(value: AccountMirrorMetadataCounts | null | undefined): AccountMirrorMetadataCounts {

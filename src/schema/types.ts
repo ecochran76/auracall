@@ -83,6 +83,16 @@ export const ServiceLiveFollowSchema = z.object({
   enabled: z.boolean().optional(),
   mode: z.string().optional(),
   priority: z.string().optional(),
+  minIntervalMs: z.number().int().nonnegative().optional(),
+  explicitRefreshMinIntervalMs: z.number().int().nonnegative().optional(),
+  jitterMaxMs: z.number().int().nonnegative().optional(),
+  failureBaseCooldownMs: z.number().int().nonnegative().optional(),
+  failureMaxCooldownMs: z.number().int().nonnegative().optional(),
+  hardStopCooldownMs: z.number().int().nonnegative().optional(),
+  maxBrowserInteractionsPerMinute: z.number().int().positive().optional(),
+  maxPageReadsPerCycle: z.number().int().nonnegative().optional(),
+  maxConversationRowsPerCycle: z.number().int().nonnegative().optional(),
+  maxArtifactRowsPerCycle: z.number().int().nonnegative().optional(),
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.

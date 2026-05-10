@@ -252,7 +252,12 @@ Terminology note:
   scheduler readiness without shelling out to the CLI. For live execute
   dogfood, prefer a long interval plus one manual `run-once` request so the
   scheduler proves the refresh path without repeatedly touching bot-sensitive
-  provider pages.
+  provider pages. Gemini uses the most conservative default mirror pacing:
+  routine refreshes wait 18 hours plus deterministic jitter, explicit refreshes
+  wait 45 minutes plus jitter, each cycle reads at most four page batches and
+  80 conversation rows, and live browser reads are paced to six interactions
+  per minute. Per-service `liveFollow` config may override those pacing fields
+  when a provider/account needs a stricter local policy.
   Use `auracall api mirror-complete` to start live follow for a mirror target
   on the configured local API. The command returns an id immediately; the
   service backfills history until no more history is detected, then stays in

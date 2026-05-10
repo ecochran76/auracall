@@ -1,5 +1,24 @@
 # RUNBOOK
 
+## Turn 114 | 2026-05-10
+
+- Active plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make Gemini live-follow calmer after a cleared `google.com/sorry`
+  bot gate.
+- Result:
+  - Gemini mirror defaults now use 18 hour routine spacing, 45 minute
+    explicit-refresh spacing, 90 minute jitter, six browser interactions per
+    minute, four page-read batches, 80 conversation rows, and 24 artifact rows
+    per cycle
+  - service `liveFollow` config may override the same politeness fields per
+    provider/runtime account
+  - the metadata collector paces browser read calls between identity, project,
+    conversation, and artifact/file inventory reads
+- Verification target:
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm vitest run tests/accountMirror/politePolicy.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts --maxWorkers 1`
+
 ## Turn 113 | 2026-05-10
 
 - Active plan:

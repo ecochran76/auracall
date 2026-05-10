@@ -28438,6 +28438,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run plans:audit -- --keep 64`
   - `git diff --check`
 
+## Turn 186 | 2026-05-10
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make Gemini live-follow safer after a manually cleared
+  `google.com/sorry` bot gate.
+- Change:
+  - added `maxBrowserInteractionsPerMinute` to the account-mirror politeness
+    contract and status limits
+  - slowed Gemini defaults to 18 hour routine interval, 45 minute explicit
+    interval, 90 minute jitter, six browser interactions per minute, four page
+    batches, 80 conversation rows, and 24 artifact rows per cycle
+  - allowed per-service `liveFollow` overrides for cadence, backoff, hard-stop
+    cooldown, row budgets, and browser interaction pacing
+  - paced metadata-collector browser reads between identity, project,
+    conversation, account-file, and detail inventory calls
+- Validation:
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm vitest run tests/accountMirror/politePolicy.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts --maxWorkers 1`
+
 ## Turn 138 | 2026-05-06
 
 - Continued implementation plan:

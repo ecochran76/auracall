@@ -41,6 +41,7 @@ export interface AccountMirrorProviderPolitenessPolicy {
   failureBaseCooldownMs: number;
   failureMaxCooldownMs: number;
   hardStopCooldownMs: number;
+  maxBrowserInteractionsPerMinute: number;
   maxPageReadsPerCycle: number;
   maxConversationRowsPerCycle: number;
   maxArtifactRowsPerCycle: number;
@@ -83,6 +84,7 @@ export interface AccountMirrorPolitenessDecision {
     jitterMaxMs: number;
     failureCooldownMs: number;
     hardStopCooldownMs: number;
+    maxBrowserInteractionsPerMinute: number;
     maxPageReadsPerCycle: number;
     maxConversationRowsPerCycle: number;
     maxArtifactRowsPerCycle: number;
@@ -101,21 +103,23 @@ const DEFAULT_POLICIES: Record<AccountMirrorProvider, AccountMirrorProviderPolit
     failureBaseCooldownMs: 30 * MINUTE_MS,
     failureMaxCooldownMs: 6 * HOUR_MS,
     hardStopCooldownMs: 12 * HOUR_MS,
+    maxBrowserInteractionsPerMinute: 20,
     maxPageReadsPerCycle: 12,
     maxConversationRowsPerCycle: 250,
     maxArtifactRowsPerCycle: 80,
   },
   gemini: {
     provider: 'gemini',
-    minIntervalMs: 12 * HOUR_MS,
-    explicitRefreshMinIntervalMs: 30 * MINUTE_MS,
-    jitterMaxMs: 45 * MINUTE_MS,
+    minIntervalMs: 18 * HOUR_MS,
+    explicitRefreshMinIntervalMs: 45 * MINUTE_MS,
+    jitterMaxMs: 90 * MINUTE_MS,
     failureBaseCooldownMs: 2 * HOUR_MS,
     failureMaxCooldownMs: 24 * HOUR_MS,
     hardStopCooldownMs: 24 * HOUR_MS,
-    maxPageReadsPerCycle: 6,
-    maxConversationRowsPerCycle: 120,
-    maxArtifactRowsPerCycle: 40,
+    maxBrowserInteractionsPerMinute: 6,
+    maxPageReadsPerCycle: 4,
+    maxConversationRowsPerCycle: 80,
+    maxArtifactRowsPerCycle: 24,
   },
   grok: {
     provider: 'grok',
@@ -125,6 +129,7 @@ const DEFAULT_POLICIES: Record<AccountMirrorProvider, AccountMirrorProviderPolit
     failureBaseCooldownMs: 60 * MINUTE_MS,
     failureMaxCooldownMs: 12 * HOUR_MS,
     hardStopCooldownMs: 12 * HOUR_MS,
+    maxBrowserInteractionsPerMinute: 12,
     maxPageReadsPerCycle: 8,
     maxConversationRowsPerCycle: 160,
     maxArtifactRowsPerCycle: 80,
@@ -219,6 +224,7 @@ function createDecision(
       jitterMaxMs: policy.jitterMaxMs,
       failureCooldownMs,
       hardStopCooldownMs: policy.hardStopCooldownMs,
+      maxBrowserInteractionsPerMinute: policy.maxBrowserInteractionsPerMinute,
       maxPageReadsPerCycle: policy.maxPageReadsPerCycle,
       maxConversationRowsPerCycle: policy.maxConversationRowsPerCycle,
       maxArtifactRowsPerCycle: policy.maxArtifactRowsPerCycle,

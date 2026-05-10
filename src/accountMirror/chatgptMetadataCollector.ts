@@ -27,6 +27,7 @@ export interface AccountMirrorMetadataCollectorInput {
     maxPageReadsPerCycle: number;
     maxConversationRowsPerCycle: number;
     maxArtifactRowsPerCycle: number;
+    maxBrowserInteractionsPerMinute: number;
   };
 }
 
@@ -95,8 +96,13 @@ export function createChatgptAccountMirrorMetadataCollector(
     async collect(input) {
       const clientConfig = resolveRuntimeProfileUserConfig(userConfig, input.runtimeProfileId, input.provider);
       const client = await BrowserAutomationClient.fromConfig(clientConfig, { target: input.provider });
+      const pacer = createBrowserInteractionPacer(
+        input.limits.maxBrowserInteractionsPerMinute,
+        input.abortSignal,
+      );
       throwIfCollectionAborted(input.abortSignal);
       const listOptions = input.abortSignal ? { abortSignal: input.abortSignal } : undefined;
+      await pacer.beforeInteraction();
       const identity = await client.getUserIdentity(listOptions);
       throwIfCollectionAborted(input.abortSignal);
       const detectedIdentityKey = readIdentityKey(identity);
@@ -108,16 +114,23 @@ export function createChatgptAccountMirrorMetadataCollector(
       const projects = await readBoundedProjects(client, input.limits.maxPageReadsPerCycle, {
         tolerateReadFailure: input.provider === 'gemini',
         listOptions,
+        pacer,
       });
       throwIfCollectionAborted(input.abortSignal);
       const conversationBudget = Math.max(0, Math.floor(input.limits.maxConversationRowsPerCycle));
-      const rootConversations = await readBoundedConversations(client, null, conversationBudget, listOptions);
+      const rootConversations = await readBoundedConversations(client, null, conversationBudget, {
+        listOptions,
+        pacer,
+      });
       let remainingConversationBudget = Math.max(0, conversationBudget - rootConversations.items.length);
       const projectConversations: Conversation[] = [];
       for (const project of projects.items) {
         throwIfCollectionAborted(input.abortSignal);
         if (remainingConversationBudget <= 0) break;
-        const result = await readBoundedConversations(client, project.id, remainingConversationBudget, listOptions);
+        const result = await readBoundedConversations(client, project.id, remainingConversationBudget, {
+          listOptions,
+          pacer,
+        });
         projectConversations.push(...result.items);
         remainingConversationBudget -= result.items.length;
         if (result.truncated) break;
@@ -135,10 +148,14 @@ export function createChatgptAccountMirrorMetadataCollector(
               cursor: input.previousEvidence?.attachmentInventory ?? null,
               shouldYield: input.shouldYield,
               listOptions,
+              pacer,
             },
           )
         : input.provider === 'grok'
-          ? await readBoundedGrokAccountFileInventory(client, input.limits.maxArtifactRowsPerCycle, listOptions)
+          ? await readBoundedGrokAccountFileInventory(client, input.limits.maxArtifactRowsPerCycle, {
+              listOptions,
+              pacer,
+            })
         : {
             artifacts: [],
             files: [],
@@ -189,6 +206,55 @@ function throwIfCollectionAborted(signal: AbortSignal | null | undefined): void 
   }
 }
 
+type BrowserInteractionPacer = {
+  beforeInteraction(): Promise<void>;
+};
+
+function createBrowserInteractionPacer(
+  maxBrowserInteractionsPerMinute: number | null | undefined,
+  abortSignal?: AbortSignal,
+): BrowserInteractionPacer {
+  const maxPerMinute = typeof maxBrowserInteractionsPerMinute === 'number' && Number.isFinite(maxBrowserInteractionsPerMinute)
+    ? Math.max(1, Math.floor(maxBrowserInteractionsPerMinute))
+    : 20;
+  const minSpacingMs = Math.ceil(60_000 / maxPerMinute);
+  let lastInteractionAtMs = 0;
+  return {
+    async beforeInteraction() {
+      throwIfCollectionAborted(abortSignal);
+      const nowMs = Date.now();
+      const waitMs = lastInteractionAtMs > 0 ? Math.max(0, lastInteractionAtMs + minSpacingMs - nowMs) : 0;
+      if (waitMs > 0) {
+        await sleepWithAbort(waitMs, abortSignal);
+      }
+      lastInteractionAtMs = Date.now();
+    },
+  };
+}
+
+function sleepWithAbort(ms: number, signal: AbortSignal | null | undefined): Promise<void> {
+  if (ms <= 0) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      cleanup();
+      const reason = signal?.reason;
+      reject(reason instanceof Error ? reason : new Error('Account mirror metadata collection was aborted.'));
+    };
+    const cleanup = () => {
+      clearTimeout(timeout);
+      signal?.removeEventListener('abort', onAbort);
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+    if (signal?.aborted) {
+      onAbort();
+    }
+  });
+}
+
 function resolveRuntimeProfileUserConfig(
   userConfig: ResolvedUserConfig,
   runtimeProfileId: string,
@@ -231,11 +297,13 @@ export async function readBoundedProjects(
   options: {
     tolerateReadFailure?: boolean;
     listOptions?: Parameters<BrowserAutomationClient['listProjects']>[0];
+    pacer?: BrowserInteractionPacer;
   } = {},
 ): Promise<{ items: Project[]; truncated: boolean }> {
   const pageBudget = Math.max(1, Math.floor(maxPageReads));
   let projects: Project[];
   try {
+    await options.pacer?.beforeInteraction();
     projects = (await client.listProjects(options.listOptions)) as Project[];
   } catch (error) {
     if (!options.tolerateReadFailure) {
@@ -254,14 +322,18 @@ async function readBoundedConversations(
   client: BrowserAutomationClient,
   projectId: string | null,
   maxRows: number,
-  listOptions?: Parameters<BrowserAutomationClient['listConversations']>[1],
+  options: {
+    listOptions?: Parameters<BrowserAutomationClient['listConversations']>[1];
+    pacer?: BrowserInteractionPacer;
+  } = {},
 ): Promise<{ items: Conversation[]; truncated: boolean }> {
   const limit = Math.max(0, Math.floor(maxRows));
   if (limit <= 0) {
     return { items: [], truncated: true };
   }
+  await options.pacer?.beforeInteraction();
   const conversations = (await client.listConversations(projectId ?? undefined, {
-    ...listOptions,
+    ...options.listOptions,
     historyLimit: limit,
     includeHistory: true,
   })) as Conversation[];
@@ -281,6 +353,7 @@ export async function readBoundedAttachmentInventory(
     cursor?: AttachmentInventoryCursor | null;
     shouldYield?: () => Promise<boolean> | boolean;
     listOptions?: Parameters<BrowserAutomationClient['listProjectFiles']>[1];
+    pacer?: BrowserInteractionPacer;
   } = 6,
 ): Promise<{
   artifacts: ConversationArtifact[];
@@ -296,6 +369,7 @@ export async function readBoundedAttachmentInventory(
   const previousCursor = typeof options === 'number' ? null : options.cursor ?? null;
   const shouldYield = typeof options === 'number' ? undefined : options.shouldYield;
   const listOptions = typeof options === 'number' ? undefined : options.listOptions;
+  const pacer = typeof options === 'number' ? undefined : options.pacer;
   const detailReadLimit = Math.max(1, Math.min(6, Math.floor(maxDetailReads)));
   if (limit <= 0) {
     return {
@@ -337,6 +411,7 @@ export async function readBoundedAttachmentInventory(
     if (!project) break;
     remainingDetailReads -= 1;
     scannedProjects += 1;
+    await pacer?.beforeInteraction();
     const projectFiles = await safeReadProjectFiles(client, project.id, listOptions);
     for (const file of projectFiles) {
       if (remaining <= 0) {
@@ -362,10 +437,10 @@ export async function readBoundedAttachmentInventory(
     if (!conversation) break;
     remainingDetailReads -= 1;
     scannedConversations += 1;
-    const [conversationFiles, context] = await Promise.all([
-      safeReadConversationFiles(client, conversation),
-      safeReadConversationContext(client, conversation),
-    ]);
+    await pacer?.beforeInteraction();
+    const conversationFiles = await safeReadConversationFiles(client, conversation);
+    await pacer?.beforeInteraction();
+    const context = await safeReadConversationContext(client, conversation);
     for (const file of conversationFiles) {
       if (remaining <= 0) {
         truncated = true;
@@ -421,6 +496,7 @@ export async function readBoundedChatgptDetailInventory(
     cursor?: AttachmentInventoryCursor | null;
     shouldYield?: () => Promise<boolean> | boolean;
     listOptions?: Parameters<BrowserAutomationClient['listAccountFiles']>[0];
+    pacer?: BrowserInteractionPacer;
   } = 6,
 ): Promise<{
   artifacts: ConversationArtifact[];
@@ -431,7 +507,11 @@ export async function readBoundedChatgptDetailInventory(
 }> {
   const limit = Math.max(0, Math.floor(maxRows));
   const listOptions = typeof options === 'number' ? undefined : options.listOptions;
-  const library = await readBoundedChatgptLibraryInventory(client, limit, listOptions);
+  const pacer = typeof options === 'number' ? undefined : options.pacer;
+  const library = await readBoundedChatgptLibraryInventory(client, limit, {
+    listOptions,
+    pacer,
+  });
   if (library.files.length > 0 || library.artifacts.length > 0) {
     return {
       artifacts: library.artifacts,
@@ -481,7 +561,10 @@ function normalizeDetailReadLimit(
 export async function readBoundedChatgptLibraryInventory(
   client: Pick<BrowserAutomationClient, 'listAccountFiles'>,
   maxRows: number,
-  listOptions?: Parameters<BrowserAutomationClient['listAccountFiles']>[0],
+  options: {
+    listOptions?: Parameters<BrowserAutomationClient['listAccountFiles']>[0];
+    pacer?: BrowserInteractionPacer;
+  } = {},
 ): Promise<{
   artifacts: ConversationArtifact[];
   files: FileRef[];
@@ -495,7 +578,8 @@ export async function readBoundedChatgptLibraryInventory(
       truncated: true,
     };
   }
-  const files = await safeReadAccountFiles(client, listOptions);
+  await options.pacer?.beforeInteraction();
+  const files = await safeReadAccountFiles(client, options.listOptions);
   const boundedFiles = files.slice(0, limit);
   return {
     artifacts: mapChatgptLibraryFilesToArtifacts(boundedFiles),
@@ -507,7 +591,10 @@ export async function readBoundedChatgptLibraryInventory(
 export async function readBoundedGrokAccountFileInventory(
   client: Pick<BrowserAutomationClient, 'listAccountFiles'>,
   maxRows: number,
-  listOptions?: Parameters<BrowserAutomationClient['listAccountFiles']>[0],
+  options: {
+    listOptions?: Parameters<BrowserAutomationClient['listAccountFiles']>[0];
+    pacer?: BrowserInteractionPacer;
+  } = {},
 ): Promise<{
   artifacts: ConversationArtifact[];
   files: FileRef[];
@@ -525,7 +612,8 @@ export async function readBoundedGrokAccountFileInventory(
       cursor: null,
     };
   }
-  const files = await safeReadAccountFiles(client, listOptions);
+  await options.pacer?.beforeInteraction();
+  const files = await safeReadAccountFiles(client, options.listOptions);
   const boundedFiles = files.slice(0, limit);
   return {
     artifacts: [],
@@ -574,7 +662,9 @@ async function safeReadProjectFiles(
   listOptions?: Parameters<BrowserAutomationClient['listProjectFiles']>[1],
 ): Promise<FileRef[]> {
   try {
-    return await client.listProjectFiles(projectId, listOptions);
+    return listOptions === undefined
+      ? await client.listProjectFiles(projectId)
+      : await client.listProjectFiles(projectId, listOptions);
   } catch {
     return [];
   }
@@ -585,7 +675,9 @@ async function safeReadAccountFiles(
   listOptions?: Parameters<BrowserAutomationClient['listAccountFiles']>[0],
 ): Promise<FileRef[]> {
   try {
-    return await client.listAccountFiles(listOptions);
+    return listOptions === undefined
+      ? await client.listAccountFiles()
+      : await client.listAccountFiles(listOptions);
   } catch {
     return [];
   }

@@ -103,6 +103,9 @@ Lazy account mirroring should be opportunistic and conservative:
 - serialize per managed browser profile and provider service
 - cap each mirror cycle with provider-specific page/read budgets; do not chase
   infinite scroll or full-history completion in one pass
+- pace live browser reads with provider-specific interactions-per-minute
+  budgets; Gemini should stay visibly slower than ChatGPT/Grok after any
+  `google.com/sorry` clearance
 
 Current implementation-facing politeness contract:
 
@@ -121,6 +124,11 @@ Current implementation-facing politeness contract:
   ChatGPT collector. It reads identity, project rows, and conversation rows
   through the existing ChatGPT adapter, bounded by the politeness page/row
   budgets. It does not submit prompts or fetch full conversation bodies.
+- The same collector now applies `maxBrowserInteractionsPerMinute` between
+  browser read calls. Gemini defaults to 18 hour routine spacing, 45 minute
+  explicit-refresh spacing, 90 minute jitter, six browser interactions per
+  minute, four page-read batches, 80 conversation rows, and 24 artifact rows
+  per cycle; service `liveFollow` config may override these pacing fields.
 - `POST /v1/account-mirrors/refresh` and MCP `account_mirror_refresh` request
   that one explicit refresh and return dispatcher evidence plus updated mirror
   status.

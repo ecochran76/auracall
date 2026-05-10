@@ -70,6 +70,8 @@ Current State:
     cancel a live-follow operation by id;
     `/v1/browser/processes` and `/ops/browser` now separate Chrome launch
     `about:blank` arguments from actual open DevTools blank page targets;
+    Gemini lazy live-follow now uses slower default cadence and a
+    six-interaction-per-minute browser-read pacer after bot-gate clearance;
     ChatGPT conversation inventory must scroll the infinite left rail when
     `includeHistory` and `historyLimit` are requested before claiming mirror
     completeness

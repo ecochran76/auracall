@@ -170,6 +170,7 @@ describe('account mirror refresh service', () => {
         maxPageReadsPerCycle: 12,
         maxConversationRowsPerCycle: 250,
         maxArtifactRowsPerCycle: 80,
+        maxBrowserInteractionsPerMinute: 20,
       },
       previousEvidence: null,
       abortSignal: expect.any(AbortSignal),
