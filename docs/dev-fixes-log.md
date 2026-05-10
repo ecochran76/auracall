@@ -1,3 +1,8 @@
+- 2026-05-09: Browser Ops should prefer structured preflight run readback
+  before asking operators to inspect logs. Preflight history rows now provide
+  `Open Run` for `GET /v1/preflight/lazy-live-follow/runs/{run_id}` plus the
+  existing `Open Log` tail action.
+
 - 2026-05-09: Operators should be able to inspect one async lazy-live-follow
   preflight run without scraping `/status` history or opening the log first.
   The API now serves `GET /v1/preflight/lazy-live-follow/runs/{run_id}`, MCP

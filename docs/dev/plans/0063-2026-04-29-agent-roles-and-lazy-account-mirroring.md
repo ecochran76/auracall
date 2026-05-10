@@ -1038,3 +1038,6 @@ One-run readback is now first-class too: `GET
 with steps, MCP `preflight_run` reads that same route, and active in-memory
 runs are checked before persisted history so an executing preflight can be
 inspected directly.
+The Browser Ops dashboard now uses that readback path directly: preflight
+history rows provide `Open Run` for structured run/step details and keep
+`Open Log` as the secondary tail view.

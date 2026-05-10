@@ -1,3 +1,29 @@
+## Turn 175 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make the Browser Ops dashboard consume the structured preflight run
+  route before falling back to log tails.
+- Change:
+  - preflight history rows now expose `Open Run` and `Open Log` separately
+  - `Open Run` fetches `GET /v1/preflight/lazy-live-follow/runs/{run_id}` and
+    renders structured run fields plus `steps[]` into a dedicated detail panel
+  - the bounded log tail remains available as the secondary diagnostic action
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 -t "serves a read-only browser operator dashboard|preflight run|status control path"`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/http/responsesServer.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 63`
+  - `git diff --check`
+- Installed dogfood:
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - `~/.local/bin/auracall --version`
+  - `systemctl --user is-active auracall-api.service`
+  - live `GET /ops/browser` includes `preflightRunDetail`,
+    `loadPreflightRunDetail`, `Open Run`, `Open Log`, and the preflight run
+    API route string.
+
 ## Turn 174 | 2026-05-09
 
 - Continued implementation plan:

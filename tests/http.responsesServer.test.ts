@@ -15524,7 +15524,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('data-preflight-step-status');
       expect(html).toContain('preflightRunHistory');
       expect(html).toContain('renderPreflightRunHistory');
+      expect(html).toContain('preflightRunDetail');
+      expect(html).toContain('loadPreflightRunDetail');
       expect(html).toContain('loadPreflightRunLog');
+      expect(html).toContain('Open Run');
       expect(html).toContain('/v1/preflight/lazy-live-follow/runs/');
       expect(html).toContain("preflight: { action: 'run', name: 'lazy-live-follow' }");
       expect(html).toContain('apiServiceControls');

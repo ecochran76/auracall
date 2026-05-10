@@ -238,7 +238,9 @@
         Operators can also fetch one structured run with
         `GET /v1/preflight/lazy-live-follow/runs/{run_id}` or MCP
         `preflight_run`; the bounded log tail remains at
-        `/v1/preflight/lazy-live-follow/runs/{run_id}/log`.
+        `/v1/preflight/lazy-live-follow/runs/{run_id}/log`. Browser Ops
+        mirrors this order with `Open Run` for structured details and
+        `Open Log` for the bounded tail.
       - execute one pass only when the server was started with
         `--account-mirror-scheduler-execute`:
         `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"run-once","dryRun":false}}'`

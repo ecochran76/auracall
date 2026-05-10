@@ -6002,6 +6002,7 @@ function createOperatorBrowserDashboardHtml(input: {
         + '</dl><div id="preflightStepProgress" class="mini-table">' + renderPreflightStepProgress(run) + '</div><div class="row">'
         + '<button id="runLazyLiveFollowPreflight" class="primary" type="button" onclick="runLazyLiveFollowPreflight()" ' + disabledAttr(running) + '>Run Preflight</button>'
         + '</div><div id="preflightRunHistory" class="mini-table">' + renderPreflightRunHistory(history) + '</div>'
+        + '<pre id="preflightRunDetail">Preflight run detail not loaded.</pre>'
         + '<pre id="preflightRunLog">Preflight log not loaded.</pre></div>';
     }
 
@@ -6023,17 +6024,19 @@ function createOperatorBrowserDashboardHtml(input: {
 
     function renderPreflightRunHistory(history) {
       if (!history.length) return '<p class="muted">No preflight runs recorded.</p>';
-      return '<table><thead><tr><th>Status</th><th>Started</th><th>Step</th><th>Duration</th><th>Log</th></tr></thead><tbody>'
+      return '<table><thead><tr><th>Status</th><th>Started</th><th>Step</th><th>Duration</th><th>Actions</th></tr></thead><tbody>'
         + history.map((entry) => {
           const duration = entry.durationMs === null || entry.durationMs === undefined ? 'running' : String(entry.durationMs) + ' ms';
           const steps = Array.isArray(entry.steps) ? entry.steps : [];
           const step = steps.find((candidate) => candidate.status === 'running') || steps[steps.length - 1] || null;
+          const id = escapeHtml(entry.id || '');
           return '<tr>'
             + '<td>' + renderStatusText(entry.status || 'unknown', toneForActualStatus(entry.status || 'unknown')) + '</td>'
             + '<td><code>' + escapeHtml(entry.startedAt || 'unknown') + '</code></td>'
             + '<td>' + escapeHtml(step ? (step.label || 'unknown') + ' (' + (step.status || 'unknown') + ')' : 'none') + '</td>'
             + '<td>' + escapeHtml(duration) + '</td>'
-            + '<td><button type="button" class="link-button" data-preflight-run-id="' + escapeHtml(entry.id || '') + '" onclick="loadPreflightRunLog(this.dataset.preflightRunId)">Open Log</button></td>'
+            + '<td><button type="button" class="link-button" data-preflight-run-id="' + id + '" onclick="loadPreflightRunDetail(this.dataset.preflightRunId)">Open Run</button>'
+            + ' <button type="button" class="link-button" data-preflight-run-id="' + id + '" onclick="loadPreflightRunLog(this.dataset.preflightRunId)">Open Log</button></td>'
             + '</tr>';
         }).join('')
         + '</tbody></table>';
@@ -8794,6 +8797,29 @@ function createOperatorBrowserDashboardHtml(input: {
           sizeBytes: payload.sizeBytes,
           truncated: payload.truncated,
           content: payload.content || '',
+        });
+      } catch (error) {
+        target.textContent = String(error.message || error);
+      }
+    }
+
+    async function loadPreflightRunDetail(id) {
+      if (!id) return;
+      const target = document.getElementById('preflightRunDetail') || document.getElementById('preflightRunLog') || $('apiLogTail');
+      target.textContent = 'Loading preflight run detail...';
+      try {
+        const payload = await fetchJson('/v1/preflight/lazy-live-follow/runs/' + encodeURIComponent(id));
+        target.textContent = asJson({
+          id: payload.id,
+          status: payload.status,
+          startedAt: payload.startedAt,
+          completedAt: payload.completedAt,
+          durationMs: payload.durationMs,
+          exitCode: payload.exitCode,
+          signal: payload.signal,
+          errorMessage: payload.errorMessage,
+          logPath: payload.logPath,
+          steps: Array.isArray(payload.steps) ? payload.steps : [],
         });
       } catch (error) {
         target.textContent = String(error.message || error);
