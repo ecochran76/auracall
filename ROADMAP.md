@@ -162,6 +162,16 @@ Current State:
     headline live-follow health line now reports current target counts instead
     of historical failed/cancelled completion totals when target rollups are
     available
+- OpenAI-compatible agent API access and semantic model selectors are now scoped
+  in
+  [docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md](docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md):
+  - `/v1/responses` accepts `model: "agent:<agent_id>"` as single-agent routing
+    shorthand
+  - agent config can bind service, raw model pins, semantic model selector
+    intent, project/conversation ids, knowledge references, and pre/post prompt
+    fields
+  - semantic selectors are the stable default posture; exact provider versions
+    remain compatibility escape hatches
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local

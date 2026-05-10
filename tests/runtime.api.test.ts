@@ -38,6 +38,21 @@ describe('runtime api model', () => {
     });
   });
 
+  it('accepts agent-prefixed model ids as OpenAI-compatible agent routing shorthand', () => {
+    const request = createExecutionRequest({
+      model: 'agent:release-researcher',
+      input: 'Summarize the launch risks.',
+    });
+
+    expect(request).toEqual({
+      model: 'agent:release-researcher',
+      input: 'Summarize the launch risks.',
+      auracall: {
+        agent: 'release-researcher',
+      },
+    });
+  });
+
   it('preserves ordered mixed text and artifacts in one response output timeline', () => {
     const teamBundle = createTeamRunBundle({
       runId: 'team_run_1',

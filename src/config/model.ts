@@ -8,6 +8,7 @@ type MutableBrowserProfile = Record<string, unknown>;
 type MutableRuntimeProfile = Record<string, unknown>;
 type MutableAgent = Record<string, unknown>;
 type MutableTeam = Record<string, unknown>;
+type ServiceId = 'chatgpt' | 'gemini' | 'grok';
 
 export interface ProjectedBrowserProfile {
   id: string;
@@ -16,14 +17,23 @@ export interface ProjectedBrowserProfile {
 export interface ProjectedRuntimeProfile {
   id: string;
   browserProfileId: string | null;
-  defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+  defaultService: ServiceId | null;
 }
 
 export interface ProjectedAgent {
   id: string;
   runtimeProfileId: string | null;
   browserProfileId: string | null;
-  defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+  defaultService: ServiceId | null;
+  service?: ServiceId;
+  model?: string;
+  modelSelector?: string;
+  projectId?: string;
+  projectName?: string;
+  conversationId?: string;
+  conversationName?: string;
+  hasKnowledge?: true;
+  hasPrompting?: true;
 }
 
 export interface ProjectedTeamMember {
@@ -31,7 +41,10 @@ export interface ProjectedTeamMember {
   exists: boolean;
   runtimeProfileId: string | null;
   browserProfileId: string | null;
-  defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+  defaultService: ServiceId | null;
+  service?: ServiceId;
+  model?: string;
+  modelSelector?: string;
 }
 
 export interface ProjectedTeam {
@@ -44,7 +57,11 @@ export interface ResolvedAgentSelection {
   agentId: string | null;
   runtimeProfileId: string | null;
   browserProfileId: string | null;
-  defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+  defaultService: ServiceId | null;
+  service?: ServiceId;
+  model?: string;
+  modelSelector?: string;
+  projectId?: string;
   exists: boolean;
 }
 
@@ -63,7 +80,7 @@ export interface ResolvedRuntimeSelection {
   runtimeProfile: MutableRuntimeProfile | null;
   browserProfileId: string | null;
   browserProfile: MutableBrowserProfile | null;
-  defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+  defaultService: ServiceId | null;
 }
 
 export interface ResolvedTeamRuntimeMemberSelection extends ResolvedRuntimeSelection {
@@ -479,8 +496,30 @@ function describeRedundantRuntimeProfileServiceDefaults(
   return redundant;
 }
 
-function asServiceId(value: unknown): 'chatgpt' | 'gemini' | 'grok' | null {
+function asServiceId(value: unknown): ServiceId | null {
   return value === 'chatgpt' || value === 'gemini' || value === 'grok' ? value : null;
+}
+
+function asNonEmptyString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function hasConfiguredKnowledge(agent: MutableAgent | null | undefined): boolean {
+  if (!isRecord(agent) || !isRecord(agent.knowledge)) return false;
+  const knowledge = agent.knowledge as MutableRecord;
+  return Object.values(knowledge).some((value) => {
+    if (Array.isArray(value)) return value.length > 0;
+    return value !== null && value !== undefined && value !== '';
+  });
+}
+
+function hasConfiguredPrompting(agent: MutableAgent | null | undefined): boolean {
+  if (!isRecord(agent)) return false;
+  return (
+    asNonEmptyString(agent.instructions) !== null ||
+    asNonEmptyString(agent.prePrompt) !== null ||
+    asNonEmptyString(agent.postPrompt) !== null
+  );
 }
 
 function sortJsonValue(value: unknown): unknown {
@@ -685,11 +724,20 @@ export function resolveAgentSelection(
   const name = typeof agentId === 'string' && agentId.trim().length > 0 ? agentId.trim() : null;
   const agent = getAgent(config, name);
   const runtimeProfile = getAgentRuntimeProfile(config, agent);
+  const runtimeDefaultService = asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined);
+  const agentService = asServiceId(isRecord(agent) ? agent.service : undefined);
+  const model = asNonEmptyString(isRecord(agent) ? agent.model : undefined);
+  const modelSelector = asNonEmptyString(isRecord(agent) ? agent.modelSelector : undefined);
+  const projectId = asNonEmptyString(isRecord(agent) ? agent.projectId : undefined);
   return {
     agentId: name,
     runtimeProfileId: getAgentRuntimeProfileId(agent),
     browserProfileId: getRuntimeProfileBrowserProfileId(runtimeProfile),
-    defaultService: asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined),
+    defaultService: agentService ?? runtimeDefaultService,
+    ...(agentService ? { service: agentService } : {}),
+    ...(model ? { model } : {}),
+    ...(modelSelector ? { modelSelector } : {}),
+    ...(projectId ? { projectId } : {}),
     exists: agent !== null,
   };
 }
@@ -737,7 +785,8 @@ export function resolveRuntimeSelection(
     runtimeProfile,
     browserProfileId,
     browserProfile,
-    defaultService: asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined),
+    defaultService:
+      agent?.service ?? asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined),
   };
 }
 
@@ -909,11 +958,28 @@ export function projectConfigModel(
     .map(([id, agent]) => {
       const runtimeProfileId = getAgentRuntimeProfileId(agent);
       const runtimeProfile = getAgentRuntimeProfile(config, agent);
+      const runtimeDefaultService = asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined);
+      const agentService = asServiceId(agent.service);
+      const model = asNonEmptyString(agent.model);
+      const modelSelector = asNonEmptyString(agent.modelSelector);
+      const projectId = asNonEmptyString(agent.projectId);
+      const projectName = asNonEmptyString(agent.projectName);
+      const conversationId = asNonEmptyString(agent.conversationId);
+      const conversationName = asNonEmptyString(agent.conversationName);
       return {
         id,
         runtimeProfileId,
         browserProfileId: getRuntimeProfileBrowserProfileId(runtimeProfile),
-        defaultService: asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined),
+        defaultService: agentService ?? runtimeDefaultService,
+        ...(agentService ? { service: agentService } : {}),
+        ...(model ? { model } : {}),
+        ...(modelSelector ? { modelSelector } : {}),
+        ...(projectId ? { projectId } : {}),
+        ...(projectName ? { projectName } : {}),
+        ...(conversationId ? { conversationId } : {}),
+        ...(conversationName ? { conversationName } : {}),
+        ...(hasConfiguredKnowledge(agent) ? { hasKnowledge: true as const } : {}),
+        ...(hasConfiguredPrompting(agent) ? { hasPrompting: true as const } : {}),
       };
     });
   const projectedAgentMap = new Map(agents.map((agent) => [agent.id, agent]));
@@ -932,6 +998,9 @@ export function projectConfigModel(
             runtimeProfileId: member.runtimeProfileId,
             browserProfileId: member.browserProfileId,
             defaultService: member.defaultService,
+            ...(member.service ? { service: member.service } : {}),
+            ...(member.model ? { model: member.model } : {}),
+            ...(member.modelSelector ? { modelSelector: member.modelSelector } : {}),
           };
         }),
       };

@@ -159,7 +159,18 @@ Typical concerns:
   agents: {
     researcher: {
       runtimeProfile: "default",
-      instructions: "Reserved future agent config"
+      service: "chatgpt",
+      modelSelector: "chatgpt:pro-extended",
+      model: "gpt-5.5-pro",
+      projectId: "proj_123",
+      instructions: "Reserved future agent config",
+      prePrompt: "Optional agent-local prompt prefix",
+      postPrompt: "Optional agent-local prompt suffix",
+      knowledge: {
+        artifactIds: ["art_1"],
+        fileIds: ["file_1"],
+        notes: ["Short agent-local note"]
+      }
     }
   },
 

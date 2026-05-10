@@ -15,7 +15,30 @@ import type {
 } from './apiTypes.js';
 
 export function createExecutionRequest(input: ExecutionRequest): ExecutionRequest {
-  return ExecutionRequestSchema.parse(input);
+  return ExecutionRequestSchema.parse(normalizeAgentModelRequest(input));
+}
+
+function normalizeAgentModelRequest(input: ExecutionRequest): ExecutionRequest {
+  const agentId = parseAgentModelId(input.model);
+  if (!agentId || input.auracall?.agent) {
+    return input;
+  }
+  return {
+    ...input,
+    auracall: {
+      ...(input.auracall ?? {}),
+      agent: agentId,
+    },
+  };
+}
+
+function parseAgentModelId(model: string): string | null {
+  const prefix = 'agent:';
+  if (!model.startsWith(prefix)) {
+    return null;
+  }
+  const agentId = model.slice(prefix.length).trim();
+  return agentId.length > 0 ? agentId : null;
 }
 
 export function createExecutionResponseMessage(text: string): ExecutionResponseMessageOutputItem {

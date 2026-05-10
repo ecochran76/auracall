@@ -1,3 +1,21 @@
+## Turn 183 | 2026-05-10
+
+- Continued implementation plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: make the OpenAI-compatible API target configured AuraCall agents
+  without baking rapidly drifting provider model versions into app configs.
+- Change:
+  - added `model: "agent:<agent_id>"` routing shorthand for `/v1/responses`
+  - extended agent config/projection with service, raw model, semantic
+    `modelSelector`, project/conversation ids, knowledge refs, and pre/post
+    prompt fields
+  - configured browser execution now honors agent raw `model` and `projectId`
+  - roadmap, endpoint docs, and target config shape document semantic selector
+    intent and raw provider-version pins as escape hatches
+- Validation:
+  - `pnpm vitest run tests/configModel.test.ts tests/runtime.api.test.ts tests/runtime.configuredExecutor.test.ts --maxWorkers 1`
+  - `pnpm run typecheck`
+
 ## Turn 182 | 2026-05-10
 
 - Continued implementation plan:

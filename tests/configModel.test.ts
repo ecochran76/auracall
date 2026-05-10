@@ -197,6 +197,48 @@ describe('config model helpers', () => {
     ]);
   });
 
+  it('projects configured agent service, model, project, and semantic selector intent', () => {
+    const config = {
+      browserProfiles: {
+        default: {},
+      },
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+      },
+      agents: {
+        researcher: {
+          runtimeProfile: 'default',
+          service: 'chatgpt',
+          modelSelector: 'chatgpt:pro-extended',
+          model: 'gpt-5.5-pro',
+          projectId: 'proj_123',
+          projectName: 'Release Research',
+          instructions: 'Use the configured project context.',
+          knowledge: {
+            artifactIds: ['art_1'],
+          },
+        },
+      },
+    };
+
+    expect(projectConfigModel(config).agents).toEqual([
+      {
+        id: 'researcher',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        defaultService: 'chatgpt',
+        service: 'chatgpt',
+        model: 'gpt-5.5-pro',
+        modelSelector: 'chatgpt:pro-extended',
+        projectId: 'proj_123',
+        projectName: 'Release Research',
+        hasKnowledge: true,
+        hasPrompting: true,
+      },
+    ]);
+    expect(resolveRuntimeSelection(config, { explicitAgentId: 'researcher' }).defaultService).toBe('chatgpt');
+  });
+
   it('resolves an agent selection through runtime and browser profile context', () => {
     const config = {
       browserProfiles: {

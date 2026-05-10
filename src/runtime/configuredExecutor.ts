@@ -3,7 +3,7 @@ import path from 'node:path';
 import { createExecutionResponseMessage } from './apiModel.js';
 import type { ExecuteStoredRunStepContext, ExecuteStoredRunStepResult } from './runner.js';
 import type { ExecutionServiceHostDeps } from './serviceHost.js';
-import { getRuntimeProfileBrowserProfileId, resolveRuntimeSelection } from '../config/model.js';
+import { getAgent, getRuntimeProfileBrowserProfileId, resolveRuntimeSelection } from '../config/model.js';
 import { runBrowserMode } from '../browser/index.js';
 import type { BrowserAttachment, BrowserRunOptions, CookieParam } from '../browser/types.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
@@ -262,8 +262,10 @@ export function createConfiguredStoredStepExecutor(
     const requestAuracall = isRecord(runInitialInputs?.auracall)
       ? runInitialInputs.auracall
       : null;
+    const agentConfig = getAgent(configRecord, context.step.agentId);
 
     const desiredModel =
+      asNonEmptyString(agentConfig?.model) ??
       asNonEmptyString(runtimeServiceConfig?.model) ??
       asNonEmptyString(globalServiceConfig?.model) ??
       null;
@@ -288,6 +290,7 @@ export function createConfiguredStoredStepExecutor(
       asNonEmptyString(globalServiceConfig?.url) ??
       null;
     const projectId =
+      asNonEmptyString(agentConfig?.projectId) ??
       asNonEmptyString(runtimeServiceConfig?.projectId) ??
       asNonEmptyString(globalServiceConfig?.projectId) ??
       null;

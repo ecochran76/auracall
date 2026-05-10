@@ -1,3 +1,10 @@
+- 2026-05-10: OpenAI-compatible app configs should not depend on drifting
+  provider version names. `/v1/responses` now accepts `model:
+  "agent:<agent_id>"` as configured-agent routing shorthand, agent config can
+  carry service/model/modelSelector/project/knowledge/prompting intent, and raw
+  provider model pins remain escape hatches while semantic `modelSelector`
+  fields become the durable selector posture.
+
 - 2026-05-10: Operators can now clear account mirror provider guards without
   opening Browser Ops. `auracall api mirror-provider-guard-clear --provider
   gemini --runtime-profile default` posts the bounded `/status` control payload

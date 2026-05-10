@@ -307,6 +307,21 @@ Current limits:
   - `X-AuraCall-Agent`
   - `X-AuraCall-Team`
   - `X-AuraCall-Service`
+- configured single-agent calls can use OpenAI-style model routing:
+  - `model: "agent:<agent_id>"` is equivalent to setting
+    `auracall.agent = "<agent_id>"`
+  - agent config may bind `runtimeProfile`, `service`, raw `model`,
+    `modelSelector`, optional project/conversation ids, knowledge refs, and
+    pre/post prompt text
+  - raw `model` remains the provider-version escape hatch
+  - `modelSelector` is the stable semantic intent field, e.g.
+    `chatgpt:auto`, `chatgpt:instant`, `chatgpt:thinking-standard`,
+    `chatgpt:thinking-extended`, `chatgpt:pro-standard`,
+    `chatgpt:pro-extended`, `grok:auto`, `grok:thinking`, or
+    `gemini:thinking`
+  - provider adapters should resolve semantic selectors against the current
+    workbench UI; older exact version selectors are non-urgent compatibility
+    pins, not the default config posture
 - no auth
 - no streaming/SSE
 - no `POST /v1/chat/completions` adapter yet

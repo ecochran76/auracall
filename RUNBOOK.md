@@ -2914,3 +2914,19 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard"`
   - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
   - `pnpm typecheck`
+
+## Turn 109 | 2026-05-10
+
+- Goal: start the configured-agent API lane and remove hard dependency on
+  drifting provider model version names.
+- Change:
+  - added `model: "agent:<agent_id>"` shorthand for `/v1/responses`
+  - extended agent config with service, raw model, semantic model selector,
+    project/conversation ids, knowledge refs, and pre/post prompt fields
+  - configured browser execution now honors agent raw model and project id
+  - wired
+    `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+    into the roadmap and endpoint/config docs
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/runtime.api.test.ts tests/runtime.configuredExecutor.test.ts --maxWorkers 1`
+  - `pnpm run typecheck`
