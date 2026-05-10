@@ -202,15 +202,18 @@ function applyServiceDefaults(
   const currentChatgptUrl = asNonEmptyString(browser.chatgptUrl) ?? null;
   const currentGeminiUrl = asNonEmptyString(browser.geminiUrl) ?? null;
   const currentGrokUrl = asNonEmptyString(browser.grokUrl) ?? null;
-  browser.chatgptUrl = (overrideExisting || browser.chatgptUrl === undefined)
-    ? resolution.serviceBinding.urls.chatgpt ?? currentChatgptUrl
-    : browser.chatgptUrl;
-  browser.geminiUrl = (overrideExisting || browser.geminiUrl === undefined)
-    ? resolution.serviceBinding.urls.gemini ?? currentGeminiUrl
-    : browser.geminiUrl;
-  browser.grokUrl = (overrideExisting || browser.grokUrl === undefined)
-    ? resolution.serviceBinding.urls.grok ?? currentGrokUrl
-    : browser.grokUrl;
+  const nextChatgptUrl = resolution.serviceBinding.urls.chatgpt ?? currentChatgptUrl;
+  const nextGeminiUrl = resolution.serviceBinding.urls.gemini ?? currentGeminiUrl;
+  const nextGrokUrl = resolution.serviceBinding.urls.grok ?? currentGrokUrl;
+  if ((overrideExisting || browser.chatgptUrl === undefined) && nextChatgptUrl) {
+    browser.chatgptUrl = nextChatgptUrl;
+  }
+  if ((overrideExisting || browser.geminiUrl === undefined) && nextGeminiUrl) {
+    browser.geminiUrl = nextGeminiUrl;
+  }
+  if ((overrideExisting || browser.grokUrl === undefined) && nextGrokUrl) {
+    browser.grokUrl = nextGrokUrl;
+  }
 
   const serviceId = resolution.serviceBinding.serviceId;
   if (!serviceId) {

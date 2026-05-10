@@ -240,14 +240,20 @@
         `pnpm run smoke:mcp-ops-browser`; it starts a fixture local API server,
         verifies packaged `auracall-mcp` lists `api_ops_browser_status`, and
         calls it with paused live-follow expectations
+      - installed-runtime MCP provider-guard readback:
+        `pnpm run smoke:mcp-provider-guard`; it runs packaged `auracall-mcp`
+        against an isolated fixture home/config and asserts
+        `account_mirror_provider_guard_clear` list/call/status behavior
+        without provider/browser work
       - compact lazy-live-follow operator preflight:
         `pnpm run preflight:lazy-live-follow`; it runs the completion-control,
         completion-hydration, live-follow health/diagnostics parity,
         ops-browser-control, ops-browser provider-guard clear,
         ops-browser preflight run-detail, user runtime install, installed MCP
-        status, and API log-tail smokes in sequence before live dogfood. When started
-        through the API/dashboard, `/status.preflight.lazyLiveFollowRun.steps`
-        and `/ops/browser` show per-step progress before the run completes.
+        status, API log-tail, ops-browser MCP, and provider-guard MCP smokes in
+        sequence before live dogfood. When started through the API/dashboard,
+        `/status.preflight.lazyLiveFollowRun.steps` and `/ops/browser` show
+        per-step progress before the run completes.
         Operators can also fetch one structured run with
         `GET /v1/preflight/lazy-live-follow/runs/{run_id}` or MCP
         `preflight_run`; the bounded log tail remains at

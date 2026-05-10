@@ -22,6 +22,7 @@ const steps: Step[] = [
   createInstallRuntimeStep(),
   createScriptStep('installed MCP api_status and api_log_tail', 'smoke:mcp-api-status', 'smoke-api-status-mcp'),
   createScriptStep('installed MCP api_ops_browser_status', 'smoke:mcp-ops-browser', 'smoke-ops-browser-mcp'),
+  createScriptStep('installed MCP provider guard clear', 'smoke:mcp-provider-guard', 'smoke-account-mirror-provider-guard-mcp'),
 ];
 
 function createScriptStep(label: string, packageScript: string, scriptName: string): Step {

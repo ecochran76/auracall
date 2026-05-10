@@ -35,6 +35,7 @@
     "smoke:ops-browser-control": "tsx scripts/smoke-ops-browser-completion-control.ts",
     "smoke:ops-browser-provider-guard": "tsx scripts/smoke-ops-browser-provider-guard.ts",
     "smoke:ops-browser-preflight-run-detail": "tsx scripts/smoke-ops-browser-preflight-run-detail.ts",
+    "smoke:mcp-provider-guard": "tsx scripts/smoke-account-mirror-provider-guard-mcp.ts",
     "test:browser": "pnpm run build && tsx scripts/browser-service/test-browser.ts && ./scripts/browser-smoke.sh",
     "test:grok-smoke": "AURACALL_ALLOW_RAW_CDP=1 tsx scripts/browser-service/grok-dom-smoke.ts",
     "test:grok-acceptance": "tsx scripts/grok-acceptance.ts",

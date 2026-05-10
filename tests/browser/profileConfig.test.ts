@@ -2,6 +2,24 @@ import { describe, expect, test } from 'vitest';
 import { applyBrowserProfileOverrides } from '../../src/browser/service/profileConfig.js';
 
 describe('applyBrowserProfileOverrides', () => {
+  test('does not write null browser urls when service urls are absent', () => {
+    const merged = {
+      auracallProfile: 'default',
+      engine: 'browser',
+    };
+    const profile = {
+      defaultService: 'gemini',
+    };
+    const browser: Record<string, unknown> = {};
+
+    applyBrowserProfileOverrides(merged, profile, browser, { overrideExisting: true });
+
+    expect(browser.target).toBe('gemini');
+    expect(browser.chatgptUrl).toBeUndefined();
+    expect(browser.geminiUrl).toBeUndefined();
+    expect(browser.grokUrl).toBeUndefined();
+  });
+
   test('uses the typed profile resolution seam for browser-family and selected service defaults', () => {
     const merged = {
       auracallProfile: 'windows-chrome-test',
