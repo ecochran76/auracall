@@ -1,5 +1,21 @@
 # RUNBOOK
 
+## Turn 115 | 2026-05-10
+
+- Active plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: expose the first OpenAI-style chat completions compatibility route for
+  configured AuraCall agents.
+- Result:
+  - added non-streaming `POST /v1/chat/completions`
+  - chat messages map into the existing `/v1/responses` execution path, including
+    `model: "agent:<agent_id>"` and scoped API-key checks
+  - `stream: true` returns an explicit unsupported-request error
+- Verification target:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "chat completions|development-only posture" --maxWorkers 1`
+  - `pnpm exec biome lint src/http/responsesServer.ts`
+  - `pnpm exec tsc --noEmit --pretty false`
+
 ## Turn 114 | 2026-05-10
 
 - Active plan:

@@ -38,6 +38,9 @@ prefer semantic intent and keep exact provider-version pins as escape hatches.
   - semantic provider selectors with execution-readiness metadata
 - Optional local API-key authorization now protects `/v1/*` routes and can
   scope `/v1/responses` calls by agent, team, service, and runtime profile.
+- Non-streaming `/v1/chat/completions` requests now adapt OpenAI-style chat
+  messages into the existing `/v1/responses` runtime path and return a standard
+  `chat.completion` object.
 
 ## Current State
 
@@ -67,17 +70,23 @@ Implemented:
   authorization for `/v1/*`. `/status` remains open for operator discovery and
   reports the active auth posture. Keys may carry `agents`, `teams`,
   `services`, and `runtimeProfiles` allow-lists for `/v1/responses`.
+- `/v1/chat/completions` is implemented for non-streaming calls. It reuses the
+  same execution authorization, agent shorthand, response drain, and stored-run
+  readback as `/v1/responses`.
 
 Remaining:
 
 - Grok and Gemini semantic `modelSelector` execution still needs
   provider-adapter resolution
-- `/v1/chat/completions` compatibility is deferred
+- streaming `/v1/chat/completions` compatibility is still deferred
 
 ## Acceptance Criteria
 
 - A client can call `/v1/responses` with `model: "agent:<agent_id>"` and the
   stored run routes through that configured agent.
+- A client can call non-streaming `/v1/chat/completions` with `model:
+  "agent:<agent_id>"` and receive a `chat.completion` projection from the same
+  configured-agent runtime path.
 - Agent config can express service, raw model, semantic selector, project,
   knowledge, and prompt intent without polluting output with unset fields.
 - Provider-specific adapters resolve semantic selectors against current
@@ -96,5 +105,5 @@ Remaining:
 - Resolve Grok and Gemini `modelSelector` values through provider-specific
   browser adapters rather than feeding semantic tokens directly into raw model
   selection.
-- Add the `/v1/chat/completions` adapter after `/v1/responses` agent routing is
-  proven.
+- Add streaming compatibility after non-streaming OpenAI client dogfooding proves
+  the basic route and response shape.

@@ -1,3 +1,19 @@
+## Turn 188 | 2026-05-10
+
+- Continued implementation plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: make basic OpenAI-style client apps work through a configured AuraCall
+  agent with `/v1/chat/completions`.
+- Change:
+  - added bounded non-streaming `POST /v1/chat/completions`
+  - chat requests adapt into the existing `/v1/responses` runtime path
+  - streaming chat completions are rejected explicitly until implemented
+  - README and Plan 0064 now document the adapter as implemented
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "chat completions|development-only posture" --maxWorkers 1`
+  - `pnpm exec biome lint src/http/responsesServer.ts`
+  - `pnpm exec tsc --noEmit --pretty false`
+
 ## Turn 187 | 2026-05-10
 
 - Continued implementation plan:

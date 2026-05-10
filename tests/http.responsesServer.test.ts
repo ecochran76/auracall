@@ -1395,7 +1395,7 @@ describe('http responses adapter', () => {
         },
         compatibility: {
           openai: true,
-          chatCompletions: false,
+          chatCompletions: true,
           streaming: false,
           auth: false,
         },
@@ -15538,6 +15538,118 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('creates non-streaming chat completions through the responses runtime path', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-chat-completions-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        now: () => new Date('2026-05-10T21:45:00.000Z'),
+        generateResponseId: () => 'chatcmpl_resp_1',
+        executeStoredRunStep: async (request) => {
+          expect(request).toMatchObject({
+            model: 'agent:researcher',
+            instructions: 'Use a terse voice.',
+            auracall: {
+              agent: 'researcher',
+              service: 'chatgpt',
+            },
+          });
+          return {
+            sharedState: {
+              structuredOutputs: [
+                {
+                  key: 'response.output',
+                  value: [
+                    {
+                      type: 'message',
+                      role: 'assistant',
+                      content: [{ type: 'output_text', text: 'Hello from AuraCall chat.' }],
+                    },
+                  ],
+                },
+              ],
+            },
+            usage: {
+              inputTokens: 7,
+              outputTokens: 5,
+              reasoningTokens: 0,
+              totalTokens: 12,
+            },
+          };
+        },
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          model: 'agent:researcher',
+          messages: [
+            { role: 'system', content: 'Use a terse voice.' },
+            { role: 'user', content: 'Say hello.' },
+          ],
+          auracall: { service: 'chatgpt' },
+        }),
+      });
+      const responseText = await response.text();
+      expect(response.status, responseText).toBe(200);
+      const payload = JSON.parse(responseText) as JsonObject;
+      expect(payload).toMatchObject({
+        id: 'chatcmpl_resp_1',
+        object: 'chat.completion',
+        created: 1_778_449_500,
+        model: 'agent:researcher',
+        choices: [
+          {
+            index: 0,
+            message: {
+              role: 'assistant',
+              content: 'Hello from AuraCall chat.',
+            },
+            finish_reason: 'stop',
+          },
+        ],
+        usage: {
+          prompt_tokens: 7,
+          completion_tokens: 5,
+          total_tokens: 12,
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('rejects streaming chat completions explicitly', async () => {
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          model: 'agent:researcher',
+          stream: true,
+          messages: [{ role: 'user', content: 'Say hello.' }],
+        }),
+      });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({
+        error: {
+          type: 'invalid_request_error',
+          message: 'Streaming chat completions are not supported by this AuraCall adapter yet.',
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('requires configured API keys for protected v1 routes', async () => {
     const server = await createResponsesHttpServer(
       { host: '127.0.0.1', port: 0 },
@@ -15776,7 +15888,7 @@ describe('http responses adapter', () => {
         },
         compatibility: {
           openai: true,
-          chatCompletions: false,
+          chatCompletions: true,
           streaming: false,
           auth: false,
         },

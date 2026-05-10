@@ -43,6 +43,7 @@ import type { TaskRunSpec } from '../teams/types.js';
 import type {
   ExecutionRequest,
   ExecutionRequestExtensionHints,
+  ExecutionResponse,
 } from '../runtime/apiTypes.js';
 import {
   inspectRuntimeRun,
@@ -246,6 +247,8 @@ interface HttpErrorPayload {
   };
 }
 
+class HttpInvalidRequestError extends Error {}
+
 interface HttpModelDescriptor {
   id: string;
   object: 'model';
@@ -264,6 +267,41 @@ interface HttpModelDescriptor {
 interface HttpModelListResponse {
   object: 'list';
   data: HttpModelDescriptor[];
+}
+
+interface HttpChatCompletionMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+interface HttpChatCompletionRequest {
+  model: string;
+  messages: HttpChatCompletionMessage[];
+  stream?: boolean;
+  metadata?: Record<string, unknown>;
+  tools?: Array<Record<string, unknown>>;
+  auracall?: ExecutionRequestExtensionHints;
+}
+
+interface HttpChatCompletionResponse {
+  id: string;
+  object: 'chat.completion';
+  created: number;
+  model: string;
+  choices: Array<{
+    index: number;
+    message: {
+      role: 'assistant';
+      content: string;
+    };
+    finish_reason: 'stop' | null;
+  }>;
+  usage?: {
+    prompt_tokens: number | null;
+    completion_tokens: number | null;
+    total_tokens: number | null;
+  };
+  metadata?: ExecutionResponse['metadata'];
 }
 
 interface HttpRecoveryDetailResponse {
@@ -503,6 +541,7 @@ interface HttpStatusResponse {
     runtimeRunsRecent: string;
     runtimeRunInspection: string;
     models: string;
+    chatCompletionsCreate: string;
     responsesCreate: string;
     responsesGetTemplate: string;
     mediaGenerationsCreate: string;
@@ -538,7 +577,7 @@ interface HttpStatusResponse {
   };
   compatibility: {
     openai: true;
-    chatCompletions: false;
+    chatCompletions: boolean;
     streaming: false;
     auth: boolean;
   };
@@ -1783,6 +1822,49 @@ export async function createResponsesHttpServer(
         return;
       }
 
+      if (req.method === 'POST' && url.pathname === '/v1/chat/completions') {
+        const body = await readRequestBody(req);
+        const chatRequest = parseChatCompletionRequest(JSON.parse(body || '{}'));
+        if (chatRequest.stream) {
+          sendJson(res, 400, {
+            error: {
+              message: 'Streaming chat completions are not supported by this AuraCall adapter yet.',
+              type: 'invalid_request_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        const request = createExecutionRequest(
+          mergeExecutionRequestHints(createExecutionRequestFromChatCompletion(chatRequest), req.headers),
+        );
+        const authorizationError = authorizeExecutionRequest(apiAuthContext, request);
+        if (authorizationError) {
+          sendJson(res, 403, {
+            error: {
+              message: authorizationError,
+              type: 'permission_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        const createdResponse = await responsesService.createResponse(request);
+        let response = createdResponse;
+        if (backgroundDrainIntervalMs > 0) {
+          accountMirrorFollowUpAfterNextDrain = true;
+          scheduleBackgroundDrain(0);
+        } else {
+          await drainThroughServerHost({
+            runId: createdResponse.id,
+            maxRuns: 1,
+            trigger: 'request-create',
+          });
+          scheduleAccountMirrorSchedulerFollowUp(0, 'response-drain-completed');
+          response = (await responsesService.readResponse(createdResponse.id)) ?? createdResponse;
+        }
+        sendJson(res, 200, createChatCompletionResponse(response, now));
+        return;
+      }
+
       if (req.method === 'POST' && url.pathname === '/v1/responses') {
         const body = await readRequestBody(req);
         const parsedBody = JSON.parse(body) as ExecutionRequest;
@@ -1929,7 +2011,7 @@ export async function createResponsesHttpServer(
       } satisfies HttpErrorPayload);
     } catch (error) {
       logger(error instanceof Error ? error.message : String(error));
-      if (error instanceof SyntaxError || error instanceof ZodError) {
+      if (error instanceof SyntaxError || error instanceof ZodError || error instanceof HttpInvalidRequestError) {
         sendJson(res, 400, {
           error: {
             message: error instanceof Error ? error.message : 'Invalid request body',
@@ -2213,7 +2295,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   }
   logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
-    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
+    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   if (serverOptions.dashboardUrl) {
@@ -2684,6 +2766,7 @@ function createHttpStatusResponse(input: {
       runtimeRunInspection:
         '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}][&probe=service-state][&diagnostics=browser-state][&authority=scheduler]',
       models: '/v1/models',
+      chatCompletionsCreate: '/v1/chat/completions',
       responsesCreate: '/v1/responses',
       responsesGetTemplate: '/v1/responses/{response_id}',
       mediaGenerationsCreate: '/v1/media-generations',
@@ -2720,7 +2803,7 @@ function createHttpStatusResponse(input: {
     },
     compatibility: {
       openai: true,
-      chatCompletions: false,
+      chatCompletions: true,
       streaming: false,
       auth: input.auth.required,
     },
@@ -3508,6 +3591,121 @@ function authorizeExecutionRequest(context: ApiAuthContext, request: ExecutionRe
     ?? authorizeScopedValue('service', service, key.services)
     ?? authorizeScopedValue('runtime profile', runtimeProfile, key.runtimeProfiles)
   );
+}
+
+function parseChatCompletionRequest(value: unknown): HttpChatCompletionRequest {
+  if (!isRecord(value)) {
+    throw new HttpInvalidRequestError('Chat completion request body must be an object.');
+  }
+  const model = readNonEmptyString(value.model);
+  const messages = Array.isArray(value.messages)
+    ? value.messages.flatMap((message): HttpChatCompletionMessage[] => {
+        if (!isRecord(message)) return [];
+        const role = readNonEmptyString(message.role);
+        if (role !== 'system' && role !== 'user' && role !== 'assistant') return [];
+        const content = normalizeChatMessageContent(message.content);
+        return content === null ? [] : [{ role, content }];
+      })
+    : [];
+  if (!model) {
+    throw new HttpInvalidRequestError('Chat completion request requires a model.');
+  }
+  if (messages.length === 0) {
+    throw new HttpInvalidRequestError('Chat completion request requires at least one string-content message.');
+  }
+  const metadata = isRecord(value.metadata) ? value.metadata : undefined;
+  const tools = Array.isArray(value.tools)
+    ? value.tools.filter((tool): tool is Record<string, unknown> => isRecord(tool))
+    : undefined;
+  return {
+    model,
+    messages,
+    stream: readBoolean(value.stream) ?? false,
+    ...(metadata ? { metadata } : {}),
+    ...(tools ? { tools } : {}),
+    auracall: isRecord(value.auracall)
+      ? (value.auracall as ExecutionRequestExtensionHints)
+      : undefined,
+  };
+}
+
+function createExecutionRequestFromChatCompletion(request: HttpChatCompletionRequest): ExecutionRequest {
+  const instructions = request.messages
+    .filter((message) => message.role === 'system')
+    .map((message) => message.content)
+    .join('\n\n')
+    || null;
+  const inputMessages = request.messages
+    .filter((message) => message.role !== 'system')
+    .map((message) => ({
+      role: message.role,
+      content: message.content,
+    }));
+  return {
+    model: request.model,
+    input: inputMessages.length > 0 ? inputMessages : request.messages,
+    ...(instructions ? { instructions } : {}),
+    ...(request.metadata ? { metadata: request.metadata } : {}),
+    ...(request.tools ? { tools: request.tools } : {}),
+    ...(request.auracall ? { auracall: request.auracall } : {}),
+  };
+}
+
+function createChatCompletionResponse(
+  response: ExecutionResponse,
+  now: () => Date,
+): HttpChatCompletionResponse {
+  const usage = response.metadata?.executionSummary?.providerUsageSummary;
+  return {
+    id: response.id,
+    object: 'chat.completion',
+    created: Math.floor(now().getTime() / 1000),
+    model: response.model ?? '',
+    choices: [
+      {
+        index: 0,
+        message: {
+          role: 'assistant',
+          content: extractChatCompletionText(response),
+        },
+        finish_reason: response.status === 'completed' ? 'stop' : null,
+      },
+    ],
+    ...(usage
+      ? {
+          usage: {
+            prompt_tokens: usage.inputTokens ?? null,
+            completion_tokens: usage.outputTokens ?? null,
+            total_tokens: usage.totalTokens ?? null,
+          },
+        }
+      : {}),
+    ...(response.metadata ? { metadata: response.metadata } : {}),
+  };
+}
+
+function extractChatCompletionText(response: ExecutionResponse): string {
+  return response.output
+    .flatMap((item) =>
+      item.type === 'message'
+        ? item.content.map((part) => part.text)
+        : [],
+    )
+    .join('\n\n');
+}
+
+function normalizeChatMessageContent(value: unknown): string | null {
+  if (typeof value === 'string') return value;
+  if (!Array.isArray(value)) return null;
+  const text = value
+    .flatMap((part): string[] => {
+      if (!isRecord(part)) return [];
+      if (part.type !== 'text') return [];
+      const textValue = readNonEmptyString(part.text);
+      return textValue ? [textValue] : [];
+    })
+    .join('\n');
+  return text.length > 0 ? text : null;
 }
 
 function authorizeScopedValue(

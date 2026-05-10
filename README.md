@@ -201,6 +201,7 @@ Terminology note:
   - `GET /v1/runtime-runs/inspect`
   - `GET /v1/models`
   - `GET /v1/workbench-capabilities`
+  - `POST /v1/chat/completions`
   - `POST /v1/responses`
   - `GET /v1/responses/{response_id}`
   - `POST /v1/media-generations`
@@ -219,9 +220,15 @@ Terminology note:
   - `POST /v1/account-mirrors/completions`
   - `GET /v1/account-mirrors/completions`
   - `GET /v1/account-mirrors/completions/{completion_id}`
+- `POST /v1/chat/completions` accepts non-streaming OpenAI-style chat requests,
+  maps `system` messages to instructions, joins the remaining chat messages
+  into the existing `/v1/responses` runtime path, and returns a standard
+  `chat.completion` object. `stream: true` is rejected explicitly until the
+  streaming adapter is implemented.
 - `GET /v1/models` returns the static provider model catalog plus AuraCall
   discovery entries. Configured agents appear as `agent:<agent_id>` model ids
-  usable with `/v1/responses`; semantic provider selectors such as
+  usable with `/v1/responses` and non-streaming `/v1/chat/completions`;
+  semantic provider selectors such as
   `chatgpt:pro-extended` include `metadata.kind="semantic_model_selector"` and
   `metadata.executionReady` so clients can distinguish execution-ready selectors
   from planned Gemini/Grok selectors.
@@ -871,7 +878,8 @@ Terminology note:
     - `X-AuraCall-Service`
   - optional local API-key auth for `/v1/*`; no auth unless configured
   - no streaming
-  - no `chat/completions` adapter yet
+  - bounded non-streaming `/v1/chat/completions` compatibility routes through
+    the existing `/v1/responses` runtime path
   - runner self-registration + heartbeat now exist for the local `api serve`
     host, but there is still no broader multi-runner claim/reassignment mode
   - direct-run responses now include bounded execution readback under

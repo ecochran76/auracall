@@ -180,8 +180,11 @@ Current State:
     thinking controls; Grok/Gemini semantic execution remains the next provider
     follow-through
   - local API and MCP tools can now configure agents and teams without
-    hand-editing the user config file; API-key policy remains the next safety
-    gate before broad client use
+    hand-editing the user config file
+  - optional scoped API-key policy now protects `/v1/*` routes when configured
+  - non-streaming `/v1/chat/completions` now adapts OpenAI-style chat requests
+    into the same configured-agent `/v1/responses` runtime path; streaming
+    remains deferred until basic client dogfooding is proven
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local
