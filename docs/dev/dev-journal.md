@@ -1,3 +1,25 @@
+## Turn 177 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: include Browser Ops preflight run-detail click coverage in the compact
+  lazy-live-follow preflight gate.
+- Change:
+  - `scripts/preflight-lazy-live-follow.ts` now runs
+    `smoke:ops-browser-preflight-run-detail` after the existing Browser Ops
+    control smoke
+  - `docs/testing.md`, the fixes log, and the lazy account mirroring plan now
+    describe the stronger preflight gate
+- Validation:
+  - `pnpm run smoke:ops-browser-preflight-run-detail`
+  - `pnpm exec biome lint scripts/preflight-lazy-live-follow.ts scripts/smoke-ops-browser-preflight-run-detail.ts docs/testing.md docs/dev/dev-journal.md docs/dev-fixes-log.md docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run preflight:lazy-live-follow`
+- Installed dogfood:
+  - the full lazy-live-follow preflight passed and included
+    `ops-browser preflight run detail` between `ops-browser dashboard controls`
+    and `install user runtime`
+
 ## Turn 176 | 2026-05-09
 
 - Continued implementation plan:

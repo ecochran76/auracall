@@ -231,8 +231,9 @@
       - compact lazy-live-follow operator preflight:
         `pnpm run preflight:lazy-live-follow`; it runs the completion-control,
         completion-hydration, live-follow health/diagnostics parity,
-        ops-browser-control, user runtime install, installed MCP status, and
-        API log-tail smokes in sequence before live dogfood. When started
+        ops-browser-control, ops-browser preflight run-detail, user runtime
+        install, installed MCP status, and API log-tail smokes in sequence
+        before live dogfood. When started
         through the API/dashboard, `/status.preflight.lazyLiveFollowRun.steps`
         and `/ops/browser` show per-step progress before the run completes.
         Operators can also fetch one structured run with

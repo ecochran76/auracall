@@ -1,3 +1,8 @@
+- 2026-05-09: The compact lazy-live-follow preflight should cover the actual
+  Browser Ops `Open Run` click path. `scripts/preflight-lazy-live-follow.ts`
+  now runs `smoke:ops-browser-preflight-run-detail` after the dashboard control
+  smoke and before installed-runtime checks.
+
 - 2026-05-09: Browser Ops `Open Run` needs browser-backed coverage, not only
   HTML string assertions. Added `smoke:ops-browser-preflight-run-detail`, which
   uses `agent-browser` against a fixture local API server and confirms the

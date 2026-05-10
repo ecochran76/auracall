@@ -1044,3 +1044,6 @@ history rows provide `Open Run` for structured run/step details and keep
 `pnpm run smoke:ops-browser-preflight-run-detail` now covers that frontend path
 with `agent-browser` against a fixture API server, so the button click and
 detail-panel update are validated beyond static HTML checks.
+The compact `pnpm run preflight:lazy-live-follow` gate now includes that
+browser-backed run-detail smoke immediately after the Browser Ops control
+smoke, before installed-runtime validation.
