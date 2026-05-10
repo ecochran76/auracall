@@ -7,6 +7,7 @@ import {
   getLazyLiveFollowPreflightRunHistoryPath,
   getLazyLiveFollowPreflightStatusPath,
   observeLazyLiveFollowPreflightRunOutput,
+  readLazyLiveFollowPreflightRun,
   readLazyLiveFollowPreflightRunHistory,
   readPreflightStatusSummary,
   recordLazyLiveFollowPreflightRun,
@@ -156,6 +157,54 @@ describe('preflight status persistence', () => {
         },
       ],
     });
+  });
+
+  it('reads a single active preflight run before persisted history', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-preflight-run-read-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const run = {
+      object: 'auracall_preflight_run' as const,
+      id: 'preflight_lazy_live_follow_active',
+      name: 'lazy-live-follow' as const,
+      status: 'running' as const,
+      command: 'pnpm',
+      args: ['run', 'preflight:lazy-live-follow'],
+      cwd: '/tmp',
+      logPath: path.join(homeDir, 'logs', 'preflight-lazy-live-follow-active.log'),
+      startedAt: '2026-05-08T20:00:00.000Z',
+      completedAt: null,
+      durationMs: null,
+      exitCode: null,
+      signal: null,
+      errorMessage: null,
+      steps: [
+        {
+          label: 'operator dashboard',
+          status: 'running' as const,
+          command: 'pnpm vitest run tests/http.responsesServer.test.ts',
+          startedAt: '2026-05-08T20:00:00.000Z',
+          completedAt: null,
+          durationMs: null,
+          errorMessage: null,
+        },
+      ],
+    };
+
+    await expect(readLazyLiveFollowPreflightRun(run.id, { readRun: () => run })).resolves.toMatchObject({
+      id: run.id,
+      status: 'running',
+      steps: [
+        {
+          label: 'operator dashboard',
+          status: 'running',
+        },
+      ],
+    });
+    const result = await readLazyLiveFollowPreflightRun(run.id, { readRun: () => run });
+    expect(result).not.toBe(run);
+    expect(result?.steps[0]).not.toBe(run.steps[0]);
+    await expect(readLazyLiveFollowPreflightRun('missing', { readRun: () => run })).resolves.toBeNull();
   });
 
   it('updates run step progress from preflight output banners', () => {

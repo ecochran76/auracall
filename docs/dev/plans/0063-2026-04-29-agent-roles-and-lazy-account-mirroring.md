@@ -1033,3 +1033,8 @@ record. The API status projection includes `steps[]` for the active run and
 recent history, and the Browser Ops dashboard renders both the current step and
 a compact step table, so operators can see progress/failure location without
 opening the bounded log tail first.
+One-run readback is now first-class too: `GET
+/v1/preflight/lazy-live-follow/runs/{run_id}` returns the structured run record
+with steps, MCP `preflight_run` reads that same route, and active in-memory
+runs are checked before persisted history so an executing preflight can be
+inspected directly.

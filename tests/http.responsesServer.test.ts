@@ -2764,6 +2764,62 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('serves a structured preflight run from recorded history', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-preflight-run-route-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const logPath = path.join(homeDir, 'logs', 'preflight-lazy-live-follow-route.log');
+    await recordLazyLiveFollowPreflightRun({
+      object: 'auracall_preflight_run',
+      id: 'preflight_lazy_live_follow_route_test',
+      name: 'lazy-live-follow',
+      status: 'passed',
+      command: 'node',
+      args: ['/tmp/preflight.js'],
+      cwd: '/tmp',
+      logPath,
+      startedAt: '2026-05-08T20:00:00.000Z',
+      completedAt: '2026-05-08T20:00:01.000Z',
+      durationMs: 1000,
+      exitCode: 0,
+      signal: null,
+      errorMessage: null,
+      steps: [
+        {
+          label: 'operator dashboard',
+          status: 'passed',
+          command: 'pnpm vitest run tests/http.responsesServer.test.ts',
+          startedAt: '2026-05-08T20:00:00.000Z',
+          completedAt: '2026-05-08T20:00:01.000Z',
+          durationMs: 1000,
+          errorMessage: null,
+        },
+      ],
+    });
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/preflight/lazy-live-follow/runs/preflight_lazy_live_follow_route_test`,
+      );
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        object: 'auracall_preflight_run',
+        id: 'preflight_lazy_live_follow_route_test',
+        status: 'passed',
+        logPath,
+        steps: [
+          {
+            label: 'operator dashboard',
+            status: 'passed',
+          },
+        ],
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('reports dry-run lazy account mirror scheduler passes through /status', async () => {
     const pass: AccountMirrorSchedulerPassResult = {
       object: 'account_mirror_scheduler_pass',
@@ -15370,6 +15426,12 @@ describe('http responses adapter', () => {
       );
       expect((payload.routes as Record<string, unknown>).accountMirrorSchedulerDiagnostics).toContain(
         '/v1/account-mirrors/scheduler/diagnostics',
+      );
+      expect((payload.routes as Record<string, unknown>).preflightRunTemplate).toBe(
+        '/v1/preflight/lazy-live-follow/runs/{run_id}',
+      );
+      expect((payload.routes as Record<string, unknown>).preflightRunLogTemplate).toContain(
+        '/v1/preflight/lazy-live-follow/runs/{run_id}/log',
       );
       expect((payload.routes as Record<string, unknown>).operatorBrowserDashboardUrl).toBe(
         'http://auracall.localhost/ops/browser',

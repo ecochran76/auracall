@@ -1,3 +1,9 @@
+- 2026-05-09: Operators should be able to inspect one async lazy-live-follow
+  preflight run without scraping `/status` history or opening the log first.
+  The API now serves `GET /v1/preflight/lazy-live-follow/runs/{run_id}`, MCP
+  exposes `preflight_run`, and active in-memory runs are resolved before
+  persisted run history.
+
 - 2026-05-09: Async lazy-live-follow preflight runs should not require log
   inspection just to know which step is running. Run history now persists
   per-step progress, `/status` projects it, and `/ops/browser` renders current

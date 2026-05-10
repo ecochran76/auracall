@@ -235,6 +235,10 @@
         API log-tail smokes in sequence before live dogfood. When started
         through the API/dashboard, `/status.preflight.lazyLiveFollowRun.steps`
         and `/ops/browser` show per-step progress before the run completes.
+        Operators can also fetch one structured run with
+        `GET /v1/preflight/lazy-live-follow/runs/{run_id}` or MCP
+        `preflight_run`; the bounded log tail remains at
+        `/v1/preflight/lazy-live-follow/runs/{run_id}/log`.
       - execute one pass only when the server was started with
         `--account-mirror-scheduler-execute`:
         `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"accountMirrorScheduler":{"action":"run-once","dryRun":false}}'`

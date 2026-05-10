@@ -127,6 +127,21 @@ export async function readLazyLiveFollowPreflightRunHistory(
   }
 }
 
+export async function readLazyLiveFollowPreflightRun(
+  id: string,
+  runner?: Pick<LazyLiveFollowPreflightRunner, 'readRun'>,
+): Promise<LazyLiveFollowPreflightRun | null> {
+  const requestedId = id.trim();
+  if (!requestedId) return null;
+  const activeRun = runner?.readRun() ?? null;
+  if (activeRun?.id === requestedId) {
+    return cloneLazyLiveFollowPreflightRun(activeRun);
+  }
+  const history = await readLazyLiveFollowPreflightRunHistory(20);
+  const run = history.find((entry) => entry.id === requestedId) ?? null;
+  return run ? cloneLazyLiveFollowPreflightRun(run) : null;
+}
+
 export async function recordLazyLiveFollowPreflightRun(
   run: LazyLiveFollowPreflightRun,
 ): Promise<void> {

@@ -1,3 +1,22 @@
+## Turn 174 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make one async lazy-live-follow preflight run directly inspectable from
+  API/MCP, not only through `/status` history or log tails.
+- Change:
+  - added `GET /v1/preflight/lazy-live-follow/runs/{run_id}` for a structured
+    run record with step progress
+  - added MCP `preflight_run`, which reads the same API route and returns
+    structured run/step content
+  - active in-memory runs are now resolved before persisted history, so
+    operators can inspect a run while it is still executing
+- Validation:
+  - `pnpm vitest run tests/preflightStatus.test.ts tests/cli/apiPreflightRunCommand.test.ts tests/mcp.preflightRun.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 -t "preflight run|status control path|/status advertises|serves a read-only browser operator dashboard"`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/preflightStatus.ts src/http/responsesServer.ts src/cli/apiPreflightRunCommand.ts src/mcp/server.ts src/mcp/tools/preflightRun.ts tests/preflightStatus.test.ts tests/cli/apiPreflightRunCommand.test.ts tests/mcp.preflightRun.test.ts`
+
 ## Turn 173 | 2026-05-09
 
 - Continued implementation plan:
