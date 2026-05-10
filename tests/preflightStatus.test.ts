@@ -6,6 +6,7 @@ import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import {
   getLazyLiveFollowPreflightRunHistoryPath,
   getLazyLiveFollowPreflightStatusPath,
+  observeLazyLiveFollowPreflightRunOutput,
   readLazyLiveFollowPreflightRunHistory,
   readPreflightStatusSummary,
   recordLazyLiveFollowPreflightRun,
@@ -90,6 +91,17 @@ describe('preflight status persistence', () => {
       exitCode: null,
       signal: null,
       errorMessage: null,
+      steps: [
+        {
+          label: 'completion controls',
+          status: 'running',
+          command: 'pnpm run smoke:completion-control',
+          startedAt: '2026-05-08T20:00:00.000Z',
+          completedAt: null,
+          durationMs: null,
+          errorMessage: null,
+        },
+      ],
     });
     await recordLazyLiveFollowPreflightRun({
       object: 'auracall_preflight_run',
@@ -106,6 +118,17 @@ describe('preflight status persistence', () => {
       exitCode: 0,
       signal: null,
       errorMessage: null,
+      steps: [
+        {
+          label: 'completion controls',
+          status: 'passed',
+          command: 'pnpm run smoke:completion-control',
+          startedAt: '2026-05-08T20:00:00.000Z',
+          completedAt: '2026-05-08T20:00:01.000Z',
+          durationMs: 1000,
+          errorMessage: null,
+        },
+      ],
     });
 
     await expect(fs.stat(getLazyLiveFollowPreflightRunHistoryPath())).resolves.toMatchObject({
@@ -116,6 +139,13 @@ describe('preflight status persistence', () => {
         id: 'preflight_lazy_live_follow_1',
         status: 'passed',
         exitCode: 0,
+        steps: [
+          expect.objectContaining({
+            label: 'completion controls',
+            status: 'passed',
+            command: 'pnpm run smoke:completion-control',
+          }),
+        ],
       }),
     ]);
     await expect(readPreflightStatusSummary()).resolves.toMatchObject({
@@ -126,5 +156,53 @@ describe('preflight status persistence', () => {
         },
       ],
     });
+  });
+
+  it('updates run step progress from preflight output banners', () => {
+    const run = {
+      object: 'auracall_preflight_run' as const,
+      id: 'preflight_lazy_live_follow_steps',
+      name: 'lazy-live-follow' as const,
+      status: 'running' as const,
+      command: 'pnpm',
+      args: ['run', 'preflight:lazy-live-follow'],
+      cwd: '/tmp',
+      logPath: '/tmp/preflight.log',
+      startedAt: '2026-05-08T20:00:00.000Z',
+      completedAt: null,
+      durationMs: null,
+      exitCode: null,
+      signal: null,
+      errorMessage: null,
+      steps: [],
+    };
+
+    observeLazyLiveFollowPreflightRunOutput(
+      run,
+      [
+        '==== completion controls ====',
+        '>> pnpm run smoke:completion-control',
+        'completion-control smoke: pass',
+        '==== completion hydration ====',
+        '>> pnpm run smoke:completion-hydration',
+      ].join('\n'),
+    );
+
+    expect(run.steps).toEqual([
+      expect.objectContaining({
+        label: 'completion controls',
+        status: 'passed',
+        command: 'pnpm run smoke:completion-control',
+        completedAt: expect.any(String),
+        durationMs: expect.any(Number),
+      }),
+      expect.objectContaining({
+        label: 'completion hydration',
+        status: 'running',
+        command: 'pnpm run smoke:completion-hydration',
+        completedAt: null,
+        durationMs: null,
+      }),
+    ]);
   });
 });

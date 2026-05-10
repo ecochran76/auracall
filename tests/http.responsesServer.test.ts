@@ -2638,6 +2638,17 @@ describe('http responses adapter', () => {
       exitCode: null,
       signal: null,
       errorMessage: null,
+      steps: [
+        {
+          label: 'completion controls',
+          status: 'running' as const,
+          command: 'pnpm run smoke:completion-control',
+          startedAt: '2026-05-08T20:00:00.000Z',
+          completedAt: null,
+          durationMs: null,
+          errorMessage: null,
+        },
+      ],
     };
     const start = vi.fn(async () => ({
       object: 'auracall_preflight_start_result' as const,
@@ -2683,6 +2694,13 @@ describe('http responses adapter', () => {
             id: 'preflight_lazy_live_follow_test',
             status: 'queued',
             logPath: '/tmp/preflight.log',
+            steps: [
+              {
+                label: 'completion controls',
+                status: 'running',
+                command: 'pnpm run smoke:completion-control',
+              },
+            ],
           },
         },
       });
@@ -2713,6 +2731,17 @@ describe('http responses adapter', () => {
       exitCode: 0,
       signal: null,
       errorMessage: null,
+      steps: [
+        {
+          label: 'completion controls',
+          status: 'passed',
+          command: 'pnpm run smoke:completion-control',
+          startedAt: '2026-05-08T20:00:00.000Z',
+          completedAt: '2026-05-08T20:00:01.000Z',
+          durationMs: 1000,
+          errorMessage: null,
+        },
+      ],
     });
     const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
 
@@ -15427,6 +15456,10 @@ describe('http responses adapter', () => {
       expect(html).toContain('renderPreflightStatus');
       expect(html).toContain('preflightControls');
       expect(html).toContain('runLazyLiveFollowPreflight');
+      expect(html).toContain('Preflight Step');
+      expect(html).toContain('preflightStepProgress');
+      expect(html).toContain('renderPreflightStepProgress');
+      expect(html).toContain('data-preflight-step-status');
       expect(html).toContain('preflightRunHistory');
       expect(html).toContain('renderPreflightRunHistory');
       expect(html).toContain('loadPreflightRunLog');

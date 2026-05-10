@@ -5171,6 +5171,7 @@ function createOperatorBrowserDashboardHtml(input: {
       const apiService = api.managedService || {};
       const preflight = status.preflight || {};
       const lazyLiveFollowPreflight = preflight.lazyLiveFollow || null;
+      const lazyLiveFollowRun = preflight.lazyLiveFollowRun || null;
       const dashboard = status.routes && status.routes.operatorBrowserDashboard;
       $('serverSummary').innerHTML = [
         ['Status', status.ok ? '<span class="ok">ok</span>' : '<span class="bad">not ok</span>'],
@@ -5179,6 +5180,7 @@ function createOperatorBrowserDashboardHtml(input: {
         ['API Log', escapeHtml(apiService.logPath || 'unknown')],
         ['Preflight', renderPreflightStatus(lazyLiveFollowPreflight)],
         ['Preflight Completed', lazyLiveFollowPreflight ? escapeHtml(lazyLiveFollowPreflight.completedAt || 'unknown') : 'never'],
+        ['Preflight Step', renderPreflightCurrentStep(lazyLiveFollowRun)],
         ['Binding', [binding.host, binding.port].filter(Boolean).join(':') || 'unknown'],
         ['Local Only', binding.localOnly ? '<span class="ok">true</span>' : '<span class="warn">false</span>'],
         ['Runner', runner.status || 'unknown'],
@@ -5203,6 +5205,14 @@ function createOperatorBrowserDashboardHtml(input: {
       const duration = typeof preflight.durationMs === 'number' ? ' in ' + preflight.durationMs + 'ms' : '';
       const failedStep = preflight.failedStep ? ' step=' + preflight.failedStep : '';
       return renderStatusText(status, tone) + escapeHtml(duration + failedStep);
+    }
+
+    function renderPreflightCurrentStep(run) {
+      const steps = run && Array.isArray(run.steps) ? run.steps : [];
+      const current = steps.find((step) => step.status === 'running') || steps[steps.length - 1] || null;
+      if (!current) return '<span class="muted">none</span>';
+      return renderStatusText(current.status || 'unknown', toneForActualStatus(current.status || 'unknown'))
+        + ' ' + escapeHtml(current.label || 'unknown');
     }
 
     function renderServiceDiscovery(status) {
@@ -5965,20 +5975,39 @@ function createOperatorBrowserDashboardHtml(input: {
         + '<dt>Latest</dt><dd>' + escapeHtml(completedAt) + '</dd>'
         + '<dt>Active Run</dt><dd>' + escapeHtml(runDetail) + '</dd>'
         + '<dt>Log</dt><dd>' + escapeHtml(run && run.logPath ? run.logPath : 'none') + '</dd>'
-        + '</dl><div class="row">'
+        + '</dl><div id="preflightStepProgress" class="mini-table">' + renderPreflightStepProgress(run) + '</div><div class="row">'
         + '<button id="runLazyLiveFollowPreflight" class="primary" type="button" onclick="runLazyLiveFollowPreflight()" ' + disabledAttr(running) + '>Run Preflight</button>'
         + '</div><div id="preflightRunHistory" class="mini-table">' + renderPreflightRunHistory(history) + '</div>'
         + '<pre id="preflightRunLog">Preflight log not loaded.</pre></div>';
     }
 
+    function renderPreflightStepProgress(run) {
+      const steps = run && Array.isArray(run.steps) ? run.steps : [];
+      if (!steps.length) return '<p class="muted">No preflight step progress recorded.</p>';
+      return '<table><thead><tr><th>Step</th><th>Status</th><th>Duration</th><th>Command</th></tr></thead><tbody>'
+        + steps.map((step) => {
+          const duration = step.durationMs === null || step.durationMs === undefined ? 'running' : String(step.durationMs) + ' ms';
+          return '<tr data-preflight-step-status="' + escapeHtml(step.status || 'unknown') + '">'
+            + '<td>' + escapeHtml(step.label || 'unknown') + '</td>'
+            + '<td>' + renderStatusText(step.status || 'unknown', toneForActualStatus(step.status || 'unknown')) + '</td>'
+            + '<td>' + escapeHtml(duration) + '</td>'
+            + '<td><code>' + escapeHtml(step.command || 'pending') + '</code></td>'
+            + '</tr>';
+        }).join('')
+        + '</tbody></table>';
+    }
+
     function renderPreflightRunHistory(history) {
       if (!history.length) return '<p class="muted">No preflight runs recorded.</p>';
-      return '<table><thead><tr><th>Status</th><th>Started</th><th>Duration</th><th>Log</th></tr></thead><tbody>'
+      return '<table><thead><tr><th>Status</th><th>Started</th><th>Step</th><th>Duration</th><th>Log</th></tr></thead><tbody>'
         + history.map((entry) => {
           const duration = entry.durationMs === null || entry.durationMs === undefined ? 'running' : String(entry.durationMs) + ' ms';
+          const steps = Array.isArray(entry.steps) ? entry.steps : [];
+          const step = steps.find((candidate) => candidate.status === 'running') || steps[steps.length - 1] || null;
           return '<tr>'
             + '<td>' + renderStatusText(entry.status || 'unknown', toneForActualStatus(entry.status || 'unknown')) + '</td>'
             + '<td><code>' + escapeHtml(entry.startedAt || 'unknown') + '</code></td>'
+            + '<td>' + escapeHtml(step ? (step.label || 'unknown') + ' (' + (step.status || 'unknown') + ')' : 'none') + '</td>'
             + '<td>' + escapeHtml(duration) + '</td>'
             + '<td><button type="button" class="link-button" data-preflight-run-id="' + escapeHtml(entry.id || '') + '" onclick="loadPreflightRunLog(this.dataset.preflightRunId)">Open Log</button></td>'
             + '</tr>';

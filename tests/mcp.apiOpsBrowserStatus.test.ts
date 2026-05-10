@@ -3,7 +3,7 @@ import { createResponsesHttpServer } from '../src/http/responsesServer.js';
 import { createApiOpsBrowserStatusToolHandler } from '../src/mcp/tools/apiOpsBrowserStatus.js';
 
 const _dashboardHtml = `
-<section><h2>Operations</h2><div id="opsControls"><div id="apiServiceControls">API Service managedService statusCommand restartCommand</div><button id="loadApiLogTailInline" onclick="loadApiLogTail()">Refresh Log Tail</button><div id="preflightControls"><button id="runLazyLiveFollowPreflight" onclick="runLazyLiveFollowPreflight()">Run Preflight</button><div id="preflightRunHistory">lazyLiveFollowRunHistory renderPreflightRunHistory</div><button data-preflight-run-id="run_1" onclick="loadPreflightRunLog(this.dataset.preflightRunId)">Open Log</button><pre id="preflightRunLog">/v1/preflight/lazy-live-follow/runs/</pre></div></div></section>
+<section><h2>Operations</h2><div id="opsControls"><div id="apiServiceControls">API Service managedService statusCommand restartCommand</div><button id="loadApiLogTailInline" onclick="loadApiLogTail()">Refresh Log Tail</button><div id="preflightControls"><button id="runLazyLiveFollowPreflight" onclick="runLazyLiveFollowPreflight()">Run Preflight</button><div id="preflightStepProgress">renderPreflightStepProgress data-preflight-step-status No preflight step progress recorded.</div><div id="preflightRunHistory">lazyLiveFollowRunHistory renderPreflightRunHistory</div><button data-preflight-run-id="run_1" onclick="loadPreflightRunLog(this.dataset.preflightRunId)">Open Log</button><pre id="preflightRunLog">/v1/preflight/lazy-live-follow/runs/</pre></div></div></section>
 <section><h2>Server</h2><dl><dt>Preflight Completed</dt><dd>never</dd></dl><button id="loadApiLogTail">Refresh API Log Tail</button><pre id="apiLogTail">/v1/api/logs/tail?maxBytes=32768</pre></section>
 <section><h2>Mirror Live Follow</h2></section>
 <div id="mirrorAttentionQueue"><table id="mirrorAttentionItems"></table></div>
@@ -129,7 +129,7 @@ describe('mcp api_ops_browser_status tool', () => {
       content: [
         {
           type: 'text',
-          text: 'AuraCall ops browser 127.0.0.1:18080 is ok; dashboard=http://127.0.0.1:18080/ops/browser; apiService=ok; apiLogTail=ok; recentEvents=ok; recentEventFilters=ok; recentSchedulerDetail=ok; recentEventPersistence=ok; schedulerWhy=ok; schedulerWaitTable=ok; schedulerWaitActions=ok; schedulerCompletionDetail=ok; schedulerDiagnostics=ok; preflight=ok; preflightRun=ok; preflightHistory=ok; preflightLog=ok; dashboard completion controls use /status; Live follow health: severity=paused posture=healthy state=idle active=1 paused=1 failed=0 cancelled=0 backpressure=none latestYield=none',
+          text: 'AuraCall ops browser 127.0.0.1:18080 is ok; dashboard=http://127.0.0.1:18080/ops/browser; apiService=ok; apiLogTail=ok; recentEvents=ok; recentEventFilters=ok; recentSchedulerDetail=ok; recentEventPersistence=ok; schedulerWhy=ok; schedulerWaitTable=ok; schedulerWaitActions=ok; schedulerCompletionDetail=ok; schedulerDiagnostics=ok; preflight=ok; preflightRun=ok; preflightHistory=ok; preflightSteps=ok; preflightLog=ok; dashboard completion controls use /status; Live follow health: severity=paused posture=healthy state=idle active=1 paused=1 failed=0 cancelled=0 backpressure=none latestYield=none',
         },
       ],
       structuredContent: {
@@ -142,6 +142,7 @@ describe('mcp api_ops_browser_status tool', () => {
           hasApiLogTailControl: true,
           hasPreflightStatusPanel: true,
           hasPreflightRunControl: true,
+          hasPreflightStepProgress: true,
           hasMirrorLiveFollowPanel: true,
           hasLiveFollowTargetsPanel: true,
           hasAttentionQueue: true,

@@ -1028,3 +1028,8 @@ the live-follow health source. The lazy-live-follow preflight already runs that
 smoke; its operator step label and testing docs now call out health and
 diagnostics parity explicitly so release/preflight output reflects the stronger
 gate.
+Async lazy-live-follow preflight runs now persist per-step progress on the run
+record. The API status projection includes `steps[]` for the active run and
+recent history, and the Browser Ops dashboard renders both the current step and
+a compact step table, so operators can see progress/failure location without
+opening the bounded log tail first.

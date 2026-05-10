@@ -1,3 +1,37 @@
+## Turn 173 | 2026-05-09
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: make async lazy-live-follow preflight progress observable without
+  opening logs.
+- Change:
+  - async preflight run records now persist `steps[]` with label, status,
+    command, timestamps, duration, and error message
+  - the service runner observes the preflight child process step banners and
+    updates the active run/history as each step starts or finishes
+  - `/status.preflight.lazyLiveFollowRun` and run history now project step
+    progress to API/MCP consumers, and `/ops/browser` renders current step plus
+    a per-step progress table
+  - `api ops-browser-status` and MCP `api_ops_browser_status` now assert the
+    dashboard step-progress contract
+- Validation:
+  - `pnpm vitest run tests/preflightStatus.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 -t "starts lazy-live-follow preflight|serves a read-only browser operator dashboard|serves a bounded preflight run log"`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/preflightStatus.ts src/http/responsesServer.ts src/cli/apiOpsBrowserCommand.ts src/mcp/tools/apiOpsBrowserStatus.ts tests/preflightStatus.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+  - `pnpm run smoke:ops-browser-control`
+  - `pnpm run smoke:mcp-ops-browser`
+  - full `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1`
+    was also attempted; the touched preflight/dashboard tests passed, while
+    unrelated existing startup-recovery timeout cases and one preview-session
+    assertion failed
+- Installed dogfood:
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - `~/.local/bin/auracall --version`
+  - `systemctl --user is-active auracall-api.service`
+  - `~/.local/bin/auracall api ops-browser-status --port 18095 --expect-live-follow-severity healthy`
+  - installed ops-browser status passed and reported `preflightSteps=ok`
+
 ## Turn 172 | 2026-05-09
 
 - Continued implementation plan:

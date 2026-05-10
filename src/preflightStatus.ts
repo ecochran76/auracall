@@ -24,6 +24,17 @@ export interface PreflightStatusSummary {
 }
 
 export type LazyLiveFollowPreflightRunStatus = 'queued' | 'running' | 'passed' | 'failed';
+export type LazyLiveFollowPreflightRunStepStatus = 'running' | 'passed' | 'failed';
+
+export interface LazyLiveFollowPreflightRunStep {
+  label: string;
+  status: LazyLiveFollowPreflightRunStepStatus;
+  command: string | null;
+  startedAt: string;
+  completedAt: string | null;
+  durationMs: number | null;
+  errorMessage: string | null;
+}
 
 export interface LazyLiveFollowPreflightRun {
   object: 'auracall_preflight_run';
@@ -40,6 +51,7 @@ export interface LazyLiveFollowPreflightRun {
   exitCode: number | null;
   signal: string | null;
   errorMessage: string | null;
+  steps: LazyLiveFollowPreflightRunStep[];
 }
 
 interface LazyLiveFollowPreflightRunHistoryFile {
@@ -163,6 +175,7 @@ export function createLazyLiveFollowPreflightRunner(): LazyLiveFollowPreflightRu
         exitCode: null,
         signal: null,
         errorMessage: null,
+        steps: [],
       };
       latestRun = run;
       await recordLazyLiveFollowPreflightRun(run);
@@ -214,9 +227,17 @@ async function startLazyLiveFollowPreflightProcess(
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   setActive(child);
-  child.stdout?.pipe(logStream, { end: false });
-  child.stderr?.pipe(logStream, { end: false });
+  const observer = createPreflightStepObserver(run);
+  child.stdout?.on('data', (chunk: Buffer) => {
+    logStream.write(chunk);
+    observer.observe(String(chunk));
+    recordLazyLiveFollowPreflightRun(run).catch(() => null);
+  });
+  child.stderr?.on('data', (chunk: Buffer) => {
+    logStream.write(chunk);
+  });
   child.on('error', (error) => {
+    failActivePreflightStep(run, error.message);
     completePreflightRun(run, new Date(run.startedAt), {
       status: 'failed',
       errorMessage: error.message,
@@ -226,6 +247,11 @@ async function startLazyLiveFollowPreflightProcess(
     logStream.end(`\npreflight process error: ${error.message}\n`);
   });
   child.on('exit', (code, signal) => {
+    if (code === 0) {
+      completeActivePreflightStep(run, 'passed');
+    } else {
+      failActivePreflightStep(run, `preflight exited with code=${code ?? 'null'} signal=${signal ?? 'null'}`);
+    }
     completePreflightRun(run, new Date(run.startedAt), {
       status: code === 0 ? 'passed' : 'failed',
       exitCode: code,
@@ -236,6 +262,77 @@ async function startLazyLiveFollowPreflightProcess(
     setActive(null);
     logStream.end(`\npreflight ${run.status}: code=${code ?? 'null'} signal=${signal ?? 'null'}\n`);
   });
+}
+
+function createPreflightStepObserver(run: LazyLiveFollowPreflightRun): { observe(text: string): void } {
+  let pending = '';
+  return {
+    observe(text: string): void {
+      pending += text;
+      const lines = pending.split(/\r?\n/);
+      pending = lines.pop() ?? '';
+      for (const line of lines) {
+        observePreflightOutputLine(run, line);
+      }
+    },
+  };
+}
+
+function observePreflightOutputLine(run: LazyLiveFollowPreflightRun, line: string): void {
+  const stepMatch = /^====\s+(.+?)\s+====$/.exec(line.trim());
+  if (stepMatch?.[1]) {
+    completeActivePreflightStep(run, 'passed');
+    run.steps.push({
+      label: stepMatch[1],
+      status: 'running',
+      command: null,
+      startedAt: new Date().toISOString(),
+      completedAt: null,
+      durationMs: null,
+      errorMessage: null,
+    });
+    return;
+  }
+  const commandMatch = /^>>\s+(.+)$/.exec(line.trim());
+  if (commandMatch?.[1]) {
+    const activeStep = findActivePreflightStep(run);
+    if (activeStep) activeStep.command = commandMatch[1];
+  }
+}
+
+export function observeLazyLiveFollowPreflightRunOutput(
+  run: LazyLiveFollowPreflightRun,
+  text: string,
+): void {
+  for (const line of text.split(/\r?\n/)) {
+    if (line) observePreflightOutputLine(run, line);
+  }
+}
+
+function findActivePreflightStep(run: LazyLiveFollowPreflightRun): LazyLiveFollowPreflightRunStep | null {
+  for (let index = run.steps.length - 1; index >= 0; index -= 1) {
+    const step = run.steps[index];
+    if (step?.status === 'running') return step;
+  }
+  return null;
+}
+
+function completeActivePreflightStep(
+  run: LazyLiveFollowPreflightRun,
+  status: Extract<LazyLiveFollowPreflightRunStepStatus, 'passed' | 'failed'>,
+  errorMessage: string | null = null,
+): void {
+  const activeStep = findActivePreflightStep(run);
+  if (!activeStep) return;
+  const completedAt = new Date();
+  activeStep.status = status;
+  activeStep.completedAt = completedAt.toISOString();
+  activeStep.durationMs = completedAt.getTime() - Date.parse(activeStep.startedAt);
+  activeStep.errorMessage = errorMessage;
+}
+
+function failActivePreflightStep(run: LazyLiveFollowPreflightRun, errorMessage: string): void {
+  completeActivePreflightStep(run, 'failed', errorMessage);
 }
 
 function completePreflightRun(
@@ -351,6 +448,27 @@ function parseLazyLiveFollowPreflightRun(raw: unknown): LazyLiveFollowPreflightR
     exitCode: readNumber(record.exitCode),
     signal: readString(record.signal),
     errorMessage: readString(record.errorMessage),
+    steps: Array.isArray(record.steps)
+      ? record.steps.map(parseLazyLiveFollowPreflightRunStep).filter((step): step is LazyLiveFollowPreflightRunStep => Boolean(step))
+      : [],
+  };
+}
+
+function parseLazyLiveFollowPreflightRunStep(raw: unknown): LazyLiveFollowPreflightRunStep | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const record = raw as Record<string, unknown>;
+  const label = readString(record.label);
+  const status = readEnum(record.status, ['running', 'passed', 'failed']);
+  const startedAt = readString(record.startedAt);
+  if (!label || !status || !startedAt) return null;
+  return {
+    label,
+    status,
+    command: readString(record.command),
+    startedAt,
+    completedAt: readString(record.completedAt),
+    durationMs: readNumber(record.durationMs),
+    errorMessage: readString(record.errorMessage),
   };
 }
 
@@ -368,6 +486,7 @@ function cloneLazyLiveFollowPreflightRun(run: LazyLiveFollowPreflightRun): LazyL
   return {
     ...run,
     args: [...run.args],
+    steps: run.steps.map((step) => ({ ...step })),
   };
 }
 

@@ -1,3 +1,8 @@
+- 2026-05-09: Async lazy-live-follow preflight runs should not require log
+  inspection just to know which step is running. Run history now persists
+  per-step progress, `/status` projects it, and `/ops/browser` renders current
+  step plus the step table.
+
 - 2026-05-09: Lazy-live-follow preflight should advertise the same contract it
   enforces. Its live-follow parity step is now labeled as health and
   diagnostics parity, and testing docs describe that diagnostics handoff drift
