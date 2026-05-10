@@ -1,3 +1,8 @@
+- 2026-05-10: Browser Ops provider-guard clearance now has a browser-backed
+  smoke. `pnpm run smoke:ops-browser-provider-guard` proves a synthetic
+  Gemini `google.com/sorry` guard renders a `Clear guard` action and that the
+  dashboard click moves the target into `provider-guard-cooldown`.
+
 - 2026-05-10: Live follow should not keep navigating a provider after a
   Google `sorry` / human-verification page is detected. Account-mirror refresh
   now records a provider guard, scheduler status reports `provider-guard`, and

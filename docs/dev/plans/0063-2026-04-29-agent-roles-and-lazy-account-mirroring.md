@@ -1052,3 +1052,9 @@ header health strip with run status, timing, and step badges. The same
 browser-backed smoke asserts that strip before opening the structured run
 detail, so release-gate visibility is covered by frontend behavior rather than
 only by static HTML checks.
+Provider bot-gate recovery is covered by Browser Ops too:
+`pnpm run smoke:ops-browser-provider-guard` seeds a synthetic Gemini
+`google.com/sorry` provider guard, opens `/ops/browser` with `agent-browser`,
+clicks the dashboard `Clear guard` action, and verifies `/status` reports
+`provider-guard-cooldown`. The compact lazy-live-follow preflight now runs
+that smoke before installed-runtime validation.

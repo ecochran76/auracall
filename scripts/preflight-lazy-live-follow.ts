@@ -17,6 +17,7 @@ const steps: Step[] = [
   createScriptStep('completion hydration', 'smoke:completion-hydration', 'smoke-account-mirror-completion-hydration'),
   createScriptStep('live-follow health and diagnostics parity', 'smoke:live-follow-health', 'smoke-live-follow-health-parity'),
   createScriptStep('ops-browser dashboard controls', 'smoke:ops-browser-control', 'smoke-ops-browser-completion-control'),
+  createScriptStep('ops-browser provider guard clear', 'smoke:ops-browser-provider-guard', 'smoke-ops-browser-provider-guard'),
   createScriptStep('ops-browser preflight run detail', 'smoke:ops-browser-preflight-run-detail', 'smoke-ops-browser-preflight-run-detail'),
   createInstallRuntimeStep(),
   createScriptStep('installed MCP api_status and api_log_tail', 'smoke:mcp-api-status', 'smoke-api-status-mcp'),

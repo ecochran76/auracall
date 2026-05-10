@@ -222,6 +222,11 @@
         a fixture live-follow completion through that path and asserts the same
         contract through `auracall api ops-browser-status` and MCP
         `api_ops_browser_status`
+      - local browser-backed smoke for provider bot-gate clear:
+        `pnpm run smoke:ops-browser-provider-guard`; it seeds a synthetic
+        Gemini `google.com/sorry` provider guard, opens `/ops/browser` with
+        `agent-browser`, clicks `Clear guard`, and verifies the target moves
+        into `provider-guard-cooldown` without provider work
       - installed-runtime dashboard/status contract readback:
         `auracall api ops-browser-status --port 8080 --expect-live-follow-severity paused --expect-completion-paused 1`
       - installed-runtime MCP dashboard/status contract readback:
@@ -231,9 +236,9 @@
       - compact lazy-live-follow operator preflight:
         `pnpm run preflight:lazy-live-follow`; it runs the completion-control,
         completion-hydration, live-follow health/diagnostics parity,
-        ops-browser-control, ops-browser preflight run-detail, user runtime
-        install, installed MCP status, and API log-tail smokes in sequence
-        before live dogfood. When started
+        ops-browser-control, ops-browser provider-guard clear,
+        ops-browser preflight run-detail, user runtime install, installed MCP
+        status, and API log-tail smokes in sequence before live dogfood. When started
         through the API/dashboard, `/status.preflight.lazyLiveFollowRun.steps`
         and `/ops/browser` show per-step progress before the run completes.
         Operators can also fetch one structured run with

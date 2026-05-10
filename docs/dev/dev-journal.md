@@ -1,3 +1,20 @@
+## Turn 181 | 2026-05-10
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: cover Browser Ops provider-guard clearance as real frontend behavior.
+- Change:
+  - added `pnpm run smoke:ops-browser-provider-guard`
+  - the smoke seeds a synthetic Gemini `google.com/sorry` provider guard,
+    opens `/ops/browser` with `agent-browser`, clicks `Clear guard`, and
+    verifies `/status` reports `provider-guard-cooldown`
+  - compact lazy-live-follow preflight now includes the provider-guard smoke
+  - testing docs and the lazy account mirroring plan describe the new gate
+- Validation:
+  - `pnpm run smoke:ops-browser-provider-guard`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome lint scripts/smoke-ops-browser-provider-guard.ts scripts/preflight-lazy-live-follow.ts package.json`
+
 ## Turn 180 | 2026-05-10
 
 - Goal: stop live-follow from repeatedly touching a provider/account after
