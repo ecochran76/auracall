@@ -227,6 +227,10 @@
         Gemini `google.com/sorry` provider guard, opens `/ops/browser` with
         `agent-browser`, clicks `Clear guard`, and verifies the target moves
         into `provider-guard-cooldown` without provider work
+      - CLI operator clear path for the same guard:
+        `auracall api mirror-provider-guard-clear --port <port> --provider gemini --runtime-profile default`
+        posts the same `/status` control payload and reports the resulting
+        quiet cooldown
       - installed-runtime dashboard/status contract readback:
         `auracall api ops-browser-status --port 8080 --expect-live-follow-severity paused --expect-completion-paused 1`
       - installed-runtime MCP dashboard/status contract readback:

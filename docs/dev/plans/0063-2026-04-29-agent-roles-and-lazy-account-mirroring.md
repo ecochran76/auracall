@@ -1058,3 +1058,7 @@ Provider bot-gate recovery is covered by Browser Ops too:
 clicks the dashboard `Clear guard` action, and verifies `/status` reports
 `provider-guard-cooldown`. The compact lazy-live-follow preflight now runs
 that smoke before installed-runtime validation.
+The same operator action is available without the dashboard through
+`auracall api mirror-provider-guard-clear --provider <provider>
+--runtime-profile <profile>`. The command posts the bounded `/status` control
+payload and prints the target plus cooldown result.

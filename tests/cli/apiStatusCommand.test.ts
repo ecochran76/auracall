@@ -651,6 +651,7 @@ describe('api status CLI helpers', () => {
   });
 
   it('validates expected backpressure reason names', () => {
+    expect(parseApiStatusBackpressureReason('provider-guard')).toBe('provider-guard');
     expect(parseApiStatusBackpressureReason('yielded-to-queued-work')).toBe('yielded-to-queued-work');
     expect(() => parseApiStatusBackpressureReason('delayed')).toThrow(
       'Invalid backpressure reason "delayed". Use one of:',

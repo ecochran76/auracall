@@ -8,6 +8,7 @@ import {
 export const API_STATUS_BACKPRESSURE_REASONS = [
   'none',
   'routine-delayed',
+  'provider-guard',
   'blocked-by-browser-work',
   'yielded-to-queued-work',
 ] as const;

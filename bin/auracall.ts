@@ -133,6 +133,10 @@ import {
   startApiMirrorCompletionForCli,
 } from '../src/cli/apiMirrorCompletionCommand.js';
 import {
+  clearApiMirrorProviderGuardForCli,
+  formatApiMirrorProviderGuardClearCliSummary,
+} from '../src/cli/apiMirrorProviderGuardCommand.js';
+import {
   assertRunStatusForCli,
   formatRunStatusCli,
   readRunStatusForCli,
@@ -1304,6 +1308,38 @@ apiCommand
       return;
     }
     console.log(formatApiMirrorCompletionCliSummary(operation));
+  });
+
+apiCommand
+  .command('mirror-provider-guard-clear')
+  .description('Clear an account mirror provider guard into a quiet cooldown.')
+  .requiredOption('--provider <provider>', 'Provider to clear: chatgpt, gemini, or grok.')
+  .option('--runtime-profile <profile>', 'Runtime profile to clear.', 'default')
+  .option('--cooldown-ms <ms>', 'Quiet cooldown after clearance.', parseIntOption)
+  .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const summary = await clearApiMirrorProviderGuardForCli({
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+      provider: commandOptions.provider,
+      runtimeProfile: commandOptions.runtimeProfile,
+      cooldownMs: commandOptions.cooldownMs,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(summary.raw, null, 2));
+      return;
+    }
+    console.log(formatApiMirrorProviderGuardClearCliSummary(summary));
   });
 
 apiCommand

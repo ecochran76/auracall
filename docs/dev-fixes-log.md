@@ -1,3 +1,8 @@
+- 2026-05-10: Operators can now clear account mirror provider guards without
+  opening Browser Ops. `auracall api mirror-provider-guard-clear --provider
+  gemini --runtime-profile default` posts the bounded `/status` control payload
+  and reports the resulting quiet cooldown.
+
 - 2026-05-10: Browser Ops provider-guard clearance now has a browser-backed
   smoke. `pnpm run smoke:ops-browser-provider-guard` proves a synthetic
   Gemini `google.com/sorry` guard renders a `Clear guard` action and that the

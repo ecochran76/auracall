@@ -1,3 +1,21 @@
+## Turn 182 | 2026-05-10
+
+- Continued implementation plan:
+  `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- Goal: let operators clear provider guards from the CLI/API path without
+  opening Browser Ops or hand-writing `/status` JSON.
+- Change:
+  - added `auracall api mirror-provider-guard-clear`
+  - the command posts the existing `/status` `accountMirrorProviderGuard.clear`
+    control payload and prints the resulting cooldown/status
+  - `api status` expectation parsing now accepts `provider-guard`
+    backpressure
+  - CLI tests cover the helper and real command parser
+- Validation:
+  - `pnpm vitest run tests/cli/apiMirrorProviderGuardCommand.test.ts tests/cli/apiStatusCommand.test.ts`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome lint src/cli/apiMirrorProviderGuardCommand.ts src/cli/apiStatusCommand.ts bin/auracall.ts tests/cli/apiMirrorProviderGuardCommand.test.ts tests/cli/apiStatusCommand.test.ts package.json scripts/preflight-lazy-live-follow.ts scripts/smoke-ops-browser-provider-guard.ts`
+
 ## Turn 181 | 2026-05-10
 
 - Continued implementation plan:
