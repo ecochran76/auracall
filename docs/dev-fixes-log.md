@@ -1,3 +1,8 @@
+- 2026-05-10: ChatGPT agent `modelSelector` values now resolve before browser
+  execution. `chatgpt:pro-extended`, for example, becomes the ChatGPT `Pro`
+  picker row plus `extended` thinking time; exact `model` pins still override
+  selector behavior as the compatibility escape hatch.
+
 - 2026-05-10: OpenAI-compatible app configs should not depend on drifting
   provider version names. `/v1/responses` now accepts `model:
   "agent:<agent_id>"` as configured-agent routing shorthand, agent config can

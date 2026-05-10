@@ -4,6 +4,10 @@ import { createExecutionResponseMessage } from './apiModel.js';
 import type { ExecuteStoredRunStepContext, ExecuteStoredRunStepResult } from './runner.js';
 import type { ExecutionServiceHostDeps } from './serviceHost.js';
 import { getAgent, getRuntimeProfileBrowserProfileId, resolveRuntimeSelection } from '../config/model.js';
+import {
+  isChatgptSemanticModelSelector,
+  resolveChatgptSemanticModelSelector,
+} from '../config/modelSelector.js';
 import { runBrowserMode } from '../browser/index.js';
 import type { BrowserAttachment, BrowserRunOptions, CookieParam } from '../browser/types.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
@@ -43,6 +47,10 @@ function asBoolean(value: unknown): boolean | null {
 
 function asDeepResearchPlanAction(value: unknown): 'start' | 'edit' | null {
   return value === 'start' || value === 'edit' ? value : null;
+}
+
+function asThinkingTimeLevel(value: unknown): 'light' | 'standard' | 'extended' | 'heavy' | null {
+  return value === 'light' || value === 'standard' || value === 'extended' || value === 'heavy' ? value : null;
 }
 
 function readRuntimeServiceConfig(
@@ -263,11 +271,32 @@ export function createConfiguredStoredStepExecutor(
       ? runInitialInputs.auracall
       : null;
     const agentConfig = getAgent(configRecord, context.step.agentId);
+    const agentModel = asNonEmptyString(agentConfig?.model);
+    const agentModelSelector = asNonEmptyString(agentConfig?.modelSelector);
+    const chatgptSemanticSelection =
+      service === 'chatgpt' && !agentModel
+        ? resolveChatgptSemanticModelSelector(agentModelSelector)
+        : null;
+    if (service === 'chatgpt' && !agentModel && agentModelSelector && !chatgptSemanticSelection && isChatgptSemanticModelSelector(agentModelSelector)) {
+      throw new Error(
+        `Stored team step ${context.step.id} has unsupported ChatGPT modelSelector "${agentModelSelector}".`,
+      );
+    }
 
     const desiredModel =
-      asNonEmptyString(agentConfig?.model) ??
+      agentModel ??
+      chatgptSemanticSelection?.desiredModel ??
       asNonEmptyString(runtimeServiceConfig?.model) ??
       asNonEmptyString(globalServiceConfig?.model) ??
+      null;
+    const thinkingTime =
+      chatgptSemanticSelection?.thinkingTime ??
+      asThinkingTimeLevel(agentConfig?.thinkingTime) ??
+      asThinkingTimeLevel(runtimeServiceConfig?.thinkingTime) ??
+      asThinkingTimeLevel(globalServiceConfig?.thinkingTime) ??
+      asThinkingTimeLevel(runtimeBrowserConfig?.thinkingTime) ??
+      asThinkingTimeLevel(browserProfileConfig?.thinkingTime) ??
+      asThinkingTimeLevel(browserConfigRecord?.thinkingTime) ??
       null;
     const composerTool =
       asNonEmptyString(requestAuracall?.composerTool) ??
@@ -374,6 +403,7 @@ export function createConfiguredStoredStepExecutor(
           asNonEmptyString(browserConfigRecord?.managedProfileRoot),
         allowCookieErrors: true,
         manualLoginWaitForSession: false,
+        thinkingTime: thinkingTime ?? undefined,
         composerTool,
         deepResearchPlanAction: deepResearchPlanAction ?? undefined,
       },
@@ -434,6 +464,8 @@ export function createConfiguredStoredStepExecutor(
               projectId,
               configuredUrl: targetUrl,
               desiredModel,
+              modelSelector: agentModelSelector,
+              thinkingTime,
               cachePath: null,
               cachePathStatus: 'unavailable',
               cachePathReason: 'provider cache identity is not resolved during stored-step execution',
@@ -473,6 +505,8 @@ export function createConfiguredStoredStepExecutor(
             projectId,
             configuredUrl: targetUrl,
             desiredModel,
+            modelSelector: agentModelSelector,
+            thinkingTime,
             cachePath: null,
             cachePathStatus: 'unavailable',
             cachePathReason: 'provider cache identity is not resolved during stored-step execution',

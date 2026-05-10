@@ -322,6 +322,9 @@ Current limits:
   - provider adapters should resolve semantic selectors against the current
     workbench UI; older exact version selectors are non-urgent compatibility
     pins, not the default config posture
+  - ChatGPT browser-backed execution currently resolves those ChatGPT selectors
+    into the model picker plus Standard/Extended thinking controls; Grok and
+    Gemini semantic execution remain follow-up work
 - no auth
 - no streaming/SSE
 - no `POST /v1/chat/completions` adapter yet

@@ -1,3 +1,21 @@
+## Turn 184 | 2026-05-10
+
+- Continued implementation plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: make ChatGPT agent `modelSelector` values execute through semantic
+  browser controls instead of versioned model strings.
+- Change:
+  - added ChatGPT selector resolution for auto, instant, thinking
+    standard/extended, and Pro standard/extended
+  - configured stored-step execution now maps agent selectors into
+    `desiredModel` plus `thinkingTime`
+  - runtime readback includes the resolved selector and thinking time
+  - endpoint docs, roadmap, and plan distinguish implemented ChatGPT selector
+    execution from remaining Grok/Gemini follow-through
+- Validation:
+  - `pnpm vitest run tests/config/modelSelector.test.ts tests/runtime.configuredExecutor.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+
 ## Turn 183 | 2026-05-10
 
 - Continued implementation plan:

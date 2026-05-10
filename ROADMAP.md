@@ -172,6 +172,9 @@ Current State:
     fields
   - semantic selectors are the stable default posture; exact provider versions
     remain compatibility escape hatches
+  - ChatGPT semantic selectors now execute through current browser model and
+    thinking controls; Grok/Gemini semantic execution remains the next provider
+    follow-through
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local

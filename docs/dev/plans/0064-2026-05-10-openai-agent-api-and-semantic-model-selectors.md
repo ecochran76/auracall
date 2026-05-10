@@ -39,10 +39,18 @@ Implemented:
 - direct `/v1/responses` agent routing shorthand is accepted
 - raw agent `model` and `projectId` are honored by browser-backed configured
   execution
+- ChatGPT semantic selectors resolve into current browser controls:
+  - `chatgpt:auto` -> `Auto`
+  - `chatgpt:instant` -> `Instant`
+  - `chatgpt:thinking-standard` -> `Thinking` + `standard`
+  - `chatgpt:thinking-extended` -> `Thinking` + `extended`
+  - `chatgpt:pro-standard` -> `Pro` + `standard`
+  - `chatgpt:pro-extended` -> `Pro` + `extended`
 
 Remaining:
 
-- semantic `modelSelector` still needs provider-adapter resolution
+- Grok and Gemini semantic `modelSelector` execution still needs
+  provider-adapter resolution
 - API key authorization is not implemented
 - `/v1/chat/completions` compatibility is deferred
 
@@ -54,11 +62,13 @@ Remaining:
   knowledge, and prompt intent without polluting output with unset fields.
 - Provider-specific adapters resolve semantic selectors against current
   workbench UI modes before AuraCall treats them as execution-ready defaults.
+  ChatGPT is the first implemented provider for this criterion.
 
 ## Next Work
 
-- Resolve `modelSelector` through provider-specific browser adapters rather
-  than feeding semantic tokens directly into raw model selection.
+- Resolve Grok and Gemini `modelSelector` values through provider-specific
+  browser adapters rather than feeding semantic tokens directly into raw model
+  selection.
 - Publish `/v1/models` entries for configured agents and semantic provider
   selectors.
 - Add API key policy so client apps can be allowed to call specific agents,

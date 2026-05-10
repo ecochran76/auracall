@@ -161,7 +161,6 @@ Typical concerns:
       runtimeProfile: "default",
       service: "chatgpt",
       modelSelector: "chatgpt:pro-extended",
-      model: "gpt-5.5-pro",
       projectId: "proj_123",
       instructions: "Reserved future agent config",
       prePrompt: "Optional agent-local prompt prefix",

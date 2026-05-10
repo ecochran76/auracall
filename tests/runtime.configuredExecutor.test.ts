@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { BrowserPassiveObservation } from '../src/browser/types.js';
+import type { BrowserPassiveObservation, BrowserRunOptions } from '../src/browser/types.js';
 import { createConfiguredStoredStepExecutor } from '../src/runtime/configuredExecutor.js';
 import { readLiveRuntimeRunServiceState, resetLiveRuntimeRunServiceStateRegistryForTests } from '../src/runtime/liveServiceStateRegistry.js';
 import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from '../src/runtime/stepOutputContract.js';
@@ -897,6 +897,177 @@ describe('configured stored-step executor', () => {
         },
       ],
     });
+  });
+
+  it('resolves ChatGPT semantic agent model selectors into browser model and thinking controls', async () => {
+    const runBrowserModeImpl = vi.fn(async () => ({
+      answerText: 'AURACALL_CHATGPT_SELECTOR_OK',
+      answerMarkdown: 'AURACALL_CHATGPT_SELECTOR_OK',
+      tookMs: 700,
+      answerTokens: 8,
+      answerChars: 28,
+      tabUrl: 'https://chatgpt.com/c/mock-chatgpt-selector',
+      conversationId: 'mock-chatgpt-selector',
+    }));
+
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        browserProfiles: {
+          default: {
+            chromePath: '/usr/bin/google-chrome',
+            sourceProfileName: 'Default',
+            managedProfileRoot: '/tmp/auracall/browser-profiles',
+          },
+        },
+        runtimeProfiles: {
+          'auracall-chatgpt-selector': {
+            engine: 'browser',
+            defaultService: 'chatgpt',
+            browserProfile: 'default',
+            services: {
+              chatgpt: {
+                manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+              },
+            },
+          },
+        },
+        agents: {
+          'pro-researcher': {
+            runtimeProfile: 'auracall-chatgpt-selector',
+            service: 'chatgpt',
+            modelSelector: 'chatgpt:pro-extended',
+            projectId: 'proj_semantic',
+          },
+        },
+      },
+      { runBrowserModeImpl },
+    );
+
+    const result = await executeStoredRunStep?.({
+      record: {
+        runId: 'teamrun_chatgpt_selector_1',
+        revision: 1,
+        bundle: {
+          run: {
+            id: 'teamrun_chatgpt_selector_1',
+          },
+        },
+      } as never,
+      step: {
+        id: 'teamrun_chatgpt_selector_1:step:1',
+        agentId: 'pro-researcher',
+        runtimeProfileId: 'auracall-chatgpt-selector',
+        browserProfileId: 'default',
+        service: 'chatgpt',
+        input: {
+          prompt: 'Reply exactly with AURACALL_CHATGPT_SELECTOR_OK',
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+      } as never,
+    });
+
+    expect(runBrowserModeImpl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          target: 'chatgpt',
+          selectedAgentId: 'pro-researcher',
+          desiredModel: 'Pro',
+          thinkingTime: 'extended',
+          projectId: 'proj_semantic',
+        }),
+      }),
+    );
+    expect(result?.output?.structuredData?.browserRun).toMatchObject({
+      provider: 'chatgpt',
+      service: 'chatgpt',
+      agentId: 'pro-researcher',
+      projectId: 'proj_semantic',
+      desiredModel: 'Pro',
+      modelSelector: 'chatgpt:pro-extended',
+      thinkingTime: 'extended',
+    });
+  });
+
+  it('keeps exact ChatGPT agent model pins ahead of semantic selector defaults', async () => {
+    const runBrowserModeImpl = vi.fn(async (_options: BrowserRunOptions) => ({
+      answerText: 'AURACALL_CHATGPT_PIN_OK',
+      answerMarkdown: 'AURACALL_CHATGPT_PIN_OK',
+      tookMs: 700,
+      answerTokens: 8,
+      answerChars: 23,
+      tabUrl: 'https://chatgpt.com/c/mock-chatgpt-pin',
+      conversationId: 'mock-chatgpt-pin',
+    }));
+
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        browserProfiles: {
+          default: {
+            chromePath: '/usr/bin/google-chrome',
+            sourceProfileName: 'Default',
+            managedProfileRoot: '/tmp/auracall/browser-profiles',
+          },
+        },
+        runtimeProfiles: {
+          'auracall-chatgpt-pin': {
+            engine: 'browser',
+            defaultService: 'chatgpt',
+            browserProfile: 'default',
+            services: {
+              chatgpt: {
+                manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+              },
+            },
+          },
+        },
+        agents: {
+          pinned: {
+            runtimeProfile: 'auracall-chatgpt-pin',
+            service: 'chatgpt',
+            model: 'GPT-5.2',
+            modelSelector: 'chatgpt:pro-extended',
+          },
+        },
+      },
+      { runBrowserModeImpl },
+    );
+
+    await executeStoredRunStep?.({
+      record: {
+        runId: 'teamrun_chatgpt_pin_1',
+        revision: 1,
+        bundle: {
+          run: {
+            id: 'teamrun_chatgpt_pin_1',
+          },
+        },
+      } as never,
+      step: {
+        id: 'teamrun_chatgpt_pin_1:step:1',
+        agentId: 'pinned',
+        runtimeProfileId: 'auracall-chatgpt-pin',
+        browserProfileId: 'default',
+        service: 'chatgpt',
+        input: {
+          prompt: 'Reply exactly with AURACALL_CHATGPT_PIN_OK',
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+      } as never,
+    });
+
+    expect(runBrowserModeImpl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          desiredModel: 'GPT-5.2',
+        }),
+      }),
+    );
+    const callOptions = runBrowserModeImpl.mock.calls.at(0)?.[0] as { config?: { thinkingTime?: string } } | undefined;
+    expect(callOptions?.config?.thinkingTime).toBeUndefined();
   });
 
   it('persists Gemini passive observations from browser execution metadata', async () => {

@@ -2930,3 +2930,17 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/runtime.api.test.ts tests/runtime.configuredExecutor.test.ts --maxWorkers 1`
   - `pnpm run typecheck`
+
+## Turn 110 | 2026-05-10
+
+- Goal: make ChatGPT agent semantic model selectors execution-ready.
+- Change:
+  - added ChatGPT selector resolution for auto, instant, thinking
+    standard/extended, and Pro standard/extended
+  - configured browser execution maps selector intent to `desiredModel` and
+    `thinkingTime`
+  - browser-run readback records `modelSelector` and resolved `thinkingTime`
+  - docs now mark Grok/Gemini selector execution as remaining follow-through
+- Verification:
+  - `pnpm vitest run tests/config/modelSelector.test.ts tests/runtime.configuredExecutor.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
