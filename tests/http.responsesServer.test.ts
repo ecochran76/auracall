@@ -15741,6 +15741,14 @@ describe('http responses adapter', () => {
       expect(html).toContain('Open Run');
       expect(html).toContain('/v1/preflight/lazy-live-follow/runs/');
       expect(html).toContain("preflight: { action: 'run', name: 'lazy-live-follow' }");
+      expect(html).toContain('browserProcessPanel');
+      expect(html).toContain('Browser Processes');
+      expect(html).toContain('Separates Chrome launch arguments from the actual DevTools page targets');
+      expect(html).toContain('loadBrowserProcesses');
+      expect(html).toContain('renderBrowserProcesses');
+      expect(html).toContain('launchCommandHasBlankArg');
+      expect(html).toContain('openBlankPageCount');
+      expect(html).toContain('/v1/browser/processes');
       expect(html).toContain('apiServiceControls');
       expect(html).toContain('loadApiLogTail');
       expect(html).toContain('/v1/api/logs/tail?maxBytes=32768');
@@ -16243,6 +16251,31 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('serves read-only browser process diagnostics', async () => {
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/browser/processes`);
+      expect(response.status).toBe(200);
+      const payload = await response.json() as {
+        object?: string;
+        metrics?: Record<string, unknown>;
+        entries?: unknown[];
+      };
+      expect(payload.object).toBe('browser_process_status');
+      expect(payload.metrics).toMatchObject({
+        configuredTargets: expect.any(Number),
+        processesAlive: expect.any(Number),
+        responsiveDevTools: expect.any(Number),
+        launchBlankArg: expect.any(Number),
+        openBlankPages: expect.any(Number),
+      });
+      expect(Array.isArray(payload.entries)).toBe(true);
+    } finally {
+      await server.close();
+    }
+  });
+
   it('serves operator dashboard pages at configured route paths', async () => {
     const server = await createResponsesHttpServer({
       host: '127.0.0.1',
@@ -16375,7 +16408,8 @@ describe('http responses adapter', () => {
       expect(response.headers.get('cache-control')).toContain('no-store');
       const html = await response.text();
       expect(html).toContain('AuraCall Preview Session');
-      expect(html).toContain('href="/account-mirror/preview-session" aria-current="page"');
+      expect(html).toContain('href="/account-mirror/preview-session"');
+      expect(html).toContain('aria-current="page"');
       expect(html).toContain('Cache-only review of selected account mirror preview assets.');
       expect(html).toContain('mirrorPreviewSessionPanel');
       expect(html).toContain('mirrorPreviewSessionGrid');

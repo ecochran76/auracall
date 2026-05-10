@@ -127,7 +127,10 @@
 - Behavior: reads `/ops/browser`, asserts the Mirror Live Follow controls use
   `POST /status` with an `accountMirrorCompletion` payload, reads linked
   `/status`, and applies live-follow/completion-count expectations without
-  launching browsers or provider work.
+  launching browsers or provider work. The dashboard contract also checks that
+  browser-process diagnostics are wired to `GET /v1/browser/processes`, where
+  process launch `about:blank` arguments are reported separately from actual
+  open blank DevTools page targets.
 - Output: dashboard contract booleans plus the same structured status summary
   returned by `auracall api status`.
 

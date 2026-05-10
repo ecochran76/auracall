@@ -1,3 +1,21 @@
+## Turn 185 | 2026-05-10
+
+- Continued implementation plan:
+  `docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md`
+- Goal: make Browser Ops distinguish Chrome launch arguments from actual
+  DevTools page targets so `about:blank` command lines are not mistaken for
+  open blank tabs.
+- Change:
+  - added read-only `GET /v1/browser/processes`
+  - Browser Ops now renders a Browser Processes panel with separate
+    `launchArgAboutBlank` and `openBlankPages` counts
+  - CLI/MCP dashboard contract checks now assert the new browser-process panel
+    and endpoint wiring
+- Validation:
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard|serves read-only browser process diagnostics|serves a cache-only account mirror preview session page" --maxWorkers 1`
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1`
+
 ## Turn 184 | 2026-05-10
 
 - Continued implementation plan:

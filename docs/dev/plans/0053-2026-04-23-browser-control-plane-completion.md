@@ -37,6 +37,9 @@ What already exists:
 - provider-level `preserveActiveTab` / no-post-submit-navigation protections
   across ChatGPT, Gemini, and Grok
 - bounded browser diagnostics on runtime/media status surfaces
+- Browser Ops process diagnostics at `GET /v1/browser/processes` now separate
+  Chrome launch-command `about:blank` evidence from actual open DevTools page
+  targets, so stale launch arguments do not look like active blank tabs
 - browser-service-owned bounded mutation history for the selected AuraCall
   runtime profile and service, surfaced through opt-in browser diagnostics
 - legacy ChatGPT/Grok navigation helpers and ChatGPT reattach fallback

@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { z, ZodError } from 'zod';
+import CDP from 'chrome-remote-interface';
 import type { OptionValues } from 'commander';
 import { MODEL_CONFIGS } from '../oracle/config.js';
 import { getCliVersion } from '../version.js';
@@ -162,6 +163,8 @@ import {
   type LiveFollowTargetAccountSummary,
   type LiveFollowTargetRollup,
 } from '../status/liveFollowHealth.js';
+import { findChromeProcessUsingUserDataDir, isDevToolsResponsive } from '../../packages/browser-service/src/processCheck.js';
+import { readDevToolsPort } from '../../packages/browser-service/src/profileState.js';
 
 export const DEFAULT_BACKGROUND_DRAIN_INTERVAL_MS = 60_000;
 
@@ -291,6 +294,43 @@ interface HttpAccountMirrorCompletionListResponse {
   object: 'list';
   data: AccountMirrorCompletionOperation[];
   count: number;
+}
+
+interface HttpBrowserProcessTargetSummary {
+  targetId: string | null;
+  type: string | null;
+  url: string | null;
+  title: string | null;
+  isBlankPage: boolean;
+}
+
+interface HttpBrowserProcessStatusEntry {
+  provider: AccountMirrorProvider;
+  runtimeProfileId: string;
+  managedProfileDir: string;
+  pid: number | null;
+  port: number | null;
+  host: string;
+  processAlive: boolean;
+  devToolsResponsive: boolean;
+  launchCommandHasBlankArg: boolean;
+  openBlankPageCount: number;
+  pageTargetCount: number;
+  targets: HttpBrowserProcessTargetSummary[];
+  error: string | null;
+}
+
+interface HttpBrowserProcessStatusResponse {
+  object: 'browser_process_status';
+  generatedAt: string;
+  metrics: {
+    configuredTargets: number;
+    processesAlive: number;
+    responsiveDevTools: number;
+    launchBlankArg: number;
+    openBlankPages: number;
+  };
+  entries: HttpBrowserProcessStatusEntry[];
 }
 
 type AccountMirrorSchedulerWakeReason =
@@ -446,6 +486,7 @@ interface HttpStatusResponse {
     accountMirrorCompletionsControlTemplate: string;
     accountMirrorSchedulerHistory: string;
     accountMirrorSchedulerDiagnostics: string;
+    browserProcesses: string;
     workbenchCapabilitiesList: string;
     operatorBrowserDashboard: string;
     accountMirrorDashboard: string;
@@ -968,6 +1009,15 @@ export async function createResponsesHttpServer(
         const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
         const query = parseApiLogTailQuery(url.searchParams);
         sendJson(res, 200, await readApiLogTail({ port: boundPort, maxBytes: query.maxBytes }));
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/browser/processes') {
+        await accountMirrorStatusRegistry.refreshPersistentState?.();
+        sendJson(res, 200, await readBrowserProcessStatus({
+          status: accountMirrorStatusRegistry.readStatus(),
+          now,
+        }));
         return;
       }
 
@@ -2557,6 +2607,7 @@ function createHttpStatusResponse(input: {
       accountMirrorCompletionsControlTemplate: 'POST /v1/account-mirrors/completions/{completion_id} {"action":"pause|resume|cancel"}',
       accountMirrorSchedulerHistory: '/v1/account-mirrors/scheduler/history[?limit=10]',
       accountMirrorSchedulerDiagnostics: '/v1/account-mirrors/scheduler/diagnostics[?provider={chatgpt|gemini|grok}&runtimeProfile={runtime_profile}|completionId={completion_id}]',
+      browserProcesses: '/v1/browser/processes',
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
       operatorBrowserDashboard: serviceDiscovery.routing.dashboardPath,
@@ -2643,6 +2694,123 @@ async function readApiLogTail(input: { port: number; maxBytes: number }): Promis
     logPath,
     ...tail,
   };
+}
+
+async function readBrowserProcessStatus(input: {
+  status: AccountMirrorStatusSummary;
+  now: () => Date;
+}): Promise<HttpBrowserProcessStatusResponse> {
+  const entries = await Promise.all(
+    Array.from(uniqueBrowserProcessTargets(input.status.entries)).map((target) => readBrowserProcessStatusEntry(target)),
+  );
+  return {
+    object: 'browser_process_status',
+    generatedAt: input.now().toISOString(),
+    metrics: {
+      configuredTargets: entries.length,
+      processesAlive: entries.filter((entry) => entry.processAlive).length,
+      responsiveDevTools: entries.filter((entry) => entry.devToolsResponsive).length,
+      launchBlankArg: entries.filter((entry) => entry.launchCommandHasBlankArg).length,
+      openBlankPages: entries.reduce((total, entry) => total + entry.openBlankPageCount, 0),
+    },
+    entries,
+  };
+}
+
+function* uniqueBrowserProcessTargets(entries: AccountMirrorStatusEntry[]): Iterable<{
+  provider: AccountMirrorProvider;
+  runtimeProfileId: string;
+}> {
+  const seen = new Set<string>();
+  for (const entry of entries) {
+    const provider = normalizeBrowserProcessProvider(entry.provider);
+    const runtimeProfileId = typeof entry.runtimeProfileId === 'string' && entry.runtimeProfileId.trim()
+      ? entry.runtimeProfileId.trim()
+      : 'default';
+    if (!provider) continue;
+    const key = `${provider}:${runtimeProfileId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    yield { provider, runtimeProfileId };
+  }
+}
+
+function normalizeBrowserProcessProvider(value: unknown): AccountMirrorProvider | null {
+  return value === 'chatgpt' || value === 'gemini' || value === 'grok' ? value : null;
+}
+
+async function readBrowserProcessStatusEntry(input: {
+  provider: AccountMirrorProvider;
+  runtimeProfileId: string;
+}): Promise<HttpBrowserProcessStatusEntry> {
+  const managedProfileDir = path.join(getAuracallHomeDir(), 'browser-profiles', input.runtimeProfileId, input.provider);
+  const host = '127.0.0.1';
+  try {
+    const processMatch = await findChromeProcessUsingUserDataDir(managedProfileDir);
+    const port = processMatch?.port ?? await readDevToolsPort(managedProfileDir);
+    const devToolsResponsive = port
+      ? await isDevToolsResponsive({ host, port, attempts: 1, timeoutMs: 750 })
+      : false;
+    const targets = devToolsResponsive && port
+      ? await readDevToolsTargetSummaries({ host, port })
+      : [];
+    return {
+      provider: input.provider,
+      runtimeProfileId: input.runtimeProfileId,
+      managedProfileDir,
+      pid: processMatch?.pid ?? null,
+      port: port ?? null,
+      host,
+      processAlive: Boolean(processMatch),
+      devToolsResponsive,
+      launchCommandHasBlankArg: commandLineHasAboutBlankLaunchArg(processMatch?.commandLine ?? ''),
+      openBlankPageCount: targets.filter((target) => target.isBlankPage).length,
+      pageTargetCount: targets.filter((target) => target.type === 'page').length,
+      targets,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      provider: input.provider,
+      runtimeProfileId: input.runtimeProfileId,
+      managedProfileDir,
+      pid: null,
+      port: null,
+      host,
+      processAlive: false,
+      devToolsResponsive: false,
+      launchCommandHasBlankArg: false,
+      openBlankPageCount: 0,
+      pageTargetCount: 0,
+      targets: [],
+      error: error instanceof Error ? error.message : 'Unknown browser process probe error.',
+    };
+  }
+}
+
+async function readDevToolsTargetSummaries(input: {
+  host: string;
+  port: number;
+}): Promise<HttpBrowserProcessTargetSummary[]> {
+  const targets = await CDP.List({ host: input.host, port: input.port }).catch(() => []);
+  return targets.map((target) => {
+    const url = typeof target.url === 'string' ? target.url : null;
+    return {
+      targetId: typeof target.id === 'string' ? target.id : null,
+      type: typeof target.type === 'string' ? target.type : null,
+      url,
+      title: typeof target.title === 'string' ? target.title : null,
+      isBlankPage: target.type === 'page' && isBlankPageUrl(url),
+    };
+  });
+}
+
+function commandLineHasAboutBlankLaunchArg(commandLine: string): boolean {
+  return /(^|\s)about:blank(\s|$)/.test(commandLine);
+}
+
+function isBlankPageUrl(url: string | null): boolean {
+  return url === 'about:blank' || url === 'chrome://newtab/' || url === 'chrome://new-tab-page/';
 }
 
 async function readLazyLiveFollowPreflightRunLogTail(input: {
@@ -5164,6 +5332,35 @@ function createOperatorBrowserDashboardHtml(input: {
           <span class="muted">No runtime conversation loaded.</span>
         </div>
         <pre id="agentsTeamsRaw">No inspection loaded.</pre>
+      </section>
+
+      <section id="browserProcessPanel" class="panel">
+        <h2>Browser Processes</h2>
+        <p style="margin-bottom: 10px;">Separates Chrome launch arguments from the actual DevTools page targets currently open.</p>
+        <div class="row" style="margin-bottom: 10px;">
+          <button id="loadBrowserProcesses" type="button">Refresh Browser Processes</button>
+          <span id="browserProcessSummary" class="muted">No browser process probe loaded.</span>
+        </div>
+        <div class="table-wrap">
+          <table id="browserProcessTable">
+            <thead>
+              <tr>
+                <th>Provider</th>
+                <th>Runtime Profile</th>
+                <th>PID</th>
+                <th>DevTools</th>
+                <th>Launch about:blank</th>
+                <th>Open blank pages</th>
+                <th>Pages</th>
+                <th class="wrap">Visible targets</th>
+              </tr>
+            </thead>
+            <tbody id="browserProcessRows">
+              <tr><td colspan="8" class="muted">No browser process probe loaded.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre id="browserProcessRaw">No browser process probe loaded.</pre>
       </section>
 
       <section class="panel wide">
@@ -9336,6 +9533,70 @@ function createOperatorBrowserDashboardHtml(input: {
       }
     }
 
+    async function loadBrowserProcesses() {
+      const button = $('loadBrowserProcesses');
+      button.disabled = true;
+      $('browserProcessSummary').textContent = 'Reading browser process and DevTools target state...';
+      try {
+        const payload = await fetchJson('/v1/browser/processes');
+        renderBrowserProcesses(payload);
+      } catch (error) {
+        $('browserProcessSummary').textContent = 'Browser process probe failed.';
+        $('browserProcessRaw').textContent = String(error.message || error);
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    function renderBrowserProcesses(payload) {
+      const metrics = payload.metrics || {};
+      const entries = Array.isArray(payload.entries) ? payload.entries : [];
+      $('browserProcessSummary').innerHTML = [
+        'configured=' + escapeHtml(String(metrics.configuredTargets ?? entries.length)),
+        'alive=' + escapeHtml(String(metrics.processesAlive ?? 0)),
+        'responsive=' + escapeHtml(String(metrics.responsiveDevTools ?? 0)),
+        'launchArgAboutBlank=' + escapeHtml(String(metrics.launchBlankArg ?? 0)),
+        'openBlankPages=' + escapeHtml(String(metrics.openBlankPages ?? 0)),
+      ].join(' ');
+      if (!entries.length) {
+        $('browserProcessRows').innerHTML = '<tr><td colspan="8" class="muted">No configured browser process targets.</td></tr>';
+        $('browserProcessRaw').textContent = asJson(payload);
+        return;
+      }
+      $('browserProcessRows').innerHTML = entries.map(renderBrowserProcessRow).join('');
+      $('browserProcessRaw').textContent = asJson(payload);
+    }
+
+    function renderBrowserProcessRow(entry) {
+      const devTools = entry.devToolsResponsive
+        ? '<span class="ok">' + escapeHtml((entry.host || '127.0.0.1') + ':' + String(entry.port || 'unknown')) + '</span>'
+        : '<span class="warn">' + escapeHtml(entry.processAlive ? 'not responsive' : 'not running') + '</span>';
+      const blankArgClass = entry.launchCommandHasBlankArg ? 'warn' : 'ok';
+      const openBlankClass = entry.openBlankPageCount > 0 ? 'bad' : 'ok';
+      return '<tr>'
+        + '<td>' + escapeHtml(entry.provider || 'unknown') + '</td>'
+        + '<td>' + escapeHtml(entry.runtimeProfileId || 'default') + '</td>'
+        + '<td>' + escapeHtml(entry.pid == null ? 'none' : String(entry.pid)) + '</td>'
+        + '<td>' + devTools + '</td>'
+        + '<td class="' + blankArgClass + '">' + escapeHtml(entry.launchCommandHasBlankArg ? 'yes' : 'no') + '</td>'
+        + '<td class="' + openBlankClass + '">' + escapeHtml(String(entry.openBlankPageCount || 0)) + '</td>'
+        + '<td>' + escapeHtml(String(entry.pageTargetCount || 0)) + '</td>'
+        + '<td class="wrap">' + renderBrowserProcessTargets(entry.targets || [], entry.error) + '</td>'
+        + '</tr>';
+    }
+
+    function renderBrowserProcessTargets(targets, error) {
+      if (error) return '<span class="bad">' + escapeHtml(error) + '</span>';
+      const pageTargets = targets.filter((target) => target.type === 'page');
+      if (!pageTargets.length) return '<span class="muted">No page targets.</span>';
+      return pageTargets.slice(0, 5).map((target) => {
+        const tone = target.isBlankPage ? 'bad' : 'ok';
+        const label = target.title || target.url || target.targetId || 'untitled';
+        const suffix = target.isBlankPage ? ' blank page' : '';
+        return '<span class="' + tone + '">' + escapeHtml(label + suffix) + '</span>';
+      }).join('<br>');
+    }
+
     $('refreshStatus').addEventListener('click', refreshStatus);
     $('loadApiLogTail').addEventListener('click', loadApiLogTail);
     $('inspectMirrorCompletionById').addEventListener('click', inspectSelectedMirrorCompletion);
@@ -9376,6 +9637,7 @@ function createOperatorBrowserDashboardHtml(input: {
       if (event.key === 'Enter') loadMirrorCatalog();
     });
     document.addEventListener('keydown', handleMirrorCatalogKeyboard);
+    $('loadBrowserProcesses').addEventListener('click', loadBrowserProcesses);
     $('probeWorkbench').addEventListener('click', probeWorkbench);
     $('probeRun').addEventListener('click', probeRun);
     initializeMirrorCatalogFiltersFromUrl();

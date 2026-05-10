@@ -1,5 +1,22 @@
 # RUNBOOK
 
+## Turn 113 | 2026-05-10
+
+- Active plan:
+  `docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md`
+- Goal: make Browser Ops clear about whether `about:blank` is a process launch
+  argument or an actual open DevTools page target.
+- Result:
+  - added `GET /v1/browser/processes`
+  - Browser Ops now has a Browser Processes panel with process PID, DevTools
+    endpoint, launch `about:blank` flag, open blank page count, page count, and
+    visible target titles/URLs
+  - CLI/MCP dashboard contract checks include the new browser-process panel
+- Verification target:
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard|serves read-only browser process diagnostics|serves a cache-only account mirror preview session page" --maxWorkers 1`
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts --maxWorkers 1`
+
 ## Turn 70 | 2026-04-27
 
 - Active plan:

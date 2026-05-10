@@ -230,6 +230,11 @@
         Gemini `google.com/sorry` provider guard, opens `/ops/browser` with
         `agent-browser`, clicks `Clear guard`, and verifies the target moves
         into `provider-guard-cooldown` without provider work
+      - Browser Ops process diagnostics:
+        `GET /v1/browser/processes` is read-only and separates Chrome launch
+        command `about:blank` arguments from actual open DevTools page targets;
+        `/ops/browser` renders the same `launchArgAboutBlank` and
+        `openBlankPages` distinction for operator checks
       - CLI operator clear path for the same guard:
         `auracall api mirror-provider-guard-clear --port <port> --provider gemini --runtime-profile default`
         posts the same `/status` control payload and reports the resulting

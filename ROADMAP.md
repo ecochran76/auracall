@@ -68,6 +68,8 @@ Current State:
     same derived live-follow severity (`healthy`, `backpressured`, `paused`, or
     `attention-needed`); API/CLI/MCP/dashboard controls can pause, resume, or
     cancel a live-follow operation by id;
+    `/v1/browser/processes` and `/ops/browser` now separate Chrome launch
+    `about:blank` arguments from actual open DevTools blank page targets;
     ChatGPT conversation inventory must scroll the infinite left rail when
     `includeHistory` and `historyLimit` are requested before claiming mirror
     completeness

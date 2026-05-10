@@ -1,3 +1,9 @@
+- 2026-05-10: Browser Ops now separates Chrome launch-argument evidence from
+  live DevTools target state. `GET /v1/browser/processes` reports
+  `launchBlankArg` independently from `openBlankPages`, and the dashboard
+  renders both so operators can tell whether `about:blank` is merely the
+  original Chrome command argument or an active blank page target.
+
 - 2026-05-10: ChatGPT agent `modelSelector` values now resolve before browser
   execution. `chatgpt:pro-extended`, for example, becomes the ChatGPT `Pro`
   picker row plus `extended` thinking time; exact `model` pins still override

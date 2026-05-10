@@ -303,6 +303,12 @@ const dashboardHtml = `
   async function loadMirrorCatalog() {
     await fetch('/v1/account-mirrors/catalog?kind=all&limit=50');
   }
+  <section id="browserProcessPanel"><h2>Browser Processes</h2><p>Separates Chrome launch arguments from the actual DevTools page targets</p><button id="loadBrowserProcesses">Refresh Browser Processes</button><span id="browserProcessSummary"></span><tbody id="browserProcessRows"></tbody><pre id="browserProcessRaw"></pre></section>
+  async function loadBrowserProcesses() {
+    return renderBrowserProcesses(await fetchJson('/v1/browser/processes'));
+  }
+  function renderBrowserProcesses(payload) { return String(payload.metrics.launchBlankArg) + String(payload.metrics.openBlankPages); }
+  function renderBrowserProcessRow(entry) { return String(entry.launchCommandHasBlankArg) + String(entry.openBlankPageCount); }
   async function controlBackgroundDrain(action) {
     await fetch('/status', {
       method: 'POST',
@@ -496,6 +502,8 @@ describe('api ops browser CLI helpers', () => {
       hasApiLogTailControl: true,
       hasPreflightStatusPanel: true,
       hasPreflightRunControl: true,
+      hasBrowserProcessPanel: true,
+      usesBrowserProcessesPath: true,
       hasServiceDiscoveryPanel: true,
       hasBackgroundDrainControls: true,
       hasMirrorSchedulerControls: true,
@@ -570,7 +578,7 @@ describe('api ops browser CLI helpers', () => {
       'Dashboard config: page=ok identities=ok liveFollow=ok controls=ok agents=ok recentRuns=ok runtimeChat=ok runtimeProviderLinks=ok runtimeProviderDirectLinks=ok runtimeProviderCacheBadges=ok recentMirrorDetail=ok recentMirrorSummary=ok recentMirrorDirectLink=ok recentMirrorCacheBadges=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard service control: nav=ok operations=ok apiService=ok apiLogTail=ok recentEvents=ok recentEventActions=ok recentEventFilters=ok recentSchedulerDetail=ok recentEventPersistence=ok preflight=ok preflightRun=ok preflightHistory=ok preflightSteps=ok preflightLog=ok backgroundDrain=ok scheduler=ok schedulerWhy=ok schedulerWaitTable=ok schedulerWaitActions=ok schedulerCompletionDetail=ok schedulerDiagnostics=ok runOnce=ok',
+      'Dashboard service control: nav=ok operations=ok apiService=ok apiLogTail=ok recentEvents=ok recentEventActions=ok recentEventFilters=ok recentSchedulerDetail=ok recentEventPersistence=ok preflight=ok preflightRun=ok preflightHistory=ok preflightSteps=ok preflightLog=ok browserProcesses=ok browserProcessPath=/v1/browser/processes backgroundDrain=ok scheduler=ok schedulerWhy=ok schedulerWaitTable=ok schedulerWaitActions=ok schedulerCompletionDetail=ok schedulerDiagnostics=ok runOnce=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard cache browse: catalog=ok page=ok previewSession=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok transcriptFilter=ok transcriptDownload=ok transcriptSearch=ok related=ok assetInspector=ok assetPreview=ok localAsset=ok materialization=ok materializationControls=ok rowPreviewActions=ok batchPreviewDrawer=ok batchPreviewReview=ok batchPreviewOpen=ok batchDetailCopy=ok batchPreviewCopy=ok batchPreviewDownload=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
