@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createAgentTeamConfigService } from '../../src/config/agentConfigService.js';
+import { createAgentRegistryStore } from '../../src/config/agentRegistryStore.js';
 
 describe('agent and team config service', () => {
   const cleanup: string[] = [];
@@ -74,6 +75,73 @@ describe('agent and team config service', () => {
         id: 'ops',
         agentIds: ['researcher'],
       }),
+    ]);
+  });
+
+  it('lists effective config and registry agents with source metadata and conflicts', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-agent-config-registry-service-'));
+    cleanup.push(dir);
+    const configPath = path.join(dir, 'config.json');
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        browserProfiles: { default: {} },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        },
+        agents: {
+          pinned: {
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+        },
+      }),
+      'utf8',
+    );
+    const registryStore = createAgentRegistryStore({
+      rootDir: dir,
+      forceJsonFallbackForTest: true,
+    });
+    await registryStore.upsertAgent({
+      id: 'worker',
+      config: {
+        runtimeProfile: 'default',
+        service: 'gemini',
+      },
+    });
+    await registryStore.upsertAgent({
+      id: 'pinned',
+      config: {
+        runtimeProfile: 'default',
+        service: 'grok',
+      },
+    });
+    const service = createAgentTeamConfigService({ configPath, registryStore });
+
+    const result = await service.list('agent');
+
+    expect(result.registryPath).toBe(registryStore.dbPath);
+    expect(result.agents).toEqual([
+      expect.objectContaining({
+        id: 'pinned',
+        source: 'config',
+        service: 'chatgpt',
+      }),
+      expect.objectContaining({
+        id: 'worker',
+        source: 'registry',
+        revision: 1,
+        service: 'gemini',
+      }),
+    ]);
+    expect(result.conflicts).toEqual([
+      {
+        kind: 'agent',
+        id: 'pinned',
+        configSource: 'config',
+        registrySource: 'registry',
+        resolution: 'config-wins',
+      },
     ]);
   });
 });

@@ -43,6 +43,7 @@ import {
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../src/teams/types.js';
 import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from '../src/runtime/stepOutputContract.js';
 import { createChatgptDeepResearchStatusFixture } from './fixtures/chatgptDeepResearchStatusFixture.js';
+import { createAgentRegistryStore } from '../src/config/agentRegistryStore.js';
 
 vi.setConfig({ testTimeout: 10000 });
 
@@ -15880,6 +15881,107 @@ describe('http responses adapter', () => {
         },
       });
       expect(activeConfig).toMatchObject(saved);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('lists registry-backed agents through config and model discovery reads', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-agent-registry-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const activeConfig: Record<string, unknown> = {
+      browserProfiles: { default: {} },
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+      },
+      agents: {
+        pinned: {
+          runtimeProfile: 'default',
+          service: 'chatgpt',
+          modelSelector: 'chatgpt:instant',
+        },
+      },
+    };
+    await fs.writeFile(path.join(homeDir, 'config.json'), JSON.stringify(activeConfig), 'utf8');
+    const registryStore = createAgentRegistryStore({
+      rootDir: homeDir,
+      forceJsonFallbackForTest: true,
+    });
+    await registryStore.upsertAgent({
+      id: 'registry-worker',
+      config: {
+        runtimeProfile: 'default',
+        service: 'gemini',
+      },
+    });
+    await registryStore.upsertAgent({
+      id: 'pinned',
+      config: {
+        runtimeProfile: 'default',
+        service: 'grok',
+      },
+    });
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      { config: activeConfig, agentRegistryStore: registryStore },
+    );
+
+    try {
+      const agentsResponse = await fetch(`http://127.0.0.1:${server.port}/v1/config/agents`);
+      expect(agentsResponse.status).toBe(200);
+      const agentsPayload = await agentsResponse.json() as JsonObject;
+      expect(agentsPayload).toMatchObject({
+        object: 'auracall_config_entity',
+        action: 'list',
+        registryPath: registryStore.dbPath,
+        agents: [
+          expect.objectContaining({
+            id: 'pinned',
+            source: 'config',
+            service: 'chatgpt',
+          }),
+          expect.objectContaining({
+            id: 'registry-worker',
+            source: 'registry',
+            revision: 1,
+            service: 'gemini',
+          }),
+        ],
+        conflicts: [
+          {
+            kind: 'agent',
+            id: 'pinned',
+            configSource: 'config',
+            registrySource: 'registry',
+            resolution: 'config-wins',
+          },
+        ],
+      });
+
+      const modelsResponse = await fetch(`http://127.0.0.1:${server.port}/v1/models`);
+      expect(modelsResponse.status).toBe(200);
+      const modelsPayload = await modelsResponse.json() as { data: Array<{ id: string; metadata?: Record<string, unknown> }> };
+      expect(modelsPayload.data).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          id: 'agent:pinned',
+          metadata: expect.objectContaining({
+            kind: 'agent',
+            source: 'config',
+            service: 'chatgpt',
+          }),
+        }),
+        expect.objectContaining({
+          id: 'agent:registry-worker',
+          metadata: expect.objectContaining({
+            kind: 'agent',
+            source: 'registry',
+            enabled: true,
+            revision: 1,
+            service: 'gemini',
+          }),
+        }),
+      ]));
     } finally {
       await server.close();
     }

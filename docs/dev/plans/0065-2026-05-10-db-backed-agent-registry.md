@@ -32,6 +32,9 @@ Implemented:
 - `createEffectiveAgentCatalog(...)` merges config-defined and registry-defined
   agents/teams into one deterministic read projection with source metadata,
   disabled-record filtering, and config-wins duplicate conflict reporting.
+- `/v1/config/agents`, `/v1/config/teams`, MCP config listing, and
+  `/v1/models` now read that effective merged catalog. Registry-backed enabled
+  agents appear as `agent:<agent_id>` model ids with source/revision metadata.
 - `projectConfigModel(...)` projects config-defined agents and teams for
   `/v1/models`, `/v1/config/agents`, `/v1/config/teams`, CLI config inspection,
   and runtime selection.
@@ -44,8 +47,7 @@ Remaining:
 - define config-vs-registry precedence and migration semantics
 - make API/MCP CRUD write the registry by default
 - keep config-defined bootstrap agents available as seed/overlay entries
-- expose registry metadata through `/v1/models`, `/v1/config/agents`, MCP, CLI,
-  and dashboard surfaces
+- expose registry metadata through CLI and dashboard surfaces
 - provide export/import so selected agents can still become reviewable files
 
 ## Architecture Decision
@@ -129,7 +131,7 @@ Add explicit registry routes only after compatibility is working:
      agent catalog
    - [x] add tests for registry entries, duplicate ids, disabled records, and
      source metadata
-   - [ ] wire merged read projection into `/v1/config/agents` and `/v1/models`
+   - [x] wire merged read projection into `/v1/config/agents` and `/v1/models`
      after the read model stays stable
 
 2. API/MCP write-path migration

@@ -96,6 +96,7 @@
   verify the HTTP scheduler-history route, CLI scheduler-history reader, CLI
   status summarizer, MCP `account_mirror_scheduler_history`, and MCP
   `api_status` all report the queued work owner and resume cursor.
+
 - Deterministic completion-control smoke: run
   `pnpm run smoke:completion-control` to start a short-lived local API server
   with an injected completion service and verify `POST /status` pause, CLI
@@ -123,6 +124,13 @@
   `pnpm run preflight:lazy-live-follow` to execute the no-browser completion,
   hydration, health, dashboard, user-runtime install, and installed MCP status
   plus log-tail checks as one release gate before live dogfood.
+
+### `config_entities_list`
+- Behavior: reads the effective AuraCall agent/team catalog. The returned
+  `agents` and `teams` arrays include config-defined entries and enabled
+  registry-backed entries with source/revision metadata, plus a `conflicts`
+  array when duplicate ids resolve by config-wins compatibility.
+- This is read-only and does not launch browsers or mutate provider state.
 
 ### `api_ops_browser_status`
 - Inputs: `port` for the local `auracall api serve` listener; optional `host`,

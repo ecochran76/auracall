@@ -3194,3 +3194,20 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification:
   - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
   - `pnpm tsc --noEmit`
+
+## Turn 115 | 2026-05-11
+
+- Goal: wire the DB-backed agent registry into expanded agent-management read
+  surfaces.
+- Change:
+  - `/v1/config/agents` and `/v1/config/teams` now return the effective
+    config plus registry catalog with source/revision metadata
+  - `/v1/models` includes enabled registry-backed agents as `agent:<agent_id>`
+    model ids with source/revision metadata
+  - MCP `config_entities_list` returns the same effective catalog metadata and
+    config-wins duplicate conflicts
+  - compatibility writes still update the user config file; registry-default
+    writes remain the next migration slice
+- Verification:
+  - `pnpm vitest run tests/config/agentConfigService.test.ts tests/config/agentRegistryStore.test.ts tests/mcp.configEntities.test.ts tests/http.responsesServer.test.ts -t "configures AuraCall agents|registry-backed agents|effective config and registry|agent registry|mcp config" --maxWorkers 1`
+  - `pnpm tsc --noEmit`

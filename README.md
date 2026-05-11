@@ -226,8 +226,10 @@ Terminology note:
   before returning, and returns a standard `chat.completion` object. `stream:
   true` is rejected explicitly until the streaming adapter is implemented.
 - `GET /v1/models` returns the static provider model catalog plus AuraCall
-  discovery entries. Configured agents appear as `agent:<agent_id>` model ids
-  usable with `/v1/responses` and non-streaming `/v1/chat/completions`;
+  discovery entries. Effective config-defined and registry-backed agents appear
+  as `agent:<agent_id>` model ids usable with `/v1/responses` and non-streaming
+  `/v1/chat/completions`; agent metadata includes source/revision fields when
+  available so clients can distinguish config and registry records.
   semantic provider selectors such as
   `chatgpt:pro-extended` include `metadata.kind="semantic_model_selector"` and
   `metadata.executionReady` so clients can distinguish execution-ready selectors

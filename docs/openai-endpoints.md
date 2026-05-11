@@ -77,14 +77,16 @@ Current limits:
     behavior
   - sectioned public task-run-spec envelopes, background worker pools, and
     parallel team execution are intentionally deferred
-- `/v1/config/agents` and `/v1/config/teams` expose trusted local config
-  management for agents and teams:
-  - `GET` lists projected configured entries
+- `/v1/config/agents` and `/v1/config/teams` expose trusted local agent/team
+  management:
+  - `GET` lists the effective config plus user-scoped registry projection,
+    including source/revision metadata and config-wins conflicts
   - `PUT /v1/config/agents/{agent_id}` accepts one raw agent config object
   - `PUT /v1/config/teams/{team_id}` accepts one raw team config object
   - `DELETE` removes the selected entry
-  - writes update the user config file and the running server's in-memory
-    config when `api serve` has a resolved config object
+  - writes still update the user config file and the running server's in-memory
+    config when `api serve` has a resolved config object; registry-default
+    writes are the next migration slice
   - protect this local control-plane surface with API-key auth before exposing
     it to any non-loopback client
 - API-key authorization can be configured in `~/.auracall/config.json` or
@@ -351,7 +353,8 @@ Current limits:
     Gemini semantic execution remain follow-up work
 - MCP exposes the same trusted local agent/team config surface through
   `config_entities_list`, `config_agent_upsert`, `config_agent_delete`,
-  `config_team_upsert`, and `config_team_delete`
+  `config_team_upsert`, and `config_team_delete`; list responses include
+  effective registry/config source metadata
 - no auth
 - no streaming/SSE
 - no `POST /v1/chat/completions` adapter yet

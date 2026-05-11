@@ -20,16 +20,17 @@ import {
 import type { ResolvedUserConfig } from '../config.js';
 import { resolveConfig } from '../schema/resolver.js';
 import {
-  projectConfigModel,
   resolveHostLocalActionExecutionPolicy,
   type ProjectedAgent,
 } from '../config/model.js';
+import type { EffectiveAgent } from '../config/agentRegistryCatalog.js';
 import { SEMANTIC_MODEL_SELECTORS } from '../config/modelSelector.js';
 import {
   agentConfigUpsertInputSchema,
   createAgentTeamConfigService,
   teamConfigUpsertInputSchema,
 } from '../config/agentConfigService.js';
+import type { AgentRegistryStore } from '../config/agentRegistryStore.js';
 import {
   inspectTeamRunLinkage,
   TeamRunInspectionError,
@@ -215,6 +216,7 @@ export interface ResponsesHttpServerDeps {
   accountMirrorSchedulerService?: AccountMirrorSchedulerPassService;
   accountMirrorSchedulerLedger?: AccountMirrorSchedulerPassLedger;
   accountMirrorCompletionService?: AccountMirrorCompletionService;
+  agentRegistryStore?: AgentRegistryStore | null;
   preflightRunner?: LazyLiveFollowPreflightRunner;
   terminateProcess?: (pid: number, signal: NodeJS.Signals) => void;
 }
@@ -711,6 +713,7 @@ export async function createResponsesHttpServer(
   const apiAuthPolicy = readApiAuthPolicy(configuredRuntimeConfig);
   const agentTeamConfigService = createAgentTeamConfigService({
     activeConfig: configuredRuntimeConfig ?? null,
+    registryStore: deps.agentRegistryStore,
   });
   const resolvedUserConfig = asResolvedUserConfig(configuredRuntimeConfig);
   const accountMirrorPersistence = createAccountMirrorPersistence({
@@ -1766,7 +1769,7 @@ export async function createResponsesHttpServer(
       }
 
       if (req.method === 'GET' && url.pathname === '/v1/models') {
-        sendJson(res, 200, createHttpModelListResponse(configuredRuntimeConfig));
+        sendJson(res, 200, createHttpModelListResponse(await agentTeamConfigService.effectiveCatalog()));
         return;
       }
 
@@ -2740,7 +2743,7 @@ export function assertResponsesHostAllowed(host: string | undefined, listenPubli
   );
 }
 
-function createHttpModelListResponse(config: Record<string, unknown> | null | undefined): HttpModelListResponse {
+function createHttpModelListResponse(catalog: { agents: Array<ProjectedAgent | EffectiveAgent> }): HttpModelListResponse {
   const providerModels: HttpModelDescriptor[] = Object.entries(MODEL_CONFIGS).map(([id, config]) => ({
     id,
     object: 'model',
@@ -2763,13 +2766,16 @@ function createHttpModelListResponse(config: Record<string, unknown> | null | un
       executionReady: selector.executionReady,
     },
   }));
-  const configuredAgents: HttpModelDescriptor[] = projectConfigModel(config ?? {}).agents.map((agent) => ({
+  const configuredAgents: HttpModelDescriptor[] = catalog.agents.map((agent) => ({
     id: `agent:${agent.id}`,
     object: 'model',
     created: 0,
     owned_by: 'auracall:agent',
     metadata: {
       kind: 'agent',
+      source: 'source' in agent ? agent.source : 'config',
+      enabled: 'enabled' in agent ? agent.enabled : true,
+      revision: 'revision' in agent ? agent.revision : undefined,
       service: agent.service ?? agent.defaultService ?? undefined,
       agent,
     },

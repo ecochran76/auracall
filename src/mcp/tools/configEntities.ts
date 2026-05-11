@@ -30,8 +30,10 @@ const configEntityOutputShape = {
   action: z.enum(['list', 'upsert', 'delete']),
   id: z.string().nullable(),
   configPath: z.string(),
+  registryPath: z.string().nullable(),
   agents: z.array(z.record(z.string(), z.unknown())),
   teams: z.array(z.record(z.string(), z.unknown())),
+  conflicts: z.array(z.record(z.string(), z.unknown())),
 } satisfies z.ZodRawShape;
 
 export interface RegisterConfigEntityToolsDeps {

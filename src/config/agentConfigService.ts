@@ -4,7 +4,18 @@ import JSON5 from 'json5';
 import { z } from 'zod';
 import { configPath, scaffoldDefaultConfigFile } from '../config.js';
 import { AgentConfigSchema, TeamConfigSchema } from '../schema/types.js';
-import { projectConfigModel, type ProjectedAgent, type ProjectedTeam } from './model.js';
+import type { ProjectedAgent, ProjectedTeam } from './model.js';
+import {
+  createEffectiveAgentCatalog,
+  type EffectiveAgent,
+  type EffectiveAgentCatalog,
+  type EffectiveCatalogConflict,
+  type EffectiveTeam,
+} from './agentRegistryCatalog.js';
+import {
+  createAgentRegistryStore,
+  type AgentRegistryStore,
+} from './agentRegistryStore.js';
 
 type MutableConfig = Record<string, unknown>;
 
@@ -30,17 +41,21 @@ export interface ConfigEntityMutationResult {
   action: 'list' | 'upsert' | 'delete';
   id: string | null;
   configPath: string;
-  agents: ProjectedAgent[];
-  teams: ProjectedTeam[];
+  registryPath: string | null;
+  agents: Array<ProjectedAgent | EffectiveAgent>;
+  teams: Array<ProjectedTeam | EffectiveTeam>;
+  conflicts: EffectiveCatalogConflict[];
 }
 
 export interface AgentTeamConfigServiceDeps {
   configPath?: string;
   activeConfig?: MutableConfig | null;
+  registryStore?: AgentRegistryStore | null;
 }
 
 export interface AgentTeamConfigService {
   list(kind?: 'agent' | 'team'): Promise<ConfigEntityMutationResult>;
+  effectiveCatalog(): Promise<EffectiveAgentCatalog>;
   upsertAgent(input: z.infer<typeof agentConfigUpsertInputSchema>): Promise<ConfigEntityMutationResult>;
   deleteAgent(id: string): Promise<ConfigEntityMutationResult>;
   upsertTeam(input: z.infer<typeof teamConfigUpsertInputSchema>): Promise<ConfigEntityMutationResult>;
@@ -52,25 +67,50 @@ export function createAgentTeamConfigService(
 ): AgentTeamConfigService {
   const targetPath = deps.configPath ?? configPath();
   const activeConfig = deps.activeConfig ?? null;
+  const registryStore = deps.registryStore === null
+    ? null
+    : deps.registryStore ?? (deps.configPath ? null : createAgentRegistryStore());
 
   const load = () => readWritableUserConfig(targetPath);
+  const readProjectionConfig = async () => {
+    if (!deps.configPath && activeConfig) {
+      return activeConfig;
+    }
+    return load();
+  };
   const save = async (next: MutableConfig) => {
     await writeJsonFile(targetPath, next);
     if (activeConfig) {
       replaceObjectContents(activeConfig, next);
     }
   };
-  const result = (
+  const result = async (
     action: ConfigEntityMutationResult['action'],
     kind: ConfigEntityMutationResult['kind'],
     id: string | null,
     config: MutableConfig,
-  ) => createResult({ action, kind, id, path: targetPath, config });
+  ) => createResult({
+    action,
+    kind,
+    id,
+    path: targetPath,
+    registryPath: registryStore?.dbPath ?? null,
+    catalog: await createEffectiveCatalog(config, registryStore),
+  });
 
   return {
     async list(kind = 'agent') {
-      const config = await load();
+      const config = await readProjectionConfig();
       return result('list', kind, null, config);
+    },
+
+    async effectiveCatalog() {
+      const config = await readProjectionConfig();
+      return createEffectiveAgentCatalog({
+        config,
+        registryAgents: registryStore ? await registryStore.listAgents({ includeDisabled: true }) : [],
+        registryTeams: registryStore ? await registryStore.listTeams({ includeDisabled: true }) : [],
+      });
     },
 
     async upsertAgent(input) {
@@ -125,6 +165,17 @@ async function readWritableUserConfig(targetPath: string): Promise<MutableConfig
   }
 }
 
+async function createEffectiveCatalog(
+  config: MutableConfig,
+  registryStore: AgentRegistryStore | null,
+): Promise<EffectiveAgentCatalog> {
+  return createEffectiveAgentCatalog({
+    config,
+    registryAgents: registryStore ? await registryStore.listAgents({ includeDisabled: true }) : [],
+    registryTeams: registryStore ? await registryStore.listTeams({ includeDisabled: true }) : [],
+  });
+}
+
 async function writeJsonFile(targetPath: string, config: MutableConfig): Promise<void> {
   await fs.mkdir(path.dirname(targetPath), { recursive: true });
   const tempPath = `${targetPath}.tmp-${process.pid}-${Date.now()}`;
@@ -137,17 +188,19 @@ function createResult(input: {
   kind: ConfigEntityMutationResult['kind'];
   id: string | null;
   path: string;
-  config: MutableConfig;
+  registryPath: string | null;
+  catalog: EffectiveAgentCatalog;
 }): ConfigEntityMutationResult {
-  const projection = projectConfigModel(input.config);
   return {
     object: 'auracall_config_entity',
     kind: input.kind,
     action: input.action,
     id: input.id,
     configPath: input.path,
-    agents: projection.agents,
-    teams: projection.teams,
+    registryPath: input.registryPath,
+    agents: input.catalog.agents,
+    teams: input.catalog.teams,
+    conflicts: input.catalog.conflicts,
   };
 }
 
