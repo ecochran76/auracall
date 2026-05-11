@@ -130,6 +130,11 @@ against the effective config plus registry catalog, and returns the
 OpenAI-compatible base URL/key/model values. Restart `auracall-api.service`
 after issuing a key so systemd reloads this environment file.
 
+Use MCP `api_key_diagnostics` before or after restart to inspect
+`~/.auracall/api.env` without returning secrets. Use
+`GET /v1/config/agent-diagnostics` to inspect the running API process's loaded
+key ids and effective agent/team reachability.
+
 Verify:
 
 ```bash

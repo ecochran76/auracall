@@ -3263,3 +3263,20 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/mcp.apiKeys.test.ts -t "API key|registry-backed agents through effective catalog scopes|api key tools" --maxWorkers 1`
   - `pnpm tsc --noEmit`
+
+## Turn 119 | 2026-05-11
+
+- Goal: expose non-secret diagnostics for registry-backed agents and scoped API
+  keys.
+- Change:
+  - added agent registry diagnostics to the config service, including effective
+    agent/team counts, config-vs-registry conflicts, disabled registry records,
+    config doctor issues, and API-key scope reachability
+  - added `GET /v1/config/agent-diagnostics` so operators can inspect the
+    running API process's loaded key ids without exposing secrets
+  - added MCP `api_key_diagnostics` to inspect `~/.auracall/api.env` before or
+    after service restart without returning key material
+  - updated README, MCP docs, OpenAI endpoint docs, runtime docs, and plan 0065
+- Verification:
+  - `pnpm vitest run tests/config/agentConfigService.test.ts tests/mcp.apiKeys.test.ts tests/http.responsesServer.test.ts -t "diagnoses|agent registry and loaded API-key diagnostics|API key|registry-backed agents through effective catalog scopes" --maxWorkers 1`
+  - `pnpm tsc --noEmit`

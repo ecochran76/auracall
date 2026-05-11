@@ -4,7 +4,10 @@ import path from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getAuracallHomeDir } from '../../auracallHome.js';
-import type { AgentTeamConfigService } from '../../config/agentConfigService.js';
+import type {
+  AgentConfigApiKeyDiagnosticInput,
+  AgentTeamConfigService,
+} from '../../config/agentConfigService.js';
 
 const apiKeyIssueInputShape = {
   agentId: z.string().trim().min(1).optional(),
@@ -40,6 +43,25 @@ const apiKeyIssueOutputShape = {
   restartRequired: z.boolean(),
 } satisfies z.ZodRawShape;
 
+const apiKeyDiagnosticsInputShape = {
+  envPath: z.string().trim().min(1).optional(),
+} satisfies z.ZodRawShape;
+
+const apiKeyDiagnosticsOutputShape = {
+  object: z.literal('auracall_agent_registry_diagnostics'),
+  ok: z.boolean(),
+  envPath: z.string(),
+  configPath: z.string(),
+  registryPath: z.string().nullable(),
+  metrics: z.record(z.string(), z.unknown()),
+  apiKeys: z.array(z.record(z.string(), z.unknown())),
+  disabledRegistryAgents: z.array(z.string()),
+  disabledRegistryTeams: z.array(z.string()),
+  conflicts: z.array(z.record(z.string(), z.unknown())),
+  configIssues: z.array(z.record(z.string(), z.unknown())),
+  issues: z.array(z.record(z.string(), z.unknown())),
+} satisfies z.ZodRawShape;
+
 export interface RegisterApiKeyToolsDeps {
   agentTeamConfigService: AgentTeamConfigService;
 }
@@ -58,6 +80,18 @@ export function registerApiKeyTools(
       outputSchema: apiKeyIssueOutputShape,
     },
     createApiKeyIssueToolHandler(deps.agentTeamConfigService),
+  );
+
+  server.registerTool(
+    'api_key_diagnostics',
+    {
+      title: 'Diagnose AuraCall API keys',
+      description:
+        'Read user-scoped AuraCall API key metadata from ~/.auracall/api.env and report agent/team scope health without exposing secrets.',
+      inputSchema: apiKeyDiagnosticsInputShape,
+      outputSchema: apiKeyDiagnosticsOutputShape,
+    },
+    createApiKeyDiagnosticsToolHandler(deps.agentTeamConfigService),
   );
 }
 
@@ -129,6 +163,29 @@ export function createApiKeyIssueToolHandler(agentTeamConfigService: AgentTeamCo
   };
 }
 
+export function createApiKeyDiagnosticsToolHandler(agentTeamConfigService: AgentTeamConfigService) {
+  return async (input: unknown) => {
+    const payload = z.object(apiKeyDiagnosticsInputShape).parse(input ?? {});
+    const envPath = path.resolve(payload.envPath ?? path.join(getAuracallHomeDir(), 'api.env'));
+    const state = await readEnvFile(envPath);
+    const diagnostics = await agentTeamConfigService.diagnostics({
+      apiKeys: readApiKeyDiagnosticsFromEnvValues(state.values),
+    });
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `AuraCall API key diagnostics: ${diagnostics.metrics.warnings} warning(s), ${diagnostics.metrics.apiKeys} key(s), env ${envPath}.`,
+        },
+      ],
+      structuredContent: {
+        ...diagnostics,
+        envPath,
+      },
+    };
+  };
+}
+
 interface EnvFileState {
   order: string[];
   values: Record<string, string>;
@@ -186,4 +243,37 @@ function writeOptionalDelimitedValue(target: Record<string, string>, key: string
   } else {
     delete target[key];
   }
+}
+
+function readApiKeyDiagnosticsFromEnvValues(values: Record<string, string>): AgentConfigApiKeyDiagnosticInput[] {
+  const keys: AgentConfigApiKeyDiagnosticInput[] = [];
+  if (values.AURACALL_API_KEY || values.AURACALL_API_KEY_ID) {
+    keys.push({
+      id: values.AURACALL_API_KEY_ID?.trim() || 'env',
+      hasSecret: Boolean(values.AURACALL_API_KEY),
+      agents: readDelimitedValueList(values.AURACALL_API_KEY_AGENTS),
+      teams: readDelimitedValueList(values.AURACALL_API_KEY_TEAMS),
+      services: readDelimitedValueList(values.AURACALL_API_KEY_SERVICES),
+      runtimeProfiles: readDelimitedValueList(values.AURACALL_API_KEY_RUNTIME_PROFILES),
+    });
+  }
+
+  for (const rawId of readDelimitedValueList(values.AURACALL_API_KEY_IDS) ?? []) {
+    const suffix = toApiAuthEnvSuffix(rawId);
+    keys.push({
+      id: values[`AURACALL_API_KEY_${suffix}_ID`]?.trim() || rawId,
+      hasSecret: Boolean(values[`AURACALL_API_KEY_${suffix}`]),
+      agents: readDelimitedValueList(values[`AURACALL_API_KEY_${suffix}_AGENTS`]),
+      teams: readDelimitedValueList(values[`AURACALL_API_KEY_${suffix}_TEAMS`]),
+      services: readDelimitedValueList(values[`AURACALL_API_KEY_${suffix}_SERVICES`]),
+      runtimeProfiles: readDelimitedValueList(values[`AURACALL_API_KEY_${suffix}_RUNTIME_PROFILES`]),
+    });
+  }
+
+  return keys;
+}
+
+function readDelimitedValueList(value: string | undefined): string[] | undefined {
+  const items = (value ?? '').split(/[,\s]+/).map((item) => item.trim()).filter(Boolean);
+  return items.length > 0 ? items : undefined;
 }

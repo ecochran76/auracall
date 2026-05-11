@@ -156,6 +156,17 @@
   MCP surface until AuraCall has explicit principal/role enforcement for
   privileged agent-management operations.
 
+### `api_key_diagnostics`
+- Inputs: optional `envPath`, defaulting to `~/.auracall/api.env`.
+- Behavior: reads API-key metadata from the env file and returns
+  `object = "auracall_agent_registry_diagnostics"` without returning any
+  secret values. The report includes effective agent/team counts, disabled
+  registry records, config-vs-registry conflicts, API-key ids, missing scoped
+  agents/teams/runtime profiles, and team-derived effective agent reachability.
+- Use this before handing a generated key to another agent and after restarting
+  the API service to verify the key id still maps to the intended agent/team
+  scopes.
+
 ### `api_ops_browser_status`
 - Inputs: `port` for the local `auracall api serve` listener; optional `host`,
   `timeoutMs`, `expectedLiveFollowSeverity`, `expectedCompletionPaused`, and

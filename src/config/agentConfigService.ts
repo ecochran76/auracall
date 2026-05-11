@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { configPath, scaffoldDefaultConfigFile } from '../config.js';
 import { AgentConfigSchema, TeamConfigSchema } from '../schema/types.js';
 import type { ProjectedAgent, ProjectedTeam } from './model.js';
+import { analyzeConfigModelBridgeHealth, type ConfigModelDoctorIssue } from './model.js';
 import {
   createEffectiveAgentConfigRecord,
   createEffectiveAgentCatalog,
@@ -50,6 +51,61 @@ export interface ConfigEntityMutationResult {
   conflicts: EffectiveCatalogConflict[];
 }
 
+export interface AgentConfigApiKeyDiagnosticInput {
+  id: string;
+  hasSecret?: boolean;
+  agents?: string[];
+  teams?: string[];
+  services?: string[];
+  runtimeProfiles?: string[];
+}
+
+export interface AgentConfigDiagnosticIssue {
+  severity: 'info' | 'warning';
+  code: string;
+  message: string;
+  kind?: 'agent' | 'team' | 'api_key' | 'config';
+  id?: string;
+  keyId?: string;
+}
+
+export interface AgentConfigApiKeyDiagnostic {
+  id: string;
+  scoped: boolean;
+  hasSecret: boolean;
+  agents: string[];
+  teams: string[];
+  services: string[];
+  runtimeProfiles: string[];
+  effectiveAgents: string[];
+  missingAgents: string[];
+  missingTeams: string[];
+  missingRuntimeProfiles: string[];
+}
+
+export interface AgentConfigDiagnosticsResult {
+  object: 'auracall_agent_registry_diagnostics';
+  ok: boolean;
+  configPath: string;
+  registryPath: string | null;
+  metrics: {
+    effectiveAgents: number;
+    effectiveTeams: number;
+    disabledRegistryAgents: number;
+    disabledRegistryTeams: number;
+    conflicts: number;
+    apiKeys: number;
+    issues: number;
+    warnings: number;
+  };
+  apiKeys: AgentConfigApiKeyDiagnostic[];
+  disabledRegistryAgents: string[];
+  disabledRegistryTeams: string[];
+  conflicts: EffectiveCatalogConflict[];
+  configIssues: ConfigModelDoctorIssue[];
+  issues: AgentConfigDiagnosticIssue[];
+}
+
 export interface AgentTeamConfigServiceDeps {
   configPath?: string;
   activeConfig?: MutableConfig | null;
@@ -60,6 +116,7 @@ export interface AgentTeamConfigService {
   list(kind?: 'agent' | 'team'): Promise<ConfigEntityMutationResult>;
   effectiveConfig(): Promise<MutableConfig>;
   effectiveCatalog(): Promise<EffectiveAgentCatalog>;
+  diagnostics(input?: { apiKeys?: AgentConfigApiKeyDiagnosticInput[] }): Promise<AgentConfigDiagnosticsResult>;
   upsertAgent(input: z.infer<typeof agentConfigUpsertInputSchema>): Promise<ConfigEntityMutationResult>;
   deleteAgent(id: string): Promise<ConfigEntityMutationResult>;
   upsertTeam(input: z.infer<typeof teamConfigUpsertInputSchema>): Promise<ConfigEntityMutationResult>;
@@ -123,6 +180,31 @@ export function createAgentTeamConfigService(
         config,
         registryAgents: registryStore ? await registryStore.listAgents({ includeDisabled: true }) : [],
         registryTeams: registryStore ? await registryStore.listTeams({ includeDisabled: true }) : [],
+      });
+    },
+
+    async diagnostics(input = {}) {
+      const config = await readProjectionConfig();
+      const registryAgents = registryStore ? await registryStore.listAgents({ includeDisabled: true }) : [];
+      const registryTeams = registryStore ? await registryStore.listTeams({ includeDisabled: true }) : [];
+      const catalog = createEffectiveAgentCatalog({
+        config,
+        registryAgents,
+        registryTeams,
+      });
+      const effectiveConfig = createEffectiveAgentConfigRecord({
+        config,
+        registryAgents,
+        registryTeams,
+      });
+      return createDiagnosticsResult({
+        effectiveConfig,
+        catalog,
+        configPath: targetPath,
+        registryPath: registryStore?.dbPath ?? null,
+        disabledRegistryAgents: registryAgents.filter((record) => !record.enabled).map((record) => record.id).sort(),
+        disabledRegistryTeams: registryTeams.filter((record) => !record.enabled).map((record) => record.id).sort(),
+        apiKeys: input.apiKeys ?? [],
       });
     },
 
@@ -232,6 +314,146 @@ export function createAgentTeamConfigService(
       return result('delete', 'team', parsedId, config, 'config');
     },
   };
+}
+
+function createDiagnosticsResult(input: {
+  effectiveConfig: MutableConfig;
+  catalog: EffectiveAgentCatalog;
+  configPath: string;
+  registryPath: string | null;
+  disabledRegistryAgents: string[];
+  disabledRegistryTeams: string[];
+  apiKeys: AgentConfigApiKeyDiagnosticInput[];
+}): AgentConfigDiagnosticsResult {
+  const configDoctor = analyzeConfigModelBridgeHealth(input.effectiveConfig);
+  const issues: AgentConfigDiagnosticIssue[] = [
+    ...input.catalog.conflicts.map((conflict): AgentConfigDiagnosticIssue => ({
+      severity: 'info',
+      code: 'registry-record-shadowed-by-config',
+      kind: conflict.kind,
+      id: conflict.id,
+      message: `${capitalize(conflict.kind)} "${conflict.id}" exists in config and registry; config wins.`,
+    })),
+    ...input.disabledRegistryAgents.map((id): AgentConfigDiagnosticIssue => ({
+      severity: 'info',
+      code: 'disabled-registry-agent',
+      kind: 'agent',
+      id,
+      message: `Registry agent "${id}" is disabled and absent from the effective catalog.`,
+    })),
+    ...input.disabledRegistryTeams.map((id): AgentConfigDiagnosticIssue => ({
+      severity: 'info',
+      code: 'disabled-registry-team',
+      kind: 'team',
+      id,
+      message: `Registry team "${id}" is disabled and absent from the effective catalog.`,
+    })),
+    ...configDoctor.issues.map((issue): AgentConfigDiagnosticIssue => ({
+      severity: issue.severity,
+      code: issue.code,
+      kind: issue.agent ? 'agent' : issue.team ? 'team' : 'config',
+      id: issue.agent ?? issue.team ?? issue.auracallRuntimeProfile ?? issue.browserProfile,
+      message: issue.message,
+    })),
+  ];
+  const apiKeys = input.apiKeys.map((key) => createApiKeyDiagnostic(key, input.catalog));
+  for (const key of apiKeys) {
+    if (!key.hasSecret) {
+      issues.push({
+        severity: 'warning',
+        code: 'api-key-secret-missing',
+        kind: 'api_key',
+        keyId: key.id,
+        message: `API key "${key.id}" is listed but has no secret value.`,
+      });
+    }
+    for (const agent of key.missingAgents) {
+      issues.push({
+        severity: 'warning',
+        code: 'api-key-agent-scope-missing',
+        kind: 'api_key',
+        keyId: key.id,
+        id: agent,
+        message: `API key "${key.id}" scopes missing agent "${agent}".`,
+      });
+    }
+    for (const team of key.missingTeams) {
+      issues.push({
+        severity: 'warning',
+        code: 'api-key-team-scope-missing',
+        kind: 'api_key',
+        keyId: key.id,
+        id: team,
+        message: `API key "${key.id}" scopes missing team "${team}".`,
+      });
+    }
+    for (const runtimeProfile of key.missingRuntimeProfiles) {
+      issues.push({
+        severity: 'warning',
+        code: 'api-key-runtime-profile-scope-missing',
+        kind: 'api_key',
+        keyId: key.id,
+        id: runtimeProfile,
+        message: `API key "${key.id}" scopes missing runtime profile "${runtimeProfile}".`,
+      });
+    }
+  }
+
+  const warningCount = issues.filter((issue) => issue.severity === 'warning').length;
+  return {
+    object: 'auracall_agent_registry_diagnostics',
+    ok: warningCount === 0,
+    configPath: input.configPath,
+    registryPath: input.registryPath,
+    metrics: {
+      effectiveAgents: input.catalog.agents.length,
+      effectiveTeams: input.catalog.teams.length,
+      disabledRegistryAgents: input.disabledRegistryAgents.length,
+      disabledRegistryTeams: input.disabledRegistryTeams.length,
+      conflicts: input.catalog.conflicts.length,
+      apiKeys: apiKeys.length,
+      issues: issues.length,
+      warnings: warningCount,
+    },
+    apiKeys,
+    disabledRegistryAgents: input.disabledRegistryAgents,
+    disabledRegistryTeams: input.disabledRegistryTeams,
+    conflicts: input.catalog.conflicts,
+    configIssues: configDoctor.issues,
+    issues,
+  };
+}
+
+function createApiKeyDiagnostic(
+  key: AgentConfigApiKeyDiagnosticInput,
+  catalog: EffectiveAgentCatalog,
+): AgentConfigApiKeyDiagnostic {
+  const agents = key.agents ?? [];
+  const teams = key.teams ?? [];
+  const services = key.services ?? [];
+  const runtimeProfiles = key.runtimeProfiles ?? [];
+  const effectiveAgentIds = new Set(catalog.agents.map((agent) => agent.id));
+  const effectiveTeamIds = new Set(catalog.teams.map((team) => team.id));
+  const effectiveRuntimeProfileIds = new Set(catalog.runtimeProfiles.map((profile) => profile.id));
+  const teamAgentIds = teams
+    .flatMap((teamId) => catalog.teams.find((team) => team.id === teamId)?.agentIds ?? []);
+  return {
+    id: key.id,
+    scoped: Boolean(agents.length || teams.length || services.length || runtimeProfiles.length),
+    hasSecret: key.hasSecret ?? true,
+    agents,
+    teams,
+    services,
+    runtimeProfiles,
+    effectiveAgents: [...new Set([...agents, ...teamAgentIds].filter((agentId) => effectiveAgentIds.has(agentId)))].sort(),
+    missingAgents: agents.filter((agentId) => !effectiveAgentIds.has(agentId)).sort(),
+    missingTeams: teams.filter((teamId) => !effectiveTeamIds.has(teamId)).sort(),
+    missingRuntimeProfiles: runtimeProfiles.filter((profileId) => !effectiveRuntimeProfileIds.has(profileId)).sort(),
+  };
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 async function readWritableUserConfig(targetPath: string): Promise<MutableConfig> {

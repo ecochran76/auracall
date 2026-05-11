@@ -39,6 +39,7 @@ Current endpoints:
 - `GET /v1/runtime-runs/inspect`
 - `GET /v1/models`
 - `GET /v1/config/agents`
+- `GET /v1/config/agent-diagnostics`
 - `PUT /v1/config/agents/{agent_id}`
 - `DELETE /v1/config/agents/{agent_id}`
 - `GET /v1/config/teams`
@@ -95,6 +96,12 @@ Current limits:
   - registry-created agents and teams are available to stored-step execution,
     HTTP team-runs, MCP response execution, and MCP team-runs through the same
     effective catalog projection
+  - `GET /v1/config/agent-diagnostics` returns non-secret operator health for
+    the effective registry/config catalog, including disabled registry records,
+    config-vs-registry conflicts, loaded API-key ids, missing scoped agents or
+    teams, and team-derived effective agent reachability. When API auth is
+    enabled, this route requires an unscoped operator key until AuraCall has a
+    first-class role/principal model.
   - protect this local control-plane surface with API-key auth before exposing
     it to any non-loopback client
 - API-key authorization can be configured in `~/.auracall/config.json` or
@@ -111,7 +118,10 @@ Current limits:
   agents, and `/v1/team-runs` enforces team scopes before creating work.
   Privileged local MCP operators can use `api_key_issue` to add an
   agent/team-scoped key to `~/.auracall/api.env`; restart the user API service
-  after issuing a key so systemd reloads the environment file.
+  after issuing a key so systemd reloads the environment file. Use
+  `GET /v1/config/agent-diagnostics` against the running service or MCP
+  `api_key_diagnostics` against the env file to validate key scope metadata
+  without exposing secret values.
 - startup recovery can re-run bounded stale persisted direct runs before readback; keep
   this enabled by default, or disable with `--no-recover-runs-on-start`.
   - control source scope with `--recover-runs-on-start-source <direct|team-run|all>`

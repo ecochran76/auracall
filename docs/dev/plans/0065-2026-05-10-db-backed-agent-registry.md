@@ -49,6 +49,11 @@ Implemented:
 - MCP exposes a local privileged `api_key_issue` tool that writes additional
   agent/team-scoped keys into the user-scoped `~/.auracall/api.env` file for
   OpenAI-compatible clients.
+- `/v1/config/agent-diagnostics` and MCP `api_key_diagnostics` expose
+  non-secret effective catalog/API-key health, including disabled registry
+  records, config-vs-registry conflicts, missing scoped targets, and
+  team-derived effective agent reachability. The HTTP route requires an
+  unscoped operator key when API auth is enabled.
 - `projectConfigModel(...)` projects config-defined agents and teams for
   `/v1/models`, `/v1/config/agents`, `/v1/config/teams`, CLI config inspection,
   and runtime selection.
@@ -57,7 +62,7 @@ Implemented:
 
 Remaining:
 
-- expose registry metadata through CLI and dashboard surfaces
+- expose registry diagnostics through CLI and dashboard surfaces
 - provide export/import so selected agents can still become reviewable files
 
 ## Architecture Decision

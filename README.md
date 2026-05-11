@@ -272,6 +272,14 @@ Terminology note:
   operators can discover the service posture. Scoped keys are enforced on
   `/v1/responses` and `/v1/team-runs` against the effective config plus
   registry catalog for agent, team, service, and runtime-profile selectors.
+  Operators can inspect non-secret scope health with
+  `GET /v1/config/agent-diagnostics`; the report includes effective
+  agent/team counts, config-vs-registry conflicts, disabled registry records,
+  and which loaded API-key ids can reach which effective agents. With auth
+  enabled, this route requires an unscoped operator key until role-based API
+  keys exist. Local MCP operators can run `api_key_diagnostics` against
+  `~/.auracall/api.env` before or after restart to catch missing agents, teams,
+  runtime profiles, or listed key ids without exposing secret values.
 - Account mirror refreshes are metadata-first and identity-gated. Successful
   refreshes persist the mirror snapshot in the existing provider cache under
   `provider + boundIdentity`; runtime/browser profile ids are retained as

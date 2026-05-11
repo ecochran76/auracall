@@ -156,6 +156,112 @@ describe('agent and team config service', () => {
     });
   });
 
+  it('diagnoses registry overlays, disabled records, and scoped API keys without secrets', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-agent-config-diagnostics-'));
+    cleanup.push(dir);
+    const configPath = path.join(dir, 'config.json');
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        browserProfiles: { default: {} },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        },
+        agents: {
+          pinned: {
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+        },
+      }),
+      'utf8',
+    );
+    const registryStore = createAgentRegistryStore({
+      rootDir: dir,
+      forceJsonFallbackForTest: true,
+    });
+    await registryStore.upsertAgent({
+      id: 'worker',
+      config: {
+        runtimeProfile: 'default',
+        service: 'gemini',
+      },
+    });
+    await registryStore.upsertAgent({
+      id: 'pinned',
+      config: {
+        runtimeProfile: 'default',
+        service: 'grok',
+      },
+    });
+    await registryStore.upsertAgent({
+      id: 'disabled-worker',
+      config: {
+        runtimeProfile: 'default',
+        service: 'grok',
+      },
+      enabled: false,
+    });
+    await registryStore.upsertTeam({
+      id: 'ops',
+      config: {
+        agents: ['worker'],
+      },
+    });
+    const service = createAgentTeamConfigService({ configPath, registryStore });
+
+    const diagnostics = await service.diagnostics({
+      apiKeys: [
+        {
+          id: 'ops-key',
+          teams: ['ops'],
+          agents: ['missing-agent'],
+          runtimeProfiles: ['missing-profile'],
+        },
+      ],
+    });
+
+    expect(diagnostics).toMatchObject({
+      object: 'auracall_agent_registry_diagnostics',
+      ok: false,
+      registryPath: registryStore.dbPath,
+      metrics: {
+        effectiveAgents: 2,
+        effectiveTeams: 1,
+        disabledRegistryAgents: 1,
+        conflicts: 1,
+        apiKeys: 1,
+        warnings: 2,
+      },
+      disabledRegistryAgents: ['disabled-worker'],
+      apiKeys: [
+        expect.objectContaining({
+          id: 'ops-key',
+          scoped: true,
+          hasSecret: true,
+          effectiveAgents: ['worker'],
+          missingAgents: ['missing-agent'],
+          missingRuntimeProfiles: ['missing-profile'],
+        }),
+      ],
+    });
+    expect(diagnostics.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        code: 'registry-record-shadowed-by-config',
+        id: 'pinned',
+      }),
+      expect.objectContaining({
+        code: 'disabled-registry-agent',
+        id: 'disabled-worker',
+      }),
+      expect.objectContaining({
+        code: 'api-key-agent-scope-missing',
+        keyId: 'ops-key',
+        id: 'missing-agent',
+      }),
+    ]));
+  });
+
   it('writes agents and teams to the registry when a registry store is configured', async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-agent-config-registry-write-'));
     cleanup.push(dir);

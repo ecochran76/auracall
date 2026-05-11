@@ -16080,6 +16080,117 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('reports agent registry and loaded API-key diagnostics over HTTP without secrets', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-agent-diagnostics-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const activeConfig: Record<string, unknown> = {
+      api: {
+        auth: {
+          required: true,
+          keys: [
+            {
+              id: 'admin-key',
+              secret: 'admin-secret',
+            },
+            {
+              id: 'ops-key',
+              secret: 'ops-secret',
+              teams: ['ops'],
+            },
+            {
+              id: 'broken-key',
+              secret: 'broken-secret',
+              agents: ['missing-agent'],
+            },
+          ],
+        },
+      },
+      browserProfiles: { default: {} },
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+      },
+      agents: {
+        pinned: {
+          runtimeProfile: 'default',
+          service: 'chatgpt',
+        },
+      },
+    };
+    await fs.writeFile(path.join(homeDir, 'config.json'), JSON.stringify(activeConfig), 'utf8');
+    const registryStore = createAgentRegistryStore({
+      rootDir: homeDir,
+      forceJsonFallbackForTest: true,
+    });
+    await registryStore.upsertAgent({
+      id: 'worker',
+      config: {
+        runtimeProfile: 'default',
+        service: 'gemini',
+      },
+    });
+    await registryStore.upsertTeam({
+      id: 'ops',
+      config: {
+        agents: ['worker'],
+      },
+    });
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      { config: activeConfig, agentRegistryStore: registryStore },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/config/agent-diagnostics`, {
+        headers: { Authorization: 'Bearer admin-secret' },
+      });
+      expect(response.status).toBe(200);
+      const payload = await response.json() as JsonObject;
+      expect(payload).toMatchObject({
+        object: 'auracall_agent_registry_diagnostics',
+        ok: false,
+        metrics: {
+          effectiveAgents: 2,
+          effectiveTeams: 1,
+          apiKeys: 3,
+          warnings: 1,
+        },
+        apiKeys: [
+          expect.objectContaining({
+            id: 'admin-key',
+            scoped: false,
+          }),
+          expect.objectContaining({
+            id: 'ops-key',
+            hasSecret: true,
+            teams: ['ops'],
+            effectiveAgents: ['worker'],
+          }),
+          expect.objectContaining({
+            id: 'broken-key',
+            hasSecret: true,
+            missingAgents: ['missing-agent'],
+          }),
+        ],
+      });
+      const scopedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/config/agent-diagnostics`, {
+        headers: { Authorization: 'Bearer ops-secret' },
+      });
+      expect(scopedResponse.status).toBe(403);
+      expect(await scopedResponse.json()).toMatchObject({
+        error: {
+          type: 'permission_error',
+          message: 'API key is not authorized for operator diagnostics.',
+        },
+      });
+      expect(JSON.stringify(payload)).not.toContain('ops-secret');
+      expect(JSON.stringify(payload)).not.toContain('broken-secret');
+      expect(JSON.stringify(payload)).not.toContain('admin-secret');
+    } finally {
+      await server.close();
+    }
+  });
+
   it('reports development-only posture through the status endpoint', async () => {
     const server = await createResponsesHttpServer(
       {

@@ -581,6 +581,7 @@ interface HttpStatusResponse {
     accountMirrorSchedulerDiagnostics: string;
     browserProcesses: string;
     workbenchCapabilitiesList: string;
+    agentRegistryDiagnostics: string;
     operatorBrowserDashboard: string;
     accountMirrorDashboard: string;
     accountMirrorPreviewSessionDashboard: string;
@@ -1816,6 +1817,23 @@ export async function createResponsesHttpServer(
         return;
       }
 
+      if (req.method === 'GET' && url.pathname === '/v1/config/agent-diagnostics') {
+        const operatorAuthError = authorizeOperatorDiagnostics(apiAuthContext);
+        if (operatorAuthError) {
+          sendJson(res, 403, {
+            error: {
+              message: operatorAuthError,
+              type: 'permission_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        sendJson(res, 200, await agentTeamConfigService.diagnostics({
+          apiKeys: apiAuthPolicy.keys.map(toAgentConfigApiKeyDiagnosticInput),
+        }));
+        return;
+      }
+
       if (req.method === 'GET' && url.pathname === '/v1/workbench-capabilities') {
         const request = parseWorkbenchCapabilityQuery(url.searchParams);
         const response = await workbenchCapabilityService.listCapabilities(request);
@@ -2906,6 +2924,7 @@ function createHttpStatusResponse(input: {
       accountMirrorSchedulerHistory: '/v1/account-mirrors/scheduler/history[?limit=10]',
       accountMirrorSchedulerDiagnostics: '/v1/account-mirrors/scheduler/diagnostics[?provider={chatgpt|gemini|grok}&runtimeProfile={runtime_profile}|completionId={completion_id}]',
       browserProcesses: '/v1/browser/processes',
+      agentRegistryDiagnostics: '/v1/config/agent-diagnostics',
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
       operatorBrowserDashboard: serviceDiscovery.routing.dashboardPath,
@@ -3717,6 +3736,25 @@ function readApiAuthEnvKeys(env: ApiAuthEnv): ApiAuthKeyPolicy[] {
   }
 
   return keys;
+}
+
+function toAgentConfigApiKeyDiagnosticInput(key: ApiAuthKeyPolicy) {
+  return {
+    id: key.id,
+    agents: key.agents,
+    teams: key.teams,
+    services: key.services,
+    runtimeProfiles: key.runtimeProfiles,
+  };
+}
+
+function authorizeOperatorDiagnostics(context: ApiAuthContext): string | null {
+  const key = context.key;
+  if (!context.policy.required || !key) return null;
+  if (key.agents?.length || key.teams?.length || key.services?.length || key.runtimeProfiles?.length) {
+    return 'API key is not authorized for operator diagnostics.';
+  }
+  return null;
 }
 
 function readDelimitedEnvList(value: string | undefined): string[] | undefined {
