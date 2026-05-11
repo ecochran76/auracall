@@ -54,6 +54,9 @@ Implemented:
   records, config-vs-registry conflicts, missing scoped targets, and
   team-derived effective agent reachability. The HTTP route requires an
   unscoped operator key when API auth is enabled.
+- `auracall config agent-diagnostics` exposes the same local secret-free
+  registry/env-file health report without requiring the API service to be
+  running.
 - `projectConfigModel(...)` projects config-defined agents and teams for
   `/v1/models`, `/v1/config/agents`, `/v1/config/teams`, CLI config inspection,
   and runtime selection.

@@ -52,6 +52,8 @@ auracall config show --json
 auracall config doctor
 auracall config doctor --json
 auracall config doctor --strict
+auracall config agent-diagnostics
+auracall config agent-diagnostics --json
 auracall profile list
 auracall profile list --json
 ```
@@ -82,6 +84,11 @@ read-only team planning view directly:
 
 This does not enable team execution or parallelism. It is an inspection and
 runtime-planning surface only.
+
+`config agent-diagnostics` reads the effective config plus user-scoped agent
+registry and `~/.auracall/api.env` without returning secrets. Use it to check
+disabled registry records, config-vs-registry conflicts, missing API-key scope
+targets, and which scoped key ids can reach which effective agents.
 
 ## Local API and dashboard
 

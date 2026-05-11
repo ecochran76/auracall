@@ -279,7 +279,9 @@ Terminology note:
   enabled, this route requires an unscoped operator key until role-based API
   keys exist. Local MCP operators can run `api_key_diagnostics` against
   `~/.auracall/api.env` before or after restart to catch missing agents, teams,
-  runtime profiles, or listed key ids without exposing secret values.
+  runtime profiles, or listed key ids without exposing secret values. The same
+  local, secret-free report is available with
+  `auracall config agent-diagnostics`.
 - Account mirror refreshes are metadata-first and identity-gated. Successful
   refreshes persist the mirror snapshot in the existing provider cache under
   `provider + boundIdentity`; runtime/browser profile ids are retained as

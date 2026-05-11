@@ -133,7 +133,9 @@ after issuing a key so systemd reloads this environment file.
 Use MCP `api_key_diagnostics` before or after restart to inspect
 `~/.auracall/api.env` without returning secrets. Use
 `GET /v1/config/agent-diagnostics` to inspect the running API process's loaded
-key ids and effective agent/team reachability.
+key ids and effective agent/team reachability. Use
+`auracall config agent-diagnostics` for the same local registry/env-file report
+without requiring the API service to be running.
 
 Verify:
 

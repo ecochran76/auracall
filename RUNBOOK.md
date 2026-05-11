@@ -3280,3 +3280,17 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification:
   - `pnpm vitest run tests/config/agentConfigService.test.ts tests/mcp.apiKeys.test.ts tests/http.responsesServer.test.ts -t "diagnoses|agent registry and loaded API-key diagnostics|API key|registry-backed agents through effective catalog scopes" --maxWorkers 1`
   - `pnpm tsc --noEmit`
+
+## Turn 120 | 2026-05-11
+
+- Goal: expose the agent registry/API-key diagnostics report through the CLI.
+- Change:
+  - added `auracall config agent-diagnostics`
+  - added a shared env-file diagnostics reader so CLI and MCP parse
+    `~/.auracall/api.env` consistently without returning secrets
+  - added a compact human formatter plus `--json`, `--strict`, `--path`, and
+    `--env-path` options
+  - updated README, configuration docs, user-runtime docs, and plan 0065
+- Verification:
+  - `pnpm vitest run tests/cli/agentDiagnosticsCommand.test.ts tests/mcp.apiKeys.test.ts tests/config/agentConfigService.test.ts --maxWorkers 1`
+  - `pnpm tsc --noEmit`

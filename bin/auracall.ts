@@ -84,6 +84,11 @@ import {
   resolveConfigDoctorExitCode,
 } from '../src/cli/configCommand.js';
 import {
+  buildAgentDiagnosticsCliReport,
+  formatAgentDiagnosticsCliReport,
+  resolveAgentDiagnosticsExitCode,
+} from '../src/cli/agentDiagnosticsCommand.js';
+import {
   executeConfiguredTeamRun,
   formatTeamRunCliExecutionPayload,
   formatTeamRunCliInspectionPayload,
@@ -8641,6 +8646,26 @@ configCommand
       return;
     }
     console.log(formatConfigDoctorReport(report));
+  });
+
+configCommand
+  .command('agent-diagnostics')
+  .description('Inspect registry-backed agents and scoped API-key reachability without exposing secrets.')
+  .option('--path <path>', 'Config path to inspect (defaults to ~/.auracall/config.json).')
+  .option('--env-path <path>', 'API env file to inspect (defaults to ~/.auracall/api.env).')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .option('--strict', 'Exit non-zero when warnings are present.', false)
+  .action(async (commandOptions) => {
+    const report = await buildAgentDiagnosticsCliReport({
+      configPath: commandOptions.path,
+      envPath: commandOptions.envPath,
+    });
+    process.exitCode = resolveAgentDiagnosticsExitCode(report, { strict: Boolean(commandOptions.strict) });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+    console.log(formatAgentDiagnosticsCliReport(report));
   });
 
 const teamsCommand = program

@@ -4,8 +4,8 @@ import path from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getAuracallHomeDir } from '../../auracallHome.js';
+import { readApiKeyDiagnosticsFromEnvValues } from '../../config/apiKeyEnvDiagnostics.js';
 import type {
-  AgentConfigApiKeyDiagnosticInput,
   AgentTeamConfigService,
 } from '../../config/agentConfigService.js';
 
@@ -243,37 +243,4 @@ function writeOptionalDelimitedValue(target: Record<string, string>, key: string
   } else {
     delete target[key];
   }
-}
-
-function readApiKeyDiagnosticsFromEnvValues(values: Record<string, string>): AgentConfigApiKeyDiagnosticInput[] {
-  const keys: AgentConfigApiKeyDiagnosticInput[] = [];
-  if (values.AURACALL_API_KEY || values.AURACALL_API_KEY_ID) {
-    keys.push({
-      id: values.AURACALL_API_KEY_ID?.trim() || 'env',
-      hasSecret: Boolean(values.AURACALL_API_KEY),
-      agents: readDelimitedValueList(values.AURACALL_API_KEY_AGENTS),
-      teams: readDelimitedValueList(values.AURACALL_API_KEY_TEAMS),
-      services: readDelimitedValueList(values.AURACALL_API_KEY_SERVICES),
-      runtimeProfiles: readDelimitedValueList(values.AURACALL_API_KEY_RUNTIME_PROFILES),
-    });
-  }
-
-  for (const rawId of readDelimitedValueList(values.AURACALL_API_KEY_IDS) ?? []) {
-    const suffix = toApiAuthEnvSuffix(rawId);
-    keys.push({
-      id: values[`AURACALL_API_KEY_${suffix}_ID`]?.trim() || rawId,
-      hasSecret: Boolean(values[`AURACALL_API_KEY_${suffix}`]),
-      agents: readDelimitedValueList(values[`AURACALL_API_KEY_${suffix}_AGENTS`]),
-      teams: readDelimitedValueList(values[`AURACALL_API_KEY_${suffix}_TEAMS`]),
-      services: readDelimitedValueList(values[`AURACALL_API_KEY_${suffix}_SERVICES`]),
-      runtimeProfiles: readDelimitedValueList(values[`AURACALL_API_KEY_${suffix}_RUNTIME_PROFILES`]),
-    });
-  }
-
-  return keys;
-}
-
-function readDelimitedValueList(value: string | undefined): string[] | undefined {
-  const items = (value ?? '').split(/[,\s]+/).map((item) => item.trim()).filter(Boolean);
-  return items.length > 0 ? items : undefined;
 }
