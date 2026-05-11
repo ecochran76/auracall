@@ -245,6 +245,95 @@ describe('team run CLI helpers', () => {
     });
   });
 
+  it('passes effective registry-backed config to the injected bridge', async () => {
+    let observedConfig: Record<string, unknown> | null = null;
+    const bridge: TeamRuntimeBridge = {
+      async executeFromConfigTaskRunSpec(input) {
+        observedConfig = input.config;
+        return {
+          teamPlan: {
+            teamRun: {
+              id: input.runId,
+              teamId: input.teamId,
+              taskRunSpecId: input.taskRunSpec.id,
+            },
+          } as never,
+          createdRuntimeRecord: {} as never,
+          finalRuntimeRecord: {
+            bundle: {
+              run: {
+                id: `${input.runId}:runtime`,
+                status: 'succeeded',
+              },
+              steps: [],
+              sharedState: {
+                status: 'succeeded',
+                notes: [],
+              },
+            },
+          } as never,
+          executionSummary: {
+            teamRunId: input.runId,
+            taskRunSpecId: input.taskRunSpec.id,
+            runtimeRunId: `${input.runId}:runtime`,
+            runtimeSourceKind: 'team-run',
+            runtimeRunStatus: 'succeeded',
+            runtimeUpdatedAt: input.createdAt,
+            terminalStepCount: 0,
+            stepSummaries: [],
+          },
+          hostDrainResults: [],
+        } as never;
+      },
+      async executeFromConfig() {
+        throw new Error('not used');
+      },
+      async executeFromResolvedTeam() {
+        throw new Error('not used');
+      },
+      async executeFromResolvedTeamTaskRunSpec() {
+        throw new Error('not used');
+      },
+    };
+
+    await executeConfiguredTeamRun({
+      config: {
+        teams: {},
+      },
+      effectiveConfigProvider: async () => ({
+        teams: {
+          registry: {
+            agents: ['registry-agent'],
+          },
+        },
+        agents: {
+          'registry-agent': {
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+        },
+      }),
+      teamId: 'registry',
+      objective: 'Use registry team.',
+      bridge,
+      now: () => '2026-05-11T12:00:00.000Z',
+      randomId: () => 'reg123',
+    });
+
+    expect(observedConfig).toMatchObject({
+      teams: {
+        registry: {
+          agents: ['registry-agent'],
+        },
+      },
+      agents: {
+        'registry-agent': {
+          service: 'chatgpt',
+        },
+      },
+    });
+  });
+
   it('executes a provided flattened taskRunSpec without rebuilding compact provenance', async () => {
     const taskRunSpec = createTaskRunSpec({
       id: 'taskrun_prebuilt_cli_1',

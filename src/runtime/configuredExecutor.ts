@@ -29,6 +29,7 @@ type MutableRecord = Record<string, unknown>;
 export interface CreateConfiguredStoredStepExecutorDeps {
   runBrowserModeImpl?: (options: BrowserRunOptions) => Promise<Awaited<ReturnType<typeof runBrowserMode>>>;
   runGeminiBrowserModeImpl?: (options: BrowserRunOptions) => Promise<Awaited<ReturnType<typeof runBrowserMode>>>;
+  effectiveConfigProvider?: () => Promise<Record<string, unknown>>;
 }
 
 function isRecord(value: unknown): value is MutableRecord {
@@ -243,7 +244,8 @@ export function createConfiguredStoredStepExecutor(
   const configRecord = config as MutableRecord;
 
   return async (context): Promise<ExecuteStoredRunStepResult> => {
-    const runtimeSelection = resolveRuntimeSelection(configRecord, {
+    const executionConfig = (deps.effectiveConfigProvider ? await deps.effectiveConfigProvider() : configRecord) as MutableRecord;
+    const runtimeSelection = resolveRuntimeSelection(executionConfig, {
       explicitProfileName: context.step.runtimeProfileId,
       explicitAgentId: context.step.agentId,
     });
@@ -260,8 +262,8 @@ export function createConfiguredStoredStepExecutor(
     }
 
     const runtimeServiceConfig = readRuntimeServiceConfig(runtimeProfile, service);
-    const globalServiceConfig = readGlobalServiceConfig(configRecord, service);
-    const browserConfigRecord = isRecord(configRecord.browser) ? configRecord.browser : null;
+    const globalServiceConfig = readGlobalServiceConfig(executionConfig, service);
+    const browserConfigRecord = isRecord(executionConfig.browser) ? executionConfig.browser : null;
     const runtimeBrowserConfig = runtimeProfile && isRecord(runtimeProfile.browser) ? runtimeProfile.browser : null;
     const browserProfileConfig = readBrowserProfileConfig(runtimeSelection.browserProfile);
     const runInitialInputs = isRecord(context.record.bundle.run.initialInputs)
@@ -270,7 +272,7 @@ export function createConfiguredStoredStepExecutor(
     const requestAuracall = isRecord(runInitialInputs?.auracall)
       ? runInitialInputs.auracall
       : null;
-    const agentConfig = getAgent(configRecord, context.step.agentId);
+    const agentConfig = getAgent(executionConfig, context.step.agentId);
     const agentModel = asNonEmptyString(agentConfig?.model);
     const agentModelSelector = asNonEmptyString(agentConfig?.modelSelector);
     const chatgptSemanticSelection =

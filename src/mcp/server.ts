@@ -42,7 +42,11 @@ import { createAccountMirrorPersistence } from '../accountMirror/cachePersistenc
 import { createAccountMirrorCatalogService } from '../accountMirror/catalogService.js';
 import { createAccountMirrorCompletionService } from '../accountMirror/completionService.js';
 import { createAccountMirrorCompletionStore } from '../accountMirror/completionStore.js';
-import { createAgentTeamConfigService } from '../config/agentConfigService.js';
+import {
+  createAgentTeamConfigService,
+  type AgentTeamConfigService,
+} from '../config/agentConfigService.js';
+import { createAgentRegistryStore } from '../config/agentRegistryStore.js';
 
 export interface McpServiceBundle {
   resolvedUserConfig: ResolvedUserConfig;
@@ -53,6 +57,7 @@ export interface McpServiceBundle {
   accountMirrorRefreshService: ReturnType<typeof createAccountMirrorRefreshService>;
   accountMirrorCatalogService: ReturnType<typeof createAccountMirrorCatalogService>;
   accountMirrorCompletionService: ReturnType<typeof createAccountMirrorCompletionService>;
+  agentTeamConfigService: AgentTeamConfigService;
 }
 
 export interface CreateMcpServicesDeps {
@@ -82,7 +87,9 @@ export async function startMcpServer(): Promise<void> {
   registerResponseCreateTool(server, {
     responsesService: services.responsesService,
   });
-  registerTeamRunTool(server);
+  registerTeamRunTool(server, {
+    agentTeamConfigService: services.agentTeamConfigService,
+  });
   registerRunStatusTool(server, {
     responsesService: services.responsesService,
     mediaGenerationService: services.mediaGenerationService,
@@ -94,9 +101,7 @@ export async function startMcpServer(): Promise<void> {
   registerRuntimeRunsRecentTool(server);
   registerRuntimeInspectTool(server);
   registerConfigEntityTools(server, {
-    service: createAgentTeamConfigService({
-      activeConfig: services.resolvedUserConfig as Record<string, unknown>,
-    }),
+    service: services.agentTeamConfigService,
   });
   registerMediaGenerationTool(server, {
     service: services.mediaGenerationService,
@@ -158,8 +163,16 @@ export async function createMcpServicesFromConfig(
   const createResponsesService = deps.createExecutionResponsesService ?? createExecutionResponsesService;
   const createMediaExecutor =
     deps.createBrowserMediaGenerationExecutor ?? createBrowserMediaGenerationExecutor;
+  const agentRegistryStore = createAgentRegistryStore();
+  const agentTeamConfigService = createAgentTeamConfigService({
+    activeConfig: resolvedUserConfig as Record<string, unknown>,
+    registryStore: agentRegistryStore,
+  });
   const configuredStoredStepExecutor = createConfiguredStoredStepExecutor(
     resolvedUserConfig as Record<string, unknown>,
+    {
+      effectiveConfigProvider: () => agentTeamConfigService.effectiveConfig(),
+    },
   );
   if (!configuredStoredStepExecutor) {
     throw new Error('Configured stored-step executor was not created for MCP response service.');
@@ -219,6 +232,7 @@ export async function createMcpServicesFromConfig(
     accountMirrorRefreshService,
     accountMirrorCatalogService,
     accountMirrorCompletionService,
+    agentTeamConfigService,
   };
 }
 

@@ -40,6 +40,9 @@ Implemented:
   registry records by default. Config-defined overlay ids are treated as pinned
   and return a blocked mutation result rather than creating hidden registry
   changes.
+- Stored-step execution, HTTP team-runs, CLI team-runs, and MCP response/team
+  services can resolve agents and teams through the effective config plus
+  registry catalog instead of config-only lookups.
 - `projectConfigModel(...)` projects config-defined agents and teams for
   `/v1/models`, `/v1/config/agents`, `/v1/config/teams`, CLI config inspection,
   and runtime selection.
@@ -48,7 +51,6 @@ Implemented:
 
 Remaining:
 
-- make runtime agent/team resolution use the effective merged catalog
 - make API-key scope checks use effective registry-backed agent/team ids
 - expose registry metadata through CLI and dashboard surfaces
 - provide export/import so selected agents can still become reviewable files
@@ -147,8 +149,8 @@ Add explicit registry routes only after compatibility is working:
    - [x] include revision and source metadata in mutation responses
 
 3. Execution/catalog integration
-   - make runtime agent resolution use the effective merged catalog
-   - make `/v1/models` include registry agents with useful metadata
+   - [x] make runtime agent resolution use the effective merged catalog
+   - [x] make `/v1/models` include registry agents with useful metadata
    - make API-key scope checks use effective agent/team ids
    - update config doctor for duplicate ids, invalid registry payloads, and
      config entries that should be migrated

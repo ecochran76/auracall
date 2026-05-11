@@ -30,7 +30,10 @@ import {
   createAgentTeamConfigService,
   teamConfigUpsertInputSchema,
 } from '../config/agentConfigService.js';
-import type { AgentRegistryStore } from '../config/agentRegistryStore.js';
+import {
+  createAgentRegistryStore,
+  type AgentRegistryStore,
+} from '../config/agentRegistryStore.js';
 import {
   inspectTeamRunLinkage,
   TeamRunInspectionError,
@@ -1853,8 +1856,9 @@ export async function createResponsesHttpServer(
               },
               trigger: 'api',
             });
+          const effectiveRuntimeConfig = await agentTeamConfigService.effectiveConfig();
           const bridgeResult = await teamRuntimeBridge.executeFromConfigTaskRunSpec({
-            config: configuredRuntimeConfig ?? {},
+            config: effectiveRuntimeConfig,
             teamId,
             runId: teamRunId,
             createdAt: nowIso,
@@ -2323,8 +2327,16 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
     terminateProcess: terminateProcessOverride,
     includeConfigDerivedPort: options.port === undefined && apiConfig.port === serverOptions.port,
   });
+  const agentRegistryStore = createAgentRegistryStore();
+  const agentTeamConfigService = createAgentTeamConfigService({
+    activeConfig: resolvedUserConfig as Record<string, unknown>,
+    registryStore: agentRegistryStore,
+  });
   const configuredStoredStepExecutor = createConfiguredStoredStepExecutor(
     resolvedUserConfig as Record<string, unknown>,
+    {
+      effectiveConfigProvider: () => agentTeamConfigService.effectiveConfig(),
+    },
   );
   if (!configuredStoredStepExecutor) {
     throw new Error('Configured stored-step executor was not created for api serve.');
@@ -2340,6 +2352,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
     },
     {
       config: resolvedUserConfig as Record<string, unknown>,
+      agentRegistryStore,
       now: () => new Date(),
       localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(
         resolvedUserConfig as Record<string, unknown>,

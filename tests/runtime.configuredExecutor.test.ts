@@ -991,6 +991,97 @@ describe('configured stored-step executor', () => {
     });
   });
 
+  it('resolves agents from an effective registry-backed config provider', async () => {
+    const runBrowserModeImpl = vi.fn(async () => ({
+      answerText: 'AURACALL_REGISTRY_AGENT_OK',
+      answerMarkdown: 'AURACALL_REGISTRY_AGENT_OK',
+      tookMs: 700,
+      answerTokens: 8,
+      answerChars: 26,
+      tabUrl: 'https://chatgpt.com/c/mock-registry-agent',
+      conversationId: 'mock-registry-agent',
+    }));
+    const effectiveConfigProvider = vi.fn(async () => ({
+      browserProfiles: {
+        default: {
+          chromePath: '/usr/bin/google-chrome',
+          sourceProfileName: 'Default',
+          managedProfileRoot: '/tmp/auracall/browser-profiles',
+        },
+      },
+      runtimeProfiles: {
+        'registry-chatgpt-profile': {
+          engine: 'browser',
+          defaultService: 'chatgpt',
+          browserProfile: 'default',
+          services: {
+            chatgpt: {
+              manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+            },
+          },
+        },
+      },
+      agents: {
+        'registry-pro-researcher': {
+          runtimeProfile: 'registry-chatgpt-profile',
+          service: 'chatgpt',
+          modelSelector: 'chatgpt:pro-standard',
+          projectId: 'proj_registry',
+        },
+      },
+    }));
+
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        browserProfiles: {},
+        runtimeProfiles: {},
+      },
+      {
+        runBrowserModeImpl,
+        effectiveConfigProvider,
+      },
+    );
+
+    await executeStoredRunStep?.({
+      record: {
+        runId: 'teamrun_registry_agent_1',
+        revision: 1,
+        bundle: {
+          run: {
+            id: 'teamrun_registry_agent_1',
+          },
+        },
+      } as never,
+      step: {
+        id: 'teamrun_registry_agent_1:step:1',
+        agentId: 'registry-pro-researcher',
+        runtimeProfileId: null,
+        browserProfileId: null,
+        service: null,
+        input: {
+          prompt: 'Reply exactly with AURACALL_REGISTRY_AGENT_OK',
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+      } as never,
+    });
+
+    expect(effectiveConfigProvider).toHaveBeenCalledTimes(1);
+    expect(runBrowserModeImpl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          target: 'chatgpt',
+          auracallProfileName: 'default',
+          selectedAgentId: 'registry-pro-researcher',
+          desiredModel: 'Pro',
+          thinkingTime: 'standard',
+          projectId: 'proj_registry',
+        }),
+      }),
+    );
+  });
+
   it('keeps exact ChatGPT agent model pins ahead of semantic selector defaults', async () => {
     const runBrowserModeImpl = vi.fn(async (_options: BrowserRunOptions) => ({
       answerText: 'AURACALL_CHATGPT_PIN_OK',

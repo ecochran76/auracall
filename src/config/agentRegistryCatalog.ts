@@ -38,13 +38,46 @@ export interface EffectiveAgentCatalog extends Omit<ProjectedConfigModel, 'agent
   conflicts: EffectiveCatalogConflict[];
 }
 
+export function createEffectiveAgentConfigRecord(input: {
+  config: MutableConfig;
+  registryAgents?: AgentRegistryAgentRecord[];
+  registryTeams?: AgentRegistryTeamRecord[];
+}): MutableConfig {
+  const configAgents = getRecord(input.config.agents);
+  const configTeams = getRecord(input.config.teams);
+  const mergedAgents: Record<string, unknown> = {};
+  const mergedTeams: Record<string, unknown> = {};
+
+  for (const record of [...(input.registryAgents ?? [])]
+    .filter((record) => record.enabled)
+    .sort((left, right) => left.id.localeCompare(right.id))) {
+    mergedAgents[record.id] = record.config;
+  }
+  for (const [id, value] of Object.entries(configAgents).sort(([left], [right]) => left.localeCompare(right))) {
+    mergedAgents[id] = value;
+  }
+
+  for (const record of [...(input.registryTeams ?? [])]
+    .filter((record) => record.enabled)
+    .sort((left, right) => left.id.localeCompare(right.id))) {
+    mergedTeams[record.id] = record.config;
+  }
+  for (const [id, value] of Object.entries(configTeams).sort(([left], [right]) => left.localeCompare(right))) {
+    mergedTeams[id] = value;
+  }
+
+  return {
+    ...input.config,
+    agents: mergedAgents,
+    teams: mergedTeams,
+  };
+}
+
 export function createEffectiveAgentCatalog(input: {
   config: MutableConfig;
   registryAgents?: AgentRegistryAgentRecord[];
   registryTeams?: AgentRegistryTeamRecord[];
 }): EffectiveAgentCatalog {
-  const configAgents = getRecord(input.config.agents);
-  const configTeams = getRecord(input.config.teams);
   const registryAgentMap = new Map((input.registryAgents ?? [])
     .filter((record) => record.enabled)
     .map((record) => [record.id, record]));
@@ -52,16 +85,14 @@ export function createEffectiveAgentCatalog(input: {
     .filter((record) => record.enabled)
     .map((record) => [record.id, record]));
   const conflicts: EffectiveCatalogConflict[] = [];
-  const mergedAgents: Record<string, unknown> = {};
-  const mergedTeams: Record<string, unknown> = {};
   const sourceByAgentId = new Map<string, { source: RegistryEntitySource; revision?: number }>();
   const sourceByTeamId = new Map<string, { source: RegistryEntitySource; revision?: number }>();
+  const effectiveConfig = createEffectiveAgentConfigRecord(input);
 
   for (const [id, record] of [...registryAgentMap.entries()].sort(([left], [right]) => left.localeCompare(right))) {
-    mergedAgents[id] = record.config;
     sourceByAgentId.set(id, { source: record.source, revision: record.revision });
   }
-  for (const [id, value] of Object.entries(configAgents).sort(([left], [right]) => left.localeCompare(right))) {
+  for (const [id] of Object.entries(getRecord(input.config.agents)).sort(([left], [right]) => left.localeCompare(right))) {
     if (registryAgentMap.has(id)) {
       conflicts.push({
         kind: 'agent',
@@ -71,15 +102,13 @@ export function createEffectiveAgentCatalog(input: {
         resolution: 'config-wins',
       });
     }
-    mergedAgents[id] = value;
     sourceByAgentId.set(id, { source: 'config' });
   }
 
   for (const [id, record] of [...registryTeamMap.entries()].sort(([left], [right]) => left.localeCompare(right))) {
-    mergedTeams[id] = record.config;
     sourceByTeamId.set(id, { source: record.source, revision: record.revision });
   }
-  for (const [id, value] of Object.entries(configTeams).sort(([left], [right]) => left.localeCompare(right))) {
+  for (const [id] of Object.entries(getRecord(input.config.teams)).sort(([left], [right]) => left.localeCompare(right))) {
     if (registryTeamMap.has(id)) {
       conflicts.push({
         kind: 'team',
@@ -89,15 +118,10 @@ export function createEffectiveAgentCatalog(input: {
         resolution: 'config-wins',
       });
     }
-    mergedTeams[id] = value;
     sourceByTeamId.set(id, { source: 'config' });
   }
 
-  const projected = projectConfigModel({
-    ...input.config,
-    agents: mergedAgents,
-    teams: mergedTeams,
-  });
+  const projected = projectConfigModel(effectiveConfig);
 
   return {
     ...projected,

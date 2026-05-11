@@ -92,6 +92,9 @@ Current limits:
     hidden registry record behind the config overlay
   - config-file writes are retained only for explicit config-path/bootstrap
     maintenance services
+  - registry-created agents and teams are available to stored-step execution,
+    HTTP team-runs, MCP response execution, and MCP team-runs through the same
+    effective catalog projection
   - protect this local control-plane surface with API-key auth before exposing
     it to any non-loopback client
 - API-key authorization can be configured in `~/.auracall/config.json` or

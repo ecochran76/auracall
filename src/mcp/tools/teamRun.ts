@@ -5,6 +5,7 @@ import { resolveConfig } from '../../schema/resolver.js';
 import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from '../../runtime/stepOutputContract.js';
 import { TaskRunSpecSchema } from '../../teams/schema.js';
 import { teamRunInputSchema } from '../types.js';
+import type { AgentTeamConfigService } from '../../config/agentConfigService.js';
 
 const localActionPolicyShape = z
   .object({
@@ -61,7 +62,11 @@ const teamRunOutputShape = {
   execution: teamRunExecutionShape,
 } satisfies z.ZodRawShape;
 
-export function registerTeamRunTool(server: McpServer): void {
+export interface RegisterTeamRunToolDeps {
+  agentTeamConfigService?: AgentTeamConfigService;
+}
+
+export function registerTeamRunTool(server: McpServer, deps: RegisterTeamRunToolDeps = {}): void {
   server.registerTool(
     'team_run',
     {
@@ -79,6 +84,9 @@ export function registerTeamRunTool(server: McpServer): void {
       try {
         const result = await executeConfiguredTeamRun({
           config,
+          effectiveConfigProvider: deps.agentTeamConfigService
+            ? async () => (deps.agentTeamConfigService ? deps.agentTeamConfigService.effectiveConfig() : config as Record<string, unknown>)
+            : undefined,
           ...payload,
           teamId: payload.taskRunSpec?.teamId ?? payload.teamId ?? '',
           objective: payload.taskRunSpec?.objective ?? payload.objective ?? '',

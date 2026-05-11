@@ -3227,3 +3227,22 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification:
   - `pnpm vitest run tests/config/agentConfigService.test.ts tests/config/agentRegistryStore.test.ts tests/mcp.configEntities.test.ts tests/http.responsesServer.test.ts -t "configures AuraCall agents|registry-backed agents|registry-backed agents through MCP|writes agents and teams to the registry|blocks registry mutations|agent registry|mcp config" --maxWorkers 1`
   - `pnpm tsc --noEmit`
+
+## Turn 117 | 2026-05-11
+
+- Goal: make runtime execution consume the effective config plus registry
+  catalog.
+- Change:
+  - added an effective config projection that materializes enabled registry
+    agents/teams with config overlays winning duplicate ids
+  - stored-step execution can now resolve agent routing from an async effective
+    config provider
+  - API serve, MCP response execution, MCP team-runs, CLI team-runs, and HTTP
+    team-runs now pass effective config into runtime/bridge resolution
+  - registry-created agents are no longer just discoverable and writable; they
+    are executable through the normal stored-step path
+- Verification:
+  - `pnpm vitest run tests/config/agentConfigService.test.ts tests/runtime.configuredExecutor.test.ts tests/cli/teamRunCommand.test.ts tests/mcp/teamRun.test.ts tests/mcp.configEntities.test.ts tests/http.responsesServer.test.ts -t "effective|registry-backed|registry agent|configured team run|team run" --maxWorkers 1`
+  - `pnpm vitest run tests/mcp/teamRun.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/cli/teamRunCommand.test.ts tests/runtime.configuredExecutor.test.ts tests/config/agentConfigService.test.ts --maxWorkers 1`
+  - `pnpm tsc --noEmit`

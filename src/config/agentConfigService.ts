@@ -6,6 +6,7 @@ import { configPath, scaffoldDefaultConfigFile } from '../config.js';
 import { AgentConfigSchema, TeamConfigSchema } from '../schema/types.js';
 import type { ProjectedAgent, ProjectedTeam } from './model.js';
 import {
+  createEffectiveAgentConfigRecord,
   createEffectiveAgentCatalog,
   type EffectiveAgent,
   type EffectiveAgentCatalog,
@@ -57,6 +58,7 @@ export interface AgentTeamConfigServiceDeps {
 
 export interface AgentTeamConfigService {
   list(kind?: 'agent' | 'team'): Promise<ConfigEntityMutationResult>;
+  effectiveConfig(): Promise<MutableConfig>;
   effectiveCatalog(): Promise<EffectiveAgentCatalog>;
   upsertAgent(input: z.infer<typeof agentConfigUpsertInputSchema>): Promise<ConfigEntityMutationResult>;
   deleteAgent(id: string): Promise<ConfigEntityMutationResult>;
@@ -108,6 +110,11 @@ export function createAgentTeamConfigService(
     async list(kind = 'agent') {
       const config = await readProjectionConfig();
       return result('list', kind, null, config);
+    },
+
+    async effectiveConfig() {
+      const config = await readProjectionConfig();
+      return createEffectiveAgentConfig(config, registryStore);
     },
 
     async effectiveCatalog() {
@@ -246,6 +253,17 @@ async function createEffectiveCatalog(
   registryStore: AgentRegistryStore | null,
 ): Promise<EffectiveAgentCatalog> {
   return createEffectiveAgentCatalog({
+    config,
+    registryAgents: registryStore ? await registryStore.listAgents({ includeDisabled: true }) : [],
+    registryTeams: registryStore ? await registryStore.listTeams({ includeDisabled: true }) : [],
+  });
+}
+
+async function createEffectiveAgentConfig(
+  config: MutableConfig,
+  registryStore: AgentRegistryStore | null,
+): Promise<MutableConfig> {
+  return createEffectiveAgentConfigRecord({
     config,
     registryAgents: registryStore ? await registryStore.listAgents({ includeDisabled: true }) : [],
     registryTeams: registryStore ? await registryStore.listTeams({ includeDisabled: true }) : [],

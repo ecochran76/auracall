@@ -119,6 +119,7 @@ describe('agent and team config service', () => {
     const service = createAgentTeamConfigService({ configPath, registryStore });
 
     const result = await service.list('agent');
+    const effectiveConfig = await service.effectiveConfig();
 
     expect(result.registryPath).toBe(registryStore.dbPath);
     expect(result.agents).toEqual([
@@ -143,6 +144,16 @@ describe('agent and team config service', () => {
         resolution: 'config-wins',
       },
     ]);
+    expect(effectiveConfig.agents).toEqual({
+      pinned: {
+        runtimeProfile: 'default',
+        service: 'chatgpt',
+      },
+      worker: {
+        runtimeProfile: 'default',
+        service: 'gemini',
+      },
+    });
   });
 
   it('writes agents and teams to the registry when a registry store is configured', async () => {

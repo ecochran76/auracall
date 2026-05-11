@@ -58,6 +58,7 @@ export interface ExecuteConfiguredTeamRunInput {
   trigger?: TaskRunSpec['trigger'];
   executionRequestedBy?: string;
   executeStoredRunStep?: ExecutionServiceHostDeps['executeStoredRunStep'];
+  effectiveConfigProvider?: () => Promise<Record<string, unknown>>;
 }
 
 export type TeamRunCliExecutionPayload = TeamRunExecutionPayload;
@@ -277,6 +278,7 @@ export async function executeConfiguredTeamRun(
       requestedBy: input.requestedBy,
       trigger: input.trigger,
     });
+  const effectiveConfig = input.effectiveConfigProvider ? await input.effectiveConfigProvider() : input.config;
   const configuredBridge = input.bridge;
   const registeredLocalRunner = configuredBridge
     ? null
@@ -284,8 +286,11 @@ export async function executeConfiguredTeamRun(
       const control = createExecutionRuntimeControl();
       const runnersControl = createExecutionRunnerControl();
       const baseExecuteStoredRunStep =
-        input.executeStoredRunStep ?? createConfiguredStoredStepExecutor(input.config);
-      const localRunnerCapabilitySummary = createLocalRunnerCapabilitySummary(input.config);
+        input.executeStoredRunStep ??
+        createConfiguredStoredStepExecutor(input.config, {
+          effectiveConfigProvider: async () => effectiveConfig,
+        });
+      const localRunnerCapabilitySummary = createLocalRunnerCapabilitySummary(effectiveConfig);
       const teamSlug = teamId.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 32) || 'team';
       const runnerId = `runner:teams-run:${teamSlug}:${suffix}`;
       const hostId = `host:teams-run:${teamSlug}:${suffix}`;
@@ -350,8 +355,8 @@ export async function executeConfiguredTeamRun(
         now,
         ownerId: runnerId,
         runnerId,
-        localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(input.config),
-        createRunAffinity: (inspection) => createConfiguredExecutionRunAffinity(input.config, inspection),
+        localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(effectiveConfig),
+        createRunAffinity: (inspection) => createConfiguredExecutionRunAffinity(effectiveConfig, inspection),
         executeStoredRunStep,
       });
 
@@ -377,7 +382,7 @@ export async function executeConfiguredTeamRun(
 
   const execution = async () =>
     activeBridge.executeFromConfigTaskRunSpec({
-      config: input.config,
+      config: effectiveConfig,
       teamId: taskRunSpec.teamId,
       runId,
       createdAt: nowIso,

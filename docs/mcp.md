@@ -16,6 +16,9 @@
 ### `team_run`
 - Inputs: either compact fields (`teamId`, `objective`, optional `title`, `promptAppend`, `structuredContext`, `responseFormat?: "text" | "markdown" | "json"`, `outputContract?: "auracall.step-output.v1"`, `maxTurns`, and bounded `localActionPolicy`) or a prebuilt flattened `taskRunSpec` validated with Aura-Call's live `TaskRunSpec` schema.
 - Behavior: creates and executes one bounded team run through the existing `TaskRunSpec -> TeamRun -> runtimeRun` path. The structured result is `object = "team_run"` with `taskRunSpec` and deterministic execution ids/status.
+- Agent/team resolution uses the effective config plus user-scoped registry
+  catalog, so registry-created teams are executable without rewriting
+  `config.json`.
 - Provenance: compact MCP-created runs are stamped with `trigger = "mcp"` and `requestedBy.kind = "mcp"`; prebuilt `taskRunSpec` inputs preserve their validated provenance.
 
 ### `response_create`
@@ -28,6 +31,7 @@
   `composerTool = "deep-research"` with `deepResearchPlanAction = "edit"`.
   The structured result is `object = "response"` and its `id` can be polled
   through `run_status`.
+- Agent model ids resolve through the effective config plus registry catalog.
 - Polling contract: create the response once, keep the returned `id`, and use
   `run_status` for subsequent state checks. Status readback is file-backed and
   must not resubmit the prompt, reopen a provider tool, or navigate the browser.
