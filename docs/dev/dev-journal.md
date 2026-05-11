@@ -1,3 +1,29 @@
+## Turn 193 | 2026-05-10
+
+- Continued implementation plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: finish the SoyLei ChatGPT Pro Extended selector repair and verify the
+  OpenAI-compatible agent path live.
+- Change:
+  - `ensureThinkingTime(...)` now recognizes a visible composer
+    Standard/Extended pill as already selected before looking for a dropdown
+  - removed a TypeScript-only `let attempt: () => void` annotation from the
+    JavaScript expression injected into the ChatGPT page
+  - added syntax compilation coverage for every supported thinking-time level
+- Validation:
+  - `pnpm vitest run tests/browser/thinkingTime.test.ts`
+  - `pnpm tsc --noEmit --pretty false`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - restarted `auracall-api.service`
+  - live smoke passed:
+    `agent:pro-extended-chatgpt-soylei` returned
+    `soylei pro extended selector ok`
+- Operational note:
+  - cancelled two stale SoyLei runs that were holding active runner leases
+  - the actual transcript payload run found during diagnosis was the earlier
+    stale readout retry, not a newly active transcript request
+
 ## Turn 192 | 2026-05-10
 
 - Continued implementation plan:

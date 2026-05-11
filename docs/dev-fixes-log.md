@@ -1,3 +1,8 @@
+- 2026-05-10: ChatGPT thinking-depth selection must tolerate the prompt
+  workbench's selected-depth pill. `ensureThinkingTime(...)` now accepts a
+  visible Standard/Extended composer pill as already selected, removes the
+  TypeScript-only annotation that broke the injected browser expression, and
+  has syntax-compilation coverage for every thinking-time level.
 - 2026-05-10: Basic OpenAI-style client apps can now use the same configured
   AuraCall agent path as `/v1/responses`. `POST /v1/chat/completions` accepts
   non-streaming chat messages, maps system content to instructions, reuses the

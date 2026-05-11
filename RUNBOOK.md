@@ -1,5 +1,25 @@
 # RUNBOOK
 
+## Turn 120 | 2026-05-10
+
+- Active plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: complete the ChatGPT Pro Extended selector repair after the SoyLei
+  smoke still returned empty content.
+- Result:
+  - cancelled stale SoyLei API runs that were holding active runner leases
+  - fixed the ChatGPT thinking-time browser expression so visible
+    Standard/Extended pills are accepted before menu probing
+  - removed a TypeScript-only annotation from the injected expression
+  - installed and restarted the user API runtime on `127.0.0.1:18095`
+  - live SoyLei `agent:pro-extended-chatgpt-soylei` smoke passed with
+    `soylei pro extended selector ok`
+- Verification target:
+  - `pnpm vitest run tests/browser/thinkingTime.test.ts`
+  - `pnpm tsc --noEmit --pretty false`
+  - `pnpm run build`
+  - installed runtime smoke via `/v1/chat/completions`
+
 ## Turn 119 | 2026-05-10
 
 - Active plan:

@@ -146,6 +146,27 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
       .replace(/\\s+/g, ' ')
       .trim();
 
+    const visible = (node) => {
+      if (!(node instanceof HTMLElement)) return false;
+      const rect = node.getBoundingClientRect();
+      const style = window.getComputedStyle(node);
+      return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+    };
+
+    const findSelectedLevelPill = () => {
+      const candidates = document.querySelectorAll(
+        'button.__composer-pill, .__composer-pill-composite button, [data-testid="composer-footer-actions"] button'
+      );
+      for (const candidate of candidates) {
+        if (!visible(candidate)) continue;
+        const text = normalize([candidate.textContent ?? '', candidate.getAttribute?.('aria-label') ?? ''].join(' '));
+        if (TARGET_LEVELS.some((target) => text.includes(target))) {
+          return candidate;
+        }
+      }
+      return null;
+    };
+
     const findThinkingChip = () => {
       for (const selector of CHIP_SELECTORS) {
         const buttons = document.querySelectorAll(selector);
@@ -166,6 +187,11 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
       }
       return null;
     };
+
+    const selectedLevelPill = findSelectedLevelPill();
+    if (selectedLevelPill) {
+      return { status: 'already-selected', label: selectedLevelPill.textContent?.trim?.() || null };
+    }
 
     const chip = findThinkingChip();
     if (!chip) {
@@ -200,13 +226,6 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
           }
         }
         return null;
-      };
-
-      const visible = (node) => {
-        if (!(node instanceof HTMLElement)) return false;
-        const rect = node.getBoundingClientRect();
-        const style = window.getComputedStyle(node);
-        return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
       };
 
       const findConfigureNode = () => Array.from(document.querySelectorAll(MENU_ITEM_SELECTOR + ', button'))
@@ -248,7 +267,7 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
         return false;
       };
 
-      let attempt: () => void;
+      let attempt;
 
       const attemptDirectMenu = () => {
         const menu = findMenu();

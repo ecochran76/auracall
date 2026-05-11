@@ -22,12 +22,15 @@ describe('browser thinking-time selection expression', () => {
     expect(expression).toContain('[role="combobox"]');
     expect(expression).toContain('normalize');
     expect(expression).toContain('extended');
+    expect(expression).toContain('findSelectedLevelPill');
+    expect(expression).toContain('button.__composer-pill, .__composer-pill-composite button');
   });
 
   it('targets the requested thinking time level', () => {
     const levels = ['light', 'standard', 'extended', 'heavy'] as const;
     for (const level of levels) {
       const expression = buildThinkingTimeExpressionForTest(level);
+      expect(() => new Function(`return ${expression}`)).not.toThrow();
       expect(expression).toContain('const TARGET_LEVELS');
       if (level === 'light') {
         expect(expression).toContain('"light","standard"');
