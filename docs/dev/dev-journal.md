@@ -1,3 +1,26 @@
+## Turn 192 | 2026-05-10
+
+- Continued implementation plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: repair ChatGPT Pro/Thinking selector handling for the SoyLei
+  OpenAI-compatible readout smoke.
+- Change:
+  - `ensureThinkingTime(...)` now treats a composer pill already labeled with
+    the requested Standard/Extended depth as selected
+  - when the first opened model pill menu does not expose Standard/Extended,
+    the selector can open `Configure...`, inspect the dialog/depth combobox,
+    and select the requested depth from there
+  - added regression coverage so the expression keeps the Configure dialog path
+- Validation:
+  - `pnpm vitest run tests/browser/thinkingTime.test.ts tests/browser/modelSelection.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/browser/actions/thinkingTime.ts tests/browser/thinkingTime.test.ts --max-diagnostics 40`
+- Live note:
+  - installed and restarted the user API runtime
+  - started the SoyLei `agent:pro-extended-chatgpt-soylei` readout retry
+  - interrupted the live retry after a browser modal was observed; no readout
+    pass was claimed
+
 ## Turn 191 | 2026-05-10
 
 - Continued implementation plan:

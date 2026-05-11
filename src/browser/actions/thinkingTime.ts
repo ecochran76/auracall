@@ -171,12 +171,21 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
     if (!chip) {
       return { status: 'chip-not-found' };
     }
+    const chipLabel = [chip.textContent ?? '', chip.getAttribute?.('aria-label') ?? '']
+      .map(normalize)
+      .filter(Boolean)
+      .join(' ');
+    if (TARGET_LEVELS.some((target) => chipLabel.includes(target))) {
+      return { status: 'already-selected', label: chip.textContent?.trim?.() || null };
+    }
 
     dispatchClickSequence(chip);
 
     return new Promise((resolve) => {
       const start = performance.now();
       let lastOpenAttemptAt = performance.now();
+      let configureOpened = false;
+      let depthComboOpened = false;
 
       const findMenu = () => {
         const menus = document.querySelectorAll(MENU_CONTAINER_SELECTOR + ', [role="group"]');
@@ -192,6 +201,32 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
         }
         return null;
       };
+
+      const visible = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const rect = node.getBoundingClientRect();
+        const style = window.getComputedStyle(node);
+        return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+      };
+
+      const findConfigureNode = () => Array.from(document.querySelectorAll(MENU_ITEM_SELECTOR + ', button'))
+        .filter(visible)
+        .find((node) => normalize([node.textContent ?? '', node.getAttribute?.('aria-label') ?? ''].join(' ')).includes('configure'));
+
+      const findDialog = () => Array.from(document.querySelectorAll('[role="dialog"], [data-radix-dialog-content], div[aria-modal="true"]'))
+        .filter(visible)
+        .at(-1);
+
+      const findDepthCombo = (dialog) => Array.from(dialog?.querySelectorAll?.('[role="combobox"], button') ?? [])
+        .filter(visible)
+        .find((node) => {
+          const text = normalize([node.textContent ?? '', node.getAttribute?.('aria-label') ?? ''].join(' '));
+          return text.includes('thinking time') ||
+            text.includes('effort') ||
+            text.includes('mode') ||
+            text.includes('standard') ||
+            text.includes('extended');
+        });
 
       const findTargetOption = (menu) => {
         const items = menu.querySelectorAll(MENU_ITEM_SELECTOR);
@@ -213,7 +248,9 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
         return false;
       };
 
-      const attempt = () => {
+      let attempt: () => void;
+
+      const attemptDirectMenu = () => {
         const menu = findMenu();
         if (!menu) {
           if (performance.now() - start > MAX_WAIT_MS) {
@@ -244,6 +281,59 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
         }
         dispatchClickSequence(targetOption);
         resolve({ status: 'switched', label });
+      };
+
+      const attemptViaConfigure = () => {
+        const menu = findMenu();
+        if (menu) {
+          return false;
+        }
+
+        const dialog = findDialog();
+        if (dialog) {
+          const dialogTarget = findTargetOption(dialog);
+          if (dialogTarget) {
+            const label = dialogTarget.textContent?.trim?.() || null;
+            if (
+              optionIsSelected(dialogTarget) ||
+              optionIsSelected(dialogTarget.querySelector?.('[aria-checked="true"], [data-state="checked"], [data-state="selected"]'))
+            ) {
+              resolve({ status: 'already-selected', label });
+              return true;
+            }
+            dispatchClickSequence(dialogTarget);
+            resolve({ status: 'switched', label });
+            return true;
+          }
+          if (!depthComboOpened) {
+            const depthCombo = findDepthCombo(dialog);
+            if (depthCombo) {
+              dispatchClickSequence(depthCombo);
+              depthComboOpened = true;
+              setTimeout(attempt, 150);
+              return true;
+            }
+          }
+        }
+
+        if (!configureOpened) {
+          const configureNode = findConfigureNode();
+          if (configureNode) {
+            dispatchClickSequence(configureNode);
+            configureOpened = true;
+            setTimeout(attempt, 200);
+            return true;
+          }
+        }
+        return false;
+      };
+
+      attempt = () => {
+        const menu = findMenu();
+        if (!menu && attemptViaConfigure()) {
+          return;
+        }
+        attemptDirectMenu();
       };
 
       setTimeout(attempt, INITIAL_WAIT_MS);

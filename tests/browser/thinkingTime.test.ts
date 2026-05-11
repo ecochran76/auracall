@@ -17,6 +17,9 @@ describe('browser thinking-time selection expression', () => {
     expect(expression).toContain('role=\\"menuitem\\"');
     expect(expression).toContain('role=\\"menuitemradio\\"');
     expect(expression).toContain('thinking time');
+    expect(expression).toContain('configure');
+    expect(expression).toContain('[role="dialog"]');
+    expect(expression).toContain('[role="combobox"]');
     expect(expression).toContain('normalize');
     expect(expression).toContain('extended');
   });

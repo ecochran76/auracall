@@ -1,5 +1,25 @@
 # RUNBOOK
 
+## Turn 119 | 2026-05-10
+
+- Active plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: fix ChatGPT Pro/Thinking depth selection after the SoyLei
+  `agent:pro-extended-chatgpt-soylei` readout smoke failed on the missing
+  Thinking-time menu.
+- Result:
+  - updated `ensureThinkingTime(...)` to accept already-selected
+    Standard/Extended composer pills
+  - added a Configure-dialog fallback for ChatGPT's current prompt-workbench
+    model/depth UI when Standard/Extended are not in the first opened menu
+  - installed and restarted the user API runtime on `127.0.0.1:18095`
+  - a live readout retry was started, but was interrupted after a stuck browser
+    modal was observed; do not count it as a pass
+- Verification target:
+  - `pnpm vitest run tests/browser/thinkingTime.test.ts tests/browser/modelSelection.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/browser/actions/thinkingTime.ts tests/browser/thinkingTime.test.ts --max-diagnostics 40`
+
 ## Turn 118 | 2026-05-10
 
 - Active plan:
