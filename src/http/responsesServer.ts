@@ -717,6 +717,7 @@ export async function createResponsesHttpServer(
     persistence: accountMirrorPersistence,
     now,
   });
+  let hasForegroundAuraCallExecutionPressure = () => false;
   const accountMirrorCatalogService = deps.accountMirrorCatalogService ?? createAccountMirrorCatalogService({
     config: configuredRuntimeConfig,
     registry: accountMirrorStatusRegistry,
@@ -727,6 +728,12 @@ export async function createResponsesHttpServer(
     registry: accountMirrorStatusRegistry,
     refreshService: accountMirrorRefreshService,
     now,
+    shouldYieldToForegroundWork: () => hasForegroundAuraCallExecutionPressure()
+      ? {
+          reason: 'foreground-work',
+          message: 'Foreground AuraCall API or service work is pending; live follow will retry later.',
+        }
+      : null,
   });
   const accountMirrorSchedulerLedger = deps.accountMirrorSchedulerLedger ?? createAccountMirrorSchedulerPassLedger({
     config: configuredRuntimeConfig,
@@ -843,8 +850,31 @@ export async function createResponsesHttpServer(
   let backgroundDrainPaused = false;
   let accountMirrorSchedulerPaused = false;
   let accountMirrorFollowUpAfterNextDrain = false;
+  let foregroundAuraCallWorkCount = 0;
+  let foregroundAuraCallDrainReservations = 0;
   let runnerHeartbeatTimer: NodeJS.Timeout | null = null;
   let closed = false;
+  const beginForegroundAuraCallWork = () => {
+    foregroundAuraCallWorkCount += 1;
+    return () => {
+      foregroundAuraCallWorkCount = Math.max(0, foregroundAuraCallWorkCount - 1);
+    };
+  };
+  const reserveForegroundAuraCallDrain = () => {
+    foregroundAuraCallDrainReservations += 1;
+    accountMirrorFollowUpAfterNextDrain = true;
+  };
+  const completeForegroundAuraCallDrainReservation = () => {
+    if (foregroundAuraCallDrainReservations > 0) {
+      foregroundAuraCallDrainReservations -= 1;
+    }
+  };
+  hasForegroundAuraCallExecutionPressure = () =>
+    foregroundAuraCallWorkCount > 0 ||
+    foregroundAuraCallDrainReservations > 0 ||
+    backgroundDrainScheduled ||
+    backgroundDrainState.state === 'scheduled' ||
+    backgroundDrainState.state === 'running';
   const drainThroughServerHost = (
     drainOptions: ServerOwnedDrainOptions & { trigger?: HttpStatusResponse['backgroundDrain']['lastTrigger'] } = {},
   ) => {
@@ -867,7 +897,8 @@ export async function createResponsesHttpServer(
         backgroundDrainState.state = closed ? 'disabled' : backgroundDrainPaused ? 'paused' : 'idle';
         backgroundDrainState.lastCompletedAt = now().toISOString();
       }
-      if (accountMirrorFollowUpAfterNextDrain) {
+      completeForegroundAuraCallDrainReservation();
+      if (accountMirrorFollowUpAfterNextDrain && foregroundAuraCallDrainReservations === 0) {
         accountMirrorFollowUpAfterNextDrain = false;
         scheduleAccountMirrorSchedulerFollowUp(0, 'response-drain-completed');
       }
@@ -1761,153 +1792,174 @@ export async function createResponsesHttpServer(
       }
 
       if (req.method === 'POST' && url.pathname === '/v1/team-runs') {
-        const body = await readRequestBody(req);
-        const payload = TEAM_RUN_CREATE_REQUEST_SCHEMA.parse(JSON.parse(body || '{}'));
-        const prebuiltTaskRunSpec = payload.taskRunSpec ?? null;
-        const teamId = (prebuiltTaskRunSpec?.teamId ?? payload.teamId ?? '').trim();
-        const nowIso = now().toISOString();
-        const suffix = createTeamRunIdSuffix();
-        const teamRunId = `teamrun_${teamId}_${suffix}`;
-        const taskRunSpec =
-          prebuiltTaskRunSpec ??
-          buildBoundedTeamTaskRunSpec({
-            nowIso,
-            taskRunSpecId: `taskrun_${teamId}_${suffix}`,
+        const endForegroundWork = beginForegroundAuraCallWork();
+        try {
+          const body = await readRequestBody(req);
+          const payload = TEAM_RUN_CREATE_REQUEST_SCHEMA.parse(JSON.parse(body || '{}'));
+          const prebuiltTaskRunSpec = payload.taskRunSpec ?? null;
+          const teamId = (prebuiltTaskRunSpec?.teamId ?? payload.teamId ?? '').trim();
+          const nowIso = now().toISOString();
+          const suffix = createTeamRunIdSuffix();
+          const teamRunId = `teamrun_${teamId}_${suffix}`;
+          const taskRunSpec =
+            prebuiltTaskRunSpec ??
+            buildBoundedTeamTaskRunSpec({
+              nowIso,
+              taskRunSpecId: `taskrun_${teamId}_${suffix}`,
+              teamId,
+              objective: payload.objective ?? '',
+              title: payload.title,
+              promptAppend: payload.promptAppend,
+              structuredContext: payload.structuredContext,
+              responseFormat: payload.responseFormat,
+              outputContract: payload.outputContract,
+              maxTurns: payload.maxTurns,
+              localActionPolicy: payload.localActionPolicy,
+              context: {
+                command: 'auracall api serve',
+              },
+              requestedBy: {
+                kind: 'api',
+                label: 'auracall api serve',
+              },
+              trigger: 'api',
+            });
+          const bridgeResult = await teamRuntimeBridge.executeFromConfigTaskRunSpec({
+            config: configuredRuntimeConfig ?? {},
             teamId,
-            objective: payload.objective ?? '',
-            title: payload.title,
-            promptAppend: payload.promptAppend,
-            structuredContext: payload.structuredContext,
-            responseFormat: payload.responseFormat,
-            outputContract: payload.outputContract,
-            maxTurns: payload.maxTurns,
-            localActionPolicy: payload.localActionPolicy,
-            context: {
-              command: 'auracall api serve',
-            },
-            requestedBy: {
-              kind: 'api',
-              label: 'auracall api serve',
-            },
-            trigger: 'api',
+            runId: teamRunId,
+            createdAt: nowIso,
+            trigger: prebuiltTaskRunSpec ? undefined : 'api',
+            requestedBy: prebuiltTaskRunSpec ? undefined : 'auracall api serve',
+            taskRunSpec,
           });
-        const bridgeResult = await teamRuntimeBridge.executeFromConfigTaskRunSpec({
-          config: configuredRuntimeConfig ?? {},
-          teamId,
-          runId: teamRunId,
-          createdAt: nowIso,
-          trigger: prebuiltTaskRunSpec ? undefined : 'api',
-          requestedBy: prebuiltTaskRunSpec ? undefined : 'auracall api serve',
-          taskRunSpec,
-        });
-        if (backgroundDrainIntervalMs > 0) {
-          scheduleBackgroundDrain(0);
+          if (backgroundDrainIntervalMs > 0) {
+            reserveForegroundAuraCallDrain();
+            scheduleBackgroundDrain(0);
+          }
+          const execution = buildTeamRunExecutionPayload({
+            teamId,
+            bridgeResult,
+            taskRunSpec,
+          });
+          const address = server.address();
+          const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
+          sendJson(res, 200, {
+            object: 'team_run',
+            taskRunSpec,
+            execution,
+            links: createTeamRunCreateLinks({
+              host: boundHost,
+              port: boundPort,
+              teamRunId: execution.teamRunId,
+              runtimeRunId: execution.runtimeRunId,
+            }),
+          } satisfies HttpTeamRunCreateResponse);
+          return;
+        } finally {
+          endForegroundWork();
         }
-        const execution = buildTeamRunExecutionPayload({
-          teamId,
-          bridgeResult,
-          taskRunSpec,
-        });
-        const address = server.address();
-        const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
-        sendJson(res, 200, {
-          object: 'team_run',
-          taskRunSpec,
-          execution,
-          links: createTeamRunCreateLinks({
-            host: boundHost,
-            port: boundPort,
-            teamRunId: execution.teamRunId,
-            runtimeRunId: execution.runtimeRunId,
-          }),
-        } satisfies HttpTeamRunCreateResponse);
-        return;
       }
 
       if (req.method === 'POST' && url.pathname === '/v1/chat/completions') {
-        const body = await readRequestBody(req);
-        const chatRequest = parseChatCompletionRequest(JSON.parse(body || '{}'));
-        if (chatRequest.stream) {
-          sendJson(res, 400, {
-            error: {
-              message: 'Streaming chat completions are not supported by this AuraCall adapter yet.',
-              type: 'invalid_request_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        const request = createExecutionRequest(
-          mergeExecutionRequestHints(createExecutionRequestFromChatCompletion(chatRequest), req.headers),
-        );
-        const authorizationError = authorizeExecutionRequest(apiAuthContext, request);
-        if (authorizationError) {
-          sendJson(res, 403, {
-            error: {
-              message: authorizationError,
-              type: 'permission_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        const createdResponse = await responsesService.createResponse(request);
-        await drainThroughServerHost({
-          runId: createdResponse.id,
-          maxRuns: 1,
-          trigger: 'request-create',
-        });
-        scheduleAccountMirrorSchedulerFollowUp(0, 'response-drain-completed');
-        const response = (await responsesService.readResponse(createdResponse.id)) ?? createdResponse;
-        sendJson(res, 200, createChatCompletionResponse(response, now));
-        return;
-      }
-
-      if (req.method === 'POST' && url.pathname === '/v1/responses') {
-        const body = await readRequestBody(req);
-        const parsedBody = JSON.parse(body) as ExecutionRequest;
-        const request = createExecutionRequest(mergeExecutionRequestHints(parsedBody, req.headers));
-        const authorizationError = authorizeExecutionRequest(apiAuthContext, request);
-        if (authorizationError) {
-          sendJson(res, 403, {
-            error: {
-              message: authorizationError,
-              type: 'permission_error',
-            },
-          } satisfies HttpErrorPayload);
-          return;
-        }
-        const createdResponse = await responsesService.createResponse(request);
-        if (backgroundDrainIntervalMs > 0) {
-          accountMirrorFollowUpAfterNextDrain = true;
-          scheduleBackgroundDrain(0);
-          sendJson(res, 200, createdResponse);
-        } else {
+        const endForegroundWork = beginForegroundAuraCallWork();
+        try {
+          const body = await readRequestBody(req);
+          const chatRequest = parseChatCompletionRequest(JSON.parse(body || '{}'));
+          if (chatRequest.stream) {
+            sendJson(res, 400, {
+              error: {
+                message: 'Streaming chat completions are not supported by this AuraCall adapter yet.',
+                type: 'invalid_request_error',
+              },
+            } satisfies HttpErrorPayload);
+            return;
+          }
+          const request = createExecutionRequest(
+            mergeExecutionRequestHints(createExecutionRequestFromChatCompletion(chatRequest), req.headers),
+          );
+          const authorizationError = authorizeExecutionRequest(apiAuthContext, request);
+          if (authorizationError) {
+            sendJson(res, 403, {
+              error: {
+                message: authorizationError,
+                type: 'permission_error',
+              },
+            } satisfies HttpErrorPayload);
+            return;
+          }
+          const createdResponse = await responsesService.createResponse(request);
           await drainThroughServerHost({
             runId: createdResponse.id,
             maxRuns: 1,
             trigger: 'request-create',
           });
           scheduleAccountMirrorSchedulerFollowUp(0, 'response-drain-completed');
-          const drainedResponse = await responsesService.readResponse(createdResponse.id);
-          sendJson(res, 200, drainedResponse ?? createdResponse);
+          const response = (await responsesService.readResponse(createdResponse.id)) ?? createdResponse;
+          sendJson(res, 200, createChatCompletionResponse(response, now));
+          return;
+        } finally {
+          endForegroundWork();
         }
-        return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/v1/responses') {
+        const endForegroundWork = beginForegroundAuraCallWork();
+        try {
+          const body = await readRequestBody(req);
+          const parsedBody = JSON.parse(body) as ExecutionRequest;
+          const request = createExecutionRequest(mergeExecutionRequestHints(parsedBody, req.headers));
+          const authorizationError = authorizeExecutionRequest(apiAuthContext, request);
+          if (authorizationError) {
+            sendJson(res, 403, {
+              error: {
+                message: authorizationError,
+                type: 'permission_error',
+              },
+            } satisfies HttpErrorPayload);
+            return;
+          }
+          const createdResponse = await responsesService.createResponse(request);
+          if (backgroundDrainIntervalMs > 0) {
+            reserveForegroundAuraCallDrain();
+            scheduleBackgroundDrain(0);
+            sendJson(res, 200, createdResponse);
+          } else {
+            await drainThroughServerHost({
+              runId: createdResponse.id,
+              maxRuns: 1,
+              trigger: 'request-create',
+            });
+            scheduleAccountMirrorSchedulerFollowUp(0, 'response-drain-completed');
+            const drainedResponse = await responsesService.readResponse(createdResponse.id);
+            sendJson(res, 200, drainedResponse ?? createdResponse);
+          }
+          return;
+        } finally {
+          endForegroundWork();
+        }
       }
 
       if (req.method === 'POST' && url.pathname === '/v1/media-generations') {
-        const body = await readRequestBody(req);
-        const parsedBody = JSON.parse(body || '{}') as MediaGenerationRequest & { wait?: unknown };
-        const mediaRequest = {
-          ...parsedBody,
-          source: parsedBody.source ?? 'api',
-        };
-        const createQuery = parseMediaGenerationCreateQuery(url.searchParams);
-        const wait = resolveMediaGenerationWait(createQuery, parsedBody);
-        const response =
-          !wait && mediaGenerationService.createGenerationAsync
-            ? await mediaGenerationService.createGenerationAsync(mediaRequest)
-            : await mediaGenerationService.createGeneration(mediaRequest);
-        sendJson(res, wait && response.status === 'failed' ? 502 : wait ? 200 : 202, response);
-        return;
+        const endForegroundWork = beginForegroundAuraCallWork();
+        try {
+          const body = await readRequestBody(req);
+          const parsedBody = JSON.parse(body || '{}') as MediaGenerationRequest & { wait?: unknown };
+          const mediaRequest = {
+            ...parsedBody,
+            source: parsedBody.source ?? 'api',
+          };
+          const createQuery = parseMediaGenerationCreateQuery(url.searchParams);
+          const wait = resolveMediaGenerationWait(createQuery, parsedBody);
+          const response =
+            !wait && mediaGenerationService.createGenerationAsync
+              ? await mediaGenerationService.createGenerationAsync(mediaRequest)
+              : await mediaGenerationService.createGeneration(mediaRequest);
+          sendJson(res, wait && response.status === 'failed' ? 502 : wait ? 200 : 202, response);
+          return;
+        } finally {
+          endForegroundWork();
+        }
       }
 
       const runStatusId = matchRunStatusRoute(url.pathname);

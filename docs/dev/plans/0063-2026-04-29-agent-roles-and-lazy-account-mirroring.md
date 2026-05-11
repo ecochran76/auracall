@@ -331,6 +331,10 @@ Lazy mirroring must remain lower priority than API-requested work:
 - Routine lazy mirror passes may observe status and cached catalogs at any
   time, but they may only acquire browser execution opportunistically with zero
   queue wait.
+- The API server now gates scheduler execution on foreground AuraCall pressure:
+  direct chat completions, Responses API requests, team runs, media generation
+  requests, scheduled background drains, and running drains report
+  `foreground-work` backpressure before a routine mirror can start.
 - If real work has already acquired the browser dispatcher, the routine mirror
   pass exits as blocked and the scheduler tries again on its normal cadence.
 - If a routine mirror has already acquired the dispatcher before a real work
@@ -343,6 +347,9 @@ Lazy mirroring must remain lower priority than API-requested work:
   blocker. Routine mirrors yield to user/API browser work such as response
   execution and media generation, but they do not preempt themselves just
   because another routine mirror refresh is queued behind the active mirror.
+- Stored response browser runs now label dispatcher locks as
+  `response-run:<runId>:<agentId>` so operators can distinguish real API work
+  from generic browser execution in queue observations and status diagnostics.
 - Browser media generation now writes to the shared queue-observation ledger,
   so lazy live follow can detect media work waiting behind an already-running
   mirror pass instead of relying only on response browser-execution events.

@@ -123,6 +123,8 @@ export interface BrowserRunOptions {
   heartbeatIntervalMs?: number;
   verbose?: boolean;
   skipBrowserExecutionOperation?: boolean;
+  /** Stable owner label for the browser operation dispatcher lock/queue. */
+  browserOperationOwnerCommand?: string | null;
   /** Optional hook to persist runtime info (port/url/target) as soon as Chrome is ready. */
   runtimeHintCb?: (hint: BrowserRuntimeMetadata) => void | Promise<void>;
 }

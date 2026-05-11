@@ -254,6 +254,40 @@ describe('account mirror scheduler pass service', () => {
     });
   });
 
+  test('execute pass yields before refresh when foreground AuraCall work is active', async () => {
+    const requestRefresh = vi.fn(async () => createRefreshResult());
+    const service = createAccountMirrorSchedulerPassService({
+      registry: createAccountMirrorStatusRegistry({
+        config,
+        now: () => new Date('2026-04-29T12:00:00.000Z'),
+      }),
+      refreshService: {
+        requestRefresh,
+      },
+      now: () => new Date('2026-04-29T12:00:00.000Z'),
+      shouldYieldToForegroundWork: () => ({
+        reason: 'foreground-work',
+        message: 'Foreground AuraCall API work is pending.',
+      }),
+    });
+
+    const result = await service.runOnce({ dryRun: false });
+
+    expect(requestRefresh).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      mode: 'execute',
+      action: 'skipped',
+      selectedTarget: {
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+      },
+      backpressure: {
+        reason: 'foreground-work',
+        message: 'Foreground AuraCall API work is pending.',
+      },
+    });
+  });
+
   test('prioritizes in-progress live-follow mirrors for lazy passes', async () => {
     const requestRefresh = vi.fn(async () => createRefreshResult());
     const service = createAccountMirrorSchedulerPassService({

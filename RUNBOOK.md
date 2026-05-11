@@ -3160,3 +3160,21 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "API key|model" --maxWorkers 1`
   - `pnpm vitest run tests/config.test.ts -t "api auth|API auth" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
+
+## Turn 113 | 2026-05-10
+
+- Goal: prioritize API/service work over routine lazy live follow.
+- Change:
+  - scheduler passes now report `foreground-work` backpressure before starting
+    a live-follow refresh when foreground AuraCall requests or drains are
+    pending/running
+  - API chat, Responses, team-run, and media-generation routes mark their
+    execution window as foreground pressure
+  - stored response browser operations now label dispatcher owners as
+    `response-run:<runId>:<agentId>` for queue/status attribution
+  - plan 0063 records the foreground-gated live-follow contract
+- Verification:
+  - `pnpm vitest run tests/runtime.configuredExecutor.test.ts tests/accountMirror/schedulerService.test.ts tests/browser/browserModeExports.test.ts tests/cli/apiStatusCommand.test.ts`
+  - `pnpm tsc --noEmit`
+  - `pnpm lint` (passes with existing warnings)
+  - `git diff --check`

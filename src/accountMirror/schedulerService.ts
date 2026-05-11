@@ -28,7 +28,8 @@ export type AccountMirrorSchedulerBackpressureReason =
   | 'routine-delayed'
   | 'provider-guard'
   | 'blocked-by-browser-work'
-  | 'yielded-to-queued-work';
+  | 'yielded-to-queued-work'
+  | 'foreground-work';
 
 export interface AccountMirrorSchedulerBackpressure {
   reason: AccountMirrorSchedulerBackpressureReason;
@@ -78,6 +79,7 @@ export function createAccountMirrorSchedulerPassService(input: {
   registry: AccountMirrorStatusRegistry;
   refreshService: AccountMirrorRefreshService;
   now?: () => Date;
+  shouldYieldToForegroundWork?: () => AccountMirrorSchedulerBackpressure | null;
 }): AccountMirrorSchedulerPassService {
   const now = input.now ?? (() => new Date());
   return {
@@ -124,6 +126,21 @@ export function createAccountMirrorSchedulerPassService(input: {
         };
       }
       const selectedTarget = summarizeTarget(selected);
+      const foregroundBackpressure = dryRun ? null : input.shouldYieldToForegroundWork?.() ?? null;
+      if (foregroundBackpressure) {
+        return {
+          object: 'account_mirror_scheduler_pass',
+          mode: 'execute',
+          action: 'skipped',
+          startedAt: startedAt.toISOString(),
+          completedAt: now().toISOString(),
+          selectedTarget,
+          backpressure: foregroundBackpressure,
+          metrics,
+          refresh: null,
+          error: null,
+        };
+      }
       if (dryRun) {
         return {
           object: 'account_mirror_scheduler_pass',

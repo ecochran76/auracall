@@ -349,6 +349,7 @@ export function createConfiguredStoredStepExecutor(
     const browserRunOptions: BrowserRunOptions = {
       prompt: effectivePrompt,
       attachments: buildBrowserAttachments(context),
+      browserOperationOwnerCommand: `response-run:${context.record.runId}:${context.step.agentId}`,
       config: {
         auracallProfileName: browserFamilyProfileName ?? runtimeSelection.runtimeProfileId,
         selectedAgentId: context.step.agentId,

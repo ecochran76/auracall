@@ -11,6 +11,7 @@ export const API_STATUS_BACKPRESSURE_REASONS = [
   'provider-guard',
   'blocked-by-browser-work',
   'yielded-to-queued-work',
+  'foreground-work',
 ] as const;
 
 export type ApiStatusBackpressureReason = typeof API_STATUS_BACKPRESSURE_REASONS[number];

@@ -193,6 +193,7 @@ describe('browserMode exports', () => {
         kind: 'browser-execution',
         operationClass: 'exclusive-mutating',
         serviceTarget: 'grok',
+        ownerCommand: 'browser-execution',
       });
       expect(loggerMessages.some((message) => message.includes('operation dispatcher key'))).toBe(true);
       const observations = summarizeBrowserOperationQueueObservations({
@@ -213,6 +214,32 @@ describe('browserMode exports', () => {
         await active.release();
       }
       clearBrowserOperationQueueObservationsForTest();
+      setAuracallHomeDirOverrideForTest(null);
+      await fs.rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('browser execution operation records caller owner command for real work attribution', async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-browser-operation-owner-'));
+    setAuracallHomeDirOverrideForTest(tempRoot);
+    const managedProfileDir = path.join(tempRoot, 'browser-profiles', 'default', 'chatgpt');
+
+    try {
+      const acquired = await acquireBrowserExecutionOperationForTest({
+        managedProfileDir,
+        target: 'chatgpt',
+        logger: () => undefined,
+        ownerCommand: 'response-run:resp_123:agent_abc',
+      });
+
+      expect(acquired?.operation).toMatchObject({
+        kind: 'browser-execution',
+        operationClass: 'exclusive-mutating',
+        serviceTarget: 'chatgpt',
+        ownerCommand: 'response-run:resp_123:agent_abc',
+      });
+      await acquired?.release();
+    } finally {
       setAuracallHomeDirOverrideForTest(null);
       await fs.rm(tempRoot, { recursive: true, force: true });
     }

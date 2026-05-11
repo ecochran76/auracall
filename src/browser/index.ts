@@ -375,6 +375,7 @@ async function acquireBrowserExecutionOperation(options: {
   logger: BrowserLogger;
   queueTimeoutMs?: number;
   queuePollMs?: number;
+  ownerCommand?: string | null;
 }, skipOperation = false): Promise<BrowserOperationAcquiredResult | null> {
   if (skipOperation) {
     options.logger('[browser] operation dispatcher already owned by caller; nested browser-execution acquire skipped.');
@@ -392,7 +393,7 @@ async function acquireBrowserExecutionOperation(options: {
     serviceTarget: options.target,
     kind: 'browser-execution',
     operationClass: 'exclusive-mutating',
-    ownerCommand: 'browser-execution',
+    ownerCommand: options.ownerCommand ?? 'browser-execution',
   } as const;
   const acquired = await dispatcher.acquireQueued(operationInput, {
     timeoutMs: resolveBrowserExecutionQueueNumber(options.queueTimeoutMs, 10 * 60 * 1000),
@@ -1159,6 +1160,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       logger,
       runtimeHintCb,
       auracallProfileName: options.config?.auracallProfileName ?? null,
+      browserOperationOwnerCommand: options.browserOperationOwnerCommand ?? null,
     });
   }
 
@@ -1228,6 +1230,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     managedProfileDir: userDataDir,
     target,
     logger,
+    ownerCommand: options.browserOperationOwnerCommand ?? null,
   }, options.skipBrowserExecutionOperation);
   await enforceChatgptBrowserRateLimitGuard(config, logger, userDataDir);
   const onWindowsRetry = createWindowsManagedProfileRetryReset({
@@ -3399,6 +3402,7 @@ async function runGrokBrowserMode({
   logger,
   runtimeHintCb,
   auracallProfileName,
+  browserOperationOwnerCommand,
 }: {
   promptText: string;
   attachments: BrowserAttachment[];
@@ -3406,6 +3410,7 @@ async function runGrokBrowserMode({
   logger: BrowserLogger;
   runtimeHintCb?: BrowserRunOptions['runtimeHintCb'];
   auracallProfileName?: string | null;
+  browserOperationOwnerCommand?: string | null;
 }): Promise<BrowserRunResult> {
   const passiveObservations: BrowserPassiveObservation[] = [];
   let chrome: LaunchedChrome | null = null;
@@ -3469,6 +3474,7 @@ async function runGrokBrowserMode({
     managedProfileDir: userDataDir,
     target: runtimeTarget,
     logger,
+    ownerCommand: browserOperationOwnerCommand ?? null,
   });
   await enforceGrokBrowserRateLimitGuard(config, logger, userDataDir);
   const onWindowsRetry = createWindowsManagedProfileRetryReset({

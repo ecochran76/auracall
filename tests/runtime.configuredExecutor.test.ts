@@ -86,6 +86,7 @@ describe('configured stored-step executor', () => {
     expect(runBrowserModeImpl).toHaveBeenCalledTimes(1);
     expect(runBrowserModeImpl.mock.calls[0]?.[0]).toMatchObject({
       prompt: 'Reply exactly with AURACALL_TEAM_SMOKE_OK',
+      browserOperationOwnerCommand: 'response-run:teamrun_1:auracall-orchestrator',
       config: {
         auracallProfileName: 'default',
         target: 'grok',
