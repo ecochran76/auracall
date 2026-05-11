@@ -15834,9 +15834,12 @@ describe('http responses adapter', () => {
         kind: 'agent',
         action: 'upsert',
         id: 'researcher',
+        mutationTarget: 'registry',
         agents: [
           expect.objectContaining({
             id: 'researcher',
+            source: 'registry',
+            revision: 1,
             modelSelector: 'chatgpt:pro-extended',
             projectId: 'proj_123',
           }),
@@ -15858,28 +15861,19 @@ describe('http responses adapter', () => {
         kind: 'team',
         action: 'upsert',
         id: 'ops',
+        mutationTarget: 'registry',
         teams: [
           expect.objectContaining({
             id: 'ops',
+            source: 'registry',
+            revision: 1,
             agentIds: ['researcher'],
           }),
         ],
       });
 
       const saved = JSON.parse(await fs.readFile(userConfigPath, 'utf8')) as Record<string, unknown>;
-      expect(saved).toMatchObject({
-        agents: {
-          researcher: {
-            modelSelector: 'chatgpt:pro-extended',
-            projectId: 'proj_123',
-          },
-        },
-        teams: {
-          ops: {
-            agents: ['researcher'],
-          },
-        },
-      });
+      expect(saved).toEqual(activeConfig);
       expect(activeConfig).toMatchObject(saved);
     } finally {
       await server.close();
@@ -15982,6 +15976,24 @@ describe('http responses adapter', () => {
           }),
         }),
       ]));
+
+      const blockedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/config/agents/pinned`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          runtimeProfile: 'default',
+          service: 'grok',
+        }),
+      });
+      expect(blockedResponse.status).toBe(200);
+      expect(await blockedResponse.json()).toMatchObject({
+        object: 'auracall_config_entity',
+        kind: 'agent',
+        action: 'upsert',
+        id: 'pinned',
+        mutationTarget: 'blocked',
+        blockedReason: 'Agent pinned is defined in config and shadows registry records.',
+      });
     } finally {
       await server.close();
     }

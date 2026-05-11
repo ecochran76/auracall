@@ -42,6 +42,8 @@ export interface ConfigEntityMutationResult {
   id: string | null;
   configPath: string;
   registryPath: string | null;
+  mutationTarget: 'config' | 'registry' | 'blocked' | null;
+  blockedReason: string | null;
   agents: Array<ProjectedAgent | EffectiveAgent>;
   teams: Array<ProjectedTeam | EffectiveTeam>;
   conflicts: EffectiveCatalogConflict[];
@@ -89,12 +91,16 @@ export function createAgentTeamConfigService(
     kind: ConfigEntityMutationResult['kind'],
     id: string | null,
     config: MutableConfig,
+    mutationTarget: ConfigEntityMutationResult['mutationTarget'] = null,
+    blockedReason: string | null = null,
   ) => createResult({
     action,
     kind,
     id,
     path: targetPath,
     registryPath: registryStore?.dbPath ?? null,
+    mutationTarget,
+    blockedReason,
     catalog: await createEffectiveCatalog(config, registryStore),
   });
 
@@ -116,37 +122,107 @@ export function createAgentTeamConfigService(
     async upsertAgent(input) {
       const payload = agentConfigUpsertInputSchema.parse(input);
       const config = await load();
+      if (registryStore) {
+        if (hasConfigEntity(config, 'agents', payload.id)) {
+          return result(
+            'upsert',
+            'agent',
+            payload.id,
+            config,
+            'blocked',
+            `Agent ${payload.id} is defined in config and shadows registry records.`,
+          );
+        }
+        await registryStore.upsertAgent({
+          id: payload.id,
+          config: payload.config,
+          updatedBy: 'auracall-config-service',
+          createdBy: 'auracall-config-service',
+        });
+        return result('upsert', 'agent', payload.id, config, 'registry');
+      }
       const agents = ensureRecord(config, 'agents');
       agents[payload.id] = payload.config;
       await save(config);
-      return result('upsert', 'agent', payload.id, config);
+      return result('upsert', 'agent', payload.id, config, 'config');
     },
 
     async deleteAgent(id) {
       const parsedId = CONFIG_ID_SCHEMA.parse(id);
       const config = await load();
+      if (registryStore) {
+        if (hasConfigEntity(config, 'agents', parsedId)) {
+          return result(
+            'delete',
+            'agent',
+            parsedId,
+            config,
+            'blocked',
+            `Agent ${parsedId} is defined in config and cannot be deleted through the registry write path.`,
+          );
+        }
+        await registryStore.setAgentEnabled(parsedId, false, {
+          updatedBy: 'auracall-config-service',
+        });
+        return result('delete', 'agent', parsedId, config, 'registry');
+      }
       const agents = ensureRecord(config, 'agents');
       delete agents[parsedId];
       await save(config);
-      return result('delete', 'agent', parsedId, config);
+      return result('delete', 'agent', parsedId, config, 'config');
     },
 
     async upsertTeam(input) {
       const payload = teamConfigUpsertInputSchema.parse(input);
       const config = await load();
+      if (registryStore) {
+        if (hasConfigEntity(config, 'teams', payload.id)) {
+          return result(
+            'upsert',
+            'team',
+            payload.id,
+            config,
+            'blocked',
+            `Team ${payload.id} is defined in config and shadows registry records.`,
+          );
+        }
+        await registryStore.upsertTeam({
+          id: payload.id,
+          config: payload.config,
+          updatedBy: 'auracall-config-service',
+          createdBy: 'auracall-config-service',
+        });
+        return result('upsert', 'team', payload.id, config, 'registry');
+      }
       const teams = ensureRecord(config, 'teams');
       teams[payload.id] = payload.config;
       await save(config);
-      return result('upsert', 'team', payload.id, config);
+      return result('upsert', 'team', payload.id, config, 'config');
     },
 
     async deleteTeam(id) {
       const parsedId = CONFIG_ID_SCHEMA.parse(id);
       const config = await load();
+      if (registryStore) {
+        if (hasConfigEntity(config, 'teams', parsedId)) {
+          return result(
+            'delete',
+            'team',
+            parsedId,
+            config,
+            'blocked',
+            `Team ${parsedId} is defined in config and cannot be deleted through the registry write path.`,
+          );
+        }
+        await registryStore.setTeamEnabled(parsedId, false, {
+          updatedBy: 'auracall-config-service',
+        });
+        return result('delete', 'team', parsedId, config, 'registry');
+      }
       const teams = ensureRecord(config, 'teams');
       delete teams[parsedId];
       await save(config);
-      return result('delete', 'team', parsedId, config);
+      return result('delete', 'team', parsedId, config, 'config');
     },
   };
 }
@@ -189,6 +265,8 @@ function createResult(input: {
   id: string | null;
   path: string;
   registryPath: string | null;
+  mutationTarget: ConfigEntityMutationResult['mutationTarget'];
+  blockedReason: string | null;
   catalog: EffectiveAgentCatalog;
 }): ConfigEntityMutationResult {
   return {
@@ -198,6 +276,8 @@ function createResult(input: {
     id: input.id,
     configPath: input.path,
     registryPath: input.registryPath,
+    mutationTarget: input.mutationTarget,
+    blockedReason: input.blockedReason,
     agents: input.catalog.agents,
     teams: input.catalog.teams,
     conflicts: input.catalog.conflicts,
@@ -209,6 +289,10 @@ function ensureRecord(config: MutableConfig, key: 'agents' | 'teams'): Record<st
     config[key] = {};
   }
   return config[key] as Record<string, unknown>;
+}
+
+function hasConfigEntity(config: MutableConfig, key: 'agents' | 'teams', id: string): boolean {
+  return isRecord(config[key]) && Object.hasOwn(config[key], id);
 }
 
 function replaceObjectContents(target: MutableConfig, source: MutableConfig): void {

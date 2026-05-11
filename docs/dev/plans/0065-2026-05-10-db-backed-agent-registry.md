@@ -23,8 +23,9 @@ Implemented:
 
 - `AgentConfigSchema` and `TeamConfigSchema` define the current agent/team
   payload shape.
-- `createAgentTeamConfigService(...)` backs API/MCP config entity CRUD by
-  reading and rewriting the user config file.
+- `createAgentTeamConfigService(...)` reads the effective config plus registry
+  projection and writes API/MCP mutations to the registry by default when a
+  registry store is available.
 - `createAgentRegistryStore(...)` initializes a user-scoped registry store at
   `~/.auracall/registry/agents.sqlite`, persists agent/team records with
   enablement and revision metadata, and has a JSON fallback for test/runtime
@@ -35,6 +36,10 @@ Implemented:
 - `/v1/config/agents`, `/v1/config/teams`, MCP config listing, and
   `/v1/models` now read that effective merged catalog. Registry-backed enabled
   agents appear as `agent:<agent_id>` model ids with source/revision metadata.
+- `/v1/config/agents`, `/v1/config/teams`, and MCP config mutation tools write
+  registry records by default. Config-defined overlay ids are treated as pinned
+  and return a blocked mutation result rather than creating hidden registry
+  changes.
 - `projectConfigModel(...)` projects config-defined agents and teams for
   `/v1/models`, `/v1/config/agents`, `/v1/config/teams`, CLI config inspection,
   and runtime selection.
@@ -43,10 +48,8 @@ Implemented:
 
 Remaining:
 
-- introduce a user-scoped agent registry store outside the portable config file
-- define config-vs-registry precedence and migration semantics
-- make API/MCP CRUD write the registry by default
-- keep config-defined bootstrap agents available as seed/overlay entries
+- make runtime agent/team resolution use the effective merged catalog
+- make API-key scope checks use effective registry-backed agent/team ids
 - expose registry metadata through CLI and dashboard surfaces
 - provide export/import so selected agents can still become reviewable files
 
@@ -135,13 +138,13 @@ Add explicit registry routes only after compatibility is working:
      after the read model stays stable
 
 2. API/MCP write-path migration
-   - change `createAgentTeamConfigService(...)` or replace it with
+   - [x] change `createAgentTeamConfigService(...)` or replace it with
      `createAgentTeamRegistryService(...)`
-   - make current `/v1/config/agents` and MCP config tools write registry
+   - [x] make current `/v1/config/agents` and MCP config tools write registry
      records by default
-   - keep an explicit escape hatch for config-file writes only for bootstrap
+   - [x] keep an explicit escape hatch for config-file writes only for bootstrap
      maintenance
-   - include revision and source metadata in mutation responses
+   - [x] include revision and source metadata in mutation responses
 
 3. Execution/catalog integration
    - make runtime agent resolution use the effective merged catalog

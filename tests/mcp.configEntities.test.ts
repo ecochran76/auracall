@@ -120,4 +120,50 @@ describe('mcp config entity tools', () => {
       },
     });
   });
+
+  it('writes registry-backed agents through MCP config entities', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-mcp-config-registry-write-'));
+    cleanup.push(dir);
+    const configPath = path.join(dir, 'config.json');
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        browserProfiles: { default: {} },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        },
+      }),
+      'utf8',
+    );
+    const registryStore = createAgentRegistryStore({
+      rootDir: dir,
+      forceJsonFallbackForTest: true,
+    });
+    const service = createAgentTeamConfigService({ configPath, registryStore });
+
+    const result = await createConfigAgentUpsertToolHandler(service)({
+      id: 'registry-worker',
+      config: {
+        runtimeProfile: 'default',
+        service: 'gemini',
+      },
+    });
+
+    expect(result).toMatchObject({
+      isError: false,
+      structuredContent: {
+        object: 'auracall_config_entity',
+        action: 'upsert',
+        mutationTarget: 'registry',
+        agents: [
+          expect.objectContaining({
+            id: 'registry-worker',
+            source: 'registry',
+            revision: 1,
+            service: 'gemini',
+          }),
+        ],
+      },
+    });
+  });
 });

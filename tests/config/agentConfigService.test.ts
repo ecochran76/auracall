@@ -144,4 +144,104 @@ describe('agent and team config service', () => {
       },
     ]);
   });
+
+  it('writes agents and teams to the registry when a registry store is configured', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-agent-config-registry-write-'));
+    cleanup.push(dir);
+    const configPath = path.join(dir, 'config.json');
+    const initialConfig = {
+      browserProfiles: { default: {} },
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+      },
+    };
+    await fs.writeFile(configPath, JSON.stringify(initialConfig), 'utf8');
+    const registryStore = createAgentRegistryStore({
+      rootDir: dir,
+      forceJsonFallbackForTest: true,
+    });
+    const service = createAgentTeamConfigService({ configPath, registryStore });
+
+    const agentResult = await service.upsertAgent({
+      id: 'registry-agent',
+      config: {
+        runtimeProfile: 'default',
+        service: 'chatgpt',
+      },
+    });
+    const teamResult = await service.upsertTeam({
+      id: 'registry-team',
+      config: {
+        agents: ['registry-agent'],
+      },
+    });
+
+    expect(agentResult).toMatchObject({
+      mutationTarget: 'registry',
+      agents: [
+        expect.objectContaining({
+          id: 'registry-agent',
+          source: 'registry',
+          revision: 1,
+        }),
+      ],
+    });
+    expect(teamResult).toMatchObject({
+      mutationTarget: 'registry',
+      teams: [
+        expect.objectContaining({
+          id: 'registry-team',
+          source: 'registry',
+          revision: 1,
+        }),
+      ],
+    });
+    expect(JSON.parse(await fs.readFile(configPath, 'utf8'))).toEqual(initialConfig);
+  });
+
+  it('blocks registry mutations for config-defined overlay ids', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-agent-config-registry-block-'));
+    cleanup.push(dir);
+    const configPath = path.join(dir, 'config.json');
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        browserProfiles: { default: {} },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        },
+        agents: {
+          pinned: {
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+        },
+      }),
+      'utf8',
+    );
+    const registryStore = createAgentRegistryStore({
+      rootDir: dir,
+      forceJsonFallbackForTest: true,
+    });
+    const service = createAgentTeamConfigService({ configPath, registryStore });
+
+    const upsertResult = await service.upsertAgent({
+      id: 'pinned',
+      config: {
+        runtimeProfile: 'default',
+        service: 'grok',
+      },
+    });
+    const deleteResult = await service.deleteAgent('pinned');
+
+    expect(upsertResult).toMatchObject({
+      mutationTarget: 'blocked',
+      blockedReason: 'Agent pinned is defined in config and shadows registry records.',
+    });
+    expect(deleteResult).toMatchObject({
+      mutationTarget: 'blocked',
+      blockedReason: 'Agent pinned is defined in config and cannot be deleted through the registry write path.',
+    });
+    expect(await registryStore.listAgents({ includeDisabled: true })).toEqual([]);
+  });
 });

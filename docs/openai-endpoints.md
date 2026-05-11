@@ -84,9 +84,14 @@ Current limits:
   - `PUT /v1/config/agents/{agent_id}` accepts one raw agent config object
   - `PUT /v1/config/teams/{team_id}` accepts one raw team config object
   - `DELETE` removes the selected entry
-  - writes still update the user config file and the running server's in-memory
-    config when `api serve` has a resolved config object; registry-default
-    writes are the next migration slice
+  - writes target the user-scoped registry by default and return
+    `mutationTarget="registry"` with source/revision metadata in the effective
+    catalog response
+  - config-defined overlay ids are pinned; mutation attempts return
+    `mutationTarget="blocked"` and a `blockedReason` instead of creating a
+    hidden registry record behind the config overlay
+  - config-file writes are retained only for explicit config-path/bootstrap
+    maintenance services
   - protect this local control-plane surface with API-key auth before exposing
     it to any non-loopback client
 - API-key authorization can be configured in `~/.auracall/config.json` or
@@ -354,7 +359,8 @@ Current limits:
 - MCP exposes the same trusted local agent/team config surface through
   `config_entities_list`, `config_agent_upsert`, `config_agent_delete`,
   `config_team_upsert`, and `config_team_delete`; list responses include
-  effective registry/config source metadata
+  effective registry/config source metadata, and mutation responses include
+  `mutationTarget` plus `blockedReason` when a config overlay id is pinned
 - no auth
 - no streaming/SSE
 - no `POST /v1/chat/completions` adapter yet

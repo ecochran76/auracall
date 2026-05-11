@@ -59,11 +59,13 @@ Implemented:
   - `chatgpt:thinking-extended` -> `Thinking` + `extended`
   - `chatgpt:pro-standard` -> `Pro` + `standard`
   - `chatgpt:pro-extended` -> `Pro` + `extended`
-- local config writes are available at:
+- local agent/team management writes are available at:
   - `GET|PUT|DELETE /v1/config/agents`
   - `GET|PUT|DELETE /v1/config/teams`
   - MCP tools `config_entities_list`, `config_agent_upsert`,
     `config_agent_delete`, `config_team_upsert`, and `config_team_delete`
+  - writes target the user-scoped registry by default; config-defined overlay
+    ids remain pinned and return blocked mutation results
 - `/v1/models` includes configured agents and semantic selector entries for
   client-side discovery. ChatGPT semantic selectors are marked
   `executionReady=true`; Gemini/Grok selector entries are visible but remain

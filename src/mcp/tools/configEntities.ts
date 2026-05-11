@@ -31,6 +31,8 @@ const configEntityOutputShape = {
   id: z.string().nullable(),
   configPath: z.string(),
   registryPath: z.string().nullable(),
+  mutationTarget: z.enum(['config', 'registry', 'blocked']).nullable(),
+  blockedReason: z.string().nullable(),
   agents: z.array(z.record(z.string(), z.unknown())),
   teams: z.array(z.record(z.string(), z.unknown())),
   conflicts: z.array(z.record(z.string(), z.unknown())),
@@ -50,7 +52,7 @@ export function registerConfigEntityTools(
     'config_entities_list',
     {
       title: 'List configured AuraCall agents and teams',
-      description: 'List configured AuraCall agent and team routing entries from the writable user config.',
+      description: 'List effective AuraCall agent and team routing entries from config overlays and the user-scoped registry.',
       inputSchema: configListInputShape,
       outputSchema: configEntityOutputShape,
     },
@@ -62,7 +64,7 @@ export function registerConfigEntityTools(
     {
       title: 'Create or update an AuraCall agent config',
       description:
-        'Create or update one AuraCall agent. Agents can bind runtimeProfile, service, model/modelSelector, project, knowledge, and prompt fields.',
+        'Create or update one AuraCall registry agent. Agents can bind runtimeProfile, service, model/modelSelector, project, knowledge, and prompt fields.',
       inputSchema: configAgentUpsertInputShape,
       outputSchema: configEntityOutputShape,
     },
@@ -73,7 +75,7 @@ export function registerConfigEntityTools(
     'config_agent_delete',
     {
       title: 'Delete an AuraCall agent config',
-      description: 'Delete one AuraCall agent from the writable user config.',
+      description: 'Disable one AuraCall registry agent. Config-defined overlay agents are pinned and return a blocked mutation result.',
       inputSchema: configDeleteInputShape,
       outputSchema: configEntityOutputShape,
     },
@@ -84,7 +86,7 @@ export function registerConfigEntityTools(
     'config_team_upsert',
     {
       title: 'Create or update an AuraCall team config',
-      description: 'Create or update one AuraCall team and its agent membership/role config.',
+      description: 'Create or update one AuraCall registry team and its agent membership/role config.',
       inputSchema: configTeamUpsertInputShape,
       outputSchema: configEntityOutputShape,
     },
@@ -95,7 +97,7 @@ export function registerConfigEntityTools(
     'config_team_delete',
     {
       title: 'Delete an AuraCall team config',
-      description: 'Delete one AuraCall team from the writable user config.',
+      description: 'Disable one AuraCall registry team. Config-defined overlay teams are pinned and return a blocked mutation result.',
       inputSchema: configDeleteInputShape,
       outputSchema: configEntityOutputShape,
     },

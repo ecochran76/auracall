@@ -132,6 +132,13 @@
   array when duplicate ids resolve by config-wins compatibility.
 - This is read-only and does not launch browsers or mutate provider state.
 
+### `config_agent_upsert`, `config_agent_delete`, `config_team_upsert`, and `config_team_delete`
+- Behavior: mutate the user-scoped agent registry by default and return the
+  effective catalog with `mutationTarget`, source, and revision metadata.
+- Config-defined overlay ids are pinned. Mutation attempts against those ids
+  return `mutationTarget = "blocked"` with a `blockedReason` rather than
+  writing a hidden registry row behind the config overlay.
+
 ### `api_ops_browser_status`
 - Inputs: `port` for the local `auracall api serve` listener; optional `host`,
   `timeoutMs`, `expectedLiveFollowSeverity`, `expectedCompletionPaused`, and

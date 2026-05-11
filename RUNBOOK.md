@@ -3211,3 +3211,19 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification:
   - `pnpm vitest run tests/config/agentConfigService.test.ts tests/config/agentRegistryStore.test.ts tests/mcp.configEntities.test.ts tests/http.responsesServer.test.ts -t "configures AuraCall agents|registry-backed agents|effective config and registry|agent registry|mcp config" --maxWorkers 1`
   - `pnpm tsc --noEmit`
+
+## Turn 116 | 2026-05-11
+
+- Goal: make expanded agent-management writes use the user-scoped registry.
+- Change:
+  - API/MCP agent and team upserts now write registry records by default when a
+    registry store is active
+  - API/MCP deletes disable registry records instead of rewriting the config
+    file
+  - config-defined overlay ids are pinned and return `mutationTarget="blocked"`
+    with a `blockedReason`
+  - mutation responses report `mutationTarget` and include source/revision
+    metadata through the effective catalog projection
+- Verification:
+  - `pnpm vitest run tests/config/agentConfigService.test.ts tests/config/agentRegistryStore.test.ts tests/mcp.configEntities.test.ts tests/http.responsesServer.test.ts -t "configures AuraCall agents|registry-backed agents|registry-backed agents through MCP|writes agents and teams to the registry|blocks registry mutations|agent registry|mcp config" --maxWorkers 1`
+  - `pnpm tsc --noEmit`
