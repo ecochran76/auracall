@@ -298,8 +298,13 @@ Terminology note:
   and `lastWakeAt` distinguish routine cadence, manual operator wakes, and
   live-follow nudges after real work settles.
   `/status.accountMirrorScheduler.operatorStatus.posture` gives the compact
-  operator read: `disabled`, `paused`, `running`, `scheduled`, `ready`,
-  `healthy`, or `backpressured`. MCP `api_status` reads the same local
+  operator read: `disabled`, `paused`, `running`, `scheduled`, `waiting`,
+  `ready`, `healthy`, or `backpressured`. `waiting` with
+  `backpressureReason=foreground-work` means live follow is intentionally
+  yielding to API/service work, not unhealthy. The detailed
+  `/status.accountMirrorScheduler.foregroundWork` object reports active request
+  count, pending drain reservations, scheduled drain state, and background drain
+  state. MCP `api_status` reads the same local
   `/status` posture and supports expectation fields so agents can assert
   scheduler readiness without shelling out to the CLI. For live execute
   dogfood, prefer a long interval plus one manual `run-once` request so the

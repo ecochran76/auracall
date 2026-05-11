@@ -335,6 +335,11 @@ Lazy mirroring must remain lower priority than API-requested work:
   direct chat completions, Responses API requests, team runs, media generation
   requests, scheduled background drains, and running drains report
   `foreground-work` backpressure before a routine mirror can start.
+- Operator status projects that condition as posture `waiting` and exposes
+  `/status.accountMirrorScheduler.foregroundWork` so API, MCP, CLI, and
+  dashboard consumers can see active request count, pending drain reservations,
+  scheduled drain state, and current background drain state without treating
+  the live-follow wait as an unhealthy provider/browser condition.
 - If real work has already acquired the browser dispatcher, the routine mirror
   pass exits as blocked and the scheduler tries again on its normal cadence.
 - If a routine mirror has already acquired the dispatcher before a real work

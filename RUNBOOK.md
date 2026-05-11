@@ -3178,3 +3178,19 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm tsc --noEmit`
   - `pnpm lint` (passes with existing warnings)
   - `git diff --check`
+
+## Turn 114 | 2026-05-10
+
+- Goal: make foreground-work live-follow waits obvious to operators.
+- Change:
+  - `/status.accountMirrorScheduler.foregroundWork` now reports active API
+    request count, pending drain reservations, scheduled drain state, and
+    background drain state
+  - scheduler operator posture now uses `waiting` for
+    `foreground-work` instead of reporting an unhealthy backpressure posture
+  - CLI/MCP status summaries and `/ops/browser` expose the foreground-work
+    readout
+  - README, MCP docs, and plan 0063 document the waiting posture contract
+- Verification:
+  - `pnpm vitest run tests/cli/apiStatusCommand.test.ts tests/mcp.apiStatus.test.ts tests/cli/apiOpsBrowserCommand.test.ts tests/mcp.apiOpsBrowserStatus.test.ts`
+  - `pnpm tsc --noEmit`

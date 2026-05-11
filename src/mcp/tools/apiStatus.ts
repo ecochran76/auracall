@@ -43,6 +43,14 @@ const apiStatusLatestYieldShape = z.object({
   remainingDetailSurfaces: z.number().nullable(),
 });
 
+const apiStatusForegroundWorkShape = z.object({
+  active: z.boolean().nullable(),
+  activeRequestCount: z.number().nullable(),
+  drainReservations: z.number().nullable(),
+  backgroundDrainScheduled: z.boolean().nullable(),
+  backgroundDrainState: z.string().nullable(),
+});
+
 const apiStatusCompletionOperationShape = z.object({
   id: z.string().nullable(),
   provider: z.string().nullable(),
@@ -177,6 +185,7 @@ const apiStatusOutputShape = {
     lastWakeAt: z.string().nullable(),
     lastAction: z.string().nullable(),
     operatorStatus: apiStatusOperatorStatusShape,
+    foregroundWork: apiStatusForegroundWorkShape,
     backpressure: apiStatusBackpressureShape,
     latestYield: apiStatusLatestYieldShape.nullable(),
   }),

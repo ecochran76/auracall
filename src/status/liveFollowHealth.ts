@@ -218,6 +218,9 @@ export function deriveLiveFollowSeverity(input: {
   if (activeCompletions > 0 && backpressureReason === 'routine-delayed') {
     return 'healthy';
   }
+  if (schedulerPosture === 'waiting' && backpressureReason === 'foreground-work') {
+    return 'healthy';
+  }
   if (schedulerPosture === 'unknown' || backpressureReason === 'unknown') {
     return 'attention-needed';
   }

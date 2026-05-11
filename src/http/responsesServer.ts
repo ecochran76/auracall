@@ -397,6 +397,7 @@ type AccountMirrorSchedulerOperatorPosture =
   | 'paused'
   | 'running'
   | 'scheduled'
+  | 'waiting'
   | 'ready'
   | 'healthy'
   | 'backpressured';
@@ -405,6 +406,14 @@ interface AccountMirrorSchedulerOperatorStatus {
   posture: AccountMirrorSchedulerOperatorPosture;
   reason: string;
   backpressureReason: string | null;
+}
+
+interface AccountMirrorSchedulerForegroundWorkStatus {
+  active: boolean;
+  activeRequestCount: number;
+  drainReservations: number;
+  backgroundDrainScheduled: boolean;
+  backgroundDrainState: HttpStatusResponse['backgroundDrain']['state'];
 }
 
 interface AccountMirrorCompletionStatusSummary {
@@ -617,6 +626,7 @@ interface HttpStatusResponse {
     lastCompletedAt: string | null;
     lastPass: AccountMirrorSchedulerPassResult | null;
     operatorStatus: AccountMirrorSchedulerOperatorStatus;
+    foregroundWork: AccountMirrorSchedulerForegroundWorkStatus;
     history: AccountMirrorSchedulerPassHistory;
   };
   accountMirrorStatus: AccountMirrorStatusSummary;
@@ -829,6 +839,13 @@ export async function createResponsesHttpServer(
     lastStartedAt: null,
     lastCompletedAt: null,
     lastPass: null,
+    foregroundWork: {
+      active: false,
+      activeRequestCount: 0,
+      drainReservations: 0,
+      backgroundDrainScheduled: false,
+      backgroundDrainState: backgroundDrainState.state,
+    },
     operatorStatus: {
       posture: accountMirrorSchedulerIntervalMs > 0 ? 'ready' : 'disabled',
       reason: accountMirrorSchedulerIntervalMs > 0
@@ -875,6 +892,13 @@ export async function createResponsesHttpServer(
     backgroundDrainScheduled ||
     backgroundDrainState.state === 'scheduled' ||
     backgroundDrainState.state === 'running';
+  const readForegroundAuraCallWorkStatus = (): AccountMirrorSchedulerForegroundWorkStatus => ({
+    active: hasForegroundAuraCallExecutionPressure(),
+    activeRequestCount: foregroundAuraCallWorkCount,
+    drainReservations: foregroundAuraCallDrainReservations,
+    backgroundDrainScheduled,
+    backgroundDrainState: backgroundDrainState.state,
+  });
   const drainThroughServerHost = (
     drainOptions: ServerOwnedDrainOptions & { trigger?: HttpStatusResponse['backgroundDrain']['lastTrigger'] } = {},
   ) => {
@@ -1117,6 +1141,7 @@ export async function createResponsesHttpServer(
           runner: runnerState,
           backgroundDrain: backgroundDrainState,
           accountMirrorScheduler: accountMirrorSchedulerState,
+          accountMirrorSchedulerForegroundWork: readForegroundAuraCallWorkStatus(),
           accountMirrorStatus: accountMirrorStatusRegistry.readStatus(),
           accountMirrorCompletions: createAccountMirrorCompletionStatusSummary(accountMirrorCompletionService, now),
           preflight: await readPreflightStatusSummary(preflightRunner),
@@ -1729,6 +1754,7 @@ export async function createResponsesHttpServer(
           runner: runnerState,
           backgroundDrain: backgroundDrainState,
           accountMirrorScheduler: accountMirrorSchedulerState,
+          accountMirrorSchedulerForegroundWork: readForegroundAuraCallWorkStatus(),
           accountMirrorStatus: accountMirrorStatusRegistry.readStatus(),
           accountMirrorCompletions: createAccountMirrorCompletionStatusSummary(accountMirrorCompletionService, now),
           preflight: await readPreflightStatusSummary(preflightRunner),
@@ -2766,6 +2792,7 @@ function createHttpStatusResponse(input: {
   runner: HttpStatusResponse['runner'];
   backgroundDrain: HttpStatusResponse['backgroundDrain'];
   accountMirrorScheduler: HttpStatusResponse['accountMirrorScheduler'];
+  accountMirrorSchedulerForegroundWork: AccountMirrorSchedulerForegroundWorkStatus;
   accountMirrorStatus: AccountMirrorStatusSummary;
   accountMirrorCompletions: AccountMirrorCompletionStatusSummary;
   preflight?: PreflightStatusSummary;
@@ -2774,8 +2801,9 @@ function createHttpStatusResponse(input: {
 }): HttpStatusResponse {
   const accountMirrorScheduler = {
     ...input.accountMirrorScheduler,
-    operatorStatus: createAccountMirrorSchedulerOperatorStatus(input.accountMirrorScheduler),
+    foregroundWork: input.accountMirrorSchedulerForegroundWork,
   };
+  accountMirrorScheduler.operatorStatus = createAccountMirrorSchedulerOperatorStatus(accountMirrorScheduler);
   const serviceDiscovery = buildApiServiceDiscovery({
     host: input.host,
     port: input.port,
@@ -4031,7 +4059,22 @@ function createAccountMirrorSchedulerOperatorStatus(
       backpressureReason: null,
     };
   }
+  if (scheduler.foregroundWork.active) {
+    return {
+      posture: 'waiting',
+      reason: formatForegroundWorkWaitReason(scheduler.foregroundWork),
+      backpressureReason: 'foreground-work',
+    };
+  }
   const backpressureReason = scheduler.lastPass?.backpressure?.reason ?? null;
+  if (backpressureReason === 'foreground-work') {
+    return {
+      posture: 'waiting',
+      reason: scheduler.lastPass?.backpressure?.message
+        ?? 'latest scheduler pass yielded to foreground AuraCall work',
+      backpressureReason,
+    };
+  }
   if (backpressureReason === 'routine-delayed') {
     return {
       posture: scheduler.state === 'scheduled' ? 'scheduled' : 'healthy',
@@ -4067,6 +4110,20 @@ function createAccountMirrorSchedulerOperatorStatus(
     reason: 'account mirror scheduler is enabled and waiting for its first pass',
     backpressureReason: null,
   };
+}
+
+function formatForegroundWorkWaitReason(status: AccountMirrorSchedulerForegroundWorkStatus): string {
+  const reasons = [
+    status.activeRequestCount > 0 ? `activeRequests=${status.activeRequestCount}` : null,
+    status.drainReservations > 0 ? `pendingDrains=${status.drainReservations}` : null,
+    status.backgroundDrainScheduled ? 'backgroundDrainScheduled=true' : null,
+    status.backgroundDrainState === 'scheduled' || status.backgroundDrainState === 'running'
+      ? `backgroundDrainState=${status.backgroundDrainState}`
+      : null,
+  ].filter(Boolean);
+  return reasons.length > 0
+    ? `foreground AuraCall work is active; live follow is waiting (${reasons.join(' ')})`
+    : 'foreground AuraCall work is active; live follow is waiting';
 }
 
 function createStartupRecoveryLog(
@@ -6926,6 +6983,7 @@ function createOperatorBrowserDashboardHtml(input: {
       const explanation = buildMirrorSchedulerExplanation(scheduler, liveFollow);
       const diagnosticsHint = buildMirrorSchedulerDiagnosticsHint(liveFollow);
       const waitRows = renderMirrorSchedulerWaitTable(liveFollow);
+      const foregroundWork = renderMirrorSchedulerForegroundWork(scheduler.foregroundWork || {});
       return '<div class="control-card" id="mirrorSchedulerControls"><div class="control-title"><strong>Mirror Scheduler</strong>'
         + renderStatusText(scheduler.state || 'unknown', toneForActualStatus(scheduler.state || 'unknown'))
         + '</div><dl>'
@@ -6935,6 +6993,7 @@ function createOperatorBrowserDashboardHtml(input: {
         + '<dt>Why</dt><dd id="mirrorSchedulerExplanation">' + escapeHtml(explanation.summary) + '</dd>'
         + '<dt>Next Retry</dt><dd id="mirrorSchedulerNextRetry">' + escapeHtml(explanation.nextRetry) + '</dd>'
         + '<dt>Routine Eligible</dt><dd id="mirrorSchedulerRoutineEligible">' + escapeHtml(explanation.routineEligible) + '</dd>'
+        + '<dt>Foreground Work</dt><dd id="mirrorSchedulerForegroundWork">' + foregroundWork + '</dd>'
         + '<dt>Diagnostics</dt><dd id="mirrorSchedulerDiagnosticsHint">' + diagnosticsHint + '</dd>'
         + '</dl><div class="row">'
         + '<button id="runMirrorScheduler" class="primary" type="button" onclick="controlMirrorScheduler(' + "'run-once'" + ', false)" ' + disabledAttr(running) + '>Run Now</button>'
@@ -6943,6 +7002,19 @@ function createOperatorBrowserDashboardHtml(input: {
         + '<button id="resumeMirrorScheduler" type="button" onclick="controlMirrorScheduler(' + "'resume'" + ')" ' + disabledAttr(!enabled || running && !paused) + '>Resume</button>'
         + '</div><div id="mirrorSchedulerWaitTable" class="mini-table">' + waitRows + '</div>'
         + '<pre id="mirrorSchedulerCompletionDetail">Select a scheduler wait row completion to inspect details.</pre></div>';
+    }
+
+    function renderMirrorSchedulerForegroundWork(foregroundWork) {
+      const active = foregroundWork.active === true;
+      const fields = [
+        'active=' + String(active),
+        'activeRequests=' + String(foregroundWork.activeRequestCount ?? 'unknown'),
+        'pendingDrains=' + String(foregroundWork.drainReservations ?? 'unknown'),
+        'backgroundDrainScheduled=' + String(foregroundWork.backgroundDrainScheduled === true),
+        'backgroundDrainState=' + String(foregroundWork.backgroundDrainState || 'unknown'),
+      ];
+      return renderStatusText(active ? 'waiting' : 'clear', 'ok') + ' <span data-mirror-scheduler-foreground-work="true">'
+        + escapeHtml(fields.join(' ')) + '</span>';
     }
 
     function buildMirrorSchedulerDiagnosticsHint(liveFollow) {
@@ -7170,6 +7242,13 @@ function createOperatorBrowserDashboardHtml(input: {
           routineEligible: 'running',
         };
       }
+      if (scheduler.foregroundWork && scheduler.foregroundWork.active === true) {
+        return {
+          summary: 'Waiting: foreground AuraCall work is active. ' + formatMirrorSchedulerForegroundWorkText(scheduler.foregroundWork),
+          nextRetry: 'after foreground work settles',
+          routineEligible: 'after foreground work settles',
+        };
+      }
       const latestPass = latestMirrorSchedulerPass(scheduler);
       const accounts = liveFollow && liveFollow.targets && Array.isArray(liveFollow.targets.accounts)
         ? liveFollow.targets.accounts
@@ -7200,6 +7279,15 @@ function createOperatorBrowserDashboardHtml(input: {
         nextRetry: formatTargetDate(retryTarget),
         routineEligible: formatTargetDate(routineTarget),
       };
+    }
+
+    function formatMirrorSchedulerForegroundWorkText(foregroundWork) {
+      return [
+        'activeRequests=' + String(foregroundWork.activeRequestCount ?? 'unknown'),
+        'pendingDrains=' + String(foregroundWork.drainReservations ?? 'unknown'),
+        'backgroundDrainScheduled=' + String(foregroundWork.backgroundDrainScheduled === true),
+        'backgroundDrainState=' + String(foregroundWork.backgroundDrainState || 'unknown'),
+      ].join(' ');
     }
 
     function latestMirrorSchedulerPass(scheduler) {

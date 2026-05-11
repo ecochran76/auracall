@@ -69,6 +69,7 @@
   scheduler summary used by `auracall api status`, including
   `scheduler.operatorStatus.posture`, wake reason, latest mirror backpressure,
   `scheduler.latestYield` when scheduler history contains a cooperative yield,
+  `scheduler.foregroundWork` when API/service work is holding live follow back,
   and `completions` metrics plus active/recent controlled live-follow
   operations. Structured output also includes `liveFollow.severity` and
   `liveFollow.line`, a compact operator summary combining scheduler posture,

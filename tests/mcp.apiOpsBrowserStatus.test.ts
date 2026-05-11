@@ -129,7 +129,7 @@ describe('mcp api_ops_browser_status tool', () => {
       content: [
         {
           type: 'text',
-          text: 'AuraCall ops browser 127.0.0.1:18080 is ok; dashboard=http://127.0.0.1:18080/ops/browser; apiService=ok; apiLogTail=ok; recentEvents=ok; recentEventFilters=ok; recentSchedulerDetail=ok; recentEventPersistence=ok; schedulerWhy=ok; schedulerWaitTable=ok; schedulerWaitActions=ok; schedulerCompletionDetail=ok; schedulerDiagnostics=ok; preflight=ok; preflightRun=ok; preflightHistory=ok; preflightSteps=ok; preflightLog=ok; dashboard completion controls use /status; Live follow health: severity=paused posture=healthy state=idle active=1 paused=1 failed=0 cancelled=0 backpressure=none latestYield=none',
+          text: 'AuraCall ops browser 127.0.0.1:18080 is ok; dashboard=http://127.0.0.1:18080/ops/browser; apiService=ok; apiLogTail=ok; recentEvents=ok; recentEventFilters=ok; recentSchedulerDetail=ok; recentEventPersistence=ok; schedulerWhy=ok; schedulerForeground=ok; schedulerWaitTable=ok; schedulerWaitActions=ok; schedulerCompletionDetail=ok; schedulerDiagnostics=ok; preflight=ok; preflightRun=ok; preflightHistory=ok; preflightSteps=ok; preflightLog=ok; dashboard completion controls use /status; Live follow health: severity=paused posture=healthy state=idle active=1 paused=1 failed=0 cancelled=0 backpressure=none latestYield=none',
         },
       ],
       structuredContent: {

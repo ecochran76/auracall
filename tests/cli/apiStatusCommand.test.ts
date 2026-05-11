@@ -544,6 +544,33 @@ describe('api status CLI helpers', () => {
       host: '127.0.0.1',
       port: 18080,
     }).liveFollow.severity).toBe('backpressured');
+    const foregroundSummary = summarizeApiStatusPayload({
+      ...buildPayload({
+        posture: 'waiting',
+        backpressure: 'foreground-work',
+      }),
+      accountMirrorScheduler: {
+        ...buildPayload({
+          posture: 'waiting',
+          backpressure: 'foreground-work',
+        }).accountMirrorScheduler,
+        foregroundWork: {
+          active: true,
+          activeRequestCount: 1,
+          drainReservations: 0,
+          backgroundDrainScheduled: true,
+          backgroundDrainState: 'scheduled',
+        },
+      },
+    }, {
+      host: '127.0.0.1',
+      port: 18080,
+    });
+    expect(foregroundSummary.liveFollow.severity).toBe('healthy');
+    expect(foregroundSummary.liveFollow.line).toContain('posture=waiting');
+    expect(formatApiStatusCliSummary(foregroundSummary)).toContain(
+      'Foreground work: active=true activeRequests=1 pendingDrains=0 backgroundDrainScheduled=true backgroundDrainState=scheduled',
+    );
     expect(summarizeApiStatusPayload(buildPayload({
       posture: 'backpressured',
       backpressure: 'routine-delayed',
@@ -653,6 +680,7 @@ describe('api status CLI helpers', () => {
   it('validates expected backpressure reason names', () => {
     expect(parseApiStatusBackpressureReason('provider-guard')).toBe('provider-guard');
     expect(parseApiStatusBackpressureReason('yielded-to-queued-work')).toBe('yielded-to-queued-work');
+    expect(parseApiStatusBackpressureReason('foreground-work')).toBe('foreground-work');
     expect(() => parseApiStatusBackpressureReason('delayed')).toThrow(
       'Invalid backpressure reason "delayed". Use one of:',
     );
@@ -660,6 +688,7 @@ describe('api status CLI helpers', () => {
 
   it('validates expected account mirror posture names', () => {
     expect(parseApiStatusAccountMirrorPosture('disabled')).toBe('disabled');
+    expect(parseApiStatusAccountMirrorPosture('waiting')).toBe('waiting');
     expect(parseApiStatusAccountMirrorPosture('backpressured')).toBe('backpressured');
     expect(() => parseApiStatusAccountMirrorPosture('blocked')).toThrow(
       'Invalid account mirror posture "blocked". Use one of:',

@@ -21,6 +21,7 @@ export const API_STATUS_ACCOUNT_MIRROR_POSTURES = [
   'paused',
   'running',
   'scheduled',
+  'waiting',
   'ready',
   'healthy',
   'backpressured',
@@ -100,8 +101,17 @@ export interface ApiStatusSchedulerSummary {
   lastWakeAt: string | null;
   lastAction: string | null;
   operatorStatus: ApiStatusSchedulerOperatorSummary;
+  foregroundWork: ApiStatusSchedulerForegroundWorkSummary;
   backpressure: ApiStatusBackpressureSummary;
   latestYield: ApiStatusSchedulerYieldSummary | null;
+}
+
+export interface ApiStatusSchedulerForegroundWorkSummary {
+  active: boolean | null;
+  activeRequestCount: number | null;
+  drainReservations: number | null;
+  backgroundDrainScheduled: boolean | null;
+  backgroundDrainState: string | null;
 }
 
 export interface ApiStatusCompletionMetricsSummary {
@@ -205,6 +215,7 @@ export function summarizeApiStatusPayload(
     : {};
   const lastPass = isRecord(scheduler.lastPass) ? scheduler.lastPass : {};
   const operatorStatus = isRecord(scheduler.operatorStatus) ? scheduler.operatorStatus : {};
+  const foregroundWork = isRecord(scheduler.foregroundWork) ? scheduler.foregroundWork : {};
   const backpressure = isRecord(lastPass.backpressure) ? lastPass.backpressure : {};
   const latestYield = summarizeLatestYield(scheduler, lastPass);
   const completions = summarizeAccountMirrorCompletions(record.accountMirrorCompletions);
@@ -222,6 +233,13 @@ export function summarizeApiStatusPayload(
       posture: normalizeApiStatusAccountMirrorPosture(operatorStatus.posture),
       reason: readString(operatorStatus.reason),
       backpressureReason: readString(operatorStatus.backpressureReason),
+    },
+    foregroundWork: {
+      active: readBoolean(foregroundWork.active),
+      activeRequestCount: readNumber(foregroundWork.activeRequestCount),
+      drainReservations: readNumber(foregroundWork.drainReservations),
+      backgroundDrainScheduled: readBoolean(foregroundWork.backgroundDrainScheduled),
+      backgroundDrainState: readString(foregroundWork.backgroundDrainState),
     },
     backpressure: {
       reason: normalizeApiStatusBackpressureReason(backpressure.reason),
@@ -319,6 +337,7 @@ export function formatApiStatusCliSummary(summary: ApiStatusCliSummary): string 
     summary.liveFollow.line,
     `Account mirror scheduler: state=${scheduler.state ?? 'unknown'} enabled=${formatNullableBoolean(scheduler.enabled)} dryRun=${formatNullableBoolean(scheduler.dryRun)}`,
     `Account mirror posture: ${operatorStatus.posture}${operatorStatus.reason ? ` - ${operatorStatus.reason}` : ''}`,
+    formatForegroundWorkLine(scheduler.foregroundWork),
     `Latest lazy mirror wake: ${scheduler.lastWakeReason ?? 'unknown'}${scheduler.lastWakeAt ? ` at ${scheduler.lastWakeAt}` : ''}`,
     `Latest lazy mirror backpressure: ${backpressure.reason}${backpressure.message ? ` - ${backpressure.message}` : ''}`,
   ];
@@ -400,6 +419,17 @@ function formatLiveFollowDesiredActualLine(targets: ApiStatusLiveFollowHealthSum
     `actual_active=${actual.active}`,
     `actual_complete=${actual.complete}`,
     `actual_attention=${actual.attentionNeeded}`,
+  ].join(' ');
+}
+
+function formatForegroundWorkLine(summary: ApiStatusSchedulerForegroundWorkSummary): string {
+  return [
+    'Foreground work:',
+    `active=${formatNullableBoolean(summary.active)}`,
+    `activeRequests=${formatNullableNumber(summary.activeRequestCount)}`,
+    `pendingDrains=${formatNullableNumber(summary.drainReservations)}`,
+    `backgroundDrainScheduled=${formatNullableBoolean(summary.backgroundDrainScheduled)}`,
+    `backgroundDrainState=${summary.backgroundDrainState ?? 'unknown'}`,
   ].join(' ');
 }
 
@@ -854,6 +884,10 @@ function isYieldPass(value: unknown): value is Record<string, unknown> {
 
 function readNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function readBoolean(value: unknown): boolean | null {
+  return typeof value === 'boolean' ? value : null;
 }
 
 function formatNullableNumber(value: number | null): string {
