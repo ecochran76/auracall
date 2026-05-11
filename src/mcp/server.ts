@@ -19,6 +19,7 @@ import { registerApiOpsBrowserStatusTool } from './tools/apiOpsBrowserStatus.js'
 import { registerRuntimeInspectTool } from './tools/runtimeInspect.js';
 import { registerRuntimeRunsRecentTool } from './tools/runtimeRunsRecent.js';
 import { registerConfigEntityTools } from './tools/configEntities.js';
+import { registerApiKeyTools } from './tools/apiKeys.js';
 import { registerAccountMirrorStatusTool } from './tools/accountMirrorStatus.js';
 import { registerAccountMirrorRefreshTool } from './tools/accountMirrorRefresh.js';
 import { registerAccountMirrorCatalogTool } from './tools/accountMirrorCatalog.js';
@@ -102,6 +103,9 @@ export async function startMcpServer(): Promise<void> {
   registerRuntimeInspectTool(server);
   registerConfigEntityTools(server, {
     service: services.agentTeamConfigService,
+  });
+  registerApiKeyTools(server, {
+    agentTeamConfigService: services.agentTeamConfigService,
   });
   registerMediaGenerationTool(server, {
     service: services.mediaGenerationService,

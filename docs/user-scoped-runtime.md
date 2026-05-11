@@ -123,6 +123,13 @@ the standard OpenAI client knobs. Keep the file outside the repo; rotate it by
 editing or deleting `~/.auracall/api.env` and reinstalling/restarting the user
 API service.
 
+Privileged local MCP operators can also issue additional scoped keys with
+`api_key_issue`. The tool appends `AURACALL_API_KEY_IDS` plus matching
+`AURACALL_API_KEY_<ID>` variables for one agent or team, validates the target
+against the effective config plus registry catalog, and returns the
+OpenAI-compatible base URL/key/model values. Restart `auracall-api.service`
+after issuing a key so systemd reloads this environment file.
+
 Verify:
 
 ```bash

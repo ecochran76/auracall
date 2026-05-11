@@ -105,6 +105,13 @@ Current limits:
   `AURACALL_API_KEY_RUNTIME_PROFILES`. `pnpm run install:user-api-service`
   creates the dotenv file with `OPENAI_BASE_URL`, `OPENAI_API_KEY`, and
   `AURACALL_MODEL` defaults for client agents when the file does not exist.
+  Execution-scope checks use the effective config plus registry catalog:
+  registry-backed agent ids are valid scope ids, agent calls can infer service
+  and runtime-profile scopes from the catalog, team-scoped keys can call member
+  agents, and `/v1/team-runs` enforces team scopes before creating work.
+  Privileged local MCP operators can use `api_key_issue` to add an
+  agent/team-scoped key to `~/.auracall/api.env`; restart the user API service
+  after issuing a key so systemd reloads the environment file.
 - startup recovery can re-run bounded stale persisted direct runs before readback; keep
   this enabled by default, or disable with `--no-recover-runs-on-start`.
   - control source scope with `--recover-runs-on-start-source <direct|team-run|all>`

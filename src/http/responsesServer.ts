@@ -23,7 +23,7 @@ import {
   resolveHostLocalActionExecutionPolicy,
   type ProjectedAgent,
 } from '../config/model.js';
-import type { EffectiveAgent } from '../config/agentRegistryCatalog.js';
+import type { EffectiveAgent, EffectiveAgentCatalog } from '../config/agentRegistryCatalog.js';
 import { SEMANTIC_MODEL_SELECTORS } from '../config/modelSelector.js';
 import {
   agentConfigUpsertInputSchema,
@@ -1830,6 +1830,20 @@ export async function createResponsesHttpServer(
           const payload = TEAM_RUN_CREATE_REQUEST_SCHEMA.parse(JSON.parse(body || '{}'));
           const prebuiltTaskRunSpec = payload.taskRunSpec ?? null;
           const teamId = (prebuiltTaskRunSpec?.teamId ?? payload.teamId ?? '').trim();
+          const authorizationError = authorizeExecutionSelection(
+            apiAuthContext,
+            { agent: null, team: teamId || null, service: null, runtimeProfile: null },
+            await agentTeamConfigService.effectiveCatalog(),
+          );
+          if (authorizationError) {
+            sendJson(res, 403, {
+              error: {
+                message: authorizationError,
+                type: 'permission_error',
+              },
+            } satisfies HttpErrorPayload);
+            return;
+          }
           const nowIso = now().toISOString();
           const suffix = createTeamRunIdSuffix();
           const teamRunId = `teamrun_${teamId}_${suffix}`;
@@ -1911,7 +1925,11 @@ export async function createResponsesHttpServer(
           const request = createExecutionRequest(
             mergeExecutionRequestHints(createExecutionRequestFromChatCompletion(chatRequest), req.headers),
           );
-          const authorizationError = authorizeExecutionRequest(apiAuthContext, request);
+          const authorizationError = authorizeExecutionRequest(
+            apiAuthContext,
+            request,
+            await agentTeamConfigService.effectiveCatalog(),
+          );
           if (authorizationError) {
             sendJson(res, 403, {
               error: {
@@ -1942,7 +1960,11 @@ export async function createResponsesHttpServer(
           const body = await readRequestBody(req);
           const parsedBody = JSON.parse(body) as ExecutionRequest;
           const request = createExecutionRequest(mergeExecutionRequestHints(parsedBody, req.headers));
-          const authorizationError = authorizeExecutionRequest(apiAuthContext, request);
+          const authorizationError = authorizeExecutionRequest(
+            apiAuthContext,
+            request,
+            await agentTeamConfigService.effectiveCatalog(),
+          );
           if (authorizationError) {
             sendJson(res, 403, {
               error: {
@@ -3728,20 +3750,59 @@ function authorizeApiRequest(
   return key ? { policy, key } : null;
 }
 
-function authorizeExecutionRequest(context: ApiAuthContext, request: ExecutionRequest): string | null {
+function authorizeExecutionRequest(
+  context: ApiAuthContext,
+  request: ExecutionRequest,
+  catalog: EffectiveAgentCatalog,
+): string | null {
+  return authorizeExecutionSelection(context, readExecutionAuthorizationSelection(request, catalog), catalog);
+}
+
+function authorizeExecutionSelection(
+  context: ApiAuthContext,
+  selection: ExecutionAuthorizationSelection,
+  catalog: EffectiveAgentCatalog,
+): string | null {
   const key = context.key;
   if (!context.policy.required || !key) return null;
+  const teamAgentIds = (key.teams ?? [])
+    .flatMap((teamId) => catalog.teams.find((team) => team.id === teamId)?.agentIds ?? []);
+  const agentAllowedByTeam = Boolean(
+    selection.agent && teamAgentIds.length > 0 && teamAgentIds.includes(selection.agent),
+  );
+  return (
+    authorizeScopedValue('agent', selection.agent, key.agents, agentAllowedByTeam)
+    ?? authorizeScopedValue('team', selection.team, key.teams, agentAllowedByTeam)
+    ?? authorizeScopedValue('service', selection.service, key.services)
+    ?? authorizeScopedValue('runtime profile', selection.runtimeProfile, key.runtimeProfiles)
+  );
+}
+
+interface ExecutionAuthorizationSelection {
+  agent: string | null;
+  team: string | null;
+  service: string | null;
+  runtimeProfile: string | null;
+}
+
+function readExecutionAuthorizationSelection(
+  request: ExecutionRequest,
+  catalog: EffectiveAgentCatalog,
+): ExecutionAuthorizationSelection {
   const auracall = request.auracall ?? {};
   const agent = typeof auracall.agent === 'string' ? auracall.agent : null;
   const team = typeof auracall.team === 'string' ? auracall.team : null;
-  const service = typeof auracall.service === 'string' ? auracall.service : null;
-  const runtimeProfile = typeof auracall.runtimeProfile === 'string' ? auracall.runtimeProfile : null;
-  return (
-    authorizeScopedValue('agent', agent, key.agents)
-    ?? authorizeScopedValue('team', team, key.teams)
-    ?? authorizeScopedValue('service', service, key.services)
-    ?? authorizeScopedValue('runtime profile', runtimeProfile, key.runtimeProfiles)
-  );
+  const catalogAgent = agent ? catalog.agents.find((entry) => entry.id === agent) : null;
+  return {
+    agent,
+    team,
+    service: typeof auracall.service === 'string'
+      ? auracall.service
+      : catalogAgent?.service ?? catalogAgent?.defaultService ?? null,
+    runtimeProfile: typeof auracall.runtimeProfile === 'string'
+      ? auracall.runtimeProfile
+      : catalogAgent?.runtimeProfileId ?? null,
+  };
 }
 
 function parseChatCompletionRequest(value: unknown): HttpChatCompletionRequest {
@@ -3863,8 +3924,10 @@ function authorizeScopedValue(
   label: string,
   value: string | null,
   allowed: string[] | undefined,
+  allowedByRelatedScope = false,
 ): string | null {
   if (!allowed?.length) return null;
+  if (allowedByRelatedScope) return null;
   if (value && allowed.includes(value)) return null;
   return `API key is not authorized for ${label}${value ? ` "${value}"` : ' selection'}.`;
 }

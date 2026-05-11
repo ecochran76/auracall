@@ -264,11 +264,14 @@ Terminology note:
   `AURACALL_API_KEY_TEAMS`, `AURACALL_API_KEY_SERVICES`, and
   `AURACALL_API_KEY_RUNTIME_PROFILES` comma/space-delimited scopes; additional
   keys can be declared with `AURACALL_API_KEY_IDS` and matching
-  `AURACALL_API_KEY_<ID>` variables.
+  `AURACALL_API_KEY_<ID>` variables. Local privileged MCP operators can use
+  `api_key_issue` to append an agent/team-scoped key to `~/.auracall/api.env`;
+  restart the user API service afterward so systemd reloads the file.
   When enabled, `/v1/*` routes require `Authorization: Bearer <secret>` or
   `X-AuraCall-API-Key: <secret>`. `/status` remains unauthenticated so local
   operators can discover the service posture. Scoped keys are enforced on
-  `/v1/responses` for agent, team, service, and runtime-profile selectors.
+  `/v1/responses` and `/v1/team-runs` against the effective config plus
+  registry catalog for agent, team, service, and runtime-profile selectors.
 - Account mirror refreshes are metadata-first and identity-gated. Successful
   refreshes persist the mirror snapshot in the existing provider cache under
   `provider + boundIdentity`; runtime/browser profile ids are retained as

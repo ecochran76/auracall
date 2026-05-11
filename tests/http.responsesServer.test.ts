@@ -15799,6 +15799,87 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('authorizes registry-backed agents through effective catalog scopes', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-registry-auth-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const activeConfig: Record<string, unknown> = {
+      api: {
+        auth: {
+          required: true,
+          keys: [
+            {
+              id: 'registry-client',
+              secret: 'registry-secret',
+              teams: ['registry-team'],
+            },
+          ],
+        },
+      },
+      browserProfiles: { default: {} },
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+      },
+    };
+    const registryStore = createAgentRegistryStore({
+      rootDir: homeDir,
+      forceJsonFallbackForTest: true,
+    });
+    await registryStore.upsertAgent({
+      id: 'registry-worker',
+      config: {
+        runtimeProfile: 'default',
+        service: 'chatgpt',
+      },
+    });
+    await registryStore.upsertTeam({
+      id: 'registry-team',
+      config: {
+        agents: ['registry-worker'],
+      },
+    });
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0, backgroundDrainIntervalMs: 60_000 },
+      { config: activeConfig, agentRegistryStore: registryStore },
+    );
+
+    try {
+      const allowedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/responses`, {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer registry-secret',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'agent:registry-worker',
+          input: 'This should be accepted by registry team scope.',
+        }),
+      });
+      expect(allowedResponse.status).toBe(200);
+
+      const deniedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/team-runs`, {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer registry-secret',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          teamId: 'other-team',
+          objective: 'This should be rejected by scoped auth.',
+        }),
+      });
+      expect(deniedResponse.status).toBe(403);
+      expect(await deniedResponse.json()).toMatchObject({
+        error: {
+          type: 'permission_error',
+          message: 'API key is not authorized for team "other-team".',
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('configures AuraCall agents and teams through the local API', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-config-entities-'));
     cleanup.push(homeDir);

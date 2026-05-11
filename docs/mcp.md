@@ -143,6 +143,19 @@
   return `mutationTarget = "blocked"` with a `blockedReason` rather than
   writing a hidden registry row behind the config overlay.
 
+### `api_key_issue`
+- Behavior: privileged local operator tool that writes an additional
+  agent/team-scoped key into `~/.auracall/api.env` and returns
+  OpenAI-compatible `OPENAI_BASE_URL`, `OPENAI_API_KEY`, and `model` values for
+  the caller.
+- Scope validation uses the effective config plus registry catalog, so
+  registry-backed agents and teams can receive scoped keys.
+- Restart `auracall-api.service` after issuing a key. The running API process
+  reads the systemd environment file at process start.
+- This tool assumes local trusted MCP stdio. Do not expose it through a remote
+  MCP surface until AuraCall has explicit principal/role enforcement for
+  privileged agent-management operations.
+
 ### `api_ops_browser_status`
 - Inputs: `port` for the local `auracall api serve` listener; optional `host`,
   `timeoutMs`, `expectedLiveFollowSeverity`, `expectedCompletionPaused`, and

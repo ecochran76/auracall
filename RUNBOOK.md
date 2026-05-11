@@ -3246,3 +3246,20 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/mcp/teamRun.test.ts --maxWorkers 1`
   - `pnpm vitest run tests/cli/teamRunCommand.test.ts tests/runtime.configuredExecutor.test.ts tests/config/agentConfigService.test.ts --maxWorkers 1`
   - `pnpm tsc --noEmit`
+
+## Turn 118 | 2026-05-11
+
+- Goal: make API-key authorization and privileged local key issuance understand
+  registry-backed agents and teams.
+- Change:
+  - API execution-scope checks now use the effective config plus registry
+    catalog
+  - agent calls can infer service/runtime-profile scopes from registry-backed
+    agent metadata
+  - team-scoped API keys can call member agents, and `/v1/team-runs` now
+    enforces team scopes before creating work
+  - added MCP `api_key_issue` to append agent/team-scoped keys to
+    `~/.auracall/api.env` for local privileged operators
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/mcp.apiKeys.test.ts -t "API key|registry-backed agents through effective catalog scopes|api key tools" --maxWorkers 1`
+  - `pnpm tsc --noEmit`
