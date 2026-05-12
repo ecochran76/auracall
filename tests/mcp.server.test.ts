@@ -101,6 +101,9 @@ describe('mcp server service wiring', () => {
         upsertAgent: expect.any(Function),
       }),
       projectEnsureService,
+      agentSetupPackageService: expect.objectContaining({
+        createPackage: expect.any(Function),
+      }),
     });
   });
 });

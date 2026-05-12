@@ -49,6 +49,7 @@ Current endpoints:
 - `PUT /v1/config/teams/{team_id}`
 - `DELETE /v1/config/teams/{team_id}`
 - `POST /v1/projects/ensure`
+- `POST /v1/agent-setup-packages`
 - `POST /v1/responses`
 - `GET /v1/responses/{response_id}`
 - `POST /v1/response-batches`
@@ -70,10 +71,11 @@ Current limits:
     `file://` URIs are projected into the stored step artifact list so the
     browser executor can upload them; remote HTTP(S) URIs are preserved as
     metadata but are not downloaded automatically.
-  - project-bound workflows can bootstrap the agent through
-    `POST /v1/projects/ensure`, then submit one `/v1/responses` request per
-    unit of work with local files in `attachments`, or submit the set once
-    through `/v1/response-batches`.
+  - project-bound workflows should bootstrap downstream clients through
+    `POST /v1/agent-setup-packages` when they need a ready-to-source scoped
+    client env; use `POST /v1/projects/ensure` plus
+    `POST /v1/config/api-keys/issue` only when the operator needs separate
+    inspection/customization phases.
 - `POST /v1/team-runs` creates one bounded task-backed team execution through
   the existing `TaskRunSpec -> TeamRun -> TeamRuntimeBridge -> runtimeRun`
   chain
@@ -144,6 +146,19 @@ Current limits:
   - domain-specific setup agents can call this route as a deterministic setup
     step, then hand a scoped execution key and `agent:<agent_id>` model name to
     the downstream client agent
+- `POST /v1/agent-setup-packages` is the composed privileged setup surface:
+  - accepts the project ensure fields plus required `agentId` and
+    `clientEnvPath`, and optional key fields such as `keyId`, `apiBaseUrl`,
+    `envPath`, `services`, `runtimeProfiles`, and `overwrite`
+  - ensures/fetches the provider project, binds the registry-backed AuraCall
+    agent, issues an agent-scoped API key, and writes the scoped client env in
+    one operator call
+  - returns `object = "auracall_agent_setup_package"` with the nested project
+    ensure result, API-key issue result, `clientEnvPath`, model id, and
+    `restartRequired`
+  - this is the preferred setup path for privileged setup agents preparing work
+    for downstream scoped execution clients
+  - when API auth is enabled, this route requires an unscoped operator key
 - `POST /v1/response-batches` is the first nonblocking batch enqueue surface:
   - accepts `{ "requests": [ ... ] }`, where each child request is an ordinary
     `/v1/responses` body, plus optional `metadata`, caller-supplied `id`, and
@@ -167,8 +182,8 @@ Current limits:
     attachment-bearing jobs, batch polling, and child response readback without
     live provider/browser work
   - deterministic client handoff smoke:
-    `pnpm run smoke:scoped-client-handoff` verifies project ensure, scoped key
-    issuance with `clientEnvPath`, API service reload simulation,
+    `pnpm run smoke:scoped-client-handoff` verifies the composed setup package
+    route, scoped key issuance with `clientEnvPath`, API service reload simulation,
     `/v1/models` validation, one direct response, and one response batch using
     only generated client env values
 - API-key authorization can be configured in `~/.auracall/config.json` or

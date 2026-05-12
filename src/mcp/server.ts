@@ -21,6 +21,7 @@ import { registerRuntimeInspectTool } from './tools/runtimeInspect.js';
 import { registerRuntimeRunsRecentTool } from './tools/runtimeRunsRecent.js';
 import { registerConfigEntityTools } from './tools/configEntities.js';
 import { registerProjectEnsureTool } from './tools/projectEnsure.js';
+import { registerAgentSetupPackageTool } from './tools/agentSetupPackage.js';
 import { registerApiKeyTools } from './tools/apiKeys.js';
 import { registerAccountMirrorStatusTool } from './tools/accountMirrorStatus.js';
 import { registerAccountMirrorRefreshTool } from './tools/accountMirrorRefresh.js';
@@ -55,6 +56,10 @@ import {
 } from '../config/agentConfigService.js';
 import { createAgentRegistryStore } from '../config/agentRegistryStore.js';
 import {
+  createAgentSetupPackageService,
+  type AgentSetupPackageService,
+} from '../projects/agentSetupPackageService.js';
+import {
   createProjectEnsureService,
   type ProjectEnsureService,
 } from '../projects/projectEnsureService.js';
@@ -71,6 +76,7 @@ export interface McpServiceBundle {
   accountMirrorCompletionService: ReturnType<typeof createAccountMirrorCompletionService>;
   agentTeamConfigService: AgentTeamConfigService;
   projectEnsureService: ProjectEnsureService;
+  agentSetupPackageService: AgentSetupPackageService;
 }
 
 export interface CreateMcpServicesDeps {
@@ -123,6 +129,9 @@ export async function startMcpServer(): Promise<void> {
   });
   registerProjectEnsureTool(server, {
     service: services.projectEnsureService,
+  });
+  registerAgentSetupPackageTool(server, {
+    service: services.agentSetupPackageService,
   });
   registerApiKeyTools(server, {
     agentTeamConfigService: services.agentTeamConfigService,
@@ -256,6 +265,10 @@ export async function createMcpServicesFromConfig(
     config: resolvedUserConfig as Record<string, unknown>,
     configService: agentTeamConfigService,
   });
+  const agentSetupPackageService = createAgentSetupPackageService({
+    projectEnsureService,
+    agentTeamConfigService,
+  });
   return {
     resolvedUserConfig,
     responsesService,
@@ -268,6 +281,7 @@ export async function createMcpServicesFromConfig(
     accountMirrorCompletionService,
     agentTeamConfigService,
     projectEnsureService,
+    agentSetupPackageService,
   };
 }
 

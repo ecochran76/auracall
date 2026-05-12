@@ -27708,6 +27708,37 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror dashboard|api ops browser CLI helpers|browser operator dashboard" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
 
+## Turn 140 | 2026-05-12
+
+- Continued implementation plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: promote the setup choreography into one first-class privileged
+  endpoint/tool so downstream agents do not have to manually sequence project
+  ensure plus scoped key issuance.
+- Change:
+  - added `POST /v1/agent-setup-packages`
+  - added MCP `agent_setup_package_create`
+  - added a composed setup package service that ensures the provider project,
+    binds the registry agent, issues the scoped key, writes the client env, and
+    returns the model id plus restart hint
+  - updated `smoke:scoped-client-handoff` to prove the composed route before
+    using only generated client env values for model discovery, one direct
+    response, and one response batch
+  - updated API workflow, OpenAI endpoint, MCP, testing, active-plan, and
+    setup-skill docs
+- Validation:
+  - `pnpm vitest run tests/projects.agentSetupPackageService.test.ts tests/mcp.agentSetupPackage.test.ts tests/mcp.server.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "agent setup packages|API key|projects through|development posture" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run smoke:scoped-client-handoff`
+  - `pnpm vitest run tests/projects.agentSetupPackageService.test.ts tests/mcp.agentSetupPackage.test.ts tests/mcp.server.test.ts tests/http.responsesServer.test.ts -t "agent setup packages|API key|projects through|mcp agent_setup|mcp server service|agent setup package service" --maxWorkers 1`
+  - `pnpm exec biome lint src/projects/agentSetupPackageService.ts src/mcp/tools/agentSetupPackage.ts src/mcp/server.ts src/http/responsesServer.ts tests/projects.agentSetupPackageService.test.ts tests/mcp.agentSetupPackage.test.ts tests/mcp.server.test.ts tests/http.responsesServer.test.ts scripts/smoke-scoped-client-handoff-workflow.ts --max-diagnostics 80`
+    reported only existing non-null assertion warning debt in
+    `tests/http.responsesServer.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 65`
+  - `pnpm run preflight:lazy-live-follow`
+
 ## Turn 139 | 2026-05-12
 
 - Continued implementation plan:

@@ -214,6 +214,21 @@ release gate before live dogfood.
   MCP surface until AuraCall has explicit principal/role enforcement for
   privileged agent-management operations.
 
+### `agent_setup_package_create`
+- Behavior: privileged composed setup tool that ensures a provider project,
+  binds a registry-backed AuraCall agent, issues a scoped API key, and writes
+  a scoped client handoff file in one call.
+- Required inputs include `service`, `runtimeProfile`, `projectName`,
+  `agentId`, and `clientEnvPath`. Optional inputs mirror `project_ensure` and
+  `api_key_issue`, including `agentModelSelector`, agent instructions,
+  `keyId`, `apiBaseUrl`, `envPath`, `services`, `runtimeProfiles`, and
+  `overwrite`.
+- Use this as the default privileged handoff path for downstream execution
+  agents. Use `project_ensure` plus `api_key_issue` only when an operator needs
+  to review or customize the two phases separately.
+- Restart `auracall-api.service` after issuing the key so the running API
+  process reloads the service env file.
+
 ### `api_key_diagnostics`
 - Inputs: optional `envPath`, defaulting to `~/.auracall/api.env`.
 - Behavior: reads API-key metadata from the env file and returns

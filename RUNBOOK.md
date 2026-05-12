@@ -3607,3 +3607,29 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run plans:audit -- --keep 65`
   - `git diff --check`
   - `pnpm run preflight:lazy-live-follow`
+
+## Turn 139 | 2026-05-12
+
+- Goal: make the scoped client handoff a first-class setup package workflow.
+- Change:
+  - added `createAgentSetupPackageService`
+  - added HTTP `POST /v1/agent-setup-packages`
+  - added MCP `agent_setup_package_create`
+  - wired the MCP service bundle and API service discovery/status routes
+  - updated `smoke:scoped-client-handoff` to use the composed setup package
+    route before validating `/v1/models`, direct response execution, and
+    response-batch enqueue from only the generated client env
+  - updated active API plan, endpoint docs, MCP docs, workflow docs, testing
+    docs, and the privileged setup skill
+- Verification:
+  - `pnpm vitest run tests/projects.agentSetupPackageService.test.ts tests/mcp.agentSetupPackage.test.ts tests/mcp.server.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "agent setup packages|API key|projects through|development posture" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run smoke:scoped-client-handoff`
+  - `pnpm vitest run tests/projects.agentSetupPackageService.test.ts tests/mcp.agentSetupPackage.test.ts tests/mcp.server.test.ts tests/http.responsesServer.test.ts -t "agent setup packages|API key|projects through|mcp agent_setup|mcp server service|agent setup package service" --maxWorkers 1`
+  - `pnpm exec biome lint src/projects/agentSetupPackageService.ts src/mcp/tools/agentSetupPackage.ts src/mcp/server.ts src/http/responsesServer.ts tests/projects.agentSetupPackageService.test.ts tests/mcp.agentSetupPackage.test.ts tests/mcp.server.test.ts tests/http.responsesServer.test.ts scripts/smoke-scoped-client-handoff-workflow.ts --max-diagnostics 80`
+    exited cleanly; it reported unrelated existing non-null assertion warnings
+    in `tests/http.responsesServer.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 65`
+  - `pnpm run preflight:lazy-live-follow`

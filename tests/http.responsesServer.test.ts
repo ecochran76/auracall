@@ -16771,6 +16771,136 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('creates composed agent setup packages through an operator-only HTTP route', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-agent-setup-package-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const createPackage = vi.fn(async () => ({
+      object: 'auracall_agent_setup_package' as const,
+      agentId: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
+      model: 'agent:pro-extended-chatgpt-soylei-che4470-seminar-grading',
+      clientEnvPath: path.join(homeDir, 'clients', 'che447-grading.env'),
+      restartRequired: true,
+      project: {
+        object: 'auracall_project_ensure' as const,
+        status: 'found' as const,
+        service: 'chatgpt' as const,
+        runtimeProfile: 'wsl-chrome-3',
+        projectName: 'ChE 4470/5470 Seminar Grading',
+        project: {
+          id: 'proj_che447',
+          name: 'ChE 4470/5470 Seminar Grading',
+          provider: 'chatgpt' as const,
+        },
+        created: false,
+        agent: {
+          id: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
+          mutationTarget: 'registry' as const,
+          blockedReason: null,
+        },
+      },
+      apiKey: {
+        object: 'auracall_api_key_issue' as const,
+        keyId: 'che447-grading',
+        envPath: path.join(homeDir, 'api.env'),
+        apiBaseUrl: 'http://127.0.0.1:18095/v1',
+        apiKey: 'auracall_secret',
+        openaiBaseUrl: 'http://127.0.0.1:18095/v1',
+        openaiApiKey: 'auracall_secret',
+        model: 'agent:pro-extended-chatgpt-soylei-che4470-seminar-grading',
+        scopes: {
+          agents: ['pro-extended-chatgpt-soylei-che4470-seminar-grading'],
+          teams: [],
+          services: ['chatgpt'],
+          runtimeProfiles: ['wsl-chrome-3'],
+        },
+        restartRequired: true,
+      },
+    }));
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        config: {
+          api: {
+            auth: {
+              required: true,
+              keys: [
+                {
+                  id: 'operator',
+                  secret: 'operator-secret',
+                },
+                {
+                  id: 'scoped',
+                  secret: 'scoped-secret',
+                  agents: ['pro-extended-chatgpt-soylei-che4470-seminar-grading'],
+                },
+              ],
+            },
+          },
+        },
+        agentSetupPackageService: {
+          createPackage,
+        },
+      },
+    );
+
+    try {
+      const scopedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/agent-setup-packages`, {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer scoped-secret',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          service: 'chatgpt',
+          runtimeProfile: 'wsl-chrome-3',
+          projectName: 'ChE 4470/5470 Seminar Grading',
+          agentId: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
+          clientEnvPath: path.join(homeDir, 'clients', 'che447-grading.env'),
+        }),
+      });
+      expect(scopedResponse.status).toBe(403);
+      expect(createPackage).not.toHaveBeenCalled();
+
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/agent-setup-packages`, {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer operator-secret',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          service: 'chatgpt',
+          runtimeProfile: 'wsl-chrome-3',
+          projectName: 'ChE 4470/5470 Seminar Grading',
+          agentId: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
+          agentModelSelector: 'chatgpt:pro-extended',
+          keyId: 'che447-grading',
+          clientEnvPath: path.join(homeDir, 'clients', 'che447-grading.env'),
+        }),
+      });
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        object: 'auracall_agent_setup_package',
+        agentId: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
+        project: {
+          project: {
+            id: 'proj_che447',
+          },
+        },
+        apiKey: {
+          keyId: 'che447-grading',
+        },
+      });
+      expect(createPackage).toHaveBeenCalledWith(expect.objectContaining({
+        projectName: 'ChE 4470/5470 Seminar Grading',
+        agentId: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
+        agentModelSelector: 'chatgpt:pro-extended',
+      }));
+    } finally {
+      await server.close();
+    }
+  });
+
   it('reports development-only posture through the status endpoint', async () => {
     const server = await createResponsesHttpServer(
       {

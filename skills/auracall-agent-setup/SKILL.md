@@ -19,38 +19,48 @@ configuration.
 
 ## Project-Bound Agent Path
 
-Use `POST /v1/projects/ensure` or MCP `project_ensure`.
+Use `POST /v1/agent-setup-packages` or MCP
+`agent_setup_package_create` when a downstream client needs a ready-to-source
+scoped handoff.
 
 Required fields:
 
 - `service`
 - `runtimeProfile`
 - `projectName`
+- `agentId`
+- `clientEnvPath`
 
 Recommended agent binding fields:
 
-- `agentId`
 - `agentModelSelector`
 - `agentInstructions`
 - `agentPrePrompt`
 - `agentPostPrompt`
 - `agentMetadata`
+- `keyId`
+- `apiBaseUrl`
+- `envPath`
 
 After success:
 
 1. Confirm the returned project id and agent id.
 2. Confirm `mutationTarget` is `registry` for a new/updated bound agent.
 3. Discover `agent:<agent_id>` from `/v1/models` or MCP config listing.
-4. Issue a scoped key for the agent.
-5. Include `clientEnvPath` so AuraCall writes a sourceable execution handoff.
-6. Restart the installed API service when the key was written to
+4. Confirm the result includes a scoped API key issue result and
+   `clientEnvPath`.
+5. Restart the installed API service when the key was written to
    `~/.auracall/api.env`.
-7. Give the execution client only the client env path or these values:
+6. Give the execution client only the client env path or these values:
    - `OPENAI_BASE_URL`
    - `OPENAI_API_KEY`
    - `AURACALL_MODEL=agent:<agent_id>`
    - `AURACALL_STATUS_URL`
    - `AURACALL_BATCH_URL`
+
+Use `POST /v1/projects/ensure` or MCP `project_ensure` plus
+`POST /v1/config/api-keys/issue` or MCP `api_key_issue` only when you need to
+inspect/customize project binding and key issuance as separate operator steps.
 
 ## Naming
 

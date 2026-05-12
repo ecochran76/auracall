@@ -39,6 +39,16 @@ interface ProjectEnsurePayload {
   agent?: { id?: string; mutationTarget?: string };
 }
 
+interface AgentSetupPackagePayload {
+  object?: string;
+  agentId?: string;
+  model?: string;
+  project?: ProjectEnsurePayload;
+  apiKey?: ApiKeyIssuePayload;
+  clientEnvPath?: string;
+  restartRequired?: boolean;
+}
+
 interface ModelsPayload {
   data?: Array<{ id?: string }>;
 }
@@ -271,7 +281,7 @@ async function main(): Promise<void> {
   let server = await createServer({ port, config, executedRequests });
 
   try {
-    const ensure = await fetchJson<ProjectEnsurePayload>(`${baseUrl}/projects/ensure`, {
+    const setup = await fetchJson<AgentSetupPackagePayload>(`${baseUrl}/agent-setup-packages`, {
       method: 'POST',
       headers: {
         authorization: 'Bearer operator-secret',
@@ -282,23 +292,9 @@ async function main(): Promise<void> {
         runtimeProfile: 'wsl-chrome-3',
         projectName: PROJECT_NAME,
         agentId: AGENT_ID,
+        keyId: 'client-handoff-smoke',
         agentModelSelector: 'chatgpt:pro-extended',
         agentInstructions: 'Exercise the scoped client handoff smoke.',
-      }),
-    });
-    assertEqual(ensure.object, 'auracall_project_ensure', 'project ensure object');
-    assertEqual(ensure.agent?.id, AGENT_ID, 'agent id');
-    assertEqual(ensure.agent?.mutationTarget, 'registry', 'agent mutation target');
-
-    const issued = await fetchJson<ApiKeyIssuePayload>(`${baseUrl}/config/api-keys/issue`, {
-      method: 'POST',
-      headers: {
-        authorization: 'Bearer operator-secret',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        agentId: AGENT_ID,
-        keyId: 'client-handoff-smoke',
         services: ['chatgpt'],
         runtimeProfiles: ['wsl-chrome-3'],
         apiBaseUrl: baseUrl,
@@ -306,6 +302,13 @@ async function main(): Promise<void> {
         clientEnvPath,
       }),
     });
+    assertEqual(setup.object, 'auracall_agent_setup_package', 'setup package object');
+    assertEqual(setup.agentId, AGENT_ID, 'setup package agent id');
+    assertEqual(setup.project?.object, 'auracall_project_ensure', 'project ensure object');
+    assertEqual(setup.project?.agent?.id, AGENT_ID, 'agent id');
+    assertEqual(setup.project?.agent?.mutationTarget, 'registry', 'agent mutation target');
+    const issued = setup.apiKey;
+    if (!issued) throw new Error('setup package did not include apiKey.');
     assertEqual(issued.object, 'auracall_api_key_issue', 'issue object');
     assertEqual(issued.model, MODEL, 'issued model');
     assertEqual(issued.clientEnvPath, clientEnvPath, 'client env path');

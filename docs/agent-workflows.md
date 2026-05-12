@@ -105,6 +105,21 @@ This is the minimum OpenAI-compatible path.
 
 Use this when a workflow needs provider-side project context before execution.
 
+Primary path:
+
+1. Call `POST /v1/agent-setup-packages` or MCP
+   `agent_setup_package_create` with an operator key.
+2. Supply `service`, `runtimeProfile`, `projectName`, `agentId`,
+   `agentModelSelector`, and `clientEnvPath`.
+3. Optionally supply project fields, agent instructions, key id, service/runtime
+   scopes, `apiBaseUrl`, and `envPath`.
+4. Verify the returned project id, agent id, `clientEnvPath`, and scoped key
+   metadata.
+5. Restart the installed API service so the server reloads the service env.
+6. Hand only the scoped client env path to the execution agent.
+
+Lower-level path:
+
 1. Call `POST /v1/projects/ensure` or MCP `project_ensure` with an operator key.
 2. Supply `service`, `runtimeProfile`, `projectName`, and optional project
    fields such as instructions/files.
@@ -118,7 +133,10 @@ Use this when a workflow needs provider-side project context before execution.
 8. Hand only the scoped client env path to the execution agent.
 
 Setup is intentionally separate from execution. A scoped execution agent should
-not be able to create or rewrite provider projects.
+not be able to create or rewrite provider projects. Prefer the composed setup
+package route when a downstream app needs a ready-to-source `.env`; use the
+lower-level routes only when an operator needs to inspect or customize each
+phase.
 
 ### Batch Workflow
 
@@ -188,8 +206,24 @@ Use the narrowest key that can run the workflow.
 After key issuance, restart the installed API service so the running process
 reloads `~/.auracall/api.env`.
 
-When calling `POST /v1/config/api-keys/issue` or MCP `api_key_issue`, provide
-both paths when a downstream agent needs a ready-to-source handoff:
+When a setup agent can create the project-bound agent and key in one call, use
+`POST /v1/agent-setup-packages` or MCP `agent_setup_package_create`:
+
+```json
+{
+  "service": "chatgpt",
+  "runtimeProfile": "wsl-chrome-3",
+  "projectName": "ChE 4470/5470 Seminar Grading",
+  "agentId": "pro-extended-chatgpt-soylei-che4470-seminar-grading",
+  "agentModelSelector": "chatgpt:pro-extended",
+  "keyId": "che447-grading-client",
+  "envPath": "/home/ecochran76/.auracall/api.env",
+  "clientEnvPath": "/home/ecochran76/.auracall/clients/che447-grading.env"
+}
+```
+
+When using the lower-level key route, provide both paths so AuraCall can also
+write the downstream handoff:
 
 ```json
 {
