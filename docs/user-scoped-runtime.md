@@ -136,6 +136,10 @@ The issue response returns the new secret once, so store it immediately in the
 calling agent's user-scoped environment. The Agents / Teams dashboard exposes
 the same operator-only key issue flow.
 
+Use `pnpm run smoke:api-key-issue` to verify the issue route against a
+short-lived local API fixture and temporary env file without mutating
+`~/.auracall/api.env`.
+
 Use MCP `api_key_diagnostics` before or after restart to inspect
 `~/.auracall/api.env` without returning secrets. Use
 `GET /v1/config/agent-diagnostics` to inspect the running API process's loaded

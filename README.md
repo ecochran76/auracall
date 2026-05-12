@@ -269,6 +269,8 @@ Terminology note:
   `POST /v1/config/api-keys/issue`, to append an agent/team-scoped key to
   `~/.auracall/api.env`; the Agents / Teams dashboard exposes the same issue
   control. Restart the user API service afterward so systemd reloads the file.
+  Use `pnpm run smoke:api-key-issue` for a temp-env HTTP smoke that does not
+  touch the real user-scoped `api.env`.
   When enabled, `/v1/*` routes require `Authorization: Bearer <secret>` or
   `X-AuraCall-API-Key: <secret>`. `/status` remains unauthenticated so local
   operators can discover the service posture. Scoped keys are enforced on

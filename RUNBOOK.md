@@ -3380,3 +3380,16 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm exec biome lint src/http/responsesServer.ts --max-diagnostics 80`
   - attempted temp-env HTTP smoke with `pnpm tsx -e`; blocked before reaching
     AuraCall by a local `tsx -e` CJS/module-resolution issue
+
+## Turn 127 | 2026-05-12
+
+- Goal: add a durable temp-env smoke for operator API-key issuance.
+- Change:
+  - added `scripts/smoke-api-key-issue.ts`
+  - added `pnpm run smoke:api-key-issue`
+  - documented that the smoke uses a short-lived local API fixture and does not
+    mutate real `~/.auracall/api.env`
+- Verification:
+  - `pnpm run smoke:api-key-issue`
+  - `pnpm tsc --noEmit`
+  - `pnpm exec biome lint scripts/smoke-api-key-issue.ts --max-diagnostics 80`
