@@ -138,7 +138,8 @@ the same operator-only key issue flow.
 
 Use `pnpm run smoke:api-key-issue` to verify the issue route against a
 short-lived local API fixture and temporary env file without mutating
-`~/.auracall/api.env`.
+`~/.auracall/api.env`. Use `pnpm run smoke:api-key-openai-client` to verify an
+issued temp key through the standard OpenAI client interface.
 
 Use MCP `api_key_diagnostics` before or after restart to inspect
 `~/.auracall/api.env` without returning secrets. Use

@@ -3393,3 +3393,17 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run smoke:api-key-issue`
   - `pnpm tsc --noEmit`
   - `pnpm exec biome lint scripts/smoke-api-key-issue.ts --max-diagnostics 80`
+
+## Turn 128 | 2026-05-12
+
+- Goal: prove issued temp API keys work through an OpenAI-compatible client.
+- Change:
+  - added `scripts/smoke-api-key-openai-client.ts`
+  - added `pnpm run smoke:api-key-openai-client`
+  - the smoke issues a temp scoped key, reloads a fixture API with that env,
+    and calls `/v1/chat/completions` through the OpenAI SDK
+- Verification:
+  - `pnpm run smoke:api-key-openai-client`
+  - `pnpm run smoke:api-key-issue`
+  - `pnpm tsc --noEmit`
+  - `pnpm exec biome lint scripts/smoke-api-key-openai-client.ts --max-diagnostics 80`
