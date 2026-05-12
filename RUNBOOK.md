@@ -3458,3 +3458,23 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     exited cleanly; it reported unrelated existing non-null assertion warnings
     in `tests/runtime.responsesService.test.ts` and
     `tests/http.responsesServer.test.ts`
+
+## Turn 132 | 2026-05-12
+
+- Goal: add the first project-bound agent setup surface for the ChE grading
+  workflow.
+- Change:
+  - added a project ensure service that finds or creates provider projects by
+    normalized exact name
+  - added MCP `project_ensure`
+  - added operator-only HTTP `POST /v1/projects/ensure`
+  - optional `agentId` binding writes a registry-backed agent with the resolved
+    `projectId`/`projectName`
+  - documented project ensure in API/MCP docs
+- Verification:
+  - `pnpm vitest run tests/projects.projectEnsureService.test.ts tests/mcp.projectEnsure.test.ts tests/mcp.server.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "provider projects|development posture|status endpoint" --maxWorkers 1`
+  - `pnpm tsc --noEmit`
+  - `pnpm exec biome lint src/projects/projectEnsureService.ts src/mcp/tools/projectEnsure.ts src/mcp/server.ts src/http/responsesServer.ts tests/projects.projectEnsureService.test.ts tests/mcp.projectEnsure.test.ts tests/mcp.server.test.ts tests/http.responsesServer.test.ts --max-diagnostics 80`
+    exited cleanly; it reported unrelated existing non-null assertion warnings
+    in `tests/http.responsesServer.test.ts`

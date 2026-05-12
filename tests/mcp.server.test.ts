@@ -22,12 +22,16 @@ describe('mcp server service wiring', () => {
       createResponse: vi.fn(),
       readResponse: vi.fn(),
     };
+    const projectEnsureService = {
+      ensureProject: vi.fn(),
+    };
     const createBrowserMediaGenerationExecutor = vi.fn(() => executor);
     const createBrowserWorkbenchCapabilityDiscovery = vi.fn(() => discoverCapabilities);
     const createBrowserWorkbenchCapabilityDiagnostics = vi.fn(() => diagnoseCapabilities);
     const createWorkbenchCapabilityService = vi.fn(() => workbenchReporter);
     const createMediaGenerationService = vi.fn(() => mediaGenerationService);
     const createExecutionResponsesService = vi.fn(() => responsesService);
+    const createProjectEnsureService = vi.fn(() => projectEnsureService);
 
     const services = await createMcpServicesFromConfig(config, {
       createBrowserMediaGenerationExecutor,
@@ -36,6 +40,7 @@ describe('mcp server service wiring', () => {
       createWorkbenchCapabilityService,
       createMediaGenerationService,
       createExecutionResponsesService,
+      createProjectEnsureService,
     });
 
     expect(createBrowserWorkbenchCapabilityDiscovery).toHaveBeenCalledWith(config);
@@ -55,7 +60,14 @@ describe('mcp server service wiring', () => {
         executeStoredRunStep: expect.any(Function),
       }),
     );
+    expect(createProjectEnsureService).toHaveBeenCalledWith({
+      config,
+      configService: expect.objectContaining({
+        upsertAgent: expect.any(Function),
+      }),
+    });
     expect(services).toEqual({
+      resolvedUserConfig: config,
       responsesService,
       mediaGenerationService,
       workbenchCapabilityReporter: workbenchReporter,
@@ -75,6 +87,10 @@ describe('mcp server service wiring', () => {
         read: expect.any(Function),
         control: expect.any(Function),
       }),
+      agentTeamConfigService: expect.objectContaining({
+        upsertAgent: expect.any(Function),
+      }),
+      projectEnsureService,
     });
   });
 });

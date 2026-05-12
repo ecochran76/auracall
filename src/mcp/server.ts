@@ -19,6 +19,7 @@ import { registerApiOpsBrowserStatusTool } from './tools/apiOpsBrowserStatus.js'
 import { registerRuntimeInspectTool } from './tools/runtimeInspect.js';
 import { registerRuntimeRunsRecentTool } from './tools/runtimeRunsRecent.js';
 import { registerConfigEntityTools } from './tools/configEntities.js';
+import { registerProjectEnsureTool } from './tools/projectEnsure.js';
 import { registerApiKeyTools } from './tools/apiKeys.js';
 import { registerAccountMirrorStatusTool } from './tools/accountMirrorStatus.js';
 import { registerAccountMirrorRefreshTool } from './tools/accountMirrorRefresh.js';
@@ -48,6 +49,10 @@ import {
   type AgentTeamConfigService,
 } from '../config/agentConfigService.js';
 import { createAgentRegistryStore } from '../config/agentRegistryStore.js';
+import {
+  createProjectEnsureService,
+  type ProjectEnsureService,
+} from '../projects/projectEnsureService.js';
 
 export interface McpServiceBundle {
   resolvedUserConfig: ResolvedUserConfig;
@@ -59,6 +64,7 @@ export interface McpServiceBundle {
   accountMirrorCatalogService: ReturnType<typeof createAccountMirrorCatalogService>;
   accountMirrorCompletionService: ReturnType<typeof createAccountMirrorCompletionService>;
   agentTeamConfigService: AgentTeamConfigService;
+  projectEnsureService: ProjectEnsureService;
 }
 
 export interface CreateMcpServicesDeps {
@@ -68,6 +74,7 @@ export interface CreateMcpServicesDeps {
   createWorkbenchCapabilityService?: typeof createWorkbenchCapabilityService;
   createBrowserWorkbenchCapabilityDiscovery?: typeof createBrowserWorkbenchCapabilityDiscovery;
   createBrowserWorkbenchCapabilityDiagnostics?: typeof createBrowserWorkbenchCapabilityDiagnostics;
+  createProjectEnsureService?: typeof createProjectEnsureService;
 }
 
 export async function startMcpServer(): Promise<void> {
@@ -103,6 +110,9 @@ export async function startMcpServer(): Promise<void> {
   registerRuntimeInspectTool(server);
   registerConfigEntityTools(server, {
     service: services.agentTeamConfigService,
+  });
+  registerProjectEnsureTool(server, {
+    service: services.projectEnsureService,
   });
   registerApiKeyTools(server, {
     agentTeamConfigService: services.agentTeamConfigService,
@@ -165,6 +175,7 @@ export async function createMcpServicesFromConfig(
     deps.createBrowserWorkbenchCapabilityDiagnostics ?? createBrowserWorkbenchCapabilityDiagnostics;
   const createMediaService = deps.createMediaGenerationService ?? createMediaGenerationService;
   const createResponsesService = deps.createExecutionResponsesService ?? createExecutionResponsesService;
+  const createProjectEnsure = deps.createProjectEnsureService ?? createProjectEnsureService;
   const createMediaExecutor =
     deps.createBrowserMediaGenerationExecutor ?? createBrowserMediaGenerationExecutor;
   const agentRegistryStore = createAgentRegistryStore();
@@ -227,6 +238,10 @@ export async function createMcpServicesFromConfig(
     initialOperations: await accountMirrorCompletionStore.listOperations({ activeOnly: false, limit: null }),
     resumeActiveOperations: true,
   });
+  const projectEnsureService = createProjectEnsure({
+    config: resolvedUserConfig as Record<string, unknown>,
+    configService: agentTeamConfigService,
+  });
   return {
     resolvedUserConfig,
     responsesService,
@@ -237,6 +252,7 @@ export async function createMcpServicesFromConfig(
     accountMirrorCatalogService,
     accountMirrorCompletionService,
     agentTeamConfigService,
+    projectEnsureService,
   };
 }
 

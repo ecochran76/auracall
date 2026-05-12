@@ -40,6 +40,21 @@
   `run_status` for subsequent state checks. Status readback is file-backed and
   must not resubmit the prompt, reopen a provider tool, or navigate the browser.
 
+### `project_ensure`
+- Inputs: `projectName`, optional `service`, `runtimeProfile`,
+  `createIfMissing`, `instructions`, `modelLabel`, `files`, `memoryMode`,
+  `agentId`, `agentModelSelector`, `agentInstructions`, `agentPrePrompt`,
+  `agentPostPrompt`, and `agentMetadata`.
+- Behavior: finds an existing provider project by normalized exact name, or
+  creates it when missing. If `agentId` is supplied, it also writes a
+  registry-backed agent bound to the resolved provider `projectId` and
+  `projectName`.
+- Use this as the setup step for project-scoped workflows such as course
+  grading. After it returns, submit ordinary `response_create` or
+  `/v1/responses` jobs against the returned/bound agent id.
+- This is a privileged setup tool. Execution-scoped agents should normally call
+  the already-bound agent, not create provider projects.
+
 ### `run_status`
 - Inputs: `id` for a response/runtime run or media generation; optional
   `diagnostics: "browser-state"`.

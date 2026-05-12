@@ -800,6 +800,73 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('ensures provider projects through an operator-only HTTP route', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-project-ensure-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const ensureProject = vi.fn(async () => ({
+      object: 'auracall_project_ensure' as const,
+      status: 'created' as const,
+      service: 'chatgpt' as const,
+      runtimeProfile: 'wsl-chrome-3',
+      projectName: 'ChE 4470/5470 Seminar Grading',
+      project: {
+        id: 'proj_created',
+        name: 'ChE 4470/5470 Seminar Grading',
+        provider: 'chatgpt' as const,
+      },
+      created: true,
+      agent: {
+        id: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
+        mutationTarget: 'registry' as const,
+        blockedReason: null,
+      },
+    }));
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        projectEnsureService: {
+          ensureProject,
+        },
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/projects/ensure`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service: 'chatgpt',
+          runtimeProfile: 'wsl-chrome-3',
+          projectName: 'ChE 4470/5470 Seminar Grading',
+          agentId: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
+          agentModelSelector: 'chatgpt:pro-extended',
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        object: 'auracall_project_ensure',
+        status: 'created',
+        project: {
+          id: 'proj_created',
+        },
+        agent: {
+          id: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
+        },
+      });
+      expect(ensureProject).toHaveBeenCalledWith({
+        service: 'chatgpt',
+        runtimeProfile: 'wsl-chrome-3',
+        projectName: 'ChE 4470/5470 Seminar Grading',
+        agentId: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
+        agentModelSelector: 'chatgpt:pro-extended',
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('records last runner activity for direct execution on /status', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runner-activity-'));
     cleanup.push(homeDir);

@@ -48,6 +48,7 @@ Current endpoints:
 - `GET /v1/config/teams`
 - `PUT /v1/config/teams/{team_id}`
 - `DELETE /v1/config/teams/{team_id}`
+- `POST /v1/projects/ensure`
 - `POST /v1/responses`
 - `GET /v1/responses/{response_id}`
 
@@ -125,6 +126,17 @@ Current limits:
     first-class role/principal model.
   - protect this local control-plane surface with API-key auth before exposing
     it to any non-loopback client
+- `POST /v1/projects/ensure` is the setup surface for project-bound agents:
+  - accepts `service`, `runtimeProfile`, `projectName`, optional create fields
+    such as `instructions`, `modelLabel`, `files`, and `memoryMode`, plus
+    optional agent binding fields such as `agentId`, `agentModelSelector`,
+    `agentInstructions`, `agentPrePrompt`, and `agentPostPrompt`
+  - finds an existing provider project by normalized exact name or creates it
+    when `createIfMissing` is omitted or `true`
+  - if `agentId` is supplied, writes a registry-backed agent bound to the
+    resolved `projectId` and `projectName`
+  - this is an operator control-plane route; scoped execution keys should use
+    the resulting agent id, not create provider projects themselves
 - API-key authorization can be configured in `~/.auracall/config.json` or
   through the installed service dotenv file at `~/.auracall/api.env`. The
   service recognizes `AURACALL_API_KEY` as a bearer key and optional
