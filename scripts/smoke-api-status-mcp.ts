@@ -10,7 +10,7 @@ type SmokeMode = 'disabled' | 'enabled' | 'both';
 interface SmokeCase {
   name: 'disabled' | 'enabled';
   port: number;
-  expectedPosture: 'disabled' | 'scheduled';
+  expectedPostures: Array<'disabled' | 'scheduled' | 'waiting'>;
   args: string[];
 }
 
@@ -22,6 +22,19 @@ interface Options {
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function stopProcess(proc: ChildProcess): Promise<void> {
+  if (proc.exitCode !== null || proc.signalCode !== null) return;
+  proc.kill('SIGTERM');
+  const exited = await Promise.race([
+    new Promise<boolean>((resolve) => proc.once('exit', () => resolve(true))),
+    sleep(5_000).then(() => false),
+  ]);
+  if (!exited && proc.exitCode === null && proc.signalCode === null) {
+    proc.kill('SIGKILL');
+    await new Promise((resolve) => proc.once('exit', resolve));
+  }
+}
 
 function expandHome(input: string): string {
   if (input === '~') return os.homedir();
@@ -96,7 +109,7 @@ function createCases(options: Options): SmokeCase[] {
   const disabled: SmokeCase = {
     name: 'disabled',
     port: options.port,
-    expectedPosture: 'disabled',
+    expectedPostures: ['disabled'],
     args: [
       'api',
       'serve',
@@ -111,7 +124,7 @@ function createCases(options: Options): SmokeCase[] {
   const enabled: SmokeCase = {
     name: 'enabled',
     port: enabledPort,
-    expectedPosture: 'scheduled',
+    expectedPostures: ['scheduled', 'waiting'],
     args: [
       'api',
       'serve',
@@ -143,7 +156,7 @@ async function waitForStatus(port: number): Promise<void> {
 async function callApiStatusThroughMcp(input: {
   mcpBin: string;
   port: number;
-  expectedPosture: SmokeCase['expectedPosture'];
+  expectedPostures: SmokeCase['expectedPostures'];
 }) {
   const client = new Client({ name: 'auracall-api-status-smoke', version: '0.0.0' });
   const transport = new StdioClientTransport({
@@ -167,7 +180,9 @@ async function callApiStatusThroughMcp(input: {
       name: 'api_status',
       arguments: {
         port: input.port,
-        expectedAccountMirrorPosture: input.expectedPosture,
+        ...(input.expectedPostures.length === 1
+          ? { expectedAccountMirrorPosture: input.expectedPostures[0] }
+          : {}),
       },
     }, undefined, { timeout: 10_000 });
     const apiLogTail = await client.callTool({
@@ -186,6 +201,7 @@ async function callApiStatusThroughMcp(input: {
 
 async function runCase(options: Options, smokeCase: SmokeCase): Promise<void> {
   let apiProcess: ChildProcess | null = null;
+  let stoppingApiProcess = false;
   try {
     const proc = spawn(options.auracallBin, smokeCase.args, {
       env: process.env,
@@ -194,6 +210,7 @@ async function runCase(options: Options, smokeCase: SmokeCase): Promise<void> {
     apiProcess = proc;
     proc.stderr?.resume();
     proc.on('exit', (code, signal) => {
+      if (stoppingApiProcess) return;
       if (code !== null && code !== 0) {
         console.error(`api serve exited early for ${smokeCase.name}: code=${code}`);
       }
@@ -206,8 +223,11 @@ async function runCase(options: Options, smokeCase: SmokeCase): Promise<void> {
     const result = await callApiStatusThroughMcp({
       mcpBin: options.mcpBin,
       port: smokeCase.port,
-      expectedPosture: smokeCase.expectedPosture,
+      expectedPostures: smokeCase.expectedPostures,
     });
+    if (result.apiStatus.isError) {
+      throw new Error(`MCP api_status returned an error for ${smokeCase.name}: ${readMcpTextContent(result.apiStatus.content)}`);
+    }
     const structuredContent = result.apiStatus.structuredContent as {
       api?: {
         process?: { pid?: unknown };
@@ -227,8 +247,10 @@ async function runCase(options: Options, smokeCase: SmokeCase): Promise<void> {
     const statusText = readMcpTextContent(result.apiStatus.content);
     const posture = scheduler?.operatorStatus?.posture;
     const state = scheduler?.state;
-    if (posture !== smokeCase.expectedPosture) {
-      throw new Error(`Expected ${smokeCase.expectedPosture} posture for ${smokeCase.name}, got ${String(posture)}.`);
+    if (!smokeCase.expectedPostures.includes(posture as SmokeCase['expectedPostures'][number])) {
+      throw new Error(
+        `Expected ${smokeCase.expectedPostures.join('/')} posture for ${smokeCase.name}, got ${String(posture)}.`,
+      );
     }
     const pid = structuredContent?.api?.process?.pid;
     const logPath = structuredContent?.api?.managedService?.logPath;
@@ -266,9 +288,9 @@ async function runCase(options: Options, smokeCase: SmokeCase): Promise<void> {
     }
     console.log(`${smokeCase.name}: posture=${String(posture)} state=${String(state)} port=${smokeCase.port} pid=${pid} log=${logPath} schedulerDiagnostics=${diagnosticsHints.length} logTail=ok`);
   } finally {
-    if (apiProcess && !apiProcess.killed) {
-      apiProcess.kill('SIGTERM');
-      await new Promise((resolve) => apiProcess?.once('exit', resolve));
+    if (apiProcess) {
+      stoppingApiProcess = true;
+      await stopProcess(apiProcess);
     }
   }
 }

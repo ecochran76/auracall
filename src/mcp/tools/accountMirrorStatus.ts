@@ -110,6 +110,7 @@ const accountMirrorStatusEntryShape = z.object({
     maxPageReadsPerCycle: z.number(),
     maxConversationRowsPerCycle: z.number(),
     maxArtifactRowsPerCycle: z.number(),
+    maxBrowserInteractionsPerMinute: z.number(),
   }),
 });
 

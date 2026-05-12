@@ -196,6 +196,7 @@ const apiStatusOutputShape = {
       active: z.number().nullable(),
       queued: z.number().nullable(),
       running: z.number().nullable(),
+      idleWaiting: z.number().nullable(),
       paused: z.number().nullable(),
       completed: z.number().nullable(),
       blocked: z.number().nullable(),

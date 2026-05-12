@@ -304,6 +304,7 @@ describe('mcp api_status tool', () => {
             total: 3,
             active: 2,
             running: 2,
+            idleWaiting: null,
             cancelled: 1,
           },
           active: [

@@ -3419,3 +3419,22 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run smoke:api-key-issue && pnpm run smoke:api-key-openai-client`
   - `pnpm tsc --noEmit`
   - `pnpm exec biome lint scripts/preflight-lazy-live-follow.ts --max-diagnostics 80`
+
+## Turn 130 | 2026-05-12
+
+- Goal: restart and harden the lazy-live-follow preflight smoke sequence after
+  crash recovery.
+- Change:
+  - added missing MCP output-schema fields for `api_status.completions.metrics`
+    and `account_mirror_status.entries[].limits`
+  - allowed the installed MCP status smoke to accept the documented healthy
+    `waiting` posture when foreground/live-follow work is present
+  - made the installed MCP status smoke clean up spawned API servers with a
+    bounded termination fallback
+- Verification:
+  - `pnpm run preflight:lazy-live-follow`
+  - `pnpm run smoke:mcp-api-status`
+  - `pnpm run smoke:mcp-provider-guard`
+  - `pnpm vitest run tests/mcp.apiStatus.test.ts tests/mcp.accountMirrorStatus.test.ts tests/mcp.accountMirrorProviderGuard.test.ts --maxWorkers 1`
+  - `pnpm tsc --noEmit`
+  - `pnpm exec biome lint scripts/smoke-api-status-mcp.ts src/mcp/tools/apiStatus.ts src/mcp/tools/accountMirrorStatus.ts tests/mcp.apiStatus.test.ts --max-diagnostics 80`
