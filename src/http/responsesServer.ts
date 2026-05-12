@@ -5931,6 +5931,11 @@ function createOperatorBrowserDashboardHtml(input: {
         <h2>Agents / Teams</h2>
         <div id="agentsTeamsNotice" class="notice" role="status" aria-live="polite">Enter an id to inspect persisted team/runtime state.</div>
         <div class="row" style="margin-bottom: 10px;">
+          <button id="loadAgentsDiagnostics" type="button">Refresh Agent Diagnostics</button>
+          <span id="agentsDiagnosticsHeadline" class="muted">No agent diagnostics loaded.</span>
+        </div>
+        <div id="agentsDiagnosticsSummary" class="muted" style="margin-bottom: 10px;">No agent diagnostics loaded.</div>
+        <div class="row" style="margin-bottom: 10px;">
           <label>Recent source
             <select id="agentsRecentRunSourceKind">
               <option value="">all</option>
@@ -6357,6 +6362,111 @@ function createOperatorBrowserDashboardHtml(input: {
       const node = $('agentsTeamsNotice');
       node.className = 'notice notice-' + (tone || 'warn');
       node.textContent = message;
+    }
+
+    async function loadAgentsDiagnostics() {
+      $('agentsDiagnosticsHeadline').textContent = 'Loading agent diagnostics...';
+      $('agentsDiagnosticsSummary').innerHTML = '<span class="muted">Loading agent diagnostics...</span>';
+      try {
+        const payload = await fetchJson('/v1/config/agent-diagnostics');
+        renderAgentsDiagnostics(payload);
+        setAgentsTeamsNotice('Agent diagnostics loaded.', payload.ok ? 'ok' : 'warn');
+      } catch (error) {
+        const message = String(error.message || error);
+        $('agentsDiagnosticsHeadline').textContent = 'Agent diagnostics unavailable.';
+        $('agentsDiagnosticsSummary').innerHTML = '<div class="notice notice-bad">Agent diagnostics failed: ' + escapeHtml(message) + '</div>';
+        setAgentsTeamsNotice('Agent diagnostics failed: ' + message, 'bad');
+      }
+    }
+
+    function renderAgentsDiagnostics(payload) {
+      const metrics = payload.metrics || {};
+      const apiKeys = Array.isArray(payload.apiKeys) ? payload.apiKeys : [];
+      const conflicts = Array.isArray(payload.conflicts) ? payload.conflicts : [];
+      const disabledAgents = Array.isArray(payload.disabledRegistryAgents) ? payload.disabledRegistryAgents : [];
+      const disabledTeams = Array.isArray(payload.disabledRegistryTeams) ? payload.disabledRegistryTeams : [];
+      const issues = Array.isArray(payload.issues) ? payload.issues : [];
+      const warningCount = readNumberField(metrics, ['warnings']);
+      $('agentsDiagnosticsHeadline').innerHTML = '<span class="' + (warningCount ? 'warn' : 'ok') + '">'
+        + escapeHtml(payload.ok ? 'healthy' : 'attention needed')
+        + '</span> '
+        + escapeHtml(String(metrics.effectiveAgents ?? 0)) + ' agents / '
+        + escapeHtml(String(metrics.effectiveTeams ?? 0)) + ' teams / '
+        + escapeHtml(String(metrics.apiKeys ?? 0)) + ' API keys / '
+        + escapeHtml(String(warningCount)) + ' warnings';
+      $('agentsDiagnosticsSummary').innerHTML = ''
+        + '<div class="badges" style="margin-bottom: 8px;">'
+        + renderBadge('agents', metrics.effectiveAgents || 0, 'ok')
+        + renderBadge('teams', metrics.effectiveTeams || 0, 'ok')
+        + renderBadge('api keys', metrics.apiKeys || 0, apiKeys.length ? 'ok' : 'muted')
+        + renderBadge('warnings', warningCount, warningCount ? 'warn' : 'ok')
+        + renderBadge('conflicts', metrics.conflicts || 0, metrics.conflicts ? 'warn' : 'ok')
+        + renderBadge('disabled agents', metrics.disabledRegistryAgents || 0, metrics.disabledRegistryAgents ? 'warn' : 'ok')
+        + renderBadge('disabled teams', metrics.disabledRegistryTeams || 0, metrics.disabledRegistryTeams ? 'warn' : 'ok')
+        + '</div>'
+        + renderAgentsDiagnosticsApiKeys(apiKeys)
+        + renderAgentsDiagnosticsList('Config / Registry Conflicts', conflicts, renderAgentsDiagnosticsConflict)
+        + renderAgentsDiagnosticsSimpleList('Disabled Registry Agents', disabledAgents)
+        + renderAgentsDiagnosticsSimpleList('Disabled Registry Teams', disabledTeams)
+        + renderAgentsDiagnosticsList('Issues', issues, renderAgentsDiagnosticsIssue);
+    }
+
+    function renderAgentsDiagnosticsApiKeys(apiKeys) {
+      if (!apiKeys.length) {
+        return '<h3>API Key Reachability</h3><div class="muted">No API keys loaded.</div>';
+      }
+      return '<h3>API Key Reachability</h3>'
+        + '<div class="table-wrap"><table id="agentsDiagnosticsApiKeysTable"><thead><tr>'
+        + '<th>Key ID</th><th>Scope</th><th>Secret</th><th>Effective Agents</th><th>Missing Targets</th>'
+        + '</tr></thead><tbody>'
+        + apiKeys.map((key) => '<tr>'
+          + '<td>' + escapeHtml(key.id || 'unknown') + '</td>'
+          + '<td>' + escapeHtml(key.scoped ? 'scoped' : 'unscoped') + renderAgentsDiagnosticsScopeDetail(key) + '</td>'
+          + '<td>' + escapeHtml(key.hasSecret ? 'present' : 'missing') + '</td>'
+          + '<td>' + escapeHtml(formatDashboardList(key.effectiveAgents || [])) + '</td>'
+          + '<td>' + escapeHtml(formatDashboardList([]
+            .concat((key.missingAgents || []).map((id) => 'agent:' + id))
+            .concat((key.missingTeams || []).map((id) => 'team:' + id))
+            .concat((key.missingRuntimeProfiles || []).map((id) => 'runtime:' + id)))) + '</td>'
+          + '</tr>').join('')
+        + '</tbody></table></div>';
+    }
+
+    function renderAgentsDiagnosticsScopeDetail(key) {
+      const parts = [];
+      if (Array.isArray(key.agents) && key.agents.length) parts.push('agents=' + key.agents.join(', '));
+      if (Array.isArray(key.teams) && key.teams.length) parts.push('teams=' + key.teams.join(', '));
+      if (Array.isArray(key.services) && key.services.length) parts.push('services=' + key.services.join(', '));
+      if (Array.isArray(key.runtimeProfiles) && key.runtimeProfiles.length) parts.push('runtime=' + key.runtimeProfiles.join(', '));
+      return parts.length ? '<div class="muted">' + escapeHtml(parts.join(' / ')) + '</div>' : '';
+    }
+
+    function renderAgentsDiagnosticsList(title, rows, renderRow) {
+      if (!rows.length) return '<h3>' + escapeHtml(title) + '</h3><div class="muted">None.</div>';
+      return '<h3>' + escapeHtml(title) + '</h3><ul>'
+        + rows.map((row) => '<li>' + renderRow(row) + '</li>').join('')
+        + '</ul>';
+    }
+
+    function renderAgentsDiagnosticsSimpleList(title, rows) {
+      return renderAgentsDiagnosticsList(title, rows, (row) => escapeHtml(row));
+    }
+
+    function renderAgentsDiagnosticsConflict(conflict) {
+      return escapeHtml((conflict.kind || 'record') + ' ' + (conflict.id || 'unknown') + ': ' + (conflict.resolution || 'unknown'));
+    }
+
+    function renderAgentsDiagnosticsIssue(issue) {
+      return '<span class="' + (issue.severity === 'warning' ? 'warn' : 'muted') + '">'
+        + escapeHtml(issue.severity || 'info')
+        + '</span> '
+        + escapeHtml(issue.code || 'issue')
+        + ': '
+        + escapeHtml(issue.message || '');
+    }
+
+    function formatDashboardList(values) {
+      return Array.isArray(values) && values.length ? values.join(', ') : 'none';
     }
 
     function renderAgentsTeamsInspection(kind, payload) {
@@ -10322,6 +10432,7 @@ function createOperatorBrowserDashboardHtml(input: {
     $('savedMirrorPreviewSessionTable').addEventListener('click', handleSavedMirrorPreviewSessionTableClick);
     $('inspectTeamRun').addEventListener('click', inspectAgentsTeamRun);
     $('inspectRuntimeRun').addEventListener('click', inspectAgentsRuntimeRun);
+    $('loadAgentsDiagnostics').addEventListener('click', loadAgentsDiagnostics);
     $('loadAgentsRecentRuns').addEventListener('click', loadAgentsRecentRuns);
     $('copyVisibleAgentsRecentMirrorLinks').addEventListener('click', copyVisibleAgentsRecentMirrorLinks);
     $('agentsRecentMirrorCacheFilter').addEventListener('change', applyAgentsRecentMirrorCacheControls);
@@ -10337,6 +10448,7 @@ function createOperatorBrowserDashboardHtml(input: {
     $('probeRun').addEventListener('click', probeRun);
     initializeMirrorCatalogFiltersFromUrl();
     void initializeMirrorPreviewSession();
+    if (isAgentsTeamsRoute()) void loadAgentsDiagnostics();
     refreshStatus();
   </script>
 </body>

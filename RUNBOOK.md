@@ -3294,3 +3294,18 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification:
   - `pnpm vitest run tests/cli/agentDiagnosticsCommand.test.ts tests/mcp.apiKeys.test.ts tests/config/agentConfigService.test.ts --maxWorkers 1`
   - `pnpm tsc --noEmit`
+
+## Turn 121 | 2026-05-11
+
+- Goal: surface registry/API-key diagnostics on the Agents / Teams dashboard.
+- Change:
+  - added a read-only Agent Diagnostics panel to `/agents`
+  - the panel fetches `/v1/config/agent-diagnostics` and renders effective
+    agent/team/key counts, warnings, conflicts, disabled registry records,
+    scoped key reachability, and issue rows without secret values
+  - the panel auto-loads when the Agents / Teams route is active and can be
+    refreshed manually
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard|agent registry and loaded API-key diagnostics" --maxWorkers 1`
+  - `pnpm tsc --noEmit`
+  - `pnpm exec biome lint src/http/responsesServer.ts --max-diagnostics 40`

@@ -57,6 +57,9 @@ Implemented:
 - `auracall config agent-diagnostics` exposes the same local secret-free
   registry/env-file health report without requiring the API service to be
   running.
+- The Agents / Teams dashboard renders a secret-free Agent Diagnostics panel
+  from `/v1/config/agent-diagnostics` so operators can see registry/key health
+  before inspecting individual runs.
 - `projectConfigModel(...)` projects config-defined agents and teams for
   `/v1/models`, `/v1/config/agents`, `/v1/config/teams`, CLI config inspection,
   and runtime selection.
@@ -65,7 +68,6 @@ Implemented:
 
 Remaining:
 
-- expose registry diagnostics through CLI and dashboard surfaces
 - provide export/import so selected agents can still become reviewable files
 
 ## Architecture Decision

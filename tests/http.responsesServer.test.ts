@@ -16420,6 +16420,17 @@ describe('http responses adapter', () => {
       expect(html).toContain('isAgentsTeamsRoute');
       expect(html).toContain('Agents / Teams');
       expect(html).toContain('agentsTeamsPanel');
+      expect(html).toContain('agentsDiagnosticsHeadline');
+      expect(html).toContain('agentsDiagnosticsSummary');
+      expect(html).toContain('loadAgentsDiagnostics');
+      expect(html).toContain('renderAgentsDiagnostics');
+      expect(html).toContain('renderAgentsDiagnosticsApiKeys');
+      expect(html).toContain('renderAgentsDiagnosticsScopeDetail');
+      expect(html).toContain('renderAgentsDiagnosticsIssue');
+      expect(html).toContain('/v1/config/agent-diagnostics');
+      expect(html).toContain('API Key Reachability');
+      expect(html).toContain('Refresh Agent Diagnostics');
+      expect(html).toContain('Agent diagnostics loaded.');
       expect(html).toContain('inspectAgentsTeamRun');
       expect(html).toContain('inspectAgentsRuntimeRun');
       expect(html).toContain('agentsRecentRuns');
