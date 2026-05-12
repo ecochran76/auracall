@@ -51,6 +51,8 @@ Current endpoints:
 - `POST /v1/projects/ensure`
 - `POST /v1/responses`
 - `GET /v1/responses/{response_id}`
+- `POST /v1/response-batches`
+- `GET /v1/response-batches/{batch_id}`
 
 Current limits:
 
@@ -65,11 +67,10 @@ Current limits:
     `file://` URIs are projected into the stored step artifact list so the
     browser executor can upload them; remote HTTP(S) URIs are preserved as
     metadata but are not downloaded automatically.
-  - project-bound grading workflows should currently bootstrap the agent through
-    `PUT /v1/config/agents/{agent_id}` or MCP `config_agent_upsert`, then submit
-    one `/v1/responses` request per student with the grading packet files in
-    `attachments`. First-class project ensure/create and batch enqueue surfaces
-    remain pending.
+  - project-bound grading workflows can bootstrap the agent through
+    `POST /v1/projects/ensure`, then submit one `/v1/responses` request per
+    student with the grading packet files in `attachments`, or submit the set
+    once through `/v1/response-batches`.
 - `POST /v1/team-runs` creates one bounded task-backed team execution through
   the existing `TaskRunSpec -> TeamRun -> TeamRuntimeBridge -> runtimeRun`
   chain
@@ -137,6 +138,21 @@ Current limits:
     resolved `projectId` and `projectName`
   - this is an operator control-plane route; scoped execution keys should use
     the resulting agent id, not create provider projects themselves
+- `POST /v1/response-batches` is the first nonblocking batch enqueue surface:
+  - accepts `{ "requests": [ ... ] }`, where each child request is an ordinary
+    `/v1/responses` body, plus optional `metadata`, caller-supplied `id`, and
+    persisted limit hints such as `maxConcurrentRuns` and
+    `maxBrowserInteractionsPerMinute`
+  - returns `202` with `object = "response_batch_status"`, aggregate counts,
+    and child `responseId` values
+  - when background drain is enabled, the route schedules the existing
+    server-owned drain and returns without waiting for provider execution
+  - `GET /v1/response-batches/{batch_id}` reads aggregate status without
+    resubmitting prompts; child responses can also be inspected through
+    `/v1/runs/{response_id}/status`
+  - current boundary: per-batch limit hints are persisted and reported, while
+    hard concurrency/rate enforcement still comes from the existing global
+    drain loop, browser dispatcher, and provider politeness controls
 - API-key authorization can be configured in `~/.auracall/config.json` or
   through the installed service dotenv file at `~/.auracall/api.env`. The
   service recognizes `AURACALL_API_KEY` as a bearer key and optional

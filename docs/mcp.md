@@ -40,6 +40,24 @@
   `run_status` for subsequent state checks. Status readback is file-backed and
   must not resubmit the prompt, reopen a provider tool, or navigate the browser.
 
+### `response_batch_create` / `response_batch_status`
+- Inputs: `response_batch_create` accepts `requests` as an array of ordinary
+  response-create request bodies, plus optional `metadata`, caller-supplied
+  `id`, and limit hints such as `maxConcurrentRuns` and
+  `maxBrowserInteractionsPerMinute`. `response_batch_status` accepts the batch
+  `id`.
+- Behavior: creates one durable response run per request and returns
+  `object = "response_batch_status"` with aggregate counts and child
+  `responseId` values. Each child remains a normal response run, so operators
+  can inspect it with `run_status`.
+- Polling contract: create the batch once, keep the returned batch id, and poll
+  `response_batch_status`. Polling is read-only and must not resubmit student
+  prompts or reopen provider workbenches.
+- Current boundary: batch limits are persisted and reported for operator/client
+  coordination. Dedicated per-batch concurrency enforcement is still delegated
+  to the existing server drain loop, browser dispatcher, and global provider
+  rate limits until the next scheduler slice.
+
 ### `project_ensure`
 - Inputs: `projectName`, optional `service`, `runtimeProfile`,
   `createIfMissing`, `instructions`, `modelLabel`, `files`, `memoryMode`,

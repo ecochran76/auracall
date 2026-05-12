@@ -867,6 +867,124 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('creates and reads response batches over the HTTP API', async () => {
+    const createBatch = vi.fn(async () => ({
+      id: 'batch_http_1',
+      object: 'response_batch_status' as const,
+      status: 'running' as const,
+      createdAt: '2026-05-12T14:00:00.000Z',
+      updatedAt: '2026-05-12T14:00:00.000Z',
+      metadata: { course: 'ChE 4470' },
+      limits: { maxConcurrentRuns: 2, maxBrowserInteractionsPerMinute: 8 },
+      counts: {
+        total: 1,
+        in_progress: 1,
+        completed: 0,
+        failed: 0,
+        cancelled: 0,
+        missing: 0,
+      },
+      jobs: [
+        {
+          index: 0,
+          responseId: 'resp_http_1',
+          model: 'agent:pro-extended-chatgpt-soylei',
+          agent: 'pro-extended-chatgpt-soylei',
+          service: 'chatgpt',
+          runtimeProfile: 'wsl-chrome-3',
+          createdAt: '2026-05-12T14:00:00.000Z',
+          status: 'in_progress' as const,
+          completedAt: null,
+          failure: null,
+        },
+      ],
+    }));
+    const readBatchStatus = vi.fn(async () => ({
+      id: 'batch_http_1',
+      object: 'response_batch_status' as const,
+      status: 'completed' as const,
+      createdAt: '2026-05-12T14:00:00.000Z',
+      updatedAt: '2026-05-12T14:10:00.000Z',
+      metadata: { course: 'ChE 4470' },
+      limits: { maxConcurrentRuns: 2, maxBrowserInteractionsPerMinute: 8 },
+      counts: {
+        total: 1,
+        in_progress: 0,
+        completed: 1,
+        failed: 0,
+        cancelled: 0,
+        missing: 0,
+      },
+      jobs: [
+        {
+          index: 0,
+          responseId: 'resp_http_1',
+          model: 'agent:pro-extended-chatgpt-soylei',
+          agent: 'pro-extended-chatgpt-soylei',
+          service: 'chatgpt',
+          runtimeProfile: 'wsl-chrome-3',
+          createdAt: '2026-05-12T14:00:00.000Z',
+          status: 'completed' as const,
+          completedAt: '2026-05-12T14:10:00.000Z',
+          failure: null,
+        },
+      ],
+    }));
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0, backgroundDrainIntervalMs: 25 },
+      {
+        responseBatchService: {
+          createBatch,
+          readBatchStatus,
+        },
+      },
+    );
+
+    try {
+      const create = await fetch(`http://127.0.0.1:${server.port}/v1/response-batches`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          metadata: { course: 'ChE 4470' },
+          limits: { maxConcurrentRuns: 2, maxBrowserInteractionsPerMinute: 8 },
+          requests: [
+            {
+              model: 'agent:pro-extended-chatgpt-soylei',
+              input: 'Grade student 1.',
+              auracall: {
+                agent: 'pro-extended-chatgpt-soylei',
+                service: 'chatgpt',
+                runtimeProfile: 'wsl-chrome-3',
+              },
+            },
+          ],
+        }),
+      });
+      expect(create.status).toBe(202);
+      await expect(create.json()).resolves.toMatchObject({
+        id: 'batch_http_1',
+        status: 'running',
+        jobs: [{ responseId: 'resp_http_1' }],
+      });
+      expect(createBatch).toHaveBeenCalledWith({
+        metadata: { course: 'ChE 4470' },
+        limits: { maxConcurrentRuns: 2, maxBrowserInteractionsPerMinute: 8 },
+        requests: expect.any(Array),
+      });
+
+      const status = await fetch(`http://127.0.0.1:${server.port}/v1/response-batches/batch_http_1`);
+      expect(status.status).toBe(200);
+      await expect(status.json()).resolves.toMatchObject({
+        id: 'batch_http_1',
+        status: 'completed',
+        counts: { completed: 1 },
+      });
+      expect(readBatchStatus).toHaveBeenCalledWith('batch_http_1');
+    } finally {
+      await server.close();
+    }
+  });
+
   it('records last runner activity for direct execution on /status', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runner-activity-'));
     cleanup.push(homeDir);
@@ -16677,6 +16795,10 @@ describe('http responses adapter', () => {
       );
       expect((payload.routes as Record<string, unknown>).configSnapshotImport).toBe(
         'POST /v1/config/snapshots/import',
+      );
+      expect((payload.routes as Record<string, unknown>).responseBatchesCreate).toBe('/v1/response-batches');
+      expect((payload.routes as Record<string, unknown>).responseBatchesGetTemplate).toBe(
+        '/v1/response-batches/{batch_id}',
       );
       expect((payload.routes as Record<string, unknown>).preflightRunTemplate).toBe(
         '/v1/preflight/lazy-live-follow/runs/{run_id}',

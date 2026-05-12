@@ -22,6 +22,10 @@ describe('mcp server service wiring', () => {
       createResponse: vi.fn(),
       readResponse: vi.fn(),
     };
+    const responseBatchService = {
+      createBatch: vi.fn(),
+      readBatchStatus: vi.fn(),
+    };
     const projectEnsureService = {
       ensureProject: vi.fn(),
     };
@@ -31,6 +35,7 @@ describe('mcp server service wiring', () => {
     const createWorkbenchCapabilityService = vi.fn(() => workbenchReporter);
     const createMediaGenerationService = vi.fn(() => mediaGenerationService);
     const createExecutionResponsesService = vi.fn(() => responsesService);
+    const createResponseBatchService = vi.fn(() => responseBatchService);
     const createProjectEnsureService = vi.fn(() => projectEnsureService);
 
     const services = await createMcpServicesFromConfig(config, {
@@ -40,6 +45,7 @@ describe('mcp server service wiring', () => {
       createWorkbenchCapabilityService,
       createMediaGenerationService,
       createExecutionResponsesService,
+      createResponseBatchService,
       createProjectEnsureService,
     });
 
@@ -66,9 +72,13 @@ describe('mcp server service wiring', () => {
         upsertAgent: expect.any(Function),
       }),
     });
+    expect(createResponseBatchService).toHaveBeenCalledWith({
+      responsesService,
+    });
     expect(services).toEqual({
       resolvedUserConfig: config,
       responsesService,
+      responseBatchService,
       mediaGenerationService,
       workbenchCapabilityReporter: workbenchReporter,
       accountMirrorStatusRegistry: expect.objectContaining({

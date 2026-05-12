@@ -9,6 +9,7 @@ import { registerSessionsTool } from './tools/sessions.js';
 import { registerSessionResources } from './tools/sessionResources.js';
 import { registerTeamRunTool } from './tools/teamRun.js';
 import { registerResponseCreateTool } from './tools/responseCreate.js';
+import { registerResponseBatchTools } from './tools/responseBatch.js';
 import { registerMediaGenerationTool } from './tools/mediaGeneration.js';
 import { registerWorkbenchCapabilitiesTool } from './tools/workbenchCapabilities.js';
 import { registerRunStatusTool } from './tools/runStatus.js';
@@ -32,6 +33,10 @@ import { resolveConfig } from '../schema/resolver.js';
 import type { ResolvedUserConfig } from '../config.js';
 import { createMediaGenerationService } from '../media/service.js';
 import { createExecutionResponsesService } from '../runtime/responsesService.js';
+import {
+  createResponseBatchService,
+  type ResponseBatchService,
+} from '../runtime/responseBatchService.js';
 import { createConfiguredStoredStepExecutor } from '../runtime/configuredExecutor.js';
 import { resolveHostLocalActionExecutionPolicy } from '../config/model.js';
 import { createBrowserMediaGenerationExecutor } from '../media/browserExecutor.js';
@@ -57,6 +62,7 @@ import {
 export interface McpServiceBundle {
   resolvedUserConfig: ResolvedUserConfig;
   responsesService: ReturnType<typeof createExecutionResponsesService>;
+  responseBatchService: ResponseBatchService;
   mediaGenerationService: ReturnType<typeof createMediaGenerationService>;
   workbenchCapabilityReporter: ReturnType<typeof createWorkbenchCapabilityService>;
   accountMirrorStatusRegistry: ReturnType<typeof createAccountMirrorStatusRegistry>;
@@ -70,6 +76,7 @@ export interface McpServiceBundle {
 export interface CreateMcpServicesDeps {
   createMediaGenerationService?: typeof createMediaGenerationService;
   createExecutionResponsesService?: typeof createExecutionResponsesService;
+  createResponseBatchService?: typeof createResponseBatchService;
   createBrowserMediaGenerationExecutor?: typeof createBrowserMediaGenerationExecutor;
   createWorkbenchCapabilityService?: typeof createWorkbenchCapabilityService;
   createBrowserWorkbenchCapabilityDiscovery?: typeof createBrowserWorkbenchCapabilityDiscovery;
@@ -94,6 +101,9 @@ export async function startMcpServer(): Promise<void> {
   registerConsultTool(server);
   registerResponseCreateTool(server, {
     responsesService: services.responsesService,
+  });
+  registerResponseBatchTools(server, {
+    service: services.responseBatchService,
   });
   registerTeamRunTool(server, {
     agentTeamConfigService: services.agentTeamConfigService,
@@ -175,6 +185,7 @@ export async function createMcpServicesFromConfig(
     deps.createBrowserWorkbenchCapabilityDiagnostics ?? createBrowserWorkbenchCapabilityDiagnostics;
   const createMediaService = deps.createMediaGenerationService ?? createMediaGenerationService;
   const createResponsesService = deps.createExecutionResponsesService ?? createExecutionResponsesService;
+  const createResponseBatch = deps.createResponseBatchService ?? createResponseBatchService;
   const createProjectEnsure = deps.createProjectEnsureService ?? createProjectEnsureService;
   const createMediaExecutor =
     deps.createBrowserMediaGenerationExecutor ?? createBrowserMediaGenerationExecutor;
@@ -211,6 +222,9 @@ export async function createMcpServicesFromConfig(
     ),
     executeStoredRunStep: async (_request, context) => configuredStoredStepExecutor(context),
   });
+  const responseBatchService = createResponseBatch({
+    responsesService,
+  });
   const accountMirrorPersistence = createAccountMirrorPersistence({
     config: resolvedUserConfig as Record<string, unknown>,
   });
@@ -245,6 +259,7 @@ export async function createMcpServicesFromConfig(
   return {
     resolvedUserConfig,
     responsesService,
+    responseBatchService,
     mediaGenerationService,
     workbenchCapabilityReporter,
     accountMirrorStatusRegistry,

@@ -3478,3 +3478,26 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm exec biome lint src/projects/projectEnsureService.ts src/mcp/tools/projectEnsure.ts src/mcp/server.ts src/http/responsesServer.ts tests/projects.projectEnsureService.test.ts tests/mcp.projectEnsure.test.ts tests/mcp.server.test.ts tests/http.responsesServer.test.ts --max-diagnostics 80`
     exited cleanly; it reported unrelated existing non-null assertion warnings
     in `tests/http.responsesServer.test.ts`
+
+## Turn 133 | 2026-05-12
+
+- Goal: add the first nonblocking batch enqueue/control surface for
+  project-bound grading workflows.
+- Change:
+  - added durable response batch records under the runtime store
+  - added MCP `response_batch_create` and `response_batch_status`
+  - added HTTP `POST /v1/response-batches` and
+    `GET /v1/response-batches/{batch_id}`
+  - child jobs are ordinary response runs and remain inspectable through
+    `run_status`
+  - persisted batch limit hints for `maxConcurrentRuns` and
+    `maxBrowserInteractionsPerMinute`; hard per-batch scheduler enforcement is
+    still delegated to the existing global drain/browser dispatcher path
+  - documented the API/MCP batch polling contract
+- Verification:
+  - `pnpm vitest run tests/runtime.responseBatchService.test.ts tests/mcp.responseBatch.test.ts tests/mcp.server.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "response batches|development posture" --maxWorkers 1`
+  - `pnpm tsc --noEmit`
+  - `pnpm exec biome lint src/runtime/responseBatchService.ts src/mcp/tools/responseBatch.ts src/mcp/server.ts src/http/responsesServer.ts tests/runtime.responseBatchService.test.ts tests/mcp.responseBatch.test.ts tests/mcp.server.test.ts tests/http.responsesServer.test.ts --max-diagnostics 30`
+    exited cleanly; it reported unrelated existing non-null assertion warnings
+    in `tests/http.responsesServer.test.ts`

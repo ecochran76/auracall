@@ -1,0 +1,256 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
+import { getRuntimeDir } from './store.js';
+import { ExecutionRequestSchema } from './apiSchema.js';
+import type { ExecutionRequest, ExecutionResponseStatus } from './apiTypes.js';
+import type { ExecutionResponsesService } from './responsesService.js';
+
+const RESPONSE_BATCHES_DIRNAME = 'response-batches';
+const RECORD_FILENAME = 'record.json';
+
+// biome-ignore lint/style/useNamingConvention: exported schema names follow the runtime API schema convention.
+export const ResponseBatchCreateRequestSchema = z.object({
+  id: z.string().trim().min(1).optional(),
+  requests: z.array(ExecutionRequestSchema).min(1),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  limits: z
+    .object({
+      maxConcurrentRuns: z.number().int().positive().optional(),
+      maxBrowserInteractionsPerMinute: z.number().int().positive().optional(),
+    })
+    .optional(),
+});
+
+export type ResponseBatchCreateRequest = z.infer<typeof ResponseBatchCreateRequestSchema>;
+
+export interface ResponseBatchJobRecord {
+  index: number;
+  responseId: string;
+  model: string;
+  agent: string | null;
+  service: string | null;
+  runtimeProfile: string | null;
+  createdAt: string;
+}
+
+export interface ResponseBatchRecord {
+  id: string;
+  object: 'response_batch';
+  createdAt: string;
+  updatedAt: string;
+  metadata: Record<string, unknown>;
+  limits: {
+    maxConcurrentRuns: number | null;
+    maxBrowserInteractionsPerMinute: number | null;
+  };
+  jobs: ResponseBatchJobRecord[];
+}
+
+export interface ResponseBatchJobStatus extends ResponseBatchJobRecord {
+  status: ExecutionResponseStatus | 'missing';
+  completedAt: string | null;
+  failure: unknown | null;
+}
+
+export interface ResponseBatchStatus {
+  id: string;
+  object: 'response_batch_status';
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled' | 'mixed_terminal';
+  createdAt: string;
+  updatedAt: string;
+  metadata: Record<string, unknown>;
+  limits: ResponseBatchRecord['limits'];
+  counts: {
+    total: number;
+    in_progress: number;
+    completed: number;
+    failed: number;
+    cancelled: number;
+    missing: number;
+  };
+  jobs: ResponseBatchJobStatus[];
+}
+
+export interface ResponseBatchStore {
+  readBatch(id: string): Promise<ResponseBatchRecord | null>;
+  writeBatch(record: ResponseBatchRecord): Promise<ResponseBatchRecord>;
+}
+
+export interface ResponseBatchService {
+  createBatch(input: ResponseBatchCreateRequest): Promise<ResponseBatchStatus>;
+  readBatchStatus(id: string): Promise<ResponseBatchStatus | null>;
+}
+
+export interface ResponseBatchServiceDeps {
+  responsesService: Pick<ExecutionResponsesService, 'createResponse' | 'readResponse'>;
+  now?: () => Date;
+  generateBatchId?: () => string;
+  store?: ResponseBatchStore;
+}
+
+export function createResponseBatchService(deps: ResponseBatchServiceDeps): ResponseBatchService {
+  const now = deps.now ?? (() => new Date());
+  const generateBatchId = deps.generateBatchId ?? (() => `batch_${randomUUID().replace(/-/g, '')}`);
+  const store = deps.store ?? createResponseBatchStore();
+
+  return {
+    async createBatch(input) {
+      const payload = ResponseBatchCreateRequestSchema.parse(input);
+      const id = payload.id ?? generateBatchId();
+      const createdAt = now().toISOString();
+      const jobs: ResponseBatchJobRecord[] = [];
+      for (const [index, request] of payload.requests.entries()) {
+        const response = await deps.responsesService.createResponse(withBatchMetadata(request, id, index));
+        jobs.push({
+          index,
+          responseId: response.id,
+          model: request.model,
+          agent: request.auracall?.agent ?? null,
+          service: request.auracall?.service ?? null,
+          runtimeProfile: request.auracall?.runtimeProfile ?? null,
+          createdAt,
+        });
+      }
+      const record: ResponseBatchRecord = {
+        id,
+        object: 'response_batch',
+        createdAt,
+        updatedAt: createdAt,
+        metadata: payload.metadata ?? {},
+        limits: {
+          maxConcurrentRuns: payload.limits?.maxConcurrentRuns ?? null,
+          maxBrowserInteractionsPerMinute: payload.limits?.maxBrowserInteractionsPerMinute ?? null,
+        },
+        jobs,
+      };
+      await store.writeBatch(record);
+      return summarizeBatchStatus(record, deps.responsesService);
+    },
+
+    async readBatchStatus(id) {
+      const record = await store.readBatch(id);
+      if (!record) return null;
+      return summarizeBatchStatus(record, deps.responsesService);
+    },
+  };
+}
+
+export function createResponseBatchStore(): ResponseBatchStore {
+  return {
+    readBatch: readResponseBatchRecord,
+    writeBatch: writeResponseBatchRecord,
+  };
+}
+
+export function getResponseBatchesDir(): string {
+  return path.join(getRuntimeDir(), RESPONSE_BATCHES_DIRNAME);
+}
+
+function getResponseBatchRecordPath(id: string): string {
+  return path.join(getResponseBatchesDir(), id, RECORD_FILENAME);
+}
+
+async function readResponseBatchRecord(id: string): Promise<ResponseBatchRecord | null> {
+  try {
+    const raw = await fs.readFile(getResponseBatchRecordPath(id), 'utf8');
+    return RESPONSE_BATCH_RECORD_SCHEMA.parse(JSON.parse(raw));
+  } catch (error) {
+    if (isErrnoException(error) && error.code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
+async function writeResponseBatchRecord(record: ResponseBatchRecord): Promise<ResponseBatchRecord> {
+  const parsed = RESPONSE_BATCH_RECORD_SCHEMA.parse(record);
+  const recordPath = getResponseBatchRecordPath(record.id);
+  await fs.mkdir(path.dirname(recordPath), { recursive: true });
+  const tempPath = `${recordPath}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`;
+  await fs.writeFile(tempPath, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8');
+  await fs.rename(tempPath, recordPath);
+  return parsed;
+}
+
+async function summarizeBatchStatus(
+  record: ResponseBatchRecord,
+  responsesService: Pick<ExecutionResponsesService, 'readResponse'>,
+): Promise<ResponseBatchStatus> {
+  const jobs: ResponseBatchJobStatus[] = [];
+  for (const job of record.jobs) {
+    const response = await responsesService.readResponse(job.responseId);
+    jobs.push({
+      ...job,
+      status: response?.status ?? 'missing',
+      completedAt: (response?.metadata?.executionSummary?.completedAt as string | null | undefined) ?? null,
+      failure: response?.metadata?.executionSummary?.failureSummary ?? null,
+    });
+  }
+  const counts = {
+    total: jobs.length,
+    in_progress: jobs.filter((job) => job.status === 'in_progress').length,
+    completed: jobs.filter((job) => job.status === 'completed').length,
+    failed: jobs.filter((job) => job.status === 'failed').length,
+    cancelled: jobs.filter((job) => job.status === 'cancelled').length,
+    missing: jobs.filter((job) => job.status === 'missing').length,
+  };
+  return {
+    id: record.id,
+    object: 'response_batch_status',
+    status: resolveBatchStatus(counts),
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    metadata: record.metadata,
+    limits: record.limits,
+    counts,
+    jobs,
+  };
+}
+
+function resolveBatchStatus(counts: ResponseBatchStatus['counts']): ResponseBatchStatus['status'] {
+  if (counts.in_progress > 0) return 'running';
+  if (counts.missing > 0) return 'failed';
+  if (counts.failed > 0 && counts.completed + counts.cancelled + counts.failed === counts.total) return 'failed';
+  if (counts.cancelled > 0 && counts.completed + counts.cancelled === counts.total) return 'cancelled';
+  if (counts.completed === counts.total) return 'completed';
+  if (counts.failed > 0 || counts.cancelled > 0) return 'mixed_terminal';
+  return 'queued';
+}
+
+function withBatchMetadata(request: ExecutionRequest, batchId: string, batchIndex: number): ExecutionRequest {
+  return {
+    ...request,
+    metadata: {
+      ...(request.metadata ?? {}),
+      batchId,
+      batchIndex,
+    },
+  };
+}
+
+const RESPONSE_BATCH_JOB_RECORD_SCHEMA: z.ZodType<ResponseBatchJobRecord> = z.object({
+  index: z.number().int().min(0),
+  responseId: z.string(),
+  model: z.string(),
+  agent: z.string().nullable(),
+  service: z.string().nullable(),
+  runtimeProfile: z.string().nullable(),
+  createdAt: z.string(),
+});
+
+const RESPONSE_BATCH_RECORD_SCHEMA: z.ZodType<ResponseBatchRecord> = z.object({
+  id: z.string(),
+  object: z.literal('response_batch'),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  metadata: z.record(z.string(), z.unknown()),
+  limits: z.object({
+    maxConcurrentRuns: z.number().int().positive().nullable(),
+    maxBrowserInteractionsPerMinute: z.number().int().positive().nullable(),
+  }),
+  jobs: z.array(RESPONSE_BATCH_JOB_RECORD_SCHEMA),
+});
+
+function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && 'code' in error;
+}

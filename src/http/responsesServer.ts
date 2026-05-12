@@ -76,6 +76,11 @@ import {
   createExecutionRequestFromRecord,
   type ExecutionResponsesServiceDeps,
 } from '../runtime/responsesService.js';
+import {
+  createResponseBatchService,
+  ResponseBatchCreateRequestSchema,
+  type ResponseBatchService,
+} from '../runtime/responseBatchService.js';
 import { createConfiguredStoredStepExecutor } from '../runtime/configuredExecutor.js';
 import { readLiveRuntimeRunServiceState } from '../runtime/liveServiceStateRegistry.js';
 import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from '../runtime/stepOutputContract.js';
@@ -213,6 +218,8 @@ export interface ResponsesHttpServerDeps {
   diagnoseWorkbenchCapabilities?: WorkbenchCapabilityServiceDeps['diagnoseCapabilities'];
   createProjectEnsureService?: typeof createProjectEnsureService;
   projectEnsureService?: ProjectEnsureService;
+  createResponseBatchService?: typeof createResponseBatchService;
+  responseBatchService?: ResponseBatchService;
   executionHost?: ExecutionServiceHost;
   localActionExecutionPolicy?: ExecutionServiceHostDeps['localActionExecutionPolicy'];
   probeRuntimeRunServiceState?: (
@@ -570,6 +577,8 @@ interface HttpStatusResponse {
     chatCompletionsCreate: string;
     responsesCreate: string;
     responsesGetTemplate: string;
+    responseBatchesCreate: string;
+    responseBatchesGetTemplate: string;
     mediaGenerationsCreate: string;
     mediaGenerationsGetTemplate: string;
     mediaGenerationsStatusTemplate: string;
@@ -835,6 +844,7 @@ export async function createResponsesHttpServer(
   const runnerHeartbeatTtlMs = 15_000;
   let host: ExecutionServiceHost;
   let responsesService: ReturnType<typeof createExecutionResponsesService>;
+  let responseBatchService: ResponseBatchService;
   let teamRuntimeBridge: TeamRuntimeBridge;
   const runnerState: HttpStatusResponse['runner'] = {
     id: null,
@@ -2105,6 +2115,36 @@ export async function createResponsesHttpServer(
         }
       }
 
+      if (req.method === 'POST' && url.pathname === '/v1/response-batches') {
+        const endForegroundWork = beginForegroundAuraCallWork();
+        try {
+          const body = await readRequestBody(req);
+          const payload = ResponseBatchCreateRequestSchema.parse(JSON.parse(body || '{}'));
+          const catalog = await agentTeamConfigService.effectiveCatalog();
+          for (const request of payload.requests) {
+            const authorizationError = authorizeExecutionRequest(apiAuthContext, request, catalog);
+            if (authorizationError) {
+              sendJson(res, 403, {
+                error: {
+                  message: authorizationError,
+                  type: 'permission_error',
+                },
+              } satisfies HttpErrorPayload);
+              return;
+            }
+          }
+          const status = await responseBatchService.createBatch(payload);
+          if (backgroundDrainIntervalMs > 0) {
+            reserveForegroundAuraCallDrain();
+            scheduleBackgroundDrain(0);
+          }
+          sendJson(res, 202, status);
+          return;
+        } finally {
+          endForegroundWork();
+        }
+      }
+
       if (req.method === 'POST' && url.pathname === '/v1/media-generations') {
         const endForegroundWork = beginForegroundAuraCallWork();
         try {
@@ -2213,6 +2253,22 @@ export async function createResponsesHttpServer(
           return;
         }
         sendJson(res, 200, response);
+        return;
+      }
+
+      const responseBatchId = matchResponseBatchRoute(url.pathname);
+      if (req.method === 'GET' && responseBatchId) {
+        const status = await responseBatchService.readBatchStatus(responseBatchId);
+        if (!status) {
+          sendJson(res, 404, {
+            error: {
+              message: `Response batch ${responseBatchId} was not found`,
+              type: 'not_found_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        sendJson(res, 200, status);
         return;
       }
 
@@ -2360,6 +2416,12 @@ export async function createResponsesHttpServer(
     drainAfterCreate: false,
     executeStoredRunStep: deps.executeStoredRunStep,
   });
+  responseBatchService =
+    deps.responseBatchService ??
+    (deps.createResponseBatchService ?? createResponseBatchService)({
+      responsesService,
+      now,
+    });
 
   if (!deps.executionHost) {
     await registerLocalRunner();
@@ -2997,6 +3059,8 @@ function createHttpStatusResponse(input: {
       chatCompletionsCreate: '/v1/chat/completions',
       responsesCreate: '/v1/responses',
       responsesGetTemplate: '/v1/responses/{response_id}',
+      responseBatchesCreate: '/v1/response-batches',
+      responseBatchesGetTemplate: '/v1/response-batches/{batch_id}',
       mediaGenerationsCreate: '/v1/media-generations',
       mediaGenerationsGetTemplate: '/v1/media-generations/{media_generation_id}',
       mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
@@ -5287,6 +5351,11 @@ function isLoopbackHost(host: string): boolean {
 
 function matchResponseRoute(pathname: string): string | null {
   const match = /^\/v1\/responses\/([^/]+)$/.exec(pathname);
+  return match?.[1] ?? null;
+}
+
+function matchResponseBatchRoute(pathname: string): string | null {
+  const match = /^\/v1\/response-batches\/([^/]+)$/.exec(pathname);
   return match?.[1] ?? null;
 }
 
