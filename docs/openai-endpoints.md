@@ -40,6 +40,8 @@ Current endpoints:
 - `GET /v1/models`
 - `GET /v1/config/agents`
 - `GET /v1/config/agent-diagnostics`
+- `POST /v1/config/snapshots/export`
+- `POST /v1/config/snapshots/import`
 - `PUT /v1/config/agents/{agent_id}`
 - `DELETE /v1/config/agents/{agent_id}`
 - `GET /v1/config/teams`
@@ -101,6 +103,15 @@ Current limits:
     config-vs-registry conflicts, loaded API-key ids, missing scoped agents or
     teams, and team-derived effective agent reachability. When API auth is
     enabled, this route requires an unscoped operator key until AuraCall has a
+    first-class role/principal model.
+  - `POST /v1/config/snapshots/export` accepts `{ "agents": ["id"], "teams":
+    ["id"] }` or `{ "all": true }` and returns a versioned
+    `auracall_agent_registry_snapshot` for review, backup, or promotion.
+  - `POST /v1/config/snapshots/import` accepts `{ "snapshot": { ... },
+    "dryRun": true }`; imports write the user-scoped registry and report
+    config-defined overlay ids as blocked.
+  - snapshot routes are operator control-plane routes. When API auth is
+    enabled, they require an unscoped operator key until AuraCall has a
     first-class role/principal model.
   - protect this local control-plane surface with API-key auth before exposing
     it to any non-loopback client

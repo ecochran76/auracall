@@ -98,6 +98,10 @@ targets, and which scoped key ids can reach which effective agents.
 blocks config-defined overlay ids rather than writing hidden registry records
 behind pinned config entries.
 
+Operators can use the same snapshot contract over HTTP with
+`POST /v1/config/snapshots/export` and `POST /v1/config/snapshots/import`.
+When API auth is enabled, these routes require an unscoped operator key.
+
 ## Local API and dashboard
 
 Use the top-level `api` block to pin the local API binding and operator-facing

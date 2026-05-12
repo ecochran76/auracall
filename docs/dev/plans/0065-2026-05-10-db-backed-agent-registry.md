@@ -61,8 +61,9 @@ Implemented:
   from `/v1/config/agent-diagnostics` so operators can see registry/key health
   before inspecting individual runs.
 - `auracall config agent-export`, `auracall config agent-import`, MCP
-  `config_snapshot_export`, and MCP `config_snapshot_import` provide versioned
-  reviewable JSON snapshots for selected effective agents/teams.
+  `config_snapshot_export`, MCP `config_snapshot_import`, and
+  `/v1/config/snapshots/*` provide versioned reviewable JSON snapshots for
+  selected effective agents/teams.
 - `projectConfigModel(...)` projects config-defined agents and teams for
   `/v1/models`, `/v1/config/agents`, `/v1/config/teams`, CLI config inspection,
   and runtime selection.
@@ -176,6 +177,7 @@ Add explicit registry routes only after compatibility is working:
 4. Export/import and operator ergonomics
    - [x] add export/import snapshots for selected agents and teams
    - [x] add CLI/MCP helpers for backup, promotion, and rollback
+   - [x] add operator HTTP snapshot export/import routes
    - defer dashboard editing until the registry API is stable
 
 ## Non-Goals

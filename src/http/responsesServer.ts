@@ -27,6 +27,7 @@ import type { EffectiveAgent, EffectiveAgentCatalog } from '../config/agentRegis
 import { SEMANTIC_MODEL_SELECTORS } from '../config/modelSelector.js';
 import {
   agentConfigUpsertInputSchema,
+  agentRegistrySnapshotSchema,
   createAgentTeamConfigService,
   teamConfigUpsertInputSchema,
 } from '../config/agentConfigService.js';
@@ -568,11 +569,11 @@ interface HttpStatusResponse {
     preflightRunTemplate: string;
     preflightRunLogTemplate: string;
     accountMirrorStatus: string;
-  accountMirrorCatalog: string;
-  accountMirrorCatalogItemTemplate: string;
-  accountMirrorPreviewSessions: string;
-  accountMirrorPreviewSessionTemplate: string;
-  accountMirrorRefresh: string;
+    accountMirrorCatalog: string;
+    accountMirrorCatalogItemTemplate: string;
+    accountMirrorPreviewSessions: string;
+    accountMirrorPreviewSessionTemplate: string;
+    accountMirrorRefresh: string;
     accountMirrorCompletionsCreate: string;
     accountMirrorCompletionsList: string;
     accountMirrorCompletionsGetTemplate: string;
@@ -582,6 +583,8 @@ interface HttpStatusResponse {
     browserProcesses: string;
     workbenchCapabilitiesList: string;
     agentRegistryDiagnostics: string;
+    configSnapshotExport: string;
+    configSnapshotImport: string;
     operatorBrowserDashboard: string;
     accountMirrorDashboard: string;
     accountMirrorPreviewSessionDashboard: string;
@@ -1818,7 +1821,7 @@ export async function createResponsesHttpServer(
       }
 
       if (req.method === 'GET' && url.pathname === '/v1/config/agent-diagnostics') {
-        const operatorAuthError = authorizeOperatorDiagnostics(apiAuthContext);
+        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
         if (operatorAuthError) {
           sendJson(res, 403, {
             error: {
@@ -1831,6 +1834,40 @@ export async function createResponsesHttpServer(
         sendJson(res, 200, await agentTeamConfigService.diagnostics({
           apiKeys: apiAuthPolicy.keys.map(toAgentConfigApiKeyDiagnosticInput),
         }));
+        return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/v1/config/snapshots/export') {
+        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+        if (operatorAuthError) {
+          sendJson(res, 403, {
+            error: {
+              message: operatorAuthError,
+              type: 'permission_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        const body = await readRequestBody(req);
+        const payload = parseConfigSnapshotExportRequest(JSON.parse(body || '{}'));
+        sendJson(res, 200, await agentTeamConfigService.exportSnapshot(payload));
+        return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/v1/config/snapshots/import') {
+        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+        if (operatorAuthError) {
+          sendJson(res, 403, {
+            error: {
+              message: operatorAuthError,
+              type: 'permission_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        const body = await readRequestBody(req);
+        const payload = parseConfigSnapshotImportRequest(JSON.parse(body || '{}'));
+        sendJson(res, 200, await agentTeamConfigService.importSnapshot(payload));
         return;
       }
 
@@ -2925,6 +2962,8 @@ function createHttpStatusResponse(input: {
       accountMirrorSchedulerDiagnostics: '/v1/account-mirrors/scheduler/diagnostics[?provider={chatgpt|gemini|grok}&runtimeProfile={runtime_profile}|completionId={completion_id}]',
       browserProcesses: '/v1/browser/processes',
       agentRegistryDiagnostics: '/v1/config/agent-diagnostics',
+      configSnapshotExport: 'POST /v1/config/snapshots/export',
+      configSnapshotImport: 'POST /v1/config/snapshots/import',
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
       operatorBrowserDashboard: serviceDiscovery.routing.dashboardPath,
@@ -3748,11 +3787,11 @@ function toAgentConfigApiKeyDiagnosticInput(key: ApiAuthKeyPolicy) {
   };
 }
 
-function authorizeOperatorDiagnostics(context: ApiAuthContext): string | null {
+function authorizeOperatorConfigAccess(context: ApiAuthContext): string | null {
   const key = context.key;
   if (!context.policy.required || !key) return null;
   if (key.agents?.length || key.teams?.length || key.services?.length || key.runtimeProfiles?.length) {
-    return 'API key is not authorized for operator diagnostics.';
+    return 'API key is not authorized for operator config access.';
   }
   return null;
 }
@@ -4721,6 +4760,32 @@ function parseWorkbenchCapabilityQuery(searchParams: URLSearchParams) {
     entrypoint: parsed.entrypoint === 'imagine' ? 'grok-imagine' : parsed.entrypoint ?? null,
     discoveryAction: parsed.discoveryAction ?? null,
   });
+}
+
+const CONFIG_SNAPSHOT_EXPORT_REQUEST_SCHEMA = z.object({
+  all: z.boolean().optional(),
+  agents: z.array(z.string().trim().min(1)).optional(),
+  teams: z.array(z.string().trim().min(1)).optional(),
+}).refine(
+  (value) => value.all || (value.agents?.length ?? 0) > 0 || (value.teams?.length ?? 0) > 0,
+  'Select at least one agent/team or set all=true.',
+);
+
+function parseConfigSnapshotExportRequest(value: unknown) {
+  const parsed = CONFIG_SNAPSHOT_EXPORT_REQUEST_SCHEMA.parse(value);
+  return {
+    agents: parsed.all ? undefined : parsed.agents,
+    teams: parsed.all ? undefined : parsed.teams,
+  };
+}
+
+const CONFIG_SNAPSHOT_IMPORT_REQUEST_SCHEMA = z.object({
+  snapshot: agentRegistrySnapshotSchema,
+  dryRun: z.boolean().optional(),
+});
+
+function parseConfigSnapshotImportRequest(value: unknown) {
+  return CONFIG_SNAPSHOT_IMPORT_REQUEST_SCHEMA.parse(value);
 }
 
 function createTeamRunIdSuffix(): string {

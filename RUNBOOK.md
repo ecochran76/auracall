@@ -3325,3 +3325,17 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification:
   - `pnpm vitest run tests/config/agentConfigService.test.ts tests/cli/agentSnapshotCommand.test.ts tests/mcp.configEntities.test.ts --maxWorkers 1`
   - `pnpm tsc --noEmit`
+
+## Turn 123 | 2026-05-12
+
+- Goal: expose the agent/team snapshot contract through the local HTTP API.
+- Change:
+  - added operator-only `POST /v1/config/snapshots/export` and
+    `POST /v1/config/snapshots/import`
+  - added request validation for selected/all exports and dry-run imports
+  - advertised the snapshot routes in `/status`
+  - updated endpoint/config docs and plan 0065
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "agent registry and loaded API-key diagnostics|agent registry snapshots|reports development-only posture" --maxWorkers 1`
+  - `pnpm tsc --noEmit`
+  - `pnpm exec biome lint src/http/responsesServer.ts --max-diagnostics 40`

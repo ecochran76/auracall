@@ -16003,7 +16003,9 @@ describe('http responses adapter', () => {
     );
 
     try {
-      const agentsResponse = await fetch(`http://127.0.0.1:${server.port}/v1/config/agents`);
+      const agentsResponse = await fetch(`http://127.0.0.1:${server.port}/v1/config/agents`, {
+        headers: { authorization: 'Bearer admin-secret' },
+      });
       expect(agentsResponse.status).toBe(200);
       const agentsPayload = await agentsResponse.json() as JsonObject;
       expect(agentsPayload).toMatchObject({
@@ -16180,12 +16182,175 @@ describe('http responses adapter', () => {
       expect(await scopedResponse.json()).toMatchObject({
         error: {
           type: 'permission_error',
-          message: 'API key is not authorized for operator diagnostics.',
+          message: 'API key is not authorized for operator config access.',
         },
       });
       expect(JSON.stringify(payload)).not.toContain('ops-secret');
       expect(JSON.stringify(payload)).not.toContain('broken-secret');
       expect(JSON.stringify(payload)).not.toContain('admin-secret');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('exports and imports agent registry snapshots over operator HTTP routes', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-agent-snapshot-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const activeConfig: Record<string, unknown> = {
+      api: {
+        auth: {
+          required: true,
+          keys: [
+            {
+              id: 'admin-key',
+              secret: 'admin-secret',
+            },
+            {
+              id: 'ops-key',
+              secret: 'ops-secret',
+              teams: ['ops'],
+            },
+          ],
+        },
+      },
+      browserProfiles: { default: {} },
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+      },
+      agents: {
+        pinned: {
+          runtimeProfile: 'default',
+          service: 'chatgpt',
+        },
+      },
+    };
+    await fs.writeFile(path.join(homeDir, 'config.json'), JSON.stringify(activeConfig), 'utf8');
+    const registryStore = createAgentRegistryStore({
+      rootDir: homeDir,
+      forceJsonFallbackForTest: true,
+    });
+    await registryStore.upsertAgent({
+      id: 'worker',
+      config: {
+        runtimeProfile: 'default',
+        service: 'gemini',
+      },
+    });
+    await registryStore.upsertTeam({
+      id: 'ops',
+      config: {
+        agents: ['worker'],
+      },
+    });
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      { config: activeConfig, agentRegistryStore: registryStore },
+    );
+
+    try {
+      const exportResponse = await fetch(`http://127.0.0.1:${server.port}/v1/config/snapshots/export`, {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer admin-secret',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          agents: ['pinned', 'worker'],
+          teams: ['ops'],
+        }),
+      });
+      expect(exportResponse.status).toBe(200);
+      const snapshot = await exportResponse.json() as JsonObject;
+      expect(snapshot).toMatchObject({
+        object: 'auracall_agent_registry_snapshot',
+        version: 1,
+        agents: [
+          expect.objectContaining({ id: 'pinned' }),
+          expect.objectContaining({ id: 'worker' }),
+        ],
+        teams: [
+          expect.objectContaining({ id: 'ops' }),
+        ],
+      });
+
+      const scopedExportResponse = await fetch(`http://127.0.0.1:${server.port}/v1/config/snapshots/export`, {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer ops-secret',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ all: true }),
+      });
+      expect(scopedExportResponse.status).toBe(403);
+      expect(await scopedExportResponse.json()).toMatchObject({
+        error: {
+          type: 'permission_error',
+          message: 'API key is not authorized for operator config access.',
+        },
+      });
+
+      const dryRunImportResponse = await fetch(`http://127.0.0.1:${server.port}/v1/config/snapshots/import`, {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer admin-secret',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          snapshot,
+          dryRun: true,
+        }),
+      });
+      expect(dryRunImportResponse.status).toBe(200);
+      expect(await dryRunImportResponse.json()).toMatchObject({
+        object: 'auracall_agent_registry_snapshot_import',
+        dryRun: true,
+        importedAgents: ['worker'],
+        importedTeams: ['ops'],
+        blockedAgents: ['pinned'],
+      });
+
+      const importResponse = await fetch(`http://127.0.0.1:${server.port}/v1/config/snapshots/import`, {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer admin-secret',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          snapshot: {
+            object: 'auracall_agent_registry_snapshot',
+            version: 1,
+            exportedAt: '2026-05-12T00:00:00.000Z',
+            agents: [
+              {
+                id: 'new-worker',
+                config: {
+                  runtimeProfile: 'default',
+                  service: 'grok',
+                },
+              },
+            ],
+            teams: [],
+          },
+        }),
+      });
+      expect(importResponse.status).toBe(200);
+      expect(await importResponse.json()).toMatchObject({
+        object: 'auracall_agent_registry_snapshot_import',
+        dryRun: false,
+        importedAgents: ['new-worker'],
+      });
+
+      const agentsResponse = await fetch(`http://127.0.0.1:${server.port}/v1/config/agents`, {
+        headers: { authorization: 'Bearer admin-secret' },
+      });
+      expect(agentsResponse.status).toBe(200);
+      const agentsPayload = await agentsResponse.json() as { agents?: unknown[] };
+      expect(agentsPayload.agents).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 'pinned' }),
+        expect.objectContaining({ id: 'new-worker', source: 'registry', service: 'grok' }),
+        expect.objectContaining({ id: 'worker' }),
+      ]));
     } finally {
       await server.close();
     }
@@ -16260,6 +16425,12 @@ describe('http responses adapter', () => {
       );
       expect((payload.routes as Record<string, unknown>).accountMirrorSchedulerDiagnostics).toContain(
         '/v1/account-mirrors/scheduler/diagnostics',
+      );
+      expect((payload.routes as Record<string, unknown>).configSnapshotExport).toBe(
+        'POST /v1/config/snapshots/export',
+      );
+      expect((payload.routes as Record<string, unknown>).configSnapshotImport).toBe(
+        'POST /v1/config/snapshots/import',
       );
       expect((payload.routes as Record<string, unknown>).preflightRunTemplate).toBe(
         '/v1/preflight/lazy-live-follow/runs/{run_id}',
