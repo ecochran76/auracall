@@ -768,6 +768,45 @@ describe('runtime service host', () => {
     expect(result.drained[0]?.record?.bundle.run.status).toBe('succeeded');
   });
 
+  it('honors the execution gate before acquiring a run lease', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await control.createRun(createDirectBundle('run_host_execution_gate', '2026-04-08T15:00:00.000Z'));
+    const host = createExecutionServiceHost({
+      control,
+      ownerId: 'host:test-execution-gate',
+      now: () => '2026-04-08T15:01:00.000Z',
+      executeStoredRunStep: async () => {
+        throw new Error('execution gate should prevent execution');
+      },
+    });
+
+    const result = await host.drainRunsOnce({
+      runId: 'run_host_execution_gate',
+      maxRuns: 1,
+      executionGate: async () => ({
+        allowed: false,
+        reason: 'test gate blocked execution',
+      }),
+    });
+
+    expect(result.executedRunIds).toEqual([]);
+    expect(result.drained).toMatchObject([
+      {
+        runId: 'run_host_execution_gate',
+        result: 'skipped',
+        reason: 'execution-gate',
+        detailReason: 'test gate blocked execution',
+      },
+    ]);
+    const stored = await control.readRun('run_host_execution_gate');
+    expect(stored?.bundle.leases).toEqual([]);
+    expect(stored?.bundle.run.status).toBe('planned');
+  });
+
   it('uses the configured live runner id as the lease owner when claiming work', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
     cleanup.push(homeDir);

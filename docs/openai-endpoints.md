@@ -141,7 +141,7 @@ Current limits:
 - `POST /v1/response-batches` is the first nonblocking batch enqueue surface:
   - accepts `{ "requests": [ ... ] }`, where each child request is an ordinary
     `/v1/responses` body, plus optional `metadata`, caller-supplied `id`, and
-    persisted limit hints such as `maxConcurrentRuns` and
+    persisted batch limits such as `maxConcurrentRuns` and
     `maxBrowserInteractionsPerMinute`
   - returns `202` with `object = "response_batch_status"`, aggregate counts,
     and child `responseId` values
@@ -150,9 +150,11 @@ Current limits:
   - `GET /v1/response-batches/{batch_id}` reads aggregate status without
     resubmitting prompts; child responses can also be inspected through
     `/v1/runs/{response_id}/status`
-  - current boundary: per-batch limit hints are persisted and reported, while
-    hard concurrency/rate enforcement still comes from the existing global
-    drain loop, browser dispatcher, and provider politeness controls
+  - the shared service-host drain path enforces those batch limits before
+    acquiring a run lease; skipped child runs remain queued for a later drain
+    pass
+  - the browser dispatcher and provider politeness controls still enforce the
+    lower-level CDP/account safety guardrails
 - API-key authorization can be configured in `~/.auracall/config.json` or
   through the installed service dotenv file at `~/.auracall/api.env`. The
   service recognizes `AURACALL_API_KEY` as a bearer key and optional

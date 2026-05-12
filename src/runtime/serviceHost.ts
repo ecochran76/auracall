@@ -78,7 +78,12 @@ export interface DrainStoredExecutionRunsOnceOptions {
   runId?: string;
   sourceKind?: ExecutionRunSourceKind;
   maxRuns?: number;
+  executionGate?: ExecutionServiceHostExecutionGate;
 }
+
+export type ExecutionServiceHostExecutionGate = (
+  record: ExecutionRunStoredRecord,
+) => Promise<{ allowed: true } | { allowed: false; reason: string }>;
 
 export interface DrainedStoredExecutionRunResult {
   runId: string;
@@ -90,7 +95,8 @@ export interface DrainedStoredExecutionRunResult {
     | 'claim-owner-unavailable'
     | 'no-runnable-step'
     | 'stranded-running-no-lease'
-    | 'limit-reached';
+    | 'limit-reached'
+    | 'execution-gate';
   detailReason?: string | null;
   record?: ExecutionRunStoredRecord;
 }
@@ -1813,6 +1819,23 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
           continue;
         }
 
+        if (
+          (candidate.kind === 'runnable' || candidate.kind === 'recoverable-stranded') &&
+          options.executionGate
+        ) {
+          const gate = await options.executionGate(currentRecord);
+          if (!gate.allowed) {
+            drained.push({
+              runId: currentRecord.runId,
+              result: 'skipped',
+              reason: 'execution-gate',
+              detailReason: gate.reason,
+              record: inspection.record,
+            });
+            continue;
+          }
+        }
+
         if (runnerId && !existingLocalLeaseId) {
           const localClaim = await selectStoredExecutionRunLocalClaim(
             {
@@ -1951,6 +1974,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
           runId: options.runId,
           sourceKind: options.sourceKind,
           maxRuns: remainingRuns,
+          executionGate: options.executionGate,
         });
         iterations += 1;
         expiredLeaseRunIds.push(...result.expiredLeaseRunIds);

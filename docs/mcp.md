@@ -43,7 +43,7 @@
 ### `response_batch_create` / `response_batch_status`
 - Inputs: `response_batch_create` accepts `requests` as an array of ordinary
   response-create request bodies, plus optional `metadata`, caller-supplied
-  `id`, and limit hints such as `maxConcurrentRuns` and
+  `id`, and batch limits such as `maxConcurrentRuns` and
   `maxBrowserInteractionsPerMinute`. `response_batch_status` accepts the batch
   `id`.
 - Behavior: creates one durable response run per request and returns
@@ -53,10 +53,11 @@
 - Polling contract: create the batch once, keep the returned batch id, and poll
   `response_batch_status`. Polling is read-only and must not resubmit student
   prompts or reopen provider workbenches.
-- Current boundary: batch limits are persisted and reported for operator/client
-  coordination. Dedicated per-batch concurrency enforcement is still delegated
-  to the existing server drain loop, browser dispatcher, and global provider
-  rate limits until the next scheduler slice.
+- Enforcement: the API server copies batch limits onto each child run and the
+  shared service-host drain path checks them before acquiring an execution
+  lease. Runs skipped for a batch gate remain queued for a later drain pass.
+  The browser dispatcher and provider politeness controls still provide the
+  lower-level CDP/account safety guardrails.
 
 ### `project_ensure`
 - Inputs: `projectName`, optional `service`, `runtimeProfile`,

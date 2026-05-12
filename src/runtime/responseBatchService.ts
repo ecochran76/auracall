@@ -5,7 +5,9 @@ import { z } from 'zod';
 import { getRuntimeDir } from './store.js';
 import { ExecutionRequestSchema } from './apiSchema.js';
 import type { ExecutionRequest, ExecutionResponseStatus } from './apiTypes.js';
+import type { ExecutionRuntimeControlContract } from './contract.js';
 import type { ExecutionResponsesService } from './responsesService.js';
+import type { ExecutionRunStoredRecord } from './store.js';
 
 const RESPONSE_BATCHES_DIRNAME = 'response-batches';
 const RECORD_FILENAME = 'record.json';
@@ -90,6 +92,11 @@ export interface ResponseBatchServiceDeps {
   store?: ResponseBatchStore;
 }
 
+export interface ResponseBatchExecutionGateDeps {
+  control: ExecutionRuntimeControlContract;
+  now?: () => Date;
+}
+
 export function createResponseBatchService(deps: ResponseBatchServiceDeps): ResponseBatchService {
   const now = deps.now ?? (() => new Date());
   const generateBatchId = deps.generateBatchId ?? (() => `batch_${randomUUID().replace(/-/g, '')}`);
@@ -100,9 +107,13 @@ export function createResponseBatchService(deps: ResponseBatchServiceDeps): Resp
       const payload = ResponseBatchCreateRequestSchema.parse(input);
       const id = payload.id ?? generateBatchId();
       const createdAt = now().toISOString();
+      const limits = {
+        maxConcurrentRuns: payload.limits?.maxConcurrentRuns ?? null,
+        maxBrowserInteractionsPerMinute: payload.limits?.maxBrowserInteractionsPerMinute ?? null,
+      };
       const jobs: ResponseBatchJobRecord[] = [];
       for (const [index, request] of payload.requests.entries()) {
-        const response = await deps.responsesService.createResponse(withBatchMetadata(request, id, index));
+        const response = await deps.responsesService.createResponse(withBatchMetadata(request, id, index, limits));
         jobs.push({
           index,
           responseId: response.id,
@@ -119,10 +130,7 @@ export function createResponseBatchService(deps: ResponseBatchServiceDeps): Resp
         createdAt,
         updatedAt: createdAt,
         metadata: payload.metadata ?? {},
-        limits: {
-          maxConcurrentRuns: payload.limits?.maxConcurrentRuns ?? null,
-          maxBrowserInteractionsPerMinute: payload.limits?.maxBrowserInteractionsPerMinute ?? null,
-        },
+        limits,
         jobs,
       };
       await store.writeBatch(record);
@@ -146,6 +154,40 @@ export function createResponseBatchStore(): ResponseBatchStore {
 
 export function getResponseBatchesDir(): string {
   return path.join(getRuntimeDir(), RESPONSE_BATCHES_DIRNAME);
+}
+
+export function createResponseBatchExecutionGate(deps: ResponseBatchExecutionGateDeps) {
+  const now = deps.now ?? (() => new Date());
+  return async (record: ExecutionRunStoredRecord): Promise<{ allowed: true } | { allowed: false; reason: string }> => {
+    const batchMetadata = readResponseBatchRunMetadata(record);
+    if (!batchMetadata) return { allowed: true };
+
+    if (batchMetadata.limits.maxConcurrentRuns !== null) {
+      const activeCount = await countActiveBatchRuns(deps.control, batchMetadata.batchId, record.runId);
+      if (activeCount >= batchMetadata.limits.maxConcurrentRuns) {
+        return {
+          allowed: false,
+          reason: `response batch ${batchMetadata.batchId} concurrency limit reached: ${activeCount}/${batchMetadata.limits.maxConcurrentRuns}`,
+        };
+      }
+    }
+
+    if (batchMetadata.limits.maxBrowserInteractionsPerMinute !== null) {
+      const startedCount = await countRecentlyStartedBatchRuns(deps.control, {
+        batchId: batchMetadata.batchId,
+        now: now(),
+        windowMs: 60_000,
+      });
+      if (startedCount >= batchMetadata.limits.maxBrowserInteractionsPerMinute) {
+        return {
+          allowed: false,
+          reason: `response batch ${batchMetadata.batchId} browser interaction rate limit reached: ${startedCount}/${batchMetadata.limits.maxBrowserInteractionsPerMinute} per minute`,
+        };
+      }
+    }
+
+    return { allowed: true };
+  };
 }
 
 function getResponseBatchRecordPath(id: string): string {
@@ -217,15 +259,87 @@ function resolveBatchStatus(counts: ResponseBatchStatus['counts']): ResponseBatc
   return 'queued';
 }
 
-function withBatchMetadata(request: ExecutionRequest, batchId: string, batchIndex: number): ExecutionRequest {
+function withBatchMetadata(
+  request: ExecutionRequest,
+  batchId: string,
+  batchIndex: number,
+  limits: ResponseBatchRecord['limits'],
+): ExecutionRequest {
   return {
     ...request,
     metadata: {
       ...(request.metadata ?? {}),
       batchId,
       batchIndex,
+      batchLimits: limits,
     },
   };
+}
+
+function readResponseBatchRunMetadata(record: ExecutionRunStoredRecord): {
+  batchId: string;
+  limits: ResponseBatchRecord['limits'];
+} | null {
+  const metadata = readRecord(record.bundle.run.initialInputs.metadata);
+  if (!metadata) return null;
+  const batchId = typeof metadata.batchId === 'string' ? metadata.batchId : null;
+  if (!batchId) return null;
+  const rawLimits = readRecord(metadata.batchLimits);
+  return {
+    batchId,
+    limits: {
+      maxConcurrentRuns: readNullablePositiveInteger(rawLimits?.maxConcurrentRuns),
+      maxBrowserInteractionsPerMinute: readNullablePositiveInteger(rawLimits?.maxBrowserInteractionsPerMinute),
+    },
+  };
+}
+
+async function countActiveBatchRuns(
+  control: ExecutionRuntimeControlContract,
+  batchId: string,
+  excludingRunId: string,
+): Promise<number> {
+  const records = await control.listRuns({ sourceKind: 'direct' });
+  return records.filter((record) => {
+    if (record.runId === excludingRunId) return false;
+    if (readResponseBatchRunMetadata(record)?.batchId !== batchId) return false;
+    if (['succeeded', 'failed', 'cancelled'].includes(record.bundle.run.status)) return false;
+    return (
+      record.bundle.leases.some((lease) => lease.status === 'active') ||
+      record.bundle.steps.some((step) => step.status === 'running')
+    );
+  }).length;
+}
+
+async function countRecentlyStartedBatchRuns(
+  control: ExecutionRuntimeControlContract,
+  input: {
+    batchId: string;
+    now: Date;
+    windowMs: number;
+  },
+): Promise<number> {
+  const cutoff = input.now.getTime() - input.windowMs;
+  const records = await control.listRuns({ sourceKind: 'direct' });
+  return records.reduce((count, record) => {
+    if (readResponseBatchRunMetadata(record)?.batchId !== input.batchId) return count;
+    return (
+      count +
+      record.bundle.events.filter((event) => {
+        if (event.type !== 'step-started') return false;
+        const createdAt = Date.parse(event.createdAt);
+        return Number.isFinite(createdAt) && createdAt >= cutoff;
+      }).length
+    );
+  }, 0);
+}
+
+function readRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+}
+
+function readNullablePositiveInteger(value: unknown): number | null {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : null;
 }
 
 const RESPONSE_BATCH_JOB_RECORD_SCHEMA: z.ZodType<ResponseBatchJobRecord> = z.object({

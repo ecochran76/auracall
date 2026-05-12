@@ -3501,3 +3501,21 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm exec biome lint src/runtime/responseBatchService.ts src/mcp/tools/responseBatch.ts src/mcp/server.ts src/http/responsesServer.ts tests/runtime.responseBatchService.test.ts tests/mcp.responseBatch.test.ts tests/mcp.server.test.ts tests/http.responsesServer.test.ts --max-diagnostics 30`
     exited cleanly; it reported unrelated existing non-null assertion warnings
     in `tests/http.responsesServer.test.ts`
+
+## Turn 134 | 2026-05-12
+
+- Goal: make response batch limits actionable in the shared drain path.
+- Change:
+  - added a service-host execution gate that runs before lease acquisition
+  - copied batch limits onto each child response run
+  - added a response-batch gate for `maxConcurrentRuns` and
+    `maxBrowserInteractionsPerMinute`
+  - wired HTTP background/targeted drains through the batch gate
+  - documented that batch-gated child runs remain queued for later drain passes
+- Verification:
+  - `pnpm vitest run tests/runtime.responseBatchService.test.ts tests/runtime.serviceHost.test.ts tests/mcp.responseBatch.test.ts tests/mcp.server.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "response batches|development posture" --maxWorkers 1`
+  - `pnpm tsc --noEmit`
+  - `pnpm exec biome lint src/runtime/responseBatchService.ts src/runtime/serviceHost.ts src/http/responsesServer.ts tests/runtime.responseBatchService.test.ts tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts --max-diagnostics 50`
+    exited cleanly; it reported unrelated existing non-null assertion warnings
+    in `tests/http.responsesServer.test.ts` and `tests/runtime.serviceHost.test.ts`

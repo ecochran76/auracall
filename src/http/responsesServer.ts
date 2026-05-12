@@ -77,6 +77,7 @@ import {
   type ExecutionResponsesServiceDeps,
 } from '../runtime/responsesService.js';
 import {
+  createResponseBatchExecutionGate,
   createResponseBatchService,
   ResponseBatchCreateRequestSchema,
   type ResponseBatchService,
@@ -845,6 +846,10 @@ export async function createResponsesHttpServer(
   let host: ExecutionServiceHost;
   let responsesService: ReturnType<typeof createExecutionResponsesService>;
   let responseBatchService: ResponseBatchService;
+  const responseBatchExecutionGate = createResponseBatchExecutionGate({
+    control,
+    now,
+  });
   let teamRuntimeBridge: TeamRuntimeBridge;
   const runnerState: HttpStatusResponse['runner'] = {
     id: null,
@@ -945,6 +950,7 @@ export async function createResponsesHttpServer(
       runId: drainOptions.runId,
       sourceKind: drainOptions.sourceKind,
       maxRuns: drainOptions.maxRuns,
+      executionGate: responseBatchExecutionGate,
       onStart: () => {
         if (backgroundDrainState.state !== 'disabled') {
           backgroundDrainState.state = 'running';
