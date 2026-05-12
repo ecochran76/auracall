@@ -106,7 +106,9 @@ For repo-local development:
 
 ```bash
 pnpm run smoke:che447-grading-batch
+pnpm run smoke:scoped-client-handoff
 ```
 
-The smoke proves the general batch pattern without live browser/provider quota
-use.
+The scoped-client-handoff smoke proves the generated client env can discover
+the target model, run one response, and enqueue a batch without live
+browser/provider quota use.

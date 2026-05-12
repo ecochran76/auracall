@@ -21,6 +21,7 @@ const steps: Step[] = [
   createScriptStep('ops-browser preflight run detail', 'smoke:ops-browser-preflight-run-detail', 'smoke-ops-browser-preflight-run-detail'),
   createScriptStep('operator API key issue', 'smoke:api-key-issue', 'smoke-api-key-issue'),
   createScriptStep('operator API key OpenAI client', 'smoke:api-key-openai-client', 'smoke-api-key-openai-client'),
+  createScriptStep('scoped client handoff workflow', 'smoke:scoped-client-handoff', 'smoke-scoped-client-handoff-workflow'),
   createScriptStep('ChE 4470 grading batch workflow', 'smoke:che447-grading-batch', 'smoke-che447-grading-batch'),
   createInstallRuntimeStep(),
   createScriptStep('installed MCP api_status and api_log_tail', 'smoke:mcp-api-status', 'smoke-api-status-mcp'),

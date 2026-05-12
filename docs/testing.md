@@ -225,6 +225,11 @@
         project-bound agent creation, scoped execution key, attachment-bearing
         batch enqueue, batch polling, and child response readback pattern
         without provider or browser dispatcher access
+      - local deterministic smoke for scoped client handoff workflows:
+        `pnpm run smoke:scoped-client-handoff`; it chains project ensure,
+        scoped key issuance with `clientEnvPath`, API service reload
+        simulation, `/v1/models` validation, one direct response, and one
+        response batch using only the generated client env values
       - local deterministic smoke for live-follow health parity:
         `pnpm run smoke:live-follow-health`; it compares `/status.liveFollow`,
         CLI `api status`, MCP `api_status`, and `/ops/browser` against one
@@ -266,9 +271,10 @@
         completion-hydration, live-follow health/diagnostics parity,
         ops-browser-control, ops-browser provider-guard clear,
         ops-browser preflight run-detail, operator API-key issue,
-        OpenAI-compatible client auth, setup-plus-batch agent workflow,
-        user runtime install, installed MCP status, API log-tail, ops-browser
-        MCP, and provider-guard MCP smokes in sequence before live dogfood.
+        OpenAI-compatible client auth, scoped client handoff workflow,
+        setup-plus-batch agent workflow, user runtime install, installed MCP
+        status, API log-tail, ops-browser MCP, and provider-guard MCP smokes
+        in sequence before live dogfood.
         When started through the API/dashboard,
         `/status.preflight.lazyLiveFollowRun.steps` and `/ops/browser` show
         per-step progress before the run completes.

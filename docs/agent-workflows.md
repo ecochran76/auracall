@@ -331,10 +331,11 @@ Run:
 
 ```bash
 pnpm run smoke:che447-grading-batch
+pnpm run smoke:scoped-client-handoff
 ```
 
-This is intentionally named after the current course workflow, but it is a
-general pattern smoke. It proves:
+The grading smoke is intentionally named after the current course workflow, but
+it is a general pattern smoke. It proves:
 
 - operator project ensure
 - project-bound agent creation
@@ -344,3 +345,8 @@ general pattern smoke. It proves:
 - batch polling
 - child response readback
 - no live provider/browser quota use
+
+The scoped-client-handoff smoke proves the same setup contract from the client
+side: after a simulated API service reload, it uses only the generated client
+env values to discover the agent, submit one direct response, enqueue a batch,
+and poll/read the results.

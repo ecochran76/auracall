@@ -3582,3 +3582,28 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run docs:list`
   - `pnpm run plans:audit -- --keep 65`
   - `git diff --check`
+
+## Turn 138 | 2026-05-12
+
+- Goal: prove the full scoped client handoff workflow end to end.
+- Change:
+  - added `scripts/smoke-scoped-client-handoff-workflow.ts`
+  - added `pnpm run smoke:scoped-client-handoff`
+  - wired the smoke into `preflight:lazy-live-follow`
+  - smoke verifies project ensure, scoped API-key issuance, simulated API
+    reload from the issued service env, generated client env handoff,
+    `/v1/models` discovery, one direct `/v1/responses` call, and one
+    attachment-bearing `/v1/response-batches` enqueue/readback
+  - updated API workflow docs, OpenAI endpoint docs, testing docs, and the
+    repo-local AuraCall API workflow skill
+- Verification:
+  - `pnpm run smoke:scoped-client-handoff`
+  - `pnpm run smoke:api-key-issue`
+  - `pnpm run smoke:api-key-openai-client`
+  - `pnpm run smoke:che447-grading-batch`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome lint scripts/smoke-scoped-client-handoff-workflow.ts scripts/preflight-lazy-live-follow.ts package.json docs/agent-workflows.md docs/openai-endpoints.md docs/testing.md skills/auracall-api-workflow/SKILL.md --max-diagnostics 60`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 65`
+  - `git diff --check`
+  - `pnpm run preflight:lazy-live-follow`

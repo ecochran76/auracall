@@ -27708,6 +27708,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror dashboard|api ops browser CLI helpers|browser operator dashboard" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
 
+## Turn 139 | 2026-05-12
+
+- Continued implementation plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: prove that a privileged AuraCall setup flow can hand a downstream
+  client agent a scoped `.env` and that the client can use only that handoff
+  to discover and run its assigned model.
+- Change:
+  - added `pnpm run smoke:scoped-client-handoff`
+  - the smoke creates a project-bound registry agent, issues a scoped API key
+    plus generated client env, restarts the API from the issued service env,
+    validates `/v1/models`, runs one direct `/v1/responses` call, and enqueues
+    one attachment-bearing response batch
+  - wired the smoke into `preflight:lazy-live-follow`
+  - updated agent workflow, OpenAI endpoint, testing, and skill docs so
+    external agents have a concrete handoff verification path
+- Validation:
+  - `pnpm run smoke:scoped-client-handoff`
+  - `pnpm run smoke:api-key-issue`
+  - `pnpm run smoke:api-key-openai-client`
+  - `pnpm run smoke:che447-grading-batch`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome lint scripts/smoke-scoped-client-handoff-workflow.ts scripts/preflight-lazy-live-follow.ts package.json docs/agent-workflows.md docs/openai-endpoints.md docs/testing.md skills/auracall-api-workflow/SKILL.md --max-diagnostics 60`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 65`
+  - `git diff --check`
+  - `pnpm run preflight:lazy-live-follow`
+
 ## Turn 151 | 2026-05-08
 
 - Continued implementation plan:

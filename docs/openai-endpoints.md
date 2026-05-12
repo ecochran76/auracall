@@ -166,6 +166,11 @@ Current limits:
     project-bound agent creation, an agent-scoped API key batch enqueue, two
     attachment-bearing jobs, batch polling, and child response readback without
     live provider/browser work
+  - deterministic client handoff smoke:
+    `pnpm run smoke:scoped-client-handoff` verifies project ensure, scoped key
+    issuance with `clientEnvPath`, API service reload simulation,
+    `/v1/models` validation, one direct response, and one response batch using
+    only generated client env values
 - API-key authorization can be configured in `~/.auracall/config.json` or
   through the installed service dotenv file at `~/.auracall/api.env`. The
   service recognizes `AURACALL_API_KEY` as a bearer key and optional
