@@ -7,6 +7,8 @@ import { createAgentRegistryStore } from '../src/config/agentRegistryStore.js';
 import {
   createConfigEntitiesListToolHandler,
   createConfigAgentUpsertToolHandler,
+  createConfigSnapshotExportToolHandler,
+  createConfigSnapshotImportToolHandler,
   createConfigTeamUpsertToolHandler,
 } from '../src/mcp/tools/configEntities.js';
 
@@ -165,5 +167,74 @@ describe('mcp config entity tools', () => {
         ],
       },
     });
+  });
+
+  it('exports and imports reviewable snapshots through MCP config entities', async () => {
+    const sourceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-mcp-config-snapshot-source-'));
+    const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-mcp-config-snapshot-target-'));
+    cleanup.push(sourceDir, targetDir);
+    const sourceConfigPath = path.join(sourceDir, 'config.json');
+    const targetConfigPath = path.join(targetDir, 'config.json');
+    const baseConfig = {
+      browserProfiles: { default: {} },
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+      },
+    };
+    await fs.writeFile(sourceConfigPath, JSON.stringify(baseConfig), 'utf8');
+    await fs.writeFile(targetConfigPath, JSON.stringify(baseConfig), 'utf8');
+    const sourceStore = createAgentRegistryStore({
+      rootDir: sourceDir,
+      forceJsonFallbackForTest: true,
+    });
+    const targetStore = createAgentRegistryStore({
+      rootDir: targetDir,
+      forceJsonFallbackForTest: true,
+    });
+    const sourceService = createAgentTeamConfigService({ configPath: sourceConfigPath, registryStore: sourceStore });
+    const targetService = createAgentTeamConfigService({ configPath: targetConfigPath, registryStore: targetStore });
+    await sourceService.upsertAgent({
+      id: 'worker',
+      config: {
+        runtimeProfile: 'default',
+        service: 'gemini',
+      },
+    });
+    await sourceService.upsertTeam({
+      id: 'ops',
+      config: {
+        agents: ['worker'],
+      },
+    });
+
+    const exported = await createConfigSnapshotExportToolHandler(sourceService)({
+      agents: ['worker'],
+      teams: ['ops'],
+    });
+    const imported = await createConfigSnapshotImportToolHandler(targetService)({
+      snapshot: exported.structuredContent,
+    });
+
+    expect(exported).toMatchObject({
+      isError: false,
+      structuredContent: {
+        object: 'auracall_agent_registry_snapshot',
+        agents: [{ id: 'worker' }],
+        teams: [{ id: 'ops' }],
+      },
+    });
+    expect(imported).toMatchObject({
+      isError: false,
+      structuredContent: {
+        object: 'auracall_agent_registry_snapshot_import',
+        importedAgents: ['worker'],
+        importedTeams: ['ops'],
+      },
+    });
+    expect(await targetStore.listAgents()).toEqual([
+      expect.objectContaining({
+        id: 'worker',
+      }),
+    ]);
   });
 });

@@ -37,6 +37,21 @@ export const teamConfigUpsertInputSchema = z.object({
   config: TeamConfigSchema,
 });
 
+const agentRegistrySnapshotEntitySchema = z.object({
+  id: CONFIG_ID_SCHEMA,
+  config: z.record(z.string(), z.unknown()),
+});
+
+export const agentRegistrySnapshotSchema = z.object({
+  object: z.literal('auracall_agent_registry_snapshot'),
+  version: z.literal(1),
+  exportedAt: z.string(),
+  agents: z.array(agentRegistrySnapshotEntitySchema),
+  teams: z.array(agentRegistrySnapshotEntitySchema),
+});
+
+export type AgentRegistrySnapshot = z.infer<typeof agentRegistrySnapshotSchema>;
+
 export interface ConfigEntityMutationResult {
   object: 'auracall_config_entity';
   kind: 'agent' | 'team';
@@ -117,10 +132,23 @@ export interface AgentTeamConfigService {
   effectiveConfig(): Promise<MutableConfig>;
   effectiveCatalog(): Promise<EffectiveAgentCatalog>;
   diagnostics(input?: { apiKeys?: AgentConfigApiKeyDiagnosticInput[] }): Promise<AgentConfigDiagnosticsResult>;
+  exportSnapshot(input?: { agents?: string[]; teams?: string[]; now?: Date }): Promise<AgentRegistrySnapshot>;
+  importSnapshot(input: { snapshot: AgentRegistrySnapshot; dryRun?: boolean }): Promise<AgentRegistrySnapshotImportResult>;
   upsertAgent(input: z.infer<typeof agentConfigUpsertInputSchema>): Promise<ConfigEntityMutationResult>;
   deleteAgent(id: string): Promise<ConfigEntityMutationResult>;
   upsertTeam(input: z.infer<typeof teamConfigUpsertInputSchema>): Promise<ConfigEntityMutationResult>;
   deleteTeam(id: string): Promise<ConfigEntityMutationResult>;
+}
+
+export interface AgentRegistrySnapshotImportResult {
+  object: 'auracall_agent_registry_snapshot_import';
+  dryRun: boolean;
+  importedAgents: string[];
+  importedTeams: string[];
+  blockedAgents: string[];
+  blockedTeams: string[];
+  configPath: string;
+  registryPath: string | null;
 }
 
 export function createAgentTeamConfigService(
@@ -206,6 +234,76 @@ export function createAgentTeamConfigService(
         disabledRegistryTeams: registryTeams.filter((record) => !record.enabled).map((record) => record.id).sort(),
         apiKeys: input.apiKeys ?? [],
       });
+    },
+
+    async exportSnapshot(input = {}) {
+      const effectiveConfig = await this.effectiveConfig();
+      const agentsRecord = getRecord(effectiveConfig.agents);
+      const teamsRecord = getRecord(effectiveConfig.teams);
+      const requestedAgents = normalizeOptionalIdList(input.agents);
+      const requestedTeams = normalizeOptionalIdList(input.teams);
+      return {
+        object: 'auracall_agent_registry_snapshot',
+        version: 1,
+        exportedAt: (input.now ?? new Date()).toISOString(),
+        agents: Object.entries(agentsRecord)
+          .filter(([id]) => !requestedAgents || requestedAgents.includes(id))
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([id, config]) => ({
+            id,
+            config: AgentConfigSchema.parse(config) as Record<string, unknown>,
+          })),
+        teams: Object.entries(teamsRecord)
+          .filter(([id]) => !requestedTeams || requestedTeams.includes(id))
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([id, config]) => ({
+            id,
+            config: TeamConfigSchema.parse(config) as Record<string, unknown>,
+          })),
+      };
+    },
+
+    async importSnapshot(input) {
+      const snapshot = agentRegistrySnapshotSchema.parse(input.snapshot);
+      const config = await load();
+      const blockedAgents = snapshot.agents
+        .map((entry) => entry.id)
+        .filter((id) => registryStore && hasConfigEntity(config, 'agents', id));
+      const blockedTeams = snapshot.teams
+        .map((entry) => entry.id)
+        .filter((id) => registryStore && hasConfigEntity(config, 'teams', id));
+      const importedAgents = snapshot.agents
+        .map((entry) => entry.id)
+        .filter((id) => !blockedAgents.includes(id));
+      const importedTeams = snapshot.teams
+        .map((entry) => entry.id)
+        .filter((id) => !blockedTeams.includes(id));
+      if (!input.dryRun) {
+        for (const entry of snapshot.agents) {
+          if (blockedAgents.includes(entry.id)) continue;
+          await this.upsertAgent({
+            id: entry.id,
+            config: AgentConfigSchema.parse(entry.config),
+          });
+        }
+        for (const entry of snapshot.teams) {
+          if (blockedTeams.includes(entry.id)) continue;
+          await this.upsertTeam({
+            id: entry.id,
+            config: TeamConfigSchema.parse(entry.config),
+          });
+        }
+      }
+      return {
+        object: 'auracall_agent_registry_snapshot_import',
+        dryRun: Boolean(input.dryRun),
+        importedAgents,
+        importedTeams,
+        blockedAgents,
+        blockedTeams,
+        configPath: targetPath,
+        registryPath: registryStore?.dbPath ?? null,
+      };
     },
 
     async upsertAgent(input) {
@@ -424,6 +522,12 @@ function createDiagnosticsResult(input: {
   };
 }
 
+function normalizeOptionalIdList(values: string[] | undefined): string[] | null {
+  if (!values) return null;
+  const normalized = values.map((value) => CONFIG_ID_SCHEMA.parse(value)).sort();
+  return normalized.length > 0 ? normalized : null;
+}
+
 function createApiKeyDiagnostic(
   key: AgentConfigApiKeyDiagnosticInput,
   catalog: EffectiveAgentCatalog,
@@ -533,6 +637,10 @@ function ensureRecord(config: MutableConfig, key: 'agents' | 'teams'): Record<st
 
 function hasConfigEntity(config: MutableConfig, key: 'agents' | 'teams', id: string): boolean {
   return isRecord(config[key]) && Object.hasOwn(config[key], id);
+}
+
+function getRecord(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
 }
 
 function replaceObjectContents(target: MutableConfig, source: MutableConfig): void {

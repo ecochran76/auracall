@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import {
   agentConfigUpsertInputSchema,
+  agentRegistrySnapshotSchema,
   createAgentTeamConfigService,
   type AgentTeamConfigService,
   teamConfigUpsertInputSchema,
@@ -24,6 +25,17 @@ const configDeleteInputShape = {
   id: z.string().trim().min(1),
 } satisfies z.ZodRawShape;
 
+const configSnapshotExportInputShape = {
+  agents: z.array(z.string().trim().min(1)).optional(),
+  teams: z.array(z.string().trim().min(1)).optional(),
+  all: z.boolean().optional(),
+} satisfies z.ZodRawShape;
+
+const configSnapshotImportInputShape = {
+  snapshot: agentRegistrySnapshotSchema,
+  dryRun: z.boolean().optional(),
+} satisfies z.ZodRawShape;
+
 const configEntityOutputShape = {
   object: z.literal('auracall_config_entity'),
   kind: z.enum(['agent', 'team']),
@@ -36,6 +48,25 @@ const configEntityOutputShape = {
   agents: z.array(z.record(z.string(), z.unknown())),
   teams: z.array(z.record(z.string(), z.unknown())),
   conflicts: z.array(z.record(z.string(), z.unknown())),
+} satisfies z.ZodRawShape;
+
+const configSnapshotOutputShape = {
+  object: z.literal('auracall_agent_registry_snapshot'),
+  version: z.literal(1),
+  exportedAt: z.string(),
+  agents: z.array(z.record(z.string(), z.unknown())),
+  teams: z.array(z.record(z.string(), z.unknown())),
+} satisfies z.ZodRawShape;
+
+const configSnapshotImportOutputShape = {
+  object: z.literal('auracall_agent_registry_snapshot_import'),
+  dryRun: z.boolean(),
+  importedAgents: z.array(z.string()),
+  importedTeams: z.array(z.string()),
+  blockedAgents: z.array(z.string()),
+  blockedTeams: z.array(z.string()),
+  configPath: z.string(),
+  registryPath: z.string().nullable(),
 } satisfies z.ZodRawShape;
 
 export interface RegisterConfigEntityToolsDeps {
@@ -103,6 +134,28 @@ export function registerConfigEntityTools(
     },
     createConfigTeamDeleteToolHandler(service),
   );
+
+  server.registerTool(
+    'config_snapshot_export',
+    {
+      title: 'Export AuraCall agents and teams',
+      description: 'Export selected effective agents and teams to a reviewable snapshot object.',
+      inputSchema: configSnapshotExportInputShape,
+      outputSchema: configSnapshotOutputShape,
+    },
+    createConfigSnapshotExportToolHandler(service),
+  );
+
+  server.registerTool(
+    'config_snapshot_import',
+    {
+      title: 'Import AuraCall agents and teams',
+      description: 'Import a reviewable agent/team snapshot into the user-scoped registry.',
+      inputSchema: configSnapshotImportInputShape,
+      outputSchema: configSnapshotImportOutputShape,
+    },
+    createConfigSnapshotImportToolHandler(service),
+  );
 }
 
 export function createConfigEntitiesListToolHandler(service: AgentTeamConfigService) {
@@ -134,6 +187,49 @@ export function createConfigTeamDeleteToolHandler(service: AgentTeamConfigServic
   return async (input: unknown) => {
     const payload = z.object(configDeleteInputShape).parse(input);
     return formatResult(await service.deleteTeam(payload.id));
+  };
+}
+
+export function createConfigSnapshotExportToolHandler(service: AgentTeamConfigService) {
+  return async (input: unknown) => {
+    const payload = z.object(configSnapshotExportInputShape).parse(input ?? {});
+    if (!payload.all && !payload.agents?.length && !payload.teams?.length) {
+      throw new Error('Select at least one agent/team or set all=true.');
+    }
+    const snapshot = await service.exportSnapshot({
+      agents: payload.all ? undefined : payload.agents,
+      teams: payload.all ? undefined : payload.teams,
+    });
+    return {
+      isError: false,
+      content: [
+        {
+          type: 'text' as const,
+          text: `AuraCall snapshot export: ${snapshot.agents.length} agent(s), ${snapshot.teams.length} team(s).`,
+        },
+      ],
+      structuredContent: snapshot as unknown as Record<string, unknown>,
+    };
+  };
+}
+
+export function createConfigSnapshotImportToolHandler(service: AgentTeamConfigService) {
+  return async (input: unknown) => {
+    const payload = z.object(configSnapshotImportInputShape).parse(input);
+    const result = await service.importSnapshot({
+      snapshot: payload.snapshot,
+      dryRun: payload.dryRun,
+    });
+    return {
+      isError: false,
+      content: [
+        {
+          type: 'text' as const,
+          text: `AuraCall snapshot import: ${result.importedAgents.length} agent(s), ${result.importedTeams.length} team(s), ${result.blockedAgents.length + result.blockedTeams.length} blocked.`,
+        },
+      ],
+      structuredContent: result as unknown as Record<string, unknown>,
+    };
   };
 }
 

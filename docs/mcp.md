@@ -143,6 +143,17 @@
   return `mutationTarget = "blocked"` with a `blockedReason` rather than
   writing a hidden registry row behind the config overlay.
 
+### `config_snapshot_export` and `config_snapshot_import`
+- Behavior: export selected effective agents/teams to
+  `object = "auracall_agent_registry_snapshot"` and import that snapshot into
+  the user-scoped registry.
+- `config_snapshot_export` requires either `all = true` or at least one agent
+  or team id. The snapshot is reviewable JSON and is not treated as the hot
+  mutable store.
+- `config_snapshot_import` supports `dryRun`. Config-defined overlay ids remain
+  pinned and are reported as blocked rather than imported behind the config
+  overlay.
+
 ### `api_key_issue`
 - Behavior: privileged local operator tool that writes an additional
   agent/team-scoped key into `~/.auracall/api.env` and returns

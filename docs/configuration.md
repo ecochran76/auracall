@@ -54,6 +54,8 @@ auracall config doctor --json
 auracall config doctor --strict
 auracall config agent-diagnostics
 auracall config agent-diagnostics --json
+auracall config agent-export --agent researcher --team ops --output agents.snapshot.json
+auracall config agent-import agents.snapshot.json --dry-run
 auracall profile list
 auracall profile list --json
 ```
@@ -89,6 +91,12 @@ runtime-planning surface only.
 registry and `~/.auracall/api.env` without returning secrets. Use it to check
 disabled registry records, config-vs-registry conflicts, missing API-key scope
 targets, and which scoped key ids can reach which effective agents.
+
+`config agent-export` writes selected effective agents/teams to a versioned
+`auracall_agent_registry_snapshot` JSON file for review, backup, or promotion.
+`config agent-import` imports that file into the user-scoped registry and still
+blocks config-defined overlay ids rather than writing hidden registry records
+behind pinned config entries.
 
 ## Local API and dashboard
 

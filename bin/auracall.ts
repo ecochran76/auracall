@@ -89,6 +89,12 @@ import {
   resolveAgentDiagnosticsExitCode,
 } from '../src/cli/agentDiagnosticsCommand.js';
 import {
+  exportAgentSnapshotForCli,
+  formatAgentSnapshotExportCliResult,
+  formatAgentSnapshotImportCliResult,
+  importAgentSnapshotForCli,
+} from '../src/cli/agentSnapshotCommand.js';
+import {
   executeConfiguredTeamRun,
   formatTeamRunCliExecutionPayload,
   formatTeamRunCliInspectionPayload,
@@ -8666,6 +8672,50 @@ configCommand
       return;
     }
     console.log(formatAgentDiagnosticsCliReport(report));
+  });
+
+configCommand
+  .command('agent-export')
+  .description('Export selected agents and teams to a reviewable snapshot file.')
+  .option('--path <path>', 'Config path to inspect (defaults to ~/.auracall/config.json).')
+  .option('--agent <id>', 'Agent id to export. Repeat for multiple agents.', collectTrimmedString, [])
+  .option('--team <id>', 'Team id to export. Repeat for multiple teams.', collectTrimmedString, [])
+  .option('--all', 'Export all effective agents and teams.', false)
+  .option('--output <path>', 'Write snapshot JSON to a file instead of stdout.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const result = await exportAgentSnapshotForCli({
+      configPath: commandOptions.path,
+      outputPath: commandOptions.output,
+      agents: commandOptions.agent,
+      teams: commandOptions.team,
+      all: Boolean(commandOptions.all),
+    });
+    if (commandOptions.json || !commandOptions.output) {
+      console.log(JSON.stringify(result.snapshot, null, 2));
+      return;
+    }
+    console.log(formatAgentSnapshotExportCliResult(result));
+  });
+
+configCommand
+  .command('agent-import')
+  .description('Import a reviewable agent/team snapshot into the user-scoped registry.')
+  .argument('<path>', 'Snapshot JSON file to import.')
+  .option('--config-path <path>', 'Config path to inspect (defaults to ~/.auracall/config.json).')
+  .option('--dry-run', 'Validate and report import actions without writing registry records.', false)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (inputPath: string, commandOptions) => {
+    const result = await importAgentSnapshotForCli({
+      configPath: commandOptions.configPath,
+      inputPath,
+      dryRun: Boolean(commandOptions.dryRun),
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatAgentSnapshotImportCliResult(result));
   });
 
 const teamsCommand = program

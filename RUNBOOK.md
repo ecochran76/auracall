@@ -3309,3 +3309,19 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard|agent registry and loaded API-key diagnostics" --maxWorkers 1`
   - `pnpm tsc --noEmit`
   - `pnpm exec biome lint src/http/responsesServer.ts --max-diagnostics 40`
+
+## Turn 122 | 2026-05-11
+
+- Goal: add reviewable export/import snapshots for registry-backed agents and
+  teams.
+- Change:
+  - added versioned `auracall_agent_registry_snapshot` export/import support to
+    the config service
+  - added `auracall config agent-export` and `auracall config agent-import`
+  - added MCP `config_snapshot_export` and `config_snapshot_import`
+  - imports write the user-scoped registry and report config-defined overlay ids
+    as blocked
+  - updated README, configuration docs, MCP docs, and plan 0065
+- Verification:
+  - `pnpm vitest run tests/config/agentConfigService.test.ts tests/cli/agentSnapshotCommand.test.ts tests/mcp.configEntities.test.ts --maxWorkers 1`
+  - `pnpm tsc --noEmit`

@@ -316,6 +316,123 @@ describe('agent and team config service', () => {
     expect(JSON.parse(await fs.readFile(configPath, 'utf8'))).toEqual(initialConfig);
   });
 
+  it('exports and imports reviewable agent registry snapshots', async () => {
+    const sourceDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-agent-config-snapshot-source-'));
+    const targetDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-agent-config-snapshot-target-'));
+    cleanup.push(sourceDir, targetDir);
+    const sourceConfigPath = path.join(sourceDir, 'config.json');
+    const targetConfigPath = path.join(targetDir, 'config.json');
+    const baseConfig = {
+      browserProfiles: { default: {} },
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+      },
+    };
+    await fs.writeFile(sourceConfigPath, JSON.stringify(baseConfig), 'utf8');
+    await fs.writeFile(targetConfigPath, JSON.stringify({
+      ...baseConfig,
+      agents: {
+        pinned: {
+          runtimeProfile: 'default',
+          service: 'chatgpt',
+        },
+      },
+    }), 'utf8');
+    const sourceStore = createAgentRegistryStore({
+      rootDir: sourceDir,
+      forceJsonFallbackForTest: true,
+    });
+    const targetStore = createAgentRegistryStore({
+      rootDir: targetDir,
+      forceJsonFallbackForTest: true,
+    });
+    const sourceService = createAgentTeamConfigService({ configPath: sourceConfigPath, registryStore: sourceStore });
+    const targetService = createAgentTeamConfigService({ configPath: targetConfigPath, registryStore: targetStore });
+    await sourceService.upsertAgent({
+      id: 'worker',
+      config: {
+        runtimeProfile: 'default',
+        service: 'gemini',
+      },
+    });
+    await sourceService.upsertAgent({
+      id: 'pinned',
+      config: {
+        runtimeProfile: 'default',
+        service: 'grok',
+      },
+    });
+    await sourceService.upsertTeam({
+      id: 'ops',
+      config: {
+        agents: ['worker'],
+      },
+    });
+
+    const snapshot = await sourceService.exportSnapshot({
+      agents: ['worker', 'pinned'],
+      teams: ['ops'],
+      now: new Date('2026-05-11T12:00:00.000Z'),
+    });
+    const dryRun = await targetService.importSnapshot({ snapshot, dryRun: true });
+    const imported = await targetService.importSnapshot({ snapshot });
+
+    expect(snapshot).toEqual({
+      object: 'auracall_agent_registry_snapshot',
+      version: 1,
+      exportedAt: '2026-05-11T12:00:00.000Z',
+      agents: [
+        {
+          id: 'pinned',
+          config: {
+            runtimeProfile: 'default',
+            service: 'grok',
+          },
+        },
+        {
+          id: 'worker',
+          config: {
+            runtimeProfile: 'default',
+            service: 'gemini',
+          },
+        },
+      ],
+      teams: [
+        {
+          id: 'ops',
+          config: {
+            agents: ['worker'],
+          },
+        },
+      ],
+    });
+    expect(dryRun).toMatchObject({
+      dryRun: true,
+      importedAgents: ['worker'],
+      importedTeams: ['ops'],
+      blockedAgents: ['pinned'],
+    });
+    expect(imported).toMatchObject({
+      dryRun: false,
+      importedAgents: ['worker'],
+      importedTeams: ['ops'],
+      blockedAgents: ['pinned'],
+    });
+    expect(await targetStore.listAgents()).toEqual([
+      expect.objectContaining({
+        id: 'worker',
+        config: expect.objectContaining({
+          service: 'gemini',
+        }),
+      }),
+    ]);
+    expect(await targetStore.listTeams()).toEqual([
+      expect.objectContaining({
+        id: 'ops',
+      }),
+    ]);
+  });
+
   it('blocks registry mutations for config-defined overlay ids', async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-agent-config-registry-block-'));
     cleanup.push(dir);

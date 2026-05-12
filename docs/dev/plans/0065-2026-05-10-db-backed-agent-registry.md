@@ -60,6 +60,9 @@ Implemented:
 - The Agents / Teams dashboard renders a secret-free Agent Diagnostics panel
   from `/v1/config/agent-diagnostics` so operators can see registry/key health
   before inspecting individual runs.
+- `auracall config agent-export`, `auracall config agent-import`, MCP
+  `config_snapshot_export`, and MCP `config_snapshot_import` provide versioned
+  reviewable JSON snapshots for selected effective agents/teams.
 - `projectConfigModel(...)` projects config-defined agents and teams for
   `/v1/models`, `/v1/config/agents`, `/v1/config/teams`, CLI config inspection,
   and runtime selection.
@@ -171,8 +174,8 @@ Add explicit registry routes only after compatibility is working:
      config entries that should be migrated
 
 4. Export/import and operator ergonomics
-   - add export/import snapshots for selected agents and teams
-   - add CLI/MCP helpers for backup, promotion, and rollback
+   - [x] add export/import snapshots for selected agents and teams
+   - [x] add CLI/MCP helpers for backup, promotion, and rollback
    - defer dashboard editing until the registry API is stable
 
 ## Non-Goals

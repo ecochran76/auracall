@@ -282,6 +282,10 @@ Terminology note:
   runtime profiles, or listed key ids without exposing secret values. The same
   local, secret-free report is available with
   `auracall config agent-diagnostics`.
+- Registry-backed agents and teams can be exported to reviewable JSON snapshots
+  with `auracall config agent-export --agent <id> --team <id> --output <file>`
+  and imported with `auracall config agent-import <file> --dry-run`. Imports
+  write the user-scoped registry and keep config-defined overlay ids pinned.
 - Account mirror refreshes are metadata-first and identity-gated. Successful
   refreshes persist the mirror snapshot in the existing provider cache under
   `provider + boundIdentity`; runtime/browser profile ids are retained as
