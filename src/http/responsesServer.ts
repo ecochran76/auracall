@@ -31,6 +31,7 @@ import {
   createAgentTeamConfigService,
   teamConfigUpsertInputSchema,
 } from '../config/agentConfigService.js';
+import { issueApiKey } from '../config/apiKeyIssuer.js';
 import {
   createAgentRegistryStore,
   type AgentRegistryStore,
@@ -583,6 +584,7 @@ interface HttpStatusResponse {
     browserProcesses: string;
     workbenchCapabilitiesList: string;
     agentRegistryDiagnostics: string;
+    configApiKeyIssue: string;
     configSnapshotExport: string;
     configSnapshotImport: string;
     operatorBrowserDashboard: string;
@@ -1837,6 +1839,23 @@ export async function createResponsesHttpServer(
         return;
       }
 
+      if (req.method === 'POST' && url.pathname === '/v1/config/api-keys/issue') {
+        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+        if (operatorAuthError) {
+          sendJson(res, 403, {
+            error: {
+              message: operatorAuthError,
+              type: 'permission_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        const body = await readRequestBody(req);
+        const payload = parseConfigApiKeyIssueRequest(JSON.parse(body || '{}'));
+        sendJson(res, 200, await issueApiKey(agentTeamConfigService, payload));
+        return;
+      }
+
       if (req.method === 'POST' && url.pathname === '/v1/config/snapshots/export') {
         const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
         if (operatorAuthError) {
@@ -2962,6 +2981,7 @@ function createHttpStatusResponse(input: {
       accountMirrorSchedulerDiagnostics: '/v1/account-mirrors/scheduler/diagnostics[?provider={chatgpt|gemini|grok}&runtimeProfile={runtime_profile}|completionId={completion_id}]',
       browserProcesses: '/v1/browser/processes',
       agentRegistryDiagnostics: '/v1/config/agent-diagnostics',
+      configApiKeyIssue: 'POST /v1/config/api-keys/issue',
       configSnapshotExport: 'POST /v1/config/snapshots/export',
       configSnapshotImport: 'POST /v1/config/snapshots/import',
       workbenchCapabilitiesList:
@@ -4786,6 +4806,24 @@ const CONFIG_SNAPSHOT_IMPORT_REQUEST_SCHEMA = z.object({
 
 function parseConfigSnapshotImportRequest(value: unknown) {
   return CONFIG_SNAPSHOT_IMPORT_REQUEST_SCHEMA.parse(value);
+}
+
+const CONFIG_API_KEY_ISSUE_REQUEST_SCHEMA = z.object({
+  agentId: z.string().trim().min(1).optional(),
+  teamId: z.string().trim().min(1).optional(),
+  keyId: z.string().trim().min(1).optional(),
+  services: z.array(z.string().trim().min(1)).optional(),
+  runtimeProfiles: z.array(z.string().trim().min(1)).optional(),
+  apiBaseUrl: z.string().trim().min(1).optional(),
+  envPath: z.string().trim().min(1).optional(),
+  overwrite: z.boolean().optional(),
+}).refine(
+  (value) => Boolean(value.agentId || value.teamId),
+  'agentId or teamId is required.',
+);
+
+function parseConfigApiKeyIssueRequest(value: unknown) {
+  return CONFIG_API_KEY_ISSUE_REQUEST_SCHEMA.parse(value);
 }
 
 function createTeamRunIdSuffix(): string {

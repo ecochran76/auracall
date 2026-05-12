@@ -40,6 +40,7 @@ Current endpoints:
 - `GET /v1/models`
 - `GET /v1/config/agents`
 - `GET /v1/config/agent-diagnostics`
+- `POST /v1/config/api-keys/issue`
 - `POST /v1/config/snapshots/export`
 - `POST /v1/config/snapshots/import`
 - `PUT /v1/config/agents/{agent_id}`
@@ -127,9 +128,11 @@ Current limits:
   registry-backed agent ids are valid scope ids, agent calls can infer service
   and runtime-profile scopes from the catalog, team-scoped keys can call member
   agents, and `/v1/team-runs` enforces team scopes before creating work.
-  Privileged local MCP operators can use `api_key_issue` to add an
-  agent/team-scoped key to `~/.auracall/api.env`; restart the user API service
-  after issuing a key so systemd reloads the environment file. Use
+  Privileged local MCP operators can use `api_key_issue`, and unscoped
+  operator API clients can use `POST /v1/config/api-keys/issue`, to add an
+  agent/team-scoped key to `~/.auracall/api.env`. The issue response returns
+  the new OpenAI-compatible key once; restart the user API service afterward so
+  systemd reloads the environment file. Use
   `GET /v1/config/agent-diagnostics` against the running service or MCP
   `api_key_diagnostics` against the env file to validate key scope metadata
   without exposing secret values.

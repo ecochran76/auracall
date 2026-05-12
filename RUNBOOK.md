@@ -3352,3 +3352,16 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard|agent registry snapshots" --maxWorkers 1`
   - `pnpm tsc --noEmit`
   - `pnpm exec biome lint src/http/responsesServer.ts --max-diagnostics 80`
+
+## Turn 125 | 2026-05-12
+
+- Goal: expose privileged API-key issuance through the operator HTTP API.
+- Change:
+  - extracted MCP API-key issuance into a reusable config service
+  - added operator-only `POST /v1/config/api-keys/issue`
+  - kept scoped execution keys blocked from issuing additional keys
+  - updated API and user-runtime docs
+- Verification:
+  - `pnpm vitest run tests/mcp.apiKeys.test.ts tests/http.responsesServer.test.ts -t "api key|API key|reports development-only posture" --maxWorkers 1`
+  - `pnpm tsc --noEmit`
+  - `pnpm exec biome lint src/config/apiKeyIssuer.ts src/mcp/tools/apiKeys.ts src/http/responsesServer.ts --max-diagnostics 80`

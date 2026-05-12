@@ -16356,6 +16356,113 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('issues scoped API keys over operator HTTP routes', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-api-key-issue-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const envPath = path.join(homeDir, 'api.env');
+    const activeConfig: Record<string, unknown> = {
+      api: {
+        auth: {
+          required: true,
+          keys: [
+            {
+              id: 'admin-key',
+              secret: 'admin-secret',
+            },
+            {
+              id: 'worker-key',
+              secret: 'worker-secret',
+              agents: ['worker'],
+            },
+          ],
+        },
+      },
+      browserProfiles: { default: {} },
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+      },
+      agents: {
+        worker: {
+          runtimeProfile: 'default',
+          service: 'chatgpt',
+        },
+      },
+    };
+    await fs.writeFile(path.join(homeDir, 'config.json'), JSON.stringify(activeConfig), 'utf8');
+    const registryStore = createAgentRegistryStore({
+      rootDir: homeDir,
+      forceJsonFallbackForTest: true,
+    });
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      { config: activeConfig, agentRegistryStore: registryStore },
+    );
+
+    try {
+      const scopedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/config/api-keys/issue`, {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer worker-secret',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          agentId: 'worker',
+          keyId: 'worker-client',
+          envPath,
+        }),
+      });
+      expect(scopedResponse.status).toBe(403);
+      expect(await scopedResponse.json()).toMatchObject({
+        error: {
+          type: 'permission_error',
+          message: 'API key is not authorized for operator config access.',
+        },
+      });
+
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/config/api-keys/issue`, {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer admin-secret',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          agentId: 'worker',
+          keyId: 'worker-client',
+          services: ['chatgpt'],
+          runtimeProfiles: ['default'],
+          envPath,
+        }),
+      });
+      expect(response.status).toBe(200);
+      const payload = await response.json() as JsonObject;
+      expect(payload).toMatchObject({
+        object: 'auracall_api_key_issue',
+        keyId: 'worker-client',
+        envPath,
+        openaiBaseUrl: 'http://127.0.0.1:18095/v1',
+        model: 'agent:worker',
+        scopes: {
+          agents: ['worker'],
+          services: ['chatgpt'],
+          runtimeProfiles: ['default'],
+        },
+        restartRequired: true,
+      });
+      expect(typeof payload.apiKey).toBe('string');
+      expect(String(payload.apiKey)).toMatch(/^auracall_/);
+      const env = await fs.readFile(envPath, 'utf8');
+      expect(env).toContain('AURACALL_API_AUTH_REQUIRED=1');
+      expect(env).toContain('AURACALL_API_KEY_IDS=worker-client');
+      expect(env).toContain('AURACALL_API_KEY_WORKER_CLIENT_ID=worker-client');
+      expect(env).toContain('AURACALL_API_KEY_WORKER_CLIENT_AGENTS=worker');
+      expect(env).toContain('AURACALL_API_KEY_WORKER_CLIENT_SERVICES=chatgpt');
+      expect(env).toContain('AURACALL_API_KEY_WORKER_CLIENT_RUNTIME_PROFILES=default');
+    } finally {
+      await server.close();
+    }
+  });
+
   it('reports development-only posture through the status endpoint', async () => {
     const server = await createResponsesHttpServer(
       {
@@ -16425,6 +16532,9 @@ describe('http responses adapter', () => {
       );
       expect((payload.routes as Record<string, unknown>).accountMirrorSchedulerDiagnostics).toContain(
         '/v1/account-mirrors/scheduler/diagnostics',
+      );
+      expect((payload.routes as Record<string, unknown>).configApiKeyIssue).toBe(
+        'POST /v1/config/api-keys/issue',
       );
       expect((payload.routes as Record<string, unknown>).configSnapshotExport).toBe(
         'POST /v1/config/snapshots/export',
