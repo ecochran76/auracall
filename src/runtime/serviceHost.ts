@@ -1444,6 +1444,26 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
 
       const activeLease = getActiveExecutionRunLease(record);
       if (!activeLease) {
+        if (record.bundle.run.status === 'planned') {
+          const cancelledBundle = cancelExecutionRun({
+            bundle: record.bundle,
+            cancelledAt,
+            note: note ?? 'planned run cancelled by service host operator control',
+            source: 'operator',
+          });
+          await control.persistRun({
+            runId,
+            bundle: cancelledBundle,
+            expectedRevision: record.revision,
+          });
+          return {
+            action: 'cancel-run',
+            runId,
+            status: 'cancelled',
+            cancelled: true,
+            reason: note ?? 'planned run cancelled by service host operator control',
+          };
+        }
         return {
           action: 'cancel-run',
           runId,

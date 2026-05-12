@@ -27761,6 +27761,42 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run preflight:lazy-live-follow`
 
+## Turn 143 | 2026-05-12
+
+- Continued implementation plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: diagnose the transcribe-audio AuraCall legacy enrichment timeout and
+  harden the exposed client/operator paths it touched.
+- Change:
+  - read
+    `../transcribe-audio/docs/dev/notes/2026-05-12-auracall-legacy-enrichment-handoff.md`
+  - confirmed the installed API was reachable but direct responses were stuck
+    behind stale planned/runtime entries after client read timeouts
+  - fixed `smoke:scoped-client-env` argument parsing for the normal
+    `pnpm run smoke:scoped-client-env -- <client.env>` invocation
+  - let operator `cancel-run` cancel planned runs that have not acquired a
+    lease yet, so timed-out client requests can be cleared without first
+    scheduler-claiming them
+  - cleaned leaked `resp_batch_gate_*` fixture entries and timed-out local
+    smoke/readout requests from the installed runtime queue through operator
+    controls
+- Validation:
+  - `pnpm exec tsc --noEmit`
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responseBatchService.test.ts -t "cancels a planned run|builds an execution gate" --maxWorkers 1`
+  - `pnpm exec biome lint scripts/smoke-scoped-client-env.ts src/runtime/serviceHost.ts tests/runtime.serviceHost.test.ts tests/runtime.responseBatchService.test.ts --max-diagnostics 60`
+    exited 0 with existing `noNonNullAssertion` warnings in
+    `tests/runtime.serviceHost.test.ts`
+  - `pnpm run smoke:scoped-client-handoff`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 65`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `pnpm run smoke:scoped-client-env -- /home/ecochran76/.auracall/api.env --prompt 'Reply exactly: auracall env smoke ok' --expect-output 'auracall env smoke ok' --timeout-ms 120000`
+  - direct `/v1/chat/completions` smoke via `/home/ecochran76/.auracall/api.env`
+    returned `auracall chat smoke ok`
+  - `pnpm run preflight:lazy-live-follow`
+
 ## Turn 140 | 2026-05-12
 
 - Continued implementation plan:

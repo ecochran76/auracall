@@ -150,6 +150,9 @@ function parseArgs(argv: string[]): ScopedClientEnvSmokeInput {
   const input: Partial<ScopedClientEnvSmokeInput> = {};
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
+    if (arg === '--') {
+      continue;
+    }
     if (arg === '--prompt') {
       input.prompt = requireValue(argv, index, arg);
       index += 1;

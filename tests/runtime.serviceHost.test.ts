@@ -4627,6 +4627,38 @@ describe('runtime service host', () => {
     expect(storedRecord?.bundle.leases[0]?.status).toBe('active');
   });
 
+  it('cancels a planned run before it has an active lease', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await control.createRun(createDirectBundle('run_cancel_planned', '2026-04-08T15:00:00.000Z'));
+
+    const host = createExecutionServiceHost({
+      control,
+      ownerId: 'host:test',
+      runnerId: 'runner:cancel-local',
+      now: () => '2026-04-08T15:05:00.000Z',
+    });
+
+    const result = await host.cancelOwnedRun('run_cancel_planned', 'operator cancelled stale planned work');
+
+    expect(result).toEqual({
+      action: 'cancel-run',
+      runId: 'run_cancel_planned',
+      status: 'cancelled',
+      cancelled: true,
+      reason: 'operator cancelled stale planned work',
+    });
+
+    const storedRecord = await control.readRun('run_cancel_planned');
+    expect(storedRecord?.bundle.run.status).toBe('cancelled');
+    expect(storedRecord?.bundle.sharedState.status).toBe('cancelled');
+    expect(storedRecord?.bundle.steps[0]?.status).toBe('cancelled');
+    expect(storedRecord?.bundle.leases).toEqual([]);
+  });
+
   it('drains multiple runnable steps on one run across passes', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
     cleanup.push(homeDir);
