@@ -6,10 +6,18 @@ import {
 } from '../../runtime/responsesService.js';
 import type { ExecutionRequest } from '../../runtime/apiTypes.js';
 
+const responseCreateAttachmentInputShape = z.object({
+  id: z.string().min(1),
+  mimeType: z.string().min(1).nullable().optional(),
+  fileName: z.string().min(1).nullable().optional(),
+  uri: z.string().min(1).nullable().optional(),
+});
+
 const responseCreateInputShape = {
   model: z.string().min(1),
   input: z.string().min(1),
   instructions: z.string().min(1).nullable().optional(),
+  attachments: z.array(responseCreateAttachmentInputShape).optional(),
   runtimeProfile: z.string().min(1).nullable().optional(),
   agent: z.string().min(1).nullable().optional(),
   service: z.enum(['chatgpt', 'gemini', 'grok']).nullable().optional(),
@@ -61,6 +69,7 @@ export function createResponseCreateToolHandler(
       model: payload.model,
       input: payload.input,
       ...(payload.instructions ? { instructions: payload.instructions } : {}),
+      ...(payload.attachments ? { attachments: payload.attachments } : {}),
       ...(payload.metadata ? { metadata: payload.metadata } : {}),
       auracall: {
         ...(payload.runtimeProfile ? { runtimeProfile: payload.runtimeProfile } : {}),

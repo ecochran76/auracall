@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../teams/types.js';
+import { fileURLToPath } from 'node:url';
+import { DEFAULT_TEAM_RUN_EXECUTION_POLICY, type TeamRunArtifactRef } from '../teams/types.js';
 import {
   createTaskRunSpecRecordStore,
   type TaskRunSpecInspectionSummary,
@@ -149,6 +150,7 @@ function createDirectExecutionBundle(input: {
   const runtimeProfile = input.request.auracall?.runtimeProfile ?? null;
   const service = normalizeExecutionServiceId(input.request.auracall?.service);
   const prompt = normalizeExecutionPrompt(input.request.input);
+  const requestArtifacts = mapRequestAttachmentsToStepArtifacts(input.request.attachments);
 
   const run = createExecutionRun({
     id: input.responseId,
@@ -193,7 +195,7 @@ function createDirectExecutionBundle(input: {
     input: {
       prompt,
       handoffIds: [],
-      artifacts: [],
+      artifacts: requestArtifacts,
       structuredData: {
         requestInput: input.request.input,
         metadata: input.request.metadata ?? {},
@@ -247,6 +249,46 @@ function createDirectExecutionBundle(input: {
     sharedState,
     events,
   });
+}
+
+function mapRequestAttachmentsToStepArtifacts(
+  attachments: ExecutionRequest['attachments'] | undefined,
+): TeamRunArtifactRef[] {
+  return (attachments ?? []).map((attachment) => {
+    const artifact: TeamRunArtifactRef = {
+      id: attachment.id,
+      kind: inferRequestAttachmentKind(attachment.mimeType),
+      title: attachment.fileName ?? attachment.id,
+    };
+    if (attachment.uri) {
+      artifact.uri = attachment.uri;
+      const localPath = resolveRequestAttachmentPath(attachment.uri);
+      if (localPath) artifact.path = localPath;
+    }
+    return artifact;
+  });
+}
+
+function inferRequestAttachmentKind(mimeType: string | null | undefined): string {
+  if (!mimeType) return 'file';
+  if (mimeType.startsWith('image/')) return 'image';
+  if (mimeType.startsWith('video/')) return 'video';
+  if (mimeType.startsWith('audio/')) return 'audio';
+  return 'file';
+}
+
+function resolveRequestAttachmentPath(uri: string): string | null {
+  const value = uri.trim();
+  if (!value) return null;
+  if (value.startsWith('file://')) {
+    try {
+      return fileURLToPath(value);
+    } catch {
+      return null;
+    }
+  }
+  if (/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(value)) return null;
+  return value;
 }
 
 function getStoredResponseOutput(bundle: ExecutionRunRecordBundle): ExecutionResponseOutputItem[] {

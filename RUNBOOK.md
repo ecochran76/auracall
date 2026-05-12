@@ -3438,3 +3438,23 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/mcp.apiStatus.test.ts tests/mcp.accountMirrorStatus.test.ts tests/mcp.accountMirrorProviderGuard.test.ts --maxWorkers 1`
   - `pnpm tsc --noEmit`
   - `pnpm exec biome lint scripts/smoke-api-status-mcp.ts src/mcp/tools/apiStatus.ts src/mcp/tools/accountMirrorStatus.ts tests/mcp.apiStatus.test.ts --max-diagnostics 80`
+
+## Turn 131 | 2026-05-12
+
+- Goal: unblock project-bound grading agents from passing student packet files
+  through API/MCP response runs.
+- Change:
+  - mapped direct `/v1/responses` attachments into stored step artifacts so the
+    configured browser executor can upload local files
+  - added `attachments` to MCP `response_create`
+  - documented the current grading workflow boundary and the pending
+    project-ensure/batch-enqueue surfaces
+- Verification:
+  - `pnpm vitest run tests/runtime.responsesService.test.ts -t "attachments" --maxWorkers 1`
+  - `pnpm vitest run tests/mcp.responseCreate.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "direct response attachments" --maxWorkers 1`
+  - `pnpm tsc --noEmit`
+  - `pnpm exec biome lint src/runtime/responsesService.ts src/mcp/tools/responseCreate.ts tests/runtime.responsesService.test.ts tests/mcp.responseCreate.test.ts tests/http.responsesServer.test.ts --max-diagnostics 80`
+    exited cleanly; it reported unrelated existing non-null assertion warnings
+    in `tests/runtime.responsesService.test.ts` and
+    `tests/http.responsesServer.test.ts`

@@ -34,6 +34,14 @@ describe('mcp response_create tool', () => {
     const result = await handler({
       model: 'gpt-5.2-thinking',
       input: 'Use Deep Research and open the plan editor.',
+      attachments: [
+        {
+          id: 'grading-packet',
+          fileName: 'student-a.pdf',
+          mimeType: 'application/pdf',
+          uri: '/tmp/student-a.pdf',
+        },
+      ],
       runtimeProfile: 'wsl-chrome-3',
       service: 'chatgpt',
       transport: 'browser',
@@ -47,6 +55,14 @@ describe('mcp response_create tool', () => {
     expect(capturedRequest).toEqual({
       model: 'gpt-5.2-thinking',
       input: 'Use Deep Research and open the plan editor.',
+      attachments: [
+        {
+          id: 'grading-packet',
+          fileName: 'student-a.pdf',
+          mimeType: 'application/pdf',
+          uri: '/tmp/student-a.pdf',
+        },
+      ],
       metadata: {
         smoke: true,
       },

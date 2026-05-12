@@ -24,7 +24,7 @@
 ### `response_create`
 - Inputs: `model`, `input`, optional `instructions`, `runtimeProfile`,
   `agent`, `service`, `transport`, `outputContract`, `composerTool`,
-  `deepResearchPlanAction`, and `metadata`.
+  `deepResearchPlanAction`, `attachments`, and `metadata`.
 - Behavior: creates one durable response run through the same stored-step
   response service used by local API `/v1/responses`. Browser-backed ChatGPT
   calls can request volatile workbench tools per call, for example
@@ -32,6 +32,10 @@
   The structured result is `object = "response"` and its `id` can be polled
   through `run_status`.
 - Agent model ids resolve through the effective config plus registry catalog.
+- `attachments` accepts entries with `id`, optional `fileName`, optional
+  `mimeType`, and optional `uri`. Local paths and `file://` URIs become
+  browser-uploadable step artifacts; remote URIs are retained for metadata and
+  future materialization.
 - Polling contract: create the response once, keep the returned `id`, and use
   `run_status` for subsequent state checks. Status readback is file-backed and
   must not resubmit the prompt, reopen a provider tool, or navigate the browser.

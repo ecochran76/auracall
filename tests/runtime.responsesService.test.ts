@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import type { ExecutionRequest } from '../src/runtime/apiTypes.js';
@@ -201,6 +202,81 @@ describe('runtime responses service', () => {
     expect(capturedStepStructuredData).toMatchObject({
       outputContract: AURACALL_STEP_OUTPUT_CONTRACT_VERSION,
     });
+  });
+
+  it('maps direct response attachments into browser-uploadable step artifacts', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const attachmentPath = path.join(homeDir, 'rubric.pdf');
+    await fs.writeFile(attachmentPath, 'rubric');
+    const control = createExecutionRuntimeControl();
+    const service = createExecutionResponsesService({
+      control,
+      now: () => new Date('2026-05-12T14:20:00.000Z'),
+      generateResponseId: () => 'resp_service_attachments_1',
+      drainAfterCreate: false,
+    });
+
+    const created = await service.createResponse({
+      model: 'agent:pro-extended-chatgpt-soylei-che4470-seminar-grading',
+      input: 'Grade this seminar packet.',
+      attachments: [
+        {
+          id: 'rubric',
+          fileName: 'rubric.pdf',
+          mimeType: 'application/pdf',
+          uri: pathToFileURL(attachmentPath).href,
+        },
+        {
+          id: 'notes',
+          fileName: 'notes.md',
+          mimeType: 'text/markdown',
+          uri: 'relative/notes.md',
+        },
+        {
+          id: 'external',
+          fileName: 'drive.pdf',
+          mimeType: 'application/pdf',
+          uri: 'https://example.test/drive.pdf',
+        },
+      ],
+      auracall: {
+        agent: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
+        runtimeProfile: 'wsl-chrome-3',
+        service: 'chatgpt',
+        transport: 'browser',
+      },
+    });
+
+    expect(created).toMatchObject({
+      id: 'resp_service_attachments_1',
+      status: 'in_progress',
+    });
+    const record = await control.readRun('resp_service_attachments_1');
+    expect(record?.bundle.run.initialInputs.attachments).toHaveLength(3);
+    expect(record?.bundle.steps[0]?.input.artifacts).toEqual([
+      {
+        id: 'rubric',
+        kind: 'file',
+        title: 'rubric.pdf',
+        uri: pathToFileURL(attachmentPath).href,
+        path: attachmentPath,
+      },
+      {
+        id: 'notes',
+        kind: 'file',
+        title: 'notes.md',
+        uri: 'relative/notes.md',
+        path: 'relative/notes.md',
+      },
+      {
+        id: 'external',
+        kind: 'file',
+        title: 'drive.pdf',
+        uri: 'https://example.test/drive.pdf',
+      },
+    ]);
   });
 
   it('returns bounded provider usage summary on response readback when stored execution reports usage', async () => {

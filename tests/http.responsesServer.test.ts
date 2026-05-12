@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import {
@@ -726,6 +727,74 @@ describe('http responses adapter', () => {
           type: 'step-succeeded',
         },
       });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('accepts direct response attachments and stores them as uploadable step artifacts', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-attachments-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const attachmentPath = path.join(homeDir, 'student-a.pdf');
+    await fs.writeFile(attachmentPath, 'student packet');
+    const control = createExecutionRuntimeControl();
+    let capturedRequest: unknown = null;
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-05-12T14:30:00.000Z'),
+        generateResponseId: () => 'resp_create_attachments_1',
+        executeStoredRunStep: async (request) => {
+          capturedRequest = request;
+          return undefined;
+        },
+      },
+    );
+
+    try {
+      const createResponse = await fetch(`http://127.0.0.1:${server.port}/v1/responses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-5.2',
+          input: 'Grade this packet.',
+          attachments: [
+            {
+              id: 'student-packet',
+              fileName: 'student-a.pdf',
+              mimeType: 'application/pdf',
+              uri: pathToFileURL(attachmentPath).href,
+            },
+          ],
+        }),
+      });
+
+      expect(createResponse.status).toBe(200);
+      await expect(createResponse.json()).resolves.toMatchObject({
+        id: 'resp_create_attachments_1',
+        status: 'completed',
+      });
+      expect(capturedRequest).toMatchObject({
+        attachments: [
+          {
+            id: 'student-packet',
+            uri: pathToFileURL(attachmentPath).href,
+          },
+        ],
+      });
+      const record = await control.readRun('resp_create_attachments_1');
+      expect(record?.bundle.steps[0]?.input.artifacts).toEqual([
+        {
+          id: 'student-packet',
+          kind: 'file',
+          title: 'student-a.pdf',
+          uri: pathToFileURL(attachmentPath).href,
+          path: attachmentPath,
+        },
+      ]);
     } finally {
       await server.close();
     }

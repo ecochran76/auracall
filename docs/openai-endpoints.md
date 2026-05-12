@@ -60,6 +60,15 @@ Current limits:
     configured stored-step executor path as normal Aura-Call runtime work
   - direct `/v1/responses` requests can opt into deterministic model output
     with `auracall.outputContract: "auracall.step-output.v1"`
+  - direct `/v1/responses` requests may include `attachments`. Local paths and
+    `file://` URIs are projected into the stored step artifact list so the
+    browser executor can upload them; remote HTTP(S) URIs are preserved as
+    metadata but are not downloaded automatically.
+  - project-bound grading workflows should currently bootstrap the agent through
+    `PUT /v1/config/agents/{agent_id}` or MCP `config_agent_upsert`, then submit
+    one `/v1/responses` request per student with the grading packet files in
+    `attachments`. First-class project ensure/create and batch enqueue surfaces
+    remain pending.
 - `POST /v1/team-runs` creates one bounded task-backed team execution through
   the existing `TaskRunSpec -> TeamRun -> TeamRuntimeBridge -> runtimeRun`
   chain
