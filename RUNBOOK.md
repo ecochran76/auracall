@@ -3339,3 +3339,16 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "agent registry and loaded API-key diagnostics|agent registry snapshots|reports development-only posture" --maxWorkers 1`
   - `pnpm tsc --noEmit`
   - `pnpm exec biome lint src/http/responsesServer.ts --max-diagnostics 40`
+
+## Turn 124 | 2026-05-12
+
+- Goal: make snapshot export/import usable from the Agents / Teams dashboard.
+- Change:
+  - added selected/all snapshot download controls
+  - added JSON file import with separate dry-run and apply buttons
+  - surfaced snapshot operation results in the dashboard status area
+  - updated README and configuration docs
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard|agent registry snapshots" --maxWorkers 1`
+  - `pnpm tsc --noEmit`
+  - `pnpm exec biome lint src/http/responsesServer.ts --max-diagnostics 80`

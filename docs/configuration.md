@@ -100,7 +100,9 @@ behind pinned config entries.
 
 Operators can use the same snapshot contract over HTTP with
 `POST /v1/config/snapshots/export` and `POST /v1/config/snapshots/import`.
-When API auth is enabled, these routes require an unscoped operator key.
+The Agents / Teams dashboard exposes the same flow as download, dry-run import,
+and apply import controls. When API auth is enabled, these routes require an
+unscoped operator key.
 
 ## Local API and dashboard
 

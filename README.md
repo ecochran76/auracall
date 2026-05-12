@@ -286,8 +286,9 @@ Terminology note:
   with `auracall config agent-export --agent <id> --team <id> --output <file>`
   and imported with `auracall config agent-import <file> --dry-run`. The same
   contract is available to operators through `POST /v1/config/snapshots/export`
-  and `POST /v1/config/snapshots/import`. Imports write the user-scoped
-  registry and keep config-defined overlay ids pinned.
+  and `POST /v1/config/snapshots/import`, and the Agents / Teams dashboard can
+  download snapshots or dry-run/apply a snapshot file. Imports write the
+  user-scoped registry and keep config-defined overlay ids pinned.
 - Account mirror refreshes are metadata-first and identity-gated. Successful
   refreshes persist the mirror snapshot in the existing provider cache under
   `provider + boundIdentity`; runtime/browser profile ids are retained as

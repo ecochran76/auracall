@@ -6001,6 +6001,27 @@ function createOperatorBrowserDashboardHtml(input: {
         </div>
         <div id="agentsDiagnosticsSummary" class="muted" style="margin-bottom: 10px;">No agent diagnostics loaded.</div>
         <div class="row" style="margin-bottom: 10px;">
+          <label>Snapshot scope
+            <select id="agentSnapshotScope">
+              <option value="selected">selected ids</option>
+              <option value="all">all effective agents and teams</option>
+            </select>
+          </label>
+          <label>Agent IDs
+            <input id="agentSnapshotAgentIds" placeholder="agent-a, agent-b">
+          </label>
+          <label>Team IDs
+            <input id="agentSnapshotTeamIds" placeholder="team-a, team-b">
+          </label>
+          <button id="downloadAgentSnapshot" type="button">Download Snapshot</button>
+          <label>Import Snapshot
+            <input id="agentSnapshotImportFile" type="file" accept="application/json,.json">
+          </label>
+          <button id="dryRunAgentSnapshotImport" type="button">Dry-run Import</button>
+          <button id="applyAgentSnapshotImport" type="button">Apply Import</button>
+        </div>
+        <pre id="agentSnapshotResult">No snapshot export/import yet.</pre>
+        <div class="row" style="margin-bottom: 10px;">
           <label>Recent source
             <select id="agentsRecentRunSourceKind">
               <option value="">all</option>
@@ -6532,6 +6553,88 @@ function createOperatorBrowserDashboardHtml(input: {
 
     function formatDashboardList(values) {
       return Array.isArray(values) && values.length ? values.join(', ') : 'none';
+    }
+
+    function readAgentSnapshotExportRequest() {
+      const scope = $('agentSnapshotScope').value;
+      if (scope === 'all') return { all: true };
+      return {
+        agents: parseDashboardIdList($('agentSnapshotAgentIds').value),
+        teams: parseDashboardIdList($('agentSnapshotTeamIds').value),
+      };
+    }
+
+    function parseDashboardIdList(value) {
+      return String(value || '')
+        .split(/[,\\s]+/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    function setAgentSnapshotResult(message, tone, payload) {
+      $('agentSnapshotResult').textContent = payload ? asJson(payload) : message;
+      setAgentsTeamsNotice(message, tone);
+    }
+
+    async function downloadAgentSnapshot() {
+      const button = $('downloadAgentSnapshot');
+      button.disabled = true;
+      try {
+        const request = readAgentSnapshotExportRequest();
+        const payload = await postJson('/v1/config/snapshots/export', request);
+        downloadJsonPayload(payload, formatAgentSnapshotFilename(payload));
+        setAgentSnapshotResult('Snapshot downloaded.', 'ok', payload);
+      } catch (error) {
+        setAgentSnapshotResult('Snapshot export failed: ' + String(error.message || error), 'bad');
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function dryRunAgentSnapshotImport() {
+      await runAgentSnapshotImport(true);
+    }
+
+    async function applyAgentSnapshotImport() {
+      await runAgentSnapshotImport(false);
+    }
+
+    async function runAgentSnapshotImport(dryRun) {
+      const button = dryRun ? $('dryRunAgentSnapshotImport') : $('applyAgentSnapshotImport');
+      button.disabled = true;
+      try {
+        const snapshot = await readAgentSnapshotImportFile();
+        const payload = await postJson('/v1/config/snapshots/import', { snapshot, dryRun });
+        setAgentSnapshotResult((dryRun ? 'Snapshot dry-run completed.' : 'Snapshot import applied.'), payload.blockedAgents?.length || payload.blockedTeams?.length ? 'warn' : 'ok', payload);
+        if (!dryRun) void loadAgentsDiagnostics();
+      } catch (error) {
+        setAgentSnapshotResult('Snapshot import failed: ' + String(error.message || error), 'bad');
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function readAgentSnapshotImportFile() {
+      const input = $('agentSnapshotImportFile');
+      const file = input.files && input.files[0];
+      if (!file) throw new Error('Choose a snapshot JSON file first.');
+      return JSON.parse(await file.text());
+    }
+
+    function downloadJsonPayload(payload, filename) {
+      const blob = new Blob([JSON.stringify(payload, null, 2) + '\\n'], { type: 'application/json;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+    }
+
+    function formatAgentSnapshotFilename(payload) {
+      const exportedAt = String(payload.exportedAt || new Date().toISOString()).replace(/[:.]/g, '-');
+      return 'auracall-agent-snapshot-' + exportedAt + '.json';
     }
 
     function renderAgentsTeamsInspection(kind, payload) {
@@ -10498,6 +10601,9 @@ function createOperatorBrowserDashboardHtml(input: {
     $('inspectTeamRun').addEventListener('click', inspectAgentsTeamRun);
     $('inspectRuntimeRun').addEventListener('click', inspectAgentsRuntimeRun);
     $('loadAgentsDiagnostics').addEventListener('click', loadAgentsDiagnostics);
+    $('downloadAgentSnapshot').addEventListener('click', downloadAgentSnapshot);
+    $('dryRunAgentSnapshotImport').addEventListener('click', dryRunAgentSnapshotImport);
+    $('applyAgentSnapshotImport').addEventListener('click', applyAgentSnapshotImport);
     $('loadAgentsRecentRuns').addEventListener('click', loadAgentsRecentRuns);
     $('copyVisibleAgentsRecentMirrorLinks').addEventListener('click', copyVisibleAgentsRecentMirrorLinks);
     $('agentsRecentMirrorCacheFilter').addEventListener('change', applyAgentsRecentMirrorCacheControls);
