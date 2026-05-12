@@ -181,8 +181,11 @@ Current limits:
   Privileged local MCP operators can use `api_key_issue`, and unscoped
   operator API clients can use `POST /v1/config/api-keys/issue`, to add an
   agent/team-scoped key to `~/.auracall/api.env`. The issue response returns
-  the new OpenAI-compatible key once; restart the user API service afterward so
-  systemd reloads the environment file. Use
+  the new OpenAI-compatible key once. Add `clientEnvPath` when AuraCall should
+  also write a scoped client handoff containing `OPENAI_BASE_URL`,
+  `OPENAI_API_KEY`, `AURACALL_MODEL`, `AURACALL_STATUS_URL`, and
+  `AURACALL_BATCH_URL`; restart the user API service afterward so systemd
+  reloads the service environment file. Use
   `GET /v1/config/agent-diagnostics` against the running service or MCP
   `api_key_diagnostics` against the env file to validate key scope metadata
   without exposing secret values.

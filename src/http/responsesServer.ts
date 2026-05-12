@@ -4929,6 +4929,7 @@ const CONFIG_API_KEY_ISSUE_REQUEST_SCHEMA = z.object({
   runtimeProfiles: z.array(z.string().trim().min(1)).optional(),
   apiBaseUrl: z.string().trim().min(1).optional(),
   envPath: z.string().trim().min(1).optional(),
+  clientEnvPath: z.string().trim().min(1).optional(),
   overwrite: z.boolean().optional(),
 }).refine(
   (value) => Boolean(value.agentId || value.teamId),

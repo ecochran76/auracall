@@ -3558,3 +3558,27 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run docs:list`
   - `pnpm run plans:audit -- --keep 65`
   - `git diff --check`
+
+## Turn 137 | 2026-05-12
+
+- Goal: make scoped API-key handoff executable for downstream AuraCall client
+  agents.
+- Change:
+  - added optional `clientEnvPath` to privileged HTTP/MCP API-key issuance
+  - key issuance now writes a separate sourceable client env file with
+    `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `AURACALL_MODEL`,
+    `AURACALL_STATUS_URL`, and `AURACALL_BATCH_URL`
+  - structured API/MCP `clientEnv` readback uses camelCase while the file keeps
+    real env-var names
+  - updated the API-key smokes, API/MCP tests, docs, and skills
+- Verification:
+  - `pnpm vitest run tests/mcp.apiKeys.test.ts tests/http.responsesServer.test.ts -t "API key|api key" --maxWorkers 1`
+  - `pnpm run smoke:api-key-issue`
+  - `pnpm run smoke:api-key-openai-client`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome lint src/config/apiKeyIssuer.ts src/mcp/tools/apiKeys.ts src/http/responsesServer.ts tests/mcp.apiKeys.test.ts tests/http.responsesServer.test.ts scripts/smoke-api-key-issue.ts scripts/smoke-api-key-openai-client.ts --max-diagnostics 60`
+    exited cleanly; it reported unrelated existing non-null assertion warnings
+    in `tests/http.responsesServer.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 65`
+  - `git diff --check`

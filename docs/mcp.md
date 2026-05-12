@@ -203,6 +203,9 @@ release gate before live dogfood.
   agent/team-scoped key into `~/.auracall/api.env` and returns
   OpenAI-compatible `OPENAI_BASE_URL`, `OPENAI_API_KEY`, and `model` values for
   the caller.
+- Optional `clientEnvPath` writes a separate scoped handoff file for the
+  execution agent. That file contains `OPENAI_BASE_URL`, `OPENAI_API_KEY`,
+  `AURACALL_MODEL`, `AURACALL_STATUS_URL`, and `AURACALL_BATCH_URL`.
 - Scope validation uses the effective config plus registry catalog, so
   registry-backed agents and teams can receive scoped keys.
 - Restart `auracall-api.service` after issuing a key. The running API process

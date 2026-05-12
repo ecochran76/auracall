@@ -112,7 +112,10 @@ Use this when a workflow needs provider-side project context before execution.
    agent to the resolved provider project.
 4. Verify the returned `mutationTarget` and resulting agent id.
 5. Issue a scoped API key for that agent.
-6. Hand only the scoped execution key to the client agent.
+6. Request a `clientEnvPath` when issuing the key so AuraCall writes a scoped
+   client handoff file.
+7. Restart the installed API service so the server reloads the service env.
+8. Hand only the scoped client env path to the execution agent.
 
 Setup is intentionally separate from execution. A scoped execution agent should
 not be able to create or rewrite provider projects.
@@ -185,6 +188,23 @@ Use the narrowest key that can run the workflow.
 After key issuance, restart the installed API service so the running process
 reloads `~/.auracall/api.env`.
 
+When calling `POST /v1/config/api-keys/issue` or MCP `api_key_issue`, provide
+both paths when a downstream agent needs a ready-to-source handoff:
+
+```json
+{
+  "agentId": "pro-extended-chatgpt-soylei-che4470-seminar-grading",
+  "keyId": "che447-grading-client",
+  "services": ["chatgpt"],
+  "runtimeProfiles": ["wsl-chrome-3"],
+  "envPath": "/home/ecochran76/.auracall/api.env",
+  "clientEnvPath": "/home/ecochran76/.auracall/clients/che447-grading.env"
+}
+```
+
+`envPath` is loaded by `auracall-api.service`. `clientEnvPath` is the scoped
+handoff file for the calling agent.
+
 ## Client Handoff Contract
 
 A setup agent should hand an execution agent only the fields it needs:
@@ -193,6 +213,8 @@ A setup agent should hand an execution agent only the fields it needs:
 OPENAI_BASE_URL=http://auracall.localhost/v1
 OPENAI_API_KEY=<scoped key>
 AURACALL_MODEL=agent:pro-extended-chatgpt-soylei-che4470-seminar-grading
+AURACALL_STATUS_URL=http://auracall.localhost/status
+AURACALL_BATCH_URL=http://auracall.localhost/v1/response-batches
 ```
 
 For OpenAI-compatible clients, set:
@@ -208,6 +230,14 @@ For custom clients, also store:
 
 Do not store provider account credentials, provider cookies, or browser profile
 paths in app repos.
+
+Validate the handoff before batch work:
+
+1. restart `auracall-api.service` after issuing the key
+2. source or parse the client env file
+3. call `GET /v1/models` with the scoped key
+4. verify the expected `AURACALL_MODEL` appears
+5. run one small `/v1/responses` smoke before enqueuing a large batch
 
 ## Polling Rules
 

@@ -12,6 +12,7 @@ export interface ApiKeyIssueInput {
   runtimeProfiles?: string[];
   apiBaseUrl?: string;
   envPath?: string;
+  clientEnvPath?: string;
   overwrite?: boolean;
 }
 
@@ -24,6 +25,14 @@ export interface ApiKeyIssueResult {
   openaiBaseUrl: string;
   openaiApiKey: string;
   model: string;
+  clientEnvPath?: string;
+  clientEnv?: {
+    openaiBaseUrl: string;
+    openaiApiKey: string;
+    auracallModel: string;
+    auracallStatusUrl: string;
+    auracallBatchUrl: string;
+  };
   scopes: {
     agents: string[];
     teams: string[];
@@ -55,6 +64,7 @@ export async function issueApiKey(
 
   const envPath = path.resolve(input.envPath ?? path.join(getAuracallHomeDir(), 'api.env'));
   const apiBaseUrl = input.apiBaseUrl ?? 'http://127.0.0.1:18095/v1';
+  const clientEnvPath = input.clientEnvPath ? path.resolve(input.clientEnvPath) : null;
   const keyId = normalizeKeyId(input.keyId ?? input.agentId ?? input.teamId ?? 'agent');
   const suffix = toApiAuthEnvSuffix(keyId);
   const secret = `auracall_${randomBytes(32).toString('base64url')}`;
@@ -86,6 +96,10 @@ export async function issueApiKey(
     : team?.agentIds[0]
       ? `agent:${team.agentIds[0]}`
       : '';
+  const clientEnv = createClientEnv(apiBaseUrl, secret, model);
+  if (clientEnvPath) {
+    await writeClientEnvFile(clientEnvPath, clientEnv);
+  }
 
   return {
     object: 'auracall_api_key_issue',
@@ -96,6 +110,7 @@ export async function issueApiKey(
     openaiBaseUrl: apiBaseUrl,
     openaiApiKey: secret,
     model,
+    ...(clientEnvPath ? { clientEnvPath, clientEnv } : {}),
     scopes,
     restartRequired: true,
   };
@@ -133,6 +148,24 @@ export async function writeEnvFile(envPath: string, state: EnvFileState): Promis
   await fs.chmod(envPath, 0o600);
 }
 
+export async function writeClientEnvFile(
+  envPath: string,
+  clientEnv: NonNullable<ApiKeyIssueResult['clientEnv']>,
+): Promise<void> {
+  await fs.mkdir(path.dirname(envPath), { recursive: true });
+  const body = [
+    '# AuraCall client handoff.',
+    '# This file contains a scoped execution key. Do not commit it.',
+    `OPENAI_BASE_URL=${clientEnv.openaiBaseUrl}`,
+    `OPENAI_API_KEY=${clientEnv.openaiApiKey}`,
+    `AURACALL_MODEL=${clientEnv.auracallModel}`,
+    `AURACALL_STATUS_URL=${clientEnv.auracallStatusUrl}`,
+    `AURACALL_BATCH_URL=${clientEnv.auracallBatchUrl}`,
+  ].join('\n');
+  await fs.writeFile(envPath, `${body}\n`, { encoding: 'utf8', mode: 0o600 });
+  await fs.chmod(envPath, 0o600);
+}
+
 export function normalizeKeyId(value: string): string {
   return value.trim().replace(/[^A-Za-z0-9_.@-]+/g, '-').replace(/^-+|-+$/g, '') || 'agent';
 }
@@ -153,4 +186,20 @@ function writeOptionalDelimitedValue(target: Record<string, string>, key: string
   } else {
     delete target[key];
   }
+}
+
+function createClientEnv(
+  apiBaseUrl: string,
+  apiKey: string,
+  model: string,
+): NonNullable<ApiKeyIssueResult['clientEnv']> {
+  const baseUrl = apiBaseUrl.replace(/\/+$/, '');
+  const rootUrl = baseUrl.endsWith('/v1') ? baseUrl.slice(0, -3) : baseUrl;
+  return {
+    openaiBaseUrl: baseUrl,
+    openaiApiKey: apiKey,
+    auracallModel: model,
+    auracallStatusUrl: `${rootUrl}/status`,
+    auracallBatchUrl: `${baseUrl}/response-batches`,
+  };
 }

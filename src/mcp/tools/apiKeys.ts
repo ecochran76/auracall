@@ -16,6 +16,7 @@ const apiKeyIssueInputShape = {
   runtimeProfiles: z.array(z.string().trim().min(1)).optional(),
   apiBaseUrl: z.string().trim().min(1).optional(),
   envPath: z.string().trim().min(1).optional(),
+  clientEnvPath: z.string().trim().min(1).optional(),
   overwrite: z.boolean().optional(),
 } satisfies z.ZodRawShape;
 
@@ -33,6 +34,14 @@ const apiKeyIssueOutputShape = {
   openaiBaseUrl: z.string(),
   openaiApiKey: z.string(),
   model: z.string(),
+  clientEnvPath: z.string().optional(),
+  clientEnv: z.object({
+    openaiBaseUrl: z.string(),
+    openaiApiKey: z.string(),
+    auracallModel: z.string(),
+    auracallStatusUrl: z.string(),
+    auracallBatchUrl: z.string(),
+  }).optional(),
   scopes: z.object({
     agents: z.array(z.string()),
     teams: z.array(z.string()),
@@ -74,7 +83,7 @@ export function registerApiKeyTools(
     {
       title: 'Issue an AuraCall API key',
       description:
-        'Create a user-scoped AuraCall API key in ~/.auracall/api.env with optional agent/team/service/runtime-profile scopes.',
+        'Create a user-scoped AuraCall API key in ~/.auracall/api.env with optional agent/team/service/runtime-profile scopes and an optional client env handoff file.',
       inputSchema: apiKeyIssueInputShape,
       outputSchema: apiKeyIssueOutputShape,
     },
@@ -102,7 +111,9 @@ export function createApiKeyIssueToolHandler(agentTeamConfigService: AgentTeamCo
       content: [
         {
           type: 'text' as const,
-          text: `Issued AuraCall API key ${structuredContent.keyId}. Restart auracall-api.service for systemd to reload ${structuredContent.envPath}.`,
+          text: structuredContent.clientEnvPath
+            ? `Issued AuraCall API key ${structuredContent.keyId} and wrote client handoff ${structuredContent.clientEnvPath}. Restart auracall-api.service for systemd to reload ${structuredContent.envPath}.`
+            : `Issued AuraCall API key ${structuredContent.keyId}. Restart auracall-api.service for systemd to reload ${structuredContent.envPath}.`,
         },
       ],
       structuredContent: structuredContent as unknown as Record<string, unknown>,

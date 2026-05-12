@@ -13,6 +13,7 @@ service. Treat `agent:<agent_id>` as the model name and prefer scoped API keys.
 - `OPENAI_BASE_URL`, usually `http://auracall.localhost/v1`
 - `OPENAI_API_KEY`, preferably scoped to the intended agent or team
 - model id, usually `agent:<agent_id>`
+- optional `AURACALL_STATUS_URL` and `AURACALL_BATCH_URL` from the handoff env
 - optional local attachment paths
 - optional batch limits:
   - `maxConcurrentRuns`
@@ -97,6 +98,9 @@ service. Treat `agent:<agent_id>` as the model name and prefer scoped API keys.
   materialization.
 
 ## Verification
+
+Before a large batch, source or parse the client handoff env file, call
+`GET /v1/models`, and run one small `/v1/responses` request with the scoped key.
 
 For repo-local development:
 

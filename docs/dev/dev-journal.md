@@ -1,3 +1,30 @@
+## Turn 195 | 2026-05-12
+
+- Continued implementation plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: make scoped API-key handoff executable for downstream AuraCall client
+  agents.
+- Change:
+  - extended privileged API/MCP key issuance with optional `clientEnvPath`
+  - key issuance now writes a separate sourceable client env handoff containing
+    `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `AURACALL_MODEL`,
+    `AURACALL_STATUS_URL`, and `AURACALL_BATCH_URL`
+  - kept structured `clientEnv` JSON camelCase while preserving uppercase env
+    names inside the handoff file
+  - updated API/MCP docs, user runtime docs, workflow docs, skills, tests, and
+    smokes
+- Validation:
+  - `pnpm vitest run tests/mcp.apiKeys.test.ts tests/http.responsesServer.test.ts -t "API key|api key" --maxWorkers 1`
+  - `pnpm run smoke:api-key-issue`
+  - `pnpm run smoke:api-key-openai-client`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome lint src/config/apiKeyIssuer.ts src/mcp/tools/apiKeys.ts src/http/responsesServer.ts tests/mcp.apiKeys.test.ts tests/http.responsesServer.test.ts scripts/smoke-api-key-issue.ts scripts/smoke-api-key-openai-client.ts --max-diagnostics 60`
+    exited cleanly; it reported unrelated existing non-null assertion warnings
+    in `tests/http.responsesServer.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 65`
+  - `git diff --check`
+
 ## Turn 194 | 2026-05-12
 
 - Continued implementation plan:

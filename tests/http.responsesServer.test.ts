@@ -16653,6 +16653,7 @@ describe('http responses adapter', () => {
     cleanup.push(homeDir);
     setAuracallHomeDirOverrideForTest(homeDir);
     const envPath = path.join(homeDir, 'api.env');
+    const clientEnvPath = path.join(homeDir, 'clients', 'worker.env');
     const activeConfig: Record<string, unknown> = {
       api: {
         auth: {
@@ -16724,6 +16725,7 @@ describe('http responses adapter', () => {
           services: ['chatgpt'],
           runtimeProfiles: ['default'],
           envPath,
+          clientEnvPath,
         }),
       });
       expect(response.status).toBe(200);
@@ -16734,6 +16736,13 @@ describe('http responses adapter', () => {
         envPath,
         openaiBaseUrl: 'http://127.0.0.1:18095/v1',
         model: 'agent:worker',
+        clientEnvPath,
+        clientEnv: {
+          openaiBaseUrl: 'http://127.0.0.1:18095/v1',
+          auracallModel: 'agent:worker',
+          auracallStatusUrl: 'http://127.0.0.1:18095/status',
+          auracallBatchUrl: 'http://127.0.0.1:18095/v1/response-batches',
+        },
         scopes: {
           agents: ['worker'],
           services: ['chatgpt'],
@@ -16743,6 +16752,7 @@ describe('http responses adapter', () => {
       });
       expect(typeof payload.apiKey).toBe('string');
       expect(String(payload.apiKey)).toMatch(/^auracall_/);
+      expect((payload.clientEnv as JsonObject).openaiApiKey).toBe(payload.apiKey);
       const env = await fs.readFile(envPath, 'utf8');
       expect(env).toContain('AURACALL_API_AUTH_REQUIRED=1');
       expect(env).toContain('AURACALL_API_KEY_IDS=worker-client');
@@ -16750,6 +16760,12 @@ describe('http responses adapter', () => {
       expect(env).toContain('AURACALL_API_KEY_WORKER_CLIENT_AGENTS=worker');
       expect(env).toContain('AURACALL_API_KEY_WORKER_CLIENT_SERVICES=chatgpt');
       expect(env).toContain('AURACALL_API_KEY_WORKER_CLIENT_RUNTIME_PROFILES=default');
+      const clientEnv = await fs.readFile(clientEnvPath, 'utf8');
+      expect(clientEnv).toContain('OPENAI_BASE_URL=http://127.0.0.1:18095/v1');
+      expect(clientEnv).toContain(`OPENAI_API_KEY=${payload.apiKey}`);
+      expect(clientEnv).toContain('AURACALL_MODEL=agent:worker');
+      expect(clientEnv).toContain('AURACALL_STATUS_URL=http://127.0.0.1:18095/status');
+      expect(clientEnv).toContain('AURACALL_BATCH_URL=http://127.0.0.1:18095/v1/response-batches');
     } finally {
       await server.close();
     }

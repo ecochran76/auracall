@@ -42,12 +42,15 @@ After success:
 2. Confirm `mutationTarget` is `registry` for a new/updated bound agent.
 3. Discover `agent:<agent_id>` from `/v1/models` or MCP config listing.
 4. Issue a scoped key for the agent.
-5. Restart the installed API service when the key was written to
+5. Include `clientEnvPath` so AuraCall writes a sourceable execution handoff.
+6. Restart the installed API service when the key was written to
    `~/.auracall/api.env`.
-6. Give the execution client only:
+7. Give the execution client only the client env path or these values:
    - `OPENAI_BASE_URL`
    - `OPENAI_API_KEY`
    - `AURACALL_MODEL=agent:<agent_id>`
+   - `AURACALL_STATUS_URL`
+   - `AURACALL_BATCH_URL`
 
 ## Naming
 

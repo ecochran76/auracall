@@ -11,6 +11,7 @@ interface ApiKeyIssuePayload {
   keyId?: string;
   apiKey?: string;
   model?: string;
+  clientEnvPath?: string;
 }
 
 function assertEqual(actual: unknown, expected: unknown, label: string): void {
@@ -69,6 +70,7 @@ async function main(): Promise<void> {
   const envSnapshot = snapshotAuracallApiEnv();
   setAuracallHomeDirOverrideForTest(homeDir);
   const envPath = path.join(homeDir, 'api.env');
+  const clientEnvPath = path.join(homeDir, 'clients', 'smoke-client.env');
   const config = {
     browserProfiles: { default: {} },
     runtimeProfiles: {
@@ -114,10 +116,12 @@ async function main(): Promise<void> {
         services: ['chatgpt'],
         runtimeProfiles: ['default'],
         envPath,
+        clientEnvPath,
       }),
     });
     assertEqual(issued.object, 'auracall_api_key_issue', 'issue response object');
     assertEqual(issued.model, 'agent:smoke', 'issued model');
+    assertEqual(issued.clientEnvPath, clientEnvPath, 'issued client env path');
     if (!issued.apiKey?.startsWith('auracall_')) {
       throw new Error('issued key did not include an AuraCall secret.');
     }
@@ -165,7 +169,7 @@ async function main(): Promise<void> {
 
     try {
       const openai = new OpenAI({
-        apiKey: issued.apiKey,
+        apiKey: (await readEnvValues(clientEnvPath)).OPENAI_API_KEY,
         baseURL: `http://127.0.0.1:${clientServer.port}/v1`,
       });
       const completion = await openai.chat.completions.create({

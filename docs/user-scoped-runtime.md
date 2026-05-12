@@ -136,6 +136,12 @@ The issue response returns the new secret once, so store it immediately in the
 calling agent's user-scoped environment. The Agents / Teams dashboard exposes
 the same operator-only key issue flow.
 
+When issuing a key for another local agent, pass `clientEnvPath` to write a
+separate sourceable handoff file with `OPENAI_BASE_URL`, `OPENAI_API_KEY`,
+`AURACALL_MODEL`, `AURACALL_STATUS_URL`, and `AURACALL_BATCH_URL`. Keep that
+handoff under user-scoped runtime storage such as `~/.auracall/clients/`, not
+in application repos.
+
 Use `pnpm run smoke:api-key-issue` to verify the issue route against a
 short-lived local API fixture and temporary env file without mutating
 `~/.auracall/api.env`. Use `pnpm run smoke:api-key-openai-client` to verify an

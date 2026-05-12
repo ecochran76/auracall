@@ -68,6 +68,59 @@ describe('mcp api key tools', () => {
     expect(env).toContain('AURACALL_API_KEY_AGENT_RESEARCHER_RUNTIME_PROFILES=default');
   });
 
+  it('writes a scoped client env handoff when requested', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-mcp-api-key-handoff-'));
+    cleanup.push(dir);
+    const configPath = path.join(dir, 'config.json');
+    const envPath = path.join(dir, 'api.env');
+    const clientEnvPath = path.join(dir, 'clients', 'researcher.env');
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        browserProfiles: { default: {} },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        },
+        agents: {
+          researcher: {
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+        },
+      }),
+      'utf8',
+    );
+    const service = createAgentTeamConfigService({ configPath });
+
+    const result = await createApiKeyIssueToolHandler(service)({
+      agentId: 'researcher',
+      keyId: 'agent-researcher',
+      apiBaseUrl: 'http://auracall.localhost/v1',
+      envPath,
+      clientEnvPath,
+    });
+
+    expect(result.structuredContent).toMatchObject({
+      object: 'auracall_api_key_issue',
+      keyId: 'agent-researcher',
+      clientEnvPath,
+      clientEnv: {
+        openaiBaseUrl: 'http://auracall.localhost/v1',
+        auracallModel: 'agent:researcher',
+        auracallStatusUrl: 'http://auracall.localhost/status',
+        auracallBatchUrl: 'http://auracall.localhost/v1/response-batches',
+      },
+    });
+    const content = result.structuredContent as { apiKey?: string; clientEnv?: { openaiApiKey?: string } };
+    expect(content.clientEnv?.openaiApiKey).toBe(content.apiKey);
+    const clientEnv = await fs.readFile(clientEnvPath, 'utf8');
+    expect(clientEnv).toContain('OPENAI_BASE_URL=http://auracall.localhost/v1');
+    expect(clientEnv).toContain(`OPENAI_API_KEY=${content.apiKey}`);
+    expect(clientEnv).toContain('AURACALL_MODEL=agent:researcher');
+    expect(clientEnv).toContain('AURACALL_STATUS_URL=http://auracall.localhost/status');
+    expect(clientEnv).toContain('AURACALL_BATCH_URL=http://auracall.localhost/v1/response-batches');
+  });
+
   it('diagnoses env-file API key scopes without returning secrets', async () => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-mcp-api-key-diagnostics-'));
     cleanup.push(dir);
