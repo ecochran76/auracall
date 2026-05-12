@@ -125,9 +125,10 @@
   to verify the packaged `auracall-mcp` binary lists `api_ops_browser_status`
   and can call it against a fixture local API server.
 - Lazy-live-follow operator preflight: run
-  `pnpm run preflight:lazy-live-follow` to execute the no-browser completion,
-  hydration, health, dashboard, user-runtime install, and installed MCP status
-  plus log-tail checks as one release gate before live dogfood.
+`pnpm run preflight:lazy-live-follow` to execute the no-browser completion,
+hydration, health, dashboard, operator API-key issue/client-auth,
+user-runtime install, and installed MCP status plus log-tail checks as one
+release gate before live dogfood.
 
 ### `config_entities_list`
 - Behavior: reads the effective AuraCall agent/team catalog. The returned

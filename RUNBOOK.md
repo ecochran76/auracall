@@ -3407,3 +3407,15 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run smoke:api-key-issue`
   - `pnpm tsc --noEmit`
   - `pnpm exec biome lint scripts/smoke-api-key-openai-client.ts --max-diagnostics 80`
+
+## Turn 129 | 2026-05-12
+
+- Goal: wire operator API-key smokes into the release/operator preflight gate.
+- Change:
+  - added `smoke:api-key-issue` and `smoke:api-key-openai-client` to
+    `preflight:lazy-live-follow`
+  - documented the expanded operator preflight in release, testing, and MCP docs
+- Verification:
+  - `pnpm run smoke:api-key-issue && pnpm run smoke:api-key-openai-client`
+  - `pnpm tsc --noEmit`
+  - `pnpm exec biome lint scripts/preflight-lazy-live-follow.ts --max-diagnostics 80`

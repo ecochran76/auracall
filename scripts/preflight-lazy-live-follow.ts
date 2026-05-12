@@ -19,6 +19,8 @@ const steps: Step[] = [
   createScriptStep('ops-browser dashboard controls', 'smoke:ops-browser-control', 'smoke-ops-browser-completion-control'),
   createScriptStep('ops-browser provider guard clear', 'smoke:ops-browser-provider-guard', 'smoke-ops-browser-provider-guard'),
   createScriptStep('ops-browser preflight run detail', 'smoke:ops-browser-preflight-run-detail', 'smoke-ops-browser-preflight-run-detail'),
+  createScriptStep('operator API key issue', 'smoke:api-key-issue', 'smoke-api-key-issue'),
+  createScriptStep('operator API key OpenAI client', 'smoke:api-key-openai-client', 'smoke-api-key-openai-client'),
   createInstallRuntimeStep(),
   createScriptStep('installed MCP api_status and api_log_tail', 'smoke:mcp-api-status', 'smoke-api-status-mcp'),
   createScriptStep('installed MCP api_ops_browser_status', 'smoke:mcp-ops-browser', 'smoke-ops-browser-mcp'),

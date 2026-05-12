@@ -259,7 +259,8 @@
         `pnpm run preflight:lazy-live-follow`; it runs the completion-control,
         completion-hydration, live-follow health/diagnostics parity,
         ops-browser-control, ops-browser provider-guard clear,
-        ops-browser preflight run-detail, user runtime install, installed MCP
+        ops-browser preflight run-detail, operator API-key issue,
+        OpenAI-compatible client auth, user runtime install, installed MCP
         status, API log-tail, ops-browser MCP, and provider-guard MCP smokes in
         sequence before live dogfood. When started through the API/dashboard,
         `/status.preflight.lazyLiveFollowRun.steps` and `/ops/browser` show
