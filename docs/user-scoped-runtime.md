@@ -133,7 +133,8 @@ after issuing a key so systemd reloads this environment file.
 Unscoped operator API clients can use the same issue path through
 `POST /v1/config/api-keys/issue`. Scoped execution keys cannot call this route.
 The issue response returns the new secret once, so store it immediately in the
-calling agent's user-scoped environment.
+calling agent's user-scoped environment. The Agents / Teams dashboard exposes
+the same operator-only key issue flow.
 
 Use MCP `api_key_diagnostics` before or after restart to inspect
 `~/.auracall/api.env` without returning secrets. Use

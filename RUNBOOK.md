@@ -3365,3 +3365,18 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm vitest run tests/mcp.apiKeys.test.ts tests/http.responsesServer.test.ts -t "api key|API key|reports development-only posture" --maxWorkers 1`
   - `pnpm tsc --noEmit`
   - `pnpm exec biome lint src/config/apiKeyIssuer.ts src/mcp/tools/apiKeys.ts src/http/responsesServer.ts --max-diagnostics 80`
+
+## Turn 126 | 2026-05-12
+
+- Goal: make privileged API-key issuance usable from the Agents / Teams
+  dashboard.
+- Change:
+  - added dashboard controls for agent/team scoped key issuance
+  - surfaced the one-time issue response and restart reminder in the page
+  - documented the dashboard issue flow
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "serves a read-only browser operator dashboard|issues scoped API keys|reports development-only posture" --maxWorkers 1`
+  - `pnpm tsc --noEmit`
+  - `pnpm exec biome lint src/http/responsesServer.ts --max-diagnostics 80`
+  - attempted temp-env HTTP smoke with `pnpm tsx -e`; blocked before reaching
+    AuraCall by a local `tsx -e` CJS/module-resolution issue

@@ -6039,6 +6039,29 @@ function createOperatorBrowserDashboardHtml(input: {
         </div>
         <div id="agentsDiagnosticsSummary" class="muted" style="margin-bottom: 10px;">No agent diagnostics loaded.</div>
         <div class="row" style="margin-bottom: 10px;">
+          <label>Key agent
+            <input id="agentApiKeyAgentId" placeholder="agent id">
+          </label>
+          <label>Key team
+            <input id="agentApiKeyTeamId" placeholder="team id">
+          </label>
+          <label>Key ID
+            <input id="agentApiKeyId" placeholder="agent-or-team-client">
+          </label>
+          <label>Services
+            <input id="agentApiKeyServices" placeholder="chatgpt, gemini">
+          </label>
+          <label>Runtime profiles
+            <input id="agentApiKeyRuntimeProfiles" placeholder="default">
+          </label>
+          <label>Env path
+            <input id="agentApiKeyEnvPath" placeholder="default api.env">
+          </label>
+          <label><input id="agentApiKeyOverwrite" type="checkbox"> overwrite</label>
+          <button id="issueAgentApiKey" type="button">Issue API Key</button>
+        </div>
+        <pre id="agentApiKeyResult">No API key issued yet.</pre>
+        <div class="row" style="margin-bottom: 10px;">
           <label>Snapshot scope
             <select id="agentSnapshotScope">
               <option value="selected">selected ids</option>
@@ -6591,6 +6614,41 @@ function createOperatorBrowserDashboardHtml(input: {
 
     function formatDashboardList(values) {
       return Array.isArray(values) && values.length ? values.join(', ') : 'none';
+    }
+
+    function readAgentApiKeyIssueRequest() {
+      const request = {};
+      const agentId = $('agentApiKeyAgentId').value.trim();
+      const teamId = $('agentApiKeyTeamId').value.trim();
+      const keyId = $('agentApiKeyId').value.trim();
+      const envPath = $('agentApiKeyEnvPath').value.trim();
+      if (agentId) request.agentId = agentId;
+      if (teamId) request.teamId = teamId;
+      if (keyId) request.keyId = keyId;
+      if (envPath) request.envPath = envPath;
+      request.services = parseDashboardIdList($('agentApiKeyServices').value);
+      request.runtimeProfiles = parseDashboardIdList($('agentApiKeyRuntimeProfiles').value);
+      request.overwrite = $('agentApiKeyOverwrite').checked;
+      return request;
+    }
+
+    function setAgentApiKeyResult(message, tone, payload) {
+      $('agentApiKeyResult').textContent = payload ? asJson(payload) : message;
+      setAgentsTeamsNotice(message, tone);
+    }
+
+    async function issueAgentApiKey() {
+      const button = $('issueAgentApiKey');
+      button.disabled = true;
+      try {
+        const payload = await postJson('/v1/config/api-keys/issue', readAgentApiKeyIssueRequest());
+        setAgentApiKeyResult('API key issued. Store the returned secret and restart auracall-api.service before using it.', 'ok', payload);
+        void loadAgentsDiagnostics();
+      } catch (error) {
+        setAgentApiKeyResult('API key issue failed: ' + String(error.message || error), 'bad');
+      } finally {
+        button.disabled = false;
+      }
     }
 
     function readAgentSnapshotExportRequest() {
@@ -10639,6 +10697,7 @@ function createOperatorBrowserDashboardHtml(input: {
     $('inspectTeamRun').addEventListener('click', inspectAgentsTeamRun);
     $('inspectRuntimeRun').addEventListener('click', inspectAgentsRuntimeRun);
     $('loadAgentsDiagnostics').addEventListener('click', loadAgentsDiagnostics);
+    $('issueAgentApiKey').addEventListener('click', issueAgentApiKey);
     $('downloadAgentSnapshot').addEventListener('click', downloadAgentSnapshot);
     $('dryRunAgentSnapshotImport').addEventListener('click', dryRunAgentSnapshotImport);
     $('applyAgentSnapshotImport').addEventListener('click', applyAgentSnapshotImport);

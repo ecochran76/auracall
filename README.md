@@ -267,8 +267,8 @@ Terminology note:
   `AURACALL_API_KEY_<ID>` variables. Local privileged MCP operators can use
   `api_key_issue`, and unscoped operator API clients can use
   `POST /v1/config/api-keys/issue`, to append an agent/team-scoped key to
-  `~/.auracall/api.env`; restart the user API service afterward so systemd
-  reloads the file.
+  `~/.auracall/api.env`; the Agents / Teams dashboard exposes the same issue
+  control. Restart the user API service afterward so systemd reloads the file.
   When enabled, `/v1/*` routes require `Authorization: Bearer <secret>` or
   `X-AuraCall-API-Key: <secret>`. `/status` remains unauthenticated so local
   operators can discover the service posture. Scoped keys are enforced on

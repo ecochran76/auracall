@@ -104,6 +104,10 @@ The Agents / Teams dashboard exposes the same flow as download, dry-run import,
 and apply import controls. When API auth is enabled, these routes require an
 unscoped operator key.
 
+The dashboard also exposes an API-key issue control for selected agent/team
+scopes. It calls `POST /v1/config/api-keys/issue`, writes the selected
+user-scoped env file, and returns the new secret once for the operator to store.
+
 ## Local API and dashboard
 
 Use the top-level `api` block to pin the local API binding and operator-facing

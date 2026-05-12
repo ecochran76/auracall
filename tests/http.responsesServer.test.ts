@@ -16712,6 +16712,18 @@ describe('http responses adapter', () => {
       expect(html).toContain('API Key Reachability');
       expect(html).toContain('Refresh Agent Diagnostics');
       expect(html).toContain('Agent diagnostics loaded.');
+      expect(html).toContain('agentApiKeyAgentId');
+      expect(html).toContain('agentApiKeyTeamId');
+      expect(html).toContain('agentApiKeyId');
+      expect(html).toContain('agentApiKeyServices');
+      expect(html).toContain('agentApiKeyRuntimeProfiles');
+      expect(html).toContain('agentApiKeyEnvPath');
+      expect(html).toContain('agentApiKeyOverwrite');
+      expect(html).toContain('issueAgentApiKey');
+      expect(html).toContain('agentApiKeyResult');
+      expect(html).toContain('/v1/config/api-keys/issue');
+      expect(html).toContain('Issue API Key');
+      expect(html).toContain('API key issued. Store the returned secret');
       expect(html).toContain('agentSnapshotScope');
       expect(html).toContain('agentSnapshotAgentIds');
       expect(html).toContain('agentSnapshotTeamIds');
