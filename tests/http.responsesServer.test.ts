@@ -933,6 +933,35 @@ describe('http responses adapter', () => {
     const server = await createResponsesHttpServer(
       { host: '127.0.0.1', port: 0, backgroundDrainIntervalMs: 25 },
       {
+        config: {
+          api: {
+            auth: {
+              required: true,
+              keys: [
+                {
+                  id: 'che447-agent',
+                  secret: 'che447-agent-secret',
+                  agents: ['pro-extended-chatgpt-soylei'],
+                  services: ['chatgpt'],
+                  runtimeProfiles: ['wsl-chrome-3'],
+                },
+              ],
+            },
+          },
+          browserProfiles: { 'wsl-chrome-3': {} },
+          runtimeProfiles: {
+            'wsl-chrome-3': {
+              browserProfile: 'wsl-chrome-3',
+              defaultService: 'chatgpt',
+            },
+          },
+          agents: {
+            'pro-extended-chatgpt-soylei': {
+              runtimeProfile: 'wsl-chrome-3',
+              service: 'chatgpt',
+            },
+          },
+        },
         responseBatchService: {
           createBatch,
           readBatchStatus,
@@ -943,7 +972,10 @@ describe('http responses adapter', () => {
     try {
       const create = await fetch(`http://127.0.0.1:${server.port}/v1/response-batches`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          authorization: 'Bearer che447-agent-secret',
+          'content-type': 'application/json',
+        },
         body: JSON.stringify({
           metadata: { course: 'ChE 4470' },
           limits: { maxConcurrentRuns: 2, maxBrowserInteractionsPerMinute: 8 },
@@ -951,11 +983,6 @@ describe('http responses adapter', () => {
             {
               model: 'agent:pro-extended-chatgpt-soylei',
               input: 'Grade student 1.',
-              auracall: {
-                agent: 'pro-extended-chatgpt-soylei',
-                service: 'chatgpt',
-                runtimeProfile: 'wsl-chrome-3',
-              },
             },
           ],
         }),
@@ -969,10 +996,21 @@ describe('http responses adapter', () => {
       expect(createBatch).toHaveBeenCalledWith({
         metadata: { course: 'ChE 4470' },
         limits: { maxConcurrentRuns: 2, maxBrowserInteractionsPerMinute: 8 },
-        requests: expect.any(Array),
+        requests: [
+          expect.objectContaining({
+            model: 'agent:pro-extended-chatgpt-soylei',
+            auracall: expect.objectContaining({
+              agent: 'pro-extended-chatgpt-soylei',
+            }),
+          }),
+        ],
       });
 
-      const status = await fetch(`http://127.0.0.1:${server.port}/v1/response-batches/batch_http_1`);
+      const status = await fetch(`http://127.0.0.1:${server.port}/v1/response-batches/batch_http_1`, {
+        headers: {
+          authorization: 'Bearer che447-agent-secret',
+        },
+      });
       expect(status.status).toBe(200);
       await expect(status.json()).resolves.toMatchObject({
         id: 'batch_http_1',

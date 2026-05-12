@@ -3519,3 +3519,25 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm exec biome lint src/runtime/responseBatchService.ts src/runtime/serviceHost.ts src/http/responsesServer.ts tests/runtime.responseBatchService.test.ts tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts --max-diagnostics 50`
     exited cleanly; it reported unrelated existing non-null assertion warnings
     in `tests/http.responsesServer.test.ts` and `tests/runtime.serviceHost.test.ts`
+
+## Turn 135 | 2026-05-12
+
+- Goal: add a deterministic ChE 4470 grading-batch workflow smoke.
+- Change:
+  - added `scripts/smoke-che447-grading-batch.ts`
+  - added `pnpm run smoke:che447-grading-batch`
+  - wired the smoke into `preflight:lazy-live-follow`
+  - smoke verifies operator `POST /v1/projects/ensure`, project-bound agent
+    creation, scoped-key batch enqueue, attachment-bearing child response jobs,
+    batch polling, and child response readback
+  - fixed `/v1/response-batches` to normalize `agent:<id>` model strings before
+    authorization and enqueue
+- Verification:
+  - `pnpm run smoke:che447-grading-batch`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "response batches|development posture" --maxWorkers 1`
+  - `pnpm tsc --noEmit`
+  - `pnpm exec biome lint scripts/smoke-che447-grading-batch.ts scripts/preflight-lazy-live-follow.ts src/http/responsesServer.ts tests/http.responsesServer.test.ts --max-diagnostics 50`
+    exited cleanly; it reported unrelated existing non-null assertion warnings
+    in `tests/http.responsesServer.test.ts`
+  - `git diff --check`
+  - `pnpm run preflight:lazy-live-follow`

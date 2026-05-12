@@ -155,6 +155,11 @@ Current limits:
     pass
   - the browser dispatcher and provider politeness controls still enforce the
     lower-level CDP/account safety guardrails
+  - deterministic local workflow smoke: `pnpm run smoke:che447-grading-batch`
+    verifies operator project ensure, project-bound agent creation, an
+    agent-scoped API key batch enqueue, two attachment-bearing grading jobs,
+    batch polling, and child response readback without live provider/browser
+    work
 - API-key authorization can be configured in `~/.auracall/config.json` or
   through the installed service dotenv file at `~/.auracall/api.env`. The
   service recognizes `AURACALL_API_KEY` as a bearer key and optional

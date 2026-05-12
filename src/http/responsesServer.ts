@@ -2125,7 +2125,13 @@ export async function createResponsesHttpServer(
         const endForegroundWork = beginForegroundAuraCallWork();
         try {
           const body = await readRequestBody(req);
-          const payload = ResponseBatchCreateRequestSchema.parse(JSON.parse(body || '{}'));
+          const parsedPayload = ResponseBatchCreateRequestSchema.parse(JSON.parse(body || '{}'));
+          const payload = {
+            ...parsedPayload,
+            requests: parsedPayload.requests.map((request) =>
+              createExecutionRequest(mergeExecutionRequestHints(request, req.headers)),
+            ),
+          };
           const catalog = await agentTeamConfigService.effectiveCatalog();
           for (const request of payload.requests) {
             const authorizationError = authorizeExecutionRequest(apiAuthContext, request, catalog);
