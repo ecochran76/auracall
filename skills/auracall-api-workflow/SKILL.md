@@ -106,9 +106,12 @@ For repo-local development:
 
 ```bash
 pnpm run smoke:che447-grading-batch
+pnpm run smoke:scoped-client-env -- <client.env>
 pnpm run smoke:scoped-client-handoff
 ```
 
-The scoped-client-handoff smoke proves the generated client env can discover
-the target model, run one response, and enqueue a batch without live
-browser/provider quota use.
+Use `smoke:scoped-client-env` as the downstream app check: it only needs the
+generated client handoff env, validates `/v1/models`, submits one
+`/v1/responses` request, and polls readback. The scoped-client-handoff smoke
+proves the generated client env can do that and also enqueue a batch without
+live browser/provider quota use.

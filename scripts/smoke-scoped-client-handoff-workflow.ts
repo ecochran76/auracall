@@ -11,6 +11,7 @@ import {
   type ProjectEnsureServiceDeps,
 } from '../src/projects/projectEnsureService.js';
 import type { ExecutionRequest } from '../src/runtime/apiTypes.js';
+import { readEnvValues, runScopedClientEnvSmoke } from './smoke-scoped-client-env.js';
 
 const PROJECT_NAME = 'Scoped Client Handoff Smoke';
 const AGENT_ID = 'pro-extended-chatgpt-soylei-client-handoff-smoke';
@@ -44,19 +45,6 @@ interface AgentSetupHandoffPayload {
   restartRequired?: boolean;
 }
 
-interface ModelsPayload {
-  data?: Array<{ id?: string }>;
-}
-
-interface ResponsePayload {
-  id?: string;
-  status?: string;
-  output?: Array<{
-    type?: string;
-    content?: Array<{ text?: string }>;
-  }>;
-}
-
 interface ResponseBatchStatusPayload {
   object?: string;
   id?: string;
@@ -78,12 +66,6 @@ function assertEqual(actual: unknown, expected: unknown, label: string): void {
   }
 }
 
-function assertIncludes(text: string, expected: string, label: string): void {
-  if (!text.includes(expected)) {
-    throw new Error(`${label}: expected ${expected}.\n${text}`);
-  }
-}
-
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
   const payload = await response.json() as T;
@@ -91,17 +73,6 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
     throw new Error(`${url} returned HTTP ${response.status}: ${JSON.stringify(payload)}`);
   }
   return payload;
-}
-
-async function readEnvValues(envPath: string): Promise<Record<string, string>> {
-  const raw = await fs.readFile(envPath, 'utf8');
-  const values: Record<string, string> = {};
-  for (const line of raw.split(/\r?\n/)) {
-    const match = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(line.trim());
-    if (!match) continue;
-    values[match[1]] = match[2];
-  }
-  return values;
 }
 
 function snapshotAuracallApiEnv(): Record<string, string | undefined> {
@@ -143,23 +114,6 @@ async function getAvailablePort(): Promise<number> {
       server.close(() => resolve(port));
     });
   });
-}
-
-async function pollResponse(baseUrl: string, responseId: string, apiKey: string): Promise<ResponsePayload> {
-  const deadline = Date.now() + 10_000;
-  let latest: ResponsePayload | null = null;
-  while (Date.now() < deadline) {
-    latest = await fetchJson<ResponsePayload>(`${baseUrl}/responses/${responseId}`, {
-      headers: {
-        authorization: `Bearer ${apiKey}`,
-      },
-    });
-    if (latest.status === 'completed' || latest.status === 'failed' || latest.status === 'cancelled') {
-      return latest;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  throw new Error(`Timed out waiting for response ${responseId}; latest=${JSON.stringify(latest)}`);
 }
 
 async function pollBatch(batchUrl: string, batchId: string, apiKey: string): Promise<ResponseBatchStatusPayload> {
@@ -324,30 +278,15 @@ async function main(): Promise<void> {
     assertEqual(clientEnv.AURACALL_STATUS_URL, `http://127.0.0.1:${port}/status`, 'handoff status URL');
     assertEqual(clientEnv.AURACALL_BATCH_URL, `${baseUrl}/response-batches`, 'handoff batch URL');
 
-    const models = await fetchJson<ModelsPayload>(`${clientEnv.OPENAI_BASE_URL}/models`, {
-      headers: {
-        authorization: `Bearer ${clientEnv.OPENAI_API_KEY}`,
-      },
+    const direct = await runScopedClientEnvSmoke({
+      envPath: clientEnvPath,
+      expectedModel: MODEL,
+      prompt: 'Direct client handoff smoke.',
+      expectedOutputIncludes: 'CLIENT_HANDOFF_OK direct',
+      timeoutMs: 10_000,
+      pollIntervalMs: 100,
+      log: false,
     });
-    if (!models.data?.some((entry) => entry.id === clientEnv.AURACALL_MODEL)) {
-      throw new Error(`models endpoint did not expose ${clientEnv.AURACALL_MODEL}`);
-    }
-
-    const direct = await fetchJson<ResponsePayload>(`${clientEnv.OPENAI_BASE_URL}/responses`, {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${clientEnv.OPENAI_API_KEY}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: clientEnv.AURACALL_MODEL,
-        input: 'Direct client handoff smoke.',
-      }),
-    });
-    if (!direct.id) throw new Error('direct response did not include an id.');
-    const directComplete = await pollResponse(clientEnv.OPENAI_BASE_URL, direct.id, clientEnv.OPENAI_API_KEY);
-    assertEqual(directComplete.status, 'completed', 'direct response status');
-    assertIncludes(directComplete.output?.[0]?.content?.[0]?.text ?? '', 'CLIENT_HANDOFF_OK direct', 'direct readback');
 
     const batch = await fetchJson<ResponseBatchStatusPayload>(clientEnv.AURACALL_BATCH_URL, {
       method: 'POST',
@@ -385,7 +324,7 @@ async function main(): Promise<void> {
     assertEqual(executedRequests.length, 3, 'executed request count');
 
     console.log(
-      `scoped-client-handoff smoke: pass port=${port} agent=${AGENT_ID} clientEnv=${clientEnvPath} direct=${direct.id} batch=${batch.id} completed=${batchComplete.counts?.completed}`,
+      `scoped-client-handoff smoke: pass port=${port} agent=${AGENT_ID} clientEnv=${clientEnvPath} direct=${direct.responseId} batch=${batch.id} completed=${batchComplete.counts?.completed}`,
     );
   } finally {
     await server.close();

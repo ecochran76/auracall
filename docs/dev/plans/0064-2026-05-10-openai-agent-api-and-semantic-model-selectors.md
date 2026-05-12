@@ -138,6 +138,9 @@ Remaining:
 - Privileged setup agents can create a project-bound agent setup handoff in one
   HTTP or MCP call and hand downstream clients only the generated scoped env
   path plus non-secret readiness metadata.
+- Downstream clients can run a repo-provided env-only smoke that reads the
+  generated scoped env, validates `/v1/models`, submits one `/v1/responses`
+  request, and polls readback without operator privileges.
 
 ## Next Work
 

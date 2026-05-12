@@ -204,6 +204,11 @@ Current limits:
     handoff route, scoped key issuance with `clientEnvPath`, API service reload
     simulation, `/v1/models` validation, one direct response, and one response
     batch using only generated client env values
+  - downstream-client smoke:
+    `pnpm run smoke:scoped-client-env -- <client.env>` reads a generated client
+    handoff env, calls `/v1/models`, submits one `/v1/responses` request, and
+    polls the response to completion without using any repo-internal setup
+    privileges
 - API-key authorization can be configured in `~/.auracall/config.json` or
   through the installed service dotenv file at `~/.auracall/api.env`. The
   service recognizes `AURACALL_API_KEY` as a bearer key and optional

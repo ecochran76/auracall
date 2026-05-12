@@ -38,6 +38,7 @@
     "smoke:mcp-provider-guard": "tsx scripts/smoke-account-mirror-provider-guard-mcp.ts",
     "smoke:api-key-issue": "tsx scripts/smoke-api-key-issue.ts",
     "smoke:api-key-openai-client": "tsx scripts/smoke-api-key-openai-client.ts",
+    "smoke:scoped-client-env": "tsx scripts/smoke-scoped-client-env.ts",
     "smoke:scoped-client-handoff": "tsx scripts/smoke-scoped-client-handoff-workflow.ts",
     "smoke:che447-grading-batch": "tsx scripts/smoke-che447-grading-batch.ts",
     "test:browser": "pnpm run build && tsx scripts/browser-service/test-browser.ts && ./scripts/browser-smoke.sh",

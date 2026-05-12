@@ -116,7 +116,9 @@ Primary path:
 4. Verify the returned project id, agent id, `clientEnvPath`, model id, scoped
    key id, scopes, and restart hint. This response is intentionally non-secret.
 5. Restart the installed API service so the server reloads the service env.
-6. Hand only the scoped client env path to the execution agent.
+6. Run `pnpm run smoke:scoped-client-env -- <clientEnvPath>` or the equivalent
+   `/v1/models` plus `/v1/responses` check against the generated env.
+7. Hand only the scoped client env path to the execution agent.
 
 Lower-level path:
 
@@ -366,6 +368,7 @@ Run:
 
 ```bash
 pnpm run smoke:che447-grading-batch
+pnpm run smoke:scoped-client-env -- <client.env>
 pnpm run smoke:scoped-client-handoff
 ```
 
@@ -381,7 +384,11 @@ it is a general pattern smoke. It proves:
 - child response readback
 - no live provider/browser quota use
 
+The scoped-client-env smoke is the tiny downstream client check: it reads a
+generated handoff env file, calls `/v1/models`, submits one `/v1/responses`
+request, polls it, and exits with clear diagnostics.
+
 The scoped-client-handoff smoke proves the same setup contract from the client
-side: after a simulated API service reload, it uses only the generated client
-env values to discover the agent, submit one direct response, enqueue a batch,
-and poll/read the results.
+side: after a simulated API service reload, it uses the scoped-client-env smoke
+against the generated env values, then enqueues a batch and polls/reads the
+results.

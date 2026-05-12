@@ -3608,6 +3608,26 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `git diff --check`
   - `pnpm run preflight:lazy-live-follow`
 
+## Turn 141 | 2026-05-12
+
+- Goal: give downstream apps a tiny env-only AuraCall API smoke.
+- Change:
+  - added `scripts/smoke-scoped-client-env.ts`
+  - added `pnpm run smoke:scoped-client-env -- <client.env>`
+  - exported the env smoke helper and reused it from
+    `smoke:scoped-client-handoff`
+  - updated workflow, endpoint, testing, active-plan, and repo-local API skill
+    docs so downstream agents know to validate the generated scoped env before
+    a larger batch
+- Verification:
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run smoke:scoped-client-handoff`
+  - `pnpm exec biome lint scripts/smoke-scoped-client-env.ts scripts/smoke-scoped-client-handoff-workflow.ts package.json docs/agent-workflows.md docs/openai-endpoints.md docs/testing.md skills/auracall-api-workflow/SKILL.md docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md RUNBOOK.md docs/dev/dev-journal.md --max-diagnostics 80`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 65`
+  - `git diff --check`
+  - `pnpm run preflight:lazy-live-follow`
+
 ## Turn 139 | 2026-05-12
 
 - Goal: make the scoped client handoff a first-class setup package workflow.

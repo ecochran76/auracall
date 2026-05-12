@@ -231,6 +231,11 @@
         with `clientEnvPath`, API service reload
         simulation, `/v1/models` validation, one direct response, and one
         response batch using only the generated client env values
+      - local downstream-client smoke:
+        `pnpm run smoke:scoped-client-env -- <client.env>`; it reads a
+        generated scoped client env, validates `/v1/models`, submits one
+        `/v1/responses` request, polls readback, and exits with clear
+        diagnostics for apps that only know the generated env contract
       - local deterministic smoke for live-follow health parity:
         `pnpm run smoke:live-follow-health`; it compares `/status.liveFollow`,
         CLI `api status`, MCP `api_status`, and `/ops/browser` against one
