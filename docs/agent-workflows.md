@@ -107,14 +107,14 @@ Use this when a workflow needs provider-side project context before execution.
 
 Primary path:
 
-1. Call `POST /v1/agent-setup-packages` or MCP
-   `agent_setup_package_create` with an operator key.
+1. Call `POST /v1/agent-setup-handoffs` or MCP
+   `agent_setup_handoff_create` with an operator key.
 2. Supply `service`, `runtimeProfile`, `projectName`, `agentId`,
    `agentModelSelector`, and `clientEnvPath`.
 3. Optionally supply project fields, agent instructions, key id, service/runtime
    scopes, `apiBaseUrl`, and `envPath`.
-4. Verify the returned project id, agent id, `clientEnvPath`, and scoped key
-   metadata.
+4. Verify the returned project id, agent id, `clientEnvPath`, model id, scoped
+   key id, scopes, and restart hint. This response is intentionally non-secret.
 5. Restart the installed API service so the server reloads the service env.
 6. Hand only the scoped client env path to the execution agent.
 
@@ -134,9 +134,10 @@ Lower-level path:
 
 Setup is intentionally separate from execution. A scoped execution agent should
 not be able to create or rewrite provider projects. Prefer the composed setup
-package route when a downstream app needs a ready-to-source `.env`; use the
-lower-level routes only when an operator needs to inspect or customize each
-phase.
+handoff route when a downstream app needs a ready-to-source `.env`; use
+`/v1/agent-setup-packages` only when a privileged operator explicitly needs the
+full one-time secret-bearing setup response, and use the lower-level routes only
+when an operator needs to inspect or customize each phase.
 
 ### Batch Workflow
 
@@ -207,7 +208,7 @@ After key issuance, restart the installed API service so the running process
 reloads `~/.auracall/api.env`.
 
 When a setup agent can create the project-bound agent and key in one call, use
-`POST /v1/agent-setup-packages` or MCP `agent_setup_package_create`:
+`POST /v1/agent-setup-handoffs` or MCP `agent_setup_handoff_create`:
 
 ```json
 {

@@ -16817,6 +16817,36 @@ describe('http responses adapter', () => {
         restartRequired: true,
       },
     }));
+    const createHandoff = vi.fn(async () => ({
+      object: 'auracall_agent_setup_handoff' as const,
+      agentId: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
+      model: 'agent:pro-extended-chatgpt-soylei-che4470-seminar-grading',
+      clientEnvPath: path.join(homeDir, 'clients', 'che447-grading.env'),
+      restartRequired: true,
+      project: {
+        status: 'found' as const,
+        id: 'proj_che447',
+        name: 'ChE 4470/5470 Seminar Grading',
+        service: 'chatgpt' as const,
+        runtimeProfile: 'wsl-chrome-3',
+        created: false,
+      },
+      key: {
+        keyId: 'che447-grading',
+        envPath: path.join(homeDir, 'api.env'),
+        apiBaseUrl: 'http://127.0.0.1:18095/v1',
+        scopes: {
+          agents: ['pro-extended-chatgpt-soylei-che4470-seminar-grading'],
+          teams: [],
+          services: ['chatgpt'],
+          runtimeProfiles: ['wsl-chrome-3'],
+        },
+      },
+      next: {
+        restartService: 'auracall-api.service',
+        sourceEnv: path.join(homeDir, 'clients', 'che447-grading.env'),
+      },
+    }));
     const server = await createResponsesHttpServer(
       { host: '127.0.0.1', port: 0 },
       {
@@ -16840,6 +16870,7 @@ describe('http responses adapter', () => {
         },
         agentSetupPackageService: {
           createPackage,
+          createHandoff,
         },
       },
     );
@@ -16896,6 +16927,34 @@ describe('http responses adapter', () => {
         agentId: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
         agentModelSelector: 'chatgpt:pro-extended',
       }));
+
+      const handoffResponse = await fetch(`http://127.0.0.1:${server.port}/v1/agent-setup-handoffs`, {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer operator-secret',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          service: 'chatgpt',
+          runtimeProfile: 'wsl-chrome-3',
+          projectName: 'ChE 4470/5470 Seminar Grading',
+          agentId: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
+          keyId: 'che447-grading',
+          clientEnvPath: path.join(homeDir, 'clients', 'che447-grading.env'),
+        }),
+      });
+      expect(handoffResponse.status).toBe(200);
+      const handoffPayload = await handoffResponse.json() as JsonObject;
+      expect(handoffPayload).toMatchObject({
+        object: 'auracall_agent_setup_handoff',
+        agentId: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
+        clientEnvPath: path.join(homeDir, 'clients', 'che447-grading.env'),
+        key: {
+          keyId: 'che447-grading',
+        },
+      });
+      expect(JSON.stringify(handoffPayload)).not.toContain('auracall_secret');
+      expect(JSON.stringify(handoffPayload)).not.toContain('apiKey');
     } finally {
       await server.close();
     }

@@ -19,9 +19,9 @@ configuration.
 
 ## Project-Bound Agent Path
 
-Use `POST /v1/agent-setup-packages` or MCP
-`agent_setup_package_create` when a downstream client needs a ready-to-source
-scoped handoff.
+Use `POST /v1/agent-setup-handoffs` or MCP
+`agent_setup_handoff_create` when a downstream client needs a ready-to-source
+scoped handoff and non-secret setup status.
 
 Required fields:
 
@@ -47,8 +47,8 @@ After success:
 1. Confirm the returned project id and agent id.
 2. Confirm `mutationTarget` is `registry` for a new/updated bound agent.
 3. Discover `agent:<agent_id>` from `/v1/models` or MCP config listing.
-4. Confirm the result includes a scoped API key issue result and
-   `clientEnvPath`.
+4. Confirm the result includes the model id, scoped key id/scopes,
+   `clientEnvPath`, and restart hint.
 5. Restart the installed API service when the key was written to
    `~/.auracall/api.env`.
 6. Give the execution client only the client env path or these values:
@@ -61,6 +61,9 @@ After success:
 Use `POST /v1/projects/ensure` or MCP `project_ensure` plus
 `POST /v1/config/api-keys/issue` or MCP `api_key_issue` only when you need to
 inspect/customize project binding and key issuance as separate operator steps.
+Use `POST /v1/agent-setup-packages` or MCP `agent_setup_package_create` only
+when a privileged operator explicitly needs the full one-time secret-bearing
+setup response.
 
 ## Naming
 

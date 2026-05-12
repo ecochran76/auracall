@@ -223,9 +223,21 @@ release gate before live dogfood.
   `api_key_issue`, including `agentModelSelector`, agent instructions,
   `keyId`, `apiBaseUrl`, `envPath`, `services`, `runtimeProfiles`, and
   `overwrite`.
-- Use this as the default privileged handoff path for downstream execution
-  agents. Use `project_ensure` plus `api_key_issue` only when an operator needs
-  to review or customize the two phases separately.
+- Use this only when a privileged operator needs the full one-time
+  secret-bearing setup response. Prefer `agent_setup_handoff_create` for normal
+  downstream agent handoff.
+- Restart `auracall-api.service` after issuing the key so the running API
+  process reloads the service env file.
+
+### `agent_setup_handoff_create`
+- Behavior: privileged composed setup tool with the same inputs as
+  `agent_setup_package_create`, but it returns only non-secret handoff metadata:
+  project status/id, model id, scoped key id/scopes, generated client env path,
+  and restart/source hints.
+- The generated scoped secret is written into `clientEnvPath`; it is not
+  returned in structured content.
+- Use this as the default setup tool for privileged agents preparing work for
+  downstream scoped execution agents.
 - Restart `auracall-api.service` after issuing the key so the running API
   process reloads the service env file.
 

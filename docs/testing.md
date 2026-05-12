@@ -227,8 +227,8 @@
         without provider or browser dispatcher access
       - local deterministic smoke for scoped client handoff workflows:
         `pnpm run smoke:scoped-client-handoff`; it chains the composed
-        `POST /v1/agent-setup-packages` route, scoped key issuance with
-        `clientEnvPath`, API service reload
+        redacted `POST /v1/agent-setup-handoffs` route, scoped key issuance
+        with `clientEnvPath`, API service reload
         simulation, `/v1/models` validation, one direct response, and one
         response batch using only the generated client env values
       - local deterministic smoke for live-follow health parity:

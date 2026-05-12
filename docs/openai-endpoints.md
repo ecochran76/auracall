@@ -50,6 +50,7 @@ Current endpoints:
 - `DELETE /v1/config/teams/{team_id}`
 - `POST /v1/projects/ensure`
 - `POST /v1/agent-setup-packages`
+- `POST /v1/agent-setup-handoffs`
 - `POST /v1/responses`
 - `GET /v1/responses/{response_id}`
 - `POST /v1/response-batches`
@@ -72,8 +73,10 @@ Current limits:
     browser executor can upload them; remote HTTP(S) URIs are preserved as
     metadata but are not downloaded automatically.
   - project-bound workflows should bootstrap downstream clients through
-    `POST /v1/agent-setup-packages` when they need a ready-to-source scoped
-    client env; use `POST /v1/projects/ensure` plus
+    `POST /v1/agent-setup-handoffs` when they need a ready-to-source scoped
+    client env and non-secret status; use `POST /v1/agent-setup-packages` only
+    when a privileged operator needs the full one-time secret-bearing response,
+    or use `POST /v1/projects/ensure` plus
     `POST /v1/config/api-keys/issue` only when the operator needs separate
     inspection/customization phases.
 - `POST /v1/team-runs` creates one bounded task-backed team execution through
@@ -157,7 +160,22 @@ Current limits:
     ensure result, API-key issue result, `clientEnvPath`, model id, and
     `restartRequired`
   - this is the preferred setup path for privileged setup agents preparing work
-    for downstream scoped execution clients
+    for downstream scoped execution clients only when they must inspect the
+    one-time secret-bearing response
+  - prefer `POST /v1/agent-setup-handoffs` when the caller only needs the
+    generated env path and non-secret readiness metadata
+  - when API auth is enabled, this route requires an unscoped operator key
+- `POST /v1/agent-setup-handoffs` is the redacted composed setup surface:
+  - accepts the same input as `/v1/agent-setup-packages`
+  - performs the same provider project ensure, registry agent binding, scoped
+    key issuance, and client env write
+  - returns `object = "auracall_agent_setup_handoff"` with the agent id, model,
+    project status/id/name, scoped key id/scopes, client env path, and restart
+    hint
+  - never returns `apiKey`, `openaiApiKey`, or the generated secret; the secret
+    is only written into the client env file
+  - this is the default setup endpoint for privileged agents preparing work for
+    downstream clients
   - when API auth is enabled, this route requires an unscoped operator key
 - `POST /v1/response-batches` is the first nonblocking batch enqueue surface:
   - accepts `{ "requests": [ ... ] }`, where each child request is an ordinary
@@ -182,10 +200,10 @@ Current limits:
     attachment-bearing jobs, batch polling, and child response readback without
     live provider/browser work
   - deterministic client handoff smoke:
-    `pnpm run smoke:scoped-client-handoff` verifies the composed setup package
-    route, scoped key issuance with `clientEnvPath`, API service reload simulation,
-    `/v1/models` validation, one direct response, and one response batch using
-    only generated client env values
+    `pnpm run smoke:scoped-client-handoff` verifies the redacted composed setup
+    handoff route, scoped key issuance with `clientEnvPath`, API service reload
+    simulation, `/v1/models` validation, one direct response, and one response
+    batch using only generated client env values
 - API-key authorization can be configured in `~/.auracall/config.json` or
   through the installed service dotenv file at `~/.auracall/api.env`. The
   service recognizes `AURACALL_API_KEY` as a bearer key and optional

@@ -47,9 +47,11 @@ prefer semantic intent and keep exact provider-version pins as escape hatches.
   privileged setup, scoped execution, durable observation, response batches,
   and skill split. The ChE grading smoke is one fixture-backed proof of that
   pattern, not a special-purpose API lane.
-- `POST /v1/agent-setup-packages` and MCP `agent_setup_package_create` now
-  compose project ensure, registry agent binding, scoped API-key issuance, and
-  client env handoff into one privileged setup call.
+- `POST /v1/agent-setup-packages`/MCP `agent_setup_package_create` and the
+  redacted `POST /v1/agent-setup-handoffs`/MCP
+  `agent_setup_handoff_create` now compose project ensure, registry agent
+  binding, scoped API-key issuance, and client env handoff into one privileged
+  setup call.
 - Repo-local skills now cover the two generic agent roles:
   `auracall-api-workflow` for scoped execution clients and
   `auracall-agent-setup` for privileged setup clients.
@@ -95,10 +97,13 @@ Implemented:
 - `POST /v1/projects/ensure` and `POST /v1/response-batches` combine into the
   first documented deterministic setup plus stochastic execution workflow for
   external agents.
-- `POST /v1/agent-setup-packages` and MCP `agent_setup_package_create` provide
-  the preferred first-class setup package workflow for downstream clients:
-  ensure provider project, bind agent, issue scoped key, write client env, and
-  return the model id plus restart hint in one response.
+- `POST /v1/agent-setup-handoffs` and MCP `agent_setup_handoff_create` provide
+  the preferred first-class handoff workflow for downstream clients: ensure
+  provider project, bind agent, issue scoped key, write client env, and return
+  only non-secret model/project/key-id/restart metadata.
+- `POST /v1/agent-setup-packages` and MCP `agent_setup_package_create` remain
+  available for privileged operators that explicitly need the full one-time
+  secret-bearing setup response.
 
 Remaining:
 
@@ -130,9 +135,9 @@ Remaining:
 - Client agents can follow a documented setup/execution split and can load
   repo-local skills that keep AuraCall endpoint choreography out of
   domain-specific workflow code.
-- Privileged setup agents can create a project-bound agent setup package in one
+- Privileged setup agents can create a project-bound agent setup handoff in one
   HTTP or MCP call and hand downstream clients only the generated scoped env
-  path.
+  path plus non-secret readiness metadata.
 
 ## Next Work
 

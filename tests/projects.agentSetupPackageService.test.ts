@@ -109,4 +109,96 @@ describe('agent setup package service', () => {
     expect(clientEnv).toContain('AURACALL_MODEL=agent:pro-extended-chatgpt-soylei-che4470-seminar-grading');
     expect(clientEnv).toContain('AURACALL_BATCH_URL=http://auracall.localhost/v1/response-batches');
   });
+
+  it('creates a redacted handoff without returning the scoped API secret', async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-agent-setup-handoff-'));
+    cleanup.push(dir);
+    const configPath = path.join(dir, 'config.json');
+    const envPath = path.join(dir, 'api.env');
+    const clientEnvPath = path.join(dir, 'clients', 'grading.env');
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        browserProfiles: {
+          'wsl-chrome-3': {},
+        },
+        runtimeProfiles: {
+          'wsl-chrome-3': {
+            browserProfile: 'wsl-chrome-3',
+            defaultService: 'chatgpt',
+          },
+        },
+        agents: {
+          'pro-extended-chatgpt-soylei-che4470-seminar-grading': {
+            runtimeProfile: 'wsl-chrome-3',
+            service: 'chatgpt',
+          },
+        },
+      }),
+      'utf8',
+    );
+    const agentTeamConfigService = createAgentTeamConfigService({ configPath });
+    const ensureProject = vi.fn<ProjectEnsureService['ensureProject']>(async (input) => ({
+      object: 'auracall_project_ensure',
+      status: 'found',
+      service: input.service ?? 'chatgpt',
+      runtimeProfile: input.runtimeProfile ?? null,
+      projectName: input.projectName,
+      project: {
+        id: 'proj_che447',
+        name: input.projectName,
+        provider: 'chatgpt',
+      },
+      created: false,
+      agent: {
+        id: input.agentId ?? 'missing',
+        mutationTarget: 'registry',
+        blockedReason: null,
+      },
+    }));
+    const service = createAgentSetupPackageService({
+      projectEnsureService: { ensureProject },
+      agentTeamConfigService,
+    });
+
+    const result = await service.createHandoff({
+      service: 'chatgpt',
+      runtimeProfile: 'wsl-chrome-3',
+      projectName: 'ChE 4470/5470 Seminar Grading',
+      agentId: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
+      keyId: 'che447-grading',
+      apiBaseUrl: 'http://auracall.localhost/v1',
+      envPath,
+      clientEnvPath,
+    });
+
+    expect(result).toMatchObject({
+      object: 'auracall_agent_setup_handoff',
+      agentId: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
+      model: 'agent:pro-extended-chatgpt-soylei-che4470-seminar-grading',
+      clientEnvPath,
+      restartRequired: true,
+      project: {
+        id: 'proj_che447',
+        status: 'found',
+      },
+      key: {
+        keyId: 'che447-grading',
+        envPath,
+        apiBaseUrl: 'http://auracall.localhost/v1',
+      },
+      next: {
+        restartService: 'auracall-api.service',
+        sourceEnv: clientEnvPath,
+      },
+    });
+    const clientEnv = await fs.readFile(clientEnvPath, 'utf8');
+    expect(clientEnv).toContain('OPENAI_API_KEY=auracall_');
+    const secret = /OPENAI_API_KEY=(auracall_[^\n]+)/.exec(clientEnv)?.[1];
+    expect(secret).toBeTruthy();
+    const redactedJson = JSON.stringify(result);
+    expect(redactedJson).not.toContain(secret);
+    expect(redactedJson).not.toContain('openaiApiKey');
+    expect(redactedJson).not.toContain('apiKey');
+  });
 });

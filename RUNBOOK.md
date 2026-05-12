@@ -3633,3 +3633,30 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run docs:list`
   - `pnpm run plans:audit -- --keep 65`
   - `pnpm run preflight:lazy-live-follow`
+
+## Turn 140 | 2026-05-12
+
+- Goal: add a non-secret setup handoff surface for downstream client agents.
+- Change:
+  - added redacted `AgentSetupHandoffResult`
+  - added HTTP `POST /v1/agent-setup-handoffs`
+  - added MCP `agent_setup_handoff_create`
+  - updated `smoke:scoped-client-handoff` to use the redacted handoff route
+    and assert the setup response does not carry secret-bearing fields
+  - kept `POST /v1/agent-setup-packages` and MCP
+    `agent_setup_package_create` for privileged operators that explicitly need
+    the full one-time secret-bearing response
+  - updated active API plan, endpoint docs, MCP docs, workflow docs, testing
+    docs, and the privileged setup skill
+- Verification:
+  - `pnpm exec tsc --noEmit`
+  - `pnpm vitest run tests/projects.agentSetupPackageService.test.ts tests/mcp.agentSetupPackage.test.ts tests/http.responsesServer.test.ts -t "agent setup|handoff|API key|development posture" --maxWorkers 1`
+  - `pnpm run smoke:scoped-client-handoff` (rerun passed after one transient
+    batch-read poll failure)
+  - `pnpm exec biome lint src/projects/agentSetupPackageService.ts src/mcp/tools/agentSetupPackage.ts src/http/responsesServer.ts tests/projects.agentSetupPackageService.test.ts tests/mcp.agentSetupPackage.test.ts tests/http.responsesServer.test.ts scripts/smoke-scoped-client-handoff-workflow.ts docs/agent-workflows.md docs/openai-endpoints.md docs/mcp.md docs/testing.md skills/auracall-agent-setup/SKILL.md --max-diagnostics 80`
+    exited cleanly; it reported unrelated existing non-null assertion warnings
+    in `tests/http.responsesServer.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 65`
+  - `git diff --check`
+  - `pnpm run preflight:lazy-live-follow`

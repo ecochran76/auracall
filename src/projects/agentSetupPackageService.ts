@@ -31,8 +31,35 @@ export interface AgentSetupPackageResult {
   restartRequired: boolean;
 }
 
+export interface AgentSetupHandoffResult {
+  object: 'auracall_agent_setup_handoff';
+  agentId: string;
+  model: string;
+  clientEnvPath: string;
+  restartRequired: boolean;
+  project: {
+    status: ProjectEnsureResult['status'];
+    id: string | null;
+    name: string | null;
+    service: ProjectEnsureResult['service'];
+    runtimeProfile: string | null;
+    created: boolean;
+  };
+  key: {
+    keyId: string;
+    envPath: string;
+    apiBaseUrl: string;
+    scopes: ApiKeyIssueResult['scopes'];
+  };
+  next: {
+    restartService: string | null;
+    sourceEnv: string;
+  };
+}
+
 export interface AgentSetupPackageService {
   createPackage(input: AgentSetupPackageInput): Promise<AgentSetupPackageResult>;
+  createHandoff(input: AgentSetupPackageInput): Promise<AgentSetupHandoffResult>;
 }
 
 export interface AgentSetupPackageServiceDeps {
@@ -43,40 +70,73 @@ export interface AgentSetupPackageServiceDeps {
 export function createAgentSetupPackageService(
   deps: AgentSetupPackageServiceDeps,
 ): AgentSetupPackageService {
+  const createPackage = async (input: AgentSetupPackageInput): Promise<AgentSetupPackageResult> => {
+    const payload = AgentSetupPackageInputSchema.parse(input);
+    const project = await deps.projectEnsureService.ensureProject(payload);
+    if (!project.project?.id) {
+      throw new Error(`Project "${payload.projectName}" was not available for agent setup.`);
+    }
+    if (!project.agent || project.agent.id !== payload.agentId) {
+      throw new Error(`Project ensure did not bind requested agent: ${payload.agentId}`);
+    }
+    if (project.agent.mutationTarget === 'blocked') {
+      throw new Error(project.agent.blockedReason ?? `Agent setup was blocked for ${payload.agentId}.`);
+    }
+
+    const apiKey = await issueApiKey(deps.agentTeamConfigService, {
+      agentId: payload.agentId,
+      keyId: payload.keyId,
+      services: payload.services ?? [payload.service],
+      runtimeProfiles: payload.runtimeProfiles ?? (payload.runtimeProfile ? [payload.runtimeProfile] : []),
+      apiBaseUrl: payload.apiBaseUrl,
+      envPath: payload.envPath,
+      clientEnvPath: payload.clientEnvPath,
+      overwrite: payload.overwrite,
+    });
+
+    return {
+      object: 'auracall_agent_setup_package',
+      agentId: payload.agentId,
+      model: apiKey.model,
+      project,
+      apiKey,
+      clientEnvPath: apiKey.clientEnvPath ?? payload.clientEnvPath,
+      restartRequired: apiKey.restartRequired,
+    };
+  };
+
   return {
-    async createPackage(input) {
-      const payload = AgentSetupPackageInputSchema.parse(input);
-      const project = await deps.projectEnsureService.ensureProject(payload);
-      if (!project.project?.id) {
-        throw new Error(`Project "${payload.projectName}" was not available for agent setup.`);
-      }
-      if (!project.agent || project.agent.id !== payload.agentId) {
-        throw new Error(`Project ensure did not bind requested agent: ${payload.agentId}`);
-      }
-      if (project.agent.mutationTarget === 'blocked') {
-        throw new Error(project.agent.blockedReason ?? `Agent setup was blocked for ${payload.agentId}.`);
-      }
+    createPackage,
+    async createHandoff(input) {
+      return redactSetupPackage(await createPackage(input));
+    },
+  };
+}
 
-      const apiKey = await issueApiKey(deps.agentTeamConfigService, {
-        agentId: payload.agentId,
-        keyId: payload.keyId,
-        services: payload.services ?? [payload.service],
-        runtimeProfiles: payload.runtimeProfiles ?? (payload.runtimeProfile ? [payload.runtimeProfile] : []),
-        apiBaseUrl: payload.apiBaseUrl,
-        envPath: payload.envPath,
-        clientEnvPath: payload.clientEnvPath,
-        overwrite: payload.overwrite,
-      });
-
-      return {
-        object: 'auracall_agent_setup_package',
-        agentId: payload.agentId,
-        model: apiKey.model,
-        project,
-        apiKey,
-        clientEnvPath: apiKey.clientEnvPath ?? payload.clientEnvPath,
-        restartRequired: apiKey.restartRequired,
-      };
+export function redactSetupPackage(packageResult: AgentSetupPackageResult): AgentSetupHandoffResult {
+  return {
+    object: 'auracall_agent_setup_handoff',
+    agentId: packageResult.agentId,
+    model: packageResult.model,
+    clientEnvPath: packageResult.clientEnvPath,
+    restartRequired: packageResult.restartRequired,
+    project: {
+      status: packageResult.project.status,
+      id: packageResult.project.project?.id ?? null,
+      name: packageResult.project.project?.name ?? packageResult.project.projectName,
+      service: packageResult.project.service,
+      runtimeProfile: packageResult.project.runtimeProfile,
+      created: packageResult.project.created,
+    },
+    key: {
+      keyId: packageResult.apiKey.keyId,
+      envPath: packageResult.apiKey.envPath,
+      apiBaseUrl: packageResult.apiKey.apiBaseUrl,
+      scopes: packageResult.apiKey.scopes,
+    },
+    next: {
+      restartService: packageResult.restartRequired ? 'auracall-api.service' : null,
+      sourceEnv: packageResult.clientEnvPath,
     },
   };
 }

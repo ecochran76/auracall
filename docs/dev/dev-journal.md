@@ -27708,6 +27708,37 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror dashboard|api ops browser CLI helpers|browser operator dashboard" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
 
+## Turn 141 | 2026-05-12
+
+- Continued implementation plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: add a redacted setup handoff surface so privileged setup agents can
+  initialize project-bound agents without returning the generated API secret in
+  structured output.
+- Change:
+  - added `POST /v1/agent-setup-handoffs`
+  - added MCP `agent_setup_handoff_create`
+  - added `AgentSetupHandoffResult`, derived from the full setup package but
+    limited to non-secret project/model/key-id/scopes/restart metadata plus the
+    generated client env path
+  - updated `smoke:scoped-client-handoff` to exercise the redacted handoff
+    route and then use only the generated client env for model discovery, one
+    direct response, and one response batch
+  - updated API workflow, endpoint, MCP, testing, active-plan, and setup-skill
+    docs
+- Validation:
+  - `pnpm exec tsc --noEmit`
+  - `pnpm vitest run tests/projects.agentSetupPackageService.test.ts tests/mcp.agentSetupPackage.test.ts tests/http.responsesServer.test.ts -t "agent setup|handoff|API key|development posture" --maxWorkers 1`
+  - `pnpm run smoke:scoped-client-handoff` (rerun passed after one transient
+    batch-read poll failure)
+  - `pnpm exec biome lint src/projects/agentSetupPackageService.ts src/mcp/tools/agentSetupPackage.ts src/http/responsesServer.ts tests/projects.agentSetupPackageService.test.ts tests/mcp.agentSetupPackage.test.ts tests/http.responsesServer.test.ts scripts/smoke-scoped-client-handoff-workflow.ts docs/agent-workflows.md docs/openai-endpoints.md docs/mcp.md docs/testing.md skills/auracall-agent-setup/SKILL.md --max-diagnostics 80`
+    reported only existing non-null assertion warning debt in
+    `tests/http.responsesServer.test.ts`
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 65`
+  - `git diff --check`
+  - `pnpm run preflight:lazy-live-follow`
+
 ## Turn 140 | 2026-05-12
 
 - Continued implementation plan:

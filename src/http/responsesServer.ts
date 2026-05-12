@@ -579,6 +579,7 @@ interface HttpStatusResponse {
     teamRunInspection: string;
     projectEnsure: string;
     agentSetupPackagesCreate: string;
+    agentSetupHandoffsCreate: string;
     runtimeRunsRecent: string;
     runtimeRunInspection: string;
     models: string;
@@ -1982,6 +1983,28 @@ export async function createResponsesHttpServer(
         }
       }
 
+      if (req.method === 'POST' && url.pathname === '/v1/agent-setup-handoffs') {
+        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+        if (operatorAuthError) {
+          sendJson(res, 403, {
+            error: {
+              message: operatorAuthError,
+              type: 'permission_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        const endForegroundWork = beginForegroundAuraCallWork();
+        try {
+          const body = await readRequestBody(req);
+          const payload = AgentSetupPackageInputSchema.parse(JSON.parse(body || '{}'));
+          sendJson(res, 200, await agentSetupPackageService.createHandoff(payload));
+          return;
+        } finally {
+          endForegroundWork();
+        }
+      }
+
       if (req.method === 'POST' && url.pathname === '/v1/team-runs') {
         const endForegroundWork = beginForegroundAuraCallWork();
         try {
@@ -2624,7 +2647,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   }
   logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
-    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/agent-setup-packages, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
+    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   if (serverOptions.dashboardUrl) {
@@ -3098,6 +3121,7 @@ function createHttpStatusResponse(input: {
         '/v1/team-runs/inspect?taskRunSpecId={task_run_spec_id}|teamRunId={team_run_id}|runtimeRunId={runtime_run_id}',
       projectEnsure: 'POST /v1/projects/ensure',
       agentSetupPackagesCreate: 'POST /v1/agent-setup-packages',
+      agentSetupHandoffsCreate: 'POST /v1/agent-setup-handoffs',
       runtimeRunsRecent: '/v1/runtime-runs/recent[?sourceKind=team-run|direct][&status=planned|running|succeeded|failed|cancelled][&limit=25]',
       runtimeRunInspection:
         '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}][&probe=service-state][&diagnostics=browser-state][&authority=scheduler]',

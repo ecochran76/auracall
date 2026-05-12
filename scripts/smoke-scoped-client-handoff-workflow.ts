@@ -17,34 +17,29 @@ const AGENT_ID = 'pro-extended-chatgpt-soylei-client-handoff-smoke';
 const MODEL = `agent:${AGENT_ID}`;
 type ResponsesHttpServer = Awaited<ReturnType<typeof createResponsesHttpServer>>;
 
-interface ApiKeyIssuePayload {
-  object?: string;
-  keyId?: string;
-  apiKey?: string;
-  model?: string;
-  clientEnvPath?: string;
-  clientEnv?: {
-    openaiBaseUrl?: string;
-    openaiApiKey?: string;
-    auracallModel?: string;
-    auracallStatusUrl?: string;
-    auracallBatchUrl?: string;
-  };
-}
-
-interface ProjectEnsurePayload {
-  object?: string;
-  status?: string;
-  project?: { id?: string };
-  agent?: { id?: string; mutationTarget?: string };
-}
-
-interface AgentSetupPackagePayload {
+interface AgentSetupHandoffPayload {
   object?: string;
   agentId?: string;
   model?: string;
-  project?: ProjectEnsurePayload;
-  apiKey?: ApiKeyIssuePayload;
+  project?: {
+    status?: string;
+    id?: string | null;
+    name?: string | null;
+    service?: string;
+    runtimeProfile?: string | null;
+    created?: boolean;
+  };
+  key?: {
+    keyId?: string;
+    envPath?: string;
+    apiBaseUrl?: string;
+    scopes?: {
+      agents?: string[];
+      teams?: string[];
+      services?: string[];
+      runtimeProfiles?: string[];
+    };
+  };
   clientEnvPath?: string;
   restartRequired?: boolean;
 }
@@ -281,7 +276,7 @@ async function main(): Promise<void> {
   let server = await createServer({ port, config, executedRequests });
 
   try {
-    const setup = await fetchJson<AgentSetupPackagePayload>(`${baseUrl}/agent-setup-packages`, {
+    const setup = await fetchJson<AgentSetupHandoffPayload>(`${baseUrl}/agent-setup-handoffs`, {
       method: 'POST',
       headers: {
         authorization: 'Bearer operator-secret',
@@ -302,20 +297,15 @@ async function main(): Promise<void> {
         clientEnvPath,
       }),
     });
-    assertEqual(setup.object, 'auracall_agent_setup_package', 'setup package object');
-    assertEqual(setup.agentId, AGENT_ID, 'setup package agent id');
-    assertEqual(setup.project?.object, 'auracall_project_ensure', 'project ensure object');
-    assertEqual(setup.project?.agent?.id, AGENT_ID, 'agent id');
-    assertEqual(setup.project?.agent?.mutationTarget, 'registry', 'agent mutation target');
-    const issued = setup.apiKey;
-    if (!issued) throw new Error('setup package did not include apiKey.');
-    assertEqual(issued.object, 'auracall_api_key_issue', 'issue object');
-    assertEqual(issued.model, MODEL, 'issued model');
-    assertEqual(issued.clientEnvPath, clientEnvPath, 'client env path');
-    assertEqual(issued.clientEnv?.openaiBaseUrl, baseUrl, 'client env base URL');
-    assertEqual(issued.clientEnv?.auracallModel, MODEL, 'client env model');
-    if (!issued.apiKey?.startsWith('auracall_') || issued.clientEnv?.openaiApiKey !== issued.apiKey) {
-      throw new Error('issue response did not include one matching scoped key.');
+    assertEqual(setup.object, 'auracall_agent_setup_handoff', 'setup handoff object');
+    assertEqual(setup.agentId, AGENT_ID, 'setup handoff agent id');
+    assertEqual(setup.model, MODEL, 'setup handoff model');
+    assertEqual(setup.clientEnvPath, clientEnvPath, 'setup handoff client env path');
+    assertEqual(setup.project?.id, 'proj_scoped_client_handoff_smoke', 'setup handoff project id');
+    assertEqual(setup.key?.keyId, 'client-handoff-smoke', 'setup handoff key id');
+    const setupJson = JSON.stringify(setup);
+    if (setupJson.includes('OPENAI_API_KEY') || setupJson.includes('openaiApiKey') || /auracall_[A-Za-z0-9_-]{20,}/.test(setupJson)) {
+      throw new Error(`setup handoff leaked secret-bearing fields: ${setupJson}`);
     }
 
     await server.close();
@@ -327,7 +317,9 @@ async function main(): Promise<void> {
 
     const clientEnv = await readEnvValues(clientEnvPath);
     assertEqual(clientEnv.OPENAI_BASE_URL, baseUrl, 'handoff OPENAI_BASE_URL');
-    assertEqual(clientEnv.OPENAI_API_KEY, issued.apiKey, 'handoff OPENAI_API_KEY');
+    if (!clientEnv.OPENAI_API_KEY?.startsWith('auracall_')) {
+      throw new Error('handoff OPENAI_API_KEY was not a scoped AuraCall key.');
+    }
     assertEqual(clientEnv.AURACALL_MODEL, MODEL, 'handoff AURACALL_MODEL');
     assertEqual(clientEnv.AURACALL_STATUS_URL, `http://127.0.0.1:${port}/status`, 'handoff status URL');
     assertEqual(clientEnv.AURACALL_BATCH_URL, `${baseUrl}/response-batches`, 'handoff batch URL');
