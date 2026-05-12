@@ -2,6 +2,10 @@
 
 `auracall-mcp` is a minimal MCP stdio server that mirrors the Aura-Call CLI. It shares session storage with the CLI (`~/.auracall/sessions` or `AURACALL_HOME_DIR`) so you can mix and match: run with the CLI, inspect or re-run via MCP, or vice versa.
 
+For agent/app workflow patterns, including setup-vs-execution separation,
+scoped keys, response batches, attachments, and polling rules, see
+`docs/agent-workflows.md`.
+
 ## Tools
 
 ### `consult`
@@ -52,7 +56,7 @@
   can inspect it with `run_status`.
 - Polling contract: create the batch once, keep the returned batch id, and poll
   `response_batch_status`. Polling is read-only and must not resubmit student
-  prompts or reopen provider workbenches.
+  prompts, domain prompts, or provider workbenches.
 - Enforcement: the API server copies batch limits onto each child run and the
   shared service-host drain path checks them before acquiring an execution
   lease. Runs skipped for a batch gate remain queued for a later drain pass.
@@ -68,9 +72,10 @@
   creates it when missing. If `agentId` is supplied, it also writes a
   registry-backed agent bound to the resolved provider `projectId` and
   `projectName`.
-- Use this as the setup step for project-scoped workflows such as course
-  grading. After it returns, submit ordinary `response_create` or
-  `/v1/responses` jobs against the returned/bound agent id.
+- Use this as the setup step for project-scoped workflows. Course grading is
+  one current smoke, but the contract is intentionally generic: after it
+  returns, submit ordinary `response_create` or `/v1/responses` jobs against
+  the returned/bound agent id.
 - This is a privileged setup tool. Execution-scoped agents should normally call
   the already-bound agent, not create provider projects.
 

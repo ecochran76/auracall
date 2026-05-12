@@ -1,3 +1,22 @@
+## Turn 194 | 2026-05-12
+
+- Continued implementation plan:
+  `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
+- Goal: generalize the ChE grading workflow into a reusable AuraCall agent
+  workflow contract.
+- Change:
+  - added `docs/agent-workflows.md` as the agent/app integration playbook for
+    deterministic setup, scoped execution, durable observation, response
+    batches, polling rules, attachments, and skill strategy
+  - added repo-local `auracall-api-workflow` and `auracall-agent-setup` skills
+    for scoped execution clients and privileged setup clients
+  - updated API, MCP, README, testing, and active plan docs to treat the
+    course smoke as one proof of a general setup-plus-batch pattern
+- Validation:
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 65`
+  - `git diff --check`
+
 ## Turn 193 | 2026-05-10
 
 - Continued implementation plan:

@@ -94,6 +94,21 @@ auracall --profile auracall-gemini-pro api serve
 # Probe the local dev server posture
 curl http://auracall.localhost/status
 
+# Discover configured AuraCall agents as OpenAI-compatible model ids
+curl -H "Authorization: Bearer <key>" http://auracall.localhost/v1/models
+
+# Submit a single prompt to a configured agent
+curl -s http://auracall.localhost/v1/responses \
+  -H "Authorization: Bearer <key>" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"agent:instant-chatgpt-ecochran76","input":"Summarize the attached runbook."}'
+
+# Enqueue many independent jobs as a nonblocking response batch
+curl -s http://auracall.localhost/v1/response-batches \
+  -H "Authorization: Bearer <key>" \
+  -H "Content-Type: application/json" \
+  -d '{"limits":{"maxConcurrentRuns":1,"maxBrowserInteractionsPerMinute":8},"requests":[{"model":"agent:instant-chatgpt-ecochran76","input":"Job 1"},{"model":"agent:instant-chatgpt-ecochran76","input":"Job 2"}]}'
+
 # Open the local read-only browser operator dashboard
 xdg-open http://auracall.localhost/ops/browser
 
@@ -146,6 +161,10 @@ Current browser-mode default posture:
   failures; `/v1/team-runs` accepts top-level `outputContract` and
   `/v1/responses` accepts `auracall.outputContract`; see
   `docs/response-shape-contract.md`
+- configured agents are the preferred integration unit for external apps and
+  local agents. Use `agent:<agent_id>` model ids, scoped API keys, durable run
+  polling, and response batches instead of hard-coded provider model labels;
+  see `docs/agent-workflows.md`.
 
 WSL quick start: run `./scripts/bootstrap-wsl.sh` to install Node 22 + WSL Chrome + deps, then follow `docs/wsl-chatgpt-runbook.md` for the ChatGPT browser setup. If you are choosing between WSL Chrome and Windows Chrome from WSL, prefer WSL Chrome first and keep it as the primary browser profile; the Windows relay path is still more brittle and is better kept in a separate named browser profile.
 

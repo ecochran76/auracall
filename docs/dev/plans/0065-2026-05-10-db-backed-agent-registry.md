@@ -49,6 +49,11 @@ Implemented:
 - MCP exposes a local privileged `api_key_issue` tool that writes additional
   agent/team-scoped keys into the user-scoped `~/.auracall/api.env` file for
   OpenAI-compatible clients.
+- `docs/agent-workflows.md` defines the registry-backed agent as the stable
+  integration unit for both deterministic setup agents and scoped execution
+  agents.
+- Repo-local `auracall-agent-setup` and `auracall-api-workflow` skills define
+  the first agent-facing procedures over the registry/key/batch surfaces.
 - `/v1/config/agent-diagnostics` and MCP `api_key_diagnostics` expose
   non-secret effective catalog/API-key health, including disabled registry
   records, config-vs-registry conflicts, missing scoped targets, and
@@ -201,6 +206,8 @@ Add explicit registry routes only after compatibility is working:
 - API-key scoping works against registry-backed agents.
 - Operators can export selected agents/teams to a reviewable file without
   treating the export as the hot mutable store.
+- Workflow clients can use deterministic agent ids and scoped keys without
+  writing large mutable agent collections back into `~/.auracall/config.json`.
 
 ## First Implementation Slice
 

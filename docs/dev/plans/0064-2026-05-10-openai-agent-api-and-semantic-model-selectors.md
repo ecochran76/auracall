@@ -43,6 +43,13 @@ prefer semantic intent and keep exact provider-version pins as escape hatches.
 - Non-streaming `/v1/chat/completions` requests now adapt OpenAI-style chat
   messages into the existing `/v1/responses` runtime path, drain one host-owned
   run synchronously, and return a standard `chat.completion` object.
+- `docs/agent-workflows.md` defines the general agent/app workflow pattern:
+  privileged setup, scoped execution, durable observation, response batches,
+  and skill split. The ChE grading smoke is one fixture-backed proof of that
+  pattern, not a special-purpose API lane.
+- Repo-local skills now cover the two generic agent roles:
+  `auracall-api-workflow` for scoped execution clients and
+  `auracall-agent-setup` for privileged setup clients.
 
 ## Current State
 
@@ -82,6 +89,9 @@ Implemented:
   readback as `/v1/responses`, but blocks for the one created run before
   returning so ordinary OpenAI-style clients receive content in the initial
   response.
+- `POST /v1/projects/ensure` and `POST /v1/response-batches` combine into the
+  first documented deterministic setup plus stochastic execution workflow for
+  external agents.
 
 Remaining:
 
@@ -110,6 +120,9 @@ Remaining:
   allow-lists.
 - Client apps can load the user-scoped dotenv file and call AuraCall with
   normal OpenAI-compatible `base_url`, `api_key`, and `model` settings.
+- Client agents can follow a documented setup/execution split and can load
+  repo-local skills that keep AuraCall endpoint choreography out of
+  domain-specific workflow code.
 
 ## Next Work
 
@@ -118,3 +131,7 @@ Remaining:
   selection.
 - Add streaming compatibility after non-streaming OpenAI client dogfooding proves
   the basic route and response shape.
+- Add first-class batch retry/cancel/priority controls once response-batch
+  dogfooding shows the minimal status contract is stable.
+- Promote the generic AuraCall skills into the shared agent-skill source of
+  truth after their repo-local versions prove useful.

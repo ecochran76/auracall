@@ -54,6 +54,9 @@ Current endpoints:
 - `POST /v1/response-batches`
 - `GET /v1/response-batches/{batch_id}`
 
+Workflow-oriented guidance lives in `docs/agent-workflows.md`. Treat this file
+as the endpoint contract and that file as the agent/app integration playbook.
+
 Current limits:
 
 - loopback by default; non-loopback requires `--listen-public`
@@ -67,10 +70,10 @@ Current limits:
     `file://` URIs are projected into the stored step artifact list so the
     browser executor can upload them; remote HTTP(S) URIs are preserved as
     metadata but are not downloaded automatically.
-  - project-bound grading workflows can bootstrap the agent through
+  - project-bound workflows can bootstrap the agent through
     `POST /v1/projects/ensure`, then submit one `/v1/responses` request per
-    student with the grading packet files in `attachments`, or submit the set
-    once through `/v1/response-batches`.
+    unit of work with local files in `attachments`, or submit the set once
+    through `/v1/response-batches`.
 - `POST /v1/team-runs` creates one bounded task-backed team execution through
   the existing `TaskRunSpec -> TeamRun -> TeamRuntimeBridge -> runtimeRun`
   chain
@@ -138,6 +141,9 @@ Current limits:
     resolved `projectId` and `projectName`
   - this is an operator control-plane route; scoped execution keys should use
     the resulting agent id, not create provider projects themselves
+  - domain-specific setup agents can call this route as a deterministic setup
+    step, then hand a scoped execution key and `agent:<agent_id>` model name to
+    the downstream client agent
 - `POST /v1/response-batches` is the first nonblocking batch enqueue surface:
   - accepts `{ "requests": [ ... ] }`, where each child request is an ordinary
     `/v1/responses` body, plus optional `metadata`, caller-supplied `id`, and
@@ -156,10 +162,10 @@ Current limits:
   - the browser dispatcher and provider politeness controls still enforce the
     lower-level CDP/account safety guardrails
   - deterministic local workflow smoke: `pnpm run smoke:che447-grading-batch`
-    verifies operator project ensure, project-bound agent creation, an
-    agent-scoped API key batch enqueue, two attachment-bearing grading jobs,
-    batch polling, and child response readback without live provider/browser
-    work
+    verifies the general setup-plus-batch pattern: operator project ensure,
+    project-bound agent creation, an agent-scoped API key batch enqueue, two
+    attachment-bearing jobs, batch polling, and child response readback without
+    live provider/browser work
 - API-key authorization can be configured in `~/.auracall/config.json` or
   through the installed service dotenv file at `~/.auracall/api.env`. The
   service recognizes `AURACALL_API_KEY` as a bearer key and optional
@@ -180,6 +186,11 @@ Current limits:
   `GET /v1/config/agent-diagnostics` against the running service or MCP
   `api_key_diagnostics` against the env file to validate key scope metadata
   without exposing secret values.
+- Agent-facing skills:
+  - `skills/auracall-api-workflow/SKILL.md` covers scoped execution clients,
+    single responses, batches, attachments, and polling
+  - `skills/auracall-agent-setup/SKILL.md` covers privileged setup clients,
+    project ensure, registry-backed agents, scoped keys, and diagnostics
 - startup recovery can re-run bounded stale persisted direct runs before readback; keep
   this enabled by default, or disable with `--no-recover-runs-on-start`.
   - control source scope with `--recover-runs-on-start-source <direct|team-run|all>`

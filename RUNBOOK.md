@@ -3541,3 +3541,20 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     in `tests/http.responsesServer.test.ts`
   - `git diff --check`
   - `pnpm run preflight:lazy-live-follow`
+
+## Turn 136 | 2026-05-12
+
+- Goal: generalize the ChE grading smoke into a reusable agent workflow
+  contract and seed agent-facing skills.
+- Change:
+  - added `docs/agent-workflows.md`
+  - added repo-local skills:
+    - `skills/auracall-api-workflow/SKILL.md`
+    - `skills/auracall-agent-setup/SKILL.md`
+  - updated README, OpenAI endpoint docs, MCP docs, testing docs, and active
+    agent/API plans so response batches, project ensure, scoped keys, and
+    polling are documented as a generic AuraCall workflow pattern
+- Verification:
+  - `pnpm run docs:list`
+  - `pnpm run plans:audit -- --keep 65`
+  - `git diff --check`
