@@ -1,8 +1,9 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserPassiveObservation, BrowserRunOptions } from '../src/browser/types.js';
+import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import { createConfiguredStoredStepExecutor } from '../src/runtime/configuredExecutor.js';
 import { readLiveRuntimeRunServiceState, resetLiveRuntimeRunServiceStateRegistryForTests } from '../src/runtime/liveServiceStateRegistry.js';
 import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from '../src/runtime/stepOutputContract.js';
@@ -10,6 +11,10 @@ import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from '../src/runtime/stepOutput
 describe('configured stored-step executor', () => {
   beforeEach(() => {
     resetLiveRuntimeRunServiceStateRegistryForTests();
+  });
+
+  afterEach(() => {
+    setAuracallHomeDirOverrideForTest(null);
   });
 
   it('executes a Grok browser-backed step from runtime-profile config and returns response output', async () => {
@@ -137,6 +142,89 @@ describe('configured stored-step executor', () => {
         ],
       },
     ]);
+  });
+
+  it('spills large API prompts to a browser attachment without truncating caller input', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-configured-executor-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const capturedOptions: BrowserRunOptions[] = [];
+    const runBrowserModeImpl = vi.fn(async (options: BrowserRunOptions) => {
+      capturedOptions.push(options);
+      return {
+        answerText: '{"ok":true}',
+        answerMarkdown: '{"ok":true}',
+        tookMs: 1200,
+        answerTokens: 17,
+        answerChars: 11,
+        tabUrl: 'https://chatgpt.com/c/mock-conversation',
+        conversationId: 'mock-conversation',
+      };
+    });
+    const largeTranscript = `Transcript:\n${'full transcript line\n'.repeat(4000)}`;
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        browser: {
+          managedProfileRoot: path.join(homeDir, 'profiles'),
+        },
+        runtimeProfiles: {
+          default: {
+            engine: 'browser',
+            defaultService: 'chatgpt',
+            browserProfile: 'default',
+            services: {
+              chatgpt: {
+                manualLoginProfileDir: path.join(homeDir, 'profiles', 'default', 'chatgpt'),
+              },
+            },
+          },
+        },
+      },
+      { runBrowserModeImpl },
+    );
+
+    await executeStoredRunStep?.({
+      record: {
+        runId: 'teamrun_large',
+        revision: 1,
+        bundle: {
+          run: {
+            id: 'teamrun_large',
+          },
+        },
+      } as never,
+      step: {
+        id: 'teamrun_large:step:1',
+        agentId: 'api-responses',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        service: 'chatgpt',
+        input: {
+          prompt: largeTranscript,
+          artifacts: [],
+          structuredData: {
+            metadata: {
+              response_format: { type: 'json_object' },
+            },
+          },
+          notes: ['Return a structured readout.'],
+        },
+      } as never,
+    });
+
+    expect(runBrowserModeImpl).toHaveBeenCalledTimes(1);
+    const options = capturedOptions[0];
+    expect(options?.prompt).toContain('The full AuraCall request is attached as auracall-request.txt.');
+    expect(options?.prompt).toContain('Return exactly one valid JSON object');
+    expect(options?.prompt.length).toBeLessThan(1000);
+    expect(options?.attachments).toHaveLength(1);
+    expect(options?.attachments?.[0]?.displayPath).toBe('auracall-request.txt');
+    const attachmentPath = options?.attachments?.[0]?.path;
+    expect(attachmentPath).toBeTruthy();
+    const attachment = await fs.readFile(attachmentPath ?? '', 'utf8');
+    expect(attachment).toContain('Request instructions:');
+    expect(attachment).toContain('Return a structured readout.');
+    expect(attachment).toContain('Transcript:\nfull transcript line\nfull transcript line');
+    expect(attachment).toContain('full transcript line\nfull transcript line');
   });
 
   it('extracts one bounded local shell action request from a JSON tool envelope', async () => {
@@ -977,6 +1065,8 @@ describe('configured stored-step executor', () => {
           desiredModel: 'Pro',
           thinkingTime: 'extended',
           projectId: 'proj_semantic',
+          chatgptUrl: 'https://chatgpt.com/g/proj_semantic/project',
+          url: 'https://chatgpt.com/g/proj_semantic/project',
         }),
       }),
     );
@@ -985,6 +1075,7 @@ describe('configured stored-step executor', () => {
       service: 'chatgpt',
       agentId: 'pro-researcher',
       projectId: 'proj_semantic',
+      configuredUrl: 'https://chatgpt.com/g/proj_semantic/project',
       desiredModel: 'Pro',
       modelSelector: 'chatgpt:pro-extended',
       thinkingTime: 'extended',
@@ -1077,9 +1168,139 @@ describe('configured stored-step executor', () => {
           desiredModel: 'Pro',
           thinkingTime: 'standard',
           projectId: 'proj_registry',
+          chatgptUrl: 'https://chatgpt.com/g/proj_registry/project',
+          url: 'https://chatgpt.com/g/proj_registry/project',
         }),
       }),
     );
+  });
+
+  it('materializes declared browser response artifacts into step and shared state', async () => {
+    const runBrowserModeImpl = vi.fn(async () => ({
+      answerText: 'legacy_readout.json ready',
+      answerMarkdown: 'legacy_readout.json ready',
+      tookMs: 700,
+      answerTokens: 8,
+      answerChars: 25,
+      tabUrl: 'https://chatgpt.com/g/proj_registry/c/mock-registry-artifact',
+      conversationId: 'mock-registry-artifact',
+      chromeTargetId: 'target-artifact',
+      chromeHost: '127.0.0.1',
+      chromePort: 45011,
+    }));
+    const browserResponseArtifactMaterializer = vi.fn(async () => ({
+      artifacts: [
+        {
+          id: 'legacy-readout-json',
+          kind: 'file',
+          title: 'legacy_readout.json',
+          path: '/tmp/legacy_readout.json',
+          uri: null,
+        },
+      ],
+      notes: ['browser response artifact materialization: discovered=1 materialized=1'],
+    }));
+
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        browserProfiles: {
+          default: {
+            chromePath: '/usr/bin/google-chrome',
+            sourceProfileName: 'Default',
+            managedProfileRoot: '/tmp/auracall/browser-profiles',
+          },
+        },
+        runtimeProfiles: {
+          'registry-chatgpt-profile': {
+            engine: 'browser',
+            defaultService: 'chatgpt',
+            browserProfile: 'default',
+            services: {
+              chatgpt: {
+                manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+              },
+            },
+          },
+        },
+        agents: {
+          'registry-pro-researcher': {
+            runtimeProfile: 'registry-chatgpt-profile',
+            service: 'chatgpt',
+            modelSelector: 'chatgpt:pro-extended',
+            projectId: 'proj_registry',
+          },
+        },
+      },
+      {
+        runBrowserModeImpl,
+        browserResponseArtifactMaterializer,
+      },
+    );
+
+    const result = await executeStoredRunStep?.({
+      record: {
+        runId: 'teamrun_registry_artifact_1',
+        revision: 1,
+        bundle: {
+          run: {
+            id: 'teamrun_registry_artifact_1',
+          },
+        },
+      } as never,
+      step: {
+        id: 'teamrun_registry_artifact_1:step:1',
+        agentId: 'registry-pro-researcher',
+        runtimeProfileId: null,
+        browserProfileId: null,
+        service: null,
+        input: {
+          prompt: 'Create legacy_readout.json and reply when ready.',
+          artifacts: [],
+          structuredData: {
+            metadata: {
+              outputContract: {
+                mode: 'chatgpt_workspace_artifact',
+                artifactFileName: 'legacy_readout.json',
+              },
+            },
+          },
+          notes: [],
+        },
+      } as never,
+    });
+
+    expect(browserResponseArtifactMaterializer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        service: 'chatgpt',
+        conversationId: 'mock-registry-artifact',
+        projectId: 'proj_registry',
+        configuredUrl: 'https://chatgpt.com/g/proj_registry/project',
+        tabUrl: 'https://chatgpt.com/g/proj_registry/c/mock-registry-artifact',
+        tabTargetId: 'target-artifact',
+        chromeHost: '127.0.0.1',
+        chromePort: 45011,
+      }),
+    );
+    expect(result?.output?.artifacts).toEqual([
+      {
+        id: 'legacy-readout-json',
+        kind: 'file',
+        title: 'legacy_readout.json',
+        path: '/tmp/legacy_readout.json',
+        uri: null,
+      },
+    ]);
+    expect(result?.sharedState?.artifacts).toEqual(result?.output?.artifacts);
+    expect(result?.sharedState?.structuredOutputs).toContainEqual({
+      key: 'response.output',
+      value: [
+        {
+          type: 'message',
+          role: 'assistant',
+          content: [{ type: 'output_text', text: 'legacy_readout.json ready' }],
+        },
+      ],
+    });
   });
 
   it('keeps exact ChatGPT agent model pins ahead of semantic selector defaults', async () => {
@@ -1412,5 +1633,62 @@ describe('configured stored-step executor', () => {
         },
       ],
     });
+  });
+
+  it('fails browser-backed steps that complete without assistant output', async () => {
+    const runBrowserModeImpl = vi.fn(async (_options: BrowserRunOptions) => ({
+      answerText: '',
+      answerMarkdown: '',
+      tookMs: 1200,
+      answerTokens: 0,
+      answerChars: 0,
+      tabUrl: 'https://chatgpt.com/c/empty-output',
+      conversationId: 'empty-output',
+    }));
+
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        runtimeProfiles: {
+          'wsl-chrome-3': {
+            engine: 'browser',
+            defaultService: 'chatgpt',
+            browserProfile: 'wsl-chrome-3',
+            services: {
+              chatgpt: {
+                manualLoginProfileDir: '/tmp/auracall/browser-profiles/wsl-chrome-3/chatgpt',
+              },
+            },
+          },
+        },
+      },
+      { runBrowserModeImpl },
+    );
+
+    await expect(
+      executeStoredRunStep?.({
+        record: {
+          runId: 'teamrun_empty_output',
+          revision: 1,
+          bundle: {
+            run: {
+              id: 'teamrun_empty_output',
+            },
+          },
+        } as never,
+        step: {
+          id: 'teamrun_empty_output:step:1',
+          agentId: 'pro-extended-chatgpt-soylei-transcripts',
+          runtimeProfileId: 'wsl-chrome-3',
+          browserProfileId: 'wsl-chrome-3',
+          service: 'chatgpt',
+          input: {
+            prompt: 'Return JSON.',
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        } as never,
+      }),
+    ).rejects.toThrow('completed without assistant output');
   });
 });

@@ -3714,3 +3714,663 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run plans:audit -- --keep 65`
   - `git diff --check`
   - `pnpm run preflight:lazy-live-follow`
+
+## Turn 141 | 2026-05-12
+
+- Goal: fix the failed transcribe-audio AuraCall readout path without
+  truncating transcripts downstream.
+- Change:
+  - preserved OpenAI-compatible `response_format` on `/v1/chat/completions`
+    requests and carried it into browser-backed execution metadata
+  - included system instructions in the browser prompt path for direct API
+    requests
+  - added large-prompt browser transport: prompts over the inline budget are
+    written under `~/.auracall/runtime/request-attachments/<run-id>/` and sent
+    to the provider workbench as an uploaded request attachment
+  - changed chat-completions failures to return HTTP 502
+    `auracall_execution_error` instead of HTTP 200 with empty assistant
+    content
+  - added ChatGPT JSON-object completion validation so browser runs that are
+    still rendering malformed JSON keep polling; if they never become
+    parseable, AuraCall fails the run honestly
+- Verification:
+  - `pnpm run typecheck`
+  - `pnpm test -- --run tests/runtime.configuredExecutor.test.ts -t "spills large API prompts"`
+  - `pnpm test -- --run tests/http.responsesServer.test.ts -t "chat completions"`
+  - `pnpm test -- --run tests/runtime.configuredExecutor.test.ts`
+  - `pnpm test -- --run tests/runtime.configuredExecutor.test.ts tests/http.responsesServer.test.ts -t "large API prompts|chat completions"`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - live large-prompt `/v1/chat/completions` smoke through
+    `agent:instant-chatgpt-soylei` returned
+    `{"ok":true,"transport":"large-prompt"}` and wrote a 96 KB request
+    attachment
+  - full-transcript SBIR readout through `agent:instant-chatgpt-soylei`
+    failed with a 502 because ChatGPT did not finish a parseable JSON object,
+    proving the new failure mode is honest
+  - full-transcript SBIR readout through `agent:pro-extended-chatgpt-soylei`
+    succeeded and wrote the readout JSON/Markdown
+- Note: a broad `tests/http.responsesServer.test.ts` run still hit unrelated
+  existing startup-recovery timeouts and path-shape failures; focused tests for
+  this slice passed.
+
+## Turn 142 | 2026-05-13
+
+- Goal: support Transcribe Audio as a burst client using a project-bound
+  SoyLei Pro Extended transcripts agent.
+- Change:
+  - attempted `POST /v1/projects/ensure` for ChatGPT project `Transcripts`
+    and agent `pro-extended-chatgpt-soylei-transcripts`
+  - project ensure failed with `button-missing`, identifying a remaining
+    ChatGPT project creation/binding selector drift
+  - registered `pro-extended-chatgpt-soylei-transcripts` directly through
+    `PUT /v1/config/agents/{id}` with `projectName=Transcripts`,
+    `runtimeProfile=wsl-chrome-3`, `service=chatgpt`, and
+    `modelSelector=chatgpt:pro-extended`
+  - issued scoped client key `transcribe-audio-transcripts` to
+    `/home/ecochran76/.local/state/transcribe-audio/auracall-transcripts.env`
+  - restarted `auracall-api.service`
+- Verification:
+  - scoped client key can read `/v1/models` and the catalog includes
+    `agent:pro-extended-chatgpt-soylei-transcripts`
+  - Transcribe Audio dry-run built a response-batch manifest
+  - Transcribe Audio live one-item enqueue completed
+    `batch_0db1883c7905471c83d807411cfdee33` and child response
+    `resp_1a4b0915303848a6ab68a48e286e563f`; materialization wrote
+    `/home/ecochran76/.transcripts/legacy-artifacts/29/29ed3d64cca92a7cf5f5-2025-08-15 Dr Stefl Knee Replacement Consult.readout.json`
+- Next:
+  - repair ChatGPT project ensure selectors so `projectName=Transcripts` can
+    be created/confirmed at the provider workbench instead of being only a
+    registry intent.
+
+## Turn 143 | 2026-05-13
+
+- Goal: fix the ChatGPT project ensure `button-missing` failure and make the
+  selector-drift evidence stronger.
+- Change:
+  - moved ChatGPT create-project confirm CTA vocabulary into
+    `ui.labelSets.project_create_confirm_buttons`
+  - changed the create confirm step to use scoped dialog roots,
+    manifest-owned labels, ordered interaction strategies, and
+    `withUiDiagnostics(...)`
+  - added a safe scoped fallback for visible non-disabled submit/create buttons
+    inside the confirmed create-project dialog
+  - updated browser automation docs/backlog with the new CTA-drift pattern and
+    the next self-healing direction: record successful discovered label aliases
+    as observations, not automatic config mutations
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/services/registry.test.ts -t "create-project confirm|project settings commit|chatgpt ui labels" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome lint src/browser/providers/chatgptAdapter.ts tests/browser/chatgptAdapter.test.ts tests/services/registry.test.ts configs/auracall.services.json docs/dev/browser-service-upgrade-backlog.md docs/dev/browser-automation-playbook.md --max-diagnostics 80`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - live `POST /v1/projects/ensure` created ChatGPT project `Transcripts`:
+    `g-p-6a04628762ac8191894b16cfaddfd126`
+  - second live `POST /v1/projects/ensure` returned `status=found`, proving
+    the setup is idempotent
+  - `/v1/config/agents` now shows
+    `agent:pro-extended-chatgpt-soylei-transcripts` bound to project id
+    `g-p-6a04628762ac8191894b16cfaddfd126`
+
+## Turn 144 | 2026-05-13
+
+- Goal: make successful runtime selector recovery visible as operator evidence
+  instead of silent provider-local self-healing.
+- Change:
+  - added `src/browser/domDriftObservations.ts` to append bounded DOM drift
+    observations under `~/.auracall/runtime/dom-drift-observations.jsonl`
+  - added `GET /v1/browser/dom-drift-observations` as a read-only operator
+    API for service/surface/status/limit-filtered observations
+  - wired ChatGPT project-create confirm fallback to record an observation
+    when manifest labels miss but the scoped submit/create fallback succeeds
+  - updated browser automation docs/backlog to keep observed aliases as
+    evidence until an operator accepts a manifest update
+- Verification:
+  - `pnpm vitest run tests/browser/domDriftObservations.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "browser DOM drift observations|browser process diagnostics" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome lint src/browser/domDriftObservations.ts src/browser/providers/chatgptAdapter.ts src/http/responsesServer.ts tests/browser/domDriftObservations.test.ts tests/http.responsesServer.test.ts docs/dev/browser-automation-playbook.md docs/dev/browser-service-upgrade-backlog.md --max-diagnostics 80`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - live `GET /v1/browser/dom-drift-observations?service=chatgpt&limit=5`
+    returned `200` with an empty observation list, proving the route is
+    installed without mutating provider state
+- Note: lint still reports existing non-null assertion warnings in
+  `tests/http.responsesServer.test.ts` outside this slice.
+
+## Turn 145 | 2026-05-13
+
+- Goal: let operators promote reviewed DOM drift observations into runtime
+  configuration without rewriting checked-in service manifests.
+- Change:
+  - added user-scoped service overrides at
+    `~/.auracall/service-overrides.json`
+  - added `resolveEffectiveServiceUiLabelSet(...)` and
+    `upsertServiceUiLabelSetAlias(...)` for approved UI label aliases
+  - made ChatGPT project-create confirm labels resolve dynamically from the
+    bundled manifest plus user overrides
+  - added `acceptDomDriftObservation(...)` and
+    `POST /v1/browser/dom-drift-observations/{observation_id}/accept`
+  - mapped the known ChatGPT project-create confirm observation to
+    `ui.labelSets.project_create_confirm_buttons`
+  - updated browser automation docs/backlog to keep this approval-gated and
+    user-scoped
+- Verification:
+  - `pnpm vitest run tests/browser/domDriftObservations.test.ts tests/services/registry.test.ts -t "DOM drift observations|user-scoped ui label-set overrides|create-project confirm" --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "browser DOM drift observations|accepts browser DOM drift observations" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome lint src/services/registry.ts src/browser/domDriftObservations.ts src/browser/providers/chatgptAdapter.ts src/http/responsesServer.ts tests/browser/domDriftObservations.test.ts tests/services/registry.test.ts tests/http.responsesServer.test.ts --max-diagnostics 80`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - live direct-loopback `POST
+    /v1/browser/dom-drift-observations/domdrift-missing/accept` returned `404`
+    with `not_found_error`, proving the installed accept route is active
+    without mutating provider state or service overrides
+  - `git diff --check`
+- Note: lint still reports existing non-null assertion warnings in
+  `tests/http.responsesServer.test.ts` outside this slice.
+
+## Turn 146 | 2026-05-13
+
+- Goal: make lazy-follow/account-mirror crawls sense probable DOM drift while
+  preserving their tolerant background behavior.
+- Change:
+  - wired account-mirror metadata collection read-failure paths into
+    `recordDomDriftObservation(...)`
+  - observations now cover tolerated failures for:
+    - project list reads
+    - conversation list reads
+    - ChatGPT library/account file reads
+    - Grok account file reads
+    - project file reads
+    - conversation file reads
+    - conversation context/artifact reads
+  - observations include provider, runtime profile, surface/action,
+    fallback kind, and error message metadata
+  - lazy-follow observations now opportunistically attach bounded page
+    evidence from the active DevTools target: URL/title, readiness/visibility,
+    visible element counts, visible labels, and up to three screenshots per
+    process under `~/.auracall/diagnostics/dom-drift`
+  - updated browser automation docs/backlog to make lazy-follow drift sensing
+    part of the standard collector pattern
+- Verification:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts -t "Grok account-files drift|project route failures|library inventory|conversation attachment" --maxWorkers 1`
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts -t "bounded page evidence|Grok account-files drift" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome lint src/accountMirror/chatgptMetadataCollector.ts tests/accountMirror/chatgptMetadataCollector.test.ts --max-diagnostics 80`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - `git diff --check`
+
+## Turn 147 | 2026-05-13
+
+- Goal: close the lazy-follow drift gap where whole collector timeouts failed
+  without leaving an operator-visible DOM drift record.
+- Change:
+  - `accountMirror.refreshService` now records `account-mirror-refresh /
+    collect-metadata` DOM drift observations for non-identity, non-provider
+    guard collector failures
+  - collector timeout observations use `fallbackKind=collector-timeout` and
+    include runtime profile, request id, dispatcher key, dispatcher operation
+    id, and the original error message
+  - timeout observations intentionally avoid extra browser probing because the
+    collector owns the active DevTools client; sub-read failures remain the
+    path that can attach live page evidence/screenshots
+- Verification:
+  - `pnpm vitest run tests/accountMirror/refreshService.test.ts -t "times out a stuck metadata collector" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome lint src/accountMirror/refreshService.ts tests/accountMirror/refreshService.test.ts --max-diagnostics 80`
+  - `pnpm vitest run tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts -t "times out a stuck metadata collector|bounded page evidence|Grok account-files drift" --maxWorkers 1`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - live direct-loopback `POST /v1/account-mirrors/refresh` for
+    `grok/default` reproduced `Account mirror metadata collector timed out for
+    grok/default.`
+  - live direct-loopback `GET
+    /v1/browser/dom-drift-observations?service=grok&surface=account-mirror-refresh&limit=3`
+    returned `domdrift-15c2ec9a-d8d8-4b89-aa0f-4e4492bbe7b2` with
+    `fallbackKind=collector-timeout`
+  - `git diff --check`
+
+## Turn 148 | 2026-05-13
+
+- Goal: fix the Grok/default lazy-follow timeout rather than only reporting it.
+- Change:
+  - made project-conversation fanout provider-aware in the account-mirror
+    collector
+  - ChatGPT still reads project conversation lists because that is valuable for
+    its project-bound workbench
+  - Grok and Gemini skip project conversation fanout and rely on root/history
+    and files/media surfaces so a low-rate background pass completes inside the
+    collector timeout
+  - updated browser automation docs/backlog with the provider-specific pacing
+    rule
+- Verification:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts -t "only fans out|bounded page evidence|Grok account-files drift" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome lint src/accountMirror/chatgptMetadataCollector.ts tests/accountMirror/chatgptMetadataCollector.test.ts --max-diagnostics 80`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - live direct-loopback `POST /v1/account-mirrors/refresh` for
+    `grok/default` completed in 63 seconds with 9 projects, 26 conversations,
+    80 files, 22 media entries, and mirror completeness `complete`
+  - live `/status` reports Grok/default `idle_waiting`, `minimum-interval`,
+    metadata counts 9/26/0/80/22, and live-follow health `severity=healthy`
+  - `git diff --check`
+
+## Turn 149 | 2026-05-13
+
+- Goal: prepare Gemini/default for the next eligible live-follow refresh after
+  the same provider-fanout audit.
+- Change:
+  - Gemini root conversation reads now hydrate the left-rail conversation
+    history with a bounded scroll pass when `includeHistory` is requested
+  - hydration is capped by `historyLimit`, stops on stable row counts or a
+    non-scrollable rail, and honors the caller abort signal
+  - kept Gemini project-conversation fanout disabled for account-mirror
+    background passes
+  - updated browser automation docs/backlog with the Gemini history hydration
+    rule
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts -t "Gemini browser adapter|only fans out" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome lint src/browser/providers/geminiAdapter.ts tests/browser/geminiAdapter.test.ts src/accountMirror/chatgptMetadataCollector.ts tests/accountMirror/chatgptMetadataCollector.test.ts --max-diagnostics 80`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - live direct-loopback `POST /v1/account-mirrors/refresh` for
+    `gemini/default` was correctly rejected with `account_mirror_not_eligible`
+    until `2026-05-13T14:32:30.716Z`
+  - local wall time at that check was `2026-05-13T08:44:08-05:00`
+  - live `/status` reports live-follow `severity=healthy`, Gemini/default
+    `idle_waiting`, current metadata counts 12/57/0/0/0, and
+    `mirrorCompleteness=in_progress` pending the next eligible pass
+
+## Turn 150 | 2026-05-13
+
+- Goal: re-center AuraCall on Transcribe Audio readiness, then return to the
+  ChE 4470/5470 seminar grading setup path.
+- Result:
+  - Transcribe Audio scoped client readiness is live-proven.
+  - `agent:pro-extended-chatgpt-soylei-transcripts` is advertised through the
+    scoped key and bound to ChatGPT project `Transcripts` with provider project
+    id `g-p-6a04628762ac8191894b16cfaddfd126`.
+  - `pnpm run smoke:scoped-client-env --
+    /home/ecochran76/.local/state/transcribe-audio/auracall-transcripts.env
+    --prompt 'Reply exactly: auracall transcribe env ok' --expect-output
+    'auracall transcribe env ok' --timeout-ms 180000` passed with response
+    `resp_45008e83347940909bcdba697b91fa2c`.
+  - The local deterministic ChE grading batch smoke passed, proving project
+    ensure, scoped key execution, response batch enqueue, attachment-bearing
+    child jobs, polling, and response readback without live provider quota use.
+  - The live ChE setup handoff created ChatGPT project
+    `ChE 4470/5470 Seminar Grading` with provider project id
+    `g-p-6a0485902cc481918bb72066dd7164b9`.
+  - The live ChE agent `pro-extended-chatgpt-soylei-che4470-seminar-grading`
+    is now registry-backed and exposed as
+    `agent:pro-extended-chatgpt-soylei-che4470-seminar-grading`.
+  - The scoped ChE client env was written to
+    `/home/ecochran76/.auracall/clients/che447-grading.env` and the installed
+    API service was restarted.
+- Verification:
+  - `systemctl --user restart auracall-api.service`
+  - scoped ChE key sees the ChE agent in `/v1/models`
+  - scoped ChE key cannot call `agent:instant-chatgpt-soylei`; the API returns
+    HTTP 403 `API key is not authorized for agent "instant-chatgpt-soylei".`
+  - the first live ChE pro-extended scoped-env response
+    `resp_deb3c8b4625e4ed9b19bb92809e0d83a` exceeded the 180 second smoke
+    timeout and remained `in_progress`; it was cancelled through operator
+    control with note `cancel timed-out CHE447 scoped-env smoke`
+- Next:
+  - Transcribe Audio can continue bounded batch work now.
+  - Before full ChE packet smokes, diagnose why the project-bound ChE
+    pro-extended execution did not complete inside the small-prompt smoke
+    window. Start with the run/browser evidence for
+    `resp_deb3c8b4625e4ed9b19bb92809e0d83a`, then retry one minimal prompt or
+    one single-student packet after the blocker is understood.
+
+## Turn 151 | 2026-05-13
+
+- Goal: unblock the ChE 4470/5470 project-bound agent path after the first live
+  scoped-env smoke stayed `in_progress`.
+- Diagnosis:
+  - cancelled response `resp_deb3c8b4625e4ed9b19bb92809e0d83a` had no persisted
+    direct-run `service`, `runtimeProfileId`, or queue affinity even though
+    authorization resolved the configured agent
+  - direct OpenAI-compatible calls using only `model: agent:<id>` were not
+    hydrating routing fields from the effective agent catalog before the run was
+    persisted
+- Change:
+  - `/v1/responses`, `/v1/chat/completions`, and `/v1/response-batches` now
+    hydrate missing service/runtime routing from the effective catalog when
+    `model` resolves to a configured `agent:<agent_id>`
+  - updated the agent workflow docs so clients know they do not need to repeat
+    provider routing fields for configured agents
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "hydrates agent model requests|creates non-streaming chat completions|creates and reads response batches" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome lint src/http/responsesServer.ts tests/http.responsesServer.test.ts --max-diagnostics 80`
+    reported only existing non-null assertion warning debt in
+    `tests/http.responsesServer.test.ts`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - scoped ChE key created `resp_503c13347c55416a99254f42ca0ed9a6`; immediate
+    metadata showed `runtimeProfile=wsl-chrome-3`, `service=chatgpt`, and step
+    `agentId=pro-extended-chatgpt-soylei-che4470-seminar-grading`
+  - runtime inspection for that response showed queue affinity
+    `requiredService=chatgpt`, `requiredRuntimeProfileId=wsl-chrome-3`, and
+    `requiredServiceAccountId=service-account:chatgpt:eric.cochran@soylei.com`
+  - the queued ChE smoke responses
+    `resp_503c13347c55416a99254f42ca0ed9a6`,
+    `resp_7afcad80822f4f3c96d17de84b84515a`, and
+    `resp_02e785b86a8f412aa28f4a2bb62a9ad8` were cancelled after routing proof
+    to avoid consuming later SoyLei Pro queue capacity
+- Current state:
+  - ChE agent routing and scoped-key authorization are fixed and installed
+  - two Transcribe Audio SoyLei Pro transcript jobs are currently running on the
+    shared `wsl-chrome-3` ChatGPT profile, so a live ChE completion proof should
+    wait until the shared queue drains or a per-workflow priority policy is
+    added
+
+## Turn 152 | 2026-05-13
+
+- Goal: run and watch a live ChE 4470/5470 scoped-env smoke rather than only
+  checking metadata.
+- Run:
+  - submitted `pnpm run smoke:scoped-client-env --
+    /home/ecochran76/.auracall/clients/che447-grading.env --prompt 'Reply
+    exactly: che447 grading env ok' --expect-output 'che447 grading env ok'
+    --timeout-ms 600000`
+  - created response `resp_23612f1b2929469aa254b2de3fd46c59`
+- Evidence:
+  - routing was correct: `service=chatgpt`, `runtimeProfile=wsl-chrome-3`,
+    agent
+    `pro-extended-chatgpt-soylei-che4470-seminar-grading`, and service-account
+    affinity `service-account:chatgpt:eric.cochran@soylei.com`
+  - the browser operation initially queued behind stale lock
+    `6897b8aa-c60c-47de-ae02-0f44e48eb5ef` from terminal failed transcript run
+    `resp_9d59ac43f87f460081a187fa28c4bf49`
+  - after removing that stale lock, the ChE run acquired browser operation
+    `4ad5a184-ae75-4d3c-bc7e-a2342a8fc5a2`
+  - the browser screenshot showed a stale ChatGPT `Create project` modal with
+    project name `Copenhagen Trip` blocking the composer
+  - after manually closing the modal, timed polling still showed no provider
+    conversation ref, no output, and only heartbeat updates
+  - the smoke wrapper also hit one transient readback error:
+    `GET /v1/responses/{id}` returned HTTP 400 `Unexpected end of JSON input`,
+    but immediate direct readback later returned HTTP 200 `in_progress`
+- Cleanup:
+  - cancelled `resp_23612f1b2929469aa254b2de3fd46c59` with operator note
+    `cancel CHE447 smoke after watched run made no provider progress; blocked
+    by stale browser lock and stuck create-project modal`
+  - manually removed the remaining browser-operation lock for the cancelled ChE
+    run
+  - confirmed no browser-operation locks remain and the ChatGPT page no longer
+    has a project modal open
+- Next:
+  - fix browser-operation lifecycle cleanup so terminal or operator-cancelled
+    runs release same-process locks
+  - add ChatGPT pre-submit modal detection/closure or fail-fast diagnostics
+    before attempting project selection/composer submission
+  - rerun the same scoped-env smoke after those two blockers are fixed
+
+## Turn 153 | 2026-05-13
+
+- Goal: trace the stale ChatGPT `Create project` modal origin seen after lazy
+  live follow and harden the cleanup path.
+- Finding:
+  - recent account-mirror scheduler history did not prove lazy follow opened
+    the modal; the strongest in-code opener is the ChatGPT project creation
+    path used by project ensure / agent setup
+  - `createProject()` opened the modal, then only closed the CDP client in
+    `finally`, so any failure after modal open could leave the dialog in the
+    human browser
+  - the existing connect-time cleanup attempted close/Escape but ignored
+    failure to actually remove the dialog, so later lazy-follow reads could
+    inherit the stale modal and appear to be the source
+  - the observed `Copenhagen Trip` project name was not present in AuraCall
+    runtime/cache/log text, so the exact actor is not recoverable from current
+    logs
+- Change:
+  - ChatGPT create-project modal state is now explicitly probed, including URL,
+    title, project-name value, and visible close labels
+  - lazy-follow read paths for projects, conversations, active artifacts, and
+    account library files now fail fast if a stale create-project modal cannot
+    be dismissed
+  - `createProject()` now performs best-effort modal cleanup on failure before
+    returning the original error
+  - create-project confirmation now uses manifest-backed labels with diagnostic
+    fallback and records DOM drift evidence when fallback succeeds
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome lint src/browser/providers/chatgptAdapter.ts
+    tests/browser/chatgptAdapter.test.ts --max-diagnostics 80`
+  - `pnpm run build`
+  - `git diff --check`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user status auracall-api.service --no-pager` reported active
+    service PID `1435291`
+  - `/status` reported `browserOperations=null`
+  - reran ChE scoped smoke:
+    `pnpm run smoke:scoped-client-env --
+    /home/ecochran76/.auracall/clients/che447-grading.env --prompt 'Reply
+    exactly: che447 grading env ok' --expect-output 'che447 grading env ok'
+    --timeout-ms 600000`
+  - smoke passed with response `resp_37bb150ee1c34458a83e71332002e67d`,
+    runtime profile `wsl-chrome-3`, provider conversation
+    `https://chatgpt.com/c/6a04da02-5fec-83ea-b5c0-a20ccab52330`, and
+    assistant text `che447 grading env ok`
+  - post-smoke `/status` reported `browserOperations=null` and live-follow
+    severity `healthy`
+- Next:
+  - continue with the ChE batch workflow now that the scoped project-bound
+    agent can complete a live browser-backed request
+
+## Turn 154 | 2026-05-13
+
+- Goal: diagnose the failed transcribe-audio AuraCall batch
+  `batch_bd9a400d785f4eeeaecf986621597091` without shrinking transcript input.
+- Finding:
+  - `resp_ad243a3df5bc4d61ac7934e144f4352b` falsely completed with
+    `output=[]` because a browser-backed direct response was claimed by a
+    runner without a configured stored-step browser executor
+  - `resp_b35c7e03a57d4d11ad3d081d77277404` held a stale active lease from
+    `2026-05-13T14:31:56.571Z`; service restart recovered and replayed it, but
+    the replay failed because the ChatGPT DOM snapshot was not accepted as a
+    parseable JSON object before timeout
+  - `resp_9d59ac43f87f460081a187fa28c4bf49` failed on the old browser port
+    path with `connect ETIMEDOUT 127.0.0.1:9222`
+- Change:
+  - browser-backed runs now fail if no configured stored-step executor is
+    attached instead of returning the generic bounded-local-runner success
+  - configured browser executor now fails empty assistant output instead of
+    materializing a successful empty response
+  - stale lease repair can reclaim an expired active-runner lease only when
+    the active runner has demonstrably moved on to a later run
+  - ChatGPT JSON-object completion now waits longer and accepts strict,
+    fenced, or embedded parseable JSON object snapshots; timeout errors include
+    best-snapshot diagnostics
+- Verification:
+  - `pnpm vitest run tests/runtime.repair.test.ts -t "conservatively"
+    --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts -t "moved on|does not
+    reclaim an expired lease|repairs only stale-heartbeat|suspiciously idle"
+    --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.runner.test.ts -t "configured stored-step
+    executor|bounded local runner" --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.configuredExecutor.test.ts -t "without
+    assistant output|spills large API prompts|Grok browser-backed" --maxWorkers
+    1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome lint ...` has no new errors; existing test non-null
+    assertion warnings remain
+  - `pnpm run build`
+  - `git diff --check`
+  - `pnpm run install:user-runtime-service`
+  - `systemctl --user is-active auracall-api.service` reported `active`
+- Recovery:
+  - created retry batch `batch_d6bebd5f5caf4de292e096b1c3396be8` for the three
+    affected transcript requests with `maxConcurrentRuns=1` and
+    `maxBrowserInteractionsPerMinute=4`
+  - after retry start, AuraCall correctly removed the old failed response's
+    stale active lease, but the first retry run exposed a remaining heartbeat
+    gap: long browser executor work can leave the run lease heartbeat expired
+    while the owning runner heartbeat remains active
+- Next:
+  - watch the retry batch through terminal state, then hand the new response
+    ids back to transcribe-audio for materialization or queue reconciliation
+  - harden long-running browser executor lease heartbeats so recovery status
+    does not show active browser work as stale-heartbeat during legitimate
+    long completions
+
+## Turn 155 | 2026-05-13
+
+- Goal: continue repair of transcribe-audio retry batch
+  `batch_d6bebd5f5caf4de292e096b1c3396be8`.
+- Change:
+  - made active lease release idempotent when stale-lease recovery already
+    expired the lease, preventing the old fatal `Execution lease ... is not
+    active` crash path
+  - added a deliberate operator escape hatch:
+    `POST /status {"leaseRepair":{"action":"repair-stale-heartbeat","runId":
+    "...","force":true}}` for expired stale-heartbeat leases that are still
+    attributed to an active runner
+  - records runner activity when the service host starts a local run, not only
+    after it completes
+  - API-backed configured browser steps now send browser execution logs to the
+    managed API log instead of suppressing them
+- Live recovery:
+  - force-repaired stale leases on `resp_dc3501c9c2b4412db047ed54995f33bb` and
+    `resp_7192460e581048eebb1f03d4e5f99e94`
+  - `resp_dc3501c9c2b4412db047ed54995f33bb` reached ChatGPT and failed with a
+    provider-materialization error, not a transport failure:
+    `ChatGPT response did not complete as a parseable JSON object after
+    waiting; best snapshot chars=22572`
+  - `resp_7192460e581048eebb1f03d4e5f99e94` remains recoverable-stranded after
+    force repair; `resp_9f793d5d494c4b8693507f1aeb2bfa8e` remains runnable
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts -t
+    "force-repairs|repairs an expired active-runner lease|repairs an expired
+    active lease left" --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t
+    "force-repairs expired stale-heartbeat|repairs only stale-heartbeat|rejects
+    suspiciously idle" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run build`
+  - `git diff --check`
+  - `pnpm run install:user-runtime-service`
+- Next:
+  - fix ChatGPT JSON materialization so complete JSON-looking snapshots can be
+    recovered or retried cleanly; do not shorten transcript payloads
+  - add richer browser-stage lifecycle events around configured stored-step
+    execution so pre-operation stalls show up in run status, not only in the API
+    log
+
+## Turn 156 | 2026-05-13
+
+- Goal: finish runtime repair for transcribe-audio retry batch
+  `batch_d6bebd5f5caf4de292e096b1c3396be8` without reducing transcript size.
+- Change:
+  - ChatGPT JSON-object materialization now waits up to 10 minutes, can click an
+    exact visible `Continue generating` button up to three times, and extracts
+    balanced embedded JSON objects from noisy DOM snapshots.
+  - response batch concurrency now counts active execution leases, not stranded
+    no-lease running steps, so one wedged run cannot consume the whole batch
+    gate.
+  - stale-heartbeat repair now treats an active runner with an expired run
+    lease, no fresh run activity, and continued runner heartbeats as locally
+    reclaimable after the grace window.
+  - ChatGPT model and thinking-time selector CDP evaluations now have hard
+    wall-clock timeouts so a stuck workbench interaction fails boundedly instead
+    of holding the browser lane forever.
+  - `/v1/responses` and `/v1/response-batches` now preserve top-level
+    OpenAI-style `response_format` by carrying it into execution metadata, which
+    is the browser executor's strict JSON signal.
+- Live evidence:
+  - `resp_9f793d5d494c4b8693507f1aeb2bfa8e` completed after the batch gate fix;
+    the response contains a structured JSON transcript readout.
+  - `resp_7192460e581048eebb1f03d4e5f99e94` was recovered from stranded state
+    and its per-run lease heartbeat stayed fresh after reinstall; a later
+    browser-stage stall exposed the need for bounded selector CDP timeouts.
+  - `resp_dc3501c9c2b4412db047ed54995f33bb` remains the old pre-fix failure and
+    should be retried as a new response rather than reused.
+  - replacement `resp_e6cd7b524b9e48b1be3b8d939627ab4c` completed but produced
+    non-parseable JSON-looking text because the ad hoc retry used top-level
+    `response_format` before the API normalization fix was installed.
+  - strict replacement `resp_8e63f04246144ac8aa542e1e3554fe3e` failed boundedly
+    at model-selector timeout; the timeout prevented an indefinite browser lane
+    hold, but the item still needs a clean retry after the profile/workbench is
+    quiet.
+- Verification:
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts -t "extracts
+    parseable JSON|stale|managed browser launch" --maxWorkers 1`
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts -t "extracts
+    parseable JSON" --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.responseBatchService.test.ts -t "execution
+    gate" --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.repair.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts -t
+    "stale-heartbeat|active-runner lease|force-repairs" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run build`
+  - `git diff --check`
+  - `pnpm run install:user-runtime-service`
+- Next:
+  - retry the remaining failed transcript as a fresh response after the ChatGPT
+    workbench is quiet; preserve `metadata.response_format.type=json_object` or
+    use the now-supported top-level `response_format`.
+  - add browser-stage lifecycle events for selector/composer/submission phases
+    so run status can say exactly where a browser-backed job is waiting.
+
+## Turn 157 | 2026-05-14
+
+- Goal: repair the transcribe-audio ChatGPT project binding and switch the
+  readout boundary toward downloadable workspace artifacts instead of long
+  inline JSON.
+- Finding:
+  - `/v1/models` advertised `agent:pro-extended-chatgpt-soylei-transcripts`
+    with `projectId=g-p-6a04628762ac8191894b16cfaddfd126` and
+    `projectName=Transcripts`, but recent browser runs still launched root
+    `https://chatgpt.com/c/...` conversations.
+  - The root-chat launch explains why the user did not see enrichment chats
+    inside the SoyLei `Transcripts` project.
+- Change:
+  - ChatGPT configured execution now derives the launch URL from `projectId`
+    using the provider project URL helper, so project-bound registry agents open
+    `https://chatgpt.com/g/<project>/project` before submission.
+  - Browser response execution can materialize declared output artifacts when
+    `metadata.outputContract` names an artifact mode or file name, and it uses
+    the service identity attached to the runtime/profile rather than the global
+    default identity.
+  - `/v1/responses/{id}` now appends shared artifact refs even when a browser
+    step also stored OpenAI-style message output in structured state.
+- Live evidence:
+  - smoke response `resp_db52dcf73b7d44b0abbffd327bbeac5c` completed under
+    `https://chatgpt.com/g/g-p-6a04628762ac8191894b16cfaddfd126-transcripts/c/6a0658da-c92c-83ea-a2a9-37ec1b9fc07f`.
+  - The assistant replied `legacy_readout.json ready`, but artifact discovery
+    recorded `discovered=0 materialized=0`; this classifies the remaining issue
+    as either ChatGPT not surfacing a downloadable artifact for that prompt or
+    AuraCall missing the current ChatGPT artifact UI shape, not a project
+    binding failure.
+- Verification:
+  - `pnpm vitest run tests/runtime.configuredExecutor.test.ts -t
+    "ChatGPT semantic agent|registry-backed|materializes declared browser
+    response artifacts" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run install:user-runtime-service`
+- Next:
+  - probe the same project conversation in a visible/browser-artifact readback
+    path to determine whether ChatGPT actually generated a downloadable
+    `legacy_readout.json` artifact.
+  - once extraction is proven, update transcribe-audio to require the
+    `legacy_readout.json` workspace artifact contract without falling back to
+    long inline JSON as the primary response shape.

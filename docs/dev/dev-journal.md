@@ -28808,6 +28808,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm exec tsc --noEmit --pretty false`
   - `pnpm vitest run tests/accountMirror/politePolicy.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts --maxWorkers 1`
 
+## Turn 152 | 2026-05-13
+
+- Ran and watched the live ChE scoped-env smoke against
+  `agent:pro-extended-chatgpt-soylei-che4470-seminar-grading`.
+- Confirmed catalog-hydrated routing worked, but the run did not reach provider
+  materialization because a stale same-process browser-operation lock from a
+  failed transcript run blocked the lane, then a stale ChatGPT `Create project`
+  modal blocked composer access.
+- Cancelled the watched ChE response and manually cleared the leftover
+  browser-operation lock; the next implementation slice should make lock
+  cleanup and pre-submit modal handling automatic before retrying CHE447.
+
+## Turn 151 | 2026-05-13
+
+- Continued ChE 4470/5470 project-bound agent readiness.
+- Fixed OpenAI-compatible `agent:<agent_id>` routing hydration so direct
+  responses, chat completions, and response batch children persist service and
+  runtime profile routing from the effective catalog before scheduling.
+- Installed the updated user runtime/API service and verified the scoped ChE
+  key now creates runs with `service=chatgpt`, `runtimeProfile=wsl-chrome-3`,
+  and SoyLei ChatGPT service-account affinity.
+- Cancelled the queued ChE routing smoke responses after metadata proof because
+  the shared SoyLei Pro queue is currently occupied by Transcribe Audio
+  transcript jobs.
+
 ## Turn 138 | 2026-05-06
 
 - Continued implementation plan:
@@ -28888,3 +28913,70 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiOpsBrowserCommand.test.ts -t "account mirror dashboard|api ops browser CLI helpers|browser operator dashboard" --maxWorkers 1`
   - `pnpm exec tsc --noEmit --pretty false`
+
+## Turn 120 | 2026-05-14
+
+- Goal: leave a durable handoff for the transcribe-audio legacy enrichment
+  failure where ChatGPT produced large partial JSON but AuraCall returned
+  `output: []`.
+- Handoff note:
+  `docs/dev/notes/2026-05-14-chatgpt-json-artifact-handoff.md`
+- Captured:
+  - failed batch id and response ids
+  - evidence that the issue is likely ChatGPT browser output/materialization
+    boundary, not an AuraCall HTTP body limit
+  - AuraCall fix that now persists the best partial JSON snapshot as a
+    recoverable artifact on failed responses
+  - non-retroactive limitation for the already-failed batch
+  - recommended next contract: ask ChatGPT to create `legacy_readout.json` in
+    its workspace and have AuraCall materialize it as a `/v1/responses`
+    artifact
+- Prior validation recorded in the handoff:
+  - focused runtime runner tests
+  - focused status tests
+  - `pnpm run typecheck`
+  - user runtime install and `auracall-api.service` restart
+
+## Turn 121 | 2026-05-14
+
+- Goal: inspect and repair the ChatGPT project memory selector regression that
+  prevented project-bound clients from selecting project-only memory.
+- Finding:
+  - the live ChatGPT create-project settings menu on `wsl-chrome-2` now exposes
+    memory choices as `role="menuitem"` controls with `aria-checked`, not the
+    older `role="menuitemradio"` controls AuraCall waited for.
+- Change:
+  - ChatGPT create-project memory selection now accepts both the old
+    `menuitemradio` shape and the current `menuitem[aria-checked]` shape
+  - project memory label matching now has narrow aliases for hyphenated and
+    unhyphenated project-only labels
+- Validation:
+  - live non-creating selector inspection on ChatGPT Library showed
+    `Project-only` can be selected and reports `aria-checked="true"`
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts`
+  - `pnpm exec tsc --noEmit`
+- Installed-runtime follow-up:
+  - `auracall --profile wsl-chrome-2 doctor --target chatgpt --json` reported
+    ChatGPT app identity `consult@polymerconsultinggroup.com` with
+    `accountLevel=Pro`
+  - `pnpm run smoke:scoped-client-env -- ~/.auracall/clients/litscout-pcg-pro-extended.env ...`
+    passed for `agent:pro-extended-chatgpt-pcg-litscout`
+  - `auracall --profile wsl-chrome-2 projects create --target chatgpt
+    --memory-mode project "AuraCall Memory Selector Probe 20260514-190116"`
+    created disposable project `g-p-6a06626841388191bd68c9717f4ef5da`
+  - the disposable project was listed, deleted, and a refreshed list showed
+    only the real `LitScout` project among the filtered entries
+
+## Turn 122 | 2026-05-14
+
+- Repaired a mismatch between registry project metadata and actual browser
+  launch URL for ChatGPT agents. The transcribe agent was advertised as bound to
+  SoyLei `Transcripts`, but root `chatgpt.com/c/...` launches bypassed the
+  project.
+- Added the first AuraCall-side seam for declared browser response artifacts:
+  output contracts can trigger conversation artifact readback/materialization,
+  and response assembly preserves artifact refs alongside message output.
+- Live smoke `resp_db52dcf73b7d44b0abbffd327bbeac5c` proves project launch is
+  fixed. It does not yet prove artifact extraction: ChatGPT replied
+  `legacy_readout.json ready`, while AuraCall recorded
+  `discovered=0 materialized=0`.

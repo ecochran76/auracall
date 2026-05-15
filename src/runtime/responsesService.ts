@@ -277,6 +277,19 @@ function inferRequestAttachmentKind(mimeType: string | null | undefined): string
   return 'file';
 }
 
+function inferArtifactMimeType(...values: Array<string | null | undefined>): string | null {
+  const haystack = values
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .join(' ')
+    .toLowerCase();
+  if (haystack.includes('.json')) return 'application/json';
+  if (haystack.includes('.md')) return 'text/markdown';
+  if (haystack.includes('.txt')) return 'text/plain';
+  if (haystack.includes('.csv')) return 'text/csv';
+  if (haystack.includes('.zip')) return 'application/zip';
+  return null;
+}
+
 function resolveRequestAttachmentPath(uri: string): string | null {
   const value = uri.trim();
   if (!value) return null;
@@ -293,23 +306,30 @@ function resolveRequestAttachmentPath(uri: string): string | null {
 
 function getStoredResponseOutput(bundle: ExecutionRunRecordBundle): ExecutionResponseOutputItem[] {
   const structured = bundle.sharedState.structuredOutputs.find((entry) => entry.key === 'response.output');
-  if (structured) {
-    const output = normalizeExecutionResponseOutputItems(structured.value);
-    if (output.length > 0) return output;
-  }
-
-  return bundle.sharedState.artifacts.map((artifact) =>
+  const artifactOutput = bundle.sharedState.artifacts.map((artifact) =>
     createExecutionResponseArtifact({
       type: 'artifact',
       id: artifact.id,
       artifact_type: normalizeResponseArtifactType(artifact.kind),
       title: artifact.title ?? null,
-      mime_type: null,
+      mime_type: inferArtifactMimeType(artifact.title, artifact.path, artifact.uri),
       uri: artifact.uri ?? artifact.path ?? null,
       disposition: artifact.path ? 'attachment' : 'inline',
-      metadata: null,
+      metadata: artifact.path
+        ? {
+            path: artifact.path,
+            localPath: artifact.path,
+            remoteUrl: artifact.uri ?? null,
+          }
+        : null,
     }),
   );
+  if (structured) {
+    const output = normalizeExecutionResponseOutputItems(structured.value);
+    if (output.length > 0) return [...output, ...artifactOutput];
+  }
+
+  return artifactOutput;
 }
 
 function getStoredModel(bundle: ExecutionRunRecordBundle): string | null {

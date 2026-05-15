@@ -15858,6 +15858,71 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `failure-backoff`; inactive failed completions still require attention.
 - 2026-05-08: Config-derived `api serve` restarts need the same orphan cleanup
   as explicit `--port` launches. Same-port termination now treats an old
+2026-05-13: OpenAI-compatible `agent:<id>` calls must persist the configured
+provider route. `/v1/responses`, `/v1/chat/completions`, and
+`/v1/response-batches` now hydrate missing service/runtime routing from the
+effective agent catalog before authorization, persistence, and scheduling, so
+scoped clients can submit plain configured-agent model ids without duplicating
+AuraCall routing hints.
+
+2026-05-13: Live ChE 4470/5470 smoke exposed two remaining readiness blockers.
+A terminal failed browser-backed run can leave a same-process browser-operation
+lock that dead-PID cleanup will not remove, and ChatGPT provider execution can
+start while a stale `Create project` modal is still blocking the composer.
+Operator cancellation also did not remove the active browser-operation lock for
+the cancelled run. Fix lock lifecycle cleanup and pre-submit modal detection
+before retrying the ChE live smoke.
+
+2026-05-13: Stale ChatGPT `Create project` modals must be attributed to the
+modal opener, not lazy-follow reads that inherit the browser state. The primary
+AuraCall opener is project ensure / `createProject()`: it can leave a modal
+behind when a failure occurs after opening the dialog. ChatGPT modal cleanup now
+probes and verifies create-project dialog state, strict lazy-follow read paths
+fail fast if cleanup cannot remove it, and failed project creation attempts run
+best-effort modal cleanup before rethrowing the original error.
+
+2026-05-13: Failed transcribe-audio batch
+`batch_bd9a400d785f4eeeaecf986621597091` was an AuraCall runtime issue, not a
+transcript-length issue. Browser-backed direct responses must not complete
+through a generic runner when no configured browser executor is attached, and
+browser executor success must require non-empty assistant output. Stale lease
+repair now handles the specific case where an active runner has moved on from
+an expired lease, while preserving conservative handling for leases still
+owned by active work. ChatGPT JSON-object completion now waits longer and
+recovers parseable strict/fenced/embedded JSON object snapshots before failing
+with best-snapshot diagnostics. Retry batch
+2026-05-13: Transcribe-audio batch repair exposed three runtime hardening
+points. Batch gates must count active leases rather than no-lease stranded
+running steps, or one recoverable browser run can starve later runnable batch
+items. ChatGPT JSON response-format materialization needs a long final-object
+wait, exact `Continue generating` handling, and balanced embedded-object
+extraction because provider DOM snapshots often contain complete JSON with
+surrounding UI text. ChatGPT selector CDP calls also need wall-clock timeouts;
+the in-page script timers are not enough when the DevTools call itself stalls.
+Also, `/v1/responses` must preserve top-level OpenAI-style `response_format`
+into execution metadata; otherwise browser runs can return non-parseable
+JSON-looking text and still complete as non-empty output.
+
+`batch_d6bebd5f5caf4de292e096b1c3396be8` was created for the three affected
+transcript requests with serialized browser concurrency.
+
+2026-05-13: Follow-up hardening needed: long browser-backed executor work can
+outlive the run lease heartbeat while the owning runner heartbeat remains
+active. This is not safe to auto-duplicate, but it makes recovery status look
+stale during legitimate long completions. The browser executor path should
+refresh the run lease heartbeat throughout provider waits, not only keep the
+runner heartbeat alive.
+
+2026-05-13: Added an explicit operator `force` path for expired
+stale-heartbeat lease repair. This is intentionally not automatic; it exists
+for cases where the runner heartbeat is alive but the run lease has expired and
+operator evidence shows no active browser operation. Retrying the
+transcribe-audio batch proved the original transport issue is repaired for at
+least one item: `resp_dc3501c9c2b4412db047ed54995f33bb` reached ChatGPT and
+captured a 22k-character JSON-looking snapshot before failing materialization.
+The remaining fix is JSON/object materialization tolerance and better
+browser-stage lifecycle observability, not transcript truncation.
+
   `auracall api serve` process with no `--port` as matching when the new
   service is binding the configured API port.
 - 2026-05-08: Runner heartbeat records must not crash the API when a prior
@@ -15918,3 +15983,19 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   config churn. The installed user API service now creates and loads
   `~/.auracall/api.env`, and the HTTP auth policy merges `AURACALL_API_KEY`
   entries from that service environment with any config-defined keys.
+- 2026-05-14: ChatGPT create-project memory selection drifted from
+  `role="menuitemradio"` controls to `role="menuitem"` controls with
+  `aria-checked`. The ChatGPT adapter now accepts both shapes and keeps narrow
+  `Project-only` label aliases so project-bound clients can select
+  project-only memory again. Installed-runtime follow-up on `wsl-chrome-2`
+  confirmed the PCG ChatGPT session is Pro, the LitScout scoped client can run
+  `agent:pro-extended-chatgpt-pcg-litscout`, and a disposable
+  `--memory-mode project` ChatGPT project can be created and deleted cleanly.
+- 2026-05-14: ChatGPT registry agents with `projectId` must launch through the
+  project URL, not the service default URL. `/v1/models` can correctly advertise
+  a project-bound agent while browser execution still opens a root chat unless
+  configured execution derives `https://chatgpt.com/g/<project>/project` from
+  the resolved project id.
+- 2026-05-14: Browser response artifacts must be merged with message output at
+  the OpenAI-compatible response boundary. A stored `response.output` message
+  should not hide shared artifact refs produced by conversation materialization.
