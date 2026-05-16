@@ -1,5 +1,7 @@
 import chalk from 'chalk';
 import kleur from 'kleur';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import type {
   BrowserReattachDiagnosticsMetadata,
   SessionMetadata,
@@ -169,6 +171,9 @@ export async function attachSession(sessionId: string, options?: AttachSessionOp
       logWriter.logLine('Answer:');
       logWriter.logLine(result.answerMarkdown || result.answerText);
       logWriter.stream.end();
+      await writeReattachedOutput(metadata.options?.writeOutputPath, result.answerText || result.answerMarkdown, (message) => {
+        console.log(dim(message));
+      });
       if (metadata.model) {
         await sessionStore.updateModelRun(metadata.id, metadata.model, {
           status: 'completed',
@@ -717,6 +722,31 @@ export function formatCompletionSummary(
     detailParts: [filesPart, slugPart],
   });
   return line2 ? `${line1} | ${line2}` : line1;
+}
+
+async function writeReattachedOutput(
+  targetPath: string | undefined,
+  content: string,
+  log: (message: string) => void,
+): Promise<string | undefined> {
+  if (!targetPath) return undefined;
+  if (!content || content.trim().length === 0) {
+    log('write-output skipped: no reattached assistant content to save.');
+    return undefined;
+  }
+  const normalizedTarget = path.resolve(targetPath);
+  const normalizedSessionsDir = path.resolve(sessionStore.sessionsDir());
+  if (
+    normalizedTarget === normalizedSessionsDir ||
+    normalizedTarget.startsWith(`${normalizedSessionsDir}${path.sep}`)
+  ) {
+    log(`write-output skipped: refusing to write inside session storage (${normalizedSessionsDir}).`);
+    return undefined;
+  }
+  await fs.mkdir(path.dirname(normalizedTarget), { recursive: true });
+  await fs.writeFile(normalizedTarget, content.endsWith('\n') ? content : `${content}\n`, 'utf8');
+  log(`Saved assistant output to ${normalizedTarget}`);
+  return normalizedTarget;
 }
 
 async function readStoredPrompt(sessionId: string): Promise<string | null> {

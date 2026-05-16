@@ -286,11 +286,132 @@ that the resolved managed profile is
 inside that profile is `ecochran76@gmail.com`, which remains informational until
 the provider app session can be read.
 
+Implemented the second readiness/recovery slice:
+
+- ChatGPT provider-app identity probing now bounds the `/api/auth/session` fetch
+  with `AbortController` and retries briefly when a fresh tab is still settling.
+- Chrome DevTools target listing now has a bounded timeout instead of being able
+  to hang project/doctor operations indefinitely.
+- ChatGPT tab attach now detects an unresponsive selected page target and, for
+  non-active-tab operations, excludes that target and opens a fresh ChatGPT tab
+  without quarantining or reseeding the managed browser profile.
+- Browser doctor can synthesize a live managed-profile entry from the OS Chrome
+  process when the browser service registry is stale, without mutating the
+  registry.
+- Browser doctor reports provider-app identity as the authority for ChatGPT
+  account matching. Chrome/Google profile mismatch remains informational when
+  the provider app session matches the expected ChatGPT account.
+- ChatGPT project name matching is now exact-normalized only; short names such
+  as `Lei` no longer fuzzy-match longer names such as `SoyLei`.
+
+Live SoyLei evidence after this fix:
+
+```bash
+pnpm tsx bin/auracall.ts --agent pro-extended-chatgpt-soylei projects \
+  --target chatgpt --refresh --operation-timeout 25
+```
+
+returned SoyLei projects including:
+
+```json
+{
+  "id": "g-p-6a08e8fee1788191bcb052b00d6bb7b3",
+  "name": "Lei",
+  "provider": "chatgpt",
+  "url": "https://chatgpt.com/g/g-p-6a08e8fee1788191bcb052b00d6bb7b3/project"
+}
+```
+
+The `Lei` project was created by:
+
+```bash
+pnpm tsx bin/auracall.ts --agent pro-extended-chatgpt-soylei projects create Lei \
+  --target chatgpt \
+  --model gpt-5.2-pro \
+  --memory-mode project \
+  --operation-timeout 60
+```
+
+Validation:
+
+```bash
+pnpm vitest run tests/browser/providerCache.test.ts tests/browser/chatgptAdapter.test.ts \
+  --testNamePattern "project cache matching|auth session expression|normalizeChatgptAuthSessionIdentity"
+pnpm exec tsc --noEmit --pretty false
+```
+
 Remaining work before retrying the Lei smoke:
 
-1. Fix the ChatGPT provider-app identity probe or browser readiness state that is
-   causing `wsl-chrome-3` to time out before identity/project listing.
-2. Confirm `projects --target chatgpt --refresh` returns the SoyLei project list
-   or a concrete auth/account mismatch.
-3. Create or resolve the `Lei` project, then rerun the company-bot non-posting
-   backup smoke once.
+1. Install the updated AuraCall runtime used by `/home/ecochran76/.local/bin/auracall`.
+2. Confirm the installed CLI sees the `Lei` project for
+   `agent:pro-extended-chatgpt-soylei`.
+3. Rerun the company-bot non-posting backup smoke once.
+
+Installed runtime and smoke result:
+
+```bash
+pnpm run install:user-runtime
+/home/ecochran76/.local/bin/auracall --agent pro-extended-chatgpt-soylei projects \
+  --target chatgpt --refresh --operation-timeout 25
+```
+
+The installed CLI sees `Lei` on `eric.cochran@soylei.com`.
+
+The first installed company-bot smoke reached the correct `Lei` project and
+created a ChatGPT conversation, but an operator-side status inspection exposed
+two remaining runtime issues:
+
+- Session liveness could falsely classify the run as `chrome-disconnected`
+  because the all-Chrome PID cache could select a renderer process for the same
+  `--user-data-dir` instead of the browser process.
+- A recovered reattach captured the assistant response but did not materialize
+  the original `--write-output` target.
+
+AuraCall follow-up fixes:
+
+- The all-Chrome process cache now uses the same browser-process preference as
+  direct process lookup: browser process first, remote-debugging port preferred,
+  renderer processes de-prioritized.
+- Reattach success now writes `metadata.options.writeOutputPath` when a browser
+  run had requested `--write-output`.
+
+Validation:
+
+```bash
+pnpm vitest run tests/browser/reattach.e2e.test.ts tests/browser-service/processCheck.test.ts \
+  tests/browser/providerCache.test.ts tests/browser/chatgptAdapter.test.ts \
+  --testNamePattern "marks session completed|prefers the browser process|project cache matching|auth session expression|normalizeChatgptAuthSessionIdentity"
+pnpm exec tsc --noEmit --pretty false
+git diff --check -- bin/auracall.ts packages/browser-service/src/chromeLifecycle.ts \
+  packages/browser-service/src/processCheck.ts src/browser/profileDoctor.ts \
+  src/browser/providers/cache.ts src/browser/providers/chatgptAdapter.ts \
+  src/cli/sessionDisplay.ts tests/browser/reattach.e2e.test.ts \
+  tests/browser-service/processCheck.test.ts tests/browser/chatgptAdapter.test.ts \
+  tests/browser/providerCache.test.ts \
+  docs/dev/notes/2026-05-16-company-bot-lei-humor-backup-handoff.md
+```
+
+Second installed company-bot smoke completed:
+
+```bash
+cd /home/ecochran76/workspace.local/company-bot
+set -a; . /home/ecochran76/credentials/API-keys.env; set +a
+python3 scripts/company_bot.py humor-digest auracall-backup \
+  --tenant soylei \
+  --bot lei \
+  --date 2026-05-15 \
+  --run-dir generated/soylei/humor/replays/2026-05-15 \
+  --auracall-bin /home/ecochran76/.local/bin/auracall \
+  --no-dry-run \
+  --force
+```
+
+Evidence:
+
+- AuraCall session `soylei-lei-humor-backup-2026-2` completed.
+- ChatGPT conversation:
+  `https://chatgpt.com/g/g-p-6a08e8fee1788191bcb052b00d6bb7b3-lei/c/6a08ebbd-1814-83ea-bd32-e1ec3d23a461`
+- Company-bot wrote:
+  `generated/soylei/humor/replays/2026-05-15/lei-humor-auracall-backup-post.md`
+- Company-bot wrote the durable command record:
+  `generated/soylei/humor/replays/2026-05-15/lei-humor-auracall-backup-run.json`

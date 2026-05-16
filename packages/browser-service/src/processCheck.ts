@@ -167,7 +167,7 @@ export async function findAllChromeProcesses(): Promise<Map<string, number>> {
 }
 
 async function findAllChromeProcessesUnix(): Promise<Map<string, number>> {
-  const results = new Map<string, number>();
+  const grouped = new Map<string, ChromeProcessMatch[]>();
   try {
     const { stdout } = await execFileAsync('ps', ['-ax', '-o', 'pid,args'], { maxBuffer: 10 * 1024 * 1024 });
     const lines = String(stdout ?? '').split('\n');
@@ -185,11 +185,25 @@ async function findAllChromeProcessesUnix(): Promise<Map<string, number>> {
       // Extract --user-data-dir=...
       const dirMatch = cmd.match(/--(?:user-data-dir|user-data-dir)=["']?([^"'\s]+)["']?/);
       if (dirMatch?.[1]) {
-        results.set(dirMatch[1], pid);
+        const userDataDir = dirMatch[1];
+        const existing = grouped.get(userDataDir) ?? [];
+        existing.push({
+          pid,
+          port: extractRemoteDebugPort(cmd),
+          commandLine: cmd,
+        });
+        grouped.set(userDataDir, existing);
       }
     }
   } catch {
     // best effort
+  }
+  const results = new Map<string, number>();
+  for (const [userDataDir, matches] of grouped.entries()) {
+    const preferred = pickPreferredChromeProcessMatch(matches);
+    if (preferred) {
+      results.set(userDataDir, preferred.pid);
+    }
   }
   return results;
 }
@@ -288,6 +302,7 @@ async function findChromeProcessUnix(userDataDir: string): Promise<ChromeProcess
     const { stdout } = await execFileAsync('ps', ['-ax', '-o', 'pid,args'], { maxBuffer: 10 * 1024 * 1024 });
     const lines = String(stdout ?? '').split('\n');
     const needle = userDataDir;
+    const matches: ChromeProcessMatch[] = [];
     for (const line of lines) {
       if (!line) continue;
       // Line format: "  PID COMMAND..."
@@ -300,17 +315,39 @@ async function findChromeProcessUnix(userDataDir: string): Promise<ChromeProcess
       
       if (!lower.includes('chrome') && !lower.includes('chromium')) continue;
       if (cmd.includes(needle) && (lower.includes('--user-data-dir') || lower.includes('/user-data-dir'))) {
-        return {
+        matches.push({
           pid,
           port: extractRemoteDebugPort(cmd),
           commandLine: cmd,
-        };
+        });
       }
     }
+    return pickPreferredChromeProcessMatch(matches);
   } catch {
     // best effort
   }
   return null;
+}
+
+export function pickPreferredChromeProcessMatchForTest(matches: ChromeProcessMatch[]): ChromeProcessMatch | null {
+  return pickPreferredChromeProcessMatch(matches);
+}
+
+function pickPreferredChromeProcessMatch(matches: ChromeProcessMatch[]): ChromeProcessMatch | null {
+  if (matches.length === 0) return null;
+  const score = (match: ChromeProcessMatch): number => {
+    const commandLine = match.commandLine.toLowerCase();
+    let value = 0;
+    if (!commandLine.includes('--type=')) value += 10;
+    if (match.port) value += 5;
+    if (commandLine.includes('--remote-debugging-port')) value += 3;
+    return value;
+  };
+  return [...matches].sort((left, right) => {
+    const scoreDelta = score(right) - score(left);
+    if (scoreDelta !== 0) return scoreDelta;
+    return left.pid - right.pid;
+  })[0] ?? null;
 }
 
 async function findChromeProcessWin32(userDataDir: string): Promise<ChromeProcessMatch | null> {

@@ -238,7 +238,15 @@ export async function writeProjectInstructionsCache(
 }
 
 export function matchProjectByName(projects: Project[], name: string): CacheNameMatch<Project> {
-  return matchByName(projects, name, (project) => project.name || project.id);
+  const normalizedName = normalize(name);
+  if (!normalizedName) {
+    return { match: null, candidates: [] };
+  }
+  const candidates = projects.filter((project) => normalize(project.name || project.id) === normalizedName);
+  if (candidates.length === 1) {
+    return { match: candidates[0], candidates: [] };
+  }
+  return { match: null, candidates };
 }
 
 export function matchConversationByTitle(

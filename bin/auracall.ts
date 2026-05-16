@@ -4263,6 +4263,11 @@ program
               target,
               localReport,
             });
+            if (identityStatus.error) {
+              selectorDiagnosisError = identityStatus.error;
+              browserToolsError = identityStatus.error;
+              return;
+            }
             if (commandOptions.json) {
               const runtime = await collectBrowserFeatureRuntime(target, localReport);
               browserTools = runtime.browserTools;

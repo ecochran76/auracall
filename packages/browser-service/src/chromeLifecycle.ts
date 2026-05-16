@@ -35,6 +35,7 @@ import { beginBrowserMutation, type BrowserMutationAuditSink } from './service/m
 const execFileAsync = promisify(execFile);
 const WINDOWS_WSL_DISCOVERY_ATTEMPTS = 40;
 const WINDOWS_WSL_DISCOVERY_DELAY_MS = 250;
+const DEFAULT_CDP_LIST_TIMEOUT_MS = 5_000;
 type ManagedChromeHandle = LaunchedChrome & { host?: string; launchedByAuracall?: boolean };
 
 export async function launchChrome(
@@ -813,10 +814,34 @@ export async function listChromeTargets(
 ) {
   const endpoint = await resolveChromeEndpoint(host, port, logger);
   try {
-    return await CDP.List({ host: endpoint.host, port: endpoint.port });
+    return await withTimeout(
+      CDP.List({ host: endpoint.host, port: endpoint.port }),
+      DEFAULT_CDP_LIST_TIMEOUT_MS,
+      `Timed out listing Chrome DevTools targets at ${endpoint.host}:${endpoint.port}`,
+    );
   } finally {
     await endpoint.dispose?.().catch(() => undefined);
   }
+}
+
+function withTimeout<T>(operation: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeout: NodeJS.Timeout | null = null;
+  return new Promise<T>((resolve, reject) => {
+    timeout = setTimeout(() => {
+      timeout = null;
+      reject(new Error(message));
+    }, timeoutMs);
+    operation.then(
+      (value) => {
+        if (timeout) clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        if (timeout) clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
 }
 
 export async function openChromeTarget(

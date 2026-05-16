@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { afterEach, describe, expect, test } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 import {
+  matchProjectByName,
   readConversationCache,
   writeConversationCache,
   writeConversationContextCache,
@@ -209,5 +210,19 @@ describe('provider cache nested writes', () => {
     } finally {
       await rm(homeDir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('project cache matching', () => {
+  test('does not fuzzy-match short project names into longer names', () => {
+    const projects = [
+      { id: 'soylei', name: 'SoyLei', provider: 'chatgpt' as const },
+      { id: 'transcripts', name: 'Transcripts', provider: 'chatgpt' as const },
+    ];
+
+    expect(matchProjectByName(projects, 'Lei')).toEqual({
+      match: null,
+      candidates: [],
+    });
   });
 });

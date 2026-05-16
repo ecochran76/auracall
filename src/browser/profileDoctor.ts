@@ -3,6 +3,7 @@ import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import type { DiagnosisReport } from '../inspector/doctor.js';
 import type { ResolvedUserConfig } from '../config.js';
+import { getPreferredRuntimeProfile } from '../config/model.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
 import { BrowserAutomationClient } from './client.js';
 import {
@@ -24,6 +25,10 @@ import {
   listInstancesWithLiveness,
   type BrowserInstanceLiveness,
 } from '../../packages/browser-service/src/service/stateRegistry.js';
+import {
+  findChromeProcessUsingUserDataDir,
+  isDevToolsResponsive,
+} from '../../packages/browser-service/src/processCheck.js';
 import {
   buildBrowserOperationKey,
   createFileBackedBrowserOperationDispatcher,
@@ -109,6 +114,27 @@ export interface BrowserDoctorFeatureReport {
   reason: string | null;
 }
 
+export type BrowserDoctorIdentityReconciliationStatus =
+  | 'provider_app_verified'
+  | 'provider_app_session_drift'
+  | 'provider_app_identity_unavailable'
+  | 'expected_identity_missing';
+
+export interface BrowserDoctorIdentityReconciliation {
+  target: BrowserDoctorTarget;
+  authority: 'provider-app-session';
+  ok: boolean;
+  status: BrowserDoctorIdentityReconciliationStatus;
+  expectedIdentity: ProviderUserIdentity | null;
+  providerAppIdentity: ProviderUserIdentity | null;
+  chromeGoogleIdentity: ProviderUserIdentity | null;
+  providerMatchesExpected: boolean | null;
+  chromeMatchesExpected: boolean | null;
+  chromeMatchesProvider: boolean | null;
+  browserProfileMismatchIsInformational: boolean;
+  summary: string;
+}
+
 export function deriveProviderIdentityFromChromeGoogleAccount(
   account: BrowserDoctorChromeAccountReport | null | undefined,
 ): ProviderUserIdentity | null {
@@ -134,6 +160,7 @@ export interface AuracallBrowserDoctorContract {
   target: BrowserDoctorTarget;
   localReport: BrowserDoctorReport;
   identityStatus: BrowserDoctorIdentityReport | null;
+  identityReconciliation: BrowserDoctorIdentityReconciliation | null;
   featureStatus: BrowserDoctorFeatureReport | null;
   runtime: {
     operation?: BrowserOperationRecord | null;
@@ -167,6 +194,7 @@ export function createAuracallBrowserDoctorContract(
     target: BrowserDoctorTarget;
     localReport: BrowserDoctorReport;
     identityStatus?: BrowserDoctorIdentityReport | null;
+    identityReconciliation?: BrowserDoctorIdentityReconciliation | null;
     featureStatus?: BrowserDoctorFeatureReport | null;
     browserTools?: BrowserToolsDoctorContract | null;
     browserToolsError?: string | null;
@@ -188,6 +216,7 @@ export function createAuracallBrowserDoctorContract(
     target: input.target,
     localReport: input.localReport,
     identityStatus: input.identityStatus ?? null,
+    identityReconciliation: input.identityReconciliation ?? null,
     featureStatus: input.featureStatus ?? null,
     runtime: {
       operation: input.operation ?? null,
@@ -196,6 +225,159 @@ export function createAuracallBrowserDoctorContract(
       selectorDiagnosis: input.selectorDiagnosis ?? null,
       selectorDiagnosisError: input.selectorDiagnosisError ?? null,
     },
+  };
+}
+
+function normalizeIdentityComparable(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function identitiesMatchForDoctor(
+  expected: ProviderUserIdentity | null | undefined,
+  actual: ProviderUserIdentity | null | undefined,
+): boolean | null {
+  if (!expected || !actual) return null;
+  const expectedEmail = normalizeIdentityComparable(expected.email);
+  if (expectedEmail) return expectedEmail === normalizeIdentityComparable(actual.email);
+  const expectedHandle = normalizeIdentityComparable(expected.handle);
+  if (expectedHandle) return expectedHandle === normalizeIdentityComparable(actual.handle);
+  const expectedName = normalizeIdentityComparable(expected.name);
+  if (expectedName) return expectedName === normalizeIdentityComparable(actual.name);
+  const expectedId = normalizeIdentityComparable(expected.id);
+  if (expectedId) return expectedId === normalizeIdentityComparable(actual.id);
+  return null;
+}
+
+function describeDoctorIdentity(identity: ProviderUserIdentity | null | undefined): string | null {
+  if (!identity) return null;
+  return asNonEmptyString(identity.email) ??
+    asNonEmptyString(identity.handle) ??
+    asNonEmptyString(identity.name) ??
+    asNonEmptyString(identity.id);
+}
+
+function resolveExpectedProviderIdentityFromConfig(
+  userConfig: ResolvedUserConfig,
+  target: BrowserDoctorTarget,
+): ProviderUserIdentity | null {
+  const configRecord = userConfig as unknown as Record<string, unknown>;
+  const runtimeProfile = getPreferredRuntimeProfile(configRecord, {
+    explicitProfileName: asNonEmptyString(userConfig.auracallProfile),
+  });
+  const profileServices = runtimeProfile && isRecord(runtimeProfile.services) ? runtimeProfile.services : null;
+  const globalServices = isRecord(configRecord.services) ? configRecord.services : {};
+  const profileService = profileServices && isRecord(profileServices[target]) ? profileServices[target] : null;
+  const globalService = isRecord(globalServices[target]) ? globalServices[target] : null;
+  const profileIdentity = isRecord(profileService?.identity) ? profileService.identity : null;
+  const globalIdentity = isRecord(globalService?.identity) ? globalService.identity : null;
+  const identity = profileIdentity ?? globalIdentity;
+  if (!identity) return null;
+  const resolved: ProviderUserIdentity = {
+    id: asNonEmptyString(identity.id) ?? undefined,
+    name: asNonEmptyString(identity.name) ?? undefined,
+    handle: asNonEmptyString(identity.handle) ?? undefined,
+    email: asNonEmptyString(identity.email) ?? undefined,
+    accountLevel: asNonEmptyString(identity.accountLevel) ?? undefined,
+    accountPlanType: asNonEmptyString(identity.accountPlanType) ?? undefined,
+    accountStructure: asNonEmptyString(identity.accountStructure) ?? undefined,
+    capabilityProfile: asNonEmptyString(identity.capabilityProfile) ?? undefined,
+    proAccess: asNonEmptyString(identity.proAccess) ?? undefined,
+    deepResearchAccess: asNonEmptyString(identity.deepResearchAccess) ?? undefined,
+    source: profileIdentity ? 'profile' : 'config',
+  };
+  return Object.values(resolved).some((value) => typeof value === 'string' && value.trim().length > 0)
+    ? resolved
+    : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+export function reconcileBrowserDoctorIdentities(
+  userConfig: ResolvedUserConfig,
+  target: BrowserDoctorTarget,
+  localReport: BrowserDoctorReport,
+  identityStatus: BrowserDoctorIdentityReport | null | undefined,
+): BrowserDoctorIdentityReconciliation {
+  const expectedIdentity = resolveExpectedProviderIdentityFromConfig(userConfig, target);
+  const providerAppIdentity = identityStatus?.identity ?? null;
+  const chromeGoogleIdentity = deriveProviderIdentityFromChromeGoogleAccount(localReport.chromeGoogleAccount);
+  const providerMatchesExpected = identitiesMatchForDoctor(expectedIdentity, providerAppIdentity);
+  const chromeMatchesExpected = identitiesMatchForDoctor(expectedIdentity, chromeGoogleIdentity);
+  const chromeMatchesProvider = identitiesMatchForDoctor(providerAppIdentity, chromeGoogleIdentity);
+  const expectedLabel = describeDoctorIdentity(expectedIdentity) ?? 'unconfigured account';
+  const providerLabel = describeDoctorIdentity(providerAppIdentity) ?? 'not detected';
+  const chromeLabel = describeDoctorIdentity(chromeGoogleIdentity) ?? 'not detected';
+
+  if (!expectedIdentity) {
+    return {
+      target,
+      authority: 'provider-app-session',
+      ok: false,
+      status: 'expected_identity_missing',
+      expectedIdentity,
+      providerAppIdentity,
+      chromeGoogleIdentity,
+      providerMatchesExpected,
+      chromeMatchesExpected,
+      chromeMatchesProvider,
+      browserProfileMismatchIsInformational: false,
+      summary: `No expected ${target} account is configured; provider app session is ${providerLabel}, Chrome/Google profile is ${chromeLabel}.`,
+    };
+  }
+
+  if (!providerAppIdentity) {
+    return {
+      target,
+      authority: 'provider-app-session',
+      ok: false,
+      status: 'provider_app_identity_unavailable',
+      expectedIdentity,
+      providerAppIdentity,
+      chromeGoogleIdentity,
+      providerMatchesExpected,
+      chromeMatchesExpected,
+      chromeMatchesProvider,
+      browserProfileMismatchIsInformational: false,
+      summary: `Provider app session was not verified for expected ${expectedLabel}; Chrome/Google profile is ${chromeLabel}.`,
+    };
+  }
+
+  if (providerMatchesExpected === false) {
+    return {
+      target,
+      authority: 'provider-app-session',
+      ok: false,
+      status: 'provider_app_session_drift',
+      expectedIdentity,
+      providerAppIdentity,
+      chromeGoogleIdentity,
+      providerMatchesExpected,
+      chromeMatchesExpected,
+      chromeMatchesProvider,
+      browserProfileMismatchIsInformational: false,
+      summary: `Provider app session is ${providerLabel}, expected ${expectedLabel}; Chrome/Google profile is ${chromeLabel}.`,
+    };
+  }
+
+  return {
+    target,
+    authority: 'provider-app-session',
+    ok: true,
+    status: 'provider_app_verified',
+    expectedIdentity,
+    providerAppIdentity,
+    chromeGoogleIdentity,
+    providerMatchesExpected,
+    chromeMatchesExpected,
+    chromeMatchesProvider,
+    browserProfileMismatchIsInformational: chromeMatchesProvider === false,
+    summary: chromeMatchesProvider === false
+      ? `Provider app session is verified as ${providerLabel}; Chrome/Google profile differs (${chromeLabel}) and is informational only.`
+      : `Provider app session is verified as ${providerLabel}.`,
   };
 }
 
@@ -384,12 +566,19 @@ export async function inspectBrowserDoctorState(
     Boolean(managedLocalStatePath);
   const staleRegistryEntries = registryEntries.filter((entry) => !entry.alive);
   const legacyRegistryEntries = registryEntries.filter((entry) => entry.legacy);
-  const managedRegistryEntry =
+  let managedRegistryEntry =
     registryEntries.find(
       (entry) =>
         path.resolve(entry.profilePath) === managedProfileDir &&
         entry.profileName.toLowerCase() === chromeProfile.toLowerCase(),
     ) ?? null;
+  if (!managedRegistryEntry) {
+    const adopted = await synthesizeManagedRegistryEntryFromProcess(managedProfileDir, chromeProfile, managedProfileRoot);
+    if (adopted) {
+      registryEntries = [adopted, ...registryEntries];
+      managedRegistryEntry = adopted;
+    }
+  }
 
   const warnings: string[] = [];
   if (!managedProfileExists) {
@@ -443,6 +632,42 @@ export async function inspectBrowserDoctorState(
     prunedRegistryEntryReasons,
     warnings,
     operationDispatcherKey,
+  };
+}
+
+async function synthesizeManagedRegistryEntryFromProcess(
+  managedProfileDir: string,
+  chromeProfile: string,
+  managedProfileRoot: string,
+): Promise<BrowserDoctorRegistryEntry | null> {
+  const processMatch = await findChromeProcessUsingUserDataDir(managedProfileDir);
+  if (!processMatch?.port) {
+    return null;
+  }
+  const host = '127.0.0.1';
+  const responsive = await isDevToolsResponsive({
+    host,
+    port: processMatch.port,
+    attempts: 1,
+    timeoutMs: 1000,
+  });
+  if (!responsive) {
+    return null;
+  }
+  const normalizedPath = path.resolve(managedProfileDir);
+  return {
+    key: `${path.normalize(managedProfileDir)}::${chromeProfile.toLowerCase()}`,
+    profilePath: normalizedPath,
+    profileName: chromeProfile,
+    pid: processMatch.pid,
+    port: processMatch.port,
+    host,
+    alive: true,
+    liveness: 'live',
+    actualPid: processMatch.pid,
+    managed: normalizedPath.startsWith(path.resolve(managedProfileRoot)),
+    legacy: isLegacyBrowserProfilePath(normalizedPath),
+    services: [],
   };
 }
 

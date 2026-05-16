@@ -29,6 +29,7 @@ describe('browser reattach end-to-end (simulated)', () => {
 
       const { sessionStore } = await import('../../src/sessionStore.js');
       const { attachSession } = await import('../../src/cli/sessionDisplay.js');
+      const outputPath = path.join(tmpHome, 'reattached-output.md');
 
       await sessionStore.ensureStorage();
       const sessionMeta = await sessionStore.createSession(
@@ -37,6 +38,7 @@ describe('browser reattach end-to-end (simulated)', () => {
           model: 'gpt-5.2-pro',
           mode: 'browser',
           browserConfig: {},
+          writeOutputPath: outputPath,
         },
         '/repo',
       );
@@ -72,6 +74,7 @@ describe('browser reattach end-to-end (simulated)', () => {
       expect(resumeMock).toHaveBeenCalledTimes(1);
       const runs = updated?.models ?? [];
       expect(runs.some((r) => r.status === 'completed')).toBe(true);
+      await expect(fs.readFile(outputPath, 'utf8')).resolves.toBe('ok text\n');
     } finally {
       await fs.rm(tmpHome, { recursive: true, force: true });
       setAuracallHomeDirOverrideForTest(null);

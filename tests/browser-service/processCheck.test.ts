@@ -26,6 +26,30 @@ function createWindowsProcessPayload(processId: number, commandLine: string) {
 }
 
 describe('processCheck (package)', () => {
+  test('prefers the browser process over renderer processes for the same user-data-dir', async () => {
+    const processCheck = await import('../../packages/browser-service/src/processCheck.js');
+    const match = processCheck.pickPreferredChromeProcessMatchForTest([
+      {
+        pid: 300,
+        port: null,
+        commandLine: '/opt/google/chrome/chrome --type=renderer --user-data-dir=/tmp/profile',
+      },
+      {
+        pid: 200,
+        port: 9222,
+        commandLine: '/opt/google/chrome/chrome --remote-debugging-port=9222 --user-data-dir=/tmp/profile about:blank',
+      },
+      {
+        pid: 100,
+        port: null,
+        commandLine: '/opt/google/chrome/chrome --type=gpu-process --user-data-dir=/tmp/profile',
+      },
+    ]);
+
+    expect(match?.pid).toBe(200);
+    expect(match?.port).toBe(9222);
+  });
+
   test('matches the requested Windows user-data-dir exactly on WSL and extracts the debug port', async () => {
     process.env.WSL_DISTRO_NAME = 'Ubuntu';
     const tempDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-processcheck-'));

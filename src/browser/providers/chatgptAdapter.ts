@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import CDP from 'chrome-remote-interface';
-import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../packages/browser-service/src/chromeLifecycle.js';
+import { connectToChromeTarget, openChromeTarget, openOrReuseChromeTarget } from '../../../packages/browser-service/src/chromeLifecycle.js';
 import type { ChromeClient } from '../types.js';
 import { ChatgptFeatureSchema } from '../llmService/providers/schema.js';
 import { transferAttachmentViaDataTransfer } from '../actions/attachmentDataTransfer.js';
@@ -44,7 +44,6 @@ import {
   waitForDownloadCapture,
   waitForPredicate,
   waitForSelector,
-  waitForNotSelector,
   withAnchoredActionDiagnostics,
   withBlockingSurfaceRecovery,
   withUiDiagnostics,
@@ -53,6 +52,7 @@ import {
   captureBrowserPostmortemSnapshot,
   persistBrowserPostmortemRecord,
 } from '../domDebug.js';
+import { recordDomDriftObservation } from '../domDriftObservations.js';
 import { extractChatgptRateLimitSummary, isChatgptRateLimitMessage } from '../chatgptRateLimitGuard.js';
 import {
   resolveBundledServiceArtifactContentTypeExtensions,
@@ -70,6 +70,7 @@ import {
   requireBundledServiceRouteTemplate,
   resolveBundledServiceUiLabel,
   resolveBundledServiceUiLabelSet,
+  resolveEffectiveServiceUiLabelSet,
 } from '../../services/registry.js';
 
 const CHATGPT_HOME_URL = requireBundledServiceBaseUrl('chatgpt');
@@ -103,6 +104,12 @@ const CHATGPT_PROJECT_TITLE_EDIT_PREFIX = normalizeUiText(
 ).toLowerCase();
 const CHATGPT_PROJECT_MEMORY_GLOBAL_LABEL = resolveBundledServiceUiLabel('chatgpt', 'project_memory_global', 'Default');
 const CHATGPT_PROJECT_MEMORY_PROJECT_LABEL = resolveBundledServiceUiLabel('chatgpt', 'project_memory_project', 'Project-only');
+const CHATGPT_PROJECT_MEMORY_MENU_ITEM_SELECTOR = [
+  '[role="menu"] [role="menuitemradio"]',
+  '[role="menu"] [role="menuitem"][aria-checked]',
+  '[role="menu"] button[aria-checked]',
+  '[role="menu"] [aria-checked]',
+].join(', ');
 const CHATGPT_PROJECT_CONTROLS_DETAILS_LABEL = normalizeUiText(
   resolveBundledServiceUiLabel('chatgpt', 'project_controls_details', 'show project details'),
 ).toLowerCase();
@@ -243,6 +250,7 @@ const CHATGPT_PROJECT_SOURCE_UPLOAD_MARKERS = resolveBundledServiceUiLabelSet(
   ['add sources', 'drag sources here'],
 ).map((label) => normalizeUiText(label).toLowerCase()).filter(Boolean);
 const CHATGPT_COMPATIBLE_HOSTS = requireBundledServiceCompatibleHosts('chatgpt');
+const CHATGPT_CDP_LIST_TIMEOUT_MS = 5_000;
 const CHATGPT_PROJECT_URL_TEMPLATE = requireBundledServiceRouteTemplate('chatgpt', 'project');
 const CHATGPT_PROJECT_SOURCES_URL_TEMPLATE = requireBundledServiceRouteTemplate('chatgpt', 'projectSources');
 const CHATGPT_CONVERSATION_URL_TEMPLATE = requireBundledServiceRouteTemplate('chatgpt', 'conversation');
@@ -687,7 +695,7 @@ export function normalizeChatgptProjectId(value: string | null | undefined): str
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
-  const match = trimmed.match(/^(g-p-[a-z0-9]+)/i);
+  const match = trimmed.match(/^((?:g-p-[a-z0-9]+)|(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))/i);
   return match?.[1] ?? null;
 }
 
@@ -1100,6 +1108,20 @@ function normalizeFileKey(value: string | null | undefined): string {
   return normalizeUiText(value).toLowerCase();
 }
 
+function normalizeChatgptArtifactTitleMatchKey(value: string | null | undefined): string {
+  return normalizeUiText(value).toLowerCase().replace(/\s+/g, '');
+}
+
+function chatgptArtifactTitleMatches(probeTitle: string, expectedTitle: string): boolean {
+  if (!expectedTitle) return true;
+  if (probeTitle === expectedTitle) return true;
+  const probeKey = normalizeChatgptArtifactTitleMatchKey(probeTitle);
+  const expectedKey = normalizeChatgptArtifactTitleMatchKey(expectedTitle);
+  if (probeKey === expectedKey) return true;
+  const expectedStem = expectedKey.replace(/\.[^.]+$/, '');
+  return expectedStem.length > 3 && probeKey.startsWith(expectedStem);
+}
+
 function normalizeInstructionComparisonText(value: string | null | undefined): string {
   return String(value ?? '')
     .replace(/\r\n/g, '\n')
@@ -1442,7 +1464,10 @@ export function matchesChatgptDownloadButtonProbe(
   if (!probeTitle) {
     return false;
   }
-  if (expectedTitle && probeTitle !== expectedTitle) {
+  if (
+    expectedTitle &&
+    !chatgptArtifactTitleMatches(probeTitle, expectedTitle)
+  ) {
     return false;
   }
   const expectedTurnId =
@@ -1486,6 +1511,34 @@ function isRetryableConnectionError(error: unknown): boolean {
   );
 }
 
+function withChatgptTimeout<T>(operation: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeout: NodeJS.Timeout | null = null;
+  return new Promise<T>((resolve, reject) => {
+    timeout = setTimeout(() => {
+      timeout = null;
+      reject(new Error(message));
+    }, timeoutMs);
+    operation.then(
+      (value) => {
+        if (timeout) clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        if (timeout) clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
+}
+
+function listChatgptChromeTargets(host: string, port: number): Promise<Awaited<ReturnType<typeof CDP.List>>> {
+  return withChatgptTimeout(
+    CDP.List({ host, port }),
+    CHATGPT_CDP_LIST_TIMEOUT_MS,
+    `Timed out listing ChatGPT Chrome DevTools targets at ${host}:${port}`,
+  );
+}
+
 export function extractChatgptProjectIdFromUrl(url: string): string | null {
   try {
     const parsed = new URL(url);
@@ -1520,8 +1573,24 @@ export function resolveChatgptProjectMemoryLabel(mode: ProjectMemoryMode): strin
   return mode === 'project' ? CHATGPT_PROJECT_MEMORY_PROJECT_LABEL : CHATGPT_PROJECT_MEMORY_GLOBAL_LABEL;
 }
 
+export function resolveChatgptProjectMemoryLabelCandidates(mode: ProjectMemoryMode): string[] {
+  const primary = resolveChatgptProjectMemoryLabel(mode);
+  const aliases = mode === 'project'
+    ? ['Project only', 'Project-only memory', 'Project only memory']
+    : ['Default memory'];
+  return Array.from(new Set([primary, ...aliases].map((label) => normalizeUiText(label)).filter(Boolean)));
+}
+
 export function resolveChatgptProjectSettingsCommitLabelsForTest(): string[] {
   return [...CHATGPT_PROJECT_SETTINGS_COMMIT_BUTTON_LABELS];
+}
+
+export function resolveChatgptProjectCreateConfirmLabelsForTest(): string[] {
+  return resolveChatgptProjectCreateConfirmButtonLabels();
+}
+
+export function buildChatgptCreateProjectDialogStateExpressionForTest(): string {
+  return buildChatgptCreateProjectDialogStateExpression();
 }
 
 export function resolveChatgptProjectSourceUploadActionLabelsForTest(): string[] {
@@ -2498,7 +2567,7 @@ function buildProjectRouteExpression(projectId?: string): string {
     const match = location.pathname.match(/^\\/g\\/([^/]+)\\/project\\/?$/);
     if (!match) return null;
     const rawId = String(match[1] || '').trim();
-    const normalized = rawId.match(/^(g-p-[a-z0-9]+)/i);
+    const normalized = rawId.match(/^((?:g-p-[a-z0-9]+)|(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))/i);
     if (!normalized) return null;
     const id = normalized[1];
     const expected = ${JSON.stringify(projectId ?? null)};
@@ -2516,7 +2585,7 @@ function buildConversationRouteExpression(conversationId: string, projectId?: st
     const expectedConversationId = ${JSON.stringify(conversationId)};
     const expectedProjectId = ${JSON.stringify(projectId ?? null)};
     if (rawConversationId !== expectedConversationId) return null;
-    const normalizedProjectId = rawProject.match(/^(g-p-[a-z0-9]+)/i)?.[1] ?? null;
+    const normalizedProjectId = rawProject.match(/^((?:g-p-[a-z0-9]+)|(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))/i)?.[1] ?? null;
     if (expectedProjectId && normalizedProjectId !== expectedProjectId) return null;
     return {
       conversationId: rawConversationId,
@@ -2569,7 +2638,7 @@ function _buildConversationTitleAppliedExpression(
     };
     const normalizeProjectId = (value) => {
       const trimmed = String(value || '').trim();
-      const match = trimmed.match(/^(g-p-[a-z0-9]+)/i);
+      const match = trimmed.match(/^((?:g-p-[a-z0-9]+)|(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))/i);
       return match ? match[1] : null;
     };
     const parseConversationInfo = (href) => {
@@ -2697,7 +2766,7 @@ function buildConversationRowActionReadyExpression(conversationId: string, proje
         .trim();
     const normalizeProjectId = (value) => {
       const trimmed = String(value || '').trim();
-      const match = trimmed.match(/^(g-p-[a-z0-9]+)/i);
+      const match = trimmed.match(/^((?:g-p-[a-z0-9]+)|(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))/i);
       return match ? match[1] : null;
     };
     const parse = (href) => {
@@ -2751,7 +2820,7 @@ function buildConversationDeletedExpression(conversationId: string, projectId?: 
         const match = parsed.pathname.match(/^\\/(?:g\\/([^/]+)\\/)?c\\/([a-zA-Z0-9-]+)\\/?$/);
         if (!match) return null;
         return {
-          projectId: String(match[1] || '').trim().match(/^(g-p-[a-z0-9]+)/i)?.[1] ?? null,
+          projectId: String(match[1] || '').trim().match(/^((?:g-p-[a-z0-9]+)|(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))/i)?.[1] ?? null,
           conversationId: String(match[2] || '').trim(),
         };
       } catch {
@@ -2790,7 +2859,7 @@ function buildProjectRouteChangeExpression(initialProjectId?: string | null): st
     const match = location.pathname.match(/^\\/g\\/([^/]+)\\/project\\/?$/);
     if (!match) return null;
     const rawId = String(match[1] || '').trim();
-    const found = rawId.match(/^(g-p-[a-z0-9]+)/i);
+    const found = rawId.match(/^((?:g-p-[a-z0-9]+)|(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))/i);
     if (!found) return null;
     const normalized = found[1];
     const initial = ${JSON.stringify(initialProjectId ?? null)};
@@ -2804,7 +2873,7 @@ function buildProjectSurfaceReadyExpression(projectId?: string | null): string {
     const route = location.pathname.match(/^\\/g\\/([^/]+)\\/project\\/?$/);
     if (!route) return null;
     const rawId = String(route[1] || '').trim();
-    const match = rawId.match(/^(g-p-[a-z0-9]+)/i);
+    const match = rawId.match(/^((?:g-p-[a-z0-9]+)|(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))/i);
     if (!match) return null;
     const normalizedId = match[1];
     const expected = ${JSON.stringify(projectId ?? null)};
@@ -2874,7 +2943,7 @@ function buildProjectSourcesReadyExpression(projectId?: string | null): string {
     const route = location.pathname.match(/^\\/g\\/([^/]+)\\/project\\/?$/);
     if (!route) return null;
     const rawId = String(route[1] || '').trim();
-    const match = rawId.match(/^(g-p-[a-z0-9]+)/i);
+    const match = rawId.match(/^((?:g-p-[a-z0-9]+)|(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))/i);
     if (!match) return null;
     const normalizedId = match[1];
     const expected = ${JSON.stringify(projectId ?? null)};
@@ -2913,7 +2982,7 @@ function buildProjectChatsReadyExpression(projectId?: string | null): string {
     const route = location.pathname.match(/^\\/g\\/([^/]+)\\/project\\/?$/);
     if (!route) return null;
     const rawId = String(route[1] || '').trim();
-    const match = rawId.match(/^(g-p-[a-z0-9]+)/i);
+    const match = rawId.match(/^((?:g-p-[a-z0-9]+)|(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))/i);
     if (!match) return null;
     const normalizedId = match[1];
     const expected = ${JSON.stringify(projectId ?? null)};
@@ -3057,10 +3126,17 @@ function buildProjectSourceRemovedExpression(fileName: string): string {
 
 export function buildChatgptAuthSessionIdentityExpression(): string {
   return `(async () => {
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timeout = setTimeout(() => {
+      try {
+        controller?.abort();
+      } catch {}
+    }, 2500);
     try {
       const response = await fetch('/api/auth/session', {
         credentials: 'include',
         headers: { accept: 'application/json' },
+        signal: controller?.signal,
       });
       if (!response.ok) {
         return null;
@@ -3088,6 +3164,8 @@ export function buildChatgptAuthSessionIdentityExpression(): string {
       };
     } catch {
       return null;
+    } finally {
+      clearTimeout(timeout);
     }
   })()`;
 }
@@ -3147,10 +3225,11 @@ async function connectToChatgptTab(
 }> {
   let host = options?.host ?? '127.0.0.1';
   let port = options?.port ?? resolvePortFromEnv();
+  let failedTargetId: string | undefined;
   if (options?.tabTargetId && port) {
     try {
       const client = await connectToChromeTarget({ host, port, target: options.tabTargetId });
-      await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+      await enableChatgptTargetDomains(client, options.tabTargetId);
       setClientSuppressFocus(client, resolveBrowserTabPolicy(options).suppressFocus);
       await dismissCreateProjectDialogIfOpen(client.Runtime).catch(() => undefined);
       return {
@@ -3162,6 +3241,7 @@ async function connectToChatgptTab(
         usedExisting: true,
       };
     } catch {
+      failedTargetId = options.tabTargetId;
       // Fall back to rescanning below when the previously resolved target id went stale.
     }
   }
@@ -3177,7 +3257,8 @@ async function connectToChatgptTab(
     | undefined;
   const preferredUrl = urlOverride ?? options?.configuredUrl ?? CHATGPT_HOME_URL;
   let resolvedTargetIdFromService: string | undefined;
-  if (serviceResolver?.resolveServiceTarget) {
+  const hasExplicitEndpoint = options?.port !== undefined || options?.host !== undefined;
+  if (!hasExplicitEndpoint && serviceResolver?.resolveServiceTarget) {
     const target = await serviceResolver.resolveServiceTarget({
       serviceId: 'chatgpt',
       configuredUrl: preferredUrl,
@@ -3202,8 +3283,12 @@ async function connectToChatgptTab(
   }
 
   const resolvedPort = port;
-  const targets = await CDP.List({ host, port: resolvedPort });
-  const candidates = targets.filter((target) => target.type === 'page' && isChatgptUrl(target.url ?? ''));
+  const targets = await listChatgptChromeTargets(host, resolvedPort);
+  const candidates = targets.filter((target) =>
+    target.type === 'page' &&
+    isChatgptUrl(target.url ?? '') &&
+    resolveChatgptTargetId(target) !== failedTargetId,
+  );
   const serviceResolved = resolvedTargetIdFromService
     ? candidates.find((target) => resolveChatgptTargetId(target) === resolvedTargetIdFromService)
     : undefined;
@@ -3213,17 +3298,19 @@ async function connectToChatgptTab(
   const tabPolicy = resolveBrowserTabPolicy(options);
 
   if (!targetInfo) {
-    const opened = await openOrReuseChromeTarget(resolvedPort, preferredUrl, {
-      host,
-      reusePolicy: 'same-origin',
-      compatibleHosts: CHATGPT_COMPATIBLE_HOSTS,
-      matchingTabLimit: tabPolicy.serviceTabLimit,
-      blankTabLimit: tabPolicy.blankTabLimit,
-      collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
-      suppressFocus: tabPolicy.suppressFocus,
-      mutationAudit: resolveMutationAudit(options),
-      mutationSource: resolveMutationSource(options, 'provider:chatgpt', 'connect-tab'),
-    });
+    const opened = failedTargetId
+      ? { target: await openChromeTarget(resolvedPort, preferredUrl, host), reused: false }
+      : await openOrReuseChromeTarget(resolvedPort, preferredUrl, {
+          host,
+          reusePolicy: 'same-origin',
+          compatibleHosts: CHATGPT_COMPATIBLE_HOSTS,
+          matchingTabLimit: tabPolicy.serviceTabLimit,
+          blankTabLimit: tabPolicy.blankTabLimit,
+          collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
+          suppressFocus: tabPolicy.suppressFocus,
+          mutationAudit: resolveMutationAudit(options),
+          mutationSource: resolveMutationSource(options, 'provider:chatgpt', 'connect-tab'),
+        });
     targetInfo = opened.target ?? undefined;
     shouldClose = !opened.reused;
     usedExisting = opened.reused;
@@ -3233,16 +3320,118 @@ async function connectToChatgptTab(
   if (!targetId) {
     throw new Error('No ChatGPT tab found. Launch a ChatGPT browser session and retry.');
   }
-  const client = await connectToChromeTarget({ host, port: resolvedPort, target: targetId });
-  await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+  let client = await connectToChromeTarget({ host, port: resolvedPort, target: targetId });
+  let resolvedTargetId = targetId;
+  try {
+    await enableChatgptTargetDomains(client, resolvedTargetId);
+  } catch (error) {
+    await client.close().catch(() => undefined);
+    if (!options?.tabTargetId && providerNavigationAllowed(options)) {
+      const opened = await openChromeTarget(resolvedPort, preferredUrl, host);
+      const freshTargetId = resolveChatgptTargetId(opened);
+      if (freshTargetId) {
+        client = await connectToChromeTarget({ host, port: resolvedPort, target: freshTargetId });
+        resolvedTargetId = freshTargetId;
+        await enableChatgptTargetDomains(client, resolvedTargetId);
+      } else {
+        throw error;
+      }
+    } else {
+      throw error;
+    }
+  }
   annotateClientMutationContext(client, options, 'provider:chatgpt');
   setClientSuppressFocus(client, tabPolicy.suppressFocus);
   await dismissCreateProjectDialogIfOpen(client.Runtime).catch(() => undefined);
-  return { client, targetId, shouldClose, host, port: resolvedPort, usedExisting };
+  return { client, targetId: resolvedTargetId, shouldClose, host, port: resolvedPort, usedExisting };
 }
 
-async function dismissCreateProjectDialogIfOpen(Runtime: ChromeClient['Runtime']): Promise<void> {
+async function enableChatgptTargetDomains(client: ChromeClient, targetId?: string): Promise<void> {
+  await withChatgptTimeout(
+    Promise.all([client.Page.enable(), client.Runtime.enable()]).then(() => undefined),
+    CHATGPT_CDP_LIST_TIMEOUT_MS,
+    `Timed out enabling ChatGPT page target${targetId ? ` ${targetId}` : ''}; the Chrome endpoint is alive but the selected page target is unresponsive.`,
+  );
+}
+
+type ChatgptCreateProjectDialogState = {
+  present?: boolean;
+  projectName?: string | null;
+  title?: string | null;
+  url?: string | null;
+  closeButtonLabels?: string[];
+  textSample?: string | null;
+};
+
+function buildChatgptCreateProjectDialogStateExpression(): string {
+  return `(() => {
+    const rootSelectors = ${JSON.stringify(CHATGPT_PROJECT_DIALOG_ROOT_SELECTORS)};
+    const nameInputSelector = ${JSON.stringify(CHATGPT_PROJECT_NAME_INPUT_SELECTOR)};
+    const createProjectLabel = 'create project';
+    const projectNameLabel = ${JSON.stringify(CHATGPT_PROJECT_NAME_INPUT_LABEL)};
+    const settingsLabel = ${JSON.stringify(CHATGPT_PROJECT_SETTINGS_BUTTON_MATCH)};
+    const instructionsLabel = ${JSON.stringify(CHATGPT_PROJECT_INSTRUCTIONS_INPUT_LABEL)};
+    const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+    const isVisible = (node) => {
+      if (!(node instanceof Element)) return false;
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+    const isCreateProjectDialog = (dialog) => {
+      if (!(dialog instanceof Element)) return false;
+      if (!isVisible(dialog)) return false;
+      const input = dialog.querySelector(nameInputSelector);
+      if (input && isVisible(input)) return true;
+      const text = normalize(dialog.textContent);
+      return text.includes(createProjectLabel) && (
+        text.includes(normalize(projectNameLabel)) ||
+        text.includes(settingsLabel) ||
+        text.includes(normalize(instructionsLabel))
+      );
+    };
+    const roots = rootSelectors
+      .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
+      .filter((dialog, index, array) => array.indexOf(dialog) === index);
+    const createDialog = roots.find(isCreateProjectDialog);
+    if (!createDialog) {
+      return { present: false, url: window.location.href, title: document.title };
+    }
+    const nameInput = createDialog.querySelector(nameInputSelector);
+    const projectName = nameInput && 'value' in nameInput ? String(nameInput.value || '') : null;
+    const closeButtonLabels = Array.from(createDialog.querySelectorAll('button,[role="button"]'))
+      .map((node) => String(node.getAttribute('aria-label') || node.getAttribute('title') || node.textContent || '').replace(/\\s+/g, ' ').trim())
+      .filter(Boolean)
+      .slice(0, 20);
+    return {
+      present: true,
+      projectName,
+      closeButtonLabels,
+      textSample: String(createDialog.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 240),
+      url: window.location.href,
+      title: document.title,
+    };
+  })()`;
+}
+
+async function readCreateProjectDialogState(
+  Runtime: ChromeClient['Runtime'],
+): Promise<ChatgptCreateProjectDialogState> {
   const { result } = await Runtime.evaluate({
+    expression: buildChatgptCreateProjectDialogStateExpression(),
+    returnByValue: true,
+  });
+  return (result?.value as ChatgptCreateProjectDialogState | undefined) ?? { present: false };
+}
+
+async function dismissCreateProjectDialogIfOpen(
+  Runtime: ChromeClient['Runtime'],
+  options?: { strict?: boolean; source?: string },
+): Promise<ChatgptCreateProjectDialogState> {
+  const before = await readCreateProjectDialogState(Runtime);
+  if (!before.present) {
+    return before;
+  }
+  await Runtime.evaluate({
     expression: `(() => {
       const rootSelectors = ${JSON.stringify(CHATGPT_PROJECT_DIALOG_ROOT_SELECTORS)};
       const nameInputSelector = ${JSON.stringify(CHATGPT_PROJECT_NAME_INPUT_SELECTOR)};
@@ -3256,40 +3445,61 @@ async function dismissCreateProjectDialogIfOpen(Runtime: ChromeClient['Runtime']
         if (!(dialog instanceof Element)) return false;
         if (!isVisible(dialog)) return false;
         const input = dialog.querySelector(nameInputSelector);
-        if (input && isVisible(input)) {
-          return true;
-        }
+        if (input && isVisible(input)) return true;
         const text = normalize(dialog.textContent);
-        const hasCreateProjectTrigger = text.includes('create project');
-        const hasProjectNameLabel = text.includes(normalize(${JSON.stringify(CHATGPT_PROJECT_NAME_INPUT_LABEL)}).toLowerCase());
-        const hasSettingsLabel = text.includes(${JSON.stringify(CHATGPT_PROJECT_SETTINGS_BUTTON_MATCH)});
-        const hasInstructionsLabel = text.includes(normalize(${JSON.stringify(CHATGPT_PROJECT_INSTRUCTIONS_INPUT_LABEL)}));
-        return hasCreateProjectTrigger && (hasProjectNameLabel || hasSettingsLabel || hasInstructionsLabel);
+        return text.includes('create project') && (
+          text.includes(normalize(${JSON.stringify(CHATGPT_PROJECT_NAME_INPUT_LABEL)})) ||
+          text.includes(${JSON.stringify(CHATGPT_PROJECT_SETTINGS_BUTTON_MATCH)}) ||
+          text.includes(normalize(${JSON.stringify(CHATGPT_PROJECT_INSTRUCTIONS_INPUT_LABEL)}))
+        );
       };
-
-      const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open], dialog'))
-        .filter((dialog) => rootSelectors.some((selector) => dialog.matches(selector)));
-      if (!dialogs.length) return { ok: false, reason: 'no-dialog' };
-
-      const createDialog = dialogs.find(isCreateProjectDialog);
-      if (!createDialog) return { ok: false, reason: 'not-create-project' };
-
-      const closeButton = createDialog.querySelector(
-        '[aria-label*="close" i], [data-testid*="close" i], button[aria-label*="close" i], button[title*="close" i]',
-      );
-      if (closeButton) {
-        closeButton.click();
+      const dialog = rootSelectors
+        .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
+        .find(isCreateProjectDialog);
+      if (!dialog) return { ok: false, reason: 'dialog-missing' };
+      const closeButton = Array.from(dialog.querySelectorAll('button,[role="button"]')).find((node) => {
+        const label = normalize(node.getAttribute('aria-label') || node.getAttribute('title') || node.textContent || '');
+        return label === 'close' || label.includes('close');
+      });
+      if (closeButton instanceof HTMLElement) {
+        closeButton.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'mouse', button: 0, buttons: 1 }));
+        closeButton.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0, buttons: 1 }));
+        closeButton.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerType: 'mouse', button: 0, buttons: 0 }));
+        closeButton.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 0, buttons: 0 }));
+        closeButton.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
       }
-      document.body.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true }),
-      );
-      return { ok: true };
+      const escapeInit = { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true, cancelable: true };
+      for (const target of [document.activeElement, document.body, document, window]) {
+        if (target && typeof target.dispatchEvent === 'function') {
+          target.dispatchEvent(new KeyboardEvent('keydown', escapeInit));
+          target.dispatchEvent(new KeyboardEvent('keyup', escapeInit));
+        }
+      }
+      return { ok: true, clickedClose: Boolean(closeButton) };
     })()`,
     returnByValue: true,
   });
-  if ((result?.value as { ok?: boolean } | undefined)?.ok) {
-    await waitForNotSelector(Runtime, CHATGPT_PROJECT_DIALOG_SELECTOR, 1_000).catch(() => undefined);
+  await waitForPredicate(
+    Runtime,
+    `(() => {
+      const state = ${buildChatgptCreateProjectDialogStateExpression()};
+      return state.present ? null : { ok: true };
+    })()`,
+    {
+      timeoutMs: 1500,
+      description: 'ChatGPT create-project dialog dismissed',
+    },
+  ).catch(() => undefined);
+  const after = await readCreateProjectDialogState(Runtime);
+  if (after.present && options?.strict) {
+    const name = normalizeUiText(after.projectName);
+    const label = options.source ? ` during ${options.source}` : '';
+    throw new Error(
+      `Stale ChatGPT create-project dialog${label} could not be dismissed` +
+        `${name ? ` (project name: ${name})` : ''}.`,
+    );
   }
+  return after.present ? after : before;
 }
 
 async function ensureChatgptSidebarOpen(client: ChromeClient): Promise<void> {
@@ -3921,16 +4131,21 @@ async function waitForCreateProjectDialogReady(client: ChromeClient, timeoutMs: 
 }
 
 async function readChatgptUserIdentity(client: ChromeClient): Promise<ProviderUserIdentity | null> {
-  const authSessionResult = await client.Runtime.evaluate({
-    expression: buildChatgptAuthSessionIdentityExpression(),
-    awaitPromise: true,
-    returnByValue: true,
-  });
-  const authIdentity = normalizeChatgptAuthSessionIdentity(
-    (authSessionResult.result?.value as ChatgptAuthSessionProbe | null | undefined) ?? null,
-  );
-  if (authIdentity) {
-    return authIdentity;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const authSessionResult = await client.Runtime.evaluate({
+      expression: buildChatgptAuthSessionIdentityExpression(),
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    const authIdentity = normalizeChatgptAuthSessionIdentity(
+      (authSessionResult.result?.value as ChatgptAuthSessionProbe | null | undefined) ?? null,
+    );
+    if (authIdentity) {
+      return authIdentity;
+    }
+    if (attempt < 2) {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
   }
 
   const fallbackResult = await client.Runtime.evaluate({
@@ -3950,6 +4165,7 @@ async function assertChatgptExpectedIdentity(
   assertProviderIdentityPreflight({
     providerId: 'chatgpt',
     actualIdentity: await readChatgptUserIdentity(client),
+    fallbackIdentity: options?.identityPreflightFallbackIdentity,
     expectedIdentity: options?.expectedUserIdentity,
     expectedServiceAccountId: options?.expectedServiceAccountId,
   });
@@ -4305,11 +4521,13 @@ async function setCreateProjectMemoryModeWithClient(
   memoryMode: ProjectMemoryMode,
 ): Promise<void> {
   const targetLabel = resolveChatgptProjectMemoryLabel(memoryMode);
+  const targetLabels = resolveChatgptProjectMemoryLabelCandidates(memoryMode);
+  const normalizedTargetLabels = targetLabels.map((label) => normalizeUiText(label).toLowerCase());
   const interactionStrategies = ['pointer', 'keyboard-space', 'keyboard-arrowdown'] as const;
   await withUiDiagnostics(
     client.Runtime,
     async () => {
-      const menuAlreadyOpen = await waitForSelector(client.Runtime, '[role="menu"] [role="menuitemradio"]', 250);
+      const menuAlreadyOpen = await waitForSelector(client.Runtime, CHATGPT_PROJECT_MEMORY_MENU_ITEM_SELECTOR, 250);
       if (!menuAlreadyOpen) {
         const opened = await openMenu(client.Runtime, {
           trigger: {
@@ -4319,7 +4537,7 @@ async function setCreateProjectMemoryModeWithClient(
             interactionStrategies,
           },
           menuSelector: '[role="menu"]',
-          expectedItemMatch: { startsWith: [targetLabel.toLowerCase()] },
+          expectedItemMatch: { startsWith: normalizedTargetLabels },
           timeoutMs: 3000,
         });
         if (!opened.ok) {
@@ -4334,10 +4552,21 @@ async function setCreateProjectMemoryModeWithClient(
       }
       const { result } = await client.Runtime.evaluate({
         expression: `(() => {
-          const target = ${JSON.stringify(targetLabel.toLowerCase())};
-          const items = Array.from(document.querySelectorAll('[role="menuitemradio"]'));
+          const targets = ${JSON.stringify(normalizedTargetLabels)};
           const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
-          const item = items.find((node) => normalize(node.textContent).startsWith(target));
+          const isVisible = (node) => {
+            if (!(node instanceof Element)) return false;
+            const rect = node.getBoundingClientRect();
+            const style = getComputedStyle(node);
+            return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+          };
+          const menus = Array.from(document.querySelectorAll('[role="menu"]')).filter(isVisible);
+          const items = menus.flatMap((menu) => Array.from(menu.querySelectorAll('[role="menuitemradio"], [role="menuitem"][aria-checked], button[aria-checked], [aria-checked]')))
+            .filter(isVisible);
+          const item = items.find((node) => {
+            const label = normalize(node.textContent);
+            return targets.some((target) => label === target || label.startsWith(target));
+          });
           if (!item) {
             return {
               ok: false,
@@ -4379,7 +4608,7 @@ async function setCreateProjectMemoryModeWithClient(
     },
     {
       label: 'chatgpt-set-create-project-memory-mode',
-      candidateSelectors: ['button', '[role="menuitemradio"]', '[role="menu"]'],
+      candidateSelectors: ['button', '[role="menuitemradio"]', '[role="menuitem"][aria-checked]', '[role="menu"]'],
       context: {
         triggerLabel: CHATGPT_PROJECT_SETTINGS_BUTTON_LABEL,
         triggerRoots: [...CHATGPT_PROJECT_DIALOG_ROOT_SELECTORS],
@@ -4394,25 +4623,127 @@ async function clickCreateProjectConfirmWithClient(client: ChromeClient): Promis
   if (!ready) {
     throw new Error('ChatGPT create-project dialog not found');
   }
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
-      const dialog =
-        document.querySelector(${JSON.stringify(CHATGPT_PROJECT_DIALOG_SELECTOR)}) ||
-        document.querySelector('dialog[open]') ||
-        document.querySelector('[role="dialog"]');
-      if (!dialog) return { ok: false, reason: 'dialog-missing' };
-      const button = Array.from(dialog.querySelectorAll('button'))
-        .find((node) => String(node.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase() === 'create project');
-      if (!button) return { ok: false, reason: 'button-missing' };
-      if (button.disabled) return { ok: false, reason: 'button-disabled' };
-      button.click();
-      return { ok: true };
-    })()`,
-    returnByValue: true,
-  });
-  const info = result?.value as { ok?: boolean; reason?: string } | undefined;
-  if (!info?.ok) {
-    throw new Error(info?.reason || 'ChatGPT create project button not found');
+  await withUiDiagnostics(
+    client.Runtime,
+    async () => {
+      const createConfirmButtonLabels = resolveChatgptProjectCreateConfirmButtonLabels();
+      const pressed = await pressButton(client.Runtime, {
+        match: { exact: createConfirmButtonLabels },
+        rootSelectors: [...CHATGPT_PROJECT_DIALOG_ROOT_SELECTORS],
+        requireVisible: true,
+        interactionStrategies: ['pointer', 'click', 'keyboard-enter'],
+        timeoutMs: 4000,
+        logCandidatesOnMiss: true,
+      });
+      if (pressed.ok) return;
+      const { result } = await client.Runtime.evaluate({
+        expression: `(() => {
+          const rootSelectors = ${JSON.stringify([...CHATGPT_PROJECT_DIALOG_ROOT_SELECTORS])};
+          const blockedLabels = ${JSON.stringify([...CHATGPT_DIALOG_DISMISS_LABELS, 'back', 'cancel', 'close'])};
+          const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+          const isVisible = (el) => {
+            if (!(el instanceof Element)) return false;
+            const rect = el.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+          };
+          const roots = rootSelectors
+            .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
+            .filter((node, index, array) => array.indexOf(node) === index && isVisible(node));
+          const dialog = roots[0] || document.querySelector('dialog[open]') || document.querySelector('[role="dialog"]');
+          if (!dialog) return { ok: false, reason: 'dialog-missing' };
+          const buttons = Array.from(dialog.querySelectorAll('button,[role="button"]'))
+            .filter((button) => isVisible(button))
+            .map((button) => {
+              const label = normalize(button.getAttribute('aria-label') || button.textContent || button.getAttribute('title') || '');
+              const disabled = Boolean(button.disabled || button.getAttribute('aria-disabled') === 'true');
+              const type = normalize(button.getAttribute('type') || '');
+              return { button, label, disabled, type };
+            });
+          const submit =
+            buttons.find((entry) => !entry.disabled && entry.type === 'submit' && !blockedLabels.includes(entry.label)) ||
+            buttons.find((entry) => !entry.disabled && entry.label.includes('create') && !blockedLabels.includes(entry.label));
+          if (!submit) {
+            return {
+              ok: false,
+              reason: 'create-confirm-button-missing',
+              labels: buttons.map((entry) => entry.label + (entry.disabled ? ' (disabled)' : '')).filter(Boolean),
+            };
+          }
+          submit.button.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'mouse', button: 0, buttons: 1 }));
+          submit.button.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0, buttons: 1 }));
+          submit.button.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerType: 'mouse', button: 0, buttons: 0 }));
+          submit.button.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, button: 0, buttons: 0 }));
+          submit.button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+          return {
+            ok: true,
+            matchedLabel: submit.label || submit.type,
+            fallbackKind: submit.type === 'submit' ? 'submit-button' : 'semantic-create-button',
+            url: window.location.href,
+            title: document.title,
+          };
+        })()`,
+        returnByValue: true,
+      });
+      const info = result?.value as {
+        ok?: boolean;
+        reason?: string;
+        labels?: string[];
+        matchedLabel?: string;
+        fallbackKind?: string;
+        url?: string;
+        title?: string;
+      } | undefined;
+      if (!info?.ok) {
+        const labels = Array.isArray(info?.labels) && info.labels.length > 0
+          ? ` (visible buttons: ${info.labels.join(', ')})`
+          : '';
+        throw new Error(`${info?.reason || pressed.reason || 'ChatGPT create project button not found'}${labels}`);
+      }
+      await recordChatgptCreateProjectConfirmDriftObservation(info);
+    },
+    {
+      label: 'chatgpt-click-create-project-confirm',
+      candidateSelectors: ['button', '[role="button"]', CHATGPT_PROJECT_DIALOG_SELECTOR],
+      context: {
+        expectedLabels: resolveChatgptProjectCreateConfirmButtonLabels(),
+        dialogRoots: [...CHATGPT_PROJECT_DIALOG_ROOT_SELECTORS],
+      },
+    },
+  );
+}
+
+function resolveChatgptProjectCreateConfirmButtonLabels(): string[] {
+  return resolveEffectiveServiceUiLabelSet('chatgpt', 'project_create_confirm_buttons', [
+    'create project',
+    'create',
+    'continue',
+  ]).map((label) => normalizeUiText(label).toLowerCase()).filter(Boolean);
+}
+
+async function recordChatgptCreateProjectConfirmDriftObservation(info: {
+  matchedLabel?: string;
+  fallbackKind?: string;
+  url?: string;
+  title?: string;
+}): Promise<void> {
+  try {
+    await recordDomDriftObservation({
+      service: 'chatgpt',
+      surface: 'project-create-dialog',
+      action: 'confirm-create-project',
+      expectedLabels: resolveChatgptProjectCreateConfirmButtonLabels(),
+      observedLabel: normalizeUiText(info.matchedLabel),
+      fallbackKind: normalizeUiText(info.fallbackKind) || 'unknown',
+      rootSelector: CHATGPT_PROJECT_DIALOG_SELECTOR,
+      url: info.url,
+      title: info.title,
+      metadata: {
+        source: 'chatgptAdapter.clickCreateProjectConfirmWithClient',
+        handling: 'successful-configured-label-miss-fallback',
+      },
+    });
+  } catch {
+    // Drift observation is operator evidence. It should never make a recovered UI action fail.
   }
 }
 
@@ -4839,7 +5170,7 @@ async function scrapeChatgptProjects(client: ChromeClient): Promise<Project[]> {
           const match = url.pathname.match(/^\\/g\\/([^/]+)\\/project\\/?$/) || url.pathname.match(/^\\/g\\/([^/]+)\\/c\\/[^/]+\\/?$/);
           if (!match) return null;
           const raw = String(match[1] || '').trim();
-          const normalized = raw.match(/^(g-p-[a-z0-9]+)/i);
+          const normalized = raw.match(/^((?:g-p-[a-z0-9]+)|(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))/i);
           return normalized ? normalized[1] : null;
         } catch {
           return null;
@@ -4994,7 +5325,7 @@ async function scrapeChatgptConversations(
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
       const normalizeProjectId = (value) => {
         const trimmed = String(value || '').trim();
-        const match = trimmed.match(/^(g-p-[a-z0-9]+)/i);
+        const match = trimmed.match(/^((?:g-p-[a-z0-9]+)|(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))/i);
         return match ? match[1] : null;
       };
       const parse = (href) => {
@@ -5183,7 +5514,7 @@ async function scrollChatgptConversationHistoryRail(
       const expectedProjectId = ${JSON.stringify(projectId)};
       const normalizeProjectId = (value) => {
         const trimmed = String(value || '').trim();
-        const match = trimmed.match(/^(g-p-[a-z0-9]+)/i);
+        const match = trimmed.match(/^((?:g-p-[a-z0-9]+)|(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))/i);
         return match ? match[1] : null;
       };
       const parse = (href) => {
@@ -5284,7 +5615,7 @@ async function _tagChatgptConversationRow(
             .trim();
         const normalizeProjectId = (value) => {
           const trimmed = String(value || '').trim();
-          const match = trimmed.match(/^(g-p-[a-z0-9]+)/i);
+          const match = trimmed.match(/^((?:g-p-[a-z0-9]+)|(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))/i);
           return match ? match[1] : null;
         };
         const parse = (href) => {
@@ -5575,7 +5906,7 @@ async function tagChatgptConversationRowExact(
         const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
         const normalizeProjectId = (value) => {
           const trimmed = String(value || '').trim();
-          const match = trimmed.match(/^(g-p-[a-z0-9]+)/i);
+          const match = trimmed.match(/^((?:g-p-[a-z0-9]+)|(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}))/i);
           return match ? match[1] : null;
         };
         const parse = (href) => {
@@ -7315,6 +7646,17 @@ async function tagChatgptArtifactButtonWithClient(
       expression: `(() => {
         const attr = ${JSON.stringify(CHATGPT_DOWNLOAD_BUTTON_ATTR)};
         const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+        const titleKey = (value) => normalize(value).toLowerCase().replace(/\\s+/g, '');
+        const titleMatches = (candidateTitle, expectedTitle) => {
+          if (!expectedTitle) return true;
+          const candidate = normalize(candidateTitle).toLowerCase();
+          if (candidate === expectedTitle) return true;
+          const candidateKey = titleKey(candidate);
+          const expectedKey = titleKey(expectedTitle);
+          if (candidateKey === expectedKey) return true;
+          const expectedStem = expectedKey.replace(/\\.[^.]+$/, '');
+          return expectedStem.length > 3 && candidateKey.startsWith(expectedStem);
+        };
         const isVisible = (node) => {
           if (!(node instanceof Element)) return false;
           const rect = node.getBoundingClientRect();
@@ -7387,7 +7729,7 @@ async function tagChatgptArtifactButtonWithClient(
         };
         const matches = (candidate) => {
           if (!candidate || !candidate.title) return false;
-          if (expectedTitle && candidate.title !== expectedTitle) return false;
+          if (expectedTitle && !titleMatches(candidate.title, expectedTitle)) return false;
           if (expectedTurnId && candidate.turnId !== expectedTurnId) return false;
           if (!expectedTurnId && expectedMessageId && candidate.messageId !== expectedMessageId && candidate.turnId !== expectedMessageId) {
             return false;
@@ -7897,6 +8239,10 @@ export function createChatgptAdapter(): Pick<
         const { client } = await connectToChatgptTab(currentOptions, currentOptions?.configuredUrl ?? CHATGPT_HOME_URL);
         try {
           await assertChatgptExpectedIdentity(client, currentOptions);
+          await dismissCreateProjectDialogIfOpen(client.Runtime, {
+            strict: true,
+            source: 'list-projects',
+          });
           await ensureChatgptSidebarOpen(client);
           return await scrapeChatgptProjects(client);
         } finally {
@@ -7926,6 +8272,10 @@ export function createChatgptAdapter(): Pick<
         const { client } = await connectToChatgptTab(currentOptions, targetUrl);
         try {
           await assertChatgptExpectedIdentity(client, currentOptions);
+          await dismissCreateProjectDialogIfOpen(client.Runtime, {
+            strict: true,
+            source: 'list-conversations',
+          });
           return await scrapeChatgptConversations(client, normalizedProjectId, currentOptions, debugContext);
         } finally {
           await client.close().catch(() => undefined);
@@ -7958,6 +8308,10 @@ export function createChatgptAdapter(): Pick<
       );
       try {
         await assertChatgptExpectedIdentity(client, options);
+        await dismissCreateProjectDialogIfOpen(client.Runtime, {
+          strict: true,
+          source: 'read-conversation-context',
+        });
         return await readChatgptConversationContextWithClient(
           client,
           conversationId,
@@ -7993,6 +8347,10 @@ export function createChatgptAdapter(): Pick<
       );
       try {
         await assertChatgptExpectedIdentity(client, options);
+        await dismissCreateProjectDialogIfOpen(client.Runtime, {
+          strict: true,
+          source: 'read-active-conversation-artifacts',
+        });
         if (targetId && targetId !== options.tabTargetId) {
           throw new Error(
             `ChatGPT active artifact read attached to ${targetId}, expected submitted tab ${options.tabTargetId}.`,
@@ -8047,6 +8405,10 @@ export function createChatgptAdapter(): Pick<
       const { client } = await connectToChatgptTab(options, CHATGPT_LIBRARY_URL);
       try {
         await assertChatgptExpectedIdentity(client, options);
+        await dismissCreateProjectDialogIfOpen(client.Runtime, {
+          strict: true,
+          source: 'list-account-files',
+        });
         await navigateToChatgptUrl(client, CHATGPT_LIBRARY_URL);
         const inventory = await readChatgptLibraryItemsWithClient(client);
         return inventory.files;
@@ -8188,6 +8550,10 @@ export function createChatgptAdapter(): Pick<
       const { client } = await connectToChatgptTab(options, options?.configuredUrl ?? CHATGPT_HOME_URL);
       try {
         await assertChatgptExpectedIdentity(client, options);
+        await dismissCreateProjectDialogIfOpen(client.Runtime, {
+          strict: true,
+          source: 'create-project-start',
+        });
         await navigateToChatgptUrl(client, options?.configuredUrl ?? CHATGPT_HOME_URL);
         const initialProjects = await scrapeChatgptProjects(client);
         const initialProjectIds = new Set(initialProjects.map((project) => project.id));
@@ -8271,6 +8637,12 @@ export function createChatgptAdapter(): Pick<
           await uploadChatgptProjectSourceFilesWithClient(client, created.id, input.files);
         }
         return created;
+      } catch (error) {
+        await dismissCreateProjectDialogIfOpen(client.Runtime, {
+          strict: false,
+          source: 'create-project-error-cleanup',
+        }).catch(() => undefined);
+        throw error;
       } finally {
         await client.close().catch(() => undefined);
       }

@@ -10,6 +10,8 @@ import {
   extractChatgptConversationSourcesFromPayload,
   findChatgptProjectByName,
   findChatgptProjectSourceName,
+  buildChatgptCreateProjectDialogStateExpressionForTest,
+  buildChatgptAuthSessionIdentityExpression,
   mergeChatgptCanvasArtifactContent,
   mergeChatgptConversationArtifacts,
   matchesChatgptConversationTitleProbe,
@@ -36,6 +38,8 @@ import {
   resolveChatgptConversationUrl,
   resolveChatgptProjectUrl,
   resolveChatgptProjectMemoryLabel,
+  resolveChatgptProjectMemoryLabelCandidates,
+  resolveChatgptProjectCreateConfirmLabelsForTest,
   resolveChatgptProjectSettingsCommitLabelsForTest,
   resolveChatgptProjectSourceUploadActionLabelsForTest,
   serializeChatgptGridRowsToCsv,
@@ -225,6 +229,9 @@ describe('normalizeChatgptProjectId', () => {
   test('keeps bare ids unchanged and strips slug suffixes', () => {
     expect(normalizeChatgptProjectId('g-p-69c859e5d5b48191af37847a03153475')).toBe('g-p-69c859e5d5b48191af37847a03153475');
     expect(normalizeChatgptProjectId('g-p-69c859e5d5b48191af37847a03153475-oracle')).toBe('g-p-69c859e5d5b48191af37847a03153475');
+    expect(normalizeChatgptProjectId('133ad4c5-b857-4a30-bf17-d951db57c33f')).toBe(
+      '133ad4c5-b857-4a30-bf17-d951db57c33f',
+    );
   });
 
   test('rejects non-canonical project ids', () => {
@@ -267,6 +274,15 @@ describe('resolveChatgptProjectMemoryLabel', () => {
   test('maps project mode to the ChatGPT Project-only label', () => {
     expect(resolveChatgptProjectMemoryLabel('project')).toBe('Project-only');
   });
+
+  test('keeps tolerant candidates for current menuitem-based project memory selector', () => {
+    expect(resolveChatgptProjectMemoryLabelCandidates('global')).toEqual(
+      expect.arrayContaining(['Default', 'Default memory']),
+    );
+    expect(resolveChatgptProjectMemoryLabelCandidates('project')).toEqual(
+      expect.arrayContaining(['Project-only', 'Project only', 'Project-only memory']),
+    );
+  });
 });
 
 describe('resolveChatgptProjectSettingsCommitLabelsForTest', () => {
@@ -274,6 +290,25 @@ describe('resolveChatgptProjectSettingsCommitLabelsForTest', () => {
     expect(resolveChatgptProjectSettingsCommitLabelsForTest()).toEqual(
       expect.arrayContaining(['save', 'save changes', 'done', 'apply']),
     );
+  });
+});
+
+describe('resolveChatgptProjectCreateConfirmLabelsForTest', () => {
+  test('uses manifest-owned create-project confirm button labels', () => {
+    expect(resolveChatgptProjectCreateConfirmLabelsForTest()).toEqual(
+      expect.arrayContaining(['create project', 'create', 'continue']),
+    );
+  });
+});
+
+describe('buildChatgptCreateProjectDialogStateExpressionForTest', () => {
+  test('recognizes the current create-project modal selectors', () => {
+    const expression = buildChatgptCreateProjectDialogStateExpressionForTest();
+
+    expect(expression).toContain('input[name=\\"projectName\\"]');
+    expect(expression).toContain('create project');
+    expect(expression).toContain('projectName');
+    expect(expression).toContain('closeButtonLabels');
   });
 });
 
@@ -289,6 +324,9 @@ describe('resolveChatgptProjectUrl', () => {
   test('builds project routes from the service manifest template', () => {
     expect(resolveChatgptProjectUrl('g-p-69c851be8cc88191afe109bea1b2a28d')).toBe(
       'https://chatgpt.com/g/g-p-69c851be8cc88191afe109bea1b2a28d/project',
+    );
+    expect(resolveChatgptProjectUrl('133ad4c5-b857-4a30-bf17-d951db57c33f')).toBe(
+      'https://chatgpt.com/g/133ad4c5-b857-4a30-bf17-d951db57c33f/project',
     );
   });
 });
@@ -434,6 +472,14 @@ describe('recoverVisibleChatgptBlockingSurfaceWithClient', () => {
 });
 
 describe('normalizeChatgptAuthSessionIdentity', () => {
+  test('auth session expression bounds stalled session fetches', () => {
+    const expression = buildChatgptAuthSessionIdentityExpression();
+
+    expect(expression).toContain('AbortController');
+    expect(expression).toContain('controller?.abort()');
+    expect(expression).toContain('signal: controller?.signal');
+  });
+
   test('prefers auth session user email and id', () => {
     expect(
       normalizeChatgptAuthSessionIdentity({
@@ -677,6 +723,29 @@ describe('matchesChatgptDownloadButtonProbe', () => {
         },
         {
           title: 'auracall-export.csv',
+          messageId: 'message-1',
+          messageIndex: 4,
+          metadata: {
+            turnId: 'turn-1',
+            buttonIndex: 0,
+          },
+        },
+      ),
+    ).toBe(true);
+  });
+
+  test('matches download button titles split by ChatGPT layout whitespace', () => {
+    expect(
+      matchesChatgptDownloadButtonProbe(
+        {
+          title: 'legacy_readout.j on',
+          turnId: 'turn-1',
+          messageId: 'message-1',
+          messageIndex: 4,
+          buttonIndex: 0,
+        },
+        {
+          title: 'legacy_readout.json',
           messageId: 'message-1',
           messageIndex: 4,
           metadata: {
@@ -1753,6 +1822,12 @@ describe('resolveChatgptConversationUrl', () => {
         'g-p-69c851be8cc88191afe109bea1b2a28d-oracle',
       ),
     ).toBe('https://chatgpt.com/g/g-p-69c851be8cc88191afe109bea1b2a28d/c/69c93212-f180-8330-815b-5f831fc395e6');
+    expect(
+      resolveChatgptConversationUrl(
+        '69c93212-f180-8330-815b-5f831fc395e6',
+        '133ad4c5-b857-4a30-bf17-d951db57c33f',
+      ),
+    ).toBe('https://chatgpt.com/g/133ad4c5-b857-4a30-bf17-d951db57c33f/c/69c93212-f180-8330-815b-5f831fc395e6');
   });
 });
 
