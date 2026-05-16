@@ -14,7 +14,7 @@ describe('api run archive CLI helpers', () => {
   test('reads archive search with filters from the local API', async () => {
     const fetchImpl = vi.fn(async (url: URL) => {
       expect(url.toString()).toBe(
-        'http://127.0.0.1:18095/v1/archive?kind=upload&provider=chatgpt&runtimeProfile=default&batchId=batch_1&q=packet&limit=3',
+        'http://127.0.0.1:18095/v1/archive?kind=upload&provider=chatgpt&runtimeProfile=default&projectId=project_1&batchId=batch_1&q=packet&limit=3',
       );
       return new Response(JSON.stringify({
         object: 'run_archive',
@@ -34,6 +34,7 @@ describe('api run archive CLI helpers', () => {
       kind: 'upload',
       provider: 'chatgpt',
       runtimeProfile: 'default',
+      projectId: 'project_1',
       batchId: 'batch_1',
       query: 'packet',
       limit: 3,
@@ -61,6 +62,7 @@ describe('api run archive CLI helpers', () => {
           provider: 'chatgpt',
           runtimeProfile: 'default',
           browserProfile: null,
+          projectId: 'project_1',
           boundIdentityKey: null,
           agentId: 'instant-chatgpt-ecochran76',
           teamId: null,
@@ -90,12 +92,13 @@ describe('api run archive CLI helpers', () => {
     }, fetchImpl as never);
 
     expect(formatApiRunArchiveItemCliSummary(item)).toContain('Run archive item: response:resp_1');
+    expect(formatApiRunArchiveItemCliSummary(item)).toContain('Project: project_1');
     expect(formatApiRunArchiveCliSummary({
       object: 'run_archive',
       kind: 'response',
       items: [(item as { item: unknown }).item],
       metrics: { total: 1 },
-    })).toContain('response response:resp_1');
+    })).toContain('project=project_1');
   });
 
   test('requests archive index backfill from the local API', async () => {

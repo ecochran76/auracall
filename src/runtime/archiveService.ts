@@ -46,6 +46,7 @@ export interface RunArchiveListRequest {
   kind?: RunArchiveItemKind | 'all' | null;
   provider?: string | null;
   runtimeProfile?: string | null;
+  projectId?: string | null;
   agent?: string | null;
   team?: string | null;
   responseId?: string | null;
@@ -67,6 +68,7 @@ export interface RunArchiveItem {
   provider: string | null;
   runtimeProfile: string | null;
   browserProfile: string | null;
+  projectId: string | null;
   boundIdentityKey: string | null;
   agentId: string | null;
   teamId: string | null;
@@ -511,6 +513,8 @@ async function buildRunArchiveItems(records: ExecutionRunStoredRecord[]): Promis
         provider: ref.provider,
         runtimeProfile: ref.runtimeProfileId,
         browserProfile: ref.browserProfileId,
+        projectId: ref.projectId,
+        boundIdentityKey: ref.boundIdentityKey,
         responseId: record.runId,
         batchId: batch.batchId,
         batchIndex: batch.batchIndex,
@@ -542,6 +546,7 @@ function buildBatchArchiveItems(records: ResponseBatchRecord[]): RunArchiveItem[
     provider: null,
     runtimeProfile: null,
     browserProfile: null,
+    projectId: null,
     boundIdentityKey: null,
     agentId: null,
     teamId: null,
@@ -588,7 +593,8 @@ function buildMediaArchiveItems(records: MediaGenerationStoredRecord[]): RunArch
       provider: response.provider,
       runtimeProfile: readRecordString(response.metadata, ['runtimeProfileId', 'runtimeProfile']),
       browserProfile: readRecordString(response.metadata, ['browserProfileId', 'browserProfile']),
-      boundIdentityKey: null,
+      projectId: readRecordString(response.metadata, ['projectId', 'project']),
+      boundIdentityKey: readRecordString(response.metadata, ['boundIdentityKey', 'identityKey', 'serviceAccountId']),
       agentId: null,
       teamId: null,
       responseId: null,
@@ -648,6 +654,7 @@ function buildMediaArchiveItems(records: MediaGenerationStoredRecord[]): RunArch
 }
 
 function createBaseRunItem(record: ExecutionRunStoredRecord, firstStep: ExecutionRunStep | null): RunArchiveItem {
+  const browserRun = readStepBrowserRun(firstStep);
   return {
     id: `response:${record.runId}`,
     object: 'run_archive_item',
@@ -660,7 +667,8 @@ function createBaseRunItem(record: ExecutionRunStoredRecord, firstStep: Executio
     provider: firstStep?.service ?? null,
     runtimeProfile: firstStep?.runtimeProfileId ?? readRecordString(record.bundle.run.initialInputs, ['runtimeProfile']),
     browserProfile: firstStep?.browserProfileId ?? null,
-    boundIdentityKey: null,
+    projectId: readRecordString(browserRun, ['projectId', 'project']),
+    boundIdentityKey: readRecordString(browserRun, ['boundIdentityKey', 'identityKey', 'serviceAccountId']),
     agentId: firstStep?.agentId ?? null,
     teamId: record.bundle.run.sourceKind === 'team-run' ? record.bundle.run.sourceId : readRecordString(record.bundle.run.initialInputs, ['team']),
     responseId: record.runId,
@@ -695,6 +703,7 @@ function buildEvidenceArchiveItem(record: RunArchiveEvidenceRecord): RunArchiveI
     provider: null,
     runtimeProfile: null,
     browserProfile: null,
+    projectId: null,
     boundIdentityKey: null,
     agentId: null,
     teamId: null,
@@ -749,11 +758,19 @@ function listInputArtifacts(steps: ExecutionRunStep[]): Array<{
   );
 }
 
+function readStepBrowserRun(step: ExecutionRunStep | null): Record<string, unknown> | null {
+  return isRecord(step?.output?.structuredData?.browserRun)
+    ? step.output.structuredData.browserRun
+    : null;
+}
+
 function listProviderConversationRefs(record: ExecutionRunStoredRecord): Array<{
   stepId: string;
   provider: Exclude<ExecutionRunServiceId, null>;
   runtimeProfileId: string | null;
   browserProfileId: string | null;
+  projectId: string | null;
+  boundIdentityKey: string | null;
   conversationId: string;
   url: string | null;
 }> {
@@ -769,6 +786,8 @@ function listProviderConversationRefs(record: ExecutionRunStoredRecord): Array<{
     if (!provider || !conversationId) continue;
     const runtimeProfileId = readRecordString(browserRun, ['runtimeProfileId', 'runtimeProfile']) ?? step.runtimeProfileId;
     const browserProfileId = readRecordString(browserRun, ['browserProfileId', 'browserProfile']) ?? step.browserProfileId;
+    const projectId = readRecordString(browserRun, ['projectId', 'project']);
+    const boundIdentityKey = readRecordString(browserRun, ['boundIdentityKey', 'identityKey', 'serviceAccountId']);
     const key = [provider, runtimeProfileId ?? '', conversationId].join(':');
     if (seen.has(key)) continue;
     seen.add(key);
@@ -777,6 +796,8 @@ function listProviderConversationRefs(record: ExecutionRunStoredRecord): Array<{
       provider,
       runtimeProfileId,
       browserProfileId,
+      projectId,
+      boundIdentityKey,
       conversationId,
       url: readRecordString(browserRun, ['tabUrl', 'conversationUrl', 'url']),
     });
@@ -801,6 +822,7 @@ function matchesRequest(item: RunArchiveItem, request: RunArchiveListRequest & {
   if (request.kind !== 'all' && item.kind !== request.kind) return false;
   if (request.provider && item.provider !== request.provider) return false;
   if (request.runtimeProfile && item.runtimeProfile !== request.runtimeProfile) return false;
+  if (request.projectId && item.projectId !== request.projectId) return false;
   if (request.agent && item.agentId !== request.agent) return false;
   if (request.team && item.teamId !== request.team) return false;
   if (request.responseId && item.responseId !== request.responseId) return false;
@@ -818,6 +840,8 @@ function itemMatchesQuery(item: RunArchiveItem, query: string): boolean {
     item.title,
     item.provider,
     item.runtimeProfile,
+    item.projectId,
+    item.boundIdentityKey,
     item.agentId,
     item.teamId,
     item.responseId,

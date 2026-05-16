@@ -120,7 +120,16 @@ function normalizeIndexRecord(value: unknown): RunArchiveIndexRecord {
 function normalizeItems(items: unknown[]): RunArchiveItem[] {
   return items
     .filter(isRunArchiveItem)
+    .map(normalizeRunArchiveItem)
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt) || left.id.localeCompare(right.id));
+}
+
+function normalizeRunArchiveItem(item: RunArchiveItem): RunArchiveItem {
+  const record = item as RunArchiveItem & { projectId?: unknown };
+  return {
+    ...item,
+    projectId: typeof record.projectId === 'string' && record.projectId.trim().length > 0 ? record.projectId.trim() : null,
+  };
 }
 
 function isRunArchiveItem(value: unknown): value is RunArchiveItem {

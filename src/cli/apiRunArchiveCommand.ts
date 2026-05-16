@@ -5,6 +5,7 @@ export interface ApiRunArchiveCliOptions {
   kind?: string | null;
   provider?: string | null;
   runtimeProfile?: string | null;
+  projectId?: string | null;
   agent?: string | null;
   team?: string | null;
   responseId?: string | null;
@@ -39,6 +40,7 @@ export async function readApiRunArchiveForCli(
   appendOptionalSearchParam(url, 'kind', options.kind);
   appendOptionalSearchParam(url, 'provider', options.provider);
   appendOptionalSearchParam(url, 'runtimeProfile', options.runtimeProfile);
+  appendOptionalSearchParam(url, 'projectId', options.projectId);
   appendOptionalSearchParam(url, 'agent', options.agent);
   appendOptionalSearchParam(url, 'team', options.team);
   appendOptionalSearchParam(url, 'responseId', options.responseId);
@@ -147,7 +149,7 @@ export function formatApiRunArchiveCliSummary(payload: unknown): string {
   for (const item of items.slice(0, 25)) {
     if (!isRecord(item)) continue;
     lines.push(
-      `- ${readString(item.kind) ?? 'unknown'} ${readString(item.id) ?? 'unknown'} status=${readString(item.status) ?? 'n/a'} provider=${readString(item.provider) ?? 'n/a'} response=${readString(item.responseId) ?? 'n/a'} batch=${readString(item.batchId) ?? 'n/a'} title=${readString(item.title) ?? ''}`.trim(),
+      `- ${readString(item.kind) ?? 'unknown'} ${readString(item.id) ?? 'unknown'} status=${readString(item.status) ?? 'n/a'} provider=${readString(item.provider) ?? 'n/a'} project=${readString(item.projectId) ?? 'n/a'} response=${readString(item.responseId) ?? 'n/a'} batch=${readString(item.batchId) ?? 'n/a'} title=${readString(item.title) ?? ''}`.trim(),
     );
   }
   return lines.join('\n');
@@ -161,6 +163,7 @@ export function formatApiRunArchiveItemCliSummary(payload: unknown): string {
     `Kind: ${readString(item.kind) ?? 'unknown'}`,
     `Status: ${readString(item.status) ?? 'n/a'}`,
     `Provider: ${readString(item.provider) ?? 'n/a'}`,
+    `Project: ${readString(item.projectId) ?? 'n/a'}`,
     `Response: ${readString(item.responseId) ?? 'n/a'}`,
     `Batch: ${readString(item.batchId) ?? 'n/a'}`,
   ];

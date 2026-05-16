@@ -1221,6 +1221,7 @@ apiCommand
   .option('--kind <kind>', 'Filter kind: response, response_batch, team_run, media_generation, upload, generated_artifact, provider_conversation, evidence.')
   .option('--provider <provider>', 'Filter by provider.')
   .option('--runtime-profile <profile>', 'Filter by runtime profile.')
+  .option('--project-id <id>', 'Filter by provider project id.')
   .option('--agent <agent>', 'Filter by agent id.')
   .option('--team <team>', 'Filter by team id.')
   .option('--response-id <id>', 'Filter by response id.')
@@ -1243,6 +1244,7 @@ apiCommand
       kind: commandOptions.kind,
       provider: commandOptions.provider,
       runtimeProfile: commandOptions.runtimeProfile,
+      projectId: commandOptions.projectId,
       agent: commandOptions.agent,
       team: commandOptions.team,
       responseId: commandOptions.responseId,

@@ -5,6 +5,7 @@ import type { ExecuteStoredRunStepContext, ExecuteStoredRunStepResult } from './
 import type { ExecutionServiceHostDeps } from './serviceHost.js';
 import type { TeamRunArtifactRef } from '../teams/types.js';
 import { getAgent, getRuntimeProfileBrowserProfileId, resolveRuntimeSelection } from '../config/model.js';
+import { resolveConfiguredServiceAccountId } from '../config/serviceAccountIdentity.js';
 import {
   isChatgptSemanticModelSelector,
   resolveChatgptSemanticModelSelector,
@@ -51,6 +52,7 @@ interface BrowserResponseArtifactMaterializerInput {
   chromeHost: string | null;
   chromePort: number | null;
   expectedUserIdentity: ProviderUserIdentity | null;
+  expectedServiceAccountId: string | null;
 }
 
 interface BrowserResponseArtifactMaterializerResult {
@@ -93,12 +95,126 @@ function buildResponseFormatInstruction(metadata: unknown): string | null {
   return 'The caller requested OpenAI-compatible response_format {"type":"json_object"}. Return exactly one valid JSON object and no surrounding prose.';
 }
 
+function buildBrowserResponseArtifactInstruction(
+  metadata: unknown,
+  service: 'chatgpt' | 'gemini' | 'grok',
+): string | null {
+  if (!shouldMaterializeBrowserResponseArtifacts(metadata)) return null;
+  const fileName = readRequiredBrowserResponseArtifactFileName(metadata);
+  const target = fileName ? ` named exactly ${fileName}` : '';
+  const fileBaseName = fileName ? path.basename(fileName) : null;
+  const chatgptSandboxInstruction =
+    service === 'chatgpt' && fileBaseName
+      ? [
+          `For ChatGPT, use the workbench/Python file sandbox and write the requested output to /mnt/data/${fileBaseName}.`,
+          `Include a final markdown download link exactly [${fileBaseName}](sandbox:/mnt/data/${fileBaseName}) so AuraCall can materialize it.`,
+        ]
+      : [];
+  return [
+    `Create a downloadable/workspace file artifact${target}.`,
+    ...chatgptSandboxInstruction,
+    'Use the provider workbench file/artifact tooling when available; do not satisfy this request with inline prose only.',
+    fileName
+      ? `Do not reply that ${fileName} is ready until the file artifact exists in the conversation and can be downloaded.`
+      : 'Do not reply that the work is ready until the file artifact exists in the conversation and can be downloaded.',
+  ].join(' ');
+}
+
 function shouldMaterializeBrowserResponseArtifacts(metadata: unknown): boolean {
   if (!isRecord(metadata)) return false;
   const outputContract = isRecord(metadata.outputContract) ? metadata.outputContract : null;
   if (!outputContract) return false;
   const mode = asNonEmptyString(outputContract.mode)?.toLowerCase() ?? '';
   return mode.includes('artifact') || asNonEmptyString(outputContract.artifactFileName) !== null;
+}
+
+function readRequiredBrowserResponseArtifactFileName(metadata: unknown): string | null {
+  if (!isRecord(metadata)) return null;
+  const outputContract = isRecord(metadata.outputContract) ? metadata.outputContract : null;
+  if (!outputContract) return null;
+  const mode = asNonEmptyString(outputContract.mode)?.toLowerCase() ?? '';
+  const artifactFileName = asNonEmptyString(outputContract.artifactFileName);
+  if (!mode.includes('artifact') && !artifactFileName) return null;
+  return artifactFileName;
+}
+
+function normalizeArtifactName(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function artifactMatchesRequiredFileName(artifact: TeamRunArtifactRef, requiredFileName: string): boolean {
+  const expected = normalizeArtifactName(path.basename(requiredFileName));
+  const candidates = [
+    artifact.title,
+    artifact.path ? path.basename(artifact.path) : null,
+    artifact.uri ? path.basename(artifact.uri.split(/[?#]/, 1)[0] ?? artifact.uri) : null,
+    artifact.id,
+  ].map((value) => typeof value === 'string' ? normalizeArtifactName(path.basename(value)) : null);
+  return candidates.includes(expected);
+}
+
+function artifactIsMaterializedFile(artifact: TeamRunArtifactRef): boolean {
+  return Boolean(asNonEmptyString(artifact.path));
+}
+
+function assertRequiredBrowserResponseArtifactMaterialized(input: {
+  metadata: unknown;
+  artifacts: TeamRunArtifactRef[];
+  notes: string[];
+  answerText: string;
+}): void {
+  const requiredFileName = readRequiredBrowserResponseArtifactFileName(input.metadata);
+  if (!requiredFileName && !shouldMaterializeBrowserResponseArtifacts(input.metadata)) {
+    return;
+  }
+  const hasRequiredArtifact = requiredFileName
+    ? input.artifacts.some((artifact) => artifactMatchesRequiredFileName(artifact, requiredFileName) && artifactIsMaterializedFile(artifact))
+    : input.artifacts.some((artifact) => artifactIsMaterializedFile(artifact));
+  if (hasRequiredArtifact) {
+    return;
+  }
+  const expected = requiredFileName ?? 'a browser response artifact';
+  const materializationNote = input.notes.find((note) => note.includes('browser response artifact materialization'));
+  const answerPreview = input.answerText.replace(/\s+/g, ' ').trim().slice(0, 240);
+  throw new Error(
+    `Browser-backed step completed without required artifact ${expected}. ` +
+      `${materializationNote ?? 'browser response artifact materialization produced no artifacts'}. ` +
+      `Assistant text was status-only or incomplete: ${answerPreview}`,
+  );
+}
+
+function hasRequiredBrowserResponseArtifactMaterialized(input: {
+  metadata: unknown;
+  artifacts: TeamRunArtifactRef[];
+}): boolean {
+  const requiredFileName = readRequiredBrowserResponseArtifactFileName(input.metadata);
+  if (!requiredFileName && !shouldMaterializeBrowserResponseArtifacts(input.metadata)) {
+    return true;
+  }
+  return requiredFileName
+    ? input.artifacts.some((artifact) => artifactMatchesRequiredFileName(artifact, requiredFileName) && artifactIsMaterializedFile(artifact))
+    : input.artifacts.some((artifact) => artifactIsMaterializedFile(artifact));
+}
+
+function buildRequiredArtifactCorrectionPrompt(input: {
+  metadata: unknown;
+  previousAnswerText: string;
+}): string | null {
+  const requiredFileName = readRequiredBrowserResponseArtifactFileName(input.metadata);
+  if (!requiredFileName) {
+    return null;
+  }
+  const fileBaseName = path.basename(requiredFileName);
+  const previousAnswerPreview = input.previousAnswerText.replace(/\s+/g, ' ').trim().slice(0, 500);
+  return [
+    `Your previous reply did not provide a downloadable ${fileBaseName} artifact.`,
+    previousAnswerPreview
+      ? `Previous reply preview: ${previousAnswerPreview}`
+      : null,
+    `Do not restate intent. Create the file now in the ChatGPT workspace at /mnt/data/${fileBaseName}.`,
+    `The file must contain the complete requested output and must be downloadable.`,
+    `After the file exists, reply only with this markdown link: [${fileBaseName}](sandbox:/mnt/data/${fileBaseName})`,
+  ].filter((line): line is string => line !== null).join('\n');
 }
 
 function artifactRefFromFile(value: Record<string, unknown>): TeamRunArtifactRef | null {
@@ -145,6 +261,7 @@ async function materializeBrowserResponseArtifacts(
       host: input.chromeHost ?? undefined,
       port: input.chromePort ?? undefined,
       expectedUserIdentity: input.expectedUserIdentity,
+      expectedServiceAccountId: input.expectedServiceAccountId,
     },
   });
   const fileArtifacts = result.files.flatMap((file) => {
@@ -176,12 +293,17 @@ async function materializeBrowserResponseArtifacts(
   };
 }
 
-function buildBrowserPromptWithRequestInstructions(context: ExecuteStoredRunStepContext, prompt: string): string {
+function buildBrowserPromptWithRequestInstructions(
+  context: ExecuteStoredRunStepContext,
+  prompt: string,
+  service: 'chatgpt' | 'gemini' | 'grok',
+): string {
   const instructionParts = [
     ...context.step.input.notes
       .map((note) => asNonEmptyString(note))
       .filter((note): note is string => note !== null),
     buildResponseFormatInstruction(context.step.input.structuredData?.metadata),
+    buildBrowserResponseArtifactInstruction(context.step.input.structuredData?.metadata, service),
   ].filter((note): note is string => note !== null);
   if (instructionParts.length === 0) {
     return prompt;
@@ -468,6 +590,10 @@ export function createConfiguredStoredStepExecutor(
 
     const runtimeServiceConfig = readRuntimeServiceConfig(runtimeProfile, service);
     const globalServiceConfig = readGlobalServiceConfig(executionConfig, service);
+    const boundIdentityKey = resolveConfiguredServiceAccountId(executionConfig, {
+      serviceId: service,
+      runtimeProfileId: runtimeSelection.runtimeProfileId,
+    });
     const browserConfigRecord = isRecord(executionConfig.browser) ? executionConfig.browser : null;
     const runtimeBrowserConfig = runtimeProfile && isRecord(runtimeProfile.browser) ? runtimeProfile.browser : null;
     const browserProfileConfig = readBrowserProfileConfig(runtimeSelection.browserProfile);
@@ -553,7 +679,7 @@ export function createConfiguredStoredStepExecutor(
       throw new Error(`Stored team step ${context.step.id} has no runnable prompt text.`);
     }
     const useStepOutputContract = shouldUseAuraCallStepOutputContract(context.step.input.structuredData);
-    const promptWithInstructions = buildBrowserPromptWithRequestInstructions(context, prompt);
+    const promptWithInstructions = buildBrowserPromptWithRequestInstructions(context, prompt, service);
     const effectivePrompt = useStepOutputContract
       ? prependAuraCallStepOutputContractPrompt(promptWithInstructions)
       : promptWithInstructions;
@@ -561,6 +687,11 @@ export function createConfiguredStoredStepExecutor(
       context,
       prompt: effectivePrompt,
       attachments: buildBrowserAttachments(context),
+    });
+    const expectedUserIdentity = asProviderUserIdentity(runtimeServiceConfig?.identity ?? globalServiceConfig?.identity);
+    const expectedServiceAccountId = resolveConfiguredServiceAccountId(executionConfig, {
+      serviceId: service,
+      runtimeProfileId: runtimeSelection.runtimeProfileId,
     });
 
     const browserRunOptions: BrowserRunOptions = {
@@ -624,6 +755,8 @@ export function createConfiguredStoredStepExecutor(
         thinkingTime: thinkingTime ?? undefined,
         composerTool,
         deepResearchPlanAction: deepResearchPlanAction ?? undefined,
+        expectedUserIdentity,
+        expectedServiceAccountId,
       },
       log: ((message?: unknown, ...optionalParams: unknown[]) => {
         const logger = deps.logger;
@@ -655,45 +788,55 @@ export function createConfiguredStoredStepExecutor(
       });
     }
 
-    let browserResult: Awaited<ReturnType<typeof runBrowserMode>>;
-    try {
-      browserResult = service === 'gemini'
-        ? await runGeminiBrowserModeImpl(browserRunOptions)
-        : await runBrowserModeImpl(browserRunOptions);
-    } finally {
-      if (liveBrowserServiceStateKey) {
-        clearLiveRuntimeRunServiceState(liveBrowserServiceStateKey);
+    const runBrowserStep = async (options: BrowserRunOptions): Promise<Awaited<ReturnType<typeof runBrowserMode>>> => {
+      try {
+        return service === 'gemini'
+          ? await runGeminiBrowserModeImpl(options)
+          : await runBrowserModeImpl(options);
+      } finally {
+        if (liveBrowserServiceStateKey) {
+          clearLiveRuntimeRunServiceState(liveBrowserServiceStateKey);
+        }
       }
-    }
+    };
+    let browserResult = await runBrowserStep(browserRunOptions);
     let responseArtifacts: TeamRunArtifactRef[] = [];
     let responseArtifactNotes: string[] = [];
-    if (shouldMaterializeBrowserResponseArtifacts(context.step.input.structuredData?.metadata)) {
+    const structuredMetadata = context.step.input.structuredData?.metadata;
+    const materializeBrowserResult = async (
+      result: Awaited<ReturnType<typeof runBrowserMode>>,
+    ): Promise<BrowserResponseArtifactMaterializerResult> => {
+      return deps.browserResponseArtifactMaterializer
+        ? await deps.browserResponseArtifactMaterializer({
+            service,
+            executionConfig,
+            conversationId: result.conversationId ?? null,
+            projectId,
+            configuredUrl: targetUrl,
+            tabUrl: result.tabUrl ?? null,
+            tabTargetId: result.chromeTargetId ?? null,
+            chromeHost: result.chromeHost ?? null,
+            chromePort: result.chromePort ?? null,
+            expectedUserIdentity,
+            expectedServiceAccountId,
+          })
+        : await materializeBrowserResponseArtifacts({
+            service,
+            executionConfig,
+            conversationId: result.conversationId ?? null,
+            projectId,
+            configuredUrl: targetUrl,
+            tabUrl: result.tabUrl ?? null,
+            tabTargetId: result.chromeTargetId ?? null,
+            chromeHost: result.chromeHost ?? null,
+            chromePort: result.chromePort ?? null,
+            expectedUserIdentity,
+            expectedServiceAccountId,
+          });
+    };
+    if (shouldMaterializeBrowserResponseArtifacts(structuredMetadata)) {
       try {
-        const materialized = deps.browserResponseArtifactMaterializer
-          ? await deps.browserResponseArtifactMaterializer({
-              service,
-              executionConfig,
-              conversationId: browserResult.conversationId ?? null,
-              projectId,
-              configuredUrl: targetUrl,
-              tabUrl: browserResult.tabUrl ?? null,
-              tabTargetId: browserResult.chromeTargetId ?? null,
-              chromeHost: browserResult.chromeHost ?? null,
-              chromePort: browserResult.chromePort ?? null,
-              expectedUserIdentity: asProviderUserIdentity(runtimeServiceConfig?.identity ?? globalServiceConfig?.identity),
-            })
-          : await materializeBrowserResponseArtifacts({
-              service,
-              executionConfig,
-              conversationId: browserResult.conversationId ?? null,
-              projectId,
-              configuredUrl: targetUrl,
-              tabUrl: browserResult.tabUrl ?? null,
-              tabTargetId: browserResult.chromeTargetId ?? null,
-              chromeHost: browserResult.chromeHost ?? null,
-              chromePort: browserResult.chromePort ?? null,
-              expectedUserIdentity: asProviderUserIdentity(runtimeServiceConfig?.identity ?? globalServiceConfig?.identity),
-            });
+        const materialized = await materializeBrowserResult(browserResult);
         responseArtifacts = materialized.artifacts;
         responseArtifactNotes = materialized.notes;
       } catch (error) {
@@ -709,8 +852,60 @@ export function createConfiguredStoredStepExecutor(
     if (!asNonEmptyString(responseText)) {
       throw new Error(`Browser-backed step ${context.step.id} completed without assistant output.`);
     }
+    if (
+      service === 'chatgpt' &&
+      shouldMaterializeBrowserResponseArtifacts(structuredMetadata) &&
+      !hasRequiredBrowserResponseArtifactMaterialized({
+        metadata: structuredMetadata,
+        artifacts: responseArtifacts,
+      })
+    ) {
+      const correctionPrompt = buildRequiredArtifactCorrectionPrompt({
+        metadata: structuredMetadata,
+        previousAnswerText: responseText,
+      });
+      if (correctionPrompt && (browserResult.tabUrl || browserResult.conversationId)) {
+        responseArtifactNotes = [
+          ...responseArtifactNotes,
+          'browser response artifact correction: retrying once in the same ChatGPT conversation',
+        ];
+        browserResult = await runBrowserStep({
+          ...browserRunOptions,
+          prompt: correctionPrompt,
+          attachments: [],
+          config: {
+            ...(browserRunOptions.config ?? {}),
+            conversationId: browserResult.conversationId ?? null,
+            url: browserResult.tabUrl ?? browserRunOptions.config?.url,
+            chatgptUrl: browserResult.tabUrl ?? browserRunOptions.config?.chatgptUrl,
+          },
+        });
+        try {
+          const materialized = await materializeBrowserResult(browserResult);
+          responseArtifacts = materialized.artifacts;
+          responseArtifactNotes = [
+            ...responseArtifactNotes,
+            ...materialized.notes.map((note) => `after correction: ${note}`),
+          ];
+        } catch (error) {
+          responseArtifactNotes = [
+            ...responseArtifactNotes,
+            `after correction: browser response artifact materialization failed: ${error instanceof Error ? error.message : String(error)}`,
+          ];
+        }
+      }
+    }
+    const finalResponseText = browserResult.answerMarkdown.trim().length > 0
+      ? browserResult.answerMarkdown
+      : browserResult.answerText;
+    assertRequiredBrowserResponseArtifactMaterialized({
+      metadata: structuredMetadata,
+      artifacts: responseArtifacts,
+      notes: responseArtifactNotes,
+      answerText: finalResponseText,
+    });
     const contractResult = useStepOutputContract
-      ? createStepOutputContractResult(parseAuraCallStepOutputEnvelope(responseText))
+      ? createStepOutputContractResult(parseAuraCallStepOutputEnvelope(finalResponseText))
       : null;
     if (contractResult) {
       return {
@@ -731,6 +926,7 @@ export function createConfiguredStoredStepExecutor(
               browserProfileId: runtimeSelection.browserProfileId,
               agentId: context.step.agentId,
               projectId,
+              boundIdentityKey,
               configuredUrl: targetUrl,
               desiredModel,
               modelSelector: agentModelSelector,
@@ -769,10 +965,10 @@ export function createConfiguredStoredStepExecutor(
         },
       };
     }
-    const localActionRequests = parseConfiguredExecutorLocalActionRequests(responseText);
+    const localActionRequests = parseConfiguredExecutorLocalActionRequests(finalResponseText);
     return {
       output: {
-        summary: summarizeOutput(responseText),
+        summary: summarizeOutput(finalResponseText),
         artifacts: responseArtifacts,
         structuredData: {
           browserRun: {
@@ -784,6 +980,7 @@ export function createConfiguredStoredStepExecutor(
             browserProfileId: runtimeSelection.browserProfileId,
             agentId: context.step.agentId,
             projectId,
+            boundIdentityKey,
             configuredUrl: targetUrl,
             desiredModel,
             modelSelector: agentModelSelector,
@@ -815,7 +1012,7 @@ export function createConfiguredStoredStepExecutor(
         structuredOutputs: [
           {
             key: 'response.output',
-            value: [createExecutionResponseMessage(responseText)],
+            value: [createExecutionResponseMessage(finalResponseText)],
           },
         ],
       },

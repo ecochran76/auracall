@@ -58,11 +58,16 @@ Implemented:
   cache-only account-mirror details.
 - Browser artifact materialization can enforce declared output artifact
   contracts when a workflow asks for provider-generated files.
+- Archive records now carry first-class provider project ids and configured
+  bound identity keys when browser-run or media-generation metadata contains
+  them. Project id filtering is exposed through `/v1/archive`,
+  `auracall api archive --project-id`, and MCP `run_archive_search`.
 
 Remaining:
 
-- Index uploaded-file metadata and generated-artifact metadata with stable
-  provider/service, bound identity, project id, and richer retrieval metadata.
+- Fill remaining upload/generated-artifact gaps where provider-specific
+  artifact ids, project ids, or bound identity keys are not yet available from
+  the runner/materializer metadata.
 - Surface archive search and retrieval through CLI, API, MCP, and the operator
   dashboard without provider browser work.
 - Add operator dashboard archive search and item/evidence navigation.

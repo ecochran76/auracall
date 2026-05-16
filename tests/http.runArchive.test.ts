@@ -83,6 +83,8 @@ describe('http run archive routes', () => {
                 provider: 'chatgpt',
                 conversationId: 'conv_http_archive',
                 tabUrl: 'https://chatgpt.com/c/conv_http_archive',
+                projectId: 'project_http_archive',
+                boundIdentityKey: 'service-account:chatgpt:ecochran76@gmail.com',
               },
             },
             notes: [],
@@ -117,6 +119,19 @@ describe('http run archive routes', () => {
           id: 'provider-conversation:resp_http_archive:chatgpt:conv_http_archive',
           kind: 'provider_conversation',
           providerConversationId: 'conv_http_archive',
+          projectId: 'project_http_archive',
+        }),
+      ]);
+
+      const projectListResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/archive?kind=provider_conversation&projectId=project_http_archive&limit=5`,
+      );
+      expect(projectListResponse.status).toBe(200);
+      const projectList = await projectListResponse.json() as { items: Array<{ id: string; projectId: string }> };
+      expect(projectList.items).toEqual([
+        expect.objectContaining({
+          id: 'provider-conversation:resp_http_archive:chatgpt:conv_http_archive',
+          projectId: 'project_http_archive',
         }),
       ]);
 

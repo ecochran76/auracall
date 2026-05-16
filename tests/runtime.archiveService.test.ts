@@ -95,6 +95,8 @@ describe('run archive service', () => {
                 tabUrl: 'https://chatgpt.com/c/conv_archive_1',
                 runtimeProfileId: 'wsl-chrome-3',
                 browserProfileId: 'wsl-chrome-3',
+                projectId: 'project_archive_1',
+                boundIdentityKey: 'service-account:chatgpt:eric.cochran@soylei.com',
               },
             },
             notes: [],
@@ -213,6 +215,16 @@ describe('run archive service', () => {
 
     const item = await service.readItem('provider-conversation:resp_archive_1:chatgpt:conv_archive_1');
     expect(item?.item.links.catalogItem).toContain('/v1/account-mirrors/catalog/items/conv_archive_1');
+    expect(item?.item).toMatchObject({
+      projectId: 'project_archive_1',
+      boundIdentityKey: 'service-account:chatgpt:eric.cochran@soylei.com',
+    });
+
+    const projectOnly = await service.listItems({
+      kind: 'provider_conversation',
+      projectId: 'project_archive_1',
+    });
+    expect(projectOnly.items.map((entry) => entry.id)).toContain('provider-conversation:resp_archive_1:chatgpt:conv_archive_1');
 
     await expect(service.readAsset(`upload:resp_archive_1:resp_archive_1:step:1:upload_packet`)).resolves.toMatchObject({
       object: 'run_archive_asset',
@@ -478,6 +490,7 @@ function createArchiveItemFixture(overrides: Partial<RunArchiveItem>): RunArchiv
     provider: 'chatgpt',
     runtimeProfile: 'default',
     browserProfile: null,
+    projectId: null,
     boundIdentityKey: null,
     agentId: null,
     teamId: null,

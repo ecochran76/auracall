@@ -26,6 +26,7 @@ describe('mcp run archive tools', () => {
           provider: 'chatgpt',
           runtimeProfile: 'default',
           browserProfile: 'default',
+          projectId: null,
           boundIdentityKey: null,
           agentId: 'instant-chatgpt-ecochran76',
           teamId: null,
@@ -87,12 +88,14 @@ describe('mcp run archive tools', () => {
     const result = await handler({
       kind: 'upload',
       batchId: 'batch_1',
+      projectId: 'project_1',
       limit: 5,
     });
 
     expect(listItems).toHaveBeenCalledWith({
       kind: 'upload',
       batchId: 'batch_1',
+      projectId: 'project_1',
       limit: 5,
     });
     expect(result).toMatchObject({
@@ -130,6 +133,7 @@ describe('mcp run archive tools', () => {
               provider: 'chatgpt',
               runtimeProfile: 'default',
               browserProfile: null,
+              projectId: null,
               boundIdentityKey: null,
               agentId: 'instant-chatgpt-ecochran76',
               teamId: null,
@@ -279,6 +283,7 @@ describe('mcp run archive tools', () => {
         provider: null,
         runtimeProfile: null,
         browserProfile: null,
+        projectId: null,
         boundIdentityKey: null,
         agentId: null,
         teamId: null,
