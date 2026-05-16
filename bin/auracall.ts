@@ -1646,11 +1646,62 @@ apiCommand
     console.log(formatRuntimeRunInspectionPayload(payload));
   });
 
+function resolveBrowserCliOperationTimeoutMs(value: number | 'auto' | string | undefined): number {
+  if (value === 'auto' || value == null) {
+    return 90_000;
+  }
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return Math.trunc(value * 1000);
+  }
+  const parsed = Number.parseFloat(String(value));
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return Math.trunc(parsed * 1000);
+  }
+  return 90_000;
+}
+
+function withBrowserCliOperationTimeout<T>(
+  operation: Promise<T>,
+  timeoutMs: number,
+  label: string,
+): Promise<T> {
+  let timeout: NodeJS.Timeout | null = null;
+  return new Promise<T>((resolve, reject) => {
+    timeout = setTimeout(() => {
+      timeout = null;
+      reject(
+        new Error(
+          `${label} timed out after ${Math.round(timeoutMs / 1000)}s. ` +
+            'The browser operation may still be blocked on provider readiness; run doctor and inspect browser-state before retrying.',
+        ),
+      );
+    }, timeoutMs);
+    operation.then(
+      (value) => {
+        if (timeout) clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        if (timeout) clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
+}
+
 const projectsCommand = program
   .command('projects')
   .description('List available projects/workspaces for the active browser provider.')
   .option('--target <chatgpt|gemini|grok>', 'Choose which provider to query (chatgpt, gemini, or grok).')
   .option('--refresh', 'Force refresh of cached project data.')
+  .addOption(
+    new Option(
+      '--operation-timeout <seconds|auto>',
+      'Bound browser project list/create operations so provider stalls return a diagnostic.',
+    )
+      .argParser(parseTimeoutOption)
+      .default('90'),
+  )
   .action(async (commandOptions) => {
     const parentOptions = program.opts?.() ?? {};
     const userConfig = await resolveConfig({ ...parentOptions, ...commandOptions }, process.cwd(), process.env);
@@ -1689,7 +1740,11 @@ const projectsCommand = program
       console.log(JSON.stringify(fallback, null, 2));
       return;
     }
-    const projects = await provider.listProjects?.(normalizedListOptions);
+    const projects = await withBrowserCliOperationTimeout(
+      llmService.listProjects(normalizedListOptions),
+      resolveBrowserCliOperationTimeoutMs(commandOptions.operationTimeout),
+      `${target} project listing`,
+    );
     if (Array.isArray(projects) && projects.length === 0) {
       const fallback = llmService.deriveProjectsFromConfig({
         configuredUrl: listOptions.configuredUrl,
@@ -1729,6 +1784,14 @@ projectsCommand
   .option('--memory-mode <global|project>', 'ChatGPT only: choose global/default memory or project-only memory.')
   .option('-f, --file <paths...>', 'Files to attach to the project.', collectPaths, [])
   .option('--target <chatgpt|gemini|grok>', 'Choose which provider to query (chatgpt, gemini, or grok).')
+  .addOption(
+    new Option(
+      '--operation-timeout <seconds|auto>',
+      'Bound browser project creation so provider stalls return a diagnostic.',
+    )
+      .argParser(parseTimeoutOption)
+      .default('120'),
+  )
   .action(async (projectName, commandOptions) => {
     const parentOptions = projectsCommand.opts?.() ?? {};
     const userConfig = await resolveConfig(
@@ -1792,15 +1855,19 @@ projectsCommand
     }
     let createdProject: import('../src/browser/providers/domain.js').Project | null = null;
     if (llmService.createProject) {
-      createdProject = await llmService.createProject(
-        {
-          name: projectName,
-          instructions: instructions ?? undefined,
-          modelLabel,
-          files: deduped,
-          memoryMode: memoryMode ?? undefined,
-        },
-        { listOptions },
+      createdProject = await withBrowserCliOperationTimeout(
+        llmService.createProject(
+          {
+            name: projectName,
+            instructions: instructions ?? undefined,
+            modelLabel,
+            files: deduped,
+            memoryMode: memoryMode ?? undefined,
+          },
+          { listOptions },
+        ),
+        resolveBrowserCliOperationTimeoutMs(commandOptions.operationTimeout),
+        `${target} project creation for "${projectName}"`,
       );
       if (!createdProject) {
         throw new Error(
@@ -4149,6 +4216,14 @@ program
   .option('--local-only', 'Inspect managed browser profile/bootstrap/browser-state only; do not attach to Chrome.')
   .option('--prune-browser-state', 'Remove dead entries from ~/.auracall/browser-state.json before reporting.')
   .option('--save-snapshot', 'Save a semantic snapshot of the page even if checks pass.')
+  .addOption(
+    new Option(
+      '--operation-timeout <seconds|auto>',
+      'Bound browser doctor probes so attach/readiness stalls return a diagnostic.',
+    )
+      .argParser(parseTimeoutOption)
+      .default('60'),
+  )
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
@@ -4180,37 +4255,46 @@ program
     let selectorDiagnosisError: string | null = null;
 
     if (!commandOptions.localOnly) {
-      await withBrowserProbeOperation(target, localReport, 'doctor', async (activeOperation) => {
-        operation = activeOperation;
-        identityStatus = await inspectBrowserDoctorIdentity(userConfig, {
-          target,
-          localReport,
-        });
-        if (commandOptions.json) {
-          const runtime = await collectBrowserFeatureRuntime(target, localReport);
-          browserTools = runtime.browserTools;
-          browserToolsError = runtime.browserToolsError;
-        }
-        runtimeBlockingState = browserTools?.report?.pageProbe?.blockingState ?? null;
-        featureStatus = await inspectBrowserDoctorFeatures(userConfig, {
-          target,
-          localReport,
-          browserTools,
-        });
-
-        if (target !== 'gemini' && !runtimeBlockingState?.requiresHuman) {
-          try {
-            const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
-            selectorDiagnosis = await client.diagnose({
-              basePath: process.cwd(),
-              saveSnapshot: Boolean(commandOptions.saveSnapshot),
-              quiet: Boolean(commandOptions.json),
+      try {
+        await withBrowserCliOperationTimeout(
+          withBrowserProbeOperation(target, localReport, 'doctor', async (activeOperation) => {
+            operation = activeOperation;
+            identityStatus = await inspectBrowserDoctorIdentity(userConfig, {
+              target,
+              localReport,
             });
-          } catch (error) {
-            selectorDiagnosisError = error instanceof Error ? error.message : String(error);
-          }
-        }
-      });
+            if (commandOptions.json) {
+              const runtime = await collectBrowserFeatureRuntime(target, localReport);
+              browserTools = runtime.browserTools;
+              browserToolsError = runtime.browserToolsError;
+            }
+            runtimeBlockingState = browserTools?.report?.pageProbe?.blockingState ?? null;
+            featureStatus = await inspectBrowserDoctorFeatures(userConfig, {
+              target,
+              localReport,
+              browserTools,
+            });
+
+            if (target !== 'gemini' && !runtimeBlockingState?.requiresHuman) {
+              try {
+                const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
+                selectorDiagnosis = await client.diagnose({
+                  basePath: process.cwd(),
+                  saveSnapshot: Boolean(commandOptions.saveSnapshot),
+                  quiet: Boolean(commandOptions.json),
+                });
+              } catch (error) {
+                selectorDiagnosisError = error instanceof Error ? error.message : String(error);
+              }
+            }
+          }),
+          resolveBrowserCliOperationTimeoutMs(commandOptions.operationTimeout),
+          `${target} doctor browser probe`,
+        );
+      } catch (error) {
+        selectorDiagnosisError = error instanceof Error ? error.message : String(error);
+        browserToolsError ??= selectorDiagnosisError;
+      }
     }
 
     if (commandOptions.json) {
@@ -4232,7 +4316,7 @@ program
         (selectorDiagnosis && !selectorDiagnosis.report.allPassed) ||
         runtimeBlockingState?.requiresHuman
       ) {
-        process.exitCode = 1;
+        process.exit(1);
       }
       return;
     }

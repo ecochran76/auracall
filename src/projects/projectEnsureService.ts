@@ -11,6 +11,7 @@ import type { Project, ProjectMemoryMode, ProviderId } from '../browser/provider
 
 const PROVIDER_ID_SCHEMA = z.enum(['chatgpt', 'gemini', 'grok']);
 const PROJECT_MEMORY_MODE_SCHEMA = z.enum(['global', 'project']);
+const DEFAULT_PROJECT_ENSURE_TIMEOUT_MS = 120_000;
 
 // biome-ignore lint/style/useNamingConvention: exported Zod schemas use the repo's stable Schema suffix convention.
 export const ProjectEnsureInputSchema = z.object({
@@ -18,6 +19,7 @@ export const ProjectEnsureInputSchema = z.object({
   runtimeProfile: z.string().trim().min(1).nullable().optional(),
   projectName: z.string().trim().min(1),
   createIfMissing: z.boolean().optional(),
+  timeoutMs: z.number().int().positive().nullable().optional(),
   instructions: z.string().nullable().optional(),
   modelLabel: z.string().trim().min(1).nullable().optional(),
   files: z.array(z.string().trim().min(1)).optional(),
@@ -67,6 +69,7 @@ export interface ProjectEnsureService {
 export interface ProjectEnsureServiceDeps {
   config?: Record<string, unknown> | ResolvedUserConfig;
   configService?: AgentTeamConfigService;
+  timeoutMs?: number;
   createProjectClient?: (input: {
     config: Record<string, unknown> | ResolvedUserConfig;
     service: ProviderId;
@@ -90,12 +93,17 @@ export function createProjectEnsureService(
       const payload = ProjectEnsureInputSchema.parse(input);
       const service = payload.service;
       const runtimeProfile = normalizeNullableString(payload.runtimeProfile);
+      const timeoutMs = normalizeTimeoutMs(payload.timeoutMs ?? deps.timeoutMs);
       const client = await createClient({
         config,
         service,
         runtimeProfile,
       });
-      const projects = await client.listProjects();
+      const projects = await withProjectEnsureTimeout(
+        client.listProjects(),
+        timeoutMs,
+        `Project listing timed out after ${timeoutMs}ms for ${service}/${runtimeProfile ?? 'default'}.`,
+      );
       const matches = projects.filter((project) => normalizeName(project.name ?? project.id) === normalizeName(payload.projectName));
       if (matches.length > 1) {
         const names = matches.map((project) => `${project.name ?? project.id} (${project.id})`).join(', ');
@@ -106,13 +114,17 @@ export function createProjectEnsureService(
       let project: Project | null = matches[0] ?? null;
       let status: ProjectEnsureResult['status'] = project ? 'found' : 'missing';
       if (!project && createIfMissing) {
-        project = await client.createProject({
-          name: payload.projectName,
-          ...(normalizeNullableString(payload.instructions) ? { instructions: normalizeNullableString(payload.instructions) ?? undefined } : {}),
-          ...(normalizeNullableString(payload.modelLabel) ? { modelLabel: normalizeNullableString(payload.modelLabel) ?? undefined } : {}),
-          ...(payload.files?.length ? { files: payload.files } : {}),
-          ...(payload.memoryMode ? { memoryMode: payload.memoryMode } : {}),
-        });
+        project = await withProjectEnsureTimeout(
+          client.createProject({
+            name: payload.projectName,
+            ...(normalizeNullableString(payload.instructions) ? { instructions: normalizeNullableString(payload.instructions) ?? undefined } : {}),
+            ...(normalizeNullableString(payload.modelLabel) ? { modelLabel: normalizeNullableString(payload.modelLabel) ?? undefined } : {}),
+            ...(payload.files?.length ? { files: payload.files } : {}),
+            ...(payload.memoryMode ? { memoryMode: payload.memoryMode } : {}),
+          }),
+          timeoutMs,
+          `Project creation timed out after ${timeoutMs}ms for ${service}/${runtimeProfile ?? 'default'} project "${payload.projectName}".`,
+        );
         if (!project?.id) {
           throw new Error(`Project creation could not be verified for "${payload.projectName}".`);
         }
@@ -157,6 +169,37 @@ export function createProjectEnsureService(
       };
     },
   };
+}
+
+function normalizeTimeoutMs(value: number | null | undefined): number {
+  if (!Number.isFinite(value ?? Number.NaN)) {
+    return DEFAULT_PROJECT_ENSURE_TIMEOUT_MS;
+  }
+  return Math.max(1, Math.trunc(value as number));
+}
+
+function withProjectEnsureTimeout<T>(
+  operation: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  let timeout: NodeJS.Timeout | null = null;
+  return new Promise<T>((resolve, reject) => {
+    timeout = setTimeout(() => {
+      timeout = null;
+      reject(new Error(message));
+    }, timeoutMs);
+    operation.then(
+      (value) => {
+        if (timeout) clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        if (timeout) clearTimeout(timeout);
+        reject(error);
+      },
+    );
+  });
 }
 
 function createBrowserProjectEnsureClient(input: {

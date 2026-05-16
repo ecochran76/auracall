@@ -108,4 +108,22 @@ describe('project ensure service', () => {
       }),
     });
   });
+
+  it('fails project listing with a bounded diagnostic when the browser path stalls', async () => {
+    const service = createProjectEnsureService({
+      createProjectClient: () => ({
+        listProjects: () => new Promise(() => undefined),
+        createProject: vi.fn(),
+      }),
+    });
+
+    await expect(
+      service.ensureProject({
+        service: 'chatgpt',
+        runtimeProfile: 'wsl-chrome-3',
+        projectName: 'Lei',
+        timeoutMs: 5,
+      }),
+    ).rejects.toThrow('Project listing timed out after 5ms for chatgpt/wsl-chrome-3.');
+  });
 });
