@@ -101,6 +101,13 @@ Use this when a client app needs one answer from one configured agent.
 
 This is the minimum OpenAI-compatible path.
 
+When the selected model is a configured `agent:<agent_id>`, callers do not need
+to repeat `auracall.service` or `auracall.runtimeProfile`. AuraCall hydrates
+missing service/runtime routing from the effective agent catalog before
+authorization, persistence, and scheduling. Runtime inspection should therefore
+show concrete `serviceIds`, `runtimeProfileIds`, and queue affinity even for
+plain OpenAI-compatible requests.
+
 ### Project-Bound Agent Setup
 
 Use this when a workflow needs provider-side project context before execution.
@@ -160,6 +167,11 @@ limits.
 Batch limits are attached to the child runs and enforced by the shared service
 host drain path before a run lease is acquired. Skipped children remain queued
 for a later drain pass.
+
+Batch children should normally use the same configured `agent:<agent_id>` model
+as one-shot calls. AuraCall applies the same catalog hydration to every child
+request before enqueueing, so scoped clients can submit ordinary OpenAI-style
+jobs without duplicating provider routing fields.
 
 Useful limits:
 
@@ -290,6 +302,40 @@ Polling is read-only:
 This rule is central to avoiding the re-navigation failures seen in Gemini and
 Grok materialization work.
 
+## Archive Readback
+
+Use the run archive when a caller needs to find what AuraCall did after a
+single response, batch, team run, or media generation:
+
+- API: `GET /v1/archive`, `GET /v1/archive/items/{archive_item_id}`, and
+  `GET /v1/archive/items/{archive_item_id}/asset`
+- CLI: `auracall api archive`, `auracall api archive-item`, and
+  `auracall api archive-backfill`; shell workflows can attach evidence with
+  `auracall api archive-evidence --payload-json '{...}'` or
+  `--payload-file evidence.json`
+- MCP: `run_archive_search`, `run_archive_item`, `run_archive_backfill`, and
+  `run_archive_attach_evidence`
+
+The archive reads a user-scoped index that is auto-built on first use if it is
+missing. Operators and privileged agents can rebuild it with the backfill
+surface after runtime repair or older-record import. The index lists response
+runs, response batches, team runs, media generations, uploaded input artifacts,
+generated artifacts, and provider conversation references without launching
+browsers or navigating provider pages. Domain agents should use this for audit
+and handoff, then store their own validation evidence when they need
+workflow-specific correctness checks.
+
+For file-bearing archive items, use the `/asset` route to stream the local
+file. It returns 404 when the archive item is not a file, the local path is
+missing, or the file no longer exists.
+
+Caller-owned validators and post-processors can attach their audit result with
+`POST /v1/archive/evidence`, CLI `auracall api archive-evidence`, or MCP
+`run_archive_attach_evidence`. Evidence records require `producer` and
+`schema`, may carry structured `data`, and can link to a response id, batch id,
+provider conversation id, or another archive item id. Search them with
+`GET /v1/archive?kind=evidence&q=<text>`.
+
 ## Attachments
 
 For local attachments:
@@ -313,7 +359,7 @@ Keep deterministic and stochastic parts explicit:
   - batch creation
   - status polling
   - output file placement
-  - schema validation
+  - caller-owned schema/domain validation
 - stochastic:
   - provider model response
   - provider-side execution duration
@@ -324,6 +370,14 @@ Where a workflow needs machine-readable output, use a deterministic prompt
 contract such as `auracall.outputContract = "auracall.step-output.v1"` or a
 workflow-specific JSON schema in the agent post-prompt. Then validate output
 after readback rather than assuming the provider followed instructions.
+
+AuraCall core should store and expose the request, uploaded files, provider
+conversation references, generated artifacts, response content, and any
+caller-supplied validation evidence. It should not decide whether a grading
+score, transcript summary, literature screen, or other domain result is correct.
+Those checks belong to workflow agents or downstream apps, and their results
+should be attached to the searchable AuraCall archive when they are useful for
+audit or handoff.
 
 ## Skill Strategy
 
@@ -359,8 +413,11 @@ state belongs inside AuraCall provider adapters and browser services.
   exposure needs a first-class principal/role model.
 - Batch cancellation, retry, and per-child priority are not yet first-class
   batch controls.
-- Workflow-specific output schemas are still conventions unless the caller
-  validates them after readback.
+- Searchable archive promotion for AuraCall-created runs, uploads, generated
+  artifacts, provider conversation ids, and caller-supplied validation evidence
+  is now tracked in Plan 0066.
+- Workflow-specific output schemas remain caller-owned unless the caller
+  validates them after readback and stores that evidence.
 
 ## Reference Smoke
 

@@ -55,6 +55,11 @@ Current endpoints:
 - `GET /v1/responses/{response_id}`
 - `POST /v1/response-batches`
 - `GET /v1/response-batches/{batch_id}`
+- `GET /v1/archive`
+- `POST /v1/archive/backfill`
+- `POST /v1/archive/evidence`
+- `GET /v1/archive/items/{archive_item_id}`
+- `GET /v1/archive/items/{archive_item_id}/asset`
 
 Workflow-oriented guidance lives in `docs/agent-workflows.md`. Treat this file
 as the endpoint contract and that file as the agent/app integration playbook.
@@ -209,6 +214,38 @@ Current limits:
     handoff env, calls `/v1/models`, submits one `/v1/responses` request, and
     polls the response to completion without using any repo-internal setup
     privileges
+- `GET /v1/archive` is the searchable archive surface for
+  AuraCall-created work:
+  - reads the user-scoped archive index under the AuraCall runtime tree and
+    auto-builds it from persisted runtime records on first use when missing
+  - does not launch browsers or revisit provider pages
+  - returns `object = "run_archive"` with stable item ids for response runs,
+    response batches, team runs, media generations, uploaded input artifacts,
+    generated artifacts, and provider conversation references
+  - supports filters for `kind`, `provider`, `runtimeProfile`, `agent`, `team`,
+    `responseId`, `batchId`, `status`, `q`, and `limit`
+  - `GET /v1/archive/items/{archive_item_id}` reads one item detail by stable
+    archive id
+  - `GET /v1/archive/items/{archive_item_id}/asset` streams the readable local
+    file for file-bearing archive items, returning 404 for non-file items or
+    missing local paths
+  - `POST /v1/archive/backfill` rebuilds the index from existing runtime
+    records without browser work; CLI parity is
+    `auracall api archive-backfill --port <port>`
+  - `POST /v1/archive/evidence` stores caller-owned validation,
+    post-processing, or review evidence as a searchable archive item with
+    `kind = "evidence"`. Required fields are `producer` and `schema`;
+    optional fields include `id`, `status`, `title`, `summary`, `responseId`,
+    `batchId`, `archiveItemId`, `providerConversationId`, `data`, and
+    `metadata`. CLI parity is `auracall api archive-evidence --payload-json
+    '{...}'` or `auracall api archive-evidence --payload-file evidence.json`.
+  - domain validation remains caller-owned; workflow agents attach their own
+    validation evidence beside archived AuraCall outputs instead of adding
+    domain validators to AuraCall core
+  - CLI parity: `auracall api archive --port <port> --kind upload --batch-id
+    <batch_id>`, `auracall api archive-item --port <port> <archive_id>`, and
+    `auracall api archive-evidence --payload-file evidence.json` read/write
+    the same API surface
 - API-key authorization can be configured in `~/.auracall/config.json` or
   through the installed service dotenv file at `~/.auracall/api.env`. The
   service recognizes `AURACALL_API_KEY` as a bearer key and optional
@@ -537,6 +574,11 @@ Current response readback note:
     - ordered visible result timeline
     - `message` items for assistant prose
     - sibling `artifact` items for durable non-text outputs
+    - recoverable diagnostic artifacts when a browser provider fails after
+      producing useful partial output; for example, an unparseable
+      `response_format: {"type":"json_object"}` ChatGPT run stores the full
+      best JSON snapshot as an artifact instead of returning an empty output
+      array
   - `metadata.executionSummary`
     - bounded machine-handling summary for routing, retries, local actions,
       artifacts, handoffs, and failure/readback inspection

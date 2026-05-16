@@ -128,6 +128,16 @@ import {
   readApiLogTailForCli,
 } from '../src/cli/apiLogTailCommand.js';
 import {
+  attachApiRunArchiveEvidenceForCli,
+  backfillApiRunArchiveForCli,
+  formatApiRunArchiveBackfillCliSummary,
+  formatApiRunArchiveCliSummary,
+  formatApiRunArchiveEvidenceCliSummary,
+  formatApiRunArchiveItemCliSummary,
+  readApiRunArchiveForCli,
+  readApiRunArchiveItemForCli,
+} from '../src/cli/apiRunArchiveCommand.js';
+import {
   formatApiSchedulerHistoryCliSummary,
   readApiSchedulerHistoryForCli,
 } from '../src/cli/apiSchedulerHistoryCommand.js';
@@ -425,6 +435,13 @@ interface BrowserDoctorIdentityReportLike {
   identity: ProviderUserIdentity | null;
   error: string | null;
   reason: string | null;
+}
+
+interface BrowserDoctorIdentityReconciliationLike {
+  ok: boolean;
+  status: string;
+  summary: string;
+  browserProfileMismatchIsInformational: boolean;
 }
 
 interface BrowserDoctorFeatureReportLike {
@@ -1193,6 +1210,136 @@ apiCommand
       return;
     }
     console.log(formatApiLogTailCliSummary(summary));
+  });
+
+apiCommand
+  .command('archive')
+  .description('Search cached AuraCall-created runs, uploads, artifacts, and provider conversation refs.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--kind <kind>', 'Filter kind: response, response_batch, team_run, media_generation, upload, generated_artifact, provider_conversation, evidence.')
+  .option('--provider <provider>', 'Filter by provider.')
+  .option('--runtime-profile <profile>', 'Filter by runtime profile.')
+  .option('--agent <agent>', 'Filter by agent id.')
+  .option('--team <team>', 'Filter by team id.')
+  .option('--response-id <id>', 'Filter by response id.')
+  .option('--batch-id <id>', 'Filter by response batch id.')
+  .option('--status <status>', 'Filter by status.')
+  .option('--query <text>', 'Text search across archive metadata.')
+  .option('--limit <count>', 'Maximum items to read.', parseIntOption, 50)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const result = await readApiRunArchiveForCli({
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+      kind: commandOptions.kind,
+      provider: commandOptions.provider,
+      runtimeProfile: commandOptions.runtimeProfile,
+      agent: commandOptions.agent,
+      team: commandOptions.team,
+      responseId: commandOptions.responseId,
+      batchId: commandOptions.batchId,
+      status: commandOptions.status,
+      query: commandOptions.query,
+      limit: commandOptions.limit,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiRunArchiveCliSummary(result));
+  });
+
+apiCommand
+  .command('archive-item')
+  .description('Read one cached AuraCall run archive item by stable archive id.')
+  .argument('<id>', 'Run archive item id.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const result = await readApiRunArchiveItemForCli({
+      id,
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiRunArchiveItemCliSummary(result));
+  });
+
+apiCommand
+  .command('archive-backfill')
+  .description('Rebuild the cached AuraCall run archive index from runtime records.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 15000)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const result = await backfillApiRunArchiveForCli({
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiRunArchiveBackfillCliSummary(result));
+  });
+
+apiCommand
+  .command('archive-evidence')
+  .description('Attach caller-owned validation/review evidence to the run archive.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP write timeout in milliseconds.', parseIntOption, 5000)
+  .option('--payload-json <json>', 'Evidence payload JSON.')
+  .option('--payload-file <path>', 'Evidence payload JSON file.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const payload = await readArchiveEvidencePayloadForCli(commandOptions);
+    const result = await attachApiRunArchiveEvidenceForCli({
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+      payload,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiRunArchiveEvidenceCliSummary(result));
   });
 
 apiCommand
@@ -4016,6 +4163,7 @@ program
       inspectBrowserDoctorIdentity,
       inspectBrowserDoctorFeatures,
       createAuracallBrowserDoctorContract,
+      reconcileBrowserDoctorIdentities,
       withBrowserProbeOperation,
     } = await import('../src/browser/profileDoctor.js');
     const localReport = await inspectBrowserDoctorState(userConfig, {
@@ -4070,6 +4218,7 @@ program
         target,
         localReport,
         identityStatus,
+        identityReconciliation: reconcileBrowserDoctorIdentities(userConfig, target, localReport, identityStatus),
         featureStatus,
         operation,
         browserTools,
@@ -4090,6 +4239,7 @@ program
 
     printLocalBrowserDoctorReport(localReport, {
       identityStatus,
+      identityReconciliation: reconcileBrowserDoctorIdentities(userConfig, target, localReport, identityStatus),
       featureStatus,
       browserTools,
       browserToolsError,
@@ -7396,6 +7546,7 @@ function printLocalBrowserDoctorReport(
   options: {
     title?: string;
     identityStatus?: BrowserDoctorIdentityReportLike | null;
+    identityReconciliation?: BrowserDoctorIdentityReconciliationLike | null;
     featureStatus?: BrowserDoctorFeatureReportLike | null;
     browserTools?: {
       report?: {
@@ -7455,6 +7606,15 @@ function printLocalBrowserDoctorReport(
       console.log(`- accountIdentity: (check failed: ${identityStatus.error})`);
     } else {
       console.log('- accountIdentity: (signed-in account not detected)');
+    }
+  }
+  if (options.identityReconciliation) {
+    const reconciliation = options.identityReconciliation;
+    console.log(
+      `- identityReconciliation: ${reconciliation.ok ? 'ok' : 'not-ok'} (${reconciliation.status}) ${reconciliation.summary}`,
+    );
+    if (reconciliation.browserProfileMismatchIsInformational) {
+      console.log('- identityAuthority: provider app session is authoritative; Chrome/Google profile mismatch is informational');
     }
   }
   if (options.featureStatus) {
@@ -7838,7 +7998,7 @@ async function runBrowserSetupCommand(commandOptions: SetupCommandOptions): Prom
     collectBrowserFeatureRuntime,
     createAuracallBrowserDoctorContract,
   } = await import('../src/browser/profileDoctor.js');
-  const managedProfileSeedPolicy = commandOptions.forceReseedManagedProfile ? 'force-reseed' : 'reseed-if-source-newer';
+  const managedProfileSeedPolicy = commandOptions.forceReseedManagedProfile ? 'force-reseed' : 'bootstrap-only';
   const initialLaunchUrl = resolveSetupLaunchUrl(target, launchOptions);
 
   const localReport = await inspectBrowserDoctorState(userConfig, {
@@ -8464,7 +8624,7 @@ program
       target,
       ...launchOptions,
       exportCookies: Boolean(commandOptions.exportCookies),
-      managedProfileSeedPolicy: commandOptions.forceReseedManagedProfile ? 'force-reseed' : 'reseed-if-source-newer',
+      managedProfileSeedPolicy: commandOptions.forceReseedManagedProfile ? 'force-reseed' : 'bootstrap-only',
     });
     const { inspectBrowserDoctorState, collectBrowserFeatureRuntime } = await import('../src/browser/profileDoctor.js');
     const localReport = await inspectBrowserDoctorState(userConfig, { target });
@@ -8551,7 +8711,7 @@ profileCommand
             target,
             ...launchOptions,
             exportCookies: false,
-            managedProfileSeedPolicy: 'reseed-if-source-newer',
+            managedProfileSeedPolicy: 'bootstrap-only',
           });
         };
         if (commandOptions.json) {
@@ -9992,6 +10152,26 @@ function resolveWaitFlag({
   if (waitFlag === true) return true;
   if (noWaitFlag === true) return false;
   return defaultWaitPreference(model, engine);
+}
+
+async function readArchiveEvidencePayloadForCli(options: {
+  payloadJson?: string;
+  payloadFile?: string;
+}): Promise<unknown> {
+  const hasInline = typeof options.payloadJson === 'string' && options.payloadJson.trim().length > 0;
+  const hasFile = typeof options.payloadFile === 'string' && options.payloadFile.trim().length > 0;
+  if (hasInline && hasFile) {
+    throw new Error('Use only one of --payload-json or --payload-file.');
+  }
+  if (!hasInline && !hasFile) {
+    throw new Error('Use --payload-json <json> or --payload-file <path> to provide archive evidence.');
+  }
+  const raw = hasInline ? options.payloadJson as string : await fs.readFile(options.payloadFile as string, 'utf8');
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Invalid archive evidence JSON: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 function readCliApiConfig(config: unknown): {

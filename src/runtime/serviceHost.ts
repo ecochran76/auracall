@@ -54,6 +54,7 @@ import type {
   ExecutionRunRecordBundle,
   ExecutionRunSourceKind,
 } from './types.js';
+import { refreshRunArchiveIndexBestEffort } from './archiveIndexRefresh.js';
 
 async function readStoredTaskRunSpecSummary(
   store: TaskRunSpecRecordStore,
@@ -350,6 +351,7 @@ export type ExecutionServiceHostOperatorControlInput =
       kind: 'lease-repair';
       action: 'repair-stale-heartbeat';
       runId: string;
+      force?: boolean;
     }
   | {
       kind: 'local-action-control';
@@ -486,6 +488,7 @@ export interface ExecutionServiceHostDeps {
     context: ExecuteLocalActionRequestContext,
   ) => Promise<ExecuteLocalActionRequestResult | undefined>;
   createRunAffinity?: (inspection: ExecutionRunInspection) => ExecutionRunAffinityRecord | null;
+  refreshArchiveIndex?: boolean;
 }
 
 type HostDrainCandidateKind =
@@ -525,7 +528,10 @@ export interface ExecutionServiceHost {
   summarizeRecoveryState(options?: Omit<DrainStoredExecutionRunsOnceOptions, 'maxRuns'>): Promise<ExecutionServiceHostRecoverySummary>;
   summarizeLocalClaimState(options?: Omit<DrainStoredExecutionRunsOnceOptions, 'maxRuns'>): Promise<ExecutionServiceHostLocalClaimSummary>;
   readRecoveryDetail(runId: string): Promise<ExecutionServiceHostRecoveryDetail | null>;
-  repairStaleHeartbeatLease(runId: string): Promise<ExecutionServiceHostStaleHeartbeatActionResult>;
+  repairStaleHeartbeatLease(
+    runId: string,
+    options?: { force?: boolean },
+  ): Promise<ExecutionServiceHostStaleHeartbeatActionResult>;
   claimLocalRunWithSchedulerAuthority(
     input: ExecutionServiceHostSchedulerControlInput,
   ): Promise<ExecutionServiceHostSchedulerClaimLocalRunResult>;
@@ -572,6 +578,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         ? Promise.resolve(undefined)
         : executeBuiltInLocalActionRequest(context, localActionExecutionPolicy));
   const createRunAffinity = deps.createRunAffinity ?? (() => null);
+  const refreshArchiveIndex = deps.refreshArchiveIndex ?? true;
   let leaseSequence = 0;
   let drainQueue = Promise.resolve<DrainStoredExecutionRunsUntilIdleResult | null>(null);
 
@@ -1139,7 +1146,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
       };
     },
 
-    async repairStaleHeartbeatLease(runId: string) {
+    async repairStaleHeartbeatLease(runId: string, options: { force?: boolean } = {}) {
       const repairAt = now();
       await runnersControl.expireRunners({
         now: repairAt,
@@ -1151,6 +1158,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
           runnersControl,
           runId,
           repairAt,
+          force: options.force ?? false,
         })
       ).action;
     },
@@ -1389,7 +1397,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
       if (input.kind === 'lease-repair') {
         return {
           kind: input.kind,
-          ...(await this.repairStaleHeartbeatLease(input.runId)),
+          ...(await this.repairStaleHeartbeatLease(input.runId, { force: input.force ?? false })),
         };
       }
       if (input.kind === 'local-action-control') {
@@ -1939,6 +1947,15 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
           continue;
         }
 
+        if (runnerId) {
+          await runnersControl.recordRunnerActivity({
+            runnerId,
+            runId: currentRecord.runId,
+            activityAt: now(),
+            eligibilityNote: 'service host started local run',
+          });
+        }
+
         const executed = await executeStoredExecutionRunOnce({
           runId: currentRecord.runId,
           ownerId: runnerId ?? ownerId,
@@ -1960,6 +1977,9 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
             activityAt: executed.bundle.run.updatedAt,
             eligibilityNote: 'service host executed local run',
           });
+        }
+        if (refreshArchiveIndex) {
+          await refreshRunArchiveIndexBestEffort({ responseId: executed.runId });
         }
         executedCount += 1;
         executedRunIds.push(executed.runId);
@@ -2197,6 +2217,7 @@ async function evaluateAndRepairStaleHeartbeatLease(input: {
   runnersControl: ExecutionRunnerControlContract;
   runId: string;
   repairAt: string;
+  force?: boolean;
 }): Promise<EvaluatedStaleHeartbeatRepair> {
   const inspection = await input.control.inspectRun(input.runId);
   if (!inspection) {
@@ -2264,6 +2285,46 @@ async function evaluateAndRepairStaleHeartbeatLease(input: {
     };
   }
 
+  if (isTerminalExecutionRunStatus(inspection.record.bundle.run.status) && activeLease.expiresAt <= input.repairAt) {
+    await input.control.expireLeases({
+      runId: input.runId,
+      now: input.repairAt,
+    });
+    return {
+      action: {
+        action: 'repair-stale-heartbeat',
+        runId: input.runId,
+        status: 'repaired',
+        repaired: true,
+        reason: 'terminal run had an expired active lease',
+        leaseHealthStatus: leaseHealth.status,
+        repairPosture: 'locally-reclaimable',
+        reconciliationReason: repair?.reconciliation.reason ?? leaseHealth.reason ?? null,
+      },
+      repair,
+    };
+  }
+
+  if (input.force && activeLease.expiresAt <= input.repairAt) {
+    await input.control.expireLeases({
+      runId: input.runId,
+      now: input.repairAt,
+    });
+    return {
+      action: {
+        action: 'repair-stale-heartbeat',
+        runId: input.runId,
+        status: 'repaired',
+        repaired: true,
+        reason: 'operator forced repair of expired stale-heartbeat lease',
+        leaseHealthStatus: leaseHealth.status,
+        repairPosture: repair?.posture ?? 'inspect-only',
+        reconciliationReason: repair?.reconciliation.reason ?? leaseHealth.reason ?? null,
+      },
+      repair,
+    };
+  }
+
   if (!repair || repair.posture !== 'locally-reclaimable') {
     return {
       action: {
@@ -2304,6 +2365,10 @@ async function evaluateAndRepairStaleHeartbeatLease(input: {
     },
     repair,
   };
+}
+
+function isTerminalExecutionRunStatus(status: ExecutionRunStoredRecord['bundle']['run']['status']): boolean {
+  return status === 'succeeded' || status === 'failed' || status === 'cancelled';
 }
 
 const ACTIVE_LEASE_IDLE_ACTIVITY_THRESHOLD_MS = 60_000;

@@ -77,6 +77,15 @@ import {
   type ExecutionResponsesServiceDeps,
 } from '../runtime/responsesService.js';
 import {
+  createRunArchiveService,
+  type RunArchiveAssetResult,
+  type RunArchiveEvidenceResult,
+  type RunArchiveItemResult,
+  type RunArchiveListRequest,
+  type RunArchiveListResult,
+  type RunArchiveService,
+} from '../runtime/archiveService.js';
+import {
   createResponseBatchExecutionGate,
   createResponseBatchService,
   ResponseBatchCreateRequestSchema,
@@ -107,6 +116,11 @@ import {
   probeGeminiBrowserServiceState,
   probeGrokBrowserServiceState,
 } from '../browser/liveServiceState.js';
+import {
+  acceptDomDriftObservation,
+  listDomDriftObservations,
+  type DomDriftObservationStatus,
+} from '../browser/domDriftObservations.js';
 import {
   probeBrowserRunDiagnostics,
   type BrowserDiagnosticsService,
@@ -227,6 +241,7 @@ export interface ResponsesHttpServerDeps {
   agentSetupPackageService?: AgentSetupPackageService;
   createResponseBatchService?: typeof createResponseBatchService;
   responseBatchService?: ResponseBatchService;
+  runArchiveService?: RunArchiveService;
   executionHost?: ExecutionServiceHost;
   localActionExecutionPolicy?: ExecutionServiceHostDeps['localActionExecutionPolicy'];
   probeRuntimeRunServiceState?: (
@@ -306,6 +321,7 @@ interface HttpChatCompletionRequest {
   model: string;
   messages: HttpChatCompletionMessage[];
   stream?: boolean;
+  response_format?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
   tools?: Array<Record<string, unknown>>;
   auracall?: ExecutionRequestExtensionHints;
@@ -364,6 +380,10 @@ interface HttpRuntimeRunListResponse {
   count: number;
 }
 
+interface HttpRunArchiveResponse extends RunArchiveListResult {}
+interface HttpRunArchiveItemResponse extends RunArchiveItemResult {}
+interface HttpRunArchiveAssetResponse extends RunArchiveAssetResult {}
+interface HttpRunArchiveEvidenceResponse extends RunArchiveEvidenceResult {}
 interface HttpAccountMirrorRefreshResponse extends AccountMirrorRefreshResult {}
 interface HttpAccountMirrorCatalogResponse extends AccountMirrorCatalogResult {}
 interface HttpAccountMirrorCatalogItemResponse extends AccountMirrorCatalogItemResult {}
@@ -591,6 +611,11 @@ interface HttpStatusResponse {
     mediaGenerationsCreate: string;
     mediaGenerationsGetTemplate: string;
     mediaGenerationsStatusTemplate: string;
+    runArchive: string;
+    runArchiveBackfill: string;
+    runArchiveEvidenceCreate: string;
+    runArchiveItemTemplate: string;
+    runArchiveItemAssetTemplate: string;
     runStatusTemplate: string;
     apiLogTail: string;
     preflightRunTemplate: string;
@@ -608,6 +633,8 @@ interface HttpStatusResponse {
     accountMirrorSchedulerHistory: string;
     accountMirrorSchedulerDiagnostics: string;
     browserProcesses: string;
+    browserDomDriftObservations: string;
+    browserDomDriftObservationAcceptTemplate: string;
     workbenchCapabilitiesList: string;
     agentRegistryDiagnostics: string;
     configApiKeyIssue: string;
@@ -780,6 +807,9 @@ export async function createResponsesHttpServer(
     config: configuredRuntimeConfig,
     registry: accountMirrorStatusRegistry,
     persistence: accountMirrorPersistence,
+    now,
+  });
+  const runArchiveService = deps.runArchiveService ?? createRunArchiveService({
     now,
   });
   const accountMirrorSchedulerService = deps.accountMirrorSchedulerService ?? createAccountMirrorSchedulerPassService({
@@ -1222,6 +1252,47 @@ export async function createResponsesHttpServer(
         return;
       }
 
+      if (req.method === 'GET' && url.pathname === '/v1/browser/dom-drift-observations') {
+        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+        if (operatorAuthError) {
+          sendJson(res, 403, {
+            error: {
+              message: operatorAuthError,
+              type: 'permission_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        sendJson(res, 200, await listDomDriftObservations(parseDomDriftObservationQuery(url.searchParams)));
+        return;
+      }
+
+      const domDriftAcceptId = matchDomDriftObservationAcceptRoute(url.pathname);
+      if (req.method === 'POST' && domDriftAcceptId) {
+        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+        if (operatorAuthError) {
+          sendJson(res, 403, {
+            error: {
+              message: operatorAuthError,
+              type: 'permission_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        const result = await acceptDomDriftObservation(domDriftAcceptId);
+        if (!result) {
+          sendJson(res, 404, {
+            error: {
+              message: `DOM drift observation ${domDriftAcceptId} was not found.`,
+              type: 'not_found_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        sendJson(res, 200, result);
+        return;
+      }
+
       const preflightRunLogId = matchPreflightRunLogRoute(url.pathname);
       if (req.method === 'GET' && preflightRunLogId) {
         const query = parseApiLogTailQuery(url.searchParams);
@@ -1309,6 +1380,64 @@ export async function createResponsesHttpServer(
               type: 'not_found_error',
             },
           });
+          return;
+        }
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/archive') {
+        const query = parseRunArchiveQuery(url.searchParams);
+        const result: HttpRunArchiveResponse = await runArchiveService.listItems(query);
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/v1/archive/backfill') {
+        const result = await runArchiveService.backfillIndex();
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/v1/archive/evidence') {
+        const body = await readRequestBody(req);
+        const payload = parseRunArchiveEvidenceCreateBody(JSON.parse(body || '{}'));
+        const result: HttpRunArchiveEvidenceResponse = await runArchiveService.attachEvidence(payload);
+        sendJson(res, 201, result);
+        return;
+      }
+
+      if (req.method === 'GET' && isRunArchiveItemAssetRoute(url.pathname)) {
+        const itemId = parseRunArchiveItemAssetId(url.pathname);
+        const result: HttpRunArchiveAssetResponse | null = await runArchiveService.readAsset(itemId);
+        if (!result) {
+          sendJson(res, 404, {
+            error: {
+              message: `Run archive item ${itemId} has no readable local asset.`,
+              type: 'not_found_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        sendCachedAsset(res, {
+          path: result.path,
+          mimeType: result.mimeType,
+          size: result.size,
+          fileName: result.fileName,
+        });
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname.startsWith('/v1/archive/items/')) {
+        const itemId = decodeURIComponent(url.pathname.slice('/v1/archive/items/'.length));
+        const result: HttpRunArchiveItemResponse | null = await runArchiveService.readItem(itemId);
+        if (!result) {
+          sendJson(res, 404, {
+            error: {
+              message: `Run archive item ${itemId} was not found.`,
+              type: 'not_found_error',
+            },
+          } satisfies HttpErrorPayload);
           return;
         }
         sendJson(res, 200, result);
@@ -2104,13 +2233,14 @@ export async function createResponsesHttpServer(
             } satisfies HttpErrorPayload);
             return;
           }
-          const request = createExecutionRequest(
+          const catalog = await agentTeamConfigService.effectiveCatalog();
+          const request = hydrateExecutionRequestFromCatalog(createExecutionRequest(
             mergeExecutionRequestHints(createExecutionRequestFromChatCompletion(chatRequest), req.headers),
-          );
+          ), catalog);
           const authorizationError = authorizeExecutionRequest(
             apiAuthContext,
             request,
-            await agentTeamConfigService.effectiveCatalog(),
+            catalog,
           );
           if (authorizationError) {
             sendJson(res, 403, {
@@ -2129,6 +2259,10 @@ export async function createResponsesHttpServer(
           });
           scheduleAccountMirrorSchedulerFollowUp(0, 'response-drain-completed');
           const response = (await responsesService.readResponse(createdResponse.id)) ?? createdResponse;
+          if (response.status !== 'completed') {
+            sendJson(res, 502, createChatCompletionErrorResponse(response));
+            return;
+          }
           sendJson(res, 200, createChatCompletionResponse(response, now));
           return;
         } finally {
@@ -2140,12 +2274,16 @@ export async function createResponsesHttpServer(
         const endForegroundWork = beginForegroundAuraCallWork();
         try {
           const body = await readRequestBody(req);
-          const parsedBody = JSON.parse(body) as ExecutionRequest;
-          const request = createExecutionRequest(mergeExecutionRequestHints(parsedBody, req.headers));
+          const parsedBody = normalizeResponsesApiRequest(JSON.parse(body || '{}'));
+          const catalog = await agentTeamConfigService.effectiveCatalog();
+          const request = hydrateExecutionRequestFromCatalog(
+            createExecutionRequest(mergeExecutionRequestHints(parsedBody, req.headers)),
+            catalog,
+          );
           const authorizationError = authorizeExecutionRequest(
             apiAuthContext,
             request,
-            await agentTeamConfigService.effectiveCatalog(),
+            catalog,
           );
           if (authorizationError) {
             sendJson(res, 403, {
@@ -2182,13 +2320,16 @@ export async function createResponsesHttpServer(
         try {
           const body = await readRequestBody(req);
           const parsedPayload = ResponseBatchCreateRequestSchema.parse(JSON.parse(body || '{}'));
+          const catalog = await agentTeamConfigService.effectiveCatalog();
           const payload = {
             ...parsedPayload,
             requests: parsedPayload.requests.map((request) =>
-              createExecutionRequest(mergeExecutionRequestHints(request, req.headers)),
+              hydrateExecutionRequestFromCatalog(
+                createExecutionRequest(mergeExecutionRequestHints(normalizeResponsesApiRequest(request), req.headers)),
+                catalog,
+              ),
             ),
           };
-          const catalog = await agentTeamConfigService.effectiveCatalog();
           for (const request of payload.requests) {
             const authorizationError = authorizeExecutionRequest(apiAuthContext, request, catalog);
             if (authorizationError) {
@@ -2598,6 +2739,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
     resolvedUserConfig as Record<string, unknown>,
     {
       effectiveConfigProvider: () => agentTeamConfigService.effectiveConfig(),
+      logger,
     },
   );
   if (!configuredStoredStepExecutor) {
@@ -2647,7 +2789,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   }
   logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
-    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
+    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   if (serverOptions.dashboardUrl) {
@@ -3134,6 +3276,11 @@ function createHttpStatusResponse(input: {
       mediaGenerationsCreate: '/v1/media-generations',
       mediaGenerationsGetTemplate: '/v1/media-generations/{media_generation_id}',
       mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
+      runArchive: '/v1/archive[?kind=response|response_batch|team_run|media_generation|upload|generated_artifact|provider_conversation|evidence][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&agent={agent_id}][&team={team_id}][&responseId={response_id}][&batchId={batch_id}][&status={status}][&q={query}][&limit=50]',
+      runArchiveBackfill: '/v1/archive/backfill',
+      runArchiveEvidenceCreate: '/v1/archive/evidence',
+      runArchiveItemTemplate: '/v1/archive/items/{archive_item_id}',
+      runArchiveItemAssetTemplate: '/v1/archive/items/{archive_item_id}/asset',
       runStatusTemplate: '/v1/runs/{run_id}/status[?diagnostics=browser-state]',
       apiLogTail: '/v1/api/logs/tail[?maxBytes=32768]',
       preflightRunTemplate: '/v1/preflight/lazy-live-follow/runs/{run_id}',
@@ -3151,6 +3298,8 @@ function createHttpStatusResponse(input: {
       accountMirrorSchedulerHistory: '/v1/account-mirrors/scheduler/history[?limit=10]',
       accountMirrorSchedulerDiagnostics: '/v1/account-mirrors/scheduler/diagnostics[?provider={chatgpt|gemini|grok}&runtimeProfile={runtime_profile}|completionId={completion_id}]',
       browserProcesses: '/v1/browser/processes',
+      browserDomDriftObservations: '/v1/browser/dom-drift-observations[?service={chatgpt|gemini|grok}&surface={surface}&status=observed|accepted|rejected&limit=50]',
+      browserDomDriftObservationAcceptTemplate: 'POST /v1/browser/dom-drift-observations/{observation_id}/accept',
       agentRegistryDiagnostics: '/v1/config/agent-diagnostics',
       configApiKeyIssue: 'POST /v1/config/api-keys/issue',
       configSnapshotExport: 'POST /v1/config/snapshots/export',
@@ -4073,6 +4222,49 @@ function readExecutionAuthorizationSelection(
   };
 }
 
+function hydrateExecutionRequestFromCatalog(
+  request: ExecutionRequest,
+  catalog: EffectiveAgentCatalog,
+): ExecutionRequest {
+  const auracall = request.auracall ?? {};
+  const agent = typeof auracall.agent === 'string' && auracall.agent.trim().length > 0
+    ? auracall.agent.trim()
+    : null;
+  if (!agent) {
+    return request;
+  }
+
+  const catalogAgent = catalog.agents.find((entry) => entry.id === agent) ?? null;
+  if (!catalogAgent) {
+    return request;
+  }
+
+  const service = typeof auracall.service === 'string' && auracall.service.trim().length > 0
+    ? auracall.service.trim()
+    : catalogAgent.service ?? catalogAgent.defaultService ?? null;
+  const runtimeProfile =
+    typeof auracall.runtimeProfile === 'string' && auracall.runtimeProfile.trim().length > 0
+      ? auracall.runtimeProfile.trim()
+      : catalogAgent.runtimeProfileId ?? null;
+
+  if (
+    (service === null || service === auracall.service) &&
+    (runtimeProfile === null || runtimeProfile === auracall.runtimeProfile)
+  ) {
+    return request;
+  }
+
+  return createExecutionRequest({
+    ...request,
+    auracall: {
+      ...auracall,
+      agent,
+      ...(service ? { service } : {}),
+      ...(runtimeProfile ? { runtimeProfile } : {}),
+    },
+  });
+}
+
 function parseChatCompletionRequest(value: unknown): HttpChatCompletionRequest {
   if (!isRecord(value)) {
     throw new HttpInvalidRequestError('Chat completion request body must be an object.');
@@ -4094,6 +4286,7 @@ function parseChatCompletionRequest(value: unknown): HttpChatCompletionRequest {
     throw new HttpInvalidRequestError('Chat completion request requires at least one string-content message.');
   }
   const metadata = isRecord(value.metadata) ? value.metadata : undefined;
+  const responseFormat = isRecord(value.response_format) ? value.response_format : undefined;
   const tools = Array.isArray(value.tools)
     ? value.tools.filter((tool): tool is Record<string, unknown> => isRecord(tool))
     : undefined;
@@ -4101,6 +4294,7 @@ function parseChatCompletionRequest(value: unknown): HttpChatCompletionRequest {
     model,
     messages,
     stream: readBoolean(value.stream) ?? false,
+    ...(responseFormat ? { response_format: responseFormat } : {}),
     ...(metadata ? { metadata } : {}),
     ...(tools ? { tools } : {}),
     auracall: isRecord(value.auracall)
@@ -4121,13 +4315,46 @@ function createExecutionRequestFromChatCompletion(request: HttpChatCompletionReq
       role: message.role,
       content: message.content,
     }));
+  const metadata = {
+    ...(request.metadata ?? {}),
+    ...(request.response_format ? { response_format: request.response_format } : {}),
+  };
   return {
     model: request.model,
     input: inputMessages.length > 0 ? inputMessages : request.messages,
     ...(instructions ? { instructions } : {}),
-    ...(request.metadata ? { metadata: request.metadata } : {}),
+    ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
     ...(request.tools ? { tools: request.tools } : {}),
     ...(request.auracall ? { auracall: request.auracall } : {}),
+  };
+}
+
+function normalizeResponsesApiRequest(value: unknown): ExecutionRequest {
+  if (!isRecord(value)) {
+    throw new HttpInvalidRequestError('Responses request body must be a JSON object.');
+  }
+  const metadata = isRecord(value.metadata) ? value.metadata : undefined;
+  const responseFormat = isRecord(value.response_format) ? value.response_format : undefined;
+  const normalized = {
+    ...value,
+    ...(metadata || responseFormat
+      ? {
+          metadata: {
+            ...(metadata ?? {}),
+            ...(responseFormat && !isRecord(metadata?.response_format) ? { response_format: responseFormat } : {}),
+          },
+        }
+      : {}),
+  };
+  return normalized as ExecutionRequest;
+}
+
+function createChatCompletionErrorResponse(response: ExecutionResponse): HttpErrorPayload {
+  return {
+    error: {
+      type: 'auracall_execution_error',
+      message: `AuraCall execution ${response.id} ended with status ${response.status}.`,
+    },
   };
 }
 
@@ -4697,6 +4924,7 @@ const STATUS_CONTROL_REQUEST_SCHEMA = z.union([
     leaseRepair: z.object({
       action: z.literal('repair-stale-heartbeat'),
       runId: z.string().min(1),
+      force: z.boolean().optional(),
     }),
   }),
   z.object({
@@ -4725,6 +4953,7 @@ function createServiceHostOperatorControlInput(payload: ServiceHostStatusControl
       kind: 'lease-repair',
       action: payload.leaseRepair.action,
       runId: payload.leaseRepair.runId,
+      force: payload.leaseRepair.force ?? false,
     };
   }
   if ('localActionControl' in payload) {
@@ -4784,6 +5013,8 @@ interface ParsedRuntimeRunListQuery {
   sourceKind?: ExecutionRunSourceKind;
 }
 
+interface ParsedRunArchiveQuery extends RunArchiveListRequest {}
+
 interface ParsedRunStatusQuery {
   diagnostics?: 'browser-state';
 }
@@ -4805,10 +5036,18 @@ interface ParsedAccountMirrorCatalogItemQuery extends ParsedAccountMirrorCatalog
   itemId: string;
 }
 
+interface ParsedDomDriftObservationQuery {
+  service?: string;
+  surface?: string;
+  status?: DomDriftObservationStatus;
+  limit?: number;
+}
+
 interface CachedCatalogItemAsset {
   path: string;
   mimeType: string;
   size: number;
+  fileName?: string | null;
 }
 
 interface ParsedAccountMirrorCompletionListQuery {
@@ -5066,6 +5305,99 @@ function parseAccountMirrorCatalogQuery(searchParams: URLSearchParams): ParsedAc
   };
 }
 
+function parseRunArchiveQuery(searchParams: URLSearchParams): ParsedRunArchiveQuery {
+  const raw: Record<string, unknown> = {};
+  for (const key of [
+    'kind',
+    'provider',
+    'runtimeProfile',
+    'agent',
+    'team',
+    'responseId',
+    'batchId',
+    'status',
+    'q',
+    'limit',
+  ]) {
+    if (searchParams.has(key)) {
+      raw[key] = searchParams.get(key);
+    }
+  }
+  const parsed = z.object({
+    kind: z.enum([
+      'all',
+      'response',
+      'response_batch',
+      'team_run',
+      'media_generation',
+      'upload',
+      'generated_artifact',
+      'provider_conversation',
+      'evidence',
+    ]).optional(),
+    provider: z.string().trim().min(1).optional(),
+    runtimeProfile: z.string().trim().min(1).optional(),
+    agent: z.string().trim().min(1).optional(),
+    team: z.string().trim().min(1).optional(),
+    responseId: z.string().trim().min(1).optional(),
+    batchId: z.string().trim().min(1).optional(),
+    status: z.string().trim().min(1).optional(),
+    q: z.string().trim().min(1).optional(),
+    limit: z.coerce.number().int().nonnegative().optional(),
+  }).parse(raw);
+  return {
+    kind: parsed.kind,
+    provider: parsed.provider,
+    runtimeProfile: parsed.runtimeProfile,
+    agent: parsed.agent,
+    team: parsed.team,
+    responseId: parsed.responseId,
+    batchId: parsed.batchId,
+    status: parsed.status,
+    query: parsed.q,
+    limit: parsed.limit,
+  };
+}
+
+function parseRunArchiveEvidenceCreateBody(value: unknown) {
+  return z.object({
+    id: z.string().trim().min(1).optional(),
+    producer: z.string().trim().min(1),
+    schema: z.string().trim().min(1),
+    status: z.enum(['pass', 'fail', 'warning', 'info', 'unknown']).optional(),
+    title: z.string().trim().min(1).optional(),
+    summary: z.string().trim().min(1).optional(),
+    responseId: z.string().trim().min(1).optional(),
+    batchId: z.string().trim().min(1).optional(),
+    archiveItemId: z.string().trim().min(1).optional(),
+    providerConversationId: z.string().trim().min(1).optional(),
+    data: z.unknown().optional(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+  }).parse(value);
+}
+
+function parseDomDriftObservationQuery(searchParams: URLSearchParams): ParsedDomDriftObservationQuery {
+  const raw: Record<string, unknown> = {};
+  if (searchParams.has('service')) {
+    raw.service = searchParams.get('service');
+  }
+  if (searchParams.has('surface')) {
+    raw.surface = searchParams.get('surface');
+  }
+  if (searchParams.has('status')) {
+    raw.status = searchParams.get('status');
+  }
+  if (searchParams.has('limit')) {
+    raw.limit = searchParams.get('limit');
+  }
+  return z.object({
+    service: z.string().trim().min(1).optional(),
+    surface: z.string().trim().min(1).optional(),
+    status: z.enum(['observed', 'accepted', 'rejected']).optional(),
+    limit: z.coerce.number().int().nonnegative().max(500).optional(),
+  }).parse(raw);
+}
+
 function parseAccountMirrorCatalogItemQuery(
   pathname: string,
   searchParams: URLSearchParams,
@@ -5084,6 +5416,23 @@ function parseAccountMirrorCatalogItemQuery(
 
 function isAccountMirrorCatalogItemAssetRoute(pathname: string): boolean {
   return pathname.startsWith('/v1/account-mirrors/catalog/items/') && pathname.endsWith('/asset');
+}
+
+function isRunArchiveItemAssetRoute(pathname: string): boolean {
+  return pathname.startsWith('/v1/archive/items/') && pathname.endsWith('/asset');
+}
+
+function parseRunArchiveItemAssetId(pathname: string): string {
+  const prefix = '/v1/archive/items/';
+  const suffix = '/asset';
+  const encodedItemId = pathname.startsWith(prefix) && pathname.endsWith(suffix)
+    ? pathname.slice(prefix.length, -suffix.length)
+    : '';
+  const itemId = decodeURIComponent(encodedItemId).trim();
+  if (!itemId) {
+    throw new Error('Run archive item id is required.');
+  }
+  return itemId;
 }
 
 function parseAccountMirrorCatalogItemAssetQuery(
@@ -5450,6 +5799,11 @@ function matchRunStatusRoute(pathname: string): string | null {
   return match?.[1] ?? null;
 }
 
+function matchDomDriftObservationAcceptRoute(pathname: string): string | null {
+  const match = /^\/v1\/browser\/dom-drift-observations\/([^/]+)\/accept$/.exec(pathname);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
 function matchAccountMirrorCompletionRoute(pathname: string): string | null {
   const match = /^\/v1\/account-mirrors\/completions\/([^/]+)$/.exec(pathname);
   return match?.[1] ?? null;
@@ -5497,11 +5851,18 @@ function sendHtml(res: http.ServerResponse, statusCode: number, html: string): v
 }
 
 function sendCachedAsset(res: http.ServerResponse, asset: CachedCatalogItemAsset): void {
-  res.writeHead(200, {
+  const headers: Record<string, string> = {
     'Content-Type': asset.mimeType,
     'Content-Length': String(asset.size),
     'Cache-Control': 'private, max-age=300',
     'X-Content-Type-Options': 'nosniff',
+  };
+  const fileName = sanitizeContentDispositionFilename(asset.fileName);
+  if (fileName) {
+    headers['Content-Disposition'] = `attachment; filename="${fileName}"`;
+  }
+  res.writeHead(200, {
+    ...headers,
   });
   createReadStream(asset.path).on('error', () => {
     if (!res.headersSent) {
@@ -5515,6 +5876,12 @@ function sendCachedAsset(res: http.ServerResponse, asset: CachedCatalogItemAsset
     }
     res.destroy();
   }).pipe(res);
+}
+
+function sanitizeContentDispositionFilename(fileName: string | null | undefined): string | null {
+  const trimmed = typeof fileName === 'string' ? fileName.trim() : '';
+  if (!trimmed) return null;
+  return path.basename(trimmed).replace(/["\r\n\\]/g, '_').slice(0, 180) || null;
 }
 
 function createOperatorBrowserDashboardHtml(input: {

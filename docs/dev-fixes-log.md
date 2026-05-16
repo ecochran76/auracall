@@ -15999,3 +15999,82 @@ browser-stage lifecycle observability, not transcript truncation.
 - 2026-05-14: Browser response artifacts must be merged with message output at
   the OpenAI-compatible response boundary. A stored `response.output` message
   should not hide shared artifact refs produced by conversation materialization.
+- 2026-05-14: Bound ChatGPT service-account drift must fail before Pro-mode
+  selection. Browser prompt runs now pass expected identity/service-account
+  binding into ChatGPT execution and run account preflight immediately after
+  login; mismatches report `chatgpt_account_session_drift` instead of a
+  misleading "Pro mode requires a Pro account" capability error.
+- 2026-05-14: Chrome/Google profile identity is not the same authority as the
+  provider app session. Browser doctor now reports an explicit
+  `identityReconciliation` layer; if the ChatGPT app session matches the
+  configured runtime binding, a different Chrome/Google account is
+  informational only and must not be treated as contamination.
+- 2026-05-14: Capability fields are not identity. Provider preflight now
+  requires an account key or configured service-account binding to match before
+  it accepts tier/capability fields such as Pro, Business, plan type, or account
+  structure. This prevents one Pro account from satisfying another Pro account's
+  runtime binding.
+- 2026-05-14: Managed browser profile repair must be explicit. `auracall login`
+  and `auracall setup` now preserve existing managed profiles by default;
+  destructive reseed requires `--force-reseed-managed-profile`, and account
+  mismatch guidance must not recommend clearing/quarantining profiles without
+  operator approval.
+- 2026-05-14: Browser-backed artifact contracts must not complete on status
+  prose. Configured ChatGPT browser runs that declare a workspace/browser
+  artifact now fail when post-run materialization finds no matching artifact,
+  and required JSON/structured-report outputs require real structured output or
+  parseable JSON rather than `browserRun` metadata or "I'll create it" text.
+- 2026-05-14: HTTP regression tests must not depend on startup timing or leaked
+  temp-root state. The HTTP harness now waits for `serveResponsesHttp` to bind
+  before signalling shutdown, retries temp cleanup around SQLite teardown, uses
+  a wider completion-independent team-run create assertion, and restores
+  temp-root env between tests.
+- 2026-05-15: Project-bound ChatGPT browser dispatch must keep one account and
+  project context through submit and artifact materialization. The runner now
+  accepts current `g-p-*` and UUID-style project ids, fails fast on root
+  fallback for project-bound runs, passes the resolved service-account binding
+  into post-response artifact materialization, and emits coordinate-bearing DOM
+  click events for ChatGPT's moved prompt-workbench model/thinking controls.
+- 2026-05-15: Browser artifact output contracts need explicit provider-facing
+  instructions as well as post-run enforcement. AuraCall now prepends
+  downloadable/workspace artifact instructions for declared artifact contracts,
+  while still failing if ChatGPT returns status prose without a materialized
+  file.
+- 2026-05-15: ChatGPT needs a concrete materialization handshake for browser
+  artifacts. For declared ChatGPT workspace artifacts, AuraCall now instructs
+  the model to write `/mnt/data/<artifactFileName>` and expose the exact
+  `sandbox:/mnt/data/<artifactFileName>` markdown link used by the existing
+  conversation artifact materializer.
+- 2026-05-15: ChatGPT can visually split artifact filenames inside download
+  controls, for example rendering `legacy_readout.json` as
+  `legacy_readout.j on`. Conversation artifact materialization now uses
+  compact/stem title matching for ChatGPT download buttons before marking
+  generated `sandbox:` artifacts as skipped.
+- 2026-05-15: Required browser artifact contracts must require a local
+  materialized file, not just a discovered provider reference. A generated
+  `sandbox:/mnt/data/...` artifact with no `localPath` now fails the configured
+  executor required-artifact check instead of completing as if the file had
+  been downloaded.
+- 2026-05-15: Browser operation locks owned by the API process must be released
+  when browser launch or devtools preflight fails before normal browser cleanup
+  begins. ChatGPT and Grok browser execution now release their dispatcher locks
+  on preflight failure, preventing a failed Chrome launch from blocking later
+  API work on the same runtime profile.
+- 2026-05-15: ChatGPT browser artifact runs need a same-conversation recovery
+  path, but completion detection must stay patient. AuraCall now retries a
+  missing required artifact once in the existing ChatGPT conversation and the
+  fallback assistant-response recovery waits for completion/stability instead
+  of returning the first visible progress snapshot.
+- 2026-05-16: Project-bound grading batch audit clarified AuraCall's product
+  boundary. A full ChE 4470/5470 batch completed and cached every response,
+  upload reference, and project-bound conversation id. A course-specific
+  arithmetic repair was applied downstream, but domain validation belongs in the
+  calling workflow or agent, not AuraCall core. AuraCall should focus on
+  command-line/API/MCP orchestration, job queue management, upload and generated
+  artifact storage, searchable cache/archive retrieval, and metadata that lets
+  callers attach their own validation or post-processing evidence.
+- 2026-05-16: Archive write-through should upsert the affected item family
+  instead of rebuilding the whole index after every service write. Response,
+  batch, media, and evidence writes now use serialized item-level upserts once
+  the index exists, while first-use compatibility still backfills older runtime
+  records before the targeted merge.

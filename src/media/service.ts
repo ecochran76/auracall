@@ -17,6 +17,7 @@ import type {
   MediaGenerationType,
 } from './types.js';
 import type { WorkbenchCapability, WorkbenchCapabilityReporter } from '../workbench/types.js';
+import { refreshRunArchiveIndexBestEffort } from '../runtime/archiveIndexRefresh.js';
 
 export interface MediaGenerationServiceDeps {
   now?: () => Date;
@@ -27,6 +28,7 @@ export interface MediaGenerationServiceDeps {
   capabilityReporter?: WorkbenchCapabilityReporter | null;
   runtimeProfile?: string | null;
   onGenerationSettled?: (response: MediaGenerationResponse) => void | Promise<void>;
+  refreshArchiveIndex?: boolean;
 }
 
 export interface MediaGenerationService {
@@ -44,6 +46,7 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
   const materializer = deps.materializer ?? null;
   const capabilityReporter = deps.capabilityReporter ?? null;
   const runtimeProfile = deps.runtimeProfile ?? null;
+  const refreshArchiveIndex = deps.refreshArchiveIndex ?? true;
 
   return {
     async createGeneration(input) {
@@ -114,6 +117,9 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
         },
       } satisfies MediaGenerationResponse);
       await store.writeResponse(response, { persistedAt: updatedAt });
+      if (refreshArchiveIndex) {
+        await refreshRunArchiveIndexBestEffort({ mediaGenerationId: id });
+      }
       return response;
     },
 
@@ -264,6 +270,9 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
         failure: null,
       } satisfies MediaGenerationResponse);
       await store.writeResponse(response, { persistedAt: completedAt });
+      if (refreshArchiveIndex) {
+        await refreshRunArchiveIndexBestEffort({ mediaGenerationId: id });
+      }
       await notifyGenerationSettled(response);
       return response;
     } catch (error) {
@@ -291,6 +300,9 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
         failure,
       } satisfies MediaGenerationResponse);
       await store.writeResponse(response, { persistedAt: completedAt });
+      if (refreshArchiveIndex) {
+        await refreshRunArchiveIndexBestEffort({ mediaGenerationId: id });
+      }
       await notifyGenerationSettled(response);
       return response;
     }

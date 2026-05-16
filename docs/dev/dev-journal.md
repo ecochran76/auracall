@@ -28980,3 +28980,499 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   fixed. It does not yet prove artifact extraction: ChatGPT replied
   `legacy_readout.json ready`, while AuraCall recorded
   `discovered=0 materialized=0`.
+
+## Turn 123 | 2026-05-14
+
+- Goal: fix the LitScout/PCG account-browser mismatch failure so AuraCall
+  reports account/session drift before attempting ChatGPT Pro-mode selection.
+- Change:
+  - ChatGPT browser prompt runs now carry configured expected identity and
+    service-account binding into the managed browser execution path
+  - ChatGPT browser automation runs an account preflight immediately after
+    login/session verification and before project navigation, model selection,
+    composer tool selection, or Pro/Thinking controls
+  - provider identity preflight now classifies bound-account mismatches as
+    `*_account_session_drift` with the expected account, observed app session,
+    and bound service-account id
+  - configured identity comparison now includes account tier/capability fields,
+    so Pro-vs-Business drift is caught as identity drift rather than a generic
+    Pro capability failure
+- Validation:
+  - `pnpm vitest run tests/browser/providerIdentityPreflight.test.ts tests/browser/chatgptService.test.ts tests/runtime.configuredExecutor.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome check --formatter-enabled=false --assist-enabled=false ...`
+  - `git diff --check -- ...`
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - `systemctl --user is-active auracall-api.service`
+  - `curl http://127.0.0.1:18095/status`
+
+## Turn 124 | 2026-05-14
+
+- Goal: resolve the false browser-profile contamination conclusion after all
+  visible ChatGPT profiles appeared logged in and healthy.
+- Finding:
+  - `wsl-chrome-3` is correctly signed into ChatGPT as
+    `eric.cochran@soylei.com` with Pro account features
+  - the same managed Chrome profile's Google/Chrome metadata reports
+    `ecochran76@gmail.com`
+  - that Chrome/Google identity is not the authoritative ChatGPT account; the
+    provider app session is authoritative for ChatGPT execution
+- Change:
+  - browser doctor contracts now include `identityReconciliation`
+  - reconciliation reports configured expected identity, provider app identity,
+    Chrome/Google profile identity, match booleans, and the authority layer
+  - if provider app identity matches the configured binding, a differing
+    Chrome/Google profile is reported as informational only rather than drift
+  - text doctor output now prints this reconciliation and authority note
+- Validation:
+  - `pnpm vitest run tests/browser/profileDoctor.test.ts tests/browser/providerIdentityPreflight.test.ts tests/cli/browserSetup.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome check --formatter-enabled=false --assist-enabled=false src/browser/profileDoctor.ts bin/auracall.ts tests/browser/profileDoctor.test.ts tests/cli/browserSetup.test.ts`
+  - source doctor on `wsl-chrome-3` reports `provider_app_verified` with
+    `browserProfileMismatchIsInformational=true`
+
+## Turn 125 | 2026-05-14
+
+- Goal: harden identity matching after confirming that profile quarantine
+  should never be an automatic response to ambiguous account evidence.
+- Change:
+  - provider identity preflight no longer treats capability fields such as
+    `Pro`, `Business`, plan type, or account structure as sufficient account
+    identity evidence
+  - account tier/capability fields are checked only after an actual account key
+    such as email, handle, id, name, or the configured service-account binding
+    matches the provider app session
+  - service-account binding is now compared against the detected provider app
+    identity when it is the only usable account key
+- Validation:
+  - `pnpm vitest run tests/browser/providerIdentityPreflight.test.ts tests/browser/profileDoctor.test.ts tests/browser/chatgptService.test.ts tests/runtime.configuredExecutor.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm exec biome check --formatter-enabled=false --assist-enabled=false src/browser/providers/identityPreflight.ts tests/browser/providerIdentityPreflight.test.ts docs/dev/dev-journal.md docs/dev-fixes-log.md`
+  - `git diff --check -- src/browser/providers/identityPreflight.ts tests/browser/providerIdentityPreflight.test.ts docs/dev/dev-journal.md docs/dev-fixes-log.md`
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - installed API response `resp_ca699ca439af4df0becb71197a57a1ce` completed
+    through `agent:pro-extended-chatgpt-soylei-che4470-seminar-grading` with
+    `auracall soylei identity ok`
+  - installed doctor on `wsl-chrome-3` still reports
+    `provider_app_verified` for `eric.cochran@soylei.com`
+
+## Turn 126 | 2026-05-14
+
+- Goal: enforce that profile quarantine/reset/reseed is an operator-approved
+  repair, not the automatic response to identity ambiguity.
+- Change:
+  - `auracall login` and `auracall setup` now preserve existing managed
+    browser profiles by default and only bootstrap empty profiles
+  - destructive managed-profile reseed remains available through the explicit
+    `--force-reseed-managed-profile` flag
+  - Grok account mismatch guidance now tells operators to switch/sign in or
+    update the binding, and explicitly says not to clear/reset/quarantine a
+    profile without operator approval
+  - browser-mode/testing docs now describe login/setup as non-destructive by
+    default
+
+## Turn 127 | 2026-05-14
+
+- Goal: fix transcribe-audio batch retries that completed at the AuraCall layer
+  with ChatGPT status text but no `legacy_readout.json` artifact or JSON
+  payload.
+- Change:
+  - declared browser artifact contracts now require a matching materialized
+    artifact before the configured executor can return success
+  - if ChatGPT replies with status text such as "I'll create the artifact" and
+    artifact materialization reports `discovered=0 materialized=0`, the step
+    fails with a required-artifact error instead of producing an empty
+    successful response
+  - required `format: json` / `structured-report` outputs no longer accept any
+    non-empty message as fulfillment; they require real structured output or a
+    parseable JSON object message
+  - internal browser metadata such as `browserRun` no longer satisfies a
+    required structured-report output
+- Validation:
+  - `pnpm vitest run tests/runtime.configuredExecutor.test.ts tests/runtime.runner.test.ts tests/runtime.responsesService.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+
+## Turn 128 | 2026-05-14
+
+- Goal: clear order-dependent HTTP test failures before returning to live
+  transcript and grading workflow retries.
+- Change:
+  - `serveResponsesHttp` shutdown tests now wait until the server emits its
+    bound log line before sending `SIGINT`, avoiding a missed shutdown signal
+    while startup recovery is still binding
+  - HTTP temp-directory cleanup now retries briefly so SQLite side files do not
+    produce false `ENOTEMPTY` failures during teardown
+  - the background team-run create test now proves the route returns before
+    step completion without assuming it resolves inside a 100 ms scheduler
+    window
+  - the HTTP test harness restores temp-root environment variables after each
+    test so later API-key route tests do not inherit a placeholder Windows temp
+    path
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "returns team-run create before execution|serveResponsesHttp|startup recovery" --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "loads local API keys|issues scoped API keys" --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1`
+
+## Turn 129 | 2026-05-15
+
+- Goal: repair the Transcripts project-bound ChatGPT dispatch path before
+  retrying private transcribe-audio payloads.
+- Change:
+  - ChatGPT project route assertions now accept both `g-p-*` ids and UUID-style
+    project ids, and browser dispatch fails fast if a project-bound run falls
+    back to root ChatGPT before or after submit
+  - browser response artifact materialization now carries the same resolved
+    expected service-account binding used by browser dispatch, avoiding false
+    `account_session_drift` when the provider app session already matches
+  - shared DOM click dispatch now sends element-center mouse coordinates so the
+    moved ChatGPT prompt-workbench model/thinking menu can be opened and
+    selected reliably
+  - browser artifact output contracts now inject explicit instructions that a
+    downloadable/workspace file must exist before the assistant may reply
+    "ready"
+- Validation:
+  - `pnpm vitest run tests/runtime.configuredExecutor.test.ts tests/browser/thinkingTime.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/browserModeExports.test.ts tests/browser/providerIdentityPreflight.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+
+## Turn 130 | 2026-05-15
+
+- Goal: close the remaining project-bound ChatGPT artifact gap where the model
+  acknowledges a required file but never exposes a downloadable object.
+- Change:
+  - ChatGPT browser artifact contracts now tell the model to write the required
+    file under `/mnt/data/<artifactFileName>` and include the exact
+    `sandbox:/mnt/data/<artifactFileName>` markdown link AuraCall already knows
+    how to discover and materialize
+  - generic browser artifact wording remains in place for provider workbenches,
+    and the existing post-run required-artifact check still fails status-only
+    replies
+- Validation:
+  - `pnpm vitest run tests/runtime.configuredExecutor.test.ts tests/browser/thinkingTime.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/browserModeExports.test.ts tests/browser/providerIdentityPreflight.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+
+## Turn 131 | 2026-05-15
+
+- Goal: fix real transcript retries where ChatGPT produced
+  `sandbox:/mnt/data/legacy_readout.json` artifact references but AuraCall
+  marked them `status=skipped`.
+- Evidence:
+  - transcribe-audio batch `batch_fdedf5abec1f496987d3a7a5769fe1b4`
+    completed two responses, both with generated
+    `sandbox:/mnt/data/legacy_readout.json` artifact references
+  - AuraCall fetch manifests for conversations
+    `6a072a0d-abd8-83ea-9fe7-ffbc28a4a522` and
+    `6a072a9c-9b1c-83ea-823d-b11a2da12fa1` had `artifactCount=1`,
+    `materializedCount=0`, and `status=skipped`
+  - live DOM on the second conversation contained a visible artifact button
+    whose text normalized to `legacy_readout.j on`, so exact
+    `legacy_readout.json` matching missed the download control
+- Change:
+  - ChatGPT artifact download matching now compares a compact title key and
+    falls back to the expected filename stem when ChatGPT inserts or drops
+    layout whitespace inside the rendered extension
+  - the same tolerant title matching is applied in the in-browser button
+    tagging script used by conversation artifact materialization
+  - required browser artifact contracts now require a materialized local file;
+    a discovered/generated `sandbox:` reference without `localPath` no longer
+    counts as success
+- Validation:
+  - `pnpm vitest run tests/runtime.configuredExecutor.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - bounded transcribe-audio retry `batch_005a02c6613c44059ac60eedef389678`
+    completed two AuraCall responses; response
+    `resp_53e517f726014e729f00ab505ef7a536` materialized a local
+    readout JSON/Markdown, while response
+    `resp_4b07621458f0461da4761ed5576d0099` exposed only future-tense status
+    text plus a generated `sandbox:` reference with no local file, confirming
+    the remaining failure is incomplete provider execution rather than the
+    filename matching skip
+
+## Turn 132 | 2026-05-15
+
+- Goal: repair the browser operation dispatcher after a bounded
+  transcribe-audio retry exposed a stale API-owned ChatGPT lock.
+- Evidence:
+  - retry batch `batch_7d913e407ee540039861154cb65b08f7` failed one response
+    with `connect ETIMEDOUT 127.0.0.1:9222`, then the next response timed out
+    behind a live-pid exclusive browser operation lock owned by
+    `response-run:resp_b4fcaa2ea0bb4195829b3e89fab5f64a:pro-extended-chatgpt-soylei-transcripts`
+  - the lock owner pid was the long-running API service, so process-liveness
+    pruning could not distinguish the failed launch from real active work
+- Change:
+  - ChatGPT browser execution now releases the dispatcher lock if managed
+    profile reuse, Chrome launch, or devtools preflight fails before the main
+    browser-run cleanup `finally` is installed
+  - Grok browser execution received the same preflight release guard around
+    launch and devtools readiness
+  - added a targeted regression test proving a preflight-released operation can
+    be reacquired immediately
+  - removed only the matching stale browser-operation lock file for the failed
+    SoyLei transcript response; no browser profile state was changed
+- Validation:
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - scoped transcribe-audio retry
+    `batch_1a75f7d585e745c7ba618cf7ec60e0b1` completed `2/2` with no
+    failures, and `--materialize --store` wrote both readout JSON/Markdown
+    files from ChatGPT-downloaded `legacy_readout.json` artifacts
+
+## Turn 133 | 2026-05-15
+
+- Goal: widen the transcribe-audio AuraCall retry after the dispatcher lock fix.
+- Evidence:
+  - five-item batch `batch_8d24bce44b94428e848587fde0b71ad5` ran through the
+    SoyLei `pro-extended-chatgpt-soylei-transcripts` agent with
+    `maxConcurrentRuns=1` and `maxBrowserInteractionsPerMinute=6`
+  - batch completed terminal with `completed=2`, `failed=3`, `cancelled=0`
+  - both completed responses materialized via `--materialize --store`:
+    `resp_f1a80b3239a14d2fb3d5867406750f63` and
+    `resp_8f4ba7f56f434a208afcceb801aa0630`
+  - all three failures were the expected required-artifact guard rejecting
+    future-tense/status-only ChatGPT replies with no materialized
+    `legacy_readout.json`
+- Follow-up:
+  - add a browser-run correction/retry path for required artifacts when
+    ChatGPT replies with "I will create..." status prose but no downloadable
+    artifact, then retry the failed response ids or their source transcript
+    items before widening concurrency
+
+## Turn 134 | 2026-05-15
+
+- Goal: close the remaining transcribe-audio artifact failure where ChatGPT
+  returned status/progress text before the required `legacy_readout.json`
+  artifact existed.
+- Evidence:
+  - three-item retry `batch_cb5e206ba0f4499282d9a93bd8069911` proved the new
+    correction path fired, but one response still failed because the assistant
+    response fallback recovered the first visible progress/status snapshot
+    while ChatGPT Pro was still thinking
+  - the same batch materialized two successful readouts through
+    `--materialize --store`: `resp_8780bcb35f8e4dbb92e027ae2d3b9fda` and
+    `resp_15e2ad4a97f142e393b772900ccfaef1`
+- Change:
+  - configured ChatGPT browser execution now retries once in the same
+    conversation when a declared browser artifact is discovered but not locally
+    materialized, with no attachments and an explicit instruction to create
+    `/mnt/data/<artifactFileName>` before replying with the sandbox link
+  - ChatGPT assistant response recovery now uses the same completion/stability
+    poller as the primary wait path instead of accepting the first visible
+    assistant snapshot
+  - the final required-artifact guard still requires a materialized local file,
+    so status-only replies fail after the one correction attempt
+- Validation:
+  - `pnpm vitest run tests/runtime.configuredExecutor.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/runtime.configuredExecutor.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+  - `pnpm run build && pnpm run install:user-runtime-service`
+  - `systemctl --user restart auracall-api.service`
+  - one-item transcribe-audio retry
+    `batch_f34adb17c3b04191b724730ac81c06c6` completed `1/1` and
+    materialized
+    `/home/ecochran76/.transcripts/legacy-artifacts/b3/b3cdff6aa3dfb60ad15d-2025-09-09 Safer Made VC Interview My recording 26.readout.json`
+
+## Turn 135 | 2026-05-15
+
+- Goal: prove the ChatGPT artifact completion fix across a wider
+  transcribe-audio batch before returning to ChE 447 workflow work.
+- Evidence:
+  - five-item batch `batch_bab3743111214d0b819f22c51a8e3549` ran through
+    `agent:pro-extended-chatgpt-soylei-transcripts` with
+    `maxConcurrentRuns=1` and `maxBrowserInteractionsPerMinute=6`
+  - batch completed terminal with `completed=5`, `failed=0`, `cancelled=0`
+  - `--materialize --store` wrote five readout JSON/Markdown pairs with no
+    materialization errors
+  - the slowest item completed after about 28 minutes, confirming the patient
+    assistant-response fallback can tolerate long Pro-Extended runs without
+    accepting intermediate progress text as final output
+- Follow-up:
+  - keep transcript production at conservative single-run concurrency until the
+    next ChE 447 agent queue work gives AuraCall a broader multi-job workload
+    to tune against
+
+## Turn 136 | 2026-05-15
+
+- Goal: return to the ChE 4470/5470 seminar grading use case and prove the
+  project-bound scoped agent can run a live attachment-bearing response batch.
+- Evidence:
+  - scoped client env
+    `/home/ecochran76/.auracall/clients/che447-grading.env` advertises
+    `agent:pro-extended-chatgpt-soylei-che4470-seminar-grading`
+  - live batch `batch_6c19494f492748ab9a133970050a1094` was submitted through
+    the scoped key with two tiny non-private packet/rubric attachment sets,
+    `maxConcurrentRuns=1`, and `maxBrowserInteractionsPerMinute=6`
+  - batch completed terminal with `completed=2`, `failed=0`, `cancelled=0`
+  - child response `resp_dc31f82d65c84952be5f1dda0631f19c` returned exactly
+    `CHE447_BATCH_SMOKE_OK Student A`
+  - child response `resp_449659557aa345c58be04cd3fc27300f` returned exactly
+    `CHE447_BATCH_SMOKE_OK Student B`
+  - both responses recorded the expected project-bound ChatGPT URLs under
+    `g-p-6a0485902cc481918bb72066dd7164b9-che-4470-5470-seminar-grading`
+    and preserved two input artifacts per child response
+- Follow-up:
+  - the course agent can now run one or two real single-student packet smokes
+    before enqueueing the full grading batch
+
+## Turn 137 | 2026-05-16
+
+- Goal: audit the full-class ChE 4470/5470 seminar grading AuraCall batch after
+  the course agent queued the remaining class packets.
+- Evidence:
+  - batch `che447-seminar-grading-batch-2026-05-15-rest` completed `22/22`
+    with `failed=0`, `cancelled=0`, and `missing=0`
+  - all 22 child responses have cached AuraCall runtime records, project-bound
+    ChatGPT conversation ids, and ChE project URLs under
+    `g-p-6a0485902cc481918bb72066dd7164b9`
+  - all 137 requested local attachments are preserved in the cached step input
+    artifact metadata and still exist at their source paths
+  - all 22 course-side `feedback-draft.json` files match the corresponding
+    cached AuraCall `response.output` JSON after repair
+  - no provider file artifacts were expected or retrieved for this workflow,
+    because it requested inline JSON and then materialized course-side draft
+    JSON files
+- Repair:
+  - corrected six draft records whose `score_total` exceeded the sum of their
+    criterion scores, updating both course-side `feedback-draft.json` files and
+    the matching AuraCall `record.json` / `bundle.json` cache entries
+  - regenerated the course-side score review summaries/tables so they now show
+    `valid_rows=22`, `invalid_rows=0`
+- Artifacts:
+  - wrote the course audit reports
+    `/mnt/h/My Drive/ISU/che447/canvas-cli/artifacts/seminars/2026-05-15-auracall-seminar-grading-batch/cache-validation-audit-2026-05-16.json`
+    and
+    `/mnt/h/My Drive/ISU/che447/canvas-cli/artifacts/seminars/2026-05-15-auracall-seminar-grading-batch/cache-validation-audit-2026-05-16.md`
+- Follow-up:
+  - keep course-specific grading validation outside AuraCall core; AuraCall's
+    responsibility is to queue and manage the work, preserve uploaded files and
+    generated intelligence artifacts, expose run/cache metadata, and make those
+    records retrievable through the searchable archive
+  - let workflow agents attach their own post-processing validators and store
+    that validation evidence beside the cached AuraCall job outputs
+
+## Turn 138 | 2026-05-16
+
+- Goal: place the ChE grading audit follow-ups into the correct AuraCall
+  roadmap lanes after clarifying that domain validation is outside AuraCall
+  core.
+- Roadmap placement:
+  - account mirror/live follow remains Plan 0063 and owns provider-account
+    history mirroring only
+  - OpenAI-compatible agent API and semantic selectors remain Plan 0064 and own
+    request entrypoints, configured-agent routing, batch semantics, scoped
+    client workflow, and provider model-selector execution
+  - DB-backed agent/team registry remains Plan 0065 and owns mutable
+    agent/team catalog, revision, diagnostics, snapshots, and API-key reach
+  - new Plan 0066 owns searchable archive promotion for AuraCall-created runs,
+    uploads, generated artifacts, provider conversation ids, and
+    caller-supplied validation evidence
+- Boundary:
+  - course grading arithmetic, transcript readout semantics, literature
+    moderation, and similar domain checks belong to caller workflows or agents;
+    AuraCall should store their evidence, not implement their logic
+
+## Turn 139 | 2026-05-16
+
+- Goal: start Plan 0066 with a read-only archive inventory projection and
+  expose it through API, CLI, and MCP.
+- Change:
+  - added a runtime archive service that scans existing AuraCall runtime/cache
+    records for responses, response batches, team runs, media generations,
+    uploaded input artifacts, generated artifacts, and provider conversation
+    references
+  - added `GET /v1/archive` and `GET /v1/archive/items/{archive_item_id}`
+  - added `auracall api archive` and `auracall api archive-item`
+  - added MCP `run_archive_search` and `run_archive_item`
+  - documented the archive readback contract in `docs/openai-endpoints.md`,
+    `docs/mcp.md`, and `docs/agent-workflows.md`
+- Verification:
+  - archive service, HTTP route, MCP tool, and CLI helper tests pass
+  - `pnpm exec tsc --noEmit` passes
+- Follow-up:
+  - make the archive incremental/write-through with backfill, checksum/dedupe
+    metadata, local asset serving, and caller-supplied evidence attachment
+
+## Turn 140 | 2026-05-16
+
+- Goal: add the first durable archive index and operator backfill path.
+- Change:
+  - added a JSON run archive index store in the user runtime tree
+  - made archive search/detail read the index and auto-build it on first use
+    when missing
+  - added `POST /v1/archive/backfill`, `auracall api archive-backfill`, and
+    MCP `run_archive_backfill`
+  - added cache-key, checksum, and file-availability metadata for local
+    uploads/generated artifacts when readable
+- Verification:
+  - archive service, HTTP route, MCP tool, and CLI helper tests pass
+  - `pnpm exec tsc --noEmit` passes
+- Follow-up:
+  - make runtime completion paths update the archive index when records are
+    written
+
+## Turn 141 | 2026-05-16
+
+- Goal: make new service-created runs appear in the archive index without
+  operator backfill.
+- Change:
+  - added a coalesced best-effort archive refresh helper
+  - wired response creation, response-batch creation, service-host run
+    settlement, media-generation settlement, and media materialization to
+    refresh the index after meaningful writes
+  - added regression coverage for response, batch, and media write-through
+- Verification:
+  - archive service, HTTP route, MCP tool, and CLI helper tests pass
+  - `pnpm exec tsc --noEmit` passes
+- Follow-up:
+  - move from full-index refresh to item-level upsert when archive volume
+    warrants it
+
+## Turn 142 | 2026-05-16
+
+- Goal: make archive file assets retrievable through stable API URLs.
+- Change:
+  - added archive asset resolution by archive item id
+  - added `GET /v1/archive/items/{archive_item_id}/asset`
+  - streamed readable local files with download headers and returned 404 for
+    non-file or missing entries
+- Verification:
+  - archive service and HTTP archive route tests pass
+  - `pnpm exec tsc --noEmit` passes
+- Follow-up:
+  - add generic caller-owned evidence attachment records
+
+## Turn 143 | 2026-05-16
+
+- Goal: add generic caller-owned evidence attachment records to the searchable
+  archive without moving domain validators into AuraCall core.
+- Change:
+  - added the archive evidence store
+  - added API `POST /v1/archive/evidence`
+  - added CLI `auracall api archive-evidence`
+  - added MCP `run_archive_attach_evidence`
+  - indexed evidence as `kind = "evidence"` and made evidence metadata
+    searchable
+  - updated endpoint, MCP, workflow, and Plan 0066 docs
+- Verification:
+  - archive service, HTTP route, MCP tool, and CLI helper tests pass
+- Follow-up:
+  - move to item-level archive upserts before large archives make full refresh
+    too expensive
+
+## Turn 144 | 2026-05-16
+
+- Goal: make normal archive write-through use targeted item-level upserts.
+- Change:
+  - added index-store item upsert support
+  - added response, batch, and media archive item-family upsert methods
+  - changed response, batch, service-host, and media settlement paths to use
+    targeted archive refreshes
+  - serialized archive refresh tasks so parallel completions do not race the
+    JSON index write path
+  - retained first-use full backfill when no index exists
+- Verification:
+  - targeted archive service tests pass
+  - typecheck passes
+- Follow-up:
+  - enrich archive item metadata and dedupe keys before dashboard work

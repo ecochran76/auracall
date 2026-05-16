@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import type { Dirent } from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
@@ -8,6 +9,7 @@ import type { ExecutionRequest, ExecutionResponseStatus } from './apiTypes.js';
 import type { ExecutionRuntimeControlContract } from './contract.js';
 import type { ExecutionResponsesService } from './responsesService.js';
 import type { ExecutionRunStoredRecord } from './store.js';
+import { refreshRunArchiveIndexBestEffort } from './archiveIndexRefresh.js';
 
 const RESPONSE_BATCHES_DIRNAME = 'response-batches';
 const RECORD_FILENAME = 'record.json';
@@ -78,6 +80,7 @@ export interface ResponseBatchStatus {
 export interface ResponseBatchStore {
   readBatch(id: string): Promise<ResponseBatchRecord | null>;
   writeBatch(record: ResponseBatchRecord): Promise<ResponseBatchRecord>;
+  listBatches?(options?: { limit?: number | null }): Promise<ResponseBatchRecord[]>;
 }
 
 export interface ResponseBatchService {
@@ -90,6 +93,7 @@ export interface ResponseBatchServiceDeps {
   now?: () => Date;
   generateBatchId?: () => string;
   store?: ResponseBatchStore;
+  refreshArchiveIndex?: boolean;
 }
 
 export interface ResponseBatchExecutionGateDeps {
@@ -101,6 +105,7 @@ export function createResponseBatchService(deps: ResponseBatchServiceDeps): Resp
   const now = deps.now ?? (() => new Date());
   const generateBatchId = deps.generateBatchId ?? (() => `batch_${randomUUID().replace(/-/g, '')}`);
   const store = deps.store ?? createResponseBatchStore();
+  const refreshArchiveIndex = deps.refreshArchiveIndex ?? true;
 
   return {
     async createBatch(input) {
@@ -134,6 +139,9 @@ export function createResponseBatchService(deps: ResponseBatchServiceDeps): Resp
         jobs,
       };
       await store.writeBatch(record);
+      if (refreshArchiveIndex) {
+        await refreshRunArchiveIndexBestEffort({ batchId: id });
+      }
       return summarizeBatchStatus(record, deps.responsesService);
     },
 
@@ -149,6 +157,7 @@ export function createResponseBatchStore(): ResponseBatchStore {
   return {
     readBatch: readResponseBatchRecord,
     writeBatch: writeResponseBatchRecord,
+    listBatches: listResponseBatchRecords,
   };
 }
 
@@ -212,6 +221,28 @@ async function writeResponseBatchRecord(record: ResponseBatchRecord): Promise<Re
   await fs.writeFile(tempPath, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8');
   await fs.rename(tempPath, recordPath);
   return parsed;
+}
+
+export async function listResponseBatchRecords(options: { limit?: number | null } = {}): Promise<ResponseBatchRecord[]> {
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(getResponseBatchesDir(), { withFileTypes: true });
+  } catch (error) {
+    if (isErrnoException(error) && error.code === 'ENOENT') return [];
+    throw error;
+  }
+  const records = (
+    await Promise.all(
+      entries
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => readResponseBatchRecord(entry.name)),
+    )
+  ).filter((record): record is ResponseBatchRecord => record !== null);
+  records.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  if (typeof options.limit === 'number' && options.limit >= 0) {
+    return records.slice(0, options.limit);
+  }
+  return records;
 }
 
 async function summarizeBatchStatus(
@@ -304,10 +335,7 @@ async function countActiveBatchRuns(
     if (record.runId === excludingRunId) return false;
     if (readResponseBatchRunMetadata(record)?.batchId !== batchId) return false;
     if (['succeeded', 'failed', 'cancelled'].includes(record.bundle.run.status)) return false;
-    return (
-      record.bundle.leases.some((lease) => lease.status === 'active') ||
-      record.bundle.steps.some((step) => step.status === 'running')
-    );
+    return record.bundle.leases.some((lease) => lease.status === 'active');
   }).length;
 }
 

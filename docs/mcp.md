@@ -86,7 +86,10 @@ scoped keys, response batches, attachments, and polling rules, see
   envelope across normal response chats, team-runtime chats, and media
   generations. It includes current status, latest event, step summaries when
   available, artifact count, artifact cache path/URI, materialization method,
-  provider/runtime metadata, and failure details.
+  provider/runtime metadata, timing, recommended polling interval, and failure
+  details. Browser-backed Extended/Pro/Deep Research runs can legitimately stay
+  active for minutes to hours; callers should keep polling the same id instead
+  of resubmitting.
 - Browser-backed response runs can also expose a bounded
   `metadata.browserRunSummary`. For ChatGPT Deep Research `edit` runs, this
   includes the review stage/action, conversation URL, modify-plan label,
@@ -103,6 +106,34 @@ scoped keys, response batches, attachments, and polling rules, see
   `response_create` or `media_generation` a second time.
 - CLI parity: `auracall run status <id> --json` reads the same durable status
   envelope from local storage.
+
+### `run_archive_search` / `run_archive_item` / `run_archive_backfill` / `run_archive_attach_evidence`
+- Inputs: `run_archive_search` accepts optional `kind`, `provider`,
+  `runtimeProfile`, `agent`, `team`, `responseId`, `batchId`, `status`,
+  `query`, and `limit`. `run_archive_item` accepts one stable archive `id`.
+  `run_archive_backfill` has no inputs. `run_archive_attach_evidence` accepts
+  caller-owned evidence with required `producer` and `schema`, optional
+  `id`, `status`, `title`, `summary`, `responseId`, `batchId`,
+  `archiveItemId`, `providerConversationId`, `data`, and `metadata`.
+- Behavior: reads cached AuraCall-created work from the user-scoped archive
+  index without provider browser or CDP access. The index covers persisted
+  response runs, response batches, team runs, media generations, uploaded input
+  artifacts, generated artifacts, provider conversation references, and
+  attached evidence records.
+- Backfill: `run_archive_backfill` rebuilds that index from existing runtime
+  records and is safe for operator repair workflows because it does not touch
+  provider pages.
+- Evidence attachment: `run_archive_attach_evidence` stores validation,
+  review, or post-processing evidence as `kind = "evidence"` so caller
+  workflows can make their own audit results searchable beside the underlying
+  AuraCall run.
+- Use this when an MCP client needs to find uploaded files, generated
+  intelligence artifacts, provider conversation ids, or batch evidence without
+  knowing AuraCall runtime file paths.
+- Boundary: these tools expose evidence; they do not validate domain-specific
+  correctness. Caller-owned validators should attach their own evidence rather
+  than expecting AuraCall core to know grading, transcript, or literature
+  review semantics.
 
 ### `api_status`
 - Inputs: `port` for the local `auracall api serve` listener; optional `host`,

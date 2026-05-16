@@ -4374,3 +4374,176 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - once extraction is proven, update transcribe-audio to require the
     `legacy_readout.json` workspace artifact contract without falling back to
     long inline JSON as the primary response shape.
+
+## Turn 158 | 2026-05-16
+
+- Goal: place the ChE grading batch audit follow-ups into the correct roadmap
+  lanes after clarifying AuraCall's product boundary.
+- Change:
+  - added Plan 0066,
+    `docs/dev/plans/0066-2026-05-16-searchable-run-cache-and-artifact-archive.md`,
+    for searchable archive promotion of AuraCall-created runs, uploads,
+    generated artifacts, provider conversation ids, and caller-supplied
+    validation evidence.
+  - wired Plan 0066 into `ROADMAP.md` and `docs/dev/plan-index.md`.
+  - added a boundary note to Plan 0063: live follow owns provider-account
+    history, not the archive of AuraCall-created jobs.
+  - added a Plan 0064 note: OpenAI-compatible requests and batches should write
+    stable archive-ready metadata, while archive retrieval belongs to Plan
+    0066.
+  - updated `docs/agent-workflows.md` so domain/schema validation is explicitly
+    caller-owned and AuraCall core stores the resulting evidence.
+- Verification:
+  - `git diff --check -- ROADMAP.md docs/dev/plan-index.md
+    docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md
+    docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md
+    docs/dev/plans/0066-2026-05-16-searchable-run-cache-and-artifact-archive.md
+    docs/agent-workflows.md docs/dev/dev-journal.md`
+  - `pnpm run plans:audit`
+- Next:
+  - start Plan 0066 with a read-only archive inventory projection over existing
+    response, batch, team-run, media, upload, artifact, and provider
+    conversation metadata.
+
+## Turn 159 | 2026-05-16
+
+- Goal: implement the first Plan 0066 slice for read-only searchable archive
+  inventory across CLI/API/MCP.
+- Change:
+  - added `createRunArchiveService(...)`, a read-only projection over existing
+    runtime response/team-run records, response-batch records, media-generation
+    records, uploaded input artifacts, generated artifacts, and provider
+    conversation references.
+  - added API routes `GET /v1/archive` and
+    `GET /v1/archive/items/{archive_item_id}`.
+  - added CLI commands `auracall api archive` and
+    `auracall api archive-item`.
+  - added MCP tools `run_archive_search` and `run_archive_item`.
+  - updated OpenAI endpoint, MCP, agent-workflow, and Plan 0066 docs.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveService.test.ts
+    tests/http.runArchive.test.ts tests/mcp.runArchive.test.ts
+    tests/cli/apiRunArchiveCommand.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+- Next:
+  - add incremental write-through indexing and backfill so archive queries do
+    not rescan runtime files on every request.
+
+## Turn 160 | 2026-05-16
+
+- Goal: promote the Plan 0066 archive projection into a durable indexed
+  readback surface.
+- Change:
+  - added a user-scoped run archive index store under the AuraCall runtime tree.
+  - changed archive search/detail to read the index and auto-build it on first
+    use when missing.
+  - added explicit backfill surfaces: `POST /v1/archive/backfill`,
+    `auracall api archive-backfill`, and MCP `run_archive_backfill`.
+  - enriched upload/generated-artifact archive items with `cacheKey`,
+    `checksumSha256`, and `fileAvailable` when AuraCall can inspect the local
+    file.
+  - updated OpenAI endpoint, MCP, workflow, and Plan 0066 docs.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveService.test.ts
+    tests/http.runArchive.test.ts tests/mcp.runArchive.test.ts
+    tests/cli/apiRunArchiveCommand.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+- Next:
+  - wire response, batch, team-run, and media completion paths to update the
+    index as records are written, so new records do not wait for first-read or
+    operator backfill.
+
+## Turn 161 | 2026-05-16
+
+- Goal: wire Plan 0066 archive indexing into the service write paths.
+- Change:
+  - added a best-effort archive-index refresh helper with in-process
+    coalescing.
+  - response creation now refreshes the archive index after run creation and
+    after drained execution.
+  - response-batch creation refreshes the archive index after the batch record
+    is persisted.
+  - service-host run execution refreshes the archive index after a run is
+    settled by the background/local runner.
+  - media-generation settlement and resumed materialization refresh the archive
+    index after the final media record is persisted.
+  - added regression coverage proving response, batch, and media service paths
+    update the index without explicit backfill.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveService.test.ts
+    tests/http.runArchive.test.ts tests/mcp.runArchive.test.ts
+    tests/cli/apiRunArchiveCommand.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+- Next:
+  - replace full-index refresh-on-write with item-level upserts before large
+    archive volumes make full refresh too expensive.
+
+## Turn 162 | 2026-05-16
+
+- Goal: expose stable archive file retrieval URLs for cache/local file-bearing
+  archive items.
+- Change:
+  - added `RunArchiveService.readAsset(...)` for resolving one archive item to
+    a readable local file.
+  - added `GET /v1/archive/items/{archive_item_id}/asset`, which streams the
+    local file with content type, length, and content-disposition headers.
+  - non-file archive items, missing local paths, and missing files return 404
+    without browser or provider work.
+  - updated OpenAI endpoint, workflow, and Plan 0066 docs.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveService.test.ts
+    tests/http.runArchive.test.ts tests/mcp.runArchive.test.ts
+    tests/cli/apiRunArchiveCommand.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+- Next:
+  - add caller-supplied evidence attachment records so workflow validators can
+    store review/audit outputs beside AuraCall runs without domain logic in
+    AuraCall core.
+
+## Turn 163 | 2026-05-16
+
+- Goal: let caller-owned validators and post-processors attach generic evidence
+  to the searchable run archive.
+- Change:
+  - added a user-scoped archive evidence store under the run archive tree.
+  - added `POST /v1/archive/evidence` for attaching validation, review, or
+    post-processing evidence to response ids, batch ids, archive item ids, or
+    provider conversation ids.
+  - added `auracall api archive-evidence` with `--payload-json` and
+    `--payload-file`.
+  - added MCP `run_archive_attach_evidence`.
+  - indexed attached records as `kind = "evidence"` so they are searchable
+    with normal archive filters and text query.
+  - updated OpenAI endpoint, MCP, workflow, and Plan 0066 docs.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveService.test.ts
+    tests/http.runArchive.test.ts tests/mcp.runArchive.test.ts
+    tests/cli/apiRunArchiveCommand.test.ts --maxWorkers 1`
+- Next:
+  - move to item-level archive upserts before large archives make full refresh
+    too expensive.
+
+## Turn 164 | 2026-05-16
+
+- Goal: replace routine full archive refreshes with item-level upserts.
+- Change:
+  - added `RunArchiveIndexStore.upsertItems(...)`.
+  - added targeted archive service upserts for response, response-batch, and
+    media-generation item families.
+  - changed response creation, service-host settlement, response-batch
+    creation, and media settlement/materialization to upsert only affected
+    archive items.
+  - serialized archive refresh tasks to avoid read/modify/write races between
+    parallel completions.
+  - kept first-use compatibility: if the index is missing, targeted upsert
+    performs a backfill first so older records are not hidden by a partial
+    index.
+  - updated Plan 0066 and the durable fixes log.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveService.test.ts
+    tests/http.runArchive.test.ts tests/mcp.runArchive.test.ts
+    tests/cli/apiRunArchiveCommand.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit`
+- Next:
+  - enrich upload/generated-artifact metadata with provider/service, bound
+    identity, project id, and stronger dedupe keys.

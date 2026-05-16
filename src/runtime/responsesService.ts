@@ -36,6 +36,7 @@ import { createExecutionServiceHost } from './serviceHost.js';
 import type { ExecutionServiceHost } from './serviceHost.js';
 import type { LocalActionExecutionPolicy } from './localActions.js';
 import type { ExecutionRunRecordBundle, ExecutionRunServiceId } from './types.js';
+import { refreshRunArchiveIndexBestEffort } from './archiveIndexRefresh.js';
 
 export interface ExecutionResponsesServiceDeps {
   control?: ExecutionRuntimeControlContract;
@@ -45,6 +46,7 @@ export interface ExecutionResponsesServiceDeps {
   executionHost?: ExecutionServiceHost;
   drainAfterCreate?: boolean;
   localActionExecutionPolicy?: Partial<LocalActionExecutionPolicy>;
+  refreshArchiveIndex?: boolean;
   executeStoredRunStep?: (
     request: ExecutionRequest,
     context: {
@@ -67,6 +69,7 @@ export function createExecutionResponsesService(
   const now = deps.now ?? (() => new Date());
   const generateResponseId = deps.generateResponseId ?? (() => `resp_${randomUUID().replace(/-/g, '')}`);
   const drainAfterCreate = deps.drainAfterCreate ?? true;
+  const refreshArchiveIndex = deps.refreshArchiveIndex ?? true;
   const host =
     deps.executionHost ??
     createExecutionServiceHost({
@@ -92,6 +95,9 @@ export function createExecutionResponsesService(
         createdAt,
       });
       const createdRecord = await control.createRun(bundle);
+      if (refreshArchiveIndex) {
+        await refreshRunArchiveIndexBestEffort({ responseId });
+      }
       if (!drainAfterCreate) {
         return createExecutionResponseForStoredRecord(createdRecord.bundle, taskRunSpecStore);
       }
@@ -102,6 +108,9 @@ export function createExecutionResponsesService(
       const executed = drained.drained[0]?.record;
       if (!executed) {
         throw new Error(`Execution response ${responseId} was not drained after creation`);
+      }
+      if (refreshArchiveIndex) {
+        await refreshRunArchiveIndexBestEffort({ responseId });
       }
       return createExecutionResponseForStoredRecord(executed.bundle, taskRunSpecStore);
     },
