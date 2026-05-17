@@ -16090,3 +16090,7 @@ browser-stage lifecycle observability, not transcript truncation.
   adding controls. The `Health` page now consumes `/status` for API, routing,
   live-follow, runtime, and account-target posture while keeping `/ops/browser`
   as the low-level debug surface.
+- 2026-05-17: The operator UX must not embed bearer secrets to read authenticated
+  `/v1` routes. The first Runs page uses the unauthenticated recovery summary
+  available from `/status?recovery=true&sourceKind=all`; deep run listing and
+  inspection stay on bearer-protected APIs until operator auth is designed.

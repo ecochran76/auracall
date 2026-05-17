@@ -148,6 +148,59 @@ function useApiStatus() {
   return state;
 }
 
+function useRunRecoveryStatus() {
+  const [state, setState] = useState({
+    status: null,
+    loading: true,
+    error: null,
+    updatedAt: null,
+  });
+
+  useEffect(() => {
+    let alive = true;
+    let timer = null;
+    let controller = null;
+
+    async function load() {
+      controller?.abort();
+      controller = new AbortController();
+      setState((current) => ({ ...current, loading: true, error: null }));
+      try {
+        const response = await fetch("/status?recovery=true&sourceKind=all", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const status = await response.json();
+        if (!alive) return;
+        setState({
+          status,
+          loading: false,
+          error: null,
+          updatedAt: new Date().toISOString(),
+        });
+      } catch (error) {
+        if (!alive || error.name === "AbortError") return;
+        setState((current) => ({
+          ...current,
+          loading: false,
+          error: error.message || "Unable to load run recovery status",
+        }));
+      }
+    }
+
+    load();
+    timer = window.setInterval(load, STATUS_POLL_MS);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+      controller?.abort();
+    };
+  }, []);
+
+  return state;
+}
+
 function SectionList({ title, items }) {
   return (
     <section className="section-list" aria-label={title}>
@@ -310,9 +363,126 @@ function HealthViewport({ apiStatus }) {
   );
 }
 
-function MainViewport({ activeNav, apiStatus }) {
+function IdList({ title, ids }) {
+  const visible = Array.isArray(ids) ? ids.slice(0, 12) : [];
+  return (
+    <article className="id-list">
+      <div className="id-list-heading">
+        <strong>{title}</strong>
+        <span>{formatNumber(Array.isArray(ids) ? ids.length : 0)}</span>
+      </div>
+      {visible.length ? (
+        <ul>
+          {visible.map((id) => (
+            <li key={id}>{id}</li>
+          ))}
+        </ul>
+      ) : (
+        <p>No runs reported.</p>
+      )}
+    </article>
+  );
+}
+
+function RunsViewport({ runStatus }) {
+  const { status, loading, error, updatedAt } = runStatus;
+  const recovery = status?.recoverySummary ?? {};
+  const localClaim = status?.localClaimSummary ?? {};
+  const topology = status?.runnerTopology ?? {};
+  const topologyMetrics = topology.metrics ?? {};
+  const localClaimMetrics = localClaim.metrics ?? {};
+
+  return (
+    <main className="viewport" tabIndex="-1">
+      <div className="health-toolbar">
+        <div className="viewport-heading">
+          <span>Runtime recovery posture</span>
+          <h1>Runs</h1>
+          <p>Read-only runtime state from `/status?recovery=true&sourceKind=all`, showing queue health without exposing API keys in the browser.</p>
+        </div>
+        <div className="status-readout">
+          <span className={`state-dot state-${statusTone(error ? "error" : "ok")}`} />
+          <strong>{error ? "Run status unavailable" : loading ? "Loading" : "Run status loaded"}</strong>
+          <small>{updatedAt ? `Updated ${formatDateTime(updatedAt)}` : "Waiting for first poll"}</small>
+        </div>
+      </div>
+
+      {error ? <div className="health-error">Unable to load run status: {error}</div> : null}
+
+      <div className="health-grid runs-grid">
+        <article className="health-card">
+          <span className="card-kicker">Recovery</span>
+          <strong>{formatNumber(recovery.totalRuns)} total</strong>
+          <p>All runtime records currently visible to the recovery scanner.</p>
+          <div className="metric-row">
+            <span>Reclaimable</span>
+            <b>{formatNumber(recovery.reclaimableRunIds?.length)}</b>
+          </div>
+          <div className="metric-row">
+            <span>Stranded</span>
+            <b>{formatNumber(recovery.strandedRunIds?.length)}</b>
+          </div>
+        </article>
+
+        <article className="health-card">
+          <span className="card-kicker">Local Claim</span>
+          <strong>{formatNumber(localClaimMetrics.selectedCount)} selected</strong>
+          <p>{localClaim.runnerId ?? "No local runner id reported"}</p>
+          <div className="metric-row">
+            <span>Blocked</span>
+            <b>{formatNumber(localClaimMetrics.blockedCount)}</b>
+          </div>
+          <div className="metric-row">
+            <span>Not ready</span>
+            <b>{formatNumber(localClaimMetrics.notReadyCount)}</b>
+          </div>
+        </article>
+
+        <article className="health-card">
+          <span className="card-kicker">Runner Topology</span>
+          <strong>{formatNumber(topologyMetrics.activeRunnerCount)} active</strong>
+          <p>{topology.localExecutionOwnerRunnerId ?? "No execution owner reported"}</p>
+          <div className="metric-row">
+            <span>Fresh</span>
+            <b>{formatNumber(topologyMetrics.freshRunnerCount)}</b>
+          </div>
+          <div className="metric-row">
+            <span>Stale</span>
+            <b>{formatNumber(topologyMetrics.staleRunnerCount)}</b>
+          </div>
+        </article>
+
+        <article className="health-card">
+          <span className="card-kicker">Authenticated APIs</span>
+          <strong>{status?.routes?.runtimeRunsRecent ?? "/v1/runtime-runs/recent"}</strong>
+          <p>Deep run listing and inspection remain on bearer-protected `/v1` routes.</p>
+          <div className="metric-row">
+            <span>Inspect</span>
+            <b>{status?.routes?.runtimeRunInspection ? "available" : "unknown"}</b>
+          </div>
+          <div className="metric-row">
+            <span>Status</span>
+            <b>{status?.routes?.runStatusTemplate ? "available" : "unknown"}</b>
+          </div>
+        </article>
+      </div>
+
+      <section className="run-lists" aria-label="Runtime run id summaries">
+        <IdList title="Reclaimable" ids={recovery.reclaimableRunIds} />
+        <IdList title="Active Leases" ids={recovery.activeLeaseRunIds} />
+        <IdList title="Stranded" ids={recovery.strandedRunIds} />
+        <IdList title="Cancelled" ids={recovery.cancelledRunIds} />
+      </section>
+    </main>
+  );
+}
+
+function MainViewport({ activeNav, apiStatus, runStatus }) {
   if (activeNav === "health") {
     return <HealthViewport apiStatus={apiStatus} />;
+  }
+  if (activeNav === "runs") {
+    return <RunsViewport runStatus={runStatus} />;
   }
 
   const content = {
@@ -336,17 +506,6 @@ function MainViewport({ activeNav, apiStatus }) {
         ["Lexical", "Fast exact text, metadata, ids, and file names"],
         ["Semantic", "Embeddings-backed retrieval across text and artifacts"],
         ["Result actions", "Open chat, inspect run, download asset, attach evidence"],
-      ],
-    },
-    runs: {
-      title: "Run Control",
-      kicker: "Queue, batch, and workflow status",
-      body:
-        "Runs should expose response jobs, batches, live-follow work, retries, cancellation, rate limits, and algorithm launches once read-only status is reliable.",
-      rows: [
-        ["Queue", "Pending, active, paused, failed, and completed work"],
-        ["Batches", "Progress, item status, materialized output, diagnostics"],
-        ["Controls", "Start, pause, retry, cancel, and inspect with audit trail"],
       ],
     },
   }[activeNav];
@@ -380,7 +539,7 @@ function MainViewport({ activeNav, apiStatus }) {
   );
 }
 
-function LeftPane({ activeNav, apiStatus }) {
+function LeftPane({ activeNav, apiStatus, runStatus }) {
   const status = apiStatus.status;
   if (activeNav === "health" && status) {
     const liveFollow = status.liveFollow ?? {};
@@ -403,6 +562,33 @@ function LeftPane({ activeNav, apiStatus }) {
             title: "Routes",
             meta: status.serviceDiscovery?.local?.dashboardUrl ?? "/dashboard",
             status: "good",
+          },
+        ]}
+      />
+    );
+  }
+  if (activeNav === "runs" && runStatus.status) {
+    const recovery = runStatus.status.recoverySummary ?? {};
+    const localClaim = runStatus.status.localClaimSummary ?? {};
+    const metrics = localClaim.metrics ?? {};
+    return (
+      <SectionList
+        title="Context"
+        items={[
+          {
+            title: "Recovery scan",
+            meta: `${recovery.totalRuns ?? 0} total, ${(recovery.reclaimableRunIds ?? []).length} reclaimable`,
+            status: statusTone((recovery.strandedRunIds ?? []).length ? "attention" : "healthy"),
+          },
+          {
+            title: "Local claim",
+            meta: `${metrics.selectedCount ?? 0} selected, ${metrics.notReadyCount ?? 0} not ready`,
+            status: statusTone((metrics.blockedCount ?? 0) ? "blocked" : "waiting"),
+          },
+          {
+            title: "Deep inspection",
+            meta: "Bearer-protected /v1 runtime run APIs",
+            status: "warn",
           },
         ]}
       />
@@ -434,7 +620,7 @@ function LeftPane({ activeNav, apiStatus }) {
   return <SectionList title="Context" items={datasets[activeNav]} />;
 }
 
-function RightPane({ activeNav, apiStatus }) {
+function RightPane({ activeNav, apiStatus, runStatus }) {
   const labels = {
     chats: "Conversation inspector",
     search: "Result inspector",
@@ -442,6 +628,7 @@ function RightPane({ activeNav, apiStatus }) {
     health: "Health inspector",
   };
   const status = apiStatus.status;
+  const runs = runStatus.status;
   const details =
     activeNav === "health" && status
       ? [
@@ -450,6 +637,13 @@ function RightPane({ activeNav, apiStatus }) {
           ["Route", status.routes?.operatorBrowserDashboardUrl ?? status.routes?.operatorBrowserDashboard ?? "/dashboard"],
           ["Debug", status.routes?.operatorDebugDashboard ?? "/ops/browser"],
         ]
+      : activeNav === "runs" && runs
+        ? [
+            ["Source", "/status?recovery=true&sourceKind=all"],
+            ["Recent runs", runs.routes?.runtimeRunsRecent ?? "/v1/runtime-runs/recent"],
+            ["Inspect", runs.routes?.runtimeRunInspection ?? "/v1/runtime-runs/inspect"],
+            ["Auth", "Deep /v1 data requires bearer key"],
+          ]
       : [
           ["Source of truth", "AuraCall JSON API"],
           ["Mode", "Read-only shell scaffold"],
@@ -466,6 +660,14 @@ function RightPane({ activeNav, apiStatus }) {
             attention: status.liveFollow?.targets?.attentionNeeded,
           },
         }
+      : activeNav === "runs" && runs
+        ? {
+            totalRuns: runs.recoverySummary?.totalRuns,
+            reclaimable: runs.recoverySummary?.reclaimableRunIds?.length,
+            stranded: runs.recoverySummary?.strandedRunIds?.length,
+            selected: runs.localClaimSummary?.metrics?.selectedCount,
+            activeRunners: runs.runnerTopology?.metrics?.activeRunnerCount,
+          }
       : { route: activeNav, mutable: false };
 
   return (
@@ -494,6 +696,7 @@ export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const dragRef = useRef(null);
   const apiStatus = useApiStatus();
+  const runStatus = useRunRecoveryStatus();
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
@@ -609,14 +812,14 @@ export default function App() {
             </button>
           </div>
           <div className="pane-content">
-            <LeftPane activeNav={layout.activeNav} apiStatus={apiStatus} />
+            <LeftPane activeNav={layout.activeNav} apiStatus={apiStatus} runStatus={runStatus} />
           </div>
           <button className="resize-handle right" type="button" aria-label="Resize left pane" onPointerDown={() => beginResize("left")}>
             <GripVertical size={16} />
           </button>
         </aside>
 
-        <MainViewport activeNav={layout.activeNav} apiStatus={apiStatus} />
+        <MainViewport activeNav={layout.activeNav} apiStatus={apiStatus} runStatus={runStatus} />
 
         <aside className={layout.rightCollapsed ? "pane right-pane is-collapsed" : "pane right-pane"}>
           <button className="resize-handle left" type="button" aria-label="Resize right pane" onPointerDown={() => beginResize("right")}>
@@ -633,7 +836,7 @@ export default function App() {
             </button>
           </div>
           <div className="pane-content">
-            <RightPane activeNav={layout.activeNav} apiStatus={apiStatus} />
+            <RightPane activeNav={layout.activeNav} apiStatus={apiStatus} runStatus={runStatus} />
           </div>
         </aside>
       </div>

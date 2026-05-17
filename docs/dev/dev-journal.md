@@ -29530,3 +29530,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     restart, and live `/dashboard`/asset/`/status` route checks pass.
 - Follow-up:
   - add read-only run and archive views before UX mutation controls.
+
+## Turn 148 | 2026-05-17
+
+- Goal: add a useful read-only Runs page without weakening API auth.
+- Change:
+  - left `/v1/runtime-runs/recent` bearer-protected and confirmed browser calls
+    without a key return 401.
+  - added Runs readback from `/status?recovery=true&sourceKind=all`.
+  - rendered recovery, local-claim, runner-topology, and bounded run-id list
+    summaries in the main viewport, left pane, and inspector.
+- Verification:
+  - `pnpm run ux:build` passes.
+  - typecheck, plan audit, full build, user-runtime install, API service
+    restart, dashboard asset probe, recovery-status probe, and expected
+    unauthenticated `/v1/runtime-runs/recent` 401 pass.
+- Follow-up:
+  - add archive/search read-only views.

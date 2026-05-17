@@ -682,6 +682,70 @@ button {
   border-bottom: 0;
 }
 
+.runs-grid .health-card strong {
+  font-size: 17px;
+}
+
+.run-lists {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.id-list {
+  min-width: 0;
+  border: 1px solid #2a3240;
+  border-radius: 8px;
+  background: #151a22;
+  overflow: hidden;
+}
+
+.id-list-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #252d38;
+}
+
+.id-list-heading strong {
+  color: #f3f6fa;
+}
+
+.id-list-heading span {
+  color: #9aa6b6;
+  font-size: 12px;
+}
+
+.id-list ul {
+  display: grid;
+  gap: 6px;
+  max-height: 316px;
+  margin: 0;
+  padding: 12px 16px 16px;
+  overflow: auto;
+  list-style: none;
+}
+
+.id-list li {
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #10161e;
+  color: #cbd5e2;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.id-list p {
+  margin: 0;
+  padding: 14px 16px 16px;
+  color: #9aa6b6;
+}
+
 .inspector-body {
   display: grid;
   gap: 18px;
@@ -768,6 +832,7 @@ button {
 
   .capability-grid,
   .health-grid,
+  .run-lists,
   .timeline-band {
     grid-template-columns: 1fr;
   }

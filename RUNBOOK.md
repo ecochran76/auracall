@@ -4626,3 +4626,32 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - add read-only run queue/status and archive-search views before exposing
     any dashboard mutation controls.
+
+## Turn 168 | 2026-05-17
+
+- Goal: make the React operator Runs page read live runtime posture without
+  adding controls or browser-held API secrets.
+- Change:
+  - confirmed unauthenticated browser calls to `/v1/runtime-runs/recent`
+    correctly return 401.
+  - added a read-only Runs page backed by
+    `/status?recovery=true&sourceKind=all`.
+  - rendered recovery totals, reclaimable/stranded counts, local-claim metrics,
+    runner-topology metrics, and bounded run-id lists.
+  - wired the Runs left context pane and right inspector to the same live
+    recovery payload.
+  - updated Plan 0067 to record the operator-auth boundary for deep `/v1` run
+    inspection.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run plans:audit`
+  - `git diff --check` for the touched UX and docs files
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - live route checks for `http://auracall.localhost/dashboard`,
+    `/dashboard/assets/...`, `/status?recovery=true&sourceKind=all`, and the
+    expected 401 from unauthenticated `/v1/runtime-runs/recent`
+- Next:
+  - add a read-only archive/search page before dashboard mutation controls.

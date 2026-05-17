@@ -104,6 +104,8 @@ State ownership:
    - add typed client helpers for archive search, run status, and account
      mirror status
    - make `Health` a real read-only status surface using `/status`
+   - make `Runs` a read-only recovery/local-claim/topology surface using
+     `/status?recovery=true&sourceKind=all`
    - keep the debug dashboard linked but visually separate
 
 3. Archive and chat browsing
@@ -138,6 +140,9 @@ State ownership:
 - `/ops/browser` continues to serve the debug dashboard.
 - `Health` reads the live `/status` payload and reports API, routing,
   live-follow, and runtime state without mutating jobs.
+- `Runs` reads the live recovery status payload and reports runtime recovery,
+  local-claim, and runner-topology posture without requiring a browser-stored
+  API key.
 - The shell does not perform provider browser work or mutate jobs.
 
 ## Definition Of Done For First Slice
@@ -156,10 +161,15 @@ State ownership:
 - Slice 2 is partially complete: the Health page now polls `/status` every 30
   seconds and renders API service, route discovery, live-follow summary, runtime
   metadata, and live-follow target rows as read-only operator information.
+- Slice 4 is started in read-only form: the Runs page polls
+  `/status?recovery=true&sourceKind=all` every 30 seconds and renders recovery
+  counts, local-claim metrics, runner-topology metrics, and bounded run-id
+  lists. Authenticated deep run listing/inspection remains on bearer-protected
+  `/v1` APIs until operator-auth UX is designed.
 - The old browser dashboard remains available at `/ops/browser` for low-level
   probes.
 
 Next implementation work should keep moving horizontally through read-only
-operator views: run queue/status, archive search, and chat-dialog conversation
-views. Mutation controls should stay out until the read-only surfaces prove the
-API contracts.
+operator views: archive search and chat-dialog conversation views. Mutation
+controls should stay out until the read-only surfaces prove the API contracts
+and the operator-auth boundary is explicit.
