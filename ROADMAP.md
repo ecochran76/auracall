@@ -196,6 +196,30 @@ Current State:
   - current `/v1/config/agents`, `/v1/config/teams`, and MCP config tools stay
     compatibility surfaces while their backing store migrates toward registry
     records with source, enabled state, revisions, and export/import support
+- searchable run cache and artifact archive work is now scoped in
+  [docs/dev/plans/0066-2026-05-16-searchable-run-cache-and-artifact-archive.md](docs/dev/plans/0066-2026-05-16-searchable-run-cache-and-artifact-archive.md):
+  - this is the right lane for promoting AuraCall-created CLI/API/MCP work into
+    a searchable cache/archive: response runs, response batches, team runs,
+    media generations, uploaded files, provider conversation references,
+    generated artifacts, and caller-supplied post-processing evidence
+  - this lane is separate from account mirror live-follow, which mirrors
+    provider-account history; the archive lane owns evidence created by
+    AuraCall jobs and must be searchable/retrievable without provider browser
+    work
+  - this lane is also separate from domain validation; course grading
+    arithmetic, transcript semantics, literature moderation, and similar
+    workflow checks belong to caller agents/workflows that can attach their
+    validation evidence to archived AuraCall outputs
+- React operator UX redesign is now scoped in
+  [docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md](docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md):
+  - the current `/ops/browser` dashboard is a debug/proof-of-concept surface,
+    not the durable product UX
+  - the new operator console lives under `ux/operator` as a React/Vite app with
+    top navigation, account/context menu, collapsible and resizable panes,
+    central workspace, and right-side inspector
+  - first slice is read-only shell work; API-backed health, run, archive,
+    search, chat, config, agent, and team pages should land incrementally after
+    the shell is stable
 - open provider-capability follow-through:
   - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
     is closed for the first-class media-generation resource across CLI, local

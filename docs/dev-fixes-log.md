@@ -16078,3 +16078,7 @@ browser-stage lifecycle observability, not transcript truncation.
   batch, media, and evidence writes now use serialized item-level upserts once
   the index exists, while first-use compatibility still backfills older runtime
   records before the targeted merge.
+- 2026-05-16: The existing `/ops/browser` dashboard should be treated as a
+  debug/proof-of-concept surface, not the product UX. Durable operator work now
+  belongs in the separate React/Vite app under `ux/operator`, with the debug
+  dashboard preserved for low-level probes until replacement pages are ready.

@@ -29476,3 +29476,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - typecheck passes
 - Follow-up:
   - enrich archive item metadata and dedupe keys before dashboard work
+
+## Turn 145 | 2026-05-16
+
+- Goal: start replacing the proof-of-concept dashboard with a real operator UX
+  while preserving the old debug surface.
+- Change:
+  - scoped the React operator UX redesign in Plan 0067.
+  - added a separate Vite/React app under `ux/operator`.
+  - added top navigation, account/context menu, collapsible and resizable side
+    panes, central viewport, right inspector, and local layout preference
+    persistence.
+  - kept the first slice read-only and isolated from provider/browser work.
+- Verification:
+  - `pnpm run ux:build` passes.
+  - `pnpm exec tsc --noEmit --pretty false` passes.
+  - `pnpm run plans:audit` passes.
+  - `git diff --check` passes for the touched UX and docs files.
+  - `pnpm exec biome check ux/operator` is not applicable yet because the
+    current Biome config ignores the new UX tree.
+- Follow-up:
+  - wire typed API clients for health, runs, archive search, and account
+    mirror status.

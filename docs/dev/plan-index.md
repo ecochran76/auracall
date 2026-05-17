@@ -37,7 +37,10 @@ Current canonical active execution plan:
 - `docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md`
 - `docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md`
 - `docs/dev/plans/0063-2026-04-29-agent-roles-and-lazy-account-mirroring.md`
+- `docs/dev/plans/0064-2026-05-10-openai-agent-api-and-semantic-model-selectors.md`
 - `docs/dev/plans/0065-2026-05-10-db-backed-agent-registry.md`
+- `docs/dev/plans/0066-2026-05-16-searchable-run-cache-and-artifact-archive.md`
+- `docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md`
 
 Audit helper:
 - `pnpm run plans:audit`

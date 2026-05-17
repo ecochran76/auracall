@@ -4547,3 +4547,28 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - enrich upload/generated-artifact metadata with provider/service, bound
     identity, project id, and stronger dedupe keys.
+
+## Turn 165 | 2026-05-16
+
+- Goal: start the operator UX redesign without replacing the existing debug
+  dashboard.
+- Change:
+  - added
+    [docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md](docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md)
+    for a React/Vite operator console.
+  - added `ux/operator` as a separate read-only React shell with AuraCall title,
+    centered nav, account/context menu, collapsible and resizable left/right
+    panes, central viewport, and right inspector.
+  - added `ux:dev` and `ux:build` scripts.
+  - updated the roadmap and plan index to mark `/ops/browser` as the current
+    proof/debug surface and the React app as the durable UX lane.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run plans:audit`
+  - `git diff --check` for the touched UX and docs files
+  - `pnpm exec biome check ux/operator` is not applicable yet because the
+    current Biome config ignores the new UX tree
+- Next:
+  - wire typed API clients for service health, run status, archive search, and
+    account mirror status before adding mutation controls.
