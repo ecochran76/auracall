@@ -101,3 +101,22 @@ Validation evidence:
 - Authenticated `/v1/archive?q=chatgpt&limit=25` search rendered `25` results.
 - Browser eval reported `selected=1`, `results=25`, and `bodyScroll=false`.
 - `agent-browser snapshot -i` completed after the large-result compaction fix.
+
+## Archive Detail Follow-Up
+
+Fifth pass made the selected archive item inspector fetch protected item detail:
+
+- Selecting a search result now fetches `/v1/archive/items/{archive_item_id}` with the session-scoped operator key.
+- The inspector reports `Loading detail`, `Detail loaded`, or `Detail unavailable` so operators can tell whether they are seeing a hydrated item or only the list summary.
+- The selected summary now includes file, provider, ownership, link, and metadata-key fields.
+- Inspector action chips are generated from every returned link key, not only a hardcoded subset.
+
+Additional screenshot:
+
+- `/tmp/auracall-operator-ux-dogfood/archive-detail-inspector.png` - hydrated response archive item with response and runtime-run action chips visible.
+
+Validation evidence:
+
+- Installed dashboard at `http://auracall.localhost/dashboard` loaded through `agent-browser` with a throwaway Chrome profile.
+- Authenticated search for `first_pass_readout` rendered `25` results and selected one item.
+- Browser eval reported `selected=1`, `results=25`, `status="Detail loaded\n5/17/2026, 11:52:55 AM"`, and `actions=["Response","Runtime Run"]`.

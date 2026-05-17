@@ -1035,6 +1035,46 @@ select:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.inspector-status {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid #28303c;
+  border-radius: 8px;
+  background: #171c24;
+}
+
+.inspector-status strong,
+.inspector-status small {
+  display: block;
+}
+
+.inspector-status strong {
+  color: #f4f7fb;
+  font-size: 13px;
+}
+
+.inspector-status small {
+  margin-top: 2px;
+  color: #9aa6b6;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.inspector-status-good {
+  border-color: #244435;
+}
+
+.inspector-status-warn {
+  border-color: #4a3e23;
+}
+
+.inspector-status-bad {
+  border-color: #54303a;
+}
+
 .inspector-actions {
   display: flex;
   flex-wrap: wrap;

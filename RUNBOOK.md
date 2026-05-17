@@ -4685,3 +4685,31 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     from 1,186 indexed records without printing the secret.
 - Next:
   - move to chat-dialog conversation views or archive item inspection.
+
+## Turn 170 | 2026-05-17
+
+- Goal: make selected archive results inspectable from the React operator UX.
+- Change:
+  - added a protected `/v1/archive/items/{archive_item_id}` detail fetch for
+    the selected Search result using only the session-scoped operator key.
+  - added inspector status states for loading, loaded, and unavailable item
+    detail.
+  - expanded the selected archive JSON summary to include file, provider,
+    ownership, link, and metadata-key fields.
+  - changed inspector action chips to render all returned item links instead
+    of a hardcoded subset.
+  - updated the operator UX dogfood note with the installed-browser evidence.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `curl -fsS http://auracall.localhost/status`
+  - `agent-browser` against `http://auracall.localhost/dashboard` with a
+    throwaway Chrome profile.
+  - authenticated Search for `first_pass_readout` rendered 25 results, selected
+    one item, reported `Detail loaded`, and exposed `Response` and
+    `Runtime Run` action chips.
+- Next:
+  - add item-specific asset/download preview, then return to chat-dialog
+    conversation views.
