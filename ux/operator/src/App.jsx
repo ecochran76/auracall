@@ -243,6 +243,17 @@ function statusTone(value) {
   return "neutral";
 }
 
+function statusLabel(value) {
+  const normalized = String(value ?? "unknown").trim();
+  if (!normalized) return "unknown";
+  return normalized
+    .replace(/^expected[-_]identity[-_]missing$/i, "identity missing")
+    .replace(/^minimum[-_]interval$/i, "min interval")
+    .replace(/^already[-_]running$/i, "already running")
+    .replace(/[_-]+/g, " ")
+    .toLowerCase();
+}
+
 function routeLabel(value) {
   const route = String(value ?? "").trim();
   if (!route) return "unknown";
@@ -686,6 +697,9 @@ function HealthViewport({ apiStatus }) {
   const liveFollow = status?.liveFollow ?? {};
   const targets = liveFollow.targets ?? {};
   const accounts = targets.accounts ?? [];
+  const enabledAccountCount = targets.enabled ?? accounts.filter((account) => account.desiredEnabled || account.desiredState === "enabled").length;
+  const unconfiguredAccountCount = targets.unconfigured ?? accounts.filter((account) => account.desiredState === "unconfigured").length;
+  const attentionAccountCount = targets.attentionNeeded ?? accounts.filter((account) => account.attentionNeeded).length;
   const routes = status?.routes ?? {};
   const discovery = status?.serviceDiscovery ?? {};
   const process = status?.process ?? {};
@@ -737,7 +751,13 @@ function HealthViewport({ apiStatus }) {
           </div>
           <div className="metric-row">
             <span>Attention</span>
-            <b>{formatNumber(targets.attentionNeeded)}</b>
+            <b>{formatNumber(attentionAccountCount)}</b>
+          </div>
+          <div className="metric-row">
+            <span>Configured</span>
+            <b>
+              {formatNumber(enabledAccountCount)} enabled / {formatNumber(unconfiguredAccountCount)} unconfigured
+            </b>
           </div>
         </article>
 
@@ -776,7 +796,9 @@ function HealthViewport({ apiStatus }) {
       <section className="health-section" aria-label="Live follow accounts">
         <div className="section-heading">
           <h2>Live Follow Accounts</h2>
-          <span>{formatNumber(accounts.length)} targets</span>
+          <span>
+            {formatNumber(accounts.length)} targets / {formatNumber(enabledAccountCount)} enabled / {formatNumber(attentionAccountCount)} attention
+          </span>
         </div>
         <div className="health-table-wrap">
           <table className="health-table">
@@ -786,6 +808,7 @@ function HealthViewport({ apiStatus }) {
                 <th>Profile</th>
                 <th>Desired</th>
                 <th>Status</th>
+                <th>Reason</th>
                 <th>Mirror</th>
                 <th>Content</th>
                 <th>Next attempt</th>
@@ -794,15 +817,25 @@ function HealthViewport({ apiStatus }) {
             <tbody>
               {accounts.map((account) => {
                 const counts = account.metadataCounts ?? {};
+                const reasonLabel =
+                  account.attentionNeeded && account.desiredState !== "unconfigured" ? "attention" : account.statusReason ?? "clear";
                 return (
                   <tr key={`${account.provider}-${account.runtimeProfileId}`}>
                     <td>{account.provider}</td>
                     <td>{account.runtimeProfileId}</td>
                     <td>
-                      <span className={`status-pill status-${statusTone(account.desiredState)}`}>{account.desiredState}</span>
+                      <span className={`status-pill status-${statusTone(account.desiredState)}`}>{statusLabel(account.desiredState)}</span>
                     </td>
                     <td>
-                      <span className={`status-pill status-${statusTone(account.actualStatus)}`}>{account.actualStatus}</span>
+                      <span className={`status-pill status-${statusTone(account.actualStatus)}`}>{statusLabel(account.actualStatus)}</span>
+                    </td>
+                    <td>
+                      <div className="status-reason">
+                        <span className={`status-pill status-${statusTone(reasonLabel)}`}>
+                          {statusLabel(reasonLabel)}
+                        </span>
+                        <small>{account.latestCompletionError ?? account.providerGuard?.summary ?? account.liveFollow?.reason ?? ""}</small>
+                      </div>
                     </td>
                     <td>{account.mirrorCompleteness ?? "unknown"}</td>
                     <td>
@@ -815,7 +848,7 @@ function HealthViewport({ apiStatus }) {
               })}
               {!accounts.length ? (
                 <tr>
-                  <td colSpan="7">No live-follow accounts reported yet.</td>
+                  <td colSpan="8">No live-follow accounts reported yet.</td>
                 </tr>
               ) : null}
             </tbody>

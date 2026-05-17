@@ -4911,3 +4911,34 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - continue UX hardening without expanding API-key prompts; same-origin
     operator dashboard access remains the superuser path.
+
+## Turn 177 | 2026-05-17
+
+- Goal: make live-follow target posture easier to read from the React Health
+  page after a transient `attention-needed` status cleared.
+- Change:
+  - added enabled and unconfigured target counts to the Live Follow card.
+  - added total/enabled/attention counts to the Live Follow Accounts table
+    heading.
+  - added a compact reason column for each target.
+  - converted internal enum labels into readable chips such as `Idle Waiting`,
+    `Min Interval`, and `Identity Missing`.
+  - stopped displaying unconfigured blocked profiles as row-level `Attention`;
+    those rows now show their actual block reason while enabled-target
+    attention remains zero.
+- Verification:
+  - `curl http://auracall.localhost/status` reported live follow `healthy`, 5
+    enabled targets, 4 unconfigured targets, and 0 attention targets.
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false`
+  - `pnpm run install:user-runtime`
+  - `agent-browser` verified the installed dashboard renders the live-follow
+    counts and readable reason chips.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/live-follow-reasons-loaded.png`
+- External links:
+  - `http://auracall.localhost/dashboard`
+  - `https://auracall.ecochran.dyndns.org/dashboard`
+- Next:
+  - consider adding filter chips for Enabled, Unconfigured, Attention, and
+    Running before the table grows further.

@@ -256,3 +256,25 @@ Validation evidence:
 - `POST http://auracall.localhost/status` with `serviceControl.restart-api-service` and `dryRun=true` returned `scheduled=false`, `unitName=auracall-api.service`, and the expected restart command.
 - After the manual restart, `http://auracall.localhost/status` briefly returned `Bad Gateway`, then recovered; direct and local-hosted status checks reported `ok=true`, live follow `healthy`, and 9 live-follow accounts.
 - `agent-browser` verified the installed dashboard at `http://auracall.localhost/dashboard` renders the API Keys panel and `Restart API` control, then saved the screenshot above.
+
+## Live Follow Status Follow-Up
+
+Twelfth pass tightened the Health page live-follow readout after a transient `attention-needed` status cleared on the next full `/status` read:
+
+- The Live Follow card now reports enabled and unconfigured target counts separately.
+- The accounts table header now includes total, enabled, and attention counts.
+- The accounts table adds a compact reason column so operators can distinguish `min interval`, `already running`, and `identity missing`.
+- Unconfigured blocked profiles no longer get shown as row-level `Attention`; the table shows their actual block reason while the rollup remains `0 attention` for enabled targets.
+- Raw enum labels are converted to readable chips such as `Idle Waiting`, `Min Interval`, and `Identity Missing`.
+
+Additional screenshot:
+
+- `/tmp/auracall-operator-ux-dogfood/live-follow-reasons-loaded.png` - Health page live-follow table showing 5 enabled targets, 4 unconfigured targets, and 0 attention targets.
+
+Validation evidence:
+
+- `curl http://auracall.localhost/status` reported live follow `healthy`, 5 enabled targets, 4 unconfigured targets, and 0 attention targets.
+- `pnpm run ux:build` passed.
+- `pnpm exec tsc -p tsconfig.build.json --pretty false` passed.
+- `pnpm run install:user-runtime` passed.
+- `agent-browser` verified the installed dashboard at `http://auracall.localhost/dashboard` renders the live-follow counts and readable reason chips, then saved the screenshot above.
