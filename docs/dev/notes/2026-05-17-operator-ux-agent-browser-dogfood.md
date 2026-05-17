@@ -57,6 +57,21 @@ Additional screenshots:
 - `/home/ecochran76/.agent-browser/tmp/screenshots/screenshot-1779024018750.png` - mobile compact search view.
 - `/home/ecochran76/.agent-browser/tmp/screenshots/screenshot-1779024037448.png` - mobile operator menu and ellipsized route readout.
 
+## Route Chip Follow-Up
+
+Third pass replaced long route/template text in operator side panes with compact route chips:
+
+- Route chips show the route name/path, keep the full template in the native hover title, and include a copy icon.
+- URL routes also include a compact open-link icon.
+- Left-pane context rows are now non-interactive cards so route copy buttons are not nested inside unrelated buttons.
+- Right-pane inspector route values use the same route chip component for Health, Search, and Runs surfaces.
+
+Additional screenshots:
+
+- `/home/ecochran76/.agent-browser/tmp/screenshots/screenshot-1779024889377.png` - mobile route readout after route-chip compaction.
+- `/home/ecochran76/.agent-browser/tmp/screenshots/screenshot-1779024939497.png` - Health route chips in left context and right inspector.
+- `/home/ecochran76/.agent-browser/tmp/screenshots/screenshot-1779024982986.png` - Runs route chips for status, recent runs, and inspect routes.
+
 ## Validation
 
 - `pnpm run ux:build`

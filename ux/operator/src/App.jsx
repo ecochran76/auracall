@@ -2,7 +2,10 @@ import {
   Activity,
   Bot,
   ChevronDown,
+  Check,
+  Copy,
   Database,
+  ExternalLink,
   GripVertical,
   HeartPulse,
   KeyRound,
@@ -114,6 +117,61 @@ function statusTone(value) {
     return "bad";
   }
   return "neutral";
+}
+
+function routeLabel(value) {
+  const route = String(value ?? "").trim();
+  if (!route) return "unknown";
+  const withoutMethod = route.replace(/^(GET|POST|PUT|PATCH|DELETE)\s+/i, "");
+  try {
+    const url = new URL(withoutMethod);
+    return url.pathname || url.hostname;
+  } catch {
+    const pathStart = withoutMethod.indexOf("/");
+    const candidate = pathStart >= 0 ? withoutMethod.slice(pathStart) : withoutMethod;
+    return candidate.split("[")[0].split("?")[0].split(" ")[0] || candidate;
+  }
+}
+
+function isUrl(value) {
+  return /^https?:\/\//i.test(String(value ?? ""));
+}
+
+function RouteChip({ value, label }) {
+  const [copied, setCopied] = useState(false);
+  const fullValue = String(value ?? "unknown");
+  const display = label ?? routeLabel(fullValue);
+
+  async function copyRoute() {
+    try {
+      await navigator.clipboard.writeText(fullValue);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1200);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <span className="route-chip" title={fullValue}>
+      <code>{display}</code>
+      <button type="button" aria-label={`Copy ${display}`} title="Copy full route" onClick={copyRoute}>
+        {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
+      </button>
+      {isUrl(fullValue) ? (
+        <a href={fullValue} aria-label={`Open ${display}`} title="Open route">
+          <ExternalLink size={13} aria-hidden="true" />
+        </a>
+      ) : null}
+    </span>
+  );
+}
+
+function DetailValue({ detail }) {
+  if (detail && typeof detail === "object" && detail.kind === "route") {
+    return <RouteChip value={detail.value} label={detail.label} />;
+  }
+  return detail;
 }
 
 function useApiStatus() {
@@ -228,13 +286,13 @@ function SectionList({ title, items }) {
       <h2>{title}</h2>
       <div className="list-stack">
         {items.map((item) => (
-          <button className="list-row" type="button" key={item.title}>
+          <article className="list-row" key={item.title}>
             <span>
               <strong>{item.title}</strong>
-              <small>{item.meta}</small>
+              <small>{item.route ? <RouteChip value={item.route} label={item.meta} /> : item.meta}</small>
             </span>
             <span className={`status-pill status-${item.status}`}>{item.status}</span>
-          </button>
+          </article>
         ))}
       </div>
     </section>
@@ -778,7 +836,8 @@ function LeftPane({ activeNav, apiStatus, runStatus }) {
           },
           {
             title: "Routes",
-            meta: status.serviceDiscovery?.local?.dashboardUrl ?? "/dashboard",
+            meta: "Dashboard",
+            route: status.serviceDiscovery?.local?.dashboardUrl ?? "/dashboard",
             status: "good",
           },
         ]}
@@ -819,7 +878,8 @@ function LeftPane({ activeNav, apiStatus, runStatus }) {
         items={[
           {
             title: "Archive route",
-            meta: status.routes?.runArchive ?? "/v1/archive",
+            meta: "Archive",
+            route: status.routes?.runArchive ?? "/v1/archive",
             status: "good",
           },
           {
@@ -874,23 +934,23 @@ function RightPane({ activeNav, apiStatus, runStatus }) {
   const details =
     activeNav === "health" && status
       ? [
-          ["Source", "/status"],
+          ["Source", { kind: "route", value: "/status" }],
           ["Service", status.process?.service ?? "auracall-api.service"],
-          ["Route", status.routes?.operatorBrowserDashboardUrl ?? status.routes?.operatorBrowserDashboard ?? "/dashboard"],
-          ["Debug", status.routes?.operatorDebugDashboard ?? "/ops/browser"],
+          ["Route", { kind: "route", value: status.routes?.operatorBrowserDashboardUrl ?? status.routes?.operatorBrowserDashboard ?? "/dashboard", label: "Dashboard" }],
+          ["Debug", { kind: "route", value: status.routes?.operatorDebugDashboard ?? "/ops/browser", label: "Debug" }],
         ]
       : activeNav === "search" && status
         ? [
-            ["Source", status.routes?.runArchive ?? "/v1/archive"],
+            ["Source", { kind: "route", value: status.routes?.runArchive ?? "/v1/archive", label: "Archive" }],
             ["Auth", "Bearer key entered by operator"],
             ["Storage", "sessionStorage only"],
             ["Mode", "Read-only archive search"],
           ]
       : activeNav === "runs" && runs
         ? [
-            ["Source", "/status?recovery=true&sourceKind=all"],
-            ["Recent runs", runs.routes?.runtimeRunsRecent ?? "/v1/runtime-runs/recent"],
-            ["Inspect", runs.routes?.runtimeRunInspection ?? "/v1/runtime-runs/inspect"],
+            ["Source", { kind: "route", value: "/status?recovery=true&sourceKind=all", label: "/status" }],
+            ["Recent runs", { kind: "route", value: runs.routes?.runtimeRunsRecent ?? "/v1/runtime-runs/recent", label: "/v1/runtime-runs/recent" }],
+            ["Inspect", { kind: "route", value: runs.routes?.runtimeRunInspection ?? "/v1/runtime-runs/inspect", label: "/v1/runtime-runs/inspect" }],
             ["Auth", "Deep /v1 data requires bearer key"],
           ]
       : [
@@ -936,7 +996,9 @@ function RightPane({ activeNav, apiStatus, runStatus }) {
         {details.map(([term, detail]) => (
           <div key={term}>
             <dt>{term}</dt>
-            <dd>{detail}</dd>
+            <dd>
+              <DetailValue detail={detail} />
+            </dd>
           </div>
         ))}
       </dl>

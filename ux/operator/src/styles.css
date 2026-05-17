@@ -83,8 +83,7 @@ select:focus-visible {
 .nav-item,
 .icon-button,
 .account-chip,
-.account-menu button,
-.list-row {
+.account-menu button {
   border: 0;
   color: inherit;
   cursor: pointer;
@@ -359,11 +358,6 @@ select:focus-visible {
   text-align: left;
 }
 
-.list-row:hover {
-  border-color: #394454;
-  background: #1b222d;
-}
-
 .list-row strong,
 .list-row small {
   display: block;
@@ -378,6 +372,10 @@ select:focus-visible {
 .list-row small {
   color: #9aa6b6;
   line-height: 1.35;
+}
+
+.list-row .route-chip {
+  margin-top: 2px;
 }
 
 .status-pill {
@@ -1006,6 +1004,50 @@ select:focus-visible {
   margin: 0;
   color: #edf1f7;
   line-height: 1.35;
+}
+
+.route-chip {
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 3px 2px 7px;
+  border: 1px solid #334052;
+  border-radius: 6px;
+  background: #10161e;
+  color: #d7e8ff;
+  vertical-align: middle;
+}
+
+.route-chip code {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-chip button,
+.route-chip a {
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #9fb3ca;
+  cursor: pointer;
+}
+
+.route-chip button:hover,
+.route-chip a:hover {
+  background: #202a36;
+  color: #f2f7ff;
 }
 
 .json-preview {
