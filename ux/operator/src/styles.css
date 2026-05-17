@@ -683,6 +683,48 @@ select:focus-visible {
   font-size: 12px;
 }
 
+.table-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #252d38;
+  background: #121720;
+}
+
+.filter-chip {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px;
+  border: 1px solid #2f3949;
+  border-radius: 6px;
+  background: #171e29;
+  color: #cfd7e3;
+  cursor: pointer;
+}
+
+.filter-chip:hover,
+.filter-chip.active {
+  border-color: #5d748f;
+  background: #203044;
+  color: #ffffff;
+}
+
+.filter-chip b {
+  min-width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: #263548;
+  color: #d7e8ff;
+  font-size: 11px;
+}
+
 .health-table-wrap {
   overflow: auto;
 }

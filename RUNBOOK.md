@@ -4942,3 +4942,29 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - consider adding filter chips for Enabled, Unconfigured, Attention, and
     Running before the table grows further.
+
+## Turn 178 | 2026-05-17
+
+- Goal: make the Health page live-follow accounts table filterable before the
+  account count grows further.
+- Change:
+  - added compact `All`, `Enabled`, `Unconfigured`, `Attention`, and `Running`
+    filter chips with live counts.
+  - changed the table heading to show visible rows against total targets.
+  - added an empty-state row for filters with no matching accounts.
+  - kept `Attention` scoped to configured/enabled attention targets so
+    unconfigured identity-missing profiles stay under `Unconfigured`.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm run install:user-runtime`
+  - `agent-browser` verified `Unconfigured` filters to 4 rows and `Attention`
+    filters to 0 rows with the empty-state message.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/live-follow-filter-unconfigured.png`
+  - `/tmp/auracall-operator-ux-dogfood/live-follow-filter-empty-attention.png`
+- External links:
+  - `http://auracall.localhost/dashboard`
+  - `https://auracall.ecochran.dyndns.org/dashboard`
+- Next:
+  - make the table denser with provider/profile chips or add row drill-down
+    before adding more status panels.

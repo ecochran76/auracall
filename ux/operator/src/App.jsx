@@ -694,12 +694,28 @@ function ApiKeysSection() {
 
 function HealthViewport({ apiStatus }) {
   const { status, loading, error, updatedAt } = apiStatus;
+  const [liveFollowFilter, setLiveFollowFilter] = useState("all");
   const liveFollow = status?.liveFollow ?? {};
   const targets = liveFollow.targets ?? {};
   const accounts = targets.accounts ?? [];
   const enabledAccountCount = targets.enabled ?? accounts.filter((account) => account.desiredEnabled || account.desiredState === "enabled").length;
   const unconfiguredAccountCount = targets.unconfigured ?? accounts.filter((account) => account.desiredState === "unconfigured").length;
   const attentionAccountCount = targets.attentionNeeded ?? accounts.filter((account) => account.attentionNeeded).length;
+  const runningAccountCount = accounts.filter((account) => account.actualStatus === "running").length;
+  const filteredAccounts = accounts.filter((account) => {
+    if (liveFollowFilter === "enabled") return account.desiredEnabled || account.desiredState === "enabled";
+    if (liveFollowFilter === "unconfigured") return account.desiredState === "unconfigured";
+    if (liveFollowFilter === "attention") return Boolean(account.attentionNeeded) && account.desiredState !== "unconfigured";
+    if (liveFollowFilter === "running") return account.actualStatus === "running";
+    return true;
+  });
+  const liveFollowFilters = [
+    { id: "all", label: "All", count: accounts.length },
+    { id: "enabled", label: "Enabled", count: enabledAccountCount },
+    { id: "unconfigured", label: "Unconfigured", count: unconfiguredAccountCount },
+    { id: "attention", label: "Attention", count: attentionAccountCount },
+    { id: "running", label: "Running", count: runningAccountCount },
+  ];
   const routes = status?.routes ?? {};
   const discovery = status?.serviceDiscovery ?? {};
   const process = status?.process ?? {};
@@ -797,8 +813,24 @@ function HealthViewport({ apiStatus }) {
         <div className="section-heading">
           <h2>Live Follow Accounts</h2>
           <span>
-            {formatNumber(accounts.length)} targets / {formatNumber(enabledAccountCount)} enabled / {formatNumber(attentionAccountCount)} attention
+            showing {formatNumber(filteredAccounts.length)} of {formatNumber(accounts.length)} / {formatNumber(enabledAccountCount)} enabled /{" "}
+            {formatNumber(attentionAccountCount)} attention
           </span>
+        </div>
+        <div className="table-filter-bar" role="tablist" aria-label="Live follow account filters">
+          {liveFollowFilters.map((filter) => (
+            <button
+              key={filter.id}
+              type="button"
+              role="tab"
+              aria-selected={liveFollowFilter === filter.id}
+              className={`filter-chip ${liveFollowFilter === filter.id ? "active" : ""}`}
+              onClick={() => setLiveFollowFilter(filter.id)}
+            >
+              <span>{filter.label}</span>
+              <b>{formatNumber(filter.count)}</b>
+            </button>
+          ))}
         </div>
         <div className="health-table-wrap">
           <table className="health-table">
@@ -815,7 +847,7 @@ function HealthViewport({ apiStatus }) {
               </tr>
             </thead>
             <tbody>
-              {accounts.map((account) => {
+              {filteredAccounts.map((account) => {
                 const counts = account.metadataCounts ?? {};
                 const reasonLabel =
                   account.attentionNeeded && account.desiredState !== "unconfigured" ? "attention" : account.statusReason ?? "clear";
@@ -849,6 +881,11 @@ function HealthViewport({ apiStatus }) {
               {!accounts.length ? (
                 <tr>
                   <td colSpan="8">No live-follow accounts reported yet.</td>
+                </tr>
+              ) : null}
+              {accounts.length > 0 && filteredAccounts.length === 0 ? (
+                <tr>
+                  <td colSpan="8">No accounts match the selected filter.</td>
                 </tr>
               ) : null}
             </tbody>

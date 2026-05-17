@@ -278,3 +278,23 @@ Validation evidence:
 - `pnpm exec tsc -p tsconfig.build.json --pretty false` passed.
 - `pnpm run install:user-runtime` passed.
 - `agent-browser` verified the installed dashboard at `http://auracall.localhost/dashboard` renders the live-follow counts and readable reason chips, then saved the screenshot above.
+
+## Live Follow Filter Follow-Up
+
+Thirteenth pass added compact table filters to the Health page live-follow accounts section:
+
+- Added `All`, `Enabled`, `Unconfigured`, `Attention`, and `Running` filter chips with live counts.
+- The table heading now reports the visible row count against the total target count.
+- Empty filter results render a specific empty-state row instead of looking like the API has no live-follow data.
+- The `Attention` filter only includes configured/enabled attention targets, so unconfigured identity-missing profiles remain visible under `Unconfigured`.
+
+Additional screenshots:
+
+- `/tmp/auracall-operator-ux-dogfood/live-follow-filter-unconfigured.png` - Unconfigured filter showing four non-enabled targets and identity-missing reasons.
+- `/tmp/auracall-operator-ux-dogfood/live-follow-filter-empty-attention.png` - Attention filter showing the zero-attention empty state.
+
+Validation evidence:
+
+- `pnpm run ux:build` passed.
+- `pnpm run install:user-runtime` passed.
+- `agent-browser` loaded `http://auracall.localhost/dashboard`, clicked `Unconfigured`, verified 4 visible rows, clicked `Attention`, verified 0 rows and the empty-state message, then closed the browser.
