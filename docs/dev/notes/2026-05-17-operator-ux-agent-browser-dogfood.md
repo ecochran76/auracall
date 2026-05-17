@@ -230,3 +230,29 @@ Validation evidence:
 - `curl http://auracall.localhost/status` reported `ok=true`, `routes.configApiKeys=/v1/config/api-keys`, `routes.configApiKeyDeleteTemplate=DELETE /v1/config/api-keys/{key_id}`, and live follow `healthy`.
 - A temp-env smoke issued `operator-ui-smoke`, listed one redacted key without leaking the secret, deleted it, and reported zero remaining temp-env keys.
 - `agent-browser` verified the Health page renders six existing key rows and the issue form, then saved the screenshot above.
+
+## Service Restart Control Follow-Up
+
+Eleventh pass added a dashboard-safe API service restart workflow after API-key issue/delete operations:
+
+- Added `POST /status` service control payload support for `restart-api-service`.
+- Added a `dryRun` mode and injectable restart scheduler so the HTTP behavior is testable without restarting the process.
+- The default scheduler runs `systemctl --user restart auracall-api.service` after the response is returned.
+- Added a Health-page `Restart API` control next to API-key refresh.
+- API-key mutation results now tell the operator to restart before external clients rely on changed key state.
+
+Additional screenshot:
+
+- `/tmp/auracall-operator-ux-dogfood/api-keys-restart-button.png` - Health page API Keys section with the compact `Restart API` control.
+
+Validation evidence:
+
+- `pnpm exec vitest run tests/http.responsesServer.test.ts -t "API service restart|issues scoped API keys|configured API keys"` passed.
+- `pnpm exec tsc -p tsconfig.build.json --pretty false` passed.
+- `pnpm run ux:build` passed.
+- `pnpm run build` passed.
+- `pnpm run install:user-runtime` passed.
+- `systemctl --user restart auracall-api.service` and `systemctl --user is-active auracall-api.service` reported `active`.
+- `POST http://auracall.localhost/status` with `serviceControl.restart-api-service` and `dryRun=true` returned `scheduled=false`, `unitName=auracall-api.service`, and the expected restart command.
+- After the manual restart, `http://auracall.localhost/status` briefly returned `Bad Gateway`, then recovered; direct and local-hosted status checks reported `ok=true`, live follow `healthy`, and 9 live-follow accounts.
+- `agent-browser` verified the installed dashboard at `http://auracall.localhost/dashboard` renders the API Keys panel and `Restart API` control, then saved the screenshot above.

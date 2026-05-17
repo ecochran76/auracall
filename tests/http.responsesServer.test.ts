@@ -4807,6 +4807,70 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('schedules API service restart through POST /status service control', async () => {
+    const scheduledRestarts: Array<{ unitName: string; delayMs: number }> = [];
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        scheduleApiServiceRestart: (input) => {
+          scheduledRestarts.push(input);
+        },
+      },
+    );
+
+    try {
+      const dryRunResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serviceControl: {
+            action: 'restart-api-service',
+            dryRun: true,
+            delayMs: 25,
+          },
+        }),
+      });
+      expect(dryRunResponse.status).toBe(200);
+      expect(await dryRunResponse.json()).toMatchObject({
+        controlResult: {
+          kind: 'service-control',
+          action: 'restart-api-service',
+          unitName: 'auracall-api.service',
+          restartCommand: 'systemctl --user restart auracall-api.service',
+          scheduled: false,
+          dryRun: true,
+          delayMs: 25,
+        },
+      });
+      expect(scheduledRestarts).toEqual([]);
+
+      const restartResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serviceControl: {
+            action: 'restart-api-service',
+            delayMs: 25,
+          },
+        }),
+      });
+      expect(restartResponse.status).toBe(200);
+      expect(await restartResponse.json()).toMatchObject({
+        controlResult: {
+          kind: 'service-control',
+          action: 'restart-api-service',
+          unitName: 'auracall-api.service',
+          scheduled: true,
+          dryRun: false,
+          delayMs: 25,
+        },
+      });
+      expect(scheduledRestarts).toEqual([{ unitName: 'auracall-api.service', delayMs: 25 }]);
+    } finally {
+      await server.close();
+    }
+  });
+
   it('cancels an active local runner-owned run through POST /status', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-run-cancel-'));
     cleanup.push(homeDir);

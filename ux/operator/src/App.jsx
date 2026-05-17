@@ -488,8 +488,10 @@ function ApiKeysSection() {
     overwrite: false,
   });
   const [busy, setBusy] = useState(false);
+  const [restarting, setRestarting] = useState(false);
   const [result, setResult] = useState(null);
   const keys = apiKeys.status?.apiKeys ?? [];
+  const restartRequired = Boolean(result?.payload?.restartRequired);
 
   function updateForm(name, value) {
     setForm((current) => ({ ...current, [name]: value }));
@@ -545,6 +547,30 @@ function ApiKeysSection() {
     }
   }
 
+  async function restartApiService() {
+    if (!window.confirm("Restart auracall-api.service now? The dashboard may disconnect briefly while the service reloads.")) return;
+    setRestarting(true);
+    setResult(null);
+    try {
+      const response = await fetch("/status", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ serviceControl: { action: "restart-api-service" } }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      setResult({ tone: "ok", payload: payload.controlResult ?? payload });
+      window.setTimeout(() => {
+        apiKeys.refresh();
+      }, 3000);
+    } catch (error) {
+      setResult({ tone: "bad", message: error.message || "API service restart failed" });
+    } finally {
+      window.setTimeout(() => setRestarting(false), 3000);
+    }
+  }
+
   return (
     <section className="health-section" aria-label="API key management">
       <div className="section-heading">
@@ -556,6 +582,10 @@ function ApiKeysSection() {
         <button className="icon-label-button" type="button" disabled={apiKeys.loading || busy} onClick={apiKeys.refresh} title="Refresh API keys">
           <RefreshCcw size={14} aria-hidden="true" />
           <span>Refresh</span>
+        </button>
+        <button className="icon-label-button" type="button" disabled={busy || restarting} onClick={restartApiService} title="Restart API service">
+          <RefreshCcw size={14} aria-hidden="true" />
+          <span>{restarting ? "Restarting" : "Restart API"}</span>
         </button>
         <small>{apiKeys.updatedAt ? `Updated ${formatDateTime(apiKeys.updatedAt)}` : apiKeys.status?.envPath ?? "/v1/config/api-keys"}</small>
       </div>
@@ -642,6 +672,7 @@ function ApiKeysSection() {
       {result ? (
         <div className={`api-key-result api-key-result-${result.tone}`}>
           <strong>{result.tone === "ok" ? "Operation complete" : result.tone === "warn" ? "No matching key removed" : "Operation failed"}</strong>
+          {restartRequired ? <p>Restart the API service before external clients rely on this key change.</p> : null}
           {result.message ? <p>{result.message}</p> : null}
           {result.payload ? <pre>{JSON.stringify(result.payload, null, 2)}</pre> : null}
         </div>

@@ -2,6 +2,7 @@ import http from 'node:http';
 import { createReadStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { z, ZodError } from 'zod';
@@ -211,6 +212,16 @@ import {
 import { findChromeProcessUsingUserDataDir, isDevToolsResponsive } from '../../packages/browser-service/src/processCheck.js';
 import { readDevToolsPort } from '../../packages/browser-service/src/profileState.js';
 
+function scheduleDefaultUserApiServiceRestart(input: ApiServiceRestartRequest): void {
+  setTimeout(() => {
+    const child = spawn('systemctl', ['--user', 'restart', input.unitName], {
+      detached: true,
+      stdio: 'ignore',
+    });
+    child.unref();
+  }, input.delayMs).unref();
+}
+
 export const DEFAULT_BACKGROUND_DRAIN_INTERVAL_MS = 60_000;
 
 export interface ResponsesHttpServerOptions {
@@ -263,6 +274,7 @@ export interface ResponsesHttpServerDeps {
   agentRegistryStore?: AgentRegistryStore | null;
   preflightRunner?: LazyLiveFollowPreflightRunner;
   terminateProcess?: (pid: number, signal: NodeJS.Signals) => void;
+  scheduleApiServiceRestart?: (input: ApiServiceRestartRequest) => void;
 }
 
 export interface ResponsesHttpServerInstance {
@@ -743,6 +755,15 @@ interface HttpStatusResponse {
         status: string;
         logPath: string;
       }
+    | {
+        kind: 'service-control';
+        action: 'restart-api-service';
+        unitName: string;
+        restartCommand: string;
+        scheduled: boolean;
+        dryRun: boolean;
+        delayMs: number;
+      }
     | ExecutionServiceHostOperatorControlResult;
 }
 
@@ -858,6 +879,7 @@ export async function createResponsesHttpServer(
     },
   });
   const preflightRunner = deps.preflightRunner ?? createLazyLiveFollowPreflightRunner();
+  const scheduleApiServiceRestart = deps.scheduleApiServiceRestart ?? scheduleDefaultUserApiServiceRestart;
   const reconcileAccountMirrorLiveFollow = async () => {
     await reconcileConfiguredAccountMirrorLiveFollow({
       registry: accountMirrorStatusRegistry,
@@ -1934,6 +1956,22 @@ export async function createResponsesHttpServer(
             id: result.run.id,
             status: result.run.status,
             logPath: result.run.logPath,
+          };
+        } else if ('serviceControl' in payload) {
+          const delayMs = payload.serviceControl.delayMs ?? 750;
+          const unitName = 'auracall-api.service';
+          const dryRun = payload.serviceControl.dryRun ?? false;
+          if (!dryRun) {
+            scheduleApiServiceRestart({ unitName, delayMs });
+          }
+          controlResult = {
+            kind: 'service-control',
+            action: payload.serviceControl.action,
+            unitName,
+            restartCommand: `systemctl --user restart ${unitName}`,
+            scheduled: !dryRun,
+            dryRun,
+            delayMs,
           };
         } else {
           const result = await host.controlOperatorAction(createServiceHostOperatorControlInput(payload));
@@ -5003,6 +5041,13 @@ const STATUS_CONTROL_REQUEST_SCHEMA = z.union([
     }),
   }),
   z.object({
+    serviceControl: z.object({
+      action: z.literal('restart-api-service'),
+      dryRun: z.boolean().optional(),
+      delayMs: z.number().int().min(0).max(10_000).optional(),
+    }),
+  }),
+  z.object({
     localActionControl: z.object({
       action: z.literal('resolve-request'),
       runId: z.string().min(1),
@@ -5062,6 +5107,7 @@ type ServiceHostStatusControlRequest = Exclude<
   | { accountMirrorProviderGuard: unknown }
   | { accountMirrorCompletion: unknown }
   | { preflight: unknown }
+  | { serviceControl: unknown }
 >;
 
 function createServiceHostOperatorControlInput(payload: ServiceHostStatusControlRequest): ExecutionServiceHostOperatorControlInput {
@@ -5165,6 +5211,11 @@ interface CachedCatalogItemAsset {
   mimeType: string;
   size: number;
   fileName?: string | null;
+}
+
+interface ApiServiceRestartRequest {
+  unitName: string;
+  delayMs: number;
 }
 
 interface ParsedAccountMirrorCompletionListQuery {

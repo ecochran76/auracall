@@ -4874,3 +4874,40 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - add a safer restart/reload workflow for key mutations so the dashboard can
     guide or trigger the required service restart explicitly.
+
+## Turn 176 | 2026-05-17
+
+- Goal: let the operator dashboard trigger the required API service restart
+  after user-scoped API-key changes.
+- Change:
+  - added `POST /status` support for a `serviceControl.restart-api-service`
+    action.
+  - added `dryRun` and injectable restart scheduling so the endpoint can be
+    tested without restarting the test process.
+  - defaulted the live restart path to `systemctl --user restart
+    auracall-api.service` after the HTTP response has already been sent.
+  - added a compact Health-page `Restart API` control beside the API-key
+    refresh button.
+  - kept API-key issue/delete results explicit that restart is required before
+    external clients rely on the changed key set.
+- Verification:
+  - `pnpm exec vitest run tests/http.responsesServer.test.ts -t "API service
+    restart|issues scoped API keys|configured API keys"`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false`
+  - `pnpm run ux:build`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service`
+  - live `POST /status` dry-run smoke returned `scheduled=false` and the
+    expected `systemctl --user restart auracall-api.service` command.
+  - `curl http://auracall.localhost/status` recovered after a brief
+    post-restart `Bad Gateway` and reported `ok=true`, live follow `healthy`,
+    and 9 live-follow accounts.
+  - `agent-browser` verified the installed dashboard renders the API Keys
+    panel and `Restart API` control.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/api-keys-restart-button.png`
+- Next:
+  - continue UX hardening without expanding API-key prompts; same-origin
+    operator dashboard access remains the superuser path.
