@@ -1451,7 +1451,7 @@ export async function createResponsesHttpServer(
       }
 
       if (req.method === 'GET' && url.pathname.startsWith('/v1/archive/items/')) {
-        const itemId = decodeURIComponent(url.pathname.slice('/v1/archive/items/'.length));
+        const itemId = parseRunArchiveItemId(url.pathname);
         const result: HttpRunArchiveItemResponse | null = await runArchiveService.readItem(itemId);
         if (!result) {
           sendJson(res, 404, {
@@ -5476,11 +5476,28 @@ function parseRunArchiveItemAssetId(pathname: string): string {
   const encodedItemId = pathname.startsWith(prefix) && pathname.endsWith(suffix)
     ? pathname.slice(prefix.length, -suffix.length)
     : '';
-  const itemId = decodeURIComponent(encodedItemId).trim();
+  const itemId = decodeRunArchiveItemPathSegment(encodedItemId).trim();
   if (!itemId) {
     throw new Error('Run archive item id is required.');
   }
   return itemId;
+}
+
+function parseRunArchiveItemId(pathname: string): string {
+  const prefix = '/v1/archive/items/';
+  const encodedItemId = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : '';
+  const itemId = decodeRunArchiveItemPathSegment(encodedItemId).trim();
+  if (!itemId) {
+    throw new Error('Run archive item id is required.');
+  }
+  return itemId;
+}
+
+function decodeRunArchiveItemPathSegment(encodedItemId: string): string {
+  if (encodedItemId.startsWith('b64/')) {
+    return Buffer.from(encodedItemId.slice('b64/'.length), 'base64url').toString('utf8');
+  }
+  return decodeURIComponent(encodedItemId);
 }
 
 function parseAccountMirrorCatalogItemAssetQuery(

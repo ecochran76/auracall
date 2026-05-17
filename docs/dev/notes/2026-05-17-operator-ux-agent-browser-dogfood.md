@@ -143,3 +143,18 @@ Observed backend/API gap:
 
 - Generated-artifact items with local files can have IDs containing embedded slash text from `sandbox:/mnt/data/...`; `/v1/archive/items/{archive_item_id}` and `/asset` currently return HTTP 400 for those encoded IDs.
 - Upload archive IDs without embedded slash text work through the item and asset routes.
+
+## Archive Slash-ID Route Follow-Up
+
+Seventh pass closed the generated-artifact route gap:
+
+- Archive item links now use `/v1/archive/items/b64/{base64url_archive_item_id}` for generated item routes.
+- The HTTP archive item and asset route parsers accept both legacy percent-encoded IDs and the new `b64/` ID form.
+- File-backed archive items now get an explicit `links.asset` during archive metadata enrichment.
+- The operator UX detail and asset fetch helpers now synthesize the same `b64/` route form, so generated-artifact IDs containing `sandbox:/mnt/data/...` do not depend on encoded slash behavior in proxies or URL parsers.
+
+Validation evidence:
+
+- `pnpm exec vitest run tests/http.runArchive.test.ts` passed.
+- The focused HTTP test now includes a generated artifact with ID text containing `sandbox:/mnt/data/first_pass_readout.json`; its item detail route and asset route both return HTTP 200 through the new `b64/` route form.
+- `pnpm run ux:build` passed after the operator route helper update.

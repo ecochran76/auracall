@@ -4747,3 +4747,27 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - fix slash-containing archive item route handling, then return to
     chat-dialog conversation views.
+
+## Turn 172 | 2026-05-17
+
+- Goal: make archive item and asset routes safe for generated-artifact IDs that
+  contain embedded slash text such as `sandbox:/mnt/data/...`.
+- Change:
+  - added a `/v1/archive/items/b64/{base64url_archive_item_id}` route form.
+  - kept legacy percent-encoded archive item routes working.
+  - changed archive metadata enrichment to attach explicit `links.asset` values
+    for file-backed archive items.
+  - changed the operator UX detail and asset helpers to synthesize the same
+    `b64/` route form.
+  - extended the HTTP archive test with a file-backed generated artifact whose
+    ID contains `sandbox:/mnt/data/first_pass_readout.json`.
+- Verification:
+  - `pnpm exec vitest run tests/http.runArchive.test.ts`
+  - `pnpm run ux:build`
+  - `git diff --check` for the touched backend, UX, test, and docs files.
+- Note:
+  - full installed-runtime rebuild is still blocked by unrelated non-UX
+    TypeScript errors in the shared dirty worktree; this slice is covered by
+    the focused HTTP test and UX production build.
+- Next:
+  - return to chat-dialog conversation views in the operator UX.

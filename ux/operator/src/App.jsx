@@ -140,9 +140,24 @@ function isPreviewableText(mimeType, fileName) {
   );
 }
 
+function base64UrlEncodeText(value) {
+  const bytes = new TextEncoder().encode(String(value ?? ""));
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/=+$/u, "");
+}
+
+function archiveItemRoute(item) {
+  if (!item?.id) return null;
+  return `/v1/archive/items/b64/${base64UrlEncodeText(item.id)}`;
+}
+
 function archiveItemAssetRoute(item) {
   if (!item?.fileAvailable) return null;
-  return item.links?.asset ?? `/v1/archive/items/${encodeURIComponent(item.id)}/asset`;
+  const route = archiveItemRoute(item);
+  return item.links?.asset ?? (route ? `${route}/asset` : null);
 }
 
 function statusTone(value) {
@@ -694,7 +709,7 @@ function ArchiveSearchViewport({
       updatedAt: null,
     });
 
-    fetch(`/v1/archive/items/${encodeURIComponent(selectedArchiveItem.id)}`, {
+    fetch(archiveItemRoute(selectedArchiveItem), {
       cache: "no-store",
       headers: {
         authorization: `Bearer ${trimmedKey}`,

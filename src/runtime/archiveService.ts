@@ -186,6 +186,14 @@ export interface RunArchiveServiceDeps {
 
 const DEFAULT_LIMIT = 50;
 
+function encodeRunArchiveItemIdForRoute(id: string): string {
+  return `b64/${Buffer.from(id, 'utf8').toString('base64url')}`;
+}
+
+function runArchiveItemRoute(id: string): string {
+  return `/v1/archive/items/${encodeRunArchiveItemIdForRoute(id)}`;
+}
+
 export function createRunArchiveService(deps: RunArchiveServiceDeps = {}): RunArchiveService {
   const runStore = deps.runStore ?? createExecutionRunRecordStore();
   const batchStore = deps.batchStore ?? createResponseBatchStore();
@@ -787,7 +795,7 @@ function buildEvidenceArchiveItem(record: RunArchiveEvidenceRecord): RunArchiveI
     links: {
       ...(record.responseId ? { response: `/v1/responses/${encodeURIComponent(record.responseId)}` } : {}),
       ...(record.batchId ? { batch: `/v1/response-batches/${encodeURIComponent(record.batchId)}` } : {}),
-      ...(record.archiveItemId ? { archiveItem: `/v1/archive/items/${encodeURIComponent(record.archiveItemId)}` } : {}),
+      ...(record.archiveItemId ? { archiveItem: runArchiveItemRoute(record.archiveItemId) } : {}),
     },
   };
 }
@@ -973,6 +981,10 @@ async function enrichFileMetadata(items: RunArchiveItem[]): Promise<RunArchiveIt
       cacheKey,
       checksumSha256,
       fileAvailable,
+      links: {
+        ...item.links,
+        ...(fileAvailable === true ? { asset: `${runArchiveItemRoute(item.id)}/asset` } : {}),
+      },
       metadata: {
         ...item.metadata,
         ...(checksumSha256 ? { checksumSha256 } : {}),

@@ -28,7 +28,9 @@ describe('http run archive routes', () => {
     setAuracallHomeDirOverrideForTest(homeDir);
     const control = createExecutionRuntimeControl();
     const uploadPath = path.join(homeDir, 'assignment.pdf');
+    const generatedPath = path.join(homeDir, 'first_pass_readout.json');
     await writeFile(uploadPath, 'assignment packet', 'utf8');
+    await writeFile(generatedPath, '{"ok":true}', 'utf8');
     await control.createRun(createExecutionRunRecordBundle({
       run: createExecutionRun({
         id: 'resp_http_archive',
@@ -96,7 +98,19 @@ describe('http run archive routes', () => {
         id: 'resp_http_archive:state',
         runId: 'resp_http_archive',
         status: 'succeeded',
-        artifacts: [],
+        artifacts: [
+          {
+            id: 'generated-artifact-slash:download:sandbox:/mnt/data/first_pass_readout.json',
+            kind: 'generated',
+            title: 'first_pass_readout.json',
+            path: generatedPath,
+            uri: 'sandbox:/mnt/data/first_pass_readout.json',
+            metadata: {
+              providerArtifactId: 'sandbox:/mnt/data/first_pass_readout.json',
+              fileName: 'first_pass_readout.json',
+            },
+          },
+        ],
         structuredOutputs: [],
         notes: [],
         history: [],
@@ -170,7 +184,12 @@ describe('http run archive routes', () => {
         `http://127.0.0.1:${server.port}/v1/archive/items/${encodeURIComponent('upload:resp_http_archive:resp_http_archive:step:1:artifact_http_upload')}`,
       );
       expect(uploadItemResponse.status).toBe(200);
-      const uploadItem = await uploadItemResponse.json() as { item: { checksumSha256: string } };
+      const uploadItem = await uploadItemResponse.json() as { item: { checksumSha256: string; links: Record<string, string> } };
+      expect(uploadItem.item).toMatchObject({
+        links: {
+          asset: expect.stringContaining('/v1/archive/items/b64/'),
+        },
+      });
       const lookupResponse = await fetch(
         `http://127.0.0.1:${server.port}/v1/archive/assets/lookup?checksumSha256=${encodeURIComponent(uploadItem.item.checksumSha256)}`,
       );
@@ -190,6 +209,24 @@ describe('http run archive routes', () => {
         `http://127.0.0.1:${server.port}/v1/archive/items/${encodeURIComponent('response:resp_http_archive')}/asset`,
       );
       expect(nonAssetResponse.status).toBe(404);
+
+      const slashGeneratedId = 'generated-artifact:resp_http_archive:generated-artifact-slash:download:sandbox:/mnt/data/first_pass_readout.json';
+      const slashGeneratedRouteId = `b64/${Buffer.from(slashGeneratedId, 'utf8').toString('base64url')}`;
+      const slashGeneratedItemResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/archive/items/${slashGeneratedRouteId}`,
+      );
+      expect(slashGeneratedItemResponse.status).toBe(200);
+      const slashGeneratedItem = await slashGeneratedItemResponse.json() as { item: { id: string; links: Record<string, string> } };
+      expect(slashGeneratedItem.item.id).toBe(slashGeneratedId);
+      expect(slashGeneratedItem.item.links.asset).toBe(`/v1/archive/items/${slashGeneratedRouteId}/asset`);
+
+      const slashGeneratedAssetResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/archive/items/${slashGeneratedRouteId}/asset`,
+      );
+      expect(slashGeneratedAssetResponse.status).toBe(200);
+      expect(slashGeneratedAssetResponse.headers.get('content-type')).toBe('application/json');
+      expect(slashGeneratedAssetResponse.headers.get('content-disposition')).toBe('attachment; filename="first_pass_readout.json"');
+      await expect(slashGeneratedAssetResponse.text()).resolves.toBe('{"ok":true}');
 
       const evidenceResponse = await fetch(`http://127.0.0.1:${server.port}/v1/archive/evidence`, {
         method: 'POST',
