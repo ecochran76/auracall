@@ -41,6 +41,22 @@ Screenshots captured during the pass:
 - The Health and Runs pages expose useful state, but the labels need operator-first language and drill-down actions before this can replace the old debug dashboard.
 - `agent-browser` default bundled Chrome failed on this host with exit code 21 and empty stderr. The pass succeeded by explicitly using `/usr/bin/google-chrome-stable --no-sandbox`; that harness issue should be tracked separately from AuraCall UX work.
 
+## Density Follow-Up
+
+Second pass tightened the operator chrome around recognizable icon controls:
+
+- Top navigation now uses icon-only buttons with accessible names and native hover hints.
+- The operator account chip is icon-only, with a compact menu for UX settings, tenant config, agents, teams, API keys, and diagnostics.
+- Header height, pane toolbars, side-list rows, status chips, cards, tables, run lists, archive filters, and result cards use tighter spacing.
+- Shared `:focus-visible` styling keeps the icon-heavy interface keyboard-visible.
+- Status readouts ellipsize route templates on mobile instead of expanding into a tall route block.
+
+Additional screenshots:
+
+- `/home/ecochran76/.agent-browser/tmp/screenshots/screenshot-1779023826879.png` - desktop compact icon navigation.
+- `/home/ecochran76/.agent-browser/tmp/screenshots/screenshot-1779024018750.png` - mobile compact search view.
+- `/home/ecochran76/.agent-browser/tmp/screenshots/screenshot-1779024037448.png` - mobile operator menu and ellipsized route readout.
+
 ## Validation
 
 - `pnpm run ux:build`

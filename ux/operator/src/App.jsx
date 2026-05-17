@@ -56,8 +56,8 @@ const DEFAULT_LAYOUT = {
   activeNav: "chats",
   leftCollapsed: false,
   rightCollapsed: false,
-  leftWidth: 288,
-  rightWidth: 344,
+  leftWidth: 264,
+  rightWidth: 320,
 };
 
 function clamp(value, min, max) {
@@ -592,7 +592,7 @@ function ArchiveSearchViewport({ apiStatus }) {
               placeholder="Paste a scoped AuraCall API key for this browser session"
               onChange={(event) => saveSessionKey(event.target.value)}
             />
-            <button type="button" onClick={() => saveSessionKey("")}>Forget</button>
+            <button type="button" title="Forget API key" onClick={() => saveSessionKey("")}>Forget</button>
           </div>
         </div>
         <div className="field-row field-row-wide">
@@ -642,8 +642,9 @@ function ArchiveSearchViewport({ apiStatus }) {
             onChange={(event) => updateFilter("limit", event.target.value)}
           />
         </div>
-        <button className="primary-action" type="submit" disabled={loading}>
-          {loading ? "Searching" : "Search Archive"}
+        <button className="primary-action" type="submit" disabled={loading} title="Search archive" aria-label="Search archive">
+          <Search size={16} aria-hidden="true" />
+          <span>{loading ? "Searching" : "Search"}</span>
         </button>
       </form>
 
@@ -1015,30 +1016,40 @@ export default function App() {
                 className={item.id === layout.activeNav ? "nav-item is-active" : "nav-item"}
                 type="button"
                 key={item.id}
+                aria-label={item.label}
+                title={item.label}
                 onClick={() => setLayout((current) => ({ ...current, activeNav: item.id }))}
               >
-                <Icon size={16} />
-                <span>{item.label}</span>
+                <Icon size={17} aria-hidden="true" />
+                <span className="nav-label">{item.label}</span>
               </button>
             );
           })}
         </nav>
         <div className="account-wrap">
-          <button className="account-chip" type="button" onClick={() => setMenuOpen((open) => !open)}>
+          <button
+            className="account-chip"
+            type="button"
+            aria-label={`Operator menu, ${activeItem.label}`}
+            title="Operator menu"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
             <span className="avatar">AC</span>
             <span className="account-copy">
               <strong>Operator</strong>
               <small>{activeItem.label}</small>
             </span>
-            <ChevronDown size={15} />
+            <ChevronDown size={14} aria-hidden="true" />
           </button>
           {menuOpen ? (
-            <div className="account-menu">
+            <div className="account-menu" role="menu">
               {MENU_ITEMS.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <button type="button" key={item.label}>
-                    <Icon size={16} />
+                  <button type="button" key={item.label} role="menuitem" title={item.label}>
+                    <Icon size={15} aria-hidden="true" />
                     <span>{item.label}</span>
                   </button>
                 );
@@ -1061,6 +1072,7 @@ export default function App() {
               className="icon-button"
               type="button"
               aria-label={layout.leftCollapsed ? "Expand left pane" : "Collapse left pane"}
+              title={layout.leftCollapsed ? "Expand left pane" : "Collapse left pane"}
               onClick={() => setLayout((current) => ({ ...current, leftCollapsed: !current.leftCollapsed }))}
             >
               {layout.leftCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
@@ -1085,6 +1097,7 @@ export default function App() {
               className="icon-button"
               type="button"
               aria-label={layout.rightCollapsed ? "Expand right pane" : "Collapse right pane"}
+              title={layout.rightCollapsed ? "Expand right pane" : "Collapse right pane"}
               onClick={() => setLayout((current) => ({ ...current, rightCollapsed: !current.rightCollapsed }))}
             >
               {layout.rightCollapsed ? <PanelRightOpen size={18} /> : <PanelRightClose size={18} />}
