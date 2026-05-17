@@ -893,6 +893,215 @@ select:focus-visible {
   padding: 12px;
 }
 
+.chat-filter-panel {
+  grid-template-columns: minmax(220px, 2fr) minmax(120px, 1fr) minmax(140px, 1fr) 90px auto;
+}
+
+.conversation-workbench {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.conversation-list,
+.chat-dialog {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid #2a3240;
+  border-radius: 8px;
+  background: #151a22;
+  overflow: hidden;
+}
+
+.conversation-list {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.conversation-list-scroll {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 10px;
+  overflow: auto;
+}
+
+.conversation-row {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid #252d38;
+  border-radius: 8px;
+  background: #111820;
+  color: #dce6f2;
+  text-align: left;
+  cursor: pointer;
+}
+
+.conversation-row.is-selected {
+  border-color: #4a7f72;
+  background: #13211f;
+}
+
+.conversation-row strong,
+.conversation-row span,
+.conversation-row small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversation-row strong {
+  color: #f4f7fb;
+  font-size: 13px;
+}
+
+.conversation-row span {
+  color: #9fb0c5;
+  font-size: 12px;
+}
+
+.conversation-row small {
+  color: #8491a4;
+  font-size: 11px;
+}
+
+.chat-dialog {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.chat-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #252d38;
+}
+
+.chat-dialog-header span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.chat-dialog-header strong,
+.chat-dialog-header small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-dialog-header strong {
+  color: #f4f7fb;
+}
+
+.chat-dialog-header small {
+  color: #9aa6b6;
+  font-size: 12px;
+}
+
+.chat-dialog-header a {
+  align-self: start;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 1px solid #314055;
+  border-radius: 6px;
+  color: #d7e8ff;
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.chat-turns {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 14px;
+  overflow: auto;
+}
+
+.chat-turn {
+  display: flex;
+}
+
+.chat-turn-user {
+  justify-content: flex-end;
+}
+
+.chat-turn-assistant,
+.chat-turn-system,
+.chat-turn-developer,
+.chat-turn-tool {
+  justify-content: flex-start;
+}
+
+.chat-bubble {
+  max-width: min(760px, 82%);
+  padding: 10px 12px;
+  border: 1px solid #2b3544;
+  border-radius: 8px;
+  background: #111820;
+  color: #e7edf5;
+}
+
+.chat-turn-user .chat-bubble {
+  border-color: #2d655a;
+  background: #12302b;
+}
+
+.chat-turn-system .chat-bubble,
+.chat-turn-developer .chat-bubble,
+.chat-turn-tool .chat-bubble {
+  border-color: #4a3e23;
+  background: #211d14;
+}
+
+.chat-bubble-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  color: #9fb0c5;
+  font-size: 11px;
+  font-weight: 720;
+  text-transform: uppercase;
+}
+
+.chat-bubble p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
+.conversation-related {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 14px;
+  border-top: 1px solid #252d38;
+}
+
+.conversation-related span {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  border-radius: 5px;
+  background: #10161e;
+  color: #bdd2e8;
+  font-size: 12px;
+}
+
 .archive-result {
   min-width: 0;
   display: grid;
@@ -1297,6 +1506,7 @@ select:focus-visible {
   .capability-grid,
   .health-grid,
   .run-lists,
+  .conversation-workbench,
   .timeline-band {
     grid-template-columns: 1fr;
   }
@@ -1306,8 +1516,13 @@ select:focus-visible {
   }
 
   .archive-search-panel,
+  .chat-filter-panel,
   .archive-result dl {
     grid-template-columns: 1fr;
+  }
+
+  .chat-bubble {
+    max-width: 100%;
   }
 
   .health-table {

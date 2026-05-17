@@ -160,6 +160,93 @@ function archiveItemAssetRoute(item) {
   return item.links?.asset ?? (route ? `${route}/asset` : null);
 }
 
+function readStringField(value, fields) {
+  if (!value || typeof value !== "object") return null;
+  for (const field of fields) {
+    const candidate = value[field];
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+  }
+  return null;
+}
+
+function readObjectField(value, field) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const candidate = value[field];
+  return candidate && typeof candidate === "object" && !Array.isArray(candidate) ? candidate : null;
+}
+
+function normalizeChatRole(value) {
+  const role = String(value ?? "").toLowerCase();
+  if (["assistant", "ai", "model", "gpt"].includes(role)) return "assistant";
+  if (["user", "human", "operator"].includes(role)) return "user";
+  if (["system", "developer", "tool"].includes(role)) return role;
+  return "assistant";
+}
+
+function stringifyMessagePart(part) {
+  if (typeof part === "string") return part;
+  if (!part || typeof part !== "object") return "";
+  return readStringField(part, ["text", "content", "markdown", "body"]) ?? JSON.stringify(part);
+}
+
+function readConversationTurnContent(value) {
+  const direct = readStringField(value, ["text", "content", "message", "body", "markdown"]);
+  if (direct) return direct;
+  const content = readObjectField(value, "content");
+  if (content) {
+    const parts = content.parts;
+    if (Array.isArray(parts)) return parts.map(stringifyMessagePart).join("\n").trim();
+    return readStringField(content, ["text", "content", "markdown", "body"]);
+  }
+  const parts = value && typeof value === "object" ? value.parts : null;
+  if (Array.isArray(parts)) return parts.map(stringifyMessagePart).join("\n").trim();
+  return null;
+}
+
+function normalizeConversationTurn(value, index) {
+  if (!value || typeof value !== "object") return null;
+  const author = readObjectField(value, "author");
+  const role = normalizeChatRole(readStringField(value, ["role", "authorRole", "speaker", "from"]) ?? readStringField(author, ["role", "name"]));
+  const content = readConversationTurnContent(value);
+  if (!content) return null;
+  return {
+    id: readStringField(value, ["id", "messageId"]) ?? `turn-${index}`,
+    role,
+    content,
+    createdAt: readStringField(value, ["createdAt", "created", "timestamp", "time"]),
+  };
+}
+
+function extractConversationTurns(item) {
+  if (!item || typeof item !== "object") return [];
+  for (const field of ["messages", "turns", "conversation", "transcript"]) {
+    const value = item[field];
+    if (Array.isArray(value)) return value.map(normalizeConversationTurn).filter(Boolean);
+  }
+  if (item.mapping && typeof item.mapping === "object") {
+    return Object.values(item.mapping)
+      .map((entry) => (entry && typeof entry === "object" ? entry.message : null))
+      .filter(Boolean)
+      .map(normalizeConversationTurn)
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function flattenConversationEntries(payload) {
+  return (payload?.entries ?? []).flatMap((entry) =>
+    (entry.manifests?.conversations ?? []).map((conversation) => ({
+      ...conversation,
+      provider: conversation.provider ?? entry.provider,
+      runtimeProfileId: entry.runtimeProfileId,
+      browserProfileId: entry.browserProfileId,
+      boundIdentityKey: entry.boundIdentityKey,
+      mirrorStatus: entry.status,
+      mirrorCompleteness: entry.mirrorCompleteness?.state,
+    })),
+  );
+}
+
 function statusTone(value) {
   const normalized = String(value ?? "").toLowerCase();
   if (["ok", "healthy", "running", "complete", "enabled", "idle_waiting", "scheduled"].includes(normalized)) {
@@ -941,6 +1028,229 @@ function ArchiveSearchViewport({
   );
 }
 
+function ConversationChatViewport({ archiveApiKey, onArchiveApiKeyChange }) {
+  const [filters, setFilters] = useState({
+    provider: "chatgpt",
+    runtimeProfile: "default",
+    limit: "25",
+  });
+  const [catalog, setCatalog] = useState(null);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [conversationDetail, setConversationDetail] = useState({ loading: false, error: null, result: null });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const conversations = useMemo(() => flattenConversationEntries(catalog), [catalog]);
+  const selectedItem = conversationDetail.result?.item ?? selectedConversation;
+  const turns = useMemo(() => extractConversationTurns(selectedItem), [selectedItem]);
+  const relatedSources = Array.isArray(selectedItem?.sources) ? selectedItem.sources : [];
+  const relatedArtifacts = Array.isArray(selectedItem?.artifacts) ? selectedItem.artifacts : [];
+  const relatedFiles = Array.isArray(selectedItem?.files) ? selectedItem.files : [];
+
+  function updateFilter(name, value) {
+    setFilters((current) => ({ ...current, [name]: value }));
+  }
+
+  async function loadConversations(event) {
+    event?.preventDefault();
+    const trimmedKey = archiveApiKey.trim();
+    if (!trimmedKey) {
+      setError("Enter an operator API key to read cached conversations.");
+      return;
+    }
+    const params = new URLSearchParams({
+      provider: filters.provider || "chatgpt",
+      runtimeProfile: filters.runtimeProfile || "default",
+      kind: "conversations",
+      limit: filters.limit || "25",
+    });
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/v1/account-mirrors/catalog?${params.toString()}`, {
+        cache: "no-store",
+        headers: { authorization: `Bearer ${trimmedKey}` },
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      const nextConversations = flattenConversationEntries(payload);
+      setCatalog(payload);
+      setSelectedConversation(nextConversations[0] ?? null);
+    } catch (loadError) {
+      setError(loadError.message || "Conversation catalog load failed");
+      setCatalog(null);
+      setSelectedConversation(null);
+      setConversationDetail({ loading: false, error: null, result: null });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!selectedConversation) {
+      setConversationDetail({ loading: false, error: null, result: null });
+      return undefined;
+    }
+    const trimmedKey = archiveApiKey.trim();
+    if (!trimmedKey) {
+      setConversationDetail({ loading: false, error: "Operator API key required to inspect conversation detail.", result: null });
+      return undefined;
+    }
+    const controller = new AbortController();
+    let alive = true;
+    const params = new URLSearchParams({
+      provider: filters.provider || selectedConversation.provider || "chatgpt",
+      runtimeProfile: filters.runtimeProfile || selectedConversation.runtimeProfileId || "default",
+      kind: "conversations",
+    });
+    setConversationDetail({ loading: true, error: null, result: null });
+    fetch(`/v1/account-mirrors/catalog/items/${encodeURIComponent(selectedConversation.id)}?${params.toString()}`, {
+      cache: "no-store",
+      headers: { authorization: `Bearer ${trimmedKey}` },
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+        return payload;
+      })
+      .then((payload) => {
+        if (!alive) return;
+        setConversationDetail({ loading: false, error: null, result: payload });
+      })
+      .catch((detailError) => {
+        if (!alive || detailError.name === "AbortError") return;
+        setConversationDetail({ loading: false, error: detailError.message || "Conversation detail load failed", result: null });
+      });
+    return () => {
+      alive = false;
+      controller.abort();
+    };
+  }, [archiveApiKey, filters.provider, filters.runtimeProfile, selectedConversation]);
+
+  return (
+    <main className="viewport" tabIndex="-1">
+      <div className="health-toolbar">
+        <div className="viewport-heading">
+          <span>Cache-backed chat review</span>
+          <h1>Chats</h1>
+          <p>Browse mirrored conversations as dialog transcripts with cached artifacts, sources, provider links, and tenant context.</p>
+        </div>
+        <div className="status-readout">
+          <span className={`state-dot state-${statusTone(error ? "error" : archiveApiKey ? "ok" : "waiting")}`} />
+          <strong>{archiveApiKey ? "Operator key loaded" : "Operator key required"}</strong>
+          <small>{catalog ? `${formatNumber(conversations.length)} conversations shown` : "/v1/account-mirrors/catalog"}</small>
+        </div>
+      </div>
+
+      <form className="archive-search-panel chat-filter-panel" onSubmit={loadConversations}>
+        <div className="field-row field-row-wide">
+          <label htmlFor="chatApiKey">Operator API key</label>
+          <div className="secret-field">
+            <input
+              id="chatApiKey"
+              type="password"
+              value={archiveApiKey}
+              autoComplete="off"
+              placeholder="Paste a scoped AuraCall API key for this browser session"
+              onChange={(event) => onArchiveApiKeyChange(event.target.value)}
+            />
+            <button type="button" title="Forget API key" onClick={() => onArchiveApiKeyChange("")}>Forget</button>
+          </div>
+        </div>
+        <div className="field-row">
+          <label htmlFor="chatProvider">Provider</label>
+          <input id="chatProvider" value={filters.provider} onChange={(event) => updateFilter("provider", event.target.value)} />
+        </div>
+        <div className="field-row">
+          <label htmlFor="chatRuntime">Runtime</label>
+          <input id="chatRuntime" value={filters.runtimeProfile} onChange={(event) => updateFilter("runtimeProfile", event.target.value)} />
+        </div>
+        <div className="field-row">
+          <label htmlFor="chatLimit">Limit</label>
+          <input id="chatLimit" type="number" min="1" max="100" value={filters.limit} onChange={(event) => updateFilter("limit", event.target.value)} />
+        </div>
+        <button className="primary-action" type="submit" disabled={loading} title="Load conversations" aria-label="Load conversations">
+          <MessageSquareText size={16} aria-hidden="true" />
+          <span>{loading ? "Loading" : "Load"}</span>
+        </button>
+      </form>
+
+      {error ? <div className="health-error">Conversation load failed: {error}</div> : null}
+
+      <section className="conversation-workbench" aria-label="Conversation dialog view">
+        <div className="conversation-list" aria-label="Cached conversations">
+          <div className="section-heading">
+            <h2>Conversations</h2>
+            <span>{catalog ? `${formatNumber(catalog.metrics?.conversations)} listed` : "No catalog yet"}</span>
+          </div>
+          <div className="conversation-list-scroll">
+            {conversations.map((conversation) => {
+              const selected = selectedConversation?.id === conversation.id;
+              return (
+                <button
+                  type="button"
+                  key={`${conversation.runtimeProfileId}:${conversation.id}`}
+                  className={selected ? "conversation-row is-selected" : "conversation-row"}
+                  aria-pressed={selected}
+                  onClick={() => setSelectedConversation(conversation)}
+                >
+                  <strong>{compactText(conversation.title ?? conversation.id, 76)}</strong>
+                  <span>{conversation.provider ?? "provider"} / {conversation.runtimeProfileId ?? "runtime"}</span>
+                  <small>{conversation.messageCount ? `${conversation.messageCount} messages` : conversation.hasCachedTranscript ? "cached transcript" : "metadata only"}</small>
+                </button>
+              );
+            })}
+            {!catalog ? <p className="empty-state">Load a provider/runtime catalog to review cached conversations.</p> : null}
+            {catalog && !conversations.length ? <p className="empty-state">No cached conversations matched this provider/runtime.</p> : null}
+          </div>
+        </div>
+
+        <article className="chat-dialog" aria-label="Selected conversation transcript">
+          {selectedItem ? (
+            <>
+              <div className="chat-dialog-header">
+                <span>
+                  <strong>{selectedItem.title ?? selectedItem.id}</strong>
+                  <small>{selectedItem.provider ?? filters.provider} / {filters.runtimeProfile}</small>
+                </span>
+                {selectedItem.url ? <a href={selectedItem.url} target="_blank" rel="noreferrer">Provider</a> : null}
+              </div>
+              {conversationDetail.error ? <div className="health-error">Detail unavailable: {conversationDetail.error}</div> : null}
+              {conversationDetail.loading ? <p className="empty-state">Loading cached transcript...</p> : null}
+              {turns.length ? (
+                <div className="chat-turns">
+                  {turns.map((turn, index) => (
+                    <section className={`chat-turn chat-turn-${turn.role}`} key={`${turn.id}-${index}`}>
+                      <div className="chat-bubble">
+                        <div className="chat-bubble-meta">
+                          <span>{turn.role}</span>
+                          {turn.createdAt ? <time>{formatDateTime(turn.createdAt)}</time> : null}
+                        </div>
+                        <p>{turn.content}</p>
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              ) : !conversationDetail.loading ? (
+                <div className="empty-state">No cached transcript turns are available for this conversation yet.</div>
+              ) : null}
+              {(relatedFiles.length || relatedArtifacts.length || relatedSources.length) ? (
+                <div className="conversation-related">
+                  {relatedFiles.length ? <span>{formatNumber(relatedFiles.length)} files</span> : null}
+                  {relatedArtifacts.length ? <span>{formatNumber(relatedArtifacts.length)} artifacts</span> : null}
+                  {relatedSources.length ? <span>{formatNumber(relatedSources.length)} sources</span> : null}
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <div className="empty-state">Select a cached conversation to inspect its transcript.</div>
+          )}
+        </article>
+      </section>
+    </main>
+  );
+}
+
 function MainViewport({
   activeNav,
   apiStatus,
@@ -951,6 +1261,14 @@ function MainViewport({
   onSelectedArchiveItemChange,
   onSelectedArchiveDetailChange,
 }) {
+  if (activeNav === "chats") {
+    return (
+      <ConversationChatViewport
+        archiveApiKey={archiveApiKey}
+        onArchiveApiKeyChange={onArchiveApiKeyChange}
+      />
+    );
+  }
   if (activeNav === "health") {
     return <HealthViewport apiStatus={apiStatus} />;
   }
@@ -971,17 +1289,6 @@ function MainViewport({
   }
 
   const content = {
-    chats: {
-      title: "Conversation Archive",
-      kicker: "Cache-backed chat review",
-      body:
-        "Chat views should render cached provider conversations as dialog transcripts with artifact cards, upload references, project context, and provider identity metadata.",
-      rows: [
-        ["Dialog layout", "Message bubbles, timestamps, model/runtime badges"],
-        ["Artifacts", "Generated files, uploads, downloads, and provider links"],
-        ["Filters", "Provider, account, project, run, and date"],
-      ],
-    },
     search: {
       title: "Search Workbench",
       kicker: "Lexical plus semantic retrieval",
@@ -993,7 +1300,12 @@ function MainViewport({
         ["Result actions", "Open chat, inspect run, download asset, attach evidence"],
       ],
     },
-  }[activeNav];
+  }[activeNav] ?? {
+    title: "Operator Workbench",
+    kicker: "AuraCall",
+    body: "Select a workspace surface from the top navigation.",
+    rows: [],
+  };
 
   return (
     <main className="viewport" tabIndex="-1">

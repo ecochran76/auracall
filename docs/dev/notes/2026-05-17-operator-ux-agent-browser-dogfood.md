@@ -158,3 +158,24 @@ Validation evidence:
 - `pnpm exec vitest run tests/http.runArchive.test.ts` passed.
 - The focused HTTP test now includes a generated artifact with ID text containing `sandbox:/mnt/data/first_pass_readout.json`; its item detail route and asset route both return HTTP 200 through the new `b64/` route form.
 - `pnpm run ux:build` passed after the operator route helper update.
+
+## Chat Dialog Follow-Up
+
+Eighth pass replaced the static Chats placeholder with a read-only conversation browser:
+
+- The Chats page uses the same session-scoped operator key as Search.
+- It loads `/v1/account-mirrors/catalog?kind=conversations` for a provider/runtime profile.
+- Selecting a conversation fetches `/v1/account-mirrors/catalog/items/{conversation_id}?kind=conversations`.
+- Cached conversation messages render as chat bubbles aligned by role.
+- The selected conversation header includes the provider link when present.
+- Related cached file/artifact/source counts appear below the transcript.
+
+Additional screenshot:
+
+- `/tmp/auracall-operator-ux-dogfood/chat-dialog-view.png` - cached ChatGPT conversation rendered as a dialog transcript.
+
+Validation evidence:
+
+- Installed dashboard at `http://auracall.localhost/dashboard` loaded through `agent-browser` with a throwaway Chrome profile.
+- Authenticated `chatgpt/default` conversation load rendered `25` rows, selected one conversation, and rendered `5` chat turns.
+- Browser eval reported `userTurns=2`, `assistantTurns=3`, header `Fridge Mullion Repair Guide`, and related counts `11 artifacts` / `9 sources`.

@@ -4771,3 +4771,32 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     the focused HTTP test and UX production build.
 - Next:
   - return to chat-dialog conversation views in the operator UX.
+
+## Turn 173 | 2026-05-17
+
+- Goal: replace the static Chats placeholder with a read-only chat-dialog
+  conversation view.
+- Change:
+  - added a Chats page backed by
+    `/v1/account-mirrors/catalog?kind=conversations`.
+  - reused the session-scoped operator key boundary from Search.
+  - added provider/runtime/limit controls for mirrored conversation catalogs.
+  - added selected conversation detail loading through
+    `/v1/account-mirrors/catalog/items/{conversation_id}?kind=conversations`.
+  - rendered cached messages as role-aligned chat bubbles.
+  - surfaced provider links and related cached file/artifact/source counts.
+  - updated the operator UX dogfood note with installed-browser evidence.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `curl -fsS http://auracall.localhost/status`
+  - `agent-browser` against `http://auracall.localhost/dashboard` with a
+    throwaway Chrome profile.
+  - authenticated `chatgpt/default` conversation load rendered 25 rows, selected
+    one conversation, rendered 5 transcript turns, and reported 2 user turns,
+    3 assistant turns, 11 artifacts, and 9 sources.
+- Next:
+  - add transcript search/download and richer related-item previews for
+    conversation detail.
