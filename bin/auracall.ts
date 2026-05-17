@@ -130,10 +130,12 @@ import {
 import {
   attachApiRunArchiveEvidenceForCli,
   backfillApiRunArchiveForCli,
+  formatApiRunArchiveAssetLookupCliSummary,
   formatApiRunArchiveBackfillCliSummary,
   formatApiRunArchiveCliSummary,
   formatApiRunArchiveEvidenceCliSummary,
   formatApiRunArchiveItemCliSummary,
+  lookupApiRunArchiveAssetForCli,
   readApiRunArchiveForCli,
   readApiRunArchiveItemForCli,
 } from '../src/cli/apiRunArchiveCommand.js';
@@ -1286,6 +1288,42 @@ apiCommand
       return;
     }
     console.log(formatApiRunArchiveItemCliSummary(result));
+  });
+
+apiCommand
+  .command('archive-asset-lookup')
+  .description('Resolve cached archive files by checksum, cache key, provider artifact id, or artifact id.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--checksum-sha256 <sha256>', 'Find archive assets by SHA-256 checksum.')
+  .option('--cache-key <key>', 'Find archive assets by cache key, such as sha256:<hash>.')
+  .option('--provider-artifact-id <id>', 'Find archive assets by provider artifact/file id.')
+  .option('--artifact-id <id>', 'Find archive assets by AuraCall artifact id.')
+  .option('--limit <count>', 'Maximum items to read.', parseIntOption, 50)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const result = await lookupApiRunArchiveAssetForCli({
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+      checksumSha256: commandOptions.checksumSha256,
+      cacheKey: commandOptions.cacheKey,
+      providerArtifactId: commandOptions.providerArtifactId,
+      artifactId: commandOptions.artifactId,
+      limit: commandOptions.limit,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiRunArchiveAssetLookupCliSummary(result));
   });
 
 apiCommand

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   createRunArchiveAttachEvidenceToolHandler,
+  createRunArchiveAssetLookupToolHandler,
   createRunArchiveBackfillToolHandler,
   createRunArchiveItemToolHandler,
   createRunArchiveSearchToolHandler,
@@ -67,6 +68,9 @@ describe('mcp run archive tools', () => {
         listItems,
         readItem: vi.fn(async () => null),
         readAsset: vi.fn(async () => null),
+        lookupAsset: vi.fn(async () => {
+          throw new Error('not used');
+        }),
         attachEvidence: vi.fn(async () => {
           throw new Error('not used');
         }),
@@ -164,6 +168,9 @@ describe('mcp run archive tools', () => {
         }),
         readItem,
         readAsset: vi.fn(async () => null),
+        lookupAsset: vi.fn(async () => {
+          throw new Error('not used');
+        }),
         attachEvidence: vi.fn(async () => {
           throw new Error('not used');
         }),
@@ -195,6 +202,61 @@ describe('mcp run archive tools', () => {
     });
   });
 
+  it('resolves archive assets through the shared archive service', async () => {
+    const lookupAsset = vi.fn(async () => ({
+      object: 'run_archive_asset_lookup' as const,
+      generatedAt: '2026-05-16T16:30:00.000Z',
+      query: {
+        checksumSha256: 'abc123',
+        cacheKey: null,
+        providerArtifactId: null,
+        artifactId: null,
+      },
+      canonicalItem: null,
+      items: [],
+      metrics: {
+        total: 0,
+        fileAvailable: 0,
+        duplicateCacheKeys: [],
+      },
+    }));
+    const handler = createRunArchiveAssetLookupToolHandler({
+      service: {
+        listItems: vi.fn(async () => {
+          throw new Error('not used');
+        }),
+        readItem: vi.fn(async () => null),
+        readAsset: vi.fn(async () => null),
+        lookupAsset,
+        attachEvidence: vi.fn(async () => {
+          throw new Error('not used');
+        }),
+        upsertResponseItems: vi.fn(async () => {
+          throw new Error('not used');
+        }),
+        upsertBatchItems: vi.fn(async () => {
+          throw new Error('not used');
+        }),
+        upsertMediaGenerationItems: vi.fn(async () => {
+          throw new Error('not used');
+        }),
+        backfillIndex: vi.fn(async () => {
+          throw new Error('not used');
+        }),
+      },
+    });
+
+    await expect(handler({ checksumSha256: 'abc123' })).resolves.toMatchObject({
+      structuredContent: {
+        object: 'run_archive_asset_lookup',
+        metrics: {
+          total: 0,
+        },
+      },
+    });
+    expect(lookupAsset).toHaveBeenCalledWith({ checksumSha256: 'abc123' });
+  });
+
   it('backfills the run archive index through the shared archive service', async () => {
     const backfillIndex = vi.fn(async () => ({
       object: 'run_archive_backfill' as const,
@@ -223,6 +285,9 @@ describe('mcp run archive tools', () => {
         }),
         readItem: vi.fn(async () => null),
         readAsset: vi.fn(async () => null),
+        lookupAsset: vi.fn(async () => {
+          throw new Error('not used');
+        }),
         attachEvidence: vi.fn(async () => {
           throw new Error('not used');
         }),
@@ -312,6 +377,9 @@ describe('mcp run archive tools', () => {
         }),
         readItem: vi.fn(async () => null),
         readAsset: vi.fn(async () => null),
+        lookupAsset: vi.fn(async () => {
+          throw new Error('not used');
+        }),
         attachEvidence,
         upsertResponseItems: vi.fn(async () => {
           throw new Error('not used');

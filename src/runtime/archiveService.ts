@@ -56,6 +56,14 @@ export interface RunArchiveListRequest {
   limit?: number | null;
 }
 
+export interface RunArchiveAssetLookupRequest {
+  checksumSha256?: string | null;
+  cacheKey?: string | null;
+  providerArtifactId?: string | null;
+  artifactId?: string | null;
+  limit?: number | null;
+}
+
 export interface RunArchiveItem {
   id: string;
   object: 'run_archive_item';
@@ -118,6 +126,24 @@ export interface RunArchiveAssetResult {
   size: number;
 }
 
+export interface RunArchiveAssetLookupResult {
+  object: 'run_archive_asset_lookup';
+  generatedAt: string;
+  query: {
+    checksumSha256: string | null;
+    cacheKey: string | null;
+    providerArtifactId: string | null;
+    artifactId: string | null;
+  };
+  canonicalItem: RunArchiveItem | null;
+  items: RunArchiveItem[];
+  metrics: {
+    total: number;
+    fileAvailable: number;
+    duplicateCacheKeys: string[];
+  };
+}
+
 export interface RunArchiveBackfillResult {
   object: 'run_archive_backfill';
   generatedAt: string;
@@ -141,6 +167,7 @@ export interface RunArchiveService {
   listItems(request?: RunArchiveListRequest): Promise<RunArchiveListResult>;
   readItem(id: string): Promise<RunArchiveItemResult | null>;
   readAsset(id: string): Promise<RunArchiveAssetResult | null>;
+  lookupAsset(request: RunArchiveAssetLookupRequest): Promise<RunArchiveAssetLookupResult>;
   attachEvidence(input: CreateRunArchiveEvidenceInput): Promise<RunArchiveEvidenceResult>;
   upsertResponseItems(responseId: string): Promise<RunArchiveBackfillResult>;
   upsertBatchItems(batchId: string): Promise<RunArchiveBackfillResult>;
@@ -220,6 +247,32 @@ export function createRunArchiveService(deps: RunArchiveServiceDeps = {}): RunAr
         fileName: item.fileName ?? item.title ?? item.artifactId ?? item.id,
         mimeType: item.mimeType ?? inferArchiveAssetMimeType(item.fileName ?? item.title ?? item.localPath),
         size: stat.size,
+      };
+    },
+    async lookupAsset(request) {
+      const query = normalizeAssetLookupRequest(request);
+      const limit = normalizeLimit(request.limit);
+      const items = (await readIndexedItems())
+        .filter((item) => matchesAssetLookupRequest(item, query))
+        .sort(compareAssetLookupItems);
+      const limited = items.slice(0, limit);
+      const canonicalItem = limited.find((item) => item.fileAvailable === true && Boolean(item.localPath)) ?? limited[0] ?? null;
+      const duplicateCacheKeys = Array.from(new Set(
+        limited
+          .map((item) => item.cacheKey)
+          .filter((cacheKey): cacheKey is string => typeof cacheKey === 'string' && cacheKey.length > 0),
+      )).filter((cacheKey) => limited.filter((item) => item.cacheKey === cacheKey).length > 1);
+      return {
+        object: 'run_archive_asset_lookup',
+        generatedAt: now().toISOString(),
+        query,
+        canonicalItem,
+        items: limited,
+        metrics: {
+          total: items.length,
+          fileAvailable: items.filter((item) => item.fileAvailable === true).length,
+          duplicateCacheKeys,
+        },
       };
     },
     async attachEvidence(input) {
@@ -833,6 +886,49 @@ function matchesRequest(item: RunArchiveItem, request: RunArchiveListRequest & {
   if (request.status && item.status !== request.status) return false;
   if (request.query && !itemMatchesQuery(item, request.query)) return false;
   return true;
+}
+
+function normalizeAssetLookupRequest(request: RunArchiveAssetLookupRequest): RunArchiveAssetLookupResult['query'] {
+  const query = {
+    checksumSha256: normalizeLookupString(request.checksumSha256)?.toLowerCase() ?? null,
+    cacheKey: normalizeLookupString(request.cacheKey) ?? null,
+    providerArtifactId: normalizeLookupString(request.providerArtifactId) ?? null,
+    artifactId: normalizeLookupString(request.artifactId) ?? null,
+  };
+  if (!query.checksumSha256 && !query.cacheKey && !query.providerArtifactId && !query.artifactId) {
+    throw new Error('At least one archive asset lookup key is required.');
+  }
+  return query;
+}
+
+function matchesAssetLookupRequest(item: RunArchiveItem, query: RunArchiveAssetLookupResult['query']): boolean {
+  if (item.kind !== 'upload' && item.kind !== 'generated_artifact') return false;
+  if (query.checksumSha256 && item.checksumSha256 !== query.checksumSha256) return false;
+  if (query.cacheKey && item.cacheKey !== query.cacheKey) return false;
+  if (query.artifactId && item.artifactId !== query.artifactId) return false;
+  if (query.providerArtifactId) {
+    const providerArtifactId =
+      readRecordString(item.metadata, ['providerArtifactId', 'fileId', 'remoteId']) ??
+      item.artifactId;
+    if (providerArtifactId !== query.providerArtifactId) return false;
+  }
+  return true;
+}
+
+function compareAssetLookupItems(left: RunArchiveItem, right: RunArchiveItem): number {
+  const leftAvailable = left.fileAvailable === true && Boolean(left.localPath) ? 1 : 0;
+  const rightAvailable = right.fileAvailable === true && Boolean(right.localPath) ? 1 : 0;
+  if (leftAvailable !== rightAvailable) return rightAvailable - leftAvailable;
+  const leftChecksum = left.checksumSha256 ? 1 : 0;
+  const rightChecksum = right.checksumSha256 ? 1 : 0;
+  if (leftChecksum !== rightChecksum) return rightChecksum - leftChecksum;
+  return right.createdAt.localeCompare(left.createdAt) || left.id.localeCompare(right.id);
+}
+
+function normalizeLookupString(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 function itemMatchesQuery(item: RunArchiveItem, query: string): boolean {

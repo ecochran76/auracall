@@ -35,6 +35,14 @@ const runArchiveItemInputShape = {
   id: z.string().min(1),
 } satisfies z.ZodRawShape;
 
+const runArchiveAssetLookupInputShape = {
+  checksumSha256: z.string().min(1).optional(),
+  cacheKey: z.string().min(1).optional(),
+  providerArtifactId: z.string().min(1).optional(),
+  artifactId: z.string().min(1).optional(),
+  limit: z.number().int().nonnegative().optional(),
+} satisfies z.ZodRawShape;
+
 const runArchiveEvidenceInputShape = {
   id: z.string().min(1).optional(),
   producer: z.string().min(1),
@@ -111,6 +119,24 @@ const runArchiveItemOutputShape = {
   item: archiveItemShape,
 } satisfies z.ZodRawShape;
 
+const runArchiveAssetLookupOutputShape = {
+  object: z.literal('run_archive_asset_lookup'),
+  generatedAt: z.string(),
+  query: z.object({
+    checksumSha256: z.string().nullable(),
+    cacheKey: z.string().nullable(),
+    providerArtifactId: z.string().nullable(),
+    artifactId: z.string().nullable(),
+  }),
+  canonicalItem: archiveItemShape.nullable(),
+  items: z.array(archiveItemShape),
+  metrics: z.object({
+    total: z.number(),
+    fileAvailable: z.number(),
+    duplicateCacheKeys: z.array(z.string()),
+  }),
+} satisfies z.ZodRawShape;
+
 const runArchiveBackfillOutputShape = {
   object: z.literal('run_archive_backfill'),
   generatedAt: z.string(),
@@ -178,6 +204,17 @@ export function registerRunArchiveTools(
     createRunArchiveItemToolHandler({ service }),
   );
   server.registerTool(
+    'run_archive_asset_lookup',
+    {
+      title: 'Resolve AuraCall archived asset',
+      description:
+        'Resolve cached AuraCall upload/generated artifact files by checksum, cache key, provider artifact id, or artifact id without browser work.',
+      inputSchema: runArchiveAssetLookupInputShape,
+      outputSchema: runArchiveAssetLookupOutputShape,
+    },
+    createRunArchiveAssetLookupToolHandler({ service }),
+  );
+  server.registerTool(
     'run_archive_backfill',
     {
       title: 'Backfill AuraCall run archive index',
@@ -241,6 +278,24 @@ export function createRunArchiveItemToolHandler(input: {
         {
           type: 'text' as const,
           text: `Run archive item ${result.item.id}: ${result.item.kind}.`,
+        },
+      ],
+      structuredContent: result as typeof result & Record<string, unknown>,
+    };
+  };
+}
+
+export function createRunArchiveAssetLookupToolHandler(input: {
+  service: RunArchiveService;
+}) {
+  return async (rawInput: unknown) => {
+    const payload = z.object(runArchiveAssetLookupInputShape).parse(rawInput);
+    const result = await input.service.lookupAsset(payload);
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `Run archive asset lookup: ${result.metrics.total} item${result.metrics.total === 1 ? '' : 's'}.`,
         },
       ],
       structuredContent: result as typeof result & Record<string, unknown>,

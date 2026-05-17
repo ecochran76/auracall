@@ -65,17 +65,21 @@ Implemented:
 - Browser response artifact references preserve provider/file metadata into
   response output and archive records, including provider artifact ids,
   remote/local paths, checksums, and file sizes when available.
+- Cache-owned uploads and generated artifacts can be resolved without browser
+  work by SHA-256 checksum, cache key, provider artifact id, or AuraCall
+  artifact id through `/v1/archive/assets/lookup`,
+  `auracall api archive-asset-lookup`, and MCP `run_archive_asset_lookup`.
 
 Remaining:
 
 - Fill remaining upload/generated-artifact gaps where provider-specific
   artifact ids, project ids, or bound identity keys are not yet exposed by a
   provider-specific runner/materializer.
-- Surface archive search and retrieval through CLI, API, MCP, and the operator
-  dashboard without provider browser work.
+- Surface archive search and retrieval through the operator dashboard without
+  provider browser work.
 - Add operator dashboard archive search and item/evidence navigation.
-- Deduplicate cached files/artifacts by stable provider ids and content hashes
-  when available.
+- Promote asset lookup results into a canonical dedupe manifest if callers need
+  a persisted duplicate-group table instead of on-demand lookup.
 
 ## Scope
 

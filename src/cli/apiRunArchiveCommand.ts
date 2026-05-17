@@ -22,6 +22,17 @@ export interface ApiRunArchiveItemCliOptions {
   id: string;
 }
 
+export interface ApiRunArchiveAssetLookupCliOptions {
+  host?: string | null;
+  port?: number | null;
+  timeoutMs?: number | null;
+  checksumSha256?: string | null;
+  cacheKey?: string | null;
+  providerArtifactId?: string | null;
+  artifactId?: string | null;
+  limit?: number | null;
+}
+
 export interface ApiRunArchiveEvidenceCliOptions {
   host?: string | null;
   port?: number | null;
@@ -81,6 +92,39 @@ export async function readApiRunArchiveItemForCli(
     });
     if (!response.ok) {
       throw new Error(`AuraCall run archive item returned HTTP ${response.status}.`);
+    }
+    return response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function lookupApiRunArchiveAssetForCli(
+  options: ApiRunArchiveAssetLookupCliOptions,
+  fetchImpl: typeof fetch = fetch,
+): Promise<unknown> {
+  const host = normalizeHost(options.host);
+  const port = normalizePort(options.port);
+  const timeoutMs = normalizeTimeoutMs(options.timeoutMs);
+  const url = new URL(`http://${host}:${port}/v1/archive/assets/lookup`);
+  appendOptionalSearchParam(url, 'checksumSha256', options.checksumSha256);
+  appendOptionalSearchParam(url, 'cacheKey', options.cacheKey);
+  appendOptionalSearchParam(url, 'providerArtifactId', options.providerArtifactId);
+  appendOptionalSearchParam(url, 'artifactId', options.artifactId);
+  if (typeof options.limit === 'number' && Number.isFinite(options.limit)) {
+    url.searchParams.set('limit', String(Math.max(0, Math.trunc(options.limit))));
+  }
+  if ([...url.searchParams.keys()].length === 0) {
+    throw new Error('Use at least one of --checksum-sha256, --cache-key, --provider-artifact-id, or --artifact-id.');
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchImpl(url, {
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`AuraCall run archive asset lookup returned HTTP ${response.status}.`);
     }
     return response.json();
   } finally {
@@ -173,6 +217,31 @@ export function formatApiRunArchiveItemCliSummary(payload: unknown): string {
   if (uri) lines.push(`URI: ${uri}`);
   const conversationId = readString(item.providerConversationId);
   if (conversationId) lines.push(`Provider conversation: ${conversationId}`);
+  return lines.join('\n');
+}
+
+export function formatApiRunArchiveAssetLookupCliSummary(payload: unknown): string {
+  const record = isRecord(payload) ? payload : {};
+  const metrics = isRecord(record.metrics) ? record.metrics : {};
+  const canonical = isRecord(record.canonicalItem) ? record.canonicalItem : null;
+  const items = Array.isArray(record.items) ? record.items : [];
+  const lines = [
+    `Run archive asset lookup: ${readNumber(metrics.total) ?? items.length} item${(readNumber(metrics.total) ?? items.length) === 1 ? '' : 's'}`,
+    `Available files: ${readNumber(metrics.fileAvailable) ?? 0}`,
+  ];
+  if (canonical) {
+    lines.push(`Canonical: ${readString(canonical.id) ?? 'unknown'}`);
+    const localPath = readString(canonical.localPath);
+    if (localPath) lines.push(`Local path: ${localPath}`);
+    const checksum = readString(canonical.checksumSha256);
+    if (checksum) lines.push(`SHA-256: ${checksum}`);
+  }
+  for (const item of items.slice(0, 10)) {
+    if (!isRecord(item)) continue;
+    lines.push(
+      `- ${readString(item.id) ?? 'unknown'} kind=${readString(item.kind) ?? 'unknown'} available=${String(item.fileAvailable ?? 'n/a')} cache=${readString(item.cacheKey) ?? 'n/a'}`,
+    );
+  }
   return lines.join('\n');
 }
 

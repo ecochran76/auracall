@@ -242,6 +242,30 @@ describe('run archive service', () => {
       }),
     });
     expect(generatedArtifact?.item.checksumSha256).toMatch(/^[a-f0-9]{64}$/);
+    const generatedChecksum = generatedArtifact?.item.checksumSha256;
+    expect(generatedChecksum).toBeTruthy();
+    await expect(service.lookupAsset({
+      checksumSha256: generatedChecksum,
+    })).resolves.toMatchObject({
+      object: 'run_archive_asset_lookup',
+      canonicalItem: expect.objectContaining({
+        id: 'generated-artifact:resp_archive_1:feedback_json',
+        localPath: generatedArtifactPath,
+      }),
+      metrics: {
+        total: 1,
+        fileAvailable: 1,
+      },
+    });
+    await expect(service.lookupAsset({
+      providerArtifactId: 'sandbox:/mnt/data/feedback-draft.json',
+    })).resolves.toMatchObject({
+      items: [
+        expect.objectContaining({
+          id: 'generated-artifact:resp_archive_1:feedback_json',
+        }),
+      ],
+    });
 
     await expect(service.readAsset(`upload:resp_archive_1:resp_archive_1:step:1:upload_packet`)).resolves.toMatchObject({
       object: 'run_archive_asset',

@@ -166,6 +166,26 @@ describe('http run archive routes', () => {
       expect(assetResponse.headers.get('content-disposition')).toBe('attachment; filename="assignment.pdf"');
       await expect(assetResponse.text()).resolves.toBe('assignment packet');
 
+      const uploadItemResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/archive/items/${encodeURIComponent('upload:resp_http_archive:resp_http_archive:step:1:artifact_http_upload')}`,
+      );
+      expect(uploadItemResponse.status).toBe(200);
+      const uploadItem = await uploadItemResponse.json() as { item: { checksumSha256: string } };
+      const lookupResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/archive/assets/lookup?checksumSha256=${encodeURIComponent(uploadItem.item.checksumSha256)}`,
+      );
+      expect(lookupResponse.status).toBe(200);
+      const lookup = await lookupResponse.json() as { object: string; canonicalItem: { id: string } | null; metrics: { total: number } };
+      expect(lookup).toMatchObject({
+        object: 'run_archive_asset_lookup',
+        canonicalItem: {
+          id: 'upload:resp_http_archive:resp_http_archive:step:1:artifact_http_upload',
+        },
+        metrics: {
+          total: 1,
+        },
+      });
+
       const nonAssetResponse = await fetch(
         `http://127.0.0.1:${server.port}/v1/archive/items/${encodeURIComponent('response:resp_http_archive')}/asset`,
       );

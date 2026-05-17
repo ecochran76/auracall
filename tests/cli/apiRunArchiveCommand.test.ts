@@ -2,10 +2,12 @@ import { describe, expect, test, vi } from 'vitest';
 import {
   attachApiRunArchiveEvidenceForCli,
   backfillApiRunArchiveForCli,
+  formatApiRunArchiveAssetLookupCliSummary,
   formatApiRunArchiveBackfillCliSummary,
   formatApiRunArchiveCliSummary,
   formatApiRunArchiveEvidenceCliSummary,
   formatApiRunArchiveItemCliSummary,
+  lookupApiRunArchiveAssetForCli,
   readApiRunArchiveForCli,
   readApiRunArchiveItemForCli,
 } from '../../src/cli/apiRunArchiveCommand.js';
@@ -99,6 +101,51 @@ describe('api run archive CLI helpers', () => {
       items: [(item as { item: unknown }).item],
       metrics: { total: 1 },
     })).toContain('project=project_1');
+  });
+
+  test('looks up archive assets by checksum through the local API', async () => {
+    const fetchImpl = vi.fn(async (url: URL) => {
+      expect(url.toString()).toBe(
+        'http://127.0.0.1:18095/v1/archive/assets/lookup?checksumSha256=abc123&limit=5',
+      );
+      return new Response(JSON.stringify({
+        object: 'run_archive_asset_lookup',
+        generatedAt: '2026-05-16T17:00:00.000Z',
+        query: {
+          checksumSha256: 'abc123',
+          cacheKey: null,
+          providerArtifactId: null,
+          artifactId: null,
+        },
+        canonicalItem: {
+          id: 'generated-artifact:resp_1:file_1',
+          kind: 'generated_artifact',
+          localPath: '/tmp/file.json',
+          checksumSha256: 'abc123',
+        },
+        items: [
+          {
+            id: 'generated-artifact:resp_1:file_1',
+            kind: 'generated_artifact',
+            fileAvailable: true,
+            cacheKey: 'sha256:abc123',
+          },
+        ],
+        metrics: {
+          total: 1,
+          fileAvailable: 1,
+          duplicateCacheKeys: [],
+        },
+      }));
+    });
+
+    const result = await lookupApiRunArchiveAssetForCli({
+      port: 18095,
+      checksumSha256: 'abc123',
+      limit: 5,
+    }, fetchImpl as never);
+
+    expect(formatApiRunArchiveAssetLookupCliSummary(result)).toContain('Canonical: generated-artifact:resp_1:file_1');
   });
 
   test('requests archive index backfill from the local API', async () => {

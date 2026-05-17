@@ -78,6 +78,7 @@ import {
 } from '../runtime/responsesService.js';
 import {
   createRunArchiveService,
+  type RunArchiveAssetLookupResult,
   type RunArchiveAssetResult,
   type RunArchiveEvidenceResult,
   type RunArchiveItemResult,
@@ -382,6 +383,7 @@ interface HttpRuntimeRunListResponse {
 
 interface HttpRunArchiveResponse extends RunArchiveListResult {}
 interface HttpRunArchiveItemResponse extends RunArchiveItemResult {}
+interface HttpRunArchiveAssetLookupResponse extends RunArchiveAssetLookupResult {}
 interface HttpRunArchiveAssetResponse extends RunArchiveAssetResult {}
 interface HttpRunArchiveEvidenceResponse extends RunArchiveEvidenceResult {}
 interface HttpAccountMirrorRefreshResponse extends AccountMirrorRefreshResult {}
@@ -612,6 +614,7 @@ interface HttpStatusResponse {
     mediaGenerationsGetTemplate: string;
     mediaGenerationsStatusTemplate: string;
     runArchive: string;
+    runArchiveAssetLookup: string;
     runArchiveBackfill: string;
     runArchiveEvidenceCreate: string;
     runArchiveItemTemplate: string;
@@ -1389,6 +1392,13 @@ export async function createResponsesHttpServer(
       if (req.method === 'GET' && url.pathname === '/v1/archive') {
         const query = parseRunArchiveQuery(url.searchParams);
         const result: HttpRunArchiveResponse = await runArchiveService.listItems(query);
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/archive/assets/lookup') {
+        const query = parseRunArchiveAssetLookupQuery(url.searchParams);
+        const result: HttpRunArchiveAssetLookupResponse = await runArchiveService.lookupAsset(query);
         sendJson(res, 200, result);
         return;
       }
@@ -3277,6 +3287,7 @@ function createHttpStatusResponse(input: {
       mediaGenerationsGetTemplate: '/v1/media-generations/{media_generation_id}',
       mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
       runArchive: '/v1/archive[?kind=response|response_batch|team_run|media_generation|upload|generated_artifact|provider_conversation|evidence][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&projectId={provider_project_id}][&agent={agent_id}][&team={team_id}][&responseId={response_id}][&batchId={batch_id}][&status={status}][&q={query}][&limit=50]',
+      runArchiveAssetLookup: '/v1/archive/assets/lookup?checksumSha256={sha256}|cacheKey={cache_key}|providerArtifactId={provider_artifact_id}|artifactId={artifact_id}[&limit=50]',
       runArchiveBackfill: '/v1/archive/backfill',
       runArchiveEvidenceCreate: '/v1/archive/evidence',
       runArchiveItemTemplate: '/v1/archive/items/{archive_item_id}',
@@ -5360,6 +5371,26 @@ function parseRunArchiveQuery(searchParams: URLSearchParams): ParsedRunArchiveQu
     query: parsed.q,
     limit: parsed.limit,
   };
+}
+
+function parseRunArchiveAssetLookupQuery(searchParams: URLSearchParams) {
+  const raw: Record<string, unknown> = {};
+  for (const key of ['checksumSha256', 'cacheKey', 'providerArtifactId', 'artifactId', 'limit']) {
+    if (searchParams.has(key)) {
+      raw[key] = searchParams.get(key);
+    }
+  }
+  const parsed = z.object({
+    checksumSha256: z.string().trim().min(1).optional(),
+    cacheKey: z.string().trim().min(1).optional(),
+    providerArtifactId: z.string().trim().min(1).optional(),
+    artifactId: z.string().trim().min(1).optional(),
+    limit: z.coerce.number().int().min(0).max(500).optional(),
+  }).parse(raw);
+  if (!parsed.checksumSha256 && !parsed.cacheKey && !parsed.providerArtifactId && !parsed.artifactId) {
+    throw new Error('At least one archive asset lookup key is required.');
+  }
+  return parsed;
 }
 
 function parseRunArchiveEvidenceCreateBody(value: unknown) {
