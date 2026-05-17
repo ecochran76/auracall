@@ -475,15 +475,15 @@ function RunsViewport({ runStatus }) {
 
         <article className="health-card">
           <span className="card-kicker">Authenticated APIs</span>
-          <strong>{status?.routes?.runtimeRunsRecent ?? "/v1/runtime-runs/recent"}</strong>
+          <strong>{status?.routes?.runtimeRunsRecent ? "available" : "unknown"}</strong>
           <p>Deep run listing and inspection remain on bearer-protected `/v1` routes.</p>
           <div className="metric-row">
-            <span>Inspect</span>
-            <b>{status?.routes?.runtimeRunInspection ? "available" : "unknown"}</b>
+            <span>Recent</span>
+            <b>{status?.routes?.runtimeRunsRecent ?? "unknown"}</b>
           </div>
           <div className="metric-row">
-            <span>Status</span>
-            <b>{status?.routes?.runStatusTemplate ? "available" : "unknown"}</b>
+            <span>Inspect</span>
+            <b>{status?.routes?.runtimeRunInspection ?? "unknown"}</b>
           </div>
         </article>
       </div>

@@ -19,6 +19,7 @@ body {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 180px),
     #0f1115;
+  overflow-x: hidden;
 }
 
 button {
@@ -26,9 +27,11 @@ button {
 }
 
 .app-shell {
+  width: 100%;
   min-height: 100vh;
   display: grid;
   grid-template-rows: 64px minmax(0, 1fr);
+  overflow-x: hidden;
 }
 
 .topbar {
@@ -188,6 +191,7 @@ button {
 }
 
 .workbench {
+  min-width: 0;
   min-height: 0;
   display: grid;
   grid-template-columns: var(--left-width) minmax(0, 1fr) var(--right-width);
@@ -539,7 +543,7 @@ button {
 
 .health-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 14px;
   margin-top: 32px;
 }
@@ -567,7 +571,7 @@ button {
   min-width: 0;
   color: #ffffff;
   font-size: 18px;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .health-card p {
@@ -575,14 +579,14 @@ button {
   margin: 0;
   color: #aeb8c6;
   line-height: 1.45;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .metric-row {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(72px, auto) minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: 1fr;
+  gap: 3px;
   padding-top: 8px;
   border-top: 1px solid #252d38;
 }
@@ -595,8 +599,10 @@ button {
   min-width: 0;
   color: #dce3ed;
   font-weight: 650;
-  text-align: right;
-  overflow-wrap: anywhere;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .route-list {
@@ -873,7 +879,11 @@ button {
 
 .archive-result strong {
   color: #f4f7fb;
-  overflow-wrap: anywhere;
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
 }
 
 .archive-result p {
@@ -998,12 +1008,12 @@ button {
   }
 
   .workbench {
-    grid-template-columns: 50px minmax(0, 1fr) 50px;
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
   }
 
   .left-pane,
   .right-pane {
-    width: 50px;
+    width: 44px;
   }
 
   .pane-content,
@@ -1027,6 +1037,10 @@ button {
     grid-template-columns: 1fr;
   }
 
+  .health-table {
+    min-width: 720px;
+  }
+
   .field-row-wide {
     grid-column: span 1;
   }
@@ -1038,12 +1052,30 @@ button {
     gap: 8px;
   }
 
+  .brand {
+    gap: 8px;
+  }
+
   .topnav {
     gap: 0;
   }
 
+  .nav-item {
+    min-width: 38px;
+    padding: 0 10px;
+  }
+
+  .account-chip {
+    width: 42px;
+    padding: 4px;
+  }
+
+  .account-chip svg {
+    display: none;
+  }
+
   .viewport {
-    padding: 30px 18px;
+    padding: 30px 18px 42px;
   }
 
   .viewport-heading h1 {
