@@ -56,6 +56,23 @@ and concrete:
   but prefer the family path in new docs. Do not move provider-dependent Grok
   helpers into `packages/browser-service` until they no longer import
   AuraCall app/provider modules.
+- DOM drift handling now has a first operator-visible observation path:
+  successful ChatGPT project-create confirm fallbacks append bounded
+  observations to `runtime/dom-drift-observations.jsonl`, and
+  `GET /v1/browser/dom-drift-observations` lists them for review.
+  `POST /v1/browser/dom-drift-observations/{id}/accept` promotes mapped
+  observations into user-scoped `service-overrides.json` label-set aliases.
+  Keep this approval-gated; do not let provider code rewrite checked-in
+  manifests or silently mutate selectors.
+- Lazy-follow/account-mirror collectors now record tolerated read failures for
+  project lists, conversation lists, library/account files, project files,
+  conversation files, and conversation context reads into the same observation
+  store. This gives long-running background crawls drift sensing without
+  turning every provider read failure into a hard stop.
+- These lazy-follow observations now also try to attach lightweight page
+  evidence when the active browser client is available: URL, title,
+  ready/visibility state, visible element counts, bounded visible labels, and
+  a capped viewport screenshot under `diagnostics/dom-drift`.
 - `BrowserOperationDispatcher.acquireQueued(...)` now provides an explicit
   browser-service wait-for-turn primitive for future service/API/MCP browser
   callers. Keep fail-fast `acquire(...)` for human/login/operator hard stops
@@ -764,6 +781,23 @@ Progress:
 - ChatGPT project-create memory-mode and project-settings/delete flows now use
   that context to explain what the automation was trying to open when a live
   miss occurs.
+- 2026-05-13: ChatGPT project-create confirm now uses manifest-owned CTA
+  labels plus `withUiDiagnostics(...)`; if the button drifts again, the failure
+  reports visible dialog buttons, expected labels, and dialog root assumptions
+  instead of the prior opaque `button-missing`.
+
+Next hardening:
+- Promote provider-local CTA fallback shape into a browser-service primitive
+  after one more provider/surface repeats it:
+  - exact/semantic label set from manifest
+  - visible scoped roots
+  - safe submit-button fallback inside the scoped surface
+  - visible button inventory on miss
+- Extend the observation acceptance map only after a provider/surface has a
+  clear manifest key. Unknown observations should remain review evidence.
+- Next collector hardening: surface these evidence records through MCP and the
+  dashboard review flow, then add provider-specific inventory snippets where
+  generic labels/counts are still insufficient.
 
 ### 9. Interaction-strategy menu helpers
 
@@ -796,6 +830,10 @@ Progress:
   - `pointer`
   - `keyboard-space`
   - `keyboard-arrowdown`
+- ChatGPT project-create confirm now tries:
+  - `pointer`
+  - `click`
+  - `keyboard-enter`
 
 ### 10. Canonical action-surface fallback helper
 
@@ -1138,6 +1176,13 @@ Next:
   - CAPTCHA / reCAPTCHA
   - Cloudflare interstitials
   - generic human-verification pages
+- Lazy-follow collector pacing now treats project-conversation fanout as a
+  provider-specific behavior: ChatGPT keeps the fanout, while Grok and Gemini
+  skip it so low-rate background passes complete through their higher-value
+  root/history/files surfaces before the collector timeout.
+- Gemini account-mirror conversation reads now perform bounded left-rail
+  history hydration before scraping root conversations, capped by
+  `historyLimit` and stable-row/no-scroll stop conditions.
 - Next browser-service anti-bot step:
   - broaden runtime consumers beyond browser-tools/doctor/features/setup so
     more operator flows stop before noisy retry loops, especially on Gemini

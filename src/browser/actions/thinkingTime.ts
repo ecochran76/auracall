@@ -23,6 +23,8 @@ type ThinkingTimeOutcome =
   | { status: 'menu-not-found' }
   | { status: 'option-not-found' };
 
+const THINKING_TIME_EVALUATE_TIMEOUT_MS = 25_000;
+
 /**
  * Selects a specific thinking time level in ChatGPT's composer pill menu.
  * @param level - The thinking time intensity: 'light', 'standard', 'extended', or 'heavy'
@@ -109,13 +111,29 @@ async function evaluateThinkingTimeSelection(
   Runtime: ChromeClient['Runtime'],
   level: ThinkingTimeLevel,
 ): Promise<ThinkingTimeOutcome | undefined> {
-  const outcome = await Runtime.evaluate({
-    expression: buildThinkingTimeExpression(level),
-    awaitPromise: true,
-    returnByValue: true,
-  });
+  const outcome = await withStageTimeout(
+    Runtime.evaluate({
+      expression: buildThinkingTimeExpression(level),
+      awaitPromise: true,
+      returnByValue: true,
+    }),
+    THINKING_TIME_EVALUATE_TIMEOUT_MS,
+    `Timed out waiting for ChatGPT thinking-time selector after ${Math.round(THINKING_TIME_EVALUATE_TIMEOUT_MS / 1000)}s.`,
+  );
 
   return outcome.result?.value as ThinkingTimeOutcome | undefined;
+}
+
+function withStageTimeout<T>(task: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const timer = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  return Promise.race([task, timer]).finally(() => {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  });
 }
 
 function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {

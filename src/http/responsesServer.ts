@@ -95,6 +95,11 @@ import {
   ResponseBatchCreateRequestSchema,
   type ResponseBatchService,
 } from '../runtime/responseBatchService.js';
+import {
+  createTenantExecutionLimitGate,
+  summarizeTenantExecutionLimits,
+  type TenantExecutionLimitStatusSummary,
+} from '../runtime/tenantExecutionLimits.js';
 import { createConfiguredStoredStepExecutor } from '../runtime/configuredExecutor.js';
 import { readLiveRuntimeRunServiceState } from '../runtime/liveServiceStateRegistry.js';
 import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from '../runtime/stepOutputContract.js';
@@ -112,6 +117,7 @@ import {
   type ExecutionServiceHostRunnerTopologySummary,
   type DrainStoredExecutionRunsUntilIdleResult,
   type ExecutionServiceHost,
+  type ExecutionServiceHostExecutionGate,
   type ExecutionServiceHostDeps,
 } from '../runtime/serviceHost.js';
 import type { ExecutionRunSourceKind, ExecutionRunStatus, ExecutionRunnerStatus } from '../runtime/types.js';
@@ -212,6 +218,9 @@ import {
 import { findChromeProcessUsingUserDataDir, isDevToolsResponsive } from '../../packages/browser-service/src/processCheck.js';
 import { readDevToolsPort } from '../../packages/browser-service/src/profileState.js';
 
+export const DEFAULT_BACKGROUND_DRAIN_INTERVAL_MS = 60_000;
+const TENANT_EXECUTION_LIMIT_STATUS_CACHE_MS = 5_000;
+
 function scheduleDefaultUserApiServiceRestart(input: ApiServiceRestartRequest): void {
   setTimeout(() => {
     const child = spawn('systemctl', ['--user', 'restart', input.unitName], {
@@ -221,8 +230,6 @@ function scheduleDefaultUserApiServiceRestart(input: ApiServiceRestartRequest): 
     child.unref();
   }, input.delayMs).unref();
 }
-
-export const DEFAULT_BACKGROUND_DRAIN_INTERVAL_MS = 60_000;
 
 export interface ResponsesHttpServerOptions {
   host?: string;
@@ -280,6 +287,18 @@ export interface ResponsesHttpServerDeps {
 export interface ResponsesHttpServerInstance {
   port: number;
   close(): Promise<void>;
+}
+
+function composeExecutionGates(
+  ...gates: ExecutionServiceHostExecutionGate[]
+): ExecutionServiceHostExecutionGate {
+  return async (record) => {
+    for (const gate of gates) {
+      const result = await gate(record);
+      if (!result.allowed) return result;
+    }
+    return { allowed: true };
+  };
 }
 
 interface ServerOwnedDrainOptions {
@@ -701,6 +720,7 @@ interface HttpStatusResponse {
     lastStartedAt: string | null;
     lastCompletedAt: string | null;
   };
+  tenantExecutionLimits: TenantExecutionLimitStatusSummary;
   accountMirrorScheduler: {
     enabled: boolean;
     dryRun: boolean;
@@ -804,6 +824,37 @@ export async function createResponsesHttpServer(
   const accountMirrorSchedulerIntervalMs = Math.max(0, options.accountMirrorSchedulerIntervalMs ?? 0);
   const accountMirrorSchedulerDryRun = options.accountMirrorSchedulerDryRun ?? true;
   const configuredRuntimeConfig = deps.config;
+  const tenantExecutionLimitsStatusCache = new Map<string, {
+    value: TenantExecutionLimitStatusSummary;
+    expiresAtMs: number;
+  }>();
+  const tenantExecutionLimitsStatusRefresh = new Map<string, Promise<TenantExecutionLimitStatusSummary>>();
+  const readTenantExecutionLimitsStatus = async (includeUsage: boolean) => {
+    const cacheKey = includeUsage ? 'usage' : 'configured';
+    const currentMs = Date.now();
+    const cached = tenantExecutionLimitsStatusCache.get(cacheKey);
+    if (cached && cached.expiresAtMs > currentMs) {
+      return cached.value;
+    }
+    let refresh = tenantExecutionLimitsStatusRefresh.get(cacheKey);
+    if (!refresh) {
+      refresh = summarizeTenantExecutionLimits({
+        control,
+        config: configuredRuntimeConfig,
+        now,
+        includeUsage,
+      }).finally(() => {
+        tenantExecutionLimitsStatusRefresh.delete(cacheKey);
+      });
+      tenantExecutionLimitsStatusRefresh.set(cacheKey, refresh);
+    }
+    const value = await refresh;
+    tenantExecutionLimitsStatusCache.set(cacheKey, {
+      value,
+      expiresAtMs: Date.now() + TENANT_EXECUTION_LIMIT_STATUS_CACHE_MS,
+    });
+    return value;
+  };
   const apiAuthPolicy = readApiAuthPolicy(configuredRuntimeConfig);
   const agentTeamConfigService = createAgentTeamConfigService({
     activeConfig: configuredRuntimeConfig ?? null,
@@ -925,6 +976,12 @@ export async function createResponsesHttpServer(
     control,
     now,
   });
+  const tenantExecutionLimitGate = createTenantExecutionLimitGate({
+    control,
+    config: configuredRuntimeConfig,
+    now,
+  });
+  const executionGate = composeExecutionGates(responseBatchExecutionGate, tenantExecutionLimitGate);
   let teamRuntimeBridge: TeamRuntimeBridge;
   const runnerState: HttpStatusResponse['runner'] = {
     id: null,
@@ -1025,7 +1082,7 @@ export async function createResponsesHttpServer(
       runId: drainOptions.runId,
       sourceKind: drainOptions.sourceKind,
       maxRuns: drainOptions.maxRuns,
-      executionGate: responseBatchExecutionGate,
+      executionGate,
       onStart: () => {
         if (backgroundDrainState.state !== 'disabled') {
           backgroundDrainState.state = 'running';
@@ -1264,6 +1321,7 @@ export async function createResponsesHttpServer(
           runnerTopology,
           runner: runnerState,
           backgroundDrain: backgroundDrainState,
+          tenantExecutionLimits: await readTenantExecutionLimitsStatus(statusQuery.tenantExecutionLimitsMode === 'usage'),
           accountMirrorScheduler: accountMirrorSchedulerState,
           accountMirrorSchedulerForegroundWork: readForegroundAuraCallWorkStatus(),
           accountMirrorStatus: accountMirrorStatusRegistry.readStatus(),
@@ -1999,6 +2057,7 @@ export async function createResponsesHttpServer(
           runnerTopology: await host.summarizeRunnerTopology(),
           runner: runnerState,
           backgroundDrain: backgroundDrainState,
+          tenantExecutionLimits: await readTenantExecutionLimitsStatus(false),
           accountMirrorScheduler: accountMirrorSchedulerState,
           accountMirrorSchedulerForegroundWork: readForegroundAuraCallWorkStatus(),
           accountMirrorStatus: accountMirrorStatusRegistry.readStatus(),
@@ -2449,7 +2508,17 @@ export async function createResponsesHttpServer(
           const status = await responseBatchService.createBatch(payload);
           if (backgroundDrainIntervalMs > 0) {
             reserveForegroundAuraCallDrain();
-            scheduleBackgroundDrain(0);
+            const initialBatchMaxRuns = Math.max(
+              1,
+              Math.min(status.counts.total, status.limits.maxConcurrentRuns ?? 1),
+            );
+            void drainThroughServerHost({
+              maxRuns: initialBatchMaxRuns,
+              trigger: 'request-create',
+            }).catch((error) => {
+              logger(error instanceof Error ? error.message : String(error));
+              return null;
+            });
           }
           sendJson(res, 202, status);
           return;
@@ -2708,6 +2777,7 @@ export async function createResponsesHttpServer(
       runnerId: localRunnerId,
       localActionExecutionPolicy: deps.localActionExecutionPolicy,
       createRunAffinity,
+      executionGate,
       executeStoredRunStep: deps.executeStoredRunStep
         ? async (context) => {
             const request = createExecutionRequestFromRecord(context.record);
@@ -3318,6 +3388,7 @@ function createHttpStatusResponse(input: {
   runnerTopology: ExecutionServiceHostRunnerTopologySummary;
   runner: HttpStatusResponse['runner'];
   backgroundDrain: HttpStatusResponse['backgroundDrain'];
+  tenantExecutionLimits: TenantExecutionLimitStatusSummary;
   accountMirrorScheduler: HttpStatusResponse['accountMirrorScheduler'];
   accountMirrorSchedulerForegroundWork: AccountMirrorSchedulerForegroundWorkStatus;
   accountMirrorStatus: AccountMirrorStatusSummary;
@@ -3440,6 +3511,7 @@ function createHttpStatusResponse(input: {
     runnerTopology: input.runnerTopology,
     runner: input.runner,
     backgroundDrain: input.backgroundDrain,
+    tenantExecutionLimits: input.tenantExecutionLimits,
     accountMirrorScheduler,
     accountMirrorStatus: input.accountMirrorStatus,
     accountMirrorCompletions: input.accountMirrorCompletions,
@@ -5135,6 +5207,9 @@ function createServiceHostOperatorControlInput(payload: ServiceHostStatusControl
       control: payload.schedulerControl,
     };
   }
+  if (!('runControl' in payload)) {
+    throw new HttpInvalidRequestError('unsupported service-host status control payload');
+  }
   return {
     kind: 'run-control',
     control: payload.runControl,
@@ -5162,6 +5237,7 @@ interface ParsedStatusQuery {
   recovery: boolean;
   sourceKindSummary?: ExecutionRunSourceKind | 'all';
   runnerTopologyMode: 'compact' | 'full';
+  tenantExecutionLimitsMode: 'configured' | 'usage';
 }
 
 interface ParsedRuntimeInspectionQuery {
@@ -5240,6 +5316,7 @@ function parseStatusQuery(searchParams: URLSearchParams): ParsedStatusQuery {
         .optional(),
       sourceKind: z.enum(['direct', 'team-run', 'all']).optional(),
       runnerTopology: z.enum(['compact', 'full']).optional(),
+      tenantExecutionLimits: z.enum(['configured', 'usage']).optional(),
     })
     .superRefine((value, ctx) => {
       if (!value.recovery && value.sourceKind !== undefined) {
@@ -5256,6 +5333,7 @@ function parseStatusQuery(searchParams: URLSearchParams): ParsedStatusQuery {
     recovery: parsed.recovery ?? false,
     sourceKindSummary: parsed.sourceKind,
     runnerTopologyMode: parsed.runnerTopology ?? 'compact',
+    tenantExecutionLimitsMode: parsed.tenantExecutionLimits ?? 'configured',
   };
 }
 
@@ -6105,7 +6183,7 @@ async function maybeSendOperatorUxAsset(
     return true;
   }
 
-  let stat;
+  let stat: Awaited<ReturnType<typeof fs.stat>>;
   try {
     stat = await fs.stat(assetFile);
   } catch {

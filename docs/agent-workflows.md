@@ -168,6 +168,16 @@ Batch limits are attached to the child runs and enforced by the shared service
 host drain path before a run lease is acquired. Skipped children remain queued
 for a later drain pass.
 
+ChatGPT tenant limits are enforced across all ChatGPT response batches and
+one-shot responses on the same drain path. Defaults are 4 concurrent chats, 120
+chat starts per hour, and 240 chat starts per day per configured ChatGPT service
+account, falling back to the AuraCall runtime profile when no service account
+identity is configured. Per-batch `maxConcurrentRuns` may be lower, but it
+cannot raise a tenant above that budget. Operators can read the configured
+ChatGPT tenant budgets from `GET /status` under `tenantExecutionLimits`; add
+`?tenantExecutionLimits=usage` when current lease/event-derived usage counters
+are needed.
+
 Batch children should normally use the same configured `agent:<agent_id>` model
 as one-shot calls. AuraCall applies the same catalog hydration to every child
 request before enqueueing, so scoped clients can submit ordinary OpenAI-style

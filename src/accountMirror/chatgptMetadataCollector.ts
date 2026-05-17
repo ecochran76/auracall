@@ -1,4 +1,7 @@
 import type { ResolvedUserConfig } from '../config.js';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { getAuracallHomeDir } from '../auracallHome.js';
 import { resolveRuntimeSelection } from '../config/model.js';
 import { applyBrowserProfileOverrides } from '../browser/service/profileConfig.js';
 import { BrowserAutomationClient } from '../browser/client.js';
@@ -11,10 +14,14 @@ import type {
 import type { AccountMirrorMediaManifestEntry } from '../browser/llmService/cache/store.js';
 import type { ProviderUserIdentity } from '../browser/providers/types.js';
 import type { AccountMirrorProvider } from './politePolicy.js';
+import { recordDomDriftObservation } from '../browser/domDriftObservations.js';
 import type {
   AccountMirrorMetadataCounts,
   AccountMirrorMetadataEvidence,
 } from './statusRegistry.js';
+
+const MAX_DOM_DRIFT_SCREENSHOTS_PER_PROCESS = 3;
+let domDriftScreenshotsCaptured = 0;
 
 export interface AccountMirrorMetadataCollectorInput {
   provider: AccountMirrorProvider;
@@ -74,6 +81,28 @@ export interface AccountMirrorMetadataCollector {
   collect(input: AccountMirrorMetadataCollectorInput): Promise<AccountMirrorMetadataCollectorResult>;
 }
 
+export interface AccountMirrorDomDriftObservationContext {
+  provider: AccountMirrorProvider;
+  runtimeProfileId: string;
+  client?: AccountMirrorDomDriftClient;
+}
+
+interface AccountMirrorDomDriftClient {
+  connectDevTools(): Promise<{
+    client: AccountMirrorDomDriftCdpLike;
+  }>;
+}
+
+type AccountMirrorDomDriftCdpLike = {
+  close(): Promise<unknown>;
+} & Record<'Runtime', {
+  enable(): Promise<unknown>;
+  evaluate(input: { expression: string; returnByValue?: boolean }): Promise<{ result?: { value?: unknown } }>;
+}> & Record<'Page', {
+  enable(): Promise<unknown>;
+  captureScreenshot(input: { format: 'png' }): Promise<{ data?: string } | null>;
+}>;
+
 export class AccountMirrorIdentityMismatchError extends Error {
   constructor(
     readonly provider: AccountMirrorProvider,
@@ -115,6 +144,7 @@ export function createChatgptAccountMirrorMetadataCollector(
         tolerateReadFailure: input.provider === 'gemini',
         listOptions,
         pacer,
+        observation: createAccountMirrorObservationContext(input, client),
       });
       throwIfCollectionAborted(input.abortSignal);
       const conversationBudget = Math.max(0, Math.floor(input.limits.maxConversationRowsPerCycle));
@@ -124,16 +154,19 @@ export function createChatgptAccountMirrorMetadataCollector(
       });
       let remainingConversationBudget = Math.max(0, conversationBudget - rootConversations.items.length);
       const projectConversations: Conversation[] = [];
-      for (const project of projects.items) {
-        throwIfCollectionAborted(input.abortSignal);
-        if (remainingConversationBudget <= 0) break;
-        const result = await readBoundedConversations(client, project.id, remainingConversationBudget, {
-          listOptions,
-          pacer,
-        });
-        projectConversations.push(...result.items);
-        remainingConversationBudget -= result.items.length;
-        if (result.truncated) break;
+      if (shouldReadProjectConversationsForAccountMirror(input.provider)) {
+        for (const project of projects.items) {
+          throwIfCollectionAborted(input.abortSignal);
+          if (remainingConversationBudget <= 0) break;
+          const result = await readBoundedConversations(client, project.id, remainingConversationBudget, {
+            listOptions,
+            pacer,
+            observation: createAccountMirrorObservationContext(input, client),
+          });
+          projectConversations.push(...result.items);
+          remainingConversationBudget -= result.items.length;
+          if (result.truncated) break;
+        }
       }
       throwIfCollectionAborted(input.abortSignal);
       const conversations = [...rootConversations.items, ...projectConversations];
@@ -149,12 +182,14 @@ export function createChatgptAccountMirrorMetadataCollector(
               shouldYield: input.shouldYield,
               listOptions,
               pacer,
+              observation: createAccountMirrorObservationContext(input, client),
             },
           )
         : input.provider === 'grok'
           ? await readBoundedGrokAccountFileInventory(client, input.limits.maxArtifactRowsPerCycle, {
               listOptions,
               pacer,
+              observation: createAccountMirrorObservationContext(input, client),
             })
         : {
             artifacts: [],
@@ -196,6 +231,21 @@ export function createChatgptAccountMirrorMetadataCollector(
         },
       };
     },
+  };
+}
+
+export function shouldReadProjectConversationsForAccountMirror(provider: AccountMirrorProvider): boolean {
+  return provider === 'chatgpt';
+}
+
+function createAccountMirrorObservationContext(
+  input: Pick<AccountMirrorMetadataCollectorInput, 'provider' | 'runtimeProfileId'>,
+  client?: AccountMirrorDomDriftClient,
+): AccountMirrorDomDriftObservationContext {
+  return {
+    provider: input.provider,
+    runtimeProfileId: input.runtimeProfileId,
+    client,
   };
 }
 
@@ -298,6 +348,7 @@ export async function readBoundedProjects(
     tolerateReadFailure?: boolean;
     listOptions?: Parameters<BrowserAutomationClient['listProjects']>[0];
     pacer?: BrowserInteractionPacer;
+    observation?: AccountMirrorDomDriftObservationContext;
   } = {},
 ): Promise<{ items: Project[]; truncated: boolean }> {
   const pageBudget = Math.max(1, Math.floor(maxPageReads));
@@ -306,6 +357,12 @@ export async function readBoundedProjects(
     await options.pacer?.beforeInteraction();
     projects = (await client.listProjects(options.listOptions)) as Project[];
   } catch (error) {
+    await recordAccountMirrorDomDriftObservation(options.observation, {
+      surface: 'account-mirror-projects',
+      action: 'list-projects',
+      fallbackKind: options.tolerateReadFailure ? 'read-failure-tolerated' : 'read-failure',
+      error,
+    });
     if (!options.tolerateReadFailure) {
       throw error;
     }
@@ -325,6 +382,7 @@ async function readBoundedConversations(
   options: {
     listOptions?: Parameters<BrowserAutomationClient['listConversations']>[1];
     pacer?: BrowserInteractionPacer;
+    observation?: AccountMirrorDomDriftObservationContext;
   } = {},
 ): Promise<{ items: Conversation[]; truncated: boolean }> {
   const limit = Math.max(0, Math.floor(maxRows));
@@ -332,11 +390,26 @@ async function readBoundedConversations(
     return { items: [], truncated: true };
   }
   await options.pacer?.beforeInteraction();
-  const conversations = (await client.listConversations(projectId ?? undefined, {
-    ...options.listOptions,
-    historyLimit: limit,
-    includeHistory: true,
-  })) as Conversation[];
+  let conversations: Conversation[];
+  try {
+    conversations = (await client.listConversations(projectId ?? undefined, {
+      ...options.listOptions,
+      historyLimit: limit,
+      includeHistory: true,
+    })) as Conversation[];
+  } catch (error) {
+    await recordAccountMirrorDomDriftObservation(options.observation, {
+      surface: projectId ? 'account-mirror-project-conversations' : 'account-mirror-conversations',
+      action: 'list-conversations',
+      fallbackKind: 'read-failure',
+      error,
+      metadata: {
+        projectId,
+        historyLimit: limit,
+      },
+    });
+    throw error;
+  }
   return {
     items: conversations.slice(0, limit),
     truncated: conversations.length > limit,
@@ -354,6 +427,7 @@ export async function readBoundedAttachmentInventory(
     shouldYield?: () => Promise<boolean> | boolean;
     listOptions?: Parameters<BrowserAutomationClient['listProjectFiles']>[1];
     pacer?: BrowserInteractionPacer;
+    observation?: AccountMirrorDomDriftObservationContext;
   } = 6,
 ): Promise<{
   artifacts: ConversationArtifact[];
@@ -370,6 +444,7 @@ export async function readBoundedAttachmentInventory(
   const shouldYield = typeof options === 'number' ? undefined : options.shouldYield;
   const listOptions = typeof options === 'number' ? undefined : options.listOptions;
   const pacer = typeof options === 'number' ? undefined : options.pacer;
+  const observation = typeof options === 'number' ? undefined : options.observation;
   const detailReadLimit = Math.max(1, Math.min(6, Math.floor(maxDetailReads)));
   if (limit <= 0) {
     return {
@@ -412,7 +487,7 @@ export async function readBoundedAttachmentInventory(
     remainingDetailReads -= 1;
     scannedProjects += 1;
     await pacer?.beforeInteraction();
-    const projectFiles = await safeReadProjectFiles(client, project.id, listOptions);
+    const projectFiles = await safeReadProjectFiles(client, project.id, listOptions, observation);
     for (const file of projectFiles) {
       if (remaining <= 0) {
         truncated = true;
@@ -438,9 +513,9 @@ export async function readBoundedAttachmentInventory(
     remainingDetailReads -= 1;
     scannedConversations += 1;
     await pacer?.beforeInteraction();
-    const conversationFiles = await safeReadConversationFiles(client, conversation);
+    const conversationFiles = await safeReadConversationFiles(client, conversation, observation);
     await pacer?.beforeInteraction();
-    const context = await safeReadConversationContext(client, conversation);
+    const context = await safeReadConversationContext(client, conversation, observation);
     for (const file of conversationFiles) {
       if (remaining <= 0) {
         truncated = true;
@@ -497,6 +572,7 @@ export async function readBoundedChatgptDetailInventory(
     shouldYield?: () => Promise<boolean> | boolean;
     listOptions?: Parameters<BrowserAutomationClient['listAccountFiles']>[0];
     pacer?: BrowserInteractionPacer;
+    observation?: AccountMirrorDomDriftObservationContext;
   } = 6,
 ): Promise<{
   artifacts: ConversationArtifact[];
@@ -508,9 +584,11 @@ export async function readBoundedChatgptDetailInventory(
   const limit = Math.max(0, Math.floor(maxRows));
   const listOptions = typeof options === 'number' ? undefined : options.listOptions;
   const pacer = typeof options === 'number' ? undefined : options.pacer;
+  const observation = typeof options === 'number' ? undefined : options.observation;
   const library = await readBoundedChatgptLibraryInventory(client, limit, {
     listOptions,
     pacer,
+    observation,
   });
   if (library.files.length > 0 || library.artifacts.length > 0) {
     return {
@@ -564,6 +642,7 @@ export async function readBoundedChatgptLibraryInventory(
   options: {
     listOptions?: Parameters<BrowserAutomationClient['listAccountFiles']>[0];
     pacer?: BrowserInteractionPacer;
+    observation?: AccountMirrorDomDriftObservationContext;
   } = {},
 ): Promise<{
   artifacts: ConversationArtifact[];
@@ -579,7 +658,10 @@ export async function readBoundedChatgptLibraryInventory(
     };
   }
   await options.pacer?.beforeInteraction();
-  const files = await safeReadAccountFiles(client, options.listOptions);
+  const files = await safeReadAccountFiles(client, options.listOptions, options.observation, {
+    surface: 'account-mirror-library',
+    action: 'list-account-files',
+  });
   const boundedFiles = files.slice(0, limit);
   return {
     artifacts: mapChatgptLibraryFilesToArtifacts(boundedFiles),
@@ -594,6 +676,7 @@ export async function readBoundedGrokAccountFileInventory(
   options: {
     listOptions?: Parameters<BrowserAutomationClient['listAccountFiles']>[0];
     pacer?: BrowserInteractionPacer;
+    observation?: AccountMirrorDomDriftObservationContext;
   } = {},
 ): Promise<{
   artifacts: ConversationArtifact[];
@@ -613,7 +696,10 @@ export async function readBoundedGrokAccountFileInventory(
     };
   }
   await options.pacer?.beforeInteraction();
-  const files = await safeReadAccountFiles(client, options.listOptions);
+  const files = await safeReadAccountFiles(client, options.listOptions, options.observation, {
+    surface: 'account-mirror-account-files',
+    action: 'list-account-files',
+  });
   const boundedFiles = files.slice(0, limit);
   return {
     artifacts: [],
@@ -660,12 +746,20 @@ async function safeReadProjectFiles(
   client: Pick<BrowserAutomationClient, 'listProjectFiles'>,
   projectId: string,
   listOptions?: Parameters<BrowserAutomationClient['listProjectFiles']>[1],
+  observation?: AccountMirrorDomDriftObservationContext,
 ): Promise<FileRef[]> {
   try {
     return listOptions === undefined
       ? await client.listProjectFiles(projectId)
       : await client.listProjectFiles(projectId, listOptions);
-  } catch {
+  } catch (error) {
+    await recordAccountMirrorDomDriftObservation(observation, {
+      surface: 'account-mirror-project-files',
+      action: 'list-project-files',
+      fallbackKind: 'read-failure-tolerated',
+      error,
+      metadata: { projectId },
+    });
     return [];
   }
 }
@@ -673,12 +767,26 @@ async function safeReadProjectFiles(
 async function safeReadAccountFiles(
   client: Pick<BrowserAutomationClient, 'listAccountFiles'>,
   listOptions?: Parameters<BrowserAutomationClient['listAccountFiles']>[0],
+  observation?: AccountMirrorDomDriftObservationContext,
+  input: {
+    surface: string;
+    action: string;
+  } = {
+    surface: 'account-mirror-account-files',
+    action: 'list-account-files',
+  },
 ): Promise<FileRef[]> {
   try {
     return listOptions === undefined
       ? await client.listAccountFiles()
       : await client.listAccountFiles(listOptions);
-  } catch {
+  } catch (error) {
+    await recordAccountMirrorDomDriftObservation(observation, {
+      surface: input.surface,
+      action: input.action,
+      fallbackKind: 'read-failure-tolerated',
+      error,
+    });
     return [];
   }
 }
@@ -686,12 +794,23 @@ async function safeReadAccountFiles(
 async function safeReadConversationFiles(
   client: Pick<BrowserAutomationClient, 'listConversationFiles'>,
   conversation: Conversation,
+  observation?: AccountMirrorDomDriftObservationContext,
 ): Promise<FileRef[]> {
   try {
     return await client.listConversationFiles(conversation.id, {
       projectId: conversation.projectId,
     });
-  } catch {
+  } catch (error) {
+    await recordAccountMirrorDomDriftObservation(observation, {
+      surface: 'account-mirror-conversation-files',
+      action: 'list-conversation-files',
+      fallbackKind: 'read-failure-tolerated',
+      error,
+      metadata: {
+        conversationId: conversation.id,
+        projectId: conversation.projectId ?? null,
+      },
+    });
     return [];
   }
 }
@@ -699,15 +818,152 @@ async function safeReadConversationFiles(
 async function safeReadConversationContext(
   client: Pick<BrowserAutomationClient, 'getConversationContext'>,
   conversation: Conversation,
+  observation?: AccountMirrorDomDriftObservationContext,
 ): Promise<{ artifacts?: ConversationArtifact[] } | null> {
   try {
     return await client.getConversationContext(conversation.id, {
       projectId: conversation.projectId,
       refresh: true,
     });
-  } catch {
+  } catch (error) {
+    await recordAccountMirrorDomDriftObservation(observation, {
+      surface: 'account-mirror-conversation-context',
+      action: 'get-conversation-context',
+      fallbackKind: 'read-failure-tolerated',
+      error,
+      metadata: {
+        conversationId: conversation.id,
+        projectId: conversation.projectId ?? null,
+      },
+    });
     return null;
   }
+}
+
+async function recordAccountMirrorDomDriftObservation(
+  context: AccountMirrorDomDriftObservationContext | null | undefined,
+  input: {
+    surface: string;
+    action: string;
+    fallbackKind: string;
+    error: unknown;
+    metadata?: Record<string, unknown>;
+  },
+): Promise<void> {
+  if (!context) return;
+  try {
+    const pageEvidence = await collectAccountMirrorDomDriftPageEvidence(context);
+    await recordDomDriftObservation({
+      service: context.provider,
+      surface: input.surface,
+      action: input.action,
+      expectedLabels: [],
+      observedLabel: null,
+      fallbackKind: input.fallbackKind,
+      metadata: {
+        source: 'accountMirror.metadataCollector',
+        runtimeProfileId: context.runtimeProfileId,
+        errorMessage: errorMessage(input.error),
+        pageEvidence,
+        ...input.metadata,
+      },
+    });
+  } catch {
+    // Lazy follow observations are evidence only; they must not make mirroring fail.
+  }
+}
+
+async function collectAccountMirrorDomDriftPageEvidence(
+  context: AccountMirrorDomDriftObservationContext | null | undefined,
+): Promise<Record<string, unknown> | null> {
+  if (!context?.client) return null;
+  const connection = await context.client.connectDevTools().catch(() => null);
+  if (!connection) return null;
+  const { client } = connection;
+  try {
+    await client.Runtime.enable().catch(() => undefined);
+    await client.Page.enable().catch(() => undefined);
+    const { result } = await client.Runtime.evaluate({
+      expression: buildAccountMirrorDomDriftPageEvidenceExpression(),
+      returnByValue: true,
+    });
+    const page = isRecord(result?.value) ? result.value : {};
+    const screenshot = await captureAccountMirrorDomDriftScreenshot(client, context).catch(() => null);
+    return {
+      ...page,
+      screenshot,
+      capturedAt: new Date().toISOString(),
+    };
+  } finally {
+    await client.close().catch(() => undefined);
+  }
+}
+
+function buildAccountMirrorDomDriftPageEvidenceExpression(): string {
+  return `(() => {
+    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+    const visible = (node) => {
+      if (!(node instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(node);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+    const visibleNodes = (selector) => Array.from(document.querySelectorAll(selector)).filter((node) => visible(node));
+    const labels = (selector, limit) => visibleNodes(selector)
+      .map((node) => normalize(node.getAttribute('aria-label') || node.getAttribute('title') || node.textContent || node.getAttribute('href') || ''))
+      .filter(Boolean)
+      .slice(0, limit);
+    return {
+      url: location.href,
+      title: document.title || null,
+      readyState: document.readyState,
+      visibilityState: document.visibilityState,
+      focused: document.hasFocus(),
+      bodyTextLength: document.body?.innerText?.length ?? 0,
+      visibleCounts: {
+        buttons: visibleNodes('button,[role="button"]').length,
+        links: visibleNodes('a[href]').length,
+        inputs: visibleNodes('input').length,
+        textareas: visibleNodes('textarea').length,
+        contenteditables: visibleNodes('[contenteditable="true"]').length,
+        dialogs: visibleNodes('[role="dialog"],dialog[open],[aria-modal="true"]').length,
+      },
+      visibleLabels: {
+        buttons: labels('button,[role="button"]', 20),
+        links: labels('a[href]', 20),
+        headings: labels('h1,h2,h3,[role="heading"]', 12),
+        dialogs: labels('[role="dialog"],dialog[open],[aria-modal="true"]', 8),
+      },
+    };
+  })()`;
+}
+
+async function captureAccountMirrorDomDriftScreenshot(
+  client: Awaited<ReturnType<AccountMirrorDomDriftClient['connectDevTools']>>['client'],
+  context: AccountMirrorDomDriftObservationContext,
+): Promise<Record<string, unknown> | null> {
+  if (domDriftScreenshotsCaptured >= MAX_DOM_DRIFT_SCREENSHOTS_PER_PROCESS) return null;
+  const screenshot = await client.Page.captureScreenshot({ format: 'png' }).catch(() => null);
+  if (!screenshot || typeof screenshot.data !== 'string' || screenshot.data.length === 0) return null;
+  domDriftScreenshotsCaptured += 1;
+  const bytes = Buffer.from(screenshot.data, 'base64');
+  const dir = path.join(getAuracallHomeDir(), 'diagnostics', 'dom-drift');
+  await fs.mkdir(dir, { recursive: true });
+  const filePath = path.join(
+    dir,
+    `${new Date().toISOString().replace(/[:.]/g, '-')}-${context.provider}-${sanitizePathToken(context.runtimeProfileId)}.png`,
+  );
+  await fs.writeFile(filePath, bytes);
+  return {
+    path: filePath,
+    mimeType: 'image/png',
+    bytes: bytes.length,
+  };
+}
+
+function sanitizePathToken(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_.-]+/g, '_').slice(0, 80) || 'unknown';
 }
 
 function addFile(
@@ -890,6 +1146,10 @@ function normalizeIdentityKey(value: string | null | undefined): string | null {
 function readString(value: string | null | undefined): string | null {
   const trimmed = String(value ?? '').trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

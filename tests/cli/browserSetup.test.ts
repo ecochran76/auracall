@@ -125,6 +125,7 @@ describe('createAuracallBrowserSetupContract', () => {
             warnings: [],
           },
           identityStatus: null,
+          identityReconciliation: null,
           featureStatus: null,
           runtime: {
             browserTools: null,
@@ -138,7 +139,7 @@ describe('createAuracallBrowserSetupContract', () => {
         login: {
           status: 'completed',
           exportCookies: false,
-          managedProfileSeedPolicy: 'reseed-if-source-newer',
+          managedProfileSeedPolicy: 'bootstrap-only',
           manualLoginProfileDir: '/tmp/managed/default/grok',
           chromeProfile: 'Default',
           launchTargetUrl: 'https://grok.com/',
@@ -191,6 +192,7 @@ describe('createAuracallBrowserSetupContract', () => {
           warnings: [],
         },
         identityStatus: null,
+        identityReconciliation: null,
         featureStatus: null,
         runtime: {
           browserTools: null,
@@ -204,7 +206,7 @@ describe('createAuracallBrowserSetupContract', () => {
       login: {
         status: 'completed',
         exportCookies: false,
-        managedProfileSeedPolicy: 'reseed-if-source-newer',
+        managedProfileSeedPolicy: 'bootstrap-only',
         manualLoginProfileDir: '/tmp/managed/default/grok',
         chromeProfile: 'Default',
         launchTargetUrl: 'https://grok.com/',
@@ -250,6 +252,7 @@ describe('createAuracallBrowserSetupContract', () => {
           warnings: [],
         },
         identityStatus: null,
+        identityReconciliation: null,
         featureStatus: null,
         runtime: {
           browserTools: null,

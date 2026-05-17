@@ -99,6 +99,7 @@ export interface ExecutionResponse {
     service?: string | null;
     executionSummary?: {
       terminalStepId?: string | null;
+      createdAt?: string | null;
       completedAt?: string | null;
       lastUpdatedAt?: string | null;
       stepSummaries?: Array<{

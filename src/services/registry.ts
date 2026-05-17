@@ -95,6 +95,11 @@ export interface ServicesRegistry {
   services: Record<string, ServiceRegistryEntry>;
 }
 
+interface ServicesRegistryOverrides {
+  version: number;
+  services: Record<string, ServiceRegistryEntry>;
+}
+
 interface ServicesRegistryFile extends ServicesRegistry {
   templateHash?: string;
 }
@@ -106,6 +111,10 @@ let bundledRegistryCache: ServicesRegistry | null = null;
 function getTemplatePath(): string {
   const dir = path.dirname(fileURLToPath(import.meta.url));
   return path.join(dir, '..', '..', 'configs', 'auracall.services.json');
+}
+
+export function getServicesRegistryOverridesPath(): string {
+  return path.join(getAuracallHomeDir(), 'service-overrides.json');
 }
 
 function hashContents(payload: string): string {
@@ -163,6 +172,61 @@ function normalizeStringDictionary(
     merged.set(normalizedKey, normalizedValue);
   }
   return Object.fromEntries(merged);
+}
+
+function readServicesRegistryOverridesSync(): ServicesRegistryOverrides {
+  const storagePath = getServicesRegistryOverridesPath();
+  try {
+    const raw = fsSync.readFileSync(storagePath, 'utf8');
+    const parsed = JSON.parse(raw) as Partial<ServicesRegistryOverrides>;
+    return {
+      version: typeof parsed.version === 'number' ? parsed.version : 1,
+      services: isRecord(parsed.services) ? normalizeServiceRegistryEntries(parsed.services) : {},
+    };
+  } catch {
+    return { version: 1, services: {} };
+  }
+}
+
+async function readServicesRegistryOverrides(storagePath: string): Promise<ServicesRegistryOverrides> {
+  try {
+    const raw = await fs.readFile(storagePath, 'utf8');
+    const parsed = JSON.parse(raw) as Partial<ServicesRegistryOverrides>;
+    return {
+      version: typeof parsed.version === 'number' ? parsed.version : 1,
+      services: isRecord(parsed.services) ? normalizeServiceRegistryEntries(parsed.services) : {},
+    };
+  } catch {
+    return { version: 1, services: {} };
+  }
+}
+
+function normalizeServiceRegistryEntries(values: Record<string, unknown>): Record<string, ServiceRegistryEntry> {
+  const entries: Record<string, ServiceRegistryEntry> = {};
+  for (const [serviceId, value] of Object.entries(values)) {
+    if (!serviceId.trim() || !isRecord(value)) continue;
+    entries[serviceId.trim()] = {
+      ui: normalizeServiceUiRegistry(value.ui),
+    };
+  }
+  return entries;
+}
+
+function normalizeServiceUiRegistry(value: unknown): ServiceUiRegistry | undefined {
+  if (!isRecord(value)) return undefined;
+  const labelSetsValue = value.labelSets;
+  const labelSets: Record<string, string[]> = {};
+  if (isRecord(labelSetsValue)) {
+    for (const [key, labels] of Object.entries(labelSetsValue)) {
+      if (!key.trim() || !Array.isArray(labels)) continue;
+      labelSets[key.trim()] = normalizeStringList(labels.filter((entry): entry is string => typeof entry === 'string'), []);
+    }
+  }
+  return Object.keys(labelSets).length > 0 ? { labelSets } : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
 const SELECTOR_KEYS = [
@@ -430,6 +494,70 @@ export function resolveBundledServiceUiLabelSet(
   fallback: readonly string[],
 ): string[] {
   return normalizeStringList(getBundledServiceEntry(serviceId)?.ui?.labelSets?.[key], fallback);
+}
+
+export function resolveEffectiveServiceUiLabelSet(
+  serviceId: string,
+  key: string,
+  fallback: readonly string[],
+): string[] {
+  const bundled = resolveBundledServiceUiLabelSet(serviceId, key, fallback);
+  const overrideLabels = readServicesRegistryOverridesSync().services[serviceId]?.ui?.labelSets?.[key];
+  return normalizeStringList([...(bundled ?? []), ...(overrideLabels ?? [])], fallback);
+}
+
+export interface UpsertServiceUiLabelSetAliasResult {
+  object: 'auracall_service_override_update';
+  service: string;
+  key: string;
+  label: string;
+  added: boolean;
+  labels: string[];
+  storagePath: string;
+}
+
+export async function upsertServiceUiLabelSetAlias(input: {
+  service: string;
+  key: string;
+  label: string;
+}): Promise<UpsertServiceUiLabelSetAliasResult> {
+  const service = input.service.trim();
+  const key = input.key.trim();
+  const label = input.label.replace(/\s+/g, ' ').trim();
+  if (!service) throw new Error('Service id is required.');
+  if (!key) throw new Error('UI label-set key is required.');
+  if (!label) throw new Error('UI label alias is required.');
+
+  const storagePath = getServicesRegistryOverridesPath();
+  const overrides = await readServicesRegistryOverrides(storagePath);
+  const serviceEntry = overrides.services[service] ?? {};
+  const ui = serviceEntry.ui ?? {};
+  const labelSets = ui.labelSets ?? {};
+  const existing = normalizeStringList(labelSets[key], []);
+  const hasLabel = existing.some((entry) => entry.toLowerCase() === label.toLowerCase());
+  const labels = hasLabel ? existing : [...existing, label];
+
+  overrides.services[service] = {
+    ...serviceEntry,
+    ui: {
+      ...ui,
+      labelSets: {
+        ...labelSets,
+        [key]: labels,
+      },
+    },
+  };
+  await fs.mkdir(path.dirname(storagePath), { recursive: true });
+  await fs.writeFile(storagePath, `${JSON.stringify(overrides, null, 2)}\n`, 'utf8');
+  return {
+    object: 'auracall_service_override_update',
+    service,
+    key,
+    label,
+    added: !hasLabel,
+    labels,
+    storagePath,
+  };
 }
 
 export function resolveBundledServiceSelectors(

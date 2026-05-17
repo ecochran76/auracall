@@ -288,6 +288,11 @@
             "done",
             "apply"
           ],
+          "project_create_confirm_buttons": [
+            "create project",
+            "create",
+            "continue"
+          ],
           "project_source_upload_actions": [
             "upload",
             "browse",

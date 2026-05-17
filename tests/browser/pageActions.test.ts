@@ -238,6 +238,49 @@ describe('waitForAssistantResponse', () => {
     expect(result.meta).toEqual({ messageId: 'mid', turnId: 'tid' });
   });
 
+  test('emits passive DOM probe while waiting for assistant text', async () => {
+    const passiveProbe = vi.fn();
+    const responseIncoming = vi.fn();
+    let snapshotReads = 0;
+    const runtime = {
+      evaluate: vi.fn().mockImplementation(async (params: { awaitPromise?: boolean; expression?: string }) => {
+        if (params?.awaitPromise) {
+          await new Promise((resolve) => setTimeout(resolve, 650));
+          return {
+            result: {
+              type: 'object',
+              value: { text: 'Answer', html: '<p>Answer</p>', messageId: 'mid', turnId: 'tid' },
+            },
+          };
+        }
+        const expression = String(params?.expression ?? '');
+        if (expression.includes('extractAssistantTurn')) {
+          snapshotReads += 1;
+          return {
+            result: {
+              value: snapshotReads === 1
+                ? null
+                : { text: 'Answer', html: '<p>Answer</p>', messageId: 'mid', turnId: 'tid' },
+            },
+          };
+        }
+        if (expression.startsWith('Boolean(document.querySelector')) {
+          return { result: { value: false } };
+        }
+        return { result: { value: null } };
+      }),
+    } as unknown as ChromeClient['Runtime'];
+
+    const result = await waitForAssistantResponse(runtime, 1000, logger, undefined, {
+      onPassiveDomProbe: passiveProbe,
+      onResponseIncoming: responseIncoming,
+    });
+
+    expect(result.text).toBe('Answer');
+    expect(passiveProbe).toHaveBeenCalled();
+    expect(responseIncoming).toHaveBeenCalledTimes(1);
+  });
+
   test('response observer watches character data mutations', async () => {
     let capturedExpression = '';
     const runtime = {

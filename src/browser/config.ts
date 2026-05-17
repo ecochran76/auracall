@@ -28,7 +28,7 @@ export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
   grokUrl: null,
   url: CHATGPT_URL,
   chatgptUrl: CHATGPT_URL,
-  timeoutMs: 1_200_000,
+  timeoutMs: 7_200_000,
   debugPort: null,
   debugPortStrategy: 'fixed',
   debugPortRange: [45000, 45100],

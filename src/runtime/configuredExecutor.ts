@@ -11,7 +11,16 @@ import {
   resolveChatgptSemanticModelSelector,
 } from '../config/modelSelector.js';
 import { runBrowserMode } from '../browser/index.js';
-import type { BrowserAttachment, BrowserRunOptions, CookieParam } from '../browser/types.js';
+import { resumeBrowserSession } from '../browser/reattach.js';
+import { waitForAssistantResponse } from '../browser/actions/assistantResponse.js';
+import type {
+  BrowserAttachment,
+  BrowserRunOptions,
+  BrowserRunResult,
+  BrowserRuntimeEvidence,
+  BrowserRuntimeMetadata,
+  CookieParam,
+} from '../browser/types.js';
 import { resolveChatgptProjectUrl } from '../browser/providers/chatgptAdapter.js';
 import type { ProviderUserIdentity } from '../browser/providers/types.js';
 import { createLlmService } from '../browser/llmService/providers/index.js';
@@ -36,6 +45,7 @@ const BROWSER_INLINE_PROMPT_CHAR_BUDGET = 60_000;
 export interface CreateConfiguredStoredStepExecutorDeps {
   runBrowserModeImpl?: (options: BrowserRunOptions) => Promise<Awaited<ReturnType<typeof runBrowserMode>>>;
   runGeminiBrowserModeImpl?: (options: BrowserRunOptions) => Promise<Awaited<ReturnType<typeof runBrowserMode>>>;
+  resumeBrowserSessionImpl?: typeof resumeBrowserSession;
   effectiveConfigProvider?: () => Promise<Record<string, unknown>>;
   browserResponseArtifactMaterializer?: (input: BrowserResponseArtifactMaterializerInput) => Promise<BrowserResponseArtifactMaterializerResult>;
   logger?: (message: string) => void;
@@ -60,6 +70,12 @@ interface BrowserResponseArtifactMaterializerResult {
   notes: string[];
 }
 
+type RecoveredBrowserRuntimeMetadata = BrowserRuntimeMetadata & {
+  auracallProfileName?: string;
+  runtimeProfileId?: string;
+  browserProfileId?: string | null;
+};
+
 function isRecord(value: unknown): value is MutableRecord {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
@@ -74,12 +90,135 @@ function asBoolean(value: unknown): boolean | null {
   return typeof value === 'boolean' ? value : null;
 }
 
+function asFiniteNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 function asProviderUserIdentity(value: unknown): ProviderUserIdentity | null {
   return isRecord(value) ? value as ProviderUserIdentity : null;
 }
 
+function normalizeBrowserObservationStateForRuntime(
+  state: BrowserRuntimeEvidence['observation']['state'],
+): Parameters<typeof recordLiveRuntimeRunServiceState>[0]['state'] {
+  if (state === 'plan-ready' || state === 'research-started') {
+    return 'thinking';
+  }
+  return state;
+}
+
 function sanitizePathComponent(value: string): string {
   return value.replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 120) || 'request';
+}
+
+function hasRecoveredStrandedStepEvent(context: ExecuteStoredRunStepContext): boolean {
+  const stepId = context.step.id;
+  return context.record.bundle.events?.some((event) =>
+    event.stepId === stepId &&
+    event.type === 'note-added' &&
+    event.note === 'recovered stranded running step for host replay'
+  ) ?? false;
+}
+
+function readLatestRuntimeEvidenceForStep(
+  context: ExecuteStoredRunStepContext,
+  service: 'chatgpt' | 'gemini' | 'grok',
+): MutableRecord | null {
+  const stepId = context.step.id;
+  const events = [...(context.record.bundle.events ?? [])].reverse();
+  let bestEvidence: MutableRecord | null = null;
+  let bestScore = -1;
+  for (const event of events) {
+    if (event.stepId && event.stepId !== stepId) {
+      continue;
+    }
+    const payload = isRecord(event.payload) ? event.payload : null;
+    const runtimeEvidence = isRecord(payload?.runtimeEvidence) ? payload.runtimeEvidence : null;
+    const details = isRecord(runtimeEvidence?.details) ? runtimeEvidence.details : null;
+    if (!runtimeEvidence || !details) {
+      continue;
+    }
+    const evidenceService = asNonEmptyString(details.service);
+    if (evidenceService && evidenceService !== service) {
+      continue;
+    }
+    const chromeTargetId = asNonEmptyString(details.chromeTargetId);
+    const tabUrl = asNonEmptyString(details.tabUrl);
+    const conversationId = asNonEmptyString(details.conversationId);
+    if (!chromeTargetId && !tabUrl && !conversationId) {
+      continue;
+    }
+    const score =
+      (conversationId ? 8 : 0) +
+      (tabUrl?.includes('/c/') ? 4 : tabUrl ? 2 : 0) +
+      (chromeTargetId ? 2 : 0) +
+      (asFiniteNumber(details.chromePort) ? 2 : 0) +
+      (asNonEmptyString(details.chromeHost) ? 1 : 0);
+    if (score > bestScore) {
+      bestScore = score;
+      bestEvidence = runtimeEvidence;
+    }
+  }
+  return bestEvidence;
+}
+
+function extractChatgptConversationIdFromUrl(url: string | null): string | null {
+  if (!url) {
+    return null;
+  }
+  const match = url.match(/\/c\/([^/?#]+)/);
+  return match?.[1] ?? null;
+}
+
+function buildBrowserRuntimeMetadataFromEvidence(input: {
+  evidence: MutableRecord;
+  runtimeProfileId: string;
+  browserProfileId: string | null;
+  manualLoginProfileDir: string | null;
+  agentId: string;
+}): RecoveredBrowserRuntimeMetadata {
+  const details = isRecord(input.evidence.details) ? input.evidence.details : {};
+  const tabUrl = asNonEmptyString(details.tabUrl) ?? asNonEmptyString(input.evidence.evidenceRef) ?? undefined;
+  const conversationId =
+    asNonEmptyString(details.conversationId) ??
+    extractChatgptConversationIdFromUrl(tabUrl ?? null) ??
+    undefined;
+  return {
+    auracallProfileName: input.runtimeProfileId,
+    selectedAgentId: input.agentId,
+    chromePort: asFiniteNumber(details.chromePort) ?? undefined,
+    chromeHost: asNonEmptyString(details.chromeHost) ?? undefined,
+    chromeTargetId: asNonEmptyString(details.chromeTargetId) ?? undefined,
+    tabUrl,
+    conversationId,
+    userDataDir: input.manualLoginProfileDir ?? undefined,
+    runtimeProfileId: input.runtimeProfileId,
+    browserProfileId: input.browserProfileId,
+  };
+}
+
+function createBrowserRunResultFromReattach(input: {
+  result: Awaited<ReturnType<typeof resumeBrowserSession>>;
+  runtime: ReturnType<typeof buildBrowserRuntimeMetadataFromEvidence>;
+}): BrowserRunResult {
+  const answerMarkdown = input.result.answerMarkdown || input.result.answerText || '';
+  const answerText = input.result.answerText || answerMarkdown;
+  return {
+    answerText,
+    answerMarkdown,
+    tookMs: 0,
+    answerTokens: Math.max(1, Math.ceil(answerMarkdown.length / 4)),
+    answerChars: answerText.length,
+    chromePid: undefined,
+    chromePort: input.runtime.chromePort,
+    chromeHost: input.runtime.chromeHost,
+    userDataDir: input.runtime.userDataDir,
+    chromeTargetId: input.runtime.chromeTargetId,
+    tabUrl: input.runtime.tabUrl,
+    conversationId: input.runtime.conversationId,
+    passiveObservations: [],
+    controllerPid: process.pid,
+  };
 }
 
 function readJsonObjectResponseFormat(metadata: unknown): MutableRecord | null {
@@ -590,6 +729,7 @@ export function createConfiguredStoredStepExecutor(
 ): ExecutionServiceHostDeps['executeStoredRunStep'] {
   const runBrowserModeImpl = deps.runBrowserModeImpl ?? runBrowserMode;
   const runGeminiBrowserModeImpl = deps.runGeminiBrowserModeImpl ?? createGeminiWebExecutor({});
+  const resumeBrowserSessionImpl = deps.resumeBrowserSessionImpl ?? resumeBrowserSession;
   const configRecord = config as MutableRecord;
 
   return async (context): Promise<ExecuteStoredRunStepResult> => {
@@ -715,6 +855,50 @@ export function createConfiguredStoredStepExecutor(
       serviceId: service,
       runtimeProfileId: runtimeSelection.runtimeProfileId,
     });
+    const liveBrowserServiceStateKey = {
+      runId: context.record.runId,
+      stepId: context.step.id,
+    };
+    const heartbeatRuntimeEvidence = async (
+      evidence: Parameters<NonNullable<ExecuteStoredRunStepContext['runtimeEvidence']>['heartbeat']>[0],
+    ): Promise<void> => {
+      await context.runtimeEvidence?.heartbeat(evidence);
+    };
+    const buildBrowserRuntimeEvidenceDetails = (
+      runtime: Pick<BrowserRuntimeMetadata, 'chromeHost' | 'chromePort' | 'chromeTargetId' | 'tabUrl' | 'conversationId'> | null,
+    ): Record<string, unknown> => ({
+      service,
+      runtimeProfileId: runtimeSelection.runtimeProfileId,
+      browserProfileId: runtimeSelection.browserProfileId,
+      agentId: context.step.agentId,
+      projectId,
+      chromePort: runtime?.chromePort ?? null,
+      chromeHost: runtime?.chromeHost ?? null,
+      chromeTargetId: runtime?.chromeTargetId ?? null,
+      tabUrl: runtime?.tabUrl ?? null,
+      conversationId: runtime?.conversationId ?? null,
+    });
+    const recordBrowserRuntimeEvidence = async (evidence: BrowserRuntimeEvidence): Promise<void> => {
+      const observation = evidence.observation;
+      const runtime = evidence.runtime ?? null;
+      recordLiveRuntimeRunServiceState({
+        ...liveBrowserServiceStateKey,
+        service,
+        state: normalizeBrowserObservationStateForRuntime(observation.state),
+        source: observation.source,
+        evidenceRef: observation.evidenceRef ?? runtime?.tabUrl ?? runtime?.chromeTargetId ?? null,
+        confidence: observation.confidence,
+        observedAt: observation.observedAt,
+      });
+      await heartbeatRuntimeEvidence({
+        observedAt: observation.observedAt,
+        state: observation.state,
+        source: observation.source,
+        evidenceRef: observation.evidenceRef ?? null,
+        confidence: observation.confidence,
+        details: buildBrowserRuntimeEvidenceDetails(runtime),
+      });
+    };
 
     const browserRunOptions: BrowserRunOptions = {
       prompt: promptTransport.prompt,
@@ -780,6 +964,26 @@ export function createConfiguredStoredStepExecutor(
         expectedUserIdentity,
         expectedServiceAccountId,
       },
+      runtimeHintCb: async (hint) => {
+        await heartbeatRuntimeEvidence({
+          observedAt: new Date().toISOString(),
+          state: 'browser-runtime-hint',
+          source: 'browser-service',
+          evidenceRef: hint.tabUrl ?? hint.chromeTargetId ?? 'browser-runtime-hint',
+          confidence: 'medium',
+          details: {
+            service,
+            runtimeProfileId: runtimeSelection.runtimeProfileId,
+            browserProfileId: runtimeSelection.browserProfileId,
+            agentId: context.step.agentId,
+            projectId,
+            chromeTargetId: hint.chromeTargetId ?? null,
+            tabUrl: hint.tabUrl ?? null,
+            conversationId: hint.conversationId ?? null,
+          },
+        });
+      },
+      runtimeEvidenceCb: recordBrowserRuntimeEvidence,
       log: ((message?: unknown, ...optionalParams: unknown[]) => {
         const logger = deps.logger;
         if (!logger) return;
@@ -791,15 +995,7 @@ export function createConfiguredStoredStepExecutor(
       verbose: false,
     };
 
-    const liveBrowserServiceStateKey =
-      service === 'gemini' || service === 'grok'
-        ? {
-            runId: context.record.runId,
-            stepId: context.step.id,
-          }
-        : null;
-
-    if (liveBrowserServiceStateKey) {
+    if (service === 'gemini' || service === 'grok') {
       recordLiveRuntimeRunServiceState({
         ...liveBrowserServiceStateKey,
         service,
@@ -816,12 +1012,94 @@ export function createConfiguredStoredStepExecutor(
           ? await runGeminiBrowserModeImpl(options)
           : await runBrowserModeImpl(options);
       } finally {
-        if (liveBrowserServiceStateKey) {
-          clearLiveRuntimeRunServiceState(liveBrowserServiceStateKey);
-        }
+        clearLiveRuntimeRunServiceState(liveBrowserServiceStateKey);
       }
     };
-    let browserResult = await runBrowserStep(browserRunOptions);
+    const recoveredRuntimeEvidence =
+      service === 'chatgpt' && hasRecoveredStrandedStepEvent(context)
+        ? readLatestRuntimeEvidenceForStep(context, service)
+        : null;
+    const runOrResumeBrowserStep = async (): Promise<Awaited<ReturnType<typeof runBrowserMode>>> => {
+      if (!recoveredRuntimeEvidence) {
+        return runBrowserStep(browserRunOptions);
+      }
+      const recoveredRuntime = buildBrowserRuntimeMetadataFromEvidence({
+        evidence: recoveredRuntimeEvidence,
+        runtimeProfileId: runtimeSelection.runtimeProfileId ?? context.step.runtimeProfileId ?? 'default',
+        browserProfileId: runtimeSelection.browserProfileId,
+        manualLoginProfileDir,
+        agentId: context.step.agentId,
+      });
+      try {
+        deps.logger?.(
+          `reattaching recovered ChatGPT browser-backed run ${context.record.runId} to existing tab ${recoveredRuntime.chromeTargetId ?? recoveredRuntime.tabUrl ?? '(unknown)'}`,
+        );
+        const heartbeatRecoveredRuntimeEvidence = async (
+          state: BrowserRuntimeEvidence['observation']['state'],
+          evidenceRef: string,
+          confidence: BrowserRuntimeEvidence['observation']['confidence'],
+        ): Promise<void> => {
+          const observedAt = new Date().toISOString();
+          recordLiveRuntimeRunServiceState({
+            ...liveBrowserServiceStateKey,
+            service,
+            state: normalizeBrowserObservationStateForRuntime(state),
+            source: 'browser-service',
+            evidenceRef,
+            confidence,
+            observedAt,
+          });
+          await heartbeatRuntimeEvidence({
+            observedAt,
+            state,
+            source: 'browser-service',
+            evidenceRef,
+            confidence,
+            details: buildBrowserRuntimeEvidenceDetails(recoveredRuntime),
+          });
+        };
+        const recordRecoveredRuntimeEvidence = (
+          state: BrowserRuntimeEvidence['observation']['state'],
+          evidenceRef: string,
+          confidence: BrowserRuntimeEvidence['observation']['confidence'],
+        ): void => {
+          void heartbeatRecoveredRuntimeEvidence(state, evidenceRef, confidence).catch((error) => {
+            const message = error instanceof Error ? error.message : String(error);
+            deps.logger?.(`failed to persist recovered ChatGPT runtime evidence: ${message}`);
+          });
+        };
+        await heartbeatRecoveredRuntimeEvidence('thinking', 'chatgpt-reattach-existing-tab', 'medium');
+        const reattached = await resumeBrowserSessionImpl(
+          recoveredRuntime as Parameters<typeof resumeBrowserSession>[0],
+          browserRunOptions.config as Parameters<typeof resumeBrowserSession>[1],
+          browserRunOptions.log as Parameters<typeof resumeBrowserSession>[2],
+          {
+            promptPreview: promptTransport.prompt.slice(0, 2_000),
+            waitForAssistantResponse: (Runtime, timeoutMs, logger, minTurn) =>
+              waitForAssistantResponse(Runtime, timeoutMs, logger, minTurn, {
+                onPassiveDomProbe: () => {
+                  recordRecoveredRuntimeEvidence('thinking', 'chatgpt-passive-dom-probe', 'low');
+                },
+                onResponseIncoming: () => {
+                  recordRecoveredRuntimeEvidence('response-incoming', 'chatgpt-assistant-snapshot', 'high');
+                },
+              }),
+          },
+        );
+        return createBrowserRunResultFromReattach({
+          result: reattached,
+          runtime: recoveredRuntime,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(
+          `Recovered ChatGPT browser-backed run ${context.record.runId} could not reattach to the submitted tab; refusing to replay the prompt: ${message}`,
+        );
+      } finally {
+        clearLiveRuntimeRunServiceState(liveBrowserServiceStateKey);
+      }
+    };
+    let browserResult = await runOrResumeBrowserStep();
     let responseArtifacts: TeamRunArtifactRef[] = [];
     let responseArtifactNotes: string[] = [];
     const structuredMetadata = context.step.input.structuredData?.metadata;
@@ -944,6 +1222,7 @@ export function createConfiguredStoredStepExecutor(
               service,
               conversationId: browserResult.conversationId ?? null,
               tabUrl: browserResult.tabUrl ?? null,
+              chromeTargetId: browserResult.chromeTargetId ?? null,
               runtimeProfileId: runtimeSelection.runtimeProfileId,
               browserProfileId: runtimeSelection.browserProfileId,
               agentId: context.step.agentId,
@@ -998,6 +1277,7 @@ export function createConfiguredStoredStepExecutor(
             service,
             conversationId: browserResult.conversationId ?? null,
             tabUrl: browserResult.tabUrl ?? null,
+            chromeTargetId: browserResult.chromeTargetId ?? null,
             runtimeProfileId: runtimeSelection.runtimeProfileId,
             browserProfileId: runtimeSelection.browserProfileId,
             agentId: context.step.agentId,

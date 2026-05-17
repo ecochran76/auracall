@@ -40,6 +40,7 @@ describe('mcp run_status tool', () => {
             runtimeProfile: 'default',
             service: 'gemini',
             executionSummary: {
+              createdAt: '2026-04-23T03:50:00.000Z',
               completedAt: '2026-04-23T04:00:00.000Z',
               lastUpdatedAt: '2026-04-23T04:00:00.000Z',
               stepSummaries: [
@@ -89,6 +90,17 @@ describe('mcp run_status tool', () => {
         object: 'auracall_run_status',
         kind: 'response',
         status: 'completed',
+        timing: {
+          createdAt: '2026-04-23T03:50:00.000Z',
+          updatedAt: '2026-04-23T04:00:00.000Z',
+          completedAt: '2026-04-23T04:00:00.000Z',
+          elapsedMs: 600_000,
+          runningForMs: null,
+        },
+        polling: {
+          recommendedPollMs: 0,
+          reason: 'terminal status; no further polling needed',
+        },
         stepCount: 1,
         artifactCount: 0,
         metadata: {

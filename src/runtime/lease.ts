@@ -16,6 +16,7 @@ export interface HeartbeatExecutionRunLeaseInput {
   leaseId: string;
   heartbeatAt: string;
   expiresAt: string;
+  runtimeEvidence?: Record<string, unknown> | null;
 }
 
 export interface ReleaseExecutionRunLeaseInput {
@@ -104,6 +105,7 @@ export function heartbeatExecutionRunLease(input: HeartbeatExecutionRunLeaseInpu
     payload: {
       ownerId: lease.ownerId,
       expiresAt: lease.expiresAt,
+      ...(input.runtimeEvidence ? { runtimeEvidence: input.runtimeEvidence } : {}),
     },
   });
 

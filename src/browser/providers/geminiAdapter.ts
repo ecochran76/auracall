@@ -157,6 +157,10 @@ function normalizePromptText(value: string): string {
     .trim();
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function sanitizeGeminiAssistantText(value: string): string {
   const normalized = normalizePromptText(value);
   return normalized
@@ -1544,6 +1548,60 @@ async function scrapeGeminiConversations(
       url: item.url ?? undefined,
       updatedAt: item.updatedAt ?? undefined,
     }));
+}
+
+export function normalizeGeminiConversationHistoryLimit(value: number | null | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 80;
+  return Math.max(1, Math.min(500, Math.floor(value)));
+}
+
+async function hydrateGeminiConversationHistory(
+  client: ChromeClient,
+  historyLimit: number,
+  abortSignal?: AbortSignal,
+): Promise<void> {
+  const limit = normalizeGeminiConversationHistoryLimit(historyLimit);
+  const maxSteps = Math.max(3, Math.min(24, Math.ceil(limit / 12)));
+  let stableSteps = 0;
+  let previousCount = 0;
+  for (let step = 0; step < maxSteps; step += 1) {
+    if (abortSignal?.aborted) {
+      const reason = abortSignal.reason;
+      throw reason instanceof Error ? reason : new Error('Gemini conversation history hydration was aborted.');
+    }
+    const { result } = await client.Runtime.evaluate({
+      expression: `(() => {
+        const list = document.querySelector('[data-test-id="all-conversations"]');
+        if (!list) return { ok: false, count: 0, scrollable: false };
+        const count = new Set(Array.from(list.querySelectorAll('a[href*="/app/"]')).map((node) => node.href || node.getAttribute('href') || '')).size;
+        const scrollRoot = (() => {
+          let node = list;
+          while (node && node !== document.body) {
+            if (node.scrollHeight > node.clientHeight + 8) return node;
+            node = node.parentElement;
+          }
+          return document.scrollingElement || document.documentElement;
+        })();
+        const before = scrollRoot.scrollTop;
+        scrollRoot.scrollTop = scrollRoot.scrollHeight;
+        scrollRoot.dispatchEvent(new Event('scroll', { bubbles: true }));
+        return {
+          ok: true,
+          count,
+          scrollable: scrollRoot.scrollHeight > scrollRoot.clientHeight + 8,
+          moved: scrollRoot.scrollTop !== before,
+        };
+      })()`,
+      returnByValue: true,
+    });
+    const state = result?.value as { ok?: boolean; count?: number; scrollable?: boolean; moved?: boolean } | undefined;
+    const count = typeof state?.count === 'number' ? state.count : 0;
+    if (!state?.ok || count >= limit) return;
+    stableSteps = count > previousCount ? 0 : stableSteps + 1;
+    previousCount = count;
+    if (!state.scrollable || (!state.moved && stableSteps >= 2)) return;
+    await sleep(500);
+  }
 }
 
 async function navigateToGeminiCreatePage(client: Pick<ChromeClient, 'Page' | 'Runtime'>): Promise<void> {
@@ -6429,6 +6487,13 @@ export function createGeminiAdapter(): Pick<
       try {
         await assertGeminiExpectedIdentity(client, options);
         await navigateToGeminiConversationSurface(client, targetUrl);
+        if (!normalizedProjectId && options?.includeHistory) {
+          await hydrateGeminiConversationHistory(
+            client,
+            normalizeGeminiConversationHistoryLimit(options.historyLimit),
+            options.abortSignal,
+          );
+        }
         return await scrapeGeminiConversations(client, normalizedProjectId ?? undefined);
       } finally {
         await client.close().catch(() => undefined);

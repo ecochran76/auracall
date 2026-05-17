@@ -19,6 +19,7 @@ import { registerApiStatusTool } from './tools/apiStatus.js';
 import { registerApiOpsBrowserStatusTool } from './tools/apiOpsBrowserStatus.js';
 import { registerRuntimeInspectTool } from './tools/runtimeInspect.js';
 import { registerRuntimeRunsRecentTool } from './tools/runtimeRunsRecent.js';
+import { registerRunArchiveTools } from './tools/runArchive.js';
 import { registerConfigEntityTools } from './tools/configEntities.js';
 import { registerProjectEnsureTool } from './tools/projectEnsure.js';
 import { registerAgentSetupPackageTool } from './tools/agentSetupPackage.js';
@@ -63,6 +64,7 @@ import {
   createProjectEnsureService,
   type ProjectEnsureService,
 } from '../projects/projectEnsureService.js';
+import { createRunArchiveService } from '../runtime/archiveService.js';
 
 export interface McpServiceBundle {
   resolvedUserConfig: ResolvedUserConfig;
@@ -74,6 +76,7 @@ export interface McpServiceBundle {
   accountMirrorRefreshService: ReturnType<typeof createAccountMirrorRefreshService>;
   accountMirrorCatalogService: ReturnType<typeof createAccountMirrorCatalogService>;
   accountMirrorCompletionService: ReturnType<typeof createAccountMirrorCompletionService>;
+  runArchiveService: ReturnType<typeof createRunArchiveService>;
   agentTeamConfigService: AgentTeamConfigService;
   projectEnsureService: ProjectEnsureService;
   agentSetupPackageService: AgentSetupPackageService;
@@ -124,6 +127,9 @@ export async function startMcpServer(): Promise<void> {
   registerApiOpsBrowserStatusTool(server);
   registerRuntimeRunsRecentTool(server);
   registerRuntimeInspectTool(server);
+  registerRunArchiveTools(server, {
+    service: services.runArchiveService,
+  });
   registerConfigEntityTools(server, {
     service: services.agentTeamConfigService,
   });
@@ -234,6 +240,7 @@ export async function createMcpServicesFromConfig(
   const responseBatchService = createResponseBatch({
     responsesService,
   });
+  const runArchiveService = createRunArchiveService();
   const accountMirrorPersistence = createAccountMirrorPersistence({
     config: resolvedUserConfig as Record<string, unknown>,
   });
@@ -273,6 +280,7 @@ export async function createMcpServicesFromConfig(
     resolvedUserConfig,
     responsesService,
     responseBatchService,
+    runArchiveService,
     mediaGenerationService,
     workbenchCapabilityReporter,
     accountMirrorStatusRegistry,

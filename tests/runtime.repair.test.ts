@@ -88,6 +88,89 @@ describe('runtime repair posture', () => {
 
     expect(
       classifyExecutionRunRepairPosture({
+        now: '2026-04-11T11:04:00.000Z',
+        reconciliation: {
+          runId: 'run_active_moved_on',
+          leaseId: 'lease_1',
+          leaseOwnerId: 'runner:active',
+          leaseExpiresAt: '2026-04-11T11:03:00.000Z',
+          status: 'active-runner',
+          reason: null,
+          runner: createExecutionRunnerRecord({
+            id: 'runner:active',
+            hostId: 'host:wsl-dev-1',
+            startedAt: '2026-04-11T10:59:00.000Z',
+            lastHeartbeatAt: '2026-04-11T11:04:00.000Z',
+            expiresAt: '2026-04-11T11:10:00.000Z',
+            lastActivityAt: '2026-04-11T11:03:30.000Z',
+            lastClaimedRunId: 'run_after_expired_lease',
+            serviceIds: ['chatgpt'],
+            runtimeProfileIds: ['default'],
+          }),
+        },
+      }),
+    ).toMatchObject({
+      posture: 'locally-reclaimable',
+      reason: 'active lease owner stopped renewing the expired lease',
+    });
+
+    expect(
+      classifyExecutionRunRepairPosture({
+        now: '2026-04-11T11:10:00.000Z',
+        reconciliation: {
+          runId: 'run_active_restarted',
+          leaseId: 'lease_1',
+          leaseOwnerId: 'runner:active',
+          leaseExpiresAt: '2026-04-11T11:03:00.000Z',
+          status: 'active-runner',
+          reason: null,
+          runner: createExecutionRunnerRecord({
+            id: 'runner:active',
+            hostId: 'host:wsl-dev-1',
+            startedAt: '2026-04-11T11:08:00.000Z',
+            lastHeartbeatAt: '2026-04-11T11:10:00.000Z',
+            expiresAt: '2026-04-11T11:15:00.000Z',
+            lastClaimedRunId: 'run_after_restart',
+            serviceIds: ['chatgpt'],
+            runtimeProfileIds: ['default'],
+          }),
+        },
+      }),
+    ).toMatchObject({
+      posture: 'locally-reclaimable',
+      reason: 'active lease owner stopped renewing the expired lease',
+    });
+
+    expect(
+      classifyExecutionRunRepairPosture({
+        now: '2026-04-11T11:10:00.000Z',
+        reconciliation: {
+          runId: 'run_active_stuck_same_claim',
+          leaseId: 'lease_1',
+          leaseOwnerId: 'runner:active',
+          leaseExpiresAt: '2026-04-11T11:03:00.000Z',
+          status: 'active-runner',
+          reason: null,
+          runner: createExecutionRunnerRecord({
+            id: 'runner:active',
+            hostId: 'host:wsl-dev-1',
+            startedAt: '2026-04-11T10:59:00.000Z',
+            lastHeartbeatAt: '2026-04-11T11:10:00.000Z',
+            expiresAt: '2026-04-11T11:15:00.000Z',
+            lastActivityAt: '2026-04-11T11:02:30.000Z',
+            lastClaimedRunId: 'run_active_stuck_same_claim',
+            serviceIds: ['chatgpt'],
+            runtimeProfileIds: ['default'],
+          }),
+        },
+      }),
+    ).toMatchObject({
+      posture: 'locally-reclaimable',
+      reason: 'active lease owner stopped renewing the expired lease',
+    });
+
+    expect(
+      classifyExecutionRunRepairPosture({
         now: '2026-04-11T11:02:00.000Z',
         reconciliation: {
           runId: 'run_stale_not_expired',

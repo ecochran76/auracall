@@ -1,4 +1,7 @@
-import { describe, expect, test, vi } from 'vitest';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import {
   mapChatgptLibraryFilesToArtifacts,
   mapGrokAccountFilesToMediaManifest,
@@ -7,9 +10,32 @@ import {
   readBoundedChatgptLibraryInventory,
   readBoundedProjects,
   readBoundedGrokAccountFileInventory,
+  shouldReadProjectConversationsForAccountMirror,
 } from '../../src/accountMirror/chatgptMetadataCollector.js';
+import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
+import { listDomDriftObservations } from '../../src/browser/domDriftObservations.js';
 
 describe('ChatGPT account mirror metadata collector', () => {
+  const cleanup: string[] = [];
+
+  afterEach(async () => {
+    setAuracallHomeDirOverrideForTest(null);
+    await Promise.all(cleanup.splice(0).map((entry) => fs.rm(entry, { recursive: true, force: true })));
+  });
+
+  async function useTempAuracallHome() {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-mirror-collector-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    return homeDir;
+  }
+
+  test('only fans out project conversations for ChatGPT account mirrors', () => {
+    expect(shouldReadProjectConversationsForAccountMirror('chatgpt')).toBe(true);
+    expect(shouldReadProjectConversationsForAccountMirror('gemini')).toBe(false);
+    expect(shouldReadProjectConversationsForAccountMirror('grok')).toBe(false);
+  });
+
   test('can tolerate transient provider project route failures for Gemini live follow', async () => {
     const client = {
       listProjects: vi.fn(async () => {
@@ -475,13 +501,19 @@ describe('ChatGPT account mirror metadata collector', () => {
   });
 
   test('tolerates Grok account-files drift without failing metadata collection', async () => {
+    await useTempAuracallHome();
     const client = {
       listAccountFiles: vi.fn(async () => {
         throw new Error('files page changed');
       }),
     };
 
-    const inventory = await readBoundedGrokAccountFileInventory(client, 8);
+    const inventory = await readBoundedGrokAccountFileInventory(client, 8, {
+      observation: {
+        provider: 'grok',
+        runtimeProfileId: 'default',
+      },
+    });
 
     expect(inventory).toEqual({
       artifacts: [],
@@ -490,6 +522,90 @@ describe('ChatGPT account mirror metadata collector', () => {
       truncated: false,
       cursor: null,
     });
+    await expect(listDomDriftObservations({ service: 'grok', surface: 'account-mirror-account-files' }))
+      .resolves.toMatchObject({
+        count: 1,
+        data: [
+          expect.objectContaining({
+            service: 'grok',
+            surface: 'account-mirror-account-files',
+            action: 'list-account-files',
+            fallbackKind: 'read-failure-tolerated',
+            metadata: expect.objectContaining({
+              runtimeProfileId: 'default',
+              errorMessage: 'files page changed',
+            }),
+          }),
+        ],
+      });
+  });
+
+  test('adds bounded page evidence to lazy-follow drift observations when DevTools is available', async () => {
+    await useTempAuracallHome();
+    const runtimeKey = 'Runtime';
+    const pageKey = 'Page';
+    const cdpClient = Object.assign(
+      {
+        close: vi.fn(async () => undefined),
+      },
+      {
+        [runtimeKey]: {
+          enable: vi.fn(async () => undefined),
+          evaluate: vi.fn(async () => ({
+            result: {
+              value: {
+                url: 'https://grok.com/files',
+                title: 'Files - Grok',
+                readyState: 'complete',
+                visibleCounts: { buttons: 2, links: 3 },
+                visibleLabels: { buttons: ['Download', 'Share'] },
+              },
+            },
+          })),
+        },
+      },
+      {
+        [pageKey]: {
+          enable: vi.fn(async () => undefined),
+          captureScreenshot: vi.fn(async () => ({
+            data: Buffer.from('not-a-real-png').toString('base64'),
+          })),
+        },
+      },
+    );
+    const client = {
+      listAccountFiles: vi.fn(async () => {
+        throw new Error('files page changed');
+      }),
+      connectDevTools: vi.fn(async () => ({
+        port: 45011,
+        client: cdpClient,
+      })),
+    };
+
+    await readBoundedGrokAccountFileInventory(client, 8, {
+      observation: {
+        provider: 'grok',
+        runtimeProfileId: 'default',
+        client,
+      },
+    });
+
+    const observations = await listDomDriftObservations({ service: 'grok', surface: 'account-mirror-account-files' });
+    expect(observations.data[0]?.metadata).toMatchObject({
+      pageEvidence: {
+        url: 'https://grok.com/files',
+        title: 'Files - Grok',
+        readyState: 'complete',
+        visibleCounts: { buttons: 2, links: 3 },
+        visibleLabels: { buttons: ['Download', 'Share'] },
+        screenshot: {
+          mimeType: 'image/png',
+          bytes: expect.any(Number),
+        },
+      },
+    });
+    expect(client.connectDevTools).toHaveBeenCalledTimes(1);
   });
 
   test('infers Grok media type from URL and MIME type', () => {

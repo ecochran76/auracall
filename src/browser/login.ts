@@ -163,7 +163,7 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
     managedProfileDir: manualLoginProfileDir,
     managedProfileName: chromeProfile,
     sourceCookiePath: bootstrapCookiePath ?? cookiePath ?? null,
-    seedPolicy: managedProfileSeedPolicy ?? 'reseed-if-source-newer',
+    seedPolicy: managedProfileSeedPolicy ?? 'bootstrap-only',
     logger: (message) => console.log(`[login] ${message}`),
   });
   if (bootstrapResult.cloned) {

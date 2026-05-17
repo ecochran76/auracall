@@ -1734,6 +1734,12 @@ export abstract class LlmService {
         name: globalIdentity.name,
         handle: globalIdentity.handle,
         email: globalIdentity.email,
+        accountLevel: globalIdentity.accountLevel,
+        accountPlanType: globalIdentity.accountPlanType,
+        accountStructure: globalIdentity.accountStructure,
+        capabilityProfile: globalIdentity.capabilityProfile,
+        proAccess: globalIdentity.proAccess,
+        deepResearchAccess: globalIdentity.deepResearchAccess,
         source: 'config',
       };
     }
@@ -1756,6 +1762,12 @@ export abstract class LlmService {
       name: identity.name,
       handle: identity.handle,
       email: identity.email,
+      accountLevel: identity.accountLevel,
+      accountPlanType: identity.accountPlanType,
+      accountStructure: identity.accountStructure,
+      capabilityProfile: identity.capabilityProfile,
+      proAccess: identity.proAccess,
+      deepResearchAccess: identity.deepResearchAccess,
       source: profileIdentity ? 'profile' : 'config',
     };
   }

@@ -885,6 +885,10 @@ describe('configured stored-step executor', () => {
         services: {
           chatgpt: {
             url: 'https://chatgpt.com/g/g-p-observations',
+            identity: {
+              email: 'consult@polymerconsultinggroup.com',
+              accountLevel: 'Pro',
+            },
           },
         },
         runtimeProfiles: {
@@ -946,6 +950,11 @@ describe('configured stored-step executor', () => {
           manualLoginWaitForSession: false,
           composerTool: 'deep-research',
           deepResearchPlanAction: 'edit',
+          expectedUserIdentity: expect.objectContaining({
+            email: 'consult@polymerconsultinggroup.com',
+            accountLevel: 'Pro',
+          }),
+          expectedServiceAccountId: 'service-account:chatgpt:consult@polymerconsultinggroup.com',
         }),
       }),
     );
@@ -958,7 +967,7 @@ describe('configured stored-step executor', () => {
       browserProfileId: 'default',
       agentId: 'auracall-chatgpt-observer',
       projectId: 'g-p-observations',
-      configuredUrl: 'https://chatgpt.com/g/g-p-observations',
+      configuredUrl: 'https://chatgpt.com/g/g-p-observations/project',
       desiredModel: 'GPT-5.2',
       chatgptDeepResearchStage: 'plan-edit-opened',
       chatgptDeepResearchPlanAction: 'edit',
@@ -985,6 +994,292 @@ describe('configured stored-step executor', () => {
           observedAt: '2026-04-15T21:20:07.000Z',
         },
       ],
+    });
+  });
+
+  it('converts ChatGPT passive runtime evidence into lease heartbeats and live service state', async () => {
+    const runtimeEvidenceHeartbeats: unknown[] = [];
+    const runBrowserModeImpl = vi.fn(async (options: BrowserRunOptions) => {
+      await options.runtimeHintCb?.({
+        chromePort: 45012,
+        chromeHost: '127.0.0.1',
+        chromeTargetId: 'target-evidence',
+        tabUrl: 'https://chatgpt.com/c/evidence-chat',
+        conversationId: 'evidence-chat',
+      });
+      await options.runtimeEvidenceCb?.({
+        observation: {
+          state: 'thinking',
+          source: 'browser-service',
+          observedAt: '2026-04-15T21:30:00.000Z',
+          evidenceRef: 'chatgpt-passive-dom-thinking',
+          confidence: 'medium',
+        },
+        runtime: {
+          chromePort: 45012,
+          chromeHost: '127.0.0.1',
+          chromeTargetId: 'target-evidence',
+          tabUrl: 'https://chatgpt.com/c/evidence-chat',
+          conversationId: 'evidence-chat',
+        },
+      });
+      expect(
+        readLiveRuntimeRunServiceState({
+          runId: 'teamrun_chatgpt_evidence_1',
+          stepId: 'teamrun_chatgpt_evidence_1:step:1',
+          service: 'chatgpt',
+        }),
+      ).toMatchObject({
+        state: 'thinking',
+        source: 'browser-service',
+        evidenceRef: 'chatgpt-passive-dom-thinking',
+        confidence: 'medium',
+        observedAt: '2026-04-15T21:30:00.000Z',
+      });
+      return {
+        answerText: 'AURACALL_CHATGPT_EVIDENCE_OK',
+        answerMarkdown: 'AURACALL_CHATGPT_EVIDENCE_OK',
+        tookMs: 900,
+        answerTokens: 10,
+        answerChars: 28,
+        tabUrl: 'https://chatgpt.com/c/evidence-chat',
+        conversationId: 'evidence-chat',
+      };
+    });
+
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        runtimeProfiles: {
+          default: {
+            engine: 'browser',
+            defaultService: 'chatgpt',
+            browserProfile: 'default',
+            services: {
+              chatgpt: {
+                manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+              },
+            },
+          },
+        },
+      },
+      { runBrowserModeImpl },
+    );
+
+    await executeStoredRunStep?.({
+      record: {
+        runId: 'teamrun_chatgpt_evidence_1',
+        revision: 1,
+        bundle: {
+          run: {
+            id: 'teamrun_chatgpt_evidence_1',
+          },
+        },
+      } as never,
+      step: {
+        id: 'teamrun_chatgpt_evidence_1:step:1',
+        agentId: 'chatgpt-evidence-agent',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        service: 'chatgpt',
+        input: {
+          prompt: 'Reply exactly with AURACALL_CHATGPT_EVIDENCE_OK',
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+      } as never,
+      runtimeEvidence: {
+        heartbeat: vi.fn(async (evidence) => {
+          runtimeEvidenceHeartbeats.push(evidence);
+        }),
+      },
+    } as never);
+
+    expect(runBrowserModeImpl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        runtimeHintCb: expect.any(Function),
+        runtimeEvidenceCb: expect.any(Function),
+      }),
+    );
+    expect(runtimeEvidenceHeartbeats).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          state: 'browser-runtime-hint',
+          source: 'browser-service',
+          evidenceRef: 'https://chatgpt.com/c/evidence-chat',
+        }),
+        expect.objectContaining({
+          observedAt: '2026-04-15T21:30:00.000Z',
+          state: 'thinking',
+          source: 'browser-service',
+          evidenceRef: 'chatgpt-passive-dom-thinking',
+          confidence: 'medium',
+          details: expect.objectContaining({
+            service: 'chatgpt',
+            runtimeProfileId: 'default',
+            browserProfileId: 'default',
+            agentId: 'chatgpt-evidence-agent',
+            chromeTargetId: 'target-evidence',
+            tabUrl: 'https://chatgpt.com/c/evidence-chat',
+            conversationId: 'evidence-chat',
+          }),
+        }),
+      ]),
+    );
+    expect(
+      readLiveRuntimeRunServiceState({
+        runId: 'teamrun_chatgpt_evidence_1',
+        stepId: 'teamrun_chatgpt_evidence_1:step:1',
+        service: 'chatgpt',
+      }),
+    ).toBeNull();
+  });
+
+  it('reattaches recovered stranded ChatGPT steps to the submitted tab instead of replaying the prompt', async () => {
+    const runBrowserModeImpl = vi.fn(async () => {
+      throw new Error('prompt replay should not run');
+    });
+    const resumeBrowserSessionImpl = vi.fn(async () => ({
+      answerText: 'AURACALL_REATTACHED_OK',
+      answerMarkdown: 'AURACALL_REATTACHED_OK',
+    }));
+    const runtimeEvidenceHeartbeat = vi.fn(async () => undefined);
+
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        runtimeProfiles: {
+          default: {
+            engine: 'browser',
+            defaultService: 'chatgpt',
+            browserProfile: 'default',
+            services: {
+              chatgpt: {
+                manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+              },
+            },
+          },
+        },
+      },
+      { runBrowserModeImpl, resumeBrowserSessionImpl },
+    );
+
+    const result = await executeStoredRunStep?.({
+      record: {
+        runId: 'teamrun_chatgpt_recovered_1',
+        revision: 3,
+        bundle: {
+          run: {
+            id: 'teamrun_chatgpt_recovered_1',
+            initialInputs: {},
+          },
+          events: [
+            {
+              id: 'teamrun_chatgpt_recovered_1:event:runtime',
+              runId: 'teamrun_chatgpt_recovered_1',
+              type: 'note-added',
+              createdAt: '2026-04-15T21:35:00.000Z',
+              leaseId: 'teamrun_chatgpt_recovered_1:lease:1',
+              note: 'lease heartbeat from runner:http-responses:127.0.0.1:18095',
+              payload: {
+                runtimeEvidence: {
+                  observedAt: '2026-04-15T21:35:00.000Z',
+                  state: 'thinking',
+                  source: 'browser-service',
+                  evidenceRef: 'chatgpt-passive-dom-probe',
+                  confidence: 'low',
+                  details: {
+                    service: 'chatgpt',
+                    runtimeProfileId: 'default',
+                    browserProfileId: 'default',
+                    agentId: 'chatgpt-recovered-agent',
+                    chromePort: 45012,
+                    chromeHost: '127.0.0.1',
+                    chromeTargetId: 'target-restart',
+                    tabUrl: 'https://chatgpt.com/c/recovered-chat',
+                    conversationId: 'recovered-chat',
+                  },
+                },
+              },
+            },
+            {
+              id: 'teamrun_chatgpt_recovered_1:event:recovered',
+              runId: 'teamrun_chatgpt_recovered_1',
+              type: 'note-added',
+              createdAt: '2026-04-15T21:36:00.000Z',
+              stepId: 'teamrun_chatgpt_recovered_1:step:1',
+              note: 'recovered stranded running step for host replay',
+              payload: {
+                source: 'service-host',
+              },
+            },
+          ],
+        },
+      } as never,
+      step: {
+        id: 'teamrun_chatgpt_recovered_1:step:1',
+        agentId: 'chatgpt-recovered-agent',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        service: 'chatgpt',
+        input: {
+          prompt: 'Reply exactly with AURACALL_REATTACHED_OK',
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+      } as never,
+      runtimeEvidence: {
+        heartbeat: runtimeEvidenceHeartbeat,
+      },
+    });
+
+    expect(runBrowserModeImpl).not.toHaveBeenCalled();
+    expect(resumeBrowserSessionImpl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chromePort: 45012,
+        chromeHost: '127.0.0.1',
+        chromeTargetId: 'target-restart',
+        tabUrl: 'https://chatgpt.com/c/recovered-chat',
+        conversationId: 'recovered-chat',
+      }),
+      expect.objectContaining({
+        target: 'chatgpt',
+        manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+      }),
+      expect.any(Function),
+      expect.objectContaining({
+        promptPreview: expect.stringContaining('Reply exactly with AURACALL_REATTACHED_OK'),
+        waitForAssistantResponse: expect.any(Function),
+      }),
+    );
+    expect(runtimeEvidenceHeartbeat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        state: 'thinking',
+        source: 'browser-service',
+        evidenceRef: 'chatgpt-reattach-existing-tab',
+        confidence: 'medium',
+        details: expect.objectContaining({
+          service: 'chatgpt',
+          runtimeProfileId: 'default',
+          browserProfileId: 'default',
+          agentId: 'chatgpt-recovered-agent',
+          chromePort: 45012,
+          chromeHost: '127.0.0.1',
+          chromeTargetId: 'target-restart',
+          tabUrl: 'https://chatgpt.com/c/recovered-chat',
+          conversationId: 'recovered-chat',
+        }),
+      }),
+    );
+    expect(result?.output?.structuredData?.browserRun).toMatchObject({
+      provider: 'chatgpt',
+      service: 'chatgpt',
+      conversationId: 'recovered-chat',
+      tabUrl: 'https://chatgpt.com/c/recovered-chat',
+      chromeTargetId: 'target-restart',
+      runtimeProfileId: 'default',
+      browserProfileId: 'default',
+      agentId: 'chatgpt-recovered-agent',
     });
   });
 
@@ -1016,6 +1311,7 @@ describe('configured stored-step executor', () => {
             services: {
               chatgpt: {
                 manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+                identity: { email: 'researcher@example.com', accountLevel: 'Pro' },
               },
             },
           },
@@ -1218,6 +1514,7 @@ describe('configured stored-step executor', () => {
             services: {
               chatgpt: {
                 manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+                identity: { email: 'researcher@example.com', accountLevel: 'Pro' },
               },
             },
           },
@@ -1279,6 +1576,28 @@ describe('configured stored-step executor', () => {
         tabTargetId: 'target-artifact',
         chromeHost: '127.0.0.1',
         chromePort: 45011,
+        expectedUserIdentity: { email: 'researcher@example.com', accountLevel: 'Pro' },
+        expectedServiceAccountId: 'service-account:chatgpt:researcher@example.com',
+      }),
+    );
+    expect(runBrowserModeImpl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('Create a downloadable/workspace file artifact named exactly legacy_readout.json.'),
+      }),
+    );
+    expect(runBrowserModeImpl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('write the requested output to /mnt/data/legacy_readout.json'),
+      }),
+    );
+    expect(runBrowserModeImpl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('[legacy_readout.json](sandbox:/mnt/data/legacy_readout.json)'),
+      }),
+    );
+    expect(runBrowserModeImpl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining('Do not reply that legacy_readout.json is ready until the file artifact exists'),
       }),
     );
     expect(result?.output?.artifacts).toEqual([
@@ -1301,6 +1620,247 @@ describe('configured stored-step executor', () => {
         },
       ],
     });
+  });
+
+  it('fails declared browser response artifact runs when only status text is returned', async () => {
+    const runBrowserModeImpl = vi.fn(async () => ({
+      answerText: "I'll create the artifact now.",
+      answerMarkdown: "I'll create the artifact now.",
+      tookMs: 700,
+      answerTokens: 8,
+      answerChars: 29,
+      tabUrl: 'https://chatgpt.com/g/proj_registry/c/mock-registry-artifact-missing',
+      conversationId: 'mock-registry-artifact-missing',
+      chromeTargetId: 'target-artifact-missing',
+      chromeHost: '127.0.0.1',
+      chromePort: 45011,
+    }));
+    const browserResponseArtifactMaterializer = vi.fn(async () => ({
+      artifacts: [
+        {
+          id: 'generated-sandbox-ref',
+          kind: 'generated',
+          title: 'legacy_readout.json',
+          path: null,
+          uri: 'sandbox:/mnt/data/legacy_readout.json',
+        },
+      ],
+      notes: ['browser response artifact materialization: discovered=1 materialized=0'],
+    }));
+
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        browserProfiles: {
+          default: {
+            chromePath: '/usr/bin/google-chrome',
+            sourceProfileName: 'Default',
+            managedProfileRoot: '/tmp/auracall/browser-profiles',
+          },
+        },
+        runtimeProfiles: {
+          'registry-chatgpt-profile': {
+            engine: 'browser',
+            defaultService: 'chatgpt',
+            browserProfile: 'default',
+            services: {
+              chatgpt: {
+                manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+              },
+            },
+          },
+        },
+        agents: {
+          'registry-pro-researcher': {
+            runtimeProfile: 'registry-chatgpt-profile',
+            service: 'chatgpt',
+            modelSelector: 'chatgpt:pro-extended',
+            projectId: 'proj_registry',
+          },
+        },
+      },
+      {
+        runBrowserModeImpl,
+        browserResponseArtifactMaterializer,
+      },
+    );
+
+    await expect(executeStoredRunStep?.({
+      record: {
+        runId: 'teamrun_registry_artifact_missing_1',
+        revision: 1,
+        bundle: {
+          run: {
+            id: 'teamrun_registry_artifact_missing_1',
+          },
+        },
+      } as never,
+      step: {
+        id: 'teamrun_registry_artifact_missing_1:step:1',
+        agentId: 'registry-pro-researcher',
+        runtimeProfileId: null,
+        browserProfileId: null,
+        service: null,
+        input: {
+          prompt: 'Create legacy_readout.json and reply when ready.',
+          artifacts: [],
+          structuredData: {
+            metadata: {
+              outputContract: {
+                mode: 'chatgpt_workspace_artifact',
+                artifactFileName: 'legacy_readout.json',
+              },
+            },
+          },
+          notes: [],
+        },
+      } as never,
+    })).rejects.toThrow(/completed without required artifact legacy_readout\.json/);
+  });
+
+  it('retries once in the same ChatGPT conversation when a required artifact reply is status-only', async () => {
+    const runBrowserModeImpl = vi
+      .fn()
+      .mockResolvedValueOnce({
+        answerText: "I'll create the artifact now.",
+        answerMarkdown: "I'll create the artifact now.",
+        tookMs: 700,
+        answerTokens: 8,
+        answerChars: 29,
+        tabUrl: 'https://chatgpt.com/g/proj_registry/c/mock-registry-artifact-retry',
+        conversationId: 'mock-registry-artifact-retry',
+        chromeTargetId: 'target-artifact-retry',
+        chromeHost: '127.0.0.1',
+        chromePort: 45011,
+      })
+      .mockResolvedValueOnce({
+        answerText: '[legacy_readout.json](sandbox:/mnt/data/legacy_readout.json)',
+        answerMarkdown: '[legacy_readout.json](sandbox:/mnt/data/legacy_readout.json)',
+        tookMs: 900,
+        answerTokens: 10,
+        answerChars: 60,
+        tabUrl: 'https://chatgpt.com/g/proj_registry/c/mock-registry-artifact-retry',
+        conversationId: 'mock-registry-artifact-retry',
+        chromeTargetId: 'target-artifact-retry',
+        chromeHost: '127.0.0.1',
+        chromePort: 45011,
+      });
+    const browserResponseArtifactMaterializer = vi
+      .fn()
+      .mockResolvedValueOnce({
+        artifacts: [
+          {
+            id: 'generated-sandbox-ref',
+            kind: 'generated',
+            title: 'legacy_readout.json',
+            path: null,
+            uri: 'sandbox:/mnt/data/legacy_readout.json',
+          },
+        ],
+        notes: ['browser response artifact materialization: discovered=1 materialized=0'],
+      })
+      .mockResolvedValueOnce({
+        artifacts: [
+          {
+            id: 'legacy-readout-json',
+            kind: 'file',
+            title: 'legacy_readout.json',
+            path: '/tmp/legacy_readout.json',
+            uri: null,
+          },
+        ],
+        notes: ['browser response artifact materialization: discovered=1 materialized=1'],
+      });
+
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        browserProfiles: {
+          default: {
+            chromePath: '/usr/bin/google-chrome',
+            sourceProfileName: 'Default',
+            managedProfileRoot: '/tmp/auracall/browser-profiles',
+          },
+        },
+        runtimeProfiles: {
+          'registry-chatgpt-profile': {
+            engine: 'browser',
+            defaultService: 'chatgpt',
+            browserProfile: 'default',
+            services: {
+              chatgpt: {
+                manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+              },
+            },
+          },
+        },
+        agents: {
+          'registry-pro-researcher': {
+            runtimeProfile: 'registry-chatgpt-profile',
+            service: 'chatgpt',
+            modelSelector: 'chatgpt:pro-extended',
+            projectId: 'proj_registry',
+          },
+        },
+      },
+      {
+        runBrowserModeImpl,
+        browserResponseArtifactMaterializer,
+      },
+    );
+
+    const result = await executeStoredRunStep?.({
+      record: {
+        runId: 'teamrun_registry_artifact_retry_1',
+        revision: 1,
+        bundle: {
+          run: {
+            id: 'teamrun_registry_artifact_retry_1',
+          },
+        },
+      } as never,
+      step: {
+        id: 'teamrun_registry_artifact_retry_1:step:1',
+        agentId: 'registry-pro-researcher',
+        runtimeProfileId: null,
+        browserProfileId: null,
+        service: null,
+        input: {
+          prompt: 'Create legacy_readout.json and reply when ready.',
+          artifacts: [],
+          structuredData: {
+            metadata: {
+              outputContract: {
+                mode: 'chatgpt_workspace_artifact',
+                artifactFileName: 'legacy_readout.json',
+              },
+            },
+          },
+          notes: [],
+        },
+      } as never,
+    });
+
+    expect(runBrowserModeImpl).toHaveBeenCalledTimes(2);
+    expect(runBrowserModeImpl).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      prompt: expect.stringContaining('Your previous reply did not provide a downloadable legacy_readout.json artifact.'),
+      attachments: [],
+      config: expect.objectContaining({
+        conversationId: 'mock-registry-artifact-retry',
+        url: 'https://chatgpt.com/g/proj_registry/c/mock-registry-artifact-retry',
+        chatgptUrl: 'https://chatgpt.com/g/proj_registry/c/mock-registry-artifact-retry',
+      }),
+    }));
+    expect(browserResponseArtifactMaterializer).toHaveBeenCalledTimes(2);
+    expect(result?.output?.artifacts).toEqual([
+      {
+        id: 'legacy-readout-json',
+        kind: 'file',
+        title: 'legacy_readout.json',
+        path: '/tmp/legacy_readout.json',
+        uri: null,
+      },
+    ]);
+    expect(result?.output?.notes).toContain('browser response artifact correction: retrying once in the same ChatGPT conversation');
+    expect(result?.output?.summary).toContain('legacy_readout.json');
   });
 
   it('keeps exact ChatGPT agent model pins ahead of semantic selector defaults', async () => {

@@ -109,6 +109,13 @@ curl -s http://auracall.localhost/v1/response-batches \
   -H "Content-Type: application/json" \
   -d '{"limits":{"maxConcurrentRuns":1,"maxBrowserInteractionsPerMinute":8},"requests":[{"model":"agent:instant-chatgpt-ecochran76","input":"Job 1"},{"model":"agent:instant-chatgpt-ecochran76","input":"Job 2"}]}'
 
+# ChatGPT tenant-wide defaults apply across batches and one-shot responses:
+# at most 4 concurrent chats, 120 chat starts per hour, and 240 chat starts per day.
+# Read configured limits from /status.tenantExecutionLimits.
+# Add ?tenantExecutionLimits=usage for lease/event-derived usage counters.
+# Override with services.chatgpt.tenantLimits or
+# profiles.<name>.services.chatgpt.tenantLimits when a tenant needs a narrower budget.
+
 # Open the local read-only browser operator dashboard
 xdg-open http://auracall.localhost/ops/browser
 
@@ -152,6 +159,10 @@ Current browser-mode default posture:
   `auracall --profile <name> login --target chatgpt` instead of waiting in the
   hidden/minimized automation window; API readback also includes those
   recovery fields in `metadata.executionSummary.failureSummary.details`
+- failed browser runs can still expose deliberate recovery artifacts in
+  `output[]`; ChatGPT JSON-object runs that time out with a large unparseable
+  best snapshot now persist that snapshot as an artifact for caller-side
+  quarantine/retry workflows
 - managed browser response/chat runs now wait through the browser-service
   operation dispatcher when another operation owns the same managed browser
   profile; login/setup/human-verification flows still surface busy state
@@ -182,7 +193,8 @@ Terminology note:
 - Operators can poll any persisted response/team/media run from the CLI with
   `auracall run status <id>` or `auracall run status <id> --json`; this uses
   the same `auracall_run_status` envelope as API `GET /v1/runs/{run_id}/status`
-  and MCP `run_status`.
+  and MCP `run_status`, including timing and recommended polling details for
+  long-running browser-backed Extended/Pro/Deep Research jobs.
 - CLI media creation uses the same durable media-generation contract as local
   API and MCP through `auracall media generate --provider
   chatgpt|gemini|grok --type image|music|video -p <prompt>`. Use `--no-wait` to return a running media id
@@ -868,6 +880,21 @@ Terminology note:
     - `api serve` defaults timer-driven drain to a 60-second cadence; use
       `--background-drain-interval-ms <ms>` to tune it, or `0` to disable the
       timer
+  - `/status` also reports ChatGPT tenant execution budgets under
+    `tenantExecutionLimits`:
+    - `providers.chatgpt.defaultLimits`
+    - `providers.chatgpt.entries[].tenantKey`
+    - `providers.chatgpt.entries[].runtimeProfileIds`
+    - `providers.chatgpt.entries[].browserProfileIds`
+    - `providers.chatgpt.entries[].limits`
+    - default `/status` keeps usage counters unscanned with
+      `usage.basis = not-requested`
+    - `GET /status?tenantExecutionLimits=usage` adds read-only evidence from
+      persisted active leases and `step-started` events:
+      - `providers.chatgpt.entries[].usage.activeChats`
+      - `providers.chatgpt.entries[].usage.chatsLastHour`
+      - `providers.chatgpt.entries[].usage.chatsLastDay`
+    - this readback does not acquire leases or execute work
   - `/status` now also reports the live persisted local runner identity for
     `api serve` under `runner`:
     - `id`

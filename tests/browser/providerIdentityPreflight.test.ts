@@ -39,7 +39,26 @@ describe('provider identity preflight', () => {
       actualIdentity: { email: 'ecochran76@gmail.com' },
       expectedIdentity: { email: 'consult@polymerconsultinggroup.com' },
       expectedServiceAccountId: 'service-account:chatgpt:consult@polymerconsultinggroup.com',
-    })).toThrow(/chatgpt_identity_mismatch/);
+    })).toThrow(/chatgpt_account_session_drift/);
+
+    expect(() => assertProviderIdentityPreflight({
+      providerId: 'chatgpt',
+      actualIdentity: { email: 'ecochran76@gmail.com' },
+      expectedIdentity: { email: 'consult@polymerconsultinggroup.com' },
+      expectedServiceAccountId: 'service-account:chatgpt:consult@polymerconsultinggroup.com',
+    })).toThrow(/account_session_drift: expected consult@polymerconsultinggroup\.com, found ecochran76@gmail\.com/);
+  });
+
+  test('keeps generic mismatch classification when no service-account binding is available', () => {
+    expect(checkProviderIdentityPreflight({
+      providerId: 'chatgpt',
+      actualIdentity: { email: 'ecochran76@gmail.com' },
+      expectedIdentity: { email: 'consult@polymerconsultinggroup.com' },
+      expectedServiceAccountId: null,
+    })).toMatchObject({
+      ok: false,
+      reason: 'chatgpt_identity_mismatch',
+    });
   });
 
   test('uses a browser-profile fallback only when page identity is absent', () => {
@@ -55,9 +74,10 @@ describe('provider identity preflight', () => {
       actualIdentity: { email: 'wrong@example.com', source: 'google-account-label' },
       fallbackIdentity: { email: 'ecochran76@gmail.com', source: 'managed-profile-google-account' },
       expectedIdentity: { email: 'ecochran76@gmail.com', source: 'profile' },
+      expectedServiceAccountId: 'service-account:gemini:ecochran76@gmail.com',
     })).toMatchObject({
       ok: false,
-      reason: 'gemini_identity_mismatch',
+      reason: 'gemini_account_session_drift',
       actualIdentity: { email: 'wrong@example.com' },
     });
   });
@@ -77,7 +97,38 @@ describe('provider identity preflight', () => {
       expectedServiceAccountId: 'service-account:chatgpt:operator@example.com',
     })).toMatchObject({
       ok: false,
-      reason: 'chatgpt_identity_mismatch',
+      reason: 'chatgpt_account_session_drift',
+    });
+  });
+
+  test('does not accept capability fields as account identity', () => {
+    expect(checkProviderIdentityPreflight({
+      providerId: 'chatgpt',
+      actualIdentity: { email: 'operator@example.com', accountLevel: 'Pro', source: 'auth-session' },
+      expectedIdentity: { accountLevel: 'Pro', source: 'profile' },
+      expectedServiceAccountId: null,
+    })).toMatchObject({
+      ok: false,
+      reason: 'chatgpt_expected_identity_missing',
+    });
+  });
+
+  test('checks service-account binding when it is the only usable account key', () => {
+    expect(checkProviderIdentityPreflight({
+      providerId: 'chatgpt',
+      actualIdentity: { email: 'operator@example.com', accountLevel: 'Pro', source: 'auth-session' },
+      expectedIdentity: { accountLevel: 'Pro', source: 'profile' },
+      expectedServiceAccountId: 'service-account:chatgpt:operator@example.com',
+    })).toMatchObject({ ok: true, reason: null });
+
+    expect(checkProviderIdentityPreflight({
+      providerId: 'chatgpt',
+      actualIdentity: { email: 'wrong@example.com', accountLevel: 'Pro', source: 'auth-session' },
+      expectedIdentity: { accountLevel: 'Pro', source: 'profile' },
+      expectedServiceAccountId: 'service-account:chatgpt:operator@example.com',
+    })).toMatchObject({
+      ok: false,
+      reason: 'chatgpt_account_session_drift',
     });
   });
 });

@@ -3,14 +3,17 @@ import { runBrowserMode, CHATGPT_URL } from '../../src/browserMode.js';
 import { resolveBrowserConfig } from '../../src/browser/config.js';
 import {
   buildThinkingStatusExpressionForTest,
+  buildChatgptProjectDispatchProbeExpressionForTest,
   formatChatgptBlockingSurfaceErrorForTest,
   logChatgptUnexpectedStateForTest,
   resolveBrowserRuntimeEntryContextForTest,
   acquireBrowserExecutionOperationForTest,
+  releaseBrowserExecutionOperationAfterPreflightFailureForTest,
   sanitizeThinkingTextForTest,
   shouldPreserveBrowserOnErrorForTest,
   shouldTreatChatgptAssistantResponseAsStaleForTest,
   resolveManagedBrowserLaunchContextForTest,
+  extractParseableJsonObjectTextForTest,
 } from '../../src/browser/index.js';
 import { BrowserAutomationError } from '../../src/oracle/errors.js';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
@@ -91,6 +94,33 @@ describe('browserMode exports', () => {
         answerMessageId: 'assist-2',
       }),
     ).toBe(false);
+  });
+
+  test('extracts parseable JSON objects from ChatGPT DOM text', () => {
+    expect(parseJsonObject(extractParseableJsonObjectTextForTest('```json\n{"ok":true}\n```') ?? '{}')).toEqual({
+      ok: true,
+    });
+    expect(
+      parseJsonObject(
+        extractParseableJsonObjectTextForTest('ChatGPT said:\n{"title":"A {literal}","items":[{"n":1}]}\nDone') ?? '{}',
+      ),
+    ).toEqual({
+      title: 'A {literal}',
+      items: [{ n: 1 }],
+    });
+    expect(extractParseableJsonObjectTextForTest('{"title":"unfinished"')).toBeNull();
+  });
+
+  test('builds ChatGPT project dispatch probes that accept UUID project routes', () => {
+    const expression = buildChatgptProjectDispatchProbeExpressionForTest(
+      '133ad4c5-b857-4a30-bf17-d951db57c33f',
+      false,
+    );
+
+    expect(expression).toContain('133ad4c5-b857-4a30-bf17-d951db57c33f');
+    expect(expression).toContain('[0-9a-f]{8}-[0-9a-f]{4}');
+    expect(expression).toContain('/project');
+    expect(expression).toContain('/c\\/');
   });
 
   test('resolves managed browser launch context from the typed launch profile', async () => {
@@ -239,6 +269,44 @@ describe('browserMode exports', () => {
         ownerCommand: 'response-run:resp_123:agent_abc',
       });
       await acquired?.release();
+    } finally {
+      setAuracallHomeDirOverrideForTest(null);
+      await fs.rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('browser execution operation can be released after launch preflight failure', async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-browser-operation-preflight-'));
+    setAuracallHomeDirOverrideForTest(tempRoot);
+    const managedProfileDir = path.join(tempRoot, 'browser-profiles', 'default', 'chatgpt');
+    const loggerMessages: string[] = [];
+
+    try {
+      const acquired = await acquireBrowserExecutionOperationForTest({
+        managedProfileDir,
+        target: 'chatgpt',
+        logger: (message) => loggerMessages.push(message),
+        ownerCommand: 'response-run:resp_preflight:agent_test',
+      });
+      expect(acquired?.operation.ownerCommand).toBe('response-run:resp_preflight:agent_test');
+
+      await releaseBrowserExecutionOperationAfterPreflightFailureForTest(
+        acquired,
+        (message) => loggerMessages.push(message),
+        'test launch',
+      );
+
+      const replacement = await acquireBrowserExecutionOperationForTest({
+        managedProfileDir,
+        target: 'chatgpt',
+        logger: (message) => loggerMessages.push(message),
+        queueTimeoutMs: 1,
+        queuePollMs: 1,
+      });
+
+      expect(replacement?.operation.kind).toBe('browser-execution');
+      expect(loggerMessages.some((message) => message.includes('released operation dispatcher lock after test launch failure'))).toBe(true);
+      await replacement?.release();
     } finally {
       setAuracallHomeDirOverrideForTest(null);
       await fs.rm(tempRoot, { recursive: true, force: true });

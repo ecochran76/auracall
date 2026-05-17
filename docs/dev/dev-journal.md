@@ -1,3 +1,22 @@
+## Turn 196 | 2026-05-17
+
+- Goal: make browser-backed response runs keep one prompt per Chrome tab while
+  renewing execution leases from live runtime evidence instead of elapsed time.
+- Change:
+  - local ChatGPT browser runs now open a dedicated prompt tab/target for each
+    dispatch before navigation or prompt submission
+  - the profile-wide browser operation lock is released after prompt submission
+    so another run on the same AuraCall runtime profile can open its own tab
+  - stored-run execution exposes a runtime-evidence heartbeat hook; browser
+    passive observations and runtime hints use it to renew leases
+  - ChatGPT passive DOM polling now emits response/thinking evidence on repeated
+    probes, not only the first state transition
+  - live runtime service state now accepts ChatGPT passive observations during
+    configured browser execution
+- Validation:
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.configuredExecutor.test.ts tests/browser-service/operationDispatcher.test.ts`
+  - `pnpm exec tsc --noEmit --pretty false`
+
 ## Turn 195 | 2026-05-12
 
 - Continued implementation plan:
@@ -29566,3 +29585,166 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     unauthenticated `/v1/archive` 401 pass.
 - Follow-up:
   - add chat-dialog conversation views or archive item detail inspection.
+
+## Turn 150 | 2026-05-17
+
+- Goal: repair ChatGPT browser response-batch dispatch so running prompts use
+  one tab each and browser leases follow runtime evidence.
+- Change:
+  - diagnosed the transcribe-audio handoff as a browser-runner orchestration
+    issue: child runs were marked in progress while one browser prompt held the
+    profile-wide operation lock and sibling work waited without a target.
+  - moved ChatGPT operation-lock release to immediately after the send action.
+  - allowed one host drain pass to execute multiple browser-backed runs when
+    the response batch `maxConcurrentRuns` budget allows it.
+  - kept browser-backed lease refresh tied to runtime target hints and passive
+    DOM observations, and added `chromeTargetId` to run summaries.
+  - fixed a runner-control CAS race found during installed-runtime dogfood:
+    concurrent local-runner heartbeat and activity writes now retry against the
+    latest runner revision instead of terminating the API service.
+- Verification:
+  - focused browser/runtime tests and typecheck pass.
+  - installed user runtime was rebuilt, installed, and restarted under
+    `auracall-api.service`.
+  - installed-runtime live batch
+    `batch_9649777663004ced82df2ee4dd7ad482` completed with two simultaneous
+    active ChatGPT children on the `default` AuraCall runtime profile.
+  - mid-run overlap evidence showed both children in `active-lease` with
+    passive service-state `thinking`; final summaries recorded distinct
+    Chrome target ids:
+    `1FE16A915AA00CE4FA5559800B71B926` and
+    `4193547A19660936FF47A255406ED635`.
+  - final records persisted passive browser observations and lease heartbeat
+    events for both children.
+- Follow-up:
+  - keep future browser-batch smokes focused on installed-runtime behavior and
+    include the mid-run overlap artifact when diagnosing lease semantics.
+
+## Turn 151 | 2026-05-17
+
+- Goal: close the remaining transcribe-audio runtime-profile routing question
+  against the real scoped API key and agent.
+- Validation:
+  - submitted scoped batch `batch_b83cbebd7f7344faa55c0b7591273aaa` with
+    `AURACALL_API_KEY_TRANSCRIBE_AUDIO_TRANSCRIPTS`,
+    `agent:pro-extended-chatgpt-soylei-transcripts`, service `chatgpt`, and
+    AuraCall runtime profile `wsl-chrome-3`.
+  - used synthetic non-private prompts only; no transcript/audio content was
+    included.
+  - captured mid-run overlap at `2026-05-17T18:28:31.808Z`: both child runs
+    were `active-lease` on `wsl-chrome-3` with passive service-state
+    `thinking` and advancing lease heartbeat counts.
+  - batch completed with two successful child responses and no failures or
+    cancellations.
+  - final browser summaries stayed on `wsl-chrome-3` and recorded distinct
+    Chrome target ids:
+    `69276C58F9DD9B95D1A13645F365ED74` and
+    `D067326180F2B5844FAD378384F55C36`.
+  - both final records persisted passive browser observations covering
+    `thinking`, `response-incoming`, and `response-complete`, with 115 lease
+    heartbeat events each.
+- Follow-up:
+  - the remaining question is not runtime-profile routing; future failures in
+    the transcribe-audio lane should be debugged as provider/session or prompt
+    workload issues unless new evidence says otherwise.
+
+## Turn 152 | 2026-05-17
+
+- Goal: add tenant-wide ChatGPT concurrency and chat-start limits above the
+  per-batch knobs.
+- Change:
+  - added `tenantLimits` to service config so ChatGPT budgets can be set at
+    `services.chatgpt.tenantLimits` or
+    `profiles.<name>.services.chatgpt.tenantLimits`.
+  - added a shared tenant execution gate on the HTTP service-host drain path,
+    composed with the existing response-batch gate.
+  - default ChatGPT tenant limits are 4 concurrent chats, 120 chat starts per
+    hour, and 240 chat starts per day.
+  - tenant identity resolves to the configured ChatGPT service-account id when
+    present, with AuraCall runtime profile fallback for unbound tenants.
+- Verification:
+  - `pnpm exec tsc --noEmit --pretty false` passes.
+  - `pnpm vitest run tests/runtime.tenantExecutionLimits.test.ts tests/runtime.responseBatchService.test.ts tests/runtime.serviceHost.test.ts` passes.
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/runtime.tenantExecutionLimits.test.ts` passes.
+  - `pnpm run docs:list` and `git diff --check` pass.
+  - `pnpm run lint` passes with the existing warning-level debt class still
+    reported by Biome.
+  - installed user runtime and `auracall-api.service` were rebuilt/restarted
+    with `pnpm run install:user-runtime-service`.
+  - `systemctl --user status auracall-api.service` shows PID 491038 active, and
+    `/status` reports the same installed runtime process.
+  - installed `dist/src/runtime/serviceHost.js` includes the default host-level
+    execution gate, so targeted host drains do not bypass tenant limits.
+  - `~/.auracall/config.json` now explicitly sets
+    `services.chatgpt.tenantLimits` to 4 concurrent, 120 hourly, and 240 daily.
+- Follow-up:
+  - surface tenant-limit status in an operator-readable API response if future
+    callers need to inspect the budget without reading config.
+
+## Turn 153 | 2026-05-17
+
+- Goal: expose ChatGPT tenant-limit readback through the existing operator
+  status surface.
+- Change:
+  - added `/status.tenantExecutionLimits` with ChatGPT default limits,
+    configured tenant entries, and runtime/browser profile evidence.
+  - kept default `/status` fast by leaving usage counters unscanned unless the
+    operator requests `GET /status?tenantExecutionLimits=usage`.
+  - kept requested usage read-only: active chats come from persisted active
+    leases, and rate counters come from persisted `step-started` events.
+  - documented the status field in README, OpenAI endpoint notes, testing
+    expectations, and agent workflow guidance.
+- Verification:
+  - `pnpm exec tsc --noEmit --pretty false` passes.
+  - `pnpm vitest run tests/runtime.tenantExecutionLimits.test.ts tests/http.responsesServer.test.ts` passes.
+  - `pnpm run docs:list` and `git diff --check` pass.
+  - `pnpm run lint` passes with the existing 192 warning-level Biome
+    diagnostics still reported.
+  - installed user runtime and `auracall-api.service` were rebuilt/restarted
+    with `pnpm run install:user-runtime-service`.
+  - `systemctl --user status auracall-api.service` shows PID 1248161 active.
+  - installed `/status` reports three ChatGPT tenant entries with the 4/120/240
+    limits and `usage.basis = not-requested` by default.
+  - installed `/status?tenantExecutionLimits=usage` reports
+    `usageRequested = true` with runtime-evidence counters.
+
+## Turn 154 | 2026-05-17
+
+- Goal: fix ChatGPT browser-backed lease expiry and restart replay after
+  long-running prompts under `wsl-chrome-3`.
+- Evidence:
+  - a downstream non-private retry finished one readout but two sibling jobs
+    failed with Chrome connection loss after leases expired while ChatGPT was
+    still running.
+  - a follow-up one-item retry stranded after AuraCall restart and was
+    reclaimed without provider progress.
+  - persisted run events showed passive service state had gone quiet before
+    lease expiry even though browser-backed work could still be running.
+- Change:
+  - assistant response polling now emits throttled passive DOM probe evidence
+    while waiting, even when no readable assistant text or thinking label is
+    available yet.
+  - runtime lease heartbeats now persist sanitized runtime evidence, including
+    submitted tab target, URL, and conversation metadata when available.
+  - recovered stranded ChatGPT browser-backed steps now try to reattach to the
+    submitted tab from persisted evidence and refuse blind prompt replay when
+    reattach fails.
+- Verification:
+  - `pnpm exec tsc --noEmit --pretty false` passes.
+  - `pnpm vitest run tests/browser/pageActions.test.ts tests/runtime.runner.test.ts tests/runtime.configuredExecutor.test.ts` passes.
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responseBatchService.test.ts tests/http.responsesServer.test.ts` passes.
+  - installed user runtime and `auracall-api.service` were rebuilt/restarted
+    with `pnpm run install:user-runtime-service`.
+  - live non-private response-batch smoke
+    `batch_35cd6a3b6a7f4cb8be7e265c82dbf9dd` /
+    `resp_98a56a0f6ba942d6ae2320b8b722fd31` used
+    `agent:pro-extended-chatgpt-soylei-transcripts`, restarted
+    `auracall-api.service` after the submitted tab had a ChatGPT conversation
+    URL, recovered through the existing tab, completed, and materialized two
+    local `first_pass_readout.json` files.
+  - final recovery status after the smoke had no reclaimable, active-lease,
+    recoverable-stranded, or stranded runs.
+- Follow-up:
+  - the earlier restart-before-conversation smoke failed terminally with a
+    specific reattach failure instead of replaying the prompt; that is the
+    expected safe behavior when no submitted conversation can be proven.

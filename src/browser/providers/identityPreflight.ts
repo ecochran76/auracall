@@ -3,7 +3,8 @@ import type { BrowserProviderConfig, BrowserProviderListOptions, ProviderUserIde
 export type ProviderIdentityPreflightReason =
   | `${BrowserProviderConfig['id']}_expected_identity_missing`
   | `${BrowserProviderConfig['id']}_identity_not_detected`
-  | `${BrowserProviderConfig['id']}_identity_mismatch`;
+  | `${BrowserProviderConfig['id']}_identity_mismatch`
+  | `${BrowserProviderConfig['id']}_account_session_drift`;
 
 export interface ProviderIdentityPreflightResult {
   ok: boolean;
@@ -70,6 +71,29 @@ function normalizeIdentityComparable(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function expectedIdentityHasAccountKey(identity: ProviderUserIdentity | null): boolean {
+  if (!identity) return false;
+  return Boolean(
+    normalizeIdentityComparable(identity.email) ||
+      normalizeIdentityComparable(identity.handle) ||
+      normalizeIdentityComparable(identity.id) ||
+      normalizeIdentityComparable(identity.name),
+  );
+}
+
+function identityMatchesServiceAccountId(serviceAccountId: string | null, actual: ProviderUserIdentity): boolean | null {
+  if (!serviceAccountId) return null;
+  const expectedKey = normalizeIdentityComparable(serviceAccountId.replace(/^service-account:[^:]+:/i, ''));
+  if (!expectedKey) return null;
+  const actualKeys = [
+    actual.email,
+    actual.handle,
+    actual.id,
+    actual.name,
+  ].map(normalizeIdentityComparable).filter((value): value is string => Boolean(value));
+  return actualKeys.includes(expectedKey);
+}
+
 function identitiesMatch(expected: ProviderUserIdentity, actual: ProviderUserIdentity): boolean {
   const expectedEmail = normalizeIdentityComparable(expected.email);
   if (expectedEmail && expectedEmail !== normalizeIdentityComparable(actual.email)) return false;
@@ -89,7 +113,7 @@ function identitiesMatch(expected: ProviderUserIdentity, actual: ProviderUserIde
   if (expectedAccountStructure && expectedAccountStructure !== normalizeIdentityComparable(actual.accountStructure)) {
     return false;
   }
-  return Boolean(expectedEmail || expectedHandle || expectedId || expectedName || expectedAccountLevel || expectedAccountPlanType || expectedAccountStructure);
+  return Boolean(expectedEmail || expectedHandle || expectedId || expectedName);
 }
 
 export function describeProviderIdentity(identity: ProviderUserIdentity | null | undefined): string | null {
@@ -112,7 +136,9 @@ export function checkProviderIdentityPreflight(input: {
   const actualIdentity =
     normalizeExpectedProviderIdentity(input.actualIdentity) ??
     normalizeExpectedProviderIdentity(input.fallbackIdentity);
-  const reason = (suffix: 'expected_identity_missing' | 'identity_not_detected' | 'identity_mismatch') =>
+  const reason = (
+    suffix: 'expected_identity_missing' | 'identity_not_detected' | 'identity_mismatch' | 'account_session_drift',
+  ) =>
     `${input.providerId}_${suffix}` as ProviderIdentityPreflightReason;
 
   if (!actualIdentity) {
@@ -125,20 +151,32 @@ export function checkProviderIdentityPreflight(input: {
       actualIdentity,
     };
   }
-  if (!expectedIdentity && !expectedServiceAccountId) {
+  const expectedHasAccountKey = expectedIdentityHasAccountKey(expectedIdentity);
+  const serviceAccountMatchesActual = identityMatchesServiceAccountId(expectedServiceAccountId, actualIdentity);
+  if (!expectedHasAccountKey && serviceAccountMatchesActual !== true) {
     return {
       ok: false,
-      reason: reason('expected_identity_missing'),
+      reason: expectedServiceAccountId ? reason('account_session_drift') : reason('expected_identity_missing'),
       providerId: input.providerId,
       expectedServiceAccountId,
       expectedIdentity,
       actualIdentity,
     };
   }
-  if (expectedIdentity && !identitiesMatch(expectedIdentity, actualIdentity)) {
+  if (expectedIdentity && expectedHasAccountKey && !identitiesMatch(expectedIdentity, actualIdentity)) {
     return {
       ok: false,
-      reason: reason('identity_mismatch'),
+      reason: reason(expectedServiceAccountId ? 'account_session_drift' : 'identity_mismatch'),
+      providerId: input.providerId,
+      expectedServiceAccountId,
+      expectedIdentity,
+      actualIdentity,
+    };
+  }
+  if (expectedServiceAccountId && serviceAccountMatchesActual === false) {
+    return {
+      ok: false,
+      reason: reason('account_session_drift'),
       providerId: input.providerId,
       expectedServiceAccountId,
       expectedIdentity,
@@ -177,6 +215,15 @@ export function assertProviderIdentityPreflight(input: {
     preflight.expectedServiceAccountId ??
     `configured ${providerLabel} account`;
   const actual = describeProviderIdentity(preflight.actualIdentity) ?? 'unknown account';
+  if (preflight.reason?.endsWith('_account_session_drift')) {
+    const binding = preflight.expectedServiceAccountId
+      ? ` Bound service account: ${preflight.expectedServiceAccountId}.`
+      : '';
+    throw new Error(
+      `${providerLabel} browser auth preflight failed (${preflight.reason}); account_session_drift: expected ${expected}, found ${actual}.${binding} ` +
+        `The browser/runtime profile binding and the ${providerLabel} app session disagree; switch/sign into the expected account for this AuraCall runtime profile or update the binding before retrying.`,
+    );
+  }
   throw new Error(
     `${providerLabel} browser auth preflight failed (${preflight.reason}); expected ${expected}, found ${actual}.`,
   );

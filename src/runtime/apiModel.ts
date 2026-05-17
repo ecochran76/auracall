@@ -132,6 +132,7 @@ export function createExecutionResponseFromRunRecord(
       service: parsed.service ?? null,
       executionSummary: {
         terminalStepId: terminalStep?.id ?? null,
+        createdAt: parsed.runRecord.run.createdAt ?? null,
         completedAt: terminalStep?.completedAt ?? null,
         lastUpdatedAt: parsed.runRecord.run.updatedAt ?? parsed.runRecord.sharedState.lastUpdatedAt ?? null,
         stepSummaries: readExecutionRunStepSummaries(parsed.runRecord),
@@ -187,6 +188,7 @@ function readExecutionRunBrowserRunSummary(
     service: readString(browserRun.service) ?? readString(browserRun.provider),
     conversationId: readString(browserRun.conversationId),
     tabUrl: readString(browserRun.tabUrl),
+    chromeTargetId: readString(browserRun.chromeTargetId),
     runtimeProfileId: readString(browserRun.runtimeProfileId),
     browserProfileId: readString(browserRun.browserProfileId),
     chatgptDeepResearchStage: readString(browserRun.chatgptDeepResearchStage),
@@ -680,6 +682,9 @@ function readExecutionRunRequestedOutputSummary(
   }
 
   const hasMessageOutput = output.some((item) => item.type === 'message');
+  const hasJsonMessageOutput = output.some((item) =>
+    item.type === 'message' && item.content.some((part) => isParseableJsonObjectText(part.text))
+  );
   const hasArtifactOutput = output.some((item) => item.type === 'artifact') || runRecord.sharedState.artifacts.length > 0;
   const hasStructuredOutput = runRecord.sharedState.structuredOutputs.some(
     (entry) => !isInternalStructuredOutputKey(entry.key),
@@ -696,6 +701,7 @@ function readExecutionRunRequestedOutputSummary(
       format,
       destination,
       hasMessageOutput,
+      hasJsonMessageOutput,
       hasArtifactOutput,
       hasStructuredOutput,
     });
@@ -768,6 +774,7 @@ function resolveRequestedOutputFulfillment(input: {
   format: string | null;
   destination: string | null;
   hasMessageOutput: boolean;
+  hasJsonMessageOutput: boolean;
   hasArtifactOutput: boolean;
   hasStructuredOutput: boolean;
 }): {
@@ -783,7 +790,7 @@ function resolveRequestedOutputFulfillment(input: {
     if (input.hasStructuredOutput) {
       return { fulfilled: true, evidence: 'structured-output' };
     }
-    if (input.hasMessageOutput) {
+    if (input.hasJsonMessageOutput) {
       return { fulfilled: true, evidence: 'message' };
     }
     return { fulfilled: false, evidence: null };
@@ -806,6 +813,27 @@ function isInternalStructuredOutputKey(key: string): boolean {
     key.startsWith('step.localActionOutcomes.') ||
     key.startsWith('human.resume.')
   );
+}
+
+function isParseableJsonObjectText(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  const candidates = [trimmed];
+  const fenced = trimmed.match(/```json\s*([\s\S]*?)\s*```/i) ?? trimmed.match(/```\s*([\s\S]*?)\s*```/);
+  if (fenced?.[1]) {
+    candidates.push(fenced[1].trim());
+  }
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate) as unknown;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return true;
+      }
+    } catch {
+      // Keep checking other candidate shapes.
+    }
+  }
+  return false;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

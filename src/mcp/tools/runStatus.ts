@@ -48,6 +48,19 @@ const runStatusStepShape = z.object({
   service: z.string().nullable().optional(),
 });
 
+const runStatusTimingShape = z.object({
+  createdAt: z.string().nullable().optional(),
+  updatedAt: z.string().nullable().optional(),
+  completedAt: z.string().nullable().optional(),
+  elapsedMs: z.number().int().nonnegative().nullable().optional(),
+  runningForMs: z.number().int().nonnegative().nullable().optional(),
+});
+
+const runStatusPollingShape = z.object({
+  recommendedPollMs: z.number().int().nonnegative(),
+  reason: z.string(),
+});
+
 const runStatusOutputShape = {
   id: z.string(),
   object: z.literal('auracall_run_status'),
@@ -55,6 +68,8 @@ const runStatusOutputShape = {
   status: z.string(),
   updatedAt: z.string().nullable().optional(),
   completedAt: z.string().nullable().optional(),
+  timing: runStatusTimingShape.optional(),
+  polling: runStatusPollingShape.optional(),
   lastEvent: z.unknown().nullable().optional(),
   stepCount: z.number().int().nonnegative().optional(),
   steps: z.array(runStatusStepShape).optional(),

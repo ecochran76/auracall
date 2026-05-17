@@ -71,6 +71,35 @@ over provider-local "first visible menu" heuristics.
   - If the same menu action can be reached from multiple real surfaces, prefer
     `openAndSelectMenuItemFromTriggers(...)` over provider-local
     `try row menu, then header menu` loops.
+  - For dialog commit CTAs that drift between labels like `Create project`,
+    `Create`, and `Continue`, keep the label set in the service manifest and
+    use scoped dialog roots plus `withUiDiagnostics(...)`. Safe fallback to a
+    visible non-disabled submit button is acceptable only inside the confirmed
+    dialog scope, and misses should report visible button labels.
+  - When a scoped fallback succeeds after manifest labels miss, record a DOM
+    drift observation instead of silently baking the discovered label into
+    provider code. Operators can inspect those observations through
+    `/v1/browser/dom-drift-observations` and promote a known mapped
+    observation with `POST /v1/browser/dom-drift-observations/{id}/accept`.
+    Accepted aliases are written to user-scoped service overrides, not the
+    checked-in manifest.
+  - Lazy-follow/account-mirror collectors should record tolerated provider
+    read failures through the same observation store. Do this for silent
+    catch-and-continue paths such as library/files/context probes so a
+    background crawl can keep moving while still surfacing probable DOM drift
+    for later repair.
+  - Keep lazy-follow provider fanout proportional to the surface value and
+    configured interaction rate. ChatGPT currently reads project conversation
+    lists; Grok and Gemini skip that fanout and rely on root/history/files
+    surfaces so one background pass can complete inside the collector timeout.
+  - Gemini root conversation reads should hydrate the left-rail history with a
+    bounded scroll pass when `includeHistory` is requested. Respect the caller's
+    `historyLimit`, stop on stable row counts or non-scrollable rails, and avoid
+    project-conversation fanout in background mirror passes.
+  - When the active browser client is available, attach bounded page evidence:
+    URL/title, document readiness, visible element counts, short visible label
+    lists, and a small capped number of screenshots under
+    `~/.auracall/diagnostics/dom-drift`.
   - Prefer `navigateAndSettle(...)` over raw `Page.navigate(...)` when the app is an SPA or a route/ready race has shown up before.
   - When troubleshooting a miss, enable `pressButton` diagnostics (`logCandidatesOnMiss`) to capture visible labels.
   - Pass scoped diagnostics `context` into `withUiDiagnostics(...)` so the
@@ -102,7 +131,7 @@ over provider-local "first visible menu" heuristics.
    - Return useful error strings when UI elements are missing.
    - Log selector candidates and counts in verbose mode.
    - Prefer package-owned diagnostics and probe helpers when possible so the next repair does not start from raw `eval`.
-   - When a flow is still fragile after the row/menu helper extraction, the next default move is not more provider-local selector glue; it is adopting the upcoming structured diagnostics wrapper from `browser-service-upgrade-backlog.md`.
+   - When a flow is still fragile after the row/menu helper extraction, the next default move is not more provider-local selector glue; it is adopting the structured diagnostics and observation patterns from `browser-service-upgrade-backlog.md`.
 
 ## When to Ask for Browser Inspection
 If the DOM is ambiguous or selectors are inconsistent:

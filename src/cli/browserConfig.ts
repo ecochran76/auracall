@@ -17,7 +17,7 @@ import {
 } from '../services/registry.js';
 import type { DebugPortStrategy } from '../../packages/browser-service/src/types.js';
 
-const DEFAULT_BROWSER_TIMEOUT_MS = 1_200_000;
+const DEFAULT_BROWSER_TIMEOUT_MS = 7_200_000;
 const DEFAULT_BROWSER_INPUT_TIMEOUT_MS = 60_000;
 export interface BrowserFlagOptions {
   auracallProfileName?: string;

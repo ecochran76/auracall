@@ -90,6 +90,21 @@
       - `backgroundDrain.state`
       - `backgroundDrain.paused`
       - `backgroundDrain.lastTrigger`
+    - current expected status also includes ChatGPT tenant execution limits:
+      - `tenantExecutionLimits.object = tenant_execution_limits_status`
+      - `tenantExecutionLimits.providers.chatgpt.defaultLimits`
+      - `tenantExecutionLimits.providers.chatgpt.metrics.tenantCount`
+      - `tenantExecutionLimits.providers.chatgpt.metrics.activeChats`
+      - `tenantExecutionLimits.providers.chatgpt.entries[].tenantKey`
+      - `tenantExecutionLimits.providers.chatgpt.entries[].runtimeProfileIds`
+      - `tenantExecutionLimits.providers.chatgpt.entries[].limits`
+      - default `/status` uses `usage.basis = not-requested`
+      - `GET /status?tenantExecutionLimits=usage` adds usage counters:
+        - `tenantExecutionLimits.providers.chatgpt.entries[].usage.activeChats`
+        - `tenantExecutionLimits.providers.chatgpt.entries[].usage.chatsLastHour`
+        - `tenantExecutionLimits.providers.chatgpt.entries[].usage.chatsLastDay`
+      - usage readback is inspection-only and derives counts from persisted
+        active leases plus `step-started` events
     - current expected status also includes the live local runner heartbeat:
       - `runner.id`
       - `runner.hostId`
@@ -794,6 +809,27 @@
     - while a direct-run step is still executing, the active lease should now
       also be refreshed under the live runner owner instead of relying on the
       initial claim timestamp alone
+    - for browser-backed response runs, lease refreshes should come from
+      runtime evidence: runtime target hints and passive DOM observations such
+      as thinking, response-incoming, and response-complete
+    - long-running ChatGPT response runs must also keep emitting passive DOM
+      probe lease evidence when the provider has not surfaced readable
+      progress text; missing assistant/status text alone is not evidence that
+      the run stopped
+    - after restart recovery, a stranded browser-backed ChatGPT step should
+      reattach to the persisted submitted tab target when available; it should
+      fail for operator review rather than replaying the prompt into a new tab
+      if reattach cannot be proven
+    - response batches that allow more than one browser-backed run should drain
+      up to their `maxConcurrentRuns` budget in one host pass; each ChatGPT
+      child should expose a distinct `browserRunSummary.chromeTargetId`, and
+      active lease heartbeats should advance from runtime evidence rather than
+      from a blind timer
+    - ChatGPT tenant limits should cap the shared drain path across batches and
+      one-shot responses: default 4 concurrent chats, 120 chat starts per hour,
+      and 240 chat starts per day per configured ChatGPT service account, with
+      AuraCall runtime profile fallback when no service account identity is
+      configured. Per-batch limits can only narrow that budget.
     - if that configured runner owner is missing or stale, new local claims
       should be skipped instead of silently falling back to a generic host id
     - `POST /status` run cancellation is now bounded to active locally owned
@@ -1576,7 +1612,7 @@
 - Remaining Grok breadth work after the acceptance bar is archived in `docs/dev/plans/legacy-archive/0024-2026-04-08-grok-remaining-crud-plan.md`. Conversation-scoped file read/list/cache parity is now live for both project and non-project conversations via `auracall conversations files list <conversationId> --target grok [--project-id <id>]`; any resumed mutation follow-up should treat that archive note as background only.
 - Interactive browser onboarding: `pnpm tsx bin/auracall.ts wizard` (preferred first-run path; detects candidate browser/profile sources, writes a browser-profile-backed `~/.auracall/config.json` entry using `browserFamilies.<name>` + `profiles.<name>.browserFamily`, then hands off to the normal setup/login/verification flow). On WSL, prefer the WSL Chrome choice first and keep that primary setup on the Aura-Call `default` profile; treat Windows Chrome as an advanced/manual-debug path in a separate named profile until a live DevTools endpoint is proven.
 - Browser profile/setup inspection: `pnpm tsx bin/auracall.ts doctor --target grok --local-only --prune-browser-state` (reports the managed profile path, inferred source profile, Chrome-level Google-account state from the managed profile `Local State` plus `Default/Preferences`, and dead/legacy `~/.auracall/browser-state.json` entries without attaching to Chrome). Omit `--local-only` to also probe the live signed-in account on managed ChatGPT/Grok sessions. Add `--json` for a machine-readable `auracall.browser-doctor` contract; non-`--local-only` JSON reports embed the stable `browser-tools.doctor-report` contract when a managed browser instance is alive.
-- Scriptable browser onboarding: `pnpm tsx bin/auracall.ts setup --target grok` (inspects the managed profile, opens the managed login profile if needed, refreshes it from the source Chrome profile when the source cookies are newer, then sends a real verification prompt through that same profile). The setup report now includes the detected signed-in account for managed ChatGPT/Grok sessions. Add `--force-reseed-managed-profile` if you want to rebuild the managed profile from the source profile before login. Add `--json` for a machine-readable `auracall.browser-setup` contract; it embeds the before/after `auracall.browser-doctor` reports plus explicit login/verification step status.
+- Scriptable browser onboarding: `pnpm tsx bin/auracall.ts setup --target grok` (inspects the managed profile, opens the managed login profile if needed, preserves existing managed profile state, then sends a real verification prompt through that same profile). The setup report now includes the detected signed-in account for managed ChatGPT/Grok sessions. Add `--force-reseed-managed-profile` if you explicitly want to rebuild the managed profile from the source profile before login. Add `--json` for a machine-readable `auracall.browser-setup` contract; it embeds the before/after `auracall.browser-doctor` reports plus explicit login/verification step status.
 - Alternate-source bootstrap test: add `--browser-bootstrap-cookie-path <path>` to `auracall setup` / `auracall login` when you want to seed the managed Aura-Call profile from a different Chromium profile (for example Windows Brave) while still launching WSL Chrome at runtime.
 - If the alternate source lives on Windows and the Chromium `Network/Cookies` DB is unreadable from WSL, expect the managed profile bootstrap to copy non-cookie auth state only; the browser can still launch, but CRUD/auth verification may stay guest-only until you sign in once in the Aura-Call-managed profile.
 - Grok context sources smoke: `pnpm tsx scripts/verify-grok-context-sources.ts <conversationId> [projectId]` (validates `sources[]` extraction from inline links + Sources sidebar accordions).

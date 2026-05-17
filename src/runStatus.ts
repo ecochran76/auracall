@@ -36,6 +36,19 @@ export interface AuraCallRunStatusArtifactSummary {
   downloadOptions?: string[] | null;
 }
 
+export interface AuraCallRunStatusTiming {
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  completedAt?: string | null;
+  elapsedMs?: number | null;
+  runningForMs?: number | null;
+}
+
+export interface AuraCallRunStatusPolling {
+  recommendedPollMs: number;
+  reason: string;
+}
+
 export interface AuraCallRunStatus {
   id: string;
   object: 'auracall_run_status';
@@ -43,6 +56,8 @@ export interface AuraCallRunStatus {
   status: ExecutionResponseStatus | MediaGenerationStatusSummary['status'];
   updatedAt?: string | null;
   completedAt?: string | null;
+  timing?: AuraCallRunStatusTiming;
+  polling?: AuraCallRunStatusPolling;
   lastEvent?: unknown | null;
   stepCount?: number;
   steps?: AuraCallRunStatusStepSummary[];
@@ -56,6 +71,7 @@ export interface AuraCallRunStatus {
 export interface ReadAuraCallRunStatusDeps {
   responsesService: Pick<ExecutionResponsesService, 'readResponse'>;
   mediaGenerationService: Pick<MediaGenerationService, 'readGeneration'>;
+  now?: () => Date;
 }
 
 export async function readAuraCallRunStatus(
@@ -64,19 +80,25 @@ export async function readAuraCallRunStatus(
 ): Promise<AuraCallRunStatus | null> {
   const response = await deps.responsesService.readResponse(id);
   if (response) {
-    return summarizeResponseRunStatus(response);
+    return summarizeResponseRunStatus(response, deps.now);
   }
 
   const mediaGeneration = await deps.mediaGenerationService.readGeneration(id);
   if (mediaGeneration) {
-    return summarizeMediaRunStatus(summarizeMediaGenerationStatus(mediaGeneration));
+    return summarizeMediaRunStatus(summarizeMediaGenerationStatus(mediaGeneration), deps.now);
   }
 
   return null;
 }
 
-export function summarizeResponseRunStatus(response: ExecutionResponse): AuraCallRunStatus {
+export function summarizeResponseRunStatus(
+  response: ExecutionResponse,
+  now: (() => Date) | undefined = undefined,
+): AuraCallRunStatus {
   const executionSummary = response.metadata?.executionSummary ?? null;
+  const createdAt = executionSummary?.createdAt ?? null;
+  const updatedAt = executionSummary?.lastUpdatedAt ?? null;
+  const completedAt = executionSummary?.completedAt ?? null;
   const steps = executionSummary?.stepSummaries ?? [];
   const artifacts = response.output
     .filter((item) => item.type === 'artifact')
@@ -104,8 +126,16 @@ export function summarizeResponseRunStatus(response: ExecutionResponse): AuraCal
     object: 'auracall_run_status',
     kind: 'response',
     status: response.status,
-    updatedAt: executionSummary?.lastUpdatedAt ?? null,
-    completedAt: executionSummary?.completedAt ?? null,
+    updatedAt,
+    completedAt,
+    timing: summarizeTiming({
+      createdAt,
+      updatedAt,
+      completedAt,
+      status: response.status,
+      now,
+    }),
+    polling: summarizePolling(response.status),
     lastEvent: executionSummary?.orchestrationTimelineSummary?.items?.slice(-1)[0] ?? null,
     stepCount: steps.length,
     steps,
@@ -116,7 +146,10 @@ export function summarizeResponseRunStatus(response: ExecutionResponse): AuraCal
   };
 }
 
-function summarizeMediaRunStatus(summary: MediaGenerationStatusSummary): AuraCallRunStatus {
+function summarizeMediaRunStatus(
+  summary: MediaGenerationStatusSummary,
+  now: (() => Date) | undefined = undefined,
+): AuraCallRunStatus {
   return {
     id: summary.id,
     object: 'auracall_run_status',
@@ -124,6 +157,14 @@ function summarizeMediaRunStatus(summary: MediaGenerationStatusSummary): AuraCal
     status: summary.status,
     updatedAt: summary.updatedAt,
     completedAt: summary.completedAt ?? null,
+    timing: summarizeTiming({
+      createdAt: summary.createdAt,
+      updatedAt: summary.updatedAt,
+      completedAt: summary.completedAt ?? null,
+      status: summary.status,
+      now,
+    }),
+    polling: summarizePolling(summary.status),
     lastEvent: summary.lastEvent ?? null,
     stepCount: 0,
     steps: [],
@@ -152,6 +193,61 @@ function summarizeMediaRunStatus(summary: MediaGenerationStatusSummary): AuraCal
     },
     failure: summary.failure ?? null,
   };
+}
+
+function summarizeTiming(input: {
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  completedAt?: string | null;
+  status: ExecutionResponseStatus | MediaGenerationStatusSummary['status'];
+  now?: () => Date;
+}): AuraCallRunStatusTiming {
+  const current = input.now?.() ?? new Date();
+  const endAt =
+    input.completedAt ??
+    (isTerminalStatus(input.status) ? input.updatedAt ?? null : current.toISOString());
+  const elapsedMs = diffMs(input.createdAt, endAt);
+  return {
+    createdAt: input.createdAt ?? null,
+    updatedAt: input.updatedAt ?? null,
+    completedAt: input.completedAt ?? null,
+    elapsedMs,
+    runningForMs: isTerminalStatus(input.status) ? null : elapsedMs,
+  };
+}
+
+function summarizePolling(
+  status: ExecutionResponseStatus | MediaGenerationStatusSummary['status'],
+): AuraCallRunStatusPolling {
+  if (status === 'in_progress' || status === 'queued' || status === 'running') {
+    return {
+      recommendedPollMs: status === 'queued' ? 5_000 : 15_000,
+      reason:
+        status === 'queued'
+          ? 'queued work can change quickly when a runner becomes available'
+          : 'provider-backed runs may legitimately stay active for minutes to hours',
+    };
+  }
+  return {
+    recommendedPollMs: 0,
+    reason: 'terminal status; no further polling needed',
+  };
+}
+
+function isTerminalStatus(status: ExecutionResponseStatus | MediaGenerationStatusSummary['status']): boolean {
+  return status === 'completed' || status === 'succeeded' || status === 'failed' || status === 'cancelled';
+}
+
+function diffMs(startAt?: string | null, endAt?: string | null): number | null {
+  if (!startAt || !endAt) {
+    return null;
+  }
+  const start = Date.parse(startAt);
+  const end = Date.parse(endAt);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    return null;
+  }
+  return Math.max(0, end - start);
 }
 
 function stringOrNull(value: unknown): string | null {

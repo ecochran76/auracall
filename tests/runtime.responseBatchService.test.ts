@@ -179,6 +179,24 @@ describe('response batch service', () => {
       heartbeatAt: '2026-05-12T15:00:05.000Z',
       expiresAt: '2026-05-12T15:01:05.000Z',
     });
+    const activeFirstRecord = await control.readRun('resp_batch_gate_1');
+    if (!activeFirstRecord) throw new Error('expected first concurrency batch run');
+    await control.persistRun({
+      runId: activeFirstRecord.runId,
+      expectedRevision: activeFirstRecord.revision,
+      bundle: {
+        ...activeFirstRecord.bundle,
+        run: {
+          ...activeFirstRecord.bundle.run,
+          status: 'running',
+        },
+        steps: activeFirstRecord.bundle.steps.map((step) =>
+          step.id === 'resp_batch_gate_1:step:1'
+            ? { ...step, status: 'running', startedAt: '2026-05-12T15:00:05.000Z' }
+            : step,
+        ),
+      },
+    });
     const gate = createResponseBatchExecutionGate({
       control,
       now: () => new Date('2026-05-12T15:00:10.000Z'),
@@ -189,6 +207,14 @@ describe('response batch service', () => {
       allowed: false,
       reason: expect.stringContaining('concurrency limit reached: 1/1'),
     });
+    await control.expireLeases({
+      runId: 'resp_batch_gate_1',
+      now: '2026-05-12T15:01:10.000Z',
+    });
+    const strandedFirstRecord = await control.readRun('resp_batch_gate_1');
+    if (!strandedFirstRecord) throw new Error('expected stranded first concurrency batch run');
+    expect(strandedFirstRecord.bundle.steps.some((step) => step.status === 'running')).toBe(true);
+    await expect(gate(secondConcurrencyRecord)).resolves.toEqual({ allowed: true });
 
     await service.createBatch({
       limits: { maxBrowserInteractionsPerMinute: 1 },

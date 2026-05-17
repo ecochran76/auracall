@@ -96,6 +96,18 @@ function createDirectBundle(runId: string, createdAt: string, status: 'planned' 
   });
 }
 
+function createBrowserDirectBundle(runId: string, createdAt: string) {
+  const bundle = createDirectBundle(runId, createdAt);
+  bundle.run.initialInputs = {
+    ...bundle.run.initialInputs,
+    auracall: {
+      service: 'chatgpt',
+      agent: 'instant-chatgpt-test',
+    },
+  };
+  return bundle;
+}
+
 function createTwoStepBundle(runId: string, createdAt: string, status: 'planned' | 'running' = 'planned') {
   const bundle = createDirectBundle(runId, createdAt, status);
   const stepOne = bundle.steps[0];
@@ -768,6 +780,46 @@ describe('runtime service host', () => {
     expect(result.drained[0]?.record?.bundle.run.status).toBe('succeeded');
   });
 
+  it('executes browser-backed maxRuns candidates concurrently', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await control.createRun(createBrowserDirectBundle('run_host_browser_1', '2026-04-08T15:00:00.000Z'));
+    await control.createRun(createBrowserDirectBundle('run_host_browser_2', '2026-04-08T15:00:01.000Z'));
+
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const host = createExecutionServiceHost({
+      control,
+      ownerId: 'host:test-browser-parallel',
+      now: () => new Date().toISOString(),
+      executeStoredRunStep: async () => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        inFlight -= 1;
+        return {
+          output: {
+            summary: 'browser-backed completion',
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        };
+      },
+    });
+
+    const result = await host.drainRunsOnce({
+      sourceKind: 'direct',
+      maxRuns: 2,
+    });
+
+    expect(result.executedRunIds.sort()).toEqual(['run_host_browser_1', 'run_host_browser_2']);
+    expect(maxInFlight).toBe(2);
+  });
+
   it('honors the execution gate before acquiring a run lease', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
     cleanup.push(homeDir);
@@ -803,6 +855,41 @@ describe('runtime service host', () => {
       },
     ]);
     const stored = await control.readRun('run_host_execution_gate');
+    expect(stored?.bundle.leases).toEqual([]);
+    expect(stored?.bundle.run.status).toBe('planned');
+  });
+
+  it('honors a configured execution gate for targeted host drains', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await control.createRun(createDirectBundle('run_host_default_execution_gate', '2026-04-08T15:00:00.000Z'));
+    const host = createExecutionServiceHost({
+      control,
+      ownerId: 'host:test-default-execution-gate',
+      now: () => '2026-04-08T15:01:00.000Z',
+      executionGate: async () => ({
+        allowed: false,
+        reason: 'configured gate blocked execution',
+      }),
+      executeStoredRunStep: async () => {
+        throw new Error('configured execution gate should prevent execution');
+      },
+    });
+
+    const result = await host.drainRun('run_host_default_execution_gate');
+
+    expect(result).toMatchObject({
+      action: 'drain-run',
+      runId: 'run_host_default_execution_gate',
+      status: 'skipped',
+      drained: false,
+      skipReason: 'execution-gate',
+      reason: 'configured gate blocked execution',
+    });
+    const stored = await control.readRun('run_host_default_execution_gate');
     expect(stored?.bundle.leases).toEqual([]);
     expect(stored?.bundle.run.status).toBe('planned');
   });
@@ -4477,6 +4564,183 @@ describe('runtime service host', () => {
     });
 
     const repairedRecord = await control.readRun('run_detail_repairable_stale');
+    expect(repairedRecord?.bundle.leases[0]?.status).toBe('expired');
+    expect(repairedRecord?.bundle.leases[0]?.releaseReason).toBe('lease expired');
+  });
+
+  it('repairs an expired active-runner lease when the runner has moved on', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await control.createRun(createDirectBundle('run_detail_active_moved_on', '2026-04-08T15:00:00.000Z'));
+    await control.acquireLease({
+      runId: 'run_detail_active_moved_on',
+      leaseId: 'run_detail_active_moved_on:lease:runner',
+      ownerId: 'runner:active-moved-on',
+      acquiredAt: '2026-04-08T15:00:00.000Z',
+      heartbeatAt: '2026-04-08T15:00:20.000Z',
+      expiresAt: '2026-04-08T15:01:00.000Z',
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:active-moved-on',
+        hostId: 'host:http-responses:127.0.0.1:8080',
+        status: 'active',
+        startedAt: '2026-04-08T14:59:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:04:00.000Z',
+        expiresAt: '2026-04-08T15:10:00.000Z',
+        lastActivityAt: '2026-04-08T15:03:30.000Z',
+        lastClaimedRunId: 'run_later_claim',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const host = createExecutionServiceHost({
+      control,
+      runnersControl,
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:05:00.000Z',
+    });
+
+    const result = await host.repairStaleHeartbeatLease('run_detail_active_moved_on');
+
+    expect(result).toEqual({
+      action: 'repair-stale-heartbeat',
+      runId: 'run_detail_active_moved_on',
+      status: 'repaired',
+      repaired: true,
+      reason: 'active lease owner stopped renewing the expired lease',
+      leaseHealthStatus: 'stale-heartbeat',
+      repairPosture: 'locally-reclaimable',
+      reconciliationReason: null,
+    });
+
+    const repairedRecord = await control.readRun('run_detail_active_moved_on');
+    expect(repairedRecord?.bundle.leases[0]?.status).toBe('expired');
+    expect(repairedRecord?.bundle.leases[0]?.releaseReason).toBe('lease expired');
+  });
+
+  it('repairs an expired active lease left on a terminal failed run', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    const bundle = createDirectBundle('run_detail_failed_active_lease', '2026-04-08T15:00:00.000Z');
+    bundle.run.status = 'failed';
+    bundle.sharedState.status = 'failed';
+    await control.createRun(bundle);
+    await control.acquireLease({
+      runId: 'run_detail_failed_active_lease',
+      leaseId: 'run_detail_failed_active_lease:lease:runner',
+      ownerId: 'runner:active-terminal',
+      acquiredAt: '2026-04-08T15:00:00.000Z',
+      heartbeatAt: '2026-04-08T15:00:20.000Z',
+      expiresAt: '2026-04-08T15:01:00.000Z',
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:active-terminal',
+        hostId: 'host:http-responses:127.0.0.1:8080',
+        status: 'active',
+        startedAt: '2026-04-08T14:59:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:04:00.000Z',
+        expiresAt: '2026-04-08T15:10:00.000Z',
+        lastActivityAt: '2026-04-08T14:59:30.000Z',
+        lastClaimedRunId: 'run_detail_failed_active_lease',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const host = createExecutionServiceHost({
+      control,
+      runnersControl,
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:05:00.000Z',
+    });
+
+    const result = await host.repairStaleHeartbeatLease('run_detail_failed_active_lease');
+
+    expect(result).toEqual({
+      action: 'repair-stale-heartbeat',
+      runId: 'run_detail_failed_active_lease',
+      status: 'repaired',
+      repaired: true,
+      reason: 'terminal run had an expired active lease',
+      leaseHealthStatus: 'stale-heartbeat',
+      repairPosture: 'locally-reclaimable',
+      reconciliationReason: 'lease heartbeat expired at 2026-04-08T15:01:00.000Z',
+    });
+
+    const repairedRecord = await control.readRun('run_detail_failed_active_lease');
+    expect(repairedRecord?.bundle.leases[0]?.status).toBe('expired');
+    expect(repairedRecord?.bundle.leases[0]?.releaseReason).toBe('lease expired');
+  });
+
+  it('force-repairs an expired stale-heartbeat lease still claimed by an active runner', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await control.createRun(createDirectBundle('run_detail_force_repair', '2026-04-08T15:00:00.000Z'));
+    await control.acquireLease({
+      runId: 'run_detail_force_repair',
+      leaseId: 'run_detail_force_repair:lease:runner',
+      ownerId: 'runner:active-stuck',
+      acquiredAt: '2026-04-08T15:00:00.000Z',
+      heartbeatAt: '2026-04-08T15:00:20.000Z',
+      expiresAt: '2026-04-08T15:01:00.000Z',
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:active-stuck',
+        hostId: 'host:http-responses:127.0.0.1:8080',
+        status: 'active',
+        startedAt: '2026-04-08T14:59:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:04:00.000Z',
+        expiresAt: '2026-04-08T15:10:00.000Z',
+        lastActivityAt: '2026-04-08T15:00:00.000Z',
+        lastClaimedRunId: 'run_detail_force_repair',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const host = createExecutionServiceHost({
+      control,
+      runnersControl,
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:05:00.000Z',
+    });
+
+    const result = await host.controlOperatorAction({
+      kind: 'lease-repair',
+      action: 'repair-stale-heartbeat',
+      runId: 'run_detail_force_repair',
+      force: true,
+    });
+
+    expect(result).toEqual({
+      kind: 'lease-repair',
+      action: 'repair-stale-heartbeat',
+      runId: 'run_detail_force_repair',
+      status: 'repaired',
+      repaired: true,
+      reason: 'operator forced repair of expired stale-heartbeat lease',
+      leaseHealthStatus: 'stale-heartbeat',
+      repairPosture: 'locally-reclaimable',
+      reconciliationReason: 'lease heartbeat expired at 2026-04-08T15:01:00.000Z',
+    });
+
+    const repairedRecord = await control.readRun('run_detail_force_repair');
     expect(repairedRecord?.bundle.leases[0]?.status).toBe('expired');
     expect(repairedRecord?.bundle.leases[0]?.releaseReason).toBe('lease expired');
   });

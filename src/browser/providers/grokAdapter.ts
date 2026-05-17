@@ -1216,7 +1216,8 @@ async function assertGrokBrowserAuthPreflight(
   const location = preflight.href ? ` at ${preflight.href}` : '';
   throw new Error(
     `Grok browser auth preflight failed (${preflight.reason ?? 'unknown'}${location}); expected ${expected}, found ${actual}. ` +
-      'Clear the managed browser profile login state before retrying.',
+      'Switch/sign into the expected account for this AuraCall runtime profile or update the binding before retrying. ' +
+      'Do not clear, reset, or quarantine the managed browser profile unless an operator explicitly approves that repair.',
   );
 }
 

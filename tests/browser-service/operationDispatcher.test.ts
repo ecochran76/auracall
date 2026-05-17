@@ -26,6 +26,14 @@ describe("operationDispatcher (package)", () => {
 		expect(key).toBe("devtools:localhost:45013");
 	});
 
+	test("scopes raw DevTools endpoint operation keys by target when provided", () => {
+		const key = buildBrowserOperationKey({
+			rawDevTools: { host: "127.0.0.1", port: 45013, targetId: "tab-123" },
+		});
+
+		expect(key).toBe("devtools:127.0.0.1:45013::target:tab-123");
+	});
+
 	test("serializes conflicting in-process operations for the same key", async () => {
 		const dispatcher = createBrowserOperationDispatcher({
 			isOwnerAlive: () => true,

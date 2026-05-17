@@ -42,4 +42,41 @@ describe('ChatGPT llm service', () => {
       }),
     );
   });
+
+  it('passes configured account identity into ChatGPT browser runs', async () => {
+    runBrowserMode.mockClear();
+    const { ChatgptService } = await import('../../src/browser/llmService/providers/chatgptService.js');
+    const service = ChatgptService.create({
+      auracallProfile: 'wsl-chrome-2',
+      services: {
+        chatgpt: {
+          identity: {
+            email: 'consult@polymerconsultinggroup.com',
+            accountLevel: 'Pro',
+          },
+        },
+      },
+      browser: {
+        target: 'chatgpt',
+        modelStrategy: 'select',
+      },
+    } as ResolvedUserConfig);
+
+    await service.runPrompt({
+      prompt: 'Say ok',
+      completionMode: 'prompt_submitted',
+    });
+
+    expect(runBrowserMode).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          expectedUserIdentity: expect.objectContaining({
+            email: 'consult@polymerconsultinggroup.com',
+            accountLevel: 'Pro',
+          }),
+          expectedServiceAccountId: 'service-account:chatgpt:consult@polymerconsultinggroup.com',
+        }),
+      }),
+    );
+  });
 });

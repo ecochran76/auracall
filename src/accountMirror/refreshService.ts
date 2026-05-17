@@ -19,6 +19,7 @@ import {
   type BrowserOperationQueueObservation,
   summarizeBrowserOperationQueueObservationsByKey,
 } from '../browser/operationQueueObservations.js';
+import { recordDomDriftObservation } from '../browser/domDriftObservations.js';
 import type { AccountMirrorProvider } from './politePolicy.js';
 import type {
   AccountMirrorProviderGuardKind,
@@ -332,6 +333,16 @@ export function createAccountMirrorRefreshService(input: {
         const completedAt = now();
         const isIdentityMismatch = error instanceof AccountMirrorIdentityMismatchError;
         const providerGuard = isIdentityMismatch ? null : extractProviderGuard(error, completedAt.getTime());
+        if (!isIdentityMismatch && !providerGuard) {
+          await recordAccountMirrorRefreshDomDriftObservation({
+            provider,
+            runtimeProfileId,
+            requestId,
+            error,
+            dispatcherKey: acquired.operation.key,
+            dispatcherOperationId: acquired.operation.id,
+          });
+        }
         registry.mergeState({ provider, runtimeProfileId }, {
           queued: false,
           running: false,
@@ -376,6 +387,43 @@ export function createAccountMirrorRefreshService(input: {
   };
 }
 
+async function recordAccountMirrorRefreshDomDriftObservation(input: {
+  provider: AccountMirrorProvider;
+  runtimeProfileId: string;
+  requestId: string;
+  error: unknown;
+  dispatcherKey: string | null;
+  dispatcherOperationId: string | null;
+}): Promise<void> {
+  try {
+    await recordDomDriftObservation({
+      service: input.provider,
+      surface: 'account-mirror-refresh',
+      action: 'collect-metadata',
+      expectedLabels: [],
+      observedLabel: null,
+      fallbackKind: classifyRefreshFailureFallback(input.error),
+      metadata: {
+        source: 'accountMirror.refreshService',
+        runtimeProfileId: input.runtimeProfileId,
+        requestId: input.requestId,
+        dispatcherKey: input.dispatcherKey,
+        dispatcherOperationId: input.dispatcherOperationId,
+        errorMessage: errorMessage(input.error),
+      },
+    });
+  } catch {
+    // Drift observations are diagnostic only; refresh failure semantics should
+    // remain governed by the original collector error.
+  }
+}
+
+function classifyRefreshFailureFallback(error: unknown): string {
+  const message = errorMessage(error);
+  if (/timed out/i.test(message)) return 'collector-timeout';
+  return 'collector-failure';
+}
+
 function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
@@ -400,6 +448,10 @@ function withTimeout<T>(
       },
     );
   });
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error ?? 'unknown error');
 }
 
 function getAccountMirrorYieldCause(acquired: BrowserOperationAcquiredResult): AccountMirrorYieldCause | null {

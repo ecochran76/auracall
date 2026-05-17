@@ -1,3 +1,10 @@
+- 2026-05-17: Browser-backed response runs must bind one dispatched prompt to
+  one Chrome tab and keep the execution lease tied to browser evidence. ChatGPT
+  dispatch now opens a dedicated target per prompt, releases the profile-wide
+  browser operation lock after submission, and configured execution renews
+  leases from runtime hints plus passive DOM observations while preserving live
+  service-state readback.
+
 - 2026-05-10: ChatGPT thinking-depth selection must tolerate the prompt
   workbench's selected-depth pill. `ensureThinkingTime(...)` now accepts a
   visible Standard/Extended composer pill as already selected, removes the
@@ -16098,3 +16105,37 @@ browser-stage lifecycle observability, not transcript truncation.
   behind bearer auth. The React Search page accepts an operator key for the
   current browser session only and uses it for read-only `/v1/archive` queries;
   no API key is embedded in source or persisted to local storage.
+- 2026-05-17: Browser-backed response batches must not serialize all ChatGPT
+  children through one profile-wide lock. ChatGPT now releases the browser
+  operation lock immediately after the send action, response-batch drains can
+  execute multiple browser-backed children up to `maxConcurrentRuns`, and final
+  browser run summaries expose `chromeTargetId` for one-running-prompt-per-tab
+  verification.
+- 2026-05-17: Local runner heartbeat and activity updates can legitimately race
+  during browser-backed batch dispatch. Runner-control heartbeat/activity
+  writes now retry after runner-record revision mismatches so a CAS conflict in
+  liveness bookkeeping does not kill the API service while browser runs are
+  active.
+- 2026-05-17: ChatGPT batch concurrency needed a tenant-wide ceiling above
+  per-batch knobs. The shared service-host drain path now composes batch limits
+  with ChatGPT tenant execution limits, defaulting each configured ChatGPT
+  service-account tenant to 4 concurrent chats, 120 chat starts per hour, and
+  240 chat starts per day. Unbound ChatGPT tenants fall back to the AuraCall
+  runtime profile key, and `services.chatgpt.tenantLimits` /
+  `profiles.<name>.services.chatgpt.tenantLimits` can narrow the default.
+- 2026-05-17: Operators need to inspect ChatGPT tenant budgets without reading
+  user-scoped config. `/status.tenantExecutionLimits` now reports configured
+  ChatGPT tenant limits by default; `GET /status?tenantExecutionLimits=usage`
+  adds observed active/chat-start usage derived from persisted active leases and
+  `step-started` events, without acquiring leases or executing work.
+- 2026-05-17: Browser-backed ChatGPT leases must be refreshed by passive DOM
+  inspection, not only by provider text/status changes. Assistant response
+  polling now emits throttled `chatgpt-passive-dom-probe` evidence while waiting,
+  lease heartbeat events persist submitted-tab runtime metadata, and recovered
+  stranded ChatGPT steps reattach to the submitted tab or fail instead of
+  blindly replaying the prompt after a service restart.
+- 2026-05-17: ChatGPT restart recovery needs the same lease-evidence stream as
+  initial browser execution. Recovered ChatGPT reattach now records an immediate
+  `chatgpt-reattach-existing-tab` heartbeat, wires passive DOM probe callbacks
+  through the reattach wait path, and prefers heartbeat evidence that includes a
+  conversation URL plus Chrome host/port when selecting the submitted tab.

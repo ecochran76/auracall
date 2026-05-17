@@ -197,6 +197,21 @@ Current limits:
   - the shared service-host drain path enforces those batch limits before
     acquiring a run lease; skipped child runs remain queued for a later drain
     pass
+  - ChatGPT tenant-wide limits are enforced on the same drain path across
+    response batches and one-shot responses. The default tenant budget is
+    `maxConcurrentChats = 4`, `maxChatsPerHour = 120`, and
+    `maxChatsPerDay = 240`; tenant identity is the configured ChatGPT service
+    account when present, then the AuraCall runtime profile fallback. Configure
+    narrower budgets under `services.chatgpt.tenantLimits` or
+    `profiles.<name>.services.chatgpt.tenantLimits`.
+  - `GET /status` exposes the current configured ChatGPT tenant budgets under
+    `tenantExecutionLimits`; add `?tenantExecutionLimits=usage` when runtime
+    lease/event-derived usage counters are needed.
+  - Browser-backed ChatGPT response runs refresh active leases from runtime
+    evidence, including passive DOM probe observations while the submitted tab
+    is still loading or thinking. Startup recovery uses persisted submitted-tab
+    evidence to reattach stranded ChatGPT work; if AuraCall cannot prove the
+    original tab, it fails the run instead of replaying the prompt.
   - the browser dispatcher and provider politeness controls still enforce the
     lower-level CDP/account safety guardrails
   - deterministic local workflow smoke: `pnpm run smoke:che447-grading-batch`
@@ -314,6 +329,22 @@ Current limits:
     - `unavailableRunIds`
     - `statusByRunId`
     - `reasonsByRunId`
+  - `/status.tenantExecutionLimits` reports read-only ChatGPT tenant budgets:
+    - `providers.chatgpt.defaultLimits`
+    - `providers.chatgpt.metrics.tenantCount`
+    - `providers.chatgpt.metrics.activeChats`
+    - `providers.chatgpt.entries[].tenantKey`
+    - `providers.chatgpt.entries[].runtimeProfileIds`
+    - `providers.chatgpt.entries[].browserProfileIds`
+    - `providers.chatgpt.entries[].limits`
+    - default `/status` leaves usage counters unscanned with
+      `usage.basis = not-requested`
+    - `GET /status?tenantExecutionLimits=usage` adds
+      `providers.chatgpt.entries[].usage.activeChats`,
+      `providers.chatgpt.entries[].usage.chatsLastHour`, and
+      `providers.chatgpt.entries[].usage.chatsLastDay`
+    - usage is derived from persisted active leases and `step-started` events;
+      this status path does not acquire leases or execute work
   - when called with `?recovery=1` (or `?recovery=true`) it also returns:
     - `recoverySummary.totalRuns`
     - reclaimable run IDs in `recoverySummary.reclaimableRunIds`

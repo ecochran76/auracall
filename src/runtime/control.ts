@@ -65,6 +65,7 @@ export function createExecutionRuntimeControl(
         leaseId: input.leaseId,
         heartbeatAt: input.heartbeatAt,
         expiresAt: input.expiresAt,
+        runtimeEvidence: input.runtimeEvidence ?? null,
       });
       return store.writeRecord(result.bundle, { expectedRevision: record.revision });
     },

@@ -1,5 +1,9 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createBrowserOperationDispatcher } from '../../packages/browser-service/src/service/operationDispatcher.js';
+import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 import {
   type AccountMirrorRefreshError,
   createAccountMirrorRefreshService,
@@ -15,6 +19,7 @@ import {
   clearBrowserOperationQueueObservationsForTest,
   recordBrowserOperationQueueObservation,
 } from '../../src/browser/operationQueueObservations.js';
+import { listDomDriftObservations } from '../../src/browser/domDriftObservations.js';
 
 const config = {
   model: 'gpt-5.2',
@@ -63,6 +68,16 @@ describe('account mirror refresh service', () => {
   beforeEach(() => {
     clearBrowserOperationQueueObservationsForTest();
   });
+
+  afterEach(() => {
+    setAuracallHomeDirOverrideForTest(null);
+  });
+
+  async function useTempAuracallHome() {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-refresh-test-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    return homeDir;
+  }
 
   test('runs an explicit default ChatGPT refresh through the browser operation dispatcher', async () => {
     const metadataCollector = {
@@ -615,6 +630,7 @@ describe('account mirror refresh service', () => {
   });
 
   test('times out a stuck metadata collector and releases the browser operation', async () => {
+    await useTempAuracallHome();
     let collectAbortSignal: AbortSignal | null = null;
     const dispatcher = createBrowserOperationDispatcher({
       now: () => new Date('2026-05-02T20:05:00.000Z'),
@@ -661,6 +677,25 @@ describe('account mirror refresh service', () => {
 
     const dispatcherKey = entry?.mirrorState.lastDispatcherKey ?? 'missing-dispatcher-key';
     await expect(dispatcher.getActive(dispatcherKey)).resolves.toBeNull();
+    await expect(listDomDriftObservations({ service: 'chatgpt', surface: 'account-mirror-refresh' }))
+      .resolves.toMatchObject({
+        data: [
+          {
+            service: 'chatgpt',
+            surface: 'account-mirror-refresh',
+            action: 'collect-metadata',
+            fallbackKind: 'collector-timeout',
+            metadata: expect.objectContaining({
+              source: 'accountMirror.refreshService',
+              runtimeProfileId: 'default',
+              requestId: expect.any(String),
+              dispatcherKey: expect.stringContaining('service:chatgpt'),
+              dispatcherOperationId: expect.any(String),
+              errorMessage: 'Account mirror metadata collector timed out for chatgpt/default.',
+            }),
+          },
+        ],
+      });
   });
 
   test('fails fast when the collector detects the wrong ChatGPT identity', async () => {

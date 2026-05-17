@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import { createExecutionRunnerRecord } from '../src/runtime/model.js';
 import { createExecutionRunnerControl } from '../src/runtime/runnersControl.js';
+import type { ExecutionRunnerRecordStore, ExecutionRunnerStoredRecord } from '../src/runtime/runnersStore.js';
 
 describe('runtime runner control', () => {
   const cleanup: string[] = [];
@@ -141,6 +142,75 @@ describe('runtime runner control', () => {
     expect(activity.runner.lastActivityAt).toBe('2026-04-11T10:00:40.000Z');
     expect(activity.runner.lastClaimedRunId).toBe('run_exec_1');
     expect(activity.runner.eligibilityNote).toBe('runner advanced one local run');
+  });
+
+  it('retries runner activity after a concurrent heartbeat advances the runner revision', async () => {
+    const runner = createExecutionRunnerRecord({
+      id: 'runner:wsl-local-1',
+      hostId: 'host:wsl-dev-1',
+      startedAt: '2026-04-11T10:00:00.000Z',
+      lastHeartbeatAt: '2026-04-11T10:00:00.000Z',
+      expiresAt: '2026-04-11T10:01:00.000Z',
+      serviceIds: ['chatgpt'],
+      runtimeProfileIds: ['default'],
+    });
+    let current: ExecutionRunnerStoredRecord = {
+      runnerId: runner.id,
+      revision: 1,
+      persistedAt: runner.lastHeartbeatAt,
+      runner,
+    };
+    let shouldSimulateMismatch = true;
+    const store: ExecutionRunnerRecordStore = {
+      async ensureStorage() {},
+      async readRunner() {
+        return current.runner;
+      },
+      async readRecord() {
+        return current;
+      },
+      async listRunners() {
+        return [current.runner];
+      },
+      async writeRunner(nextRunner, options) {
+        if (shouldSimulateMismatch) {
+          shouldSimulateMismatch = false;
+          current = {
+            ...current,
+            revision: 2,
+            persistedAt: '2026-04-11T10:00:30.000Z',
+            runner: createExecutionRunnerRecord({
+              ...current.runner,
+              lastHeartbeatAt: '2026-04-11T10:00:30.000Z',
+              expiresAt: '2026-04-11T10:01:30.000Z',
+            }),
+          };
+          throw new Error(`Execution runner ${runner.id} revision mismatch: expected 1, found 2`);
+        }
+        expect(options?.expectedRevision).toBe(2);
+        current = {
+          runnerId: nextRunner.id,
+          revision: 3,
+          persistedAt: options?.persistedAt ?? nextRunner.lastHeartbeatAt,
+          runner: nextRunner,
+        };
+        return current;
+      },
+    };
+
+    const control = createExecutionRunnerControl(store);
+    const activity = await control.recordRunnerActivity({
+      runnerId: runner.id,
+      runId: 'run_exec_1',
+      activityAt: '2026-04-11T10:00:40.000Z',
+      eligibilityNote: 'runner advanced one local run',
+    });
+
+    expect(activity.revision).toBe(3);
+    expect(activity.runner.lastHeartbeatAt).toBe('2026-04-11T10:00:30.000Z');
+    expect(activity.runner.expiresAt).toBe('2026-04-11T10:01:30.000Z');
+    expect(activity.runner.lastActivityAt).toBe('2026-04-11T10:00:40.000Z');
+    expect(activity.runner.lastClaimedRunId).toBe('run_exec_1');
   });
 
   it('expires stale active runners through one bounded sweep', async () => {

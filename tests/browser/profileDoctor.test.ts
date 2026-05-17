@@ -19,6 +19,7 @@ import {
   createAuracallBrowserDoctorContract,
   inspectBrowserDoctorIdentity,
   inspectBrowserDoctorState,
+  reconcileBrowserDoctorIdentities,
 } from '../../src/browser/profileDoctor.js';
 
 type ChromeProfileInfo = {
@@ -873,6 +874,7 @@ describe('profileDoctor', () => {
         error: null,
         reason: null,
       },
+      identityReconciliation: null,
       featureStatus: {
         target: 'grok',
         supported: true,
@@ -1035,5 +1037,67 @@ describe('profileDoctor', () => {
         browserToolsError: null,
       },
     });
+  });
+
+  it('treats Chrome account mismatch as informational when provider app identity matches expected account', () => {
+    const reconciliation = reconcileBrowserDoctorIdentities(
+      {
+        auracallProfile: 'wsl-chrome-3',
+        runtimeProfiles: {
+          'wsl-chrome-3': {
+            services: {
+              chatgpt: {
+                identity: {
+                  email: 'eric.cochran@soylei.com',
+                  accountLevel: 'Pro',
+                },
+              },
+            },
+          },
+        },
+      } as never,
+      'chatgpt',
+      {
+        target: 'chatgpt',
+        chromeGoogleAccount: {
+          provider: 'google',
+          source: 'merged',
+          status: 'signed-in',
+          chromeProfile: 'Default',
+          profileName: 'Your Chrome',
+          displayName: 'Eric Cochran',
+          givenName: 'Eric',
+          email: 'ecochran76@gmail.com',
+          gaiaId: '108150140934027970801',
+          consentedPrimaryAccount: false,
+          explicitBrowserSignin: true,
+          activeAccounts: 1,
+          localStatePath: '/tmp/Local State',
+          preferencesPath: '/tmp/Preferences',
+        },
+      } as never,
+      {
+        target: 'chatgpt',
+        supported: true,
+        attempted: true,
+        identity: {
+          email: 'eric.cochran@soylei.com',
+          accountLevel: 'Pro',
+          source: 'auth-session',
+        },
+        error: null,
+        reason: null,
+      },
+    );
+
+    expect(reconciliation).toMatchObject({
+      ok: true,
+      status: 'provider_app_verified',
+      providerMatchesExpected: true,
+      chromeMatchesExpected: false,
+      chromeMatchesProvider: false,
+      browserProfileMismatchIsInformational: true,
+    });
+    expect(reconciliation.summary).toContain('informational only');
   });
 });

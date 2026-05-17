@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import { createExecutionRuntimeControl } from '../src/runtime/control.js';
+import { createExecutionResponsesService } from '../src/runtime/responsesService.js';
 import {
   createExecutionRun,
   createExecutionRunEvent,
@@ -150,6 +151,37 @@ describe('runtime runner', () => {
     expect(executed.bundle.leases[0]?.releaseReason).toBe('failed');
   });
 
+  it('fails browser-backed runs when no configured stored-step executor is attached', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-runner-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const bundle = createDirectBundle('run_missing_configured_executor');
+    bundle.run.initialInputs = {
+      ...bundle.run.initialInputs,
+      auracall: {
+        runtimeProfile: 'default',
+        service: 'chatgpt',
+        agent: 'instant-chatgpt-test',
+      },
+    };
+    const control = createExecutionRuntimeControl();
+    await control.createRun(bundle);
+
+    const executed = await executeStoredExecutionRunOnce({
+      runId: 'run_missing_configured_executor',
+      ownerId: 'runner:local-test',
+      now: () => '2026-04-08T13:02:05.000Z',
+      control,
+    });
+
+    expect(executed.bundle.run.status).toBe('failed');
+    expect(executed.bundle.steps[0]?.failure).toMatchObject({
+      code: 'runner_execution_failed',
+      message: 'No configured stored-step executor is attached for browser-backed run run_missing_configured_executor.',
+    });
+  });
+
   it('preserves browser automation failure details for operator recovery', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-runner-'));
     cleanup.push(homeDir);
@@ -181,6 +213,80 @@ describe('runtime runner', () => {
         providerState: 'login-required',
         authRecoveryCommand: 'auracall --profile wsl-chrome-2 login --target chatgpt',
         managedProfileDir: '/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt',
+      },
+    });
+  });
+
+  it('attaches recoverable failure artifacts to failed response output', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-runner-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await control.createRun(createDirectBundle('run_recoverable_partial_json'));
+
+    await executeStoredExecutionRunOnce({
+      runId: 'run_recoverable_partial_json',
+      ownerId: 'runner:local-test',
+      now: () => '2026-04-08T13:02:20.000Z',
+      control,
+      executeStep: async () => {
+        throw new BrowserAutomationError('ChatGPT response did not complete as a parseable JSON object after waiting', {
+          recoverySharedState: {
+            artifacts: [
+              {
+                id: 'json_object_best_snapshot_1',
+                kind: 'file',
+                title: 'Recoverable partial JSON snapshot',
+                path: '/tmp/recovery.partial.json',
+                uri: '/tmp/recovery.partial.json',
+              },
+            ],
+            structuredOutputs: [
+              {
+                key: 'response.recovery.bestSnapshot',
+                value: {
+                  id: 'json_object_best_snapshot_1',
+                  chars: 22322,
+                  preview: '{"title":"partial"',
+                  persisted: true,
+                },
+              },
+            ],
+            notes: ['recoverable partial JSON snapshot stored at /tmp/recovery.partial.json'],
+          },
+        });
+      },
+    });
+
+    const response = await createExecutionResponsesService().readResponse('run_recoverable_partial_json');
+
+    expect(response).toMatchObject({
+      status: 'failed',
+      output: [
+        {
+          type: 'artifact',
+          id: 'json_object_best_snapshot_1',
+          artifact_type: 'file',
+          title: 'Recoverable partial JSON snapshot',
+          uri: '/tmp/recovery.partial.json',
+          disposition: 'attachment',
+        },
+      ],
+      metadata: {
+        executionSummary: {
+          failureSummary: {
+            details: {
+              recoverySharedState: {
+                structuredOutputs: [
+                  {
+                    key: 'response.recovery.bestSnapshot',
+                  },
+                ],
+              },
+            },
+          },
+        },
       },
     });
   });
@@ -898,6 +1004,69 @@ describe('runtime runner', () => {
       details: {
         missingRequiredLabels: ['work bundle'],
       },
+    });
+  });
+
+  it('does not treat status text or browser metadata as required JSON output', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-runner-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'run_missing_json_requested_output';
+    const stepId = `${runId}:step:1`;
+    const bundle = createDirectBundle(runId);
+    const initialStep = bundle.steps[0];
+    if (!initialStep) {
+      throw new Error('expected direct bundle to contain one step');
+    }
+    bundle.steps[0] = createExecutionRunStep({
+      ...initialStep,
+      id: stepId,
+      input: {
+        ...initialStep.input,
+        prompt: 'Create legacy_readout.json.',
+        structuredData: {
+          requestedOutputs: [
+            {
+              kind: 'structured-report',
+              label: 'legacy readout json',
+              format: 'json',
+              required: true,
+              destination: 'response-metadata',
+            },
+          ],
+        },
+      },
+    });
+    bundle.run.stepIds = [stepId];
+    await control.createRun(bundle);
+
+    const executed = await executeStoredExecutionRunOnce({
+      runId,
+      ownerId: 'runner:local-test',
+      now: () => '2026-04-08T13:05:00.000Z',
+      control,
+      executeStep: async () => ({
+        output: {
+          summary: "I'll create the artifact now.",
+          artifacts: [],
+          structuredData: {
+            browserRun: {
+              provider: 'chatgpt',
+              conversationId: 'mock-conversation',
+            },
+          },
+          notes: [],
+        },
+      }),
+    });
+
+    expect(executed.bundle.run.status).toBe('failed');
+    expect(executed.bundle.steps[0]?.failure).toMatchObject({
+      code: 'requested_output_required_missing',
+      message: 'missing required requested outputs: legacy readout json',
+      ownerStepId: stepId,
     });
   });
 
@@ -1724,6 +1893,66 @@ describe('runtime runner', () => {
     expect(executed.bundle.leases[0]?.expiresAt).not.toBe(executed.bundle.leases[0]?.acquiredAt);
     expect(executed.bundle.leases[0]?.heartbeatAt).not.toBe(executed.bundle.leases[0]?.acquiredAt);
     expect(executed.bundle.events.some((event) => event.note?.includes('lease heartbeat from runner:local-test'))).toBe(true);
+  });
+
+  it('refreshes a browser-backed lease from runtime evidence when timer heartbeats are disabled', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-runner-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const bundle = createDirectBundle('run_runtime_evidence_heartbeat');
+    bundle.run.initialInputs = {
+      ...bundle.run.initialInputs,
+      auracall: {
+        runtimeProfile: 'default',
+        service: 'chatgpt',
+        agent: 'instant-chatgpt-test',
+      },
+    };
+    const control = createExecutionRuntimeControl();
+    await control.createRun(bundle);
+
+    const executed = await executeStoredExecutionRunOnce({
+      runId: 'run_runtime_evidence_heartbeat',
+      ownerId: 'runner:local-test',
+      control,
+      now: () => '2026-04-08T13:11:00.000Z',
+      leaseHeartbeatIntervalMs: 0,
+      leaseHeartbeatTtlMs: 30_000,
+      executeStep: async ({ runtimeEvidence }) => {
+        await runtimeEvidence?.heartbeat({
+          observedAt: '2026-04-08T13:11:12.000Z',
+          state: 'thinking',
+          source: 'browser-service',
+          evidenceRef: 'chatgpt-thinking-dom',
+          confidence: 'medium',
+        });
+        return {
+          output: {
+            summary: 'runtime evidence completion',
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        };
+      },
+    });
+
+    expect(executed.bundle.run.status).toBe('succeeded');
+    expect(executed.bundle.leases[0]?.heartbeatAt).toBe('2026-04-08T13:11:12.000Z');
+    expect(executed.bundle.leases[0]?.expiresAt).toBe('2026-04-08T13:11:42.000Z');
+    expect(executed.bundle.events.some((event) => event.note?.includes('lease heartbeat from runner:local-test'))).toBe(true);
+    expect(
+      executed.bundle.events.find((event) => event.note?.includes('lease heartbeat from runner:local-test'))?.payload,
+    ).toMatchObject({
+      runtimeEvidence: {
+        observedAt: '2026-04-08T13:11:12.000Z',
+        state: 'thinking',
+        source: 'browser-service',
+        evidenceRef: 'chatgpt-thinking-dom',
+        confidence: 'medium',
+      },
+    });
   });
 
   it('injects dependency-scoped local action outcome summaries into later step execution context', async () => {

@@ -4,6 +4,7 @@ import {
   type ExecutionRunnerRecordStore,
   type ExecutionRunnerStoredRecord,
   type ListExecutionRunnerRecordOptions,
+  type WriteExecutionRunnerRecordOptions,
 } from './runnersStore.js';
 import type { ExecutionRunnerRecord } from './types.js';
 
@@ -51,6 +52,8 @@ export interface ExecutionRunnerControlContract {
   recordRunnerActivity(input: RecordExecutionRunnerActivityInput): Promise<ExecutionRunnerStoredRecord>;
 }
 
+const RUNNER_UPDATE_MAX_ATTEMPTS = 3;
+
 export function createExecutionRunnerControl(
   store: ExecutionRunnerRecordStore = createExecutionRunnerRecordStore(),
 ): ExecutionRunnerControlContract {
@@ -71,17 +74,16 @@ export function createExecutionRunnerControl(
     },
 
     async heartbeatRunner(input) {
-      const record = await requireStoredRunnerRecord(store, input.runnerId);
-      const nextRunner = createExecutionRunnerRecord({
-        ...record.runner,
-        status: 'active',
-        startedAt: record.runner.startedAt,
-        lastHeartbeatAt: input.heartbeatAt,
-        expiresAt: input.expiresAt,
-        eligibilityNote: input.eligibilityNote ?? record.runner.eligibilityNote,
-      });
-      return store.writeRunner(nextRunner, {
-        expectedRevision: record.revision,
+      return updateRunnerWithRevisionRetry(store, input.runnerId, (record) => {
+        const nextRunner = createExecutionRunnerRecord({
+          ...record.runner,
+          status: 'active',
+          startedAt: record.runner.startedAt,
+          lastHeartbeatAt: input.heartbeatAt,
+          expiresAt: input.expiresAt,
+          eligibilityNote: input.eligibilityNote ?? record.runner.eligibilityNote,
+        });
+        return { runner: nextRunner };
       });
     },
 
@@ -127,16 +129,17 @@ export function createExecutionRunnerControl(
     },
 
     async recordRunnerActivity(input) {
-      const record = await requireStoredRunnerRecord(store, input.runnerId);
-      const nextRunner = createExecutionRunnerRecord({
-        ...record.runner,
-        lastActivityAt: input.activityAt,
-        lastClaimedRunId: input.runId,
-        eligibilityNote: input.eligibilityNote ?? record.runner.eligibilityNote,
-      });
-      return store.writeRunner(nextRunner, {
-        expectedRevision: record.revision,
-        persistedAt: input.activityAt,
+      return updateRunnerWithRevisionRetry(store, input.runnerId, (record) => {
+        const nextRunner = createExecutionRunnerRecord({
+          ...record.runner,
+          lastActivityAt: input.activityAt,
+          lastClaimedRunId: input.runId,
+          eligibilityNote: input.eligibilityNote ?? record.runner.eligibilityNote,
+        });
+        return {
+          runner: nextRunner,
+          options: { persistedAt: input.activityAt },
+        };
       });
     },
   };
@@ -151,4 +154,36 @@ async function requireStoredRunnerRecord(
     throw new Error(`Execution runner ${runnerId} was not found`);
   }
   return record;
+}
+
+async function updateRunnerWithRevisionRetry(
+  store: ExecutionRunnerRecordStore,
+  runnerId: string,
+  buildUpdate: (
+    record: ExecutionRunnerStoredRecord,
+  ) => { runner: ExecutionRunnerRecord; options?: Omit<WriteExecutionRunnerRecordOptions, 'expectedRevision'> },
+): Promise<ExecutionRunnerStoredRecord> {
+  let lastMismatch: unknown = null;
+  for (let attempt = 0; attempt < RUNNER_UPDATE_MAX_ATTEMPTS; attempt += 1) {
+    const record = await requireStoredRunnerRecord(store, runnerId);
+    const update = buildUpdate(record);
+    try {
+      return await store.writeRunner(update.runner, {
+        ...update.options,
+        expectedRevision: record.revision,
+      });
+    } catch (error) {
+      if (!isRunnerRevisionMismatchError(error, runnerId)) {
+        throw error;
+      }
+      lastMismatch = error;
+    }
+  }
+  throw lastMismatch instanceof Error
+    ? lastMismatch
+    : new Error(`Execution runner ${runnerId} revision mismatch after retry`);
+}
+
+function isRunnerRevisionMismatchError(error: unknown, runnerId: string): boolean {
+  return error instanceof Error && error.message.includes(`Execution runner ${runnerId} revision mismatch`);
 }

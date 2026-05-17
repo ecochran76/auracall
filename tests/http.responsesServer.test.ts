@@ -45,6 +45,7 @@ import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../src/teams/types.js';
 import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from '../src/runtime/stepOutputContract.js';
 import { createChatgptDeepResearchStatusFixture } from './fixtures/chatgptDeepResearchStatusFixture.js';
 import { createAgentRegistryStore } from '../src/config/agentRegistryStore.js';
+import { recordDomDriftObservation } from '../src/browser/domDriftObservations.js';
 
 vi.setConfig({ testTimeout: 10000 });
 
@@ -72,11 +73,27 @@ const completeAccountMirror = {
 
 describe('http responses adapter', () => {
   const cleanup: string[] = [];
+  const originalTempEnv = {
+    TMPDIR: process.env.TMPDIR,
+    TMP: process.env.TMP,
+    TEMP: process.env.TEMP,
+  };
 
   afterEach(async () => {
+    for (const [key, value] of Object.entries(originalTempEnv)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
     setAuracallHomeDirOverrideForTest(null);
     resetLiveRuntimeRunServiceStateRegistryForTests();
-    await Promise.all(cleanup.splice(0).map((entry) => fs.rm(entry, { recursive: true, force: true })));
+    await Promise.all(
+      cleanup
+        .splice(0)
+        .map((entry) => fs.rm(entry, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 })),
+    );
   });
 
   const seedPlannedDirectRun = async (
@@ -536,6 +553,12 @@ describe('http responses adapter', () => {
   };
 
   const terminateServeResponsesHttp = async (options: Parameters<typeof serveResponsesHttp>[0]) => {
+    const serveOptions = options ?? {};
+    let resolveBound: () => void = () => {};
+    const bound = new Promise<void>((resolve) => {
+      resolveBound = resolve;
+    });
+    const optionLogger = serveOptions.logger;
     const servePromise = serveResponsesHttp({
       executeStoredRunStep: async () => ({
         output: {
@@ -545,9 +568,15 @@ describe('http responses adapter', () => {
           notes: [],
         },
       }),
-      ...options,
+      ...serveOptions,
+      logger: (message) => {
+        optionLogger?.(message);
+        if (message.includes('AuraCall responses server bound on')) {
+          resolveBound();
+        }
+      },
     });
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await bound;
     process.emit('SIGINT');
     await servePromise;
   };
@@ -868,6 +897,10 @@ describe('http responses adapter', () => {
   });
 
   it('creates and reads response batches over the HTTP API', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-response-batches-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
     const createBatch = vi.fn(async () => ({
       id: 'batch_http_1',
       object: 'response_batch_status' as const,
@@ -1764,6 +1797,46 @@ describe('http responses adapter', () => {
           lastStartedAt: null,
           lastCompletedAt: null,
         },
+        tenantExecutionLimits: {
+          object: 'tenant_execution_limits_status',
+          generatedAt: expect.any(String),
+          usageRequested: false,
+          providers: {
+            chatgpt: {
+              defaultLimits: {
+                maxConcurrentChats: 4,
+                maxChatsPerHour: 120,
+                maxChatsPerDay: 240,
+              },
+              metrics: {
+                tenantCount: 1,
+                entryCount: 1,
+                activeChats: null,
+                chatsLastHour: null,
+                chatsLastDay: null,
+              },
+              entries: [
+                {
+                  service: 'chatgpt',
+                  tenantKey: 'service:chatgpt:unbound',
+                  runtimeProfileIds: [],
+                  browserProfileIds: [],
+                  limits: {
+                    maxConcurrentChats: 4,
+                    maxChatsPerHour: 120,
+                    maxChatsPerDay: 240,
+                  },
+                  usage: {
+                    basis: 'not-requested',
+                    activeChats: null,
+                    chatsLastHour: null,
+                    chatsLastDay: null,
+                  },
+                },
+              ],
+            },
+          },
+        },
         accountMirrorScheduler: {
           enabled: false,
           dryRun: true,
@@ -1807,6 +1880,31 @@ describe('http responses adapter', () => {
         'X-AuraCall-Team',
         'X-AuraCall-Service',
       ]);
+      const usageResponse = await fetch(`http://127.0.0.1:${server.port}/status?tenantExecutionLimits=usage`);
+      expect(usageResponse.status).toBe(200);
+      const usagePayload = (await usageResponse.json()) as JsonObject;
+      expect(usagePayload.tenantExecutionLimits).toMatchObject({
+        usageRequested: true,
+        providers: {
+          chatgpt: {
+            metrics: {
+              activeChats: 0,
+              chatsLastHour: 0,
+              chatsLastDay: 0,
+            },
+            entries: [
+              {
+                usage: {
+                  basis: 'runtime-evidence',
+                  activeChats: 0,
+                  chatsLastHour: 0,
+                  chatsLastDay: 0,
+                },
+              },
+            ],
+          },
+        },
+      });
     } finally {
       await server.close();
     }
@@ -2124,6 +2222,10 @@ describe('http responses adapter', () => {
   });
 
   it('lists account mirror completion operations through the API surface', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-account-mirror-completions-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
     const operation: AccountMirrorCompletionOperation = {
       object: 'account_mirror_completion',
       id: 'acctmirror_http_list',
@@ -3474,6 +3576,10 @@ describe('http responses adapter', () => {
   });
 
   it('pauses, resumes, and manually triggers lazy account mirror scheduler through POST /status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-scheduler-control-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
     const runOnce = vi.fn(async (input: { dryRun: boolean }): Promise<AccountMirrorSchedulerPassResult> => ({
       object: 'account_mirror_scheduler_pass',
       mode: input.dryRun ? 'dry-run' : 'execute',
@@ -4866,6 +4972,79 @@ describe('http responses adapter', () => {
         },
       });
       expect(scheduledRestarts).toEqual([{ unitName: 'auracall-api.service', delayMs: 25 }]);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('force-repairs expired stale-heartbeat leases through POST /status when requested by an operator', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-stale-heartbeat-force-repair-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await seedPlannedDirectRun(control, 'status_repair_force', '2026-04-08T16:10:00.000Z', 'Force repair.');
+    await control.acquireLease({
+      runId: 'status_repair_force',
+      leaseId: 'status_repair_force:lease:1',
+      ownerId: 'runner:active-force-http',
+      acquiredAt: '2026-04-08T16:10:00.000Z',
+      heartbeatAt: '2026-04-08T16:10:10.000Z',
+      expiresAt: '2026-04-08T16:11:00.000Z',
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:active-force-http',
+        hostId: 'host:http-responses:127.0.0.1:8080',
+        status: 'active',
+        startedAt: '2026-04-08T16:00:00.000Z',
+        lastHeartbeatAt: '2026-04-08T16:14:55.000Z',
+        expiresAt: '2026-04-08T16:20:00.000Z',
+        lastActivityAt: '2026-04-08T16:10:00.000Z',
+        lastClaimedRunId: 'status_repair_force',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        runnersControl,
+        now: () => new Date('2026-04-08T16:15:00.000Z'),
+      },
+    );
+
+    try {
+      const repairResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leaseRepair: {
+            action: 'repair-stale-heartbeat',
+            runId: 'status_repair_force',
+            force: true,
+          },
+        }),
+      });
+      expect(repairResponse.status).toBe(200);
+      const repairPayload = (await repairResponse.json()) as JsonObject;
+      expect(repairPayload).toMatchObject({
+        controlResult: {
+          kind: 'lease-repair',
+          action: 'repair-stale-heartbeat',
+          runId: 'status_repair_force',
+          status: 'repaired',
+          repaired: true,
+          reason: 'operator forced repair of expired stale-heartbeat lease',
+        },
+      });
+
+      const repairedRecord = await control.readRun('status_repair_force');
+      expect(repairedRecord?.bundle.leases[0]?.status).toBe('expired');
+      expect(repairedRecord?.bundle.leases[0]?.releaseReason).toBe('lease expired');
     } finally {
       await server.close();
     }
@@ -6713,7 +6892,7 @@ describe('http responses adapter', () => {
       });
       const createSettled = await Promise.race([
         createPromise.then(() => 'resolved' as const),
-        new Promise<'pending'>((resolve) => setTimeout(() => resolve('pending'), 100)),
+        delay(5_000, 'pending' as const),
       ]);
       expect(createSettled).toBe('resolved');
 
@@ -15895,6 +16074,66 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('hydrates agent model requests with catalog service and runtime before execution', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-agent-model-hydration-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0, backgroundDrainIntervalMs: 60_000 },
+      {
+        config: {
+          browserProfiles: { 'wsl-chrome-3': {} },
+          runtimeProfiles: {
+            'wsl-chrome-3': {
+              browserProfile: 'wsl-chrome-3',
+              defaultService: 'chatgpt',
+            },
+          },
+          agents: {
+            'pro-extended-chatgpt-soylei-che4470-seminar-grading': {
+              runtimeProfile: 'wsl-chrome-3',
+              service: 'chatgpt',
+              modelSelector: 'chatgpt:pro-extended',
+              projectId: 'proj_che447',
+            },
+          },
+        },
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/responses`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          model: 'agent:pro-extended-chatgpt-soylei-che4470-seminar-grading',
+          input: 'Reply exactly with CHE447_OK.',
+        }),
+      });
+      const payload = await response.json() as JsonObject;
+      expect(response.status).toBe(200);
+      expect(payload).toMatchObject({
+        status: 'in_progress',
+        metadata: {
+          runtimeProfile: 'wsl-chrome-3',
+          service: 'chatgpt',
+          executionSummary: {
+            stepSummaries: [
+              {
+                agentId: 'pro-extended-chatgpt-soylei-che4470-seminar-grading',
+                runtimeProfileId: 'wsl-chrome-3',
+                service: 'chatgpt',
+              },
+            ],
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('creates non-streaming chat completions through the responses runtime path', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-chat-completions-'));
     cleanup.push(homeDir);
@@ -15909,6 +16148,11 @@ describe('http responses adapter', () => {
           expect(request).toMatchObject({
             model: 'agent:researcher',
             instructions: 'Use a terse voice.',
+            metadata: {
+              response_format: {
+                type: 'json_object',
+              },
+            },
             auracall: {
               agent: 'researcher',
               service: 'chatgpt',
@@ -15950,6 +16194,7 @@ describe('http responses adapter', () => {
             { role: 'system', content: 'Use a terse voice.' },
             { role: 'user', content: 'Say hello.' },
           ],
+          response_format: { type: 'json_object' },
           auracall: { service: 'chatgpt' },
         }),
       });
@@ -15975,6 +16220,45 @@ describe('http responses adapter', () => {
           prompt_tokens: 7,
           completion_tokens: 5,
           total_tokens: 12,
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('returns an API error for failed chat completion execution instead of empty assistant content', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-chat-completions-failed-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0, backgroundDrainIntervalMs: 60_000 },
+      {
+        now: () => new Date('2026-05-10T21:45:00.000Z'),
+        generateResponseId: () => 'chatcmpl_resp_failed_1',
+        executeStoredRunStep: async () => {
+          throw new Error('Unable to find the Thinking time dropdown menu.');
+        },
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/chat/completions`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          model: 'agent:researcher',
+          messages: [{ role: 'user', content: 'Say hello.' }],
+          auracall: { service: 'chatgpt' },
+        }),
+      });
+      const payload = await response.json() as JsonObject;
+      expect(response.status).toBe(502);
+      expect(payload).toMatchObject({
+        error: {
+          type: 'auracall_execution_error',
+          message: 'AuraCall execution chatcmpl_resp_failed_1 ended with status failed.',
         },
       });
     } finally {
@@ -17093,6 +17377,10 @@ describe('http responses adapter', () => {
   });
 
   it('reports development-only posture through the status endpoint', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-dev-posture-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
     const server = await createResponsesHttpServer(
       {
         host: '127.0.0.1',
@@ -17851,6 +18139,82 @@ describe('http responses adapter', () => {
         openBlankPages: expect.any(Number),
       });
       expect(Array.isArray(payload.entries)).toBe(true);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('serves read-only browser DOM drift observations', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-dom-drift-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    await recordDomDriftObservation({
+      service: 'chatgpt',
+      surface: 'project-create-dialog',
+      action: 'confirm-create-project',
+      expectedLabels: ['Create project'],
+      observedLabel: 'Create workspace',
+      fallbackKind: 'submit-button',
+      observedAt: '2026-05-13T12:00:00.000Z',
+    });
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/browser/dom-drift-observations?service=chatgpt&limit=10`,
+      );
+      expect(response.status).toBe(200);
+      const payload = await response.json() as {
+        object?: string;
+        count?: number;
+        data?: Array<Record<string, unknown>>;
+      };
+      expect(payload.object).toBe('auracall_dom_drift_observation_list');
+      expect(payload.count).toBe(1);
+      expect(payload.data?.[0]).toMatchObject({
+        service: 'chatgpt',
+        surface: 'project-create-dialog',
+        observedLabel: 'Create workspace',
+        fallbackKind: 'submit-button',
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('accepts browser DOM drift observations into user-scoped overrides', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-dom-drift-accept-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const observation = await recordDomDriftObservation({
+      service: 'chatgpt',
+      surface: 'project-create-dialog',
+      action: 'confirm-create-project',
+      expectedLabels: ['Create project'],
+      observedLabel: 'Create workspace',
+      fallbackKind: 'submit-button',
+      observedAt: '2026-05-13T12:00:00.000Z',
+    });
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/browser/dom-drift-observations/${encodeURIComponent(observation.id)}/accept`,
+        { method: 'POST' },
+      );
+      expect(response.status).toBe(200);
+      const payload = await response.json() as {
+        object?: string;
+        observation?: Record<string, unknown>;
+        manifestUpdate?: Record<string, unknown>;
+      };
+      expect(payload.object).toBe('auracall_dom_drift_observation_acceptance');
+      expect(payload.observation).toMatchObject({ id: observation.id, status: 'accepted' });
+      expect(payload.manifestUpdate).toMatchObject({
+        service: 'chatgpt',
+        key: 'project_create_confirm_buttons',
+        label: 'Create workspace',
+      });
     } finally {
       await server.close();
     }

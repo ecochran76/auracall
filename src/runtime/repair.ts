@@ -40,13 +40,31 @@ export function classifyExecutionRunRepairPosture(input: {
         reason: 'run has no active lease to reclaim',
         reconciliation,
       };
-    case 'active-runner':
+    case 'active-runner': {
+      if (
+        reconciliation.leaseExpiresAt &&
+        reconciliation.leaseExpiresAt <= input.now &&
+        reconciliation.runner &&
+        activeRunnerNoLongerProtectsExpiredLease({
+          runId: reconciliation.runId,
+          leaseExpiresAt: reconciliation.leaseExpiresAt,
+          runner: reconciliation.runner,
+        })
+      ) {
+        return {
+          runId: reconciliation.runId,
+          posture: 'locally-reclaimable',
+          reason: 'active lease owner stopped renewing the expired lease',
+          reconciliation,
+        };
+      }
       return {
         runId: reconciliation.runId,
         posture: 'not-reclaimable',
         reason: 'active lease is still owned by an active runner',
         reconciliation,
       };
+    }
     case 'stale-runner':
     case 'missing-runner': {
       if (reconciliation.leaseExpiresAt && reconciliation.leaseExpiresAt <= input.now) {
@@ -65,6 +83,28 @@ export function classifyExecutionRunRepairPosture(input: {
       };
     }
   }
+}
+
+function activeRunnerNoLongerProtectsExpiredLease(input: {
+  runId: string;
+  leaseExpiresAt: string;
+  runner: ExecutionRunLeaseRunnerReconciliation['runner'];
+}): boolean {
+  if (!input.runner) return false;
+  if (!input.runner.lastClaimedRunId) {
+    return false;
+  }
+  const lastActivityMs = Date.parse(input.runner.lastActivityAt ?? '');
+  const leaseExpiresAtMs = Date.parse(input.leaseExpiresAt);
+  if (Number.isNaN(lastActivityMs) || Number.isNaN(leaseExpiresAtMs)) {
+    const lastHeartbeatMs = Date.parse(input.runner.lastHeartbeatAt ?? '');
+    return !Number.isNaN(lastHeartbeatMs) && lastHeartbeatMs - leaseExpiresAtMs > 60_000;
+  }
+  if (lastActivityMs > leaseExpiresAtMs) {
+    return true;
+  }
+  const lastHeartbeatMs = Date.parse(input.runner.lastHeartbeatAt ?? '');
+  return !Number.isNaN(lastHeartbeatMs) && lastHeartbeatMs - leaseExpiresAtMs > 60_000;
 }
 
 export async function evaluateStoredExecutionRunRepairClassification(

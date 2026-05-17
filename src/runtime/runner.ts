@@ -25,9 +25,21 @@ export interface ExecuteStoredRunStepResult {
   sharedState?: Partial<Pick<ExecutionRunSharedState, 'artifacts' | 'structuredOutputs' | 'notes'>>;
 }
 
+export interface ExecuteStoredRunStepRuntimeEvidence {
+  observedAt?: string | null;
+  state?: string | null;
+  source?: string | null;
+  evidenceRef?: string | null;
+  confidence?: string | null;
+  details?: Record<string, unknown> | null;
+}
+
 export interface ExecuteStoredRunStepContext {
   record: ExecutionRunStoredRecord;
   step: ExecutionRunStep;
+  runtimeEvidence?: {
+    heartbeat: (evidence?: ExecuteStoredRunStepRuntimeEvidence) => Promise<void>;
+  };
 }
 
 export interface ExecuteLocalActionRequestResult {
@@ -202,8 +214,9 @@ export async function executeStoredExecutionRunOnce(
 
   let releaseReason: string | null = 'completed';
   let finalRecord: ExecutionRunStoredRecord | null = null;
+  const requiresConfiguredExecutor = requiresConfiguredStoredStepExecutor(inspection.record.bundle);
   const leaseHeartbeat = startExecutionLeaseHeartbeatLoop({
-    enabled: leaseHeartbeatIntervalMs > 0,
+    enabled: leaseHeartbeatIntervalMs > 0 && !requiresConfiguredExecutor,
     intervalMs: leaseHeartbeatIntervalMs,
     ttlMs: leaseHeartbeatTtlMs,
     runId: options.runId,
@@ -260,19 +273,29 @@ export async function executeStoredExecutionRunOnce(
       finalRecord = currentRecord;
       return finalRecord;
     }
-    const result =
-      (await options.executeStep?.({
-        record: currentRecord,
-        step: executionContextStep,
-      })) ?? {
-        output: {
-          summary: 'bounded local runner pass completed',
-          artifacts: [],
-          structuredData: {},
-          notes: [],
+    const result = await options.executeStep?.({
+      record: currentRecord,
+      step: executionContextStep,
+      runtimeEvidence: {
+        heartbeat: async (evidence = {}) => {
+          await leaseHeartbeat.heartbeat(evidence);
         },
-      };
-    const output = normalizeExecutionRunStepOutput(result.output ?? {
+      },
+    });
+    if (!result && requiresConfiguredExecutor) {
+      throw new Error(
+        `No configured stored-step executor is attached for browser-backed run ${currentRecord.bundle.run.id}.`,
+      );
+    }
+    const effectiveResult = result ?? {
+      output: {
+        summary: 'bounded local runner pass completed',
+        artifacts: [],
+        structuredData: {},
+        notes: [],
+      },
+    };
+    const output = normalizeExecutionRunStepOutput(effectiveResult.output ?? {
       summary: 'bounded local runner pass completed',
       artifacts: [],
       structuredData: {},
@@ -300,11 +323,11 @@ export async function executeStoredExecutionRunOnce(
       mergeSharedStatePatch(
         mergeSharedStatePatch(
           mergeSharedStatePatch(
-            result.sharedState,
+            effectiveResult.sharedState,
             buildProviderUsageSharedStatePatch({
               stepId,
               generatedAt: completedAt,
-              usage: result.usage ?? null,
+              usage: effectiveResult.usage ?? null,
             }),
           ),
           buildConsumedTaskTransfersSharedStatePatch({
@@ -371,10 +394,22 @@ export async function executeStoredExecutionRunOnce(
     releaseReason = 'failed';
     const failedAt = now();
     const userError = asOracleUserError(error);
+    const failureRecoverySharedState = extractFailureRecoverySharedState(userError?.details);
     const failedBundle = failExecutionRunStep({
       bundle: currentRecord.bundle,
       stepId,
       failedAt,
+      output: failureRecoverySharedState
+        ? {
+            summary: 'Provider run failed, but AuraCall captured a recoverable diagnostic artifact.',
+            artifacts: failureRecoverySharedState.artifacts ?? [],
+            structuredData: {
+              recovery: failureRecoverySharedState.structuredOutputs ?? [],
+            },
+            notes: failureRecoverySharedState.notes ?? [],
+          }
+        : undefined,
+      sharedState: failureRecoverySharedState ?? undefined,
       failure: {
         code: 'runner_execution_failed',
         message: error instanceof Error ? error.message : String(error),
@@ -415,12 +450,20 @@ async function releaseExecutionRunLeaseIfStillActive(input: {
   if (!activeLease || activeLease.id !== input.leaseId) {
     return latestRecord;
   }
-  return input.control.releaseLease({
-    runId: input.runId,
-    leaseId: input.leaseId,
-    releasedAt: input.releasedAt,
-    releaseReason: input.releaseReason,
-  });
+  try {
+    return await input.control.releaseLease({
+      runId: input.runId,
+      leaseId: input.leaseId,
+      releasedAt: input.releasedAt,
+      releaseReason: input.releaseReason,
+    });
+  } catch (error) {
+    const refreshed = await input.control.readRun(input.runId);
+    if (refreshed && !getActiveExecutionRunLease(refreshed)) {
+      return refreshed;
+    }
+    throw error;
+  }
 }
 
 function startExecutionLeaseHeartbeatLoop(input: {
@@ -431,22 +474,17 @@ function startExecutionLeaseHeartbeatLoop(input: {
   leaseId: string;
   control: ExecutionRuntimeControlContract;
   now: () => string;
-}): { stop(): Promise<void> } {
-  if (!input.enabled) {
-    return {
-      async stop() {
-        return;
-      },
-    };
-  }
-
+}): { heartbeat(evidence?: ExecuteStoredRunStepRuntimeEvidence | null): Promise<void>; stop(): Promise<void> } {
   let stopped = false;
   let inFlight: Promise<void> = Promise.resolve();
-  const timer = setInterval(() => {
+  const heartbeat = async (evidenceInput?: ExecuteStoredRunStepRuntimeEvidence | null): Promise<void> => {
     if (stopped) {
       return;
     }
-    const heartbeatAt = input.now();
+    const runtimeEvidence = normalizeRuntimeEvidenceForLeaseEvent(evidenceInput ?? null);
+    const heartbeatAt = runtimeEvidence
+      ? resolveRuntimeEvidenceHeartbeatAt(runtimeEvidence, input.now)
+      : input.now();
     const expiresAt = addMillisecondsToIsoTimestamp(heartbeatAt, input.ttlMs);
     inFlight = inFlight
       .catch(() => undefined)
@@ -457,22 +495,78 @@ function startExecutionLeaseHeartbeatLoop(input: {
           leaseId: input.leaseId,
           heartbeatAt,
           expiresAt,
+          runtimeEvidence,
         });
       })
       .catch(() => undefined);
-  }, input.intervalMs);
-  if (typeof timer.unref === 'function') {
+    await inFlight.catch(() => undefined);
+  };
+  const timer = input.enabled
+    ? setInterval(() => {
+        void heartbeat();
+      }, input.intervalMs)
+    : null;
+  if (timer && typeof timer.unref === 'function') {
     timer.unref();
   }
 
   return {
+    heartbeat,
     async stop() {
       if (stopped) return;
       stopped = true;
-      clearInterval(timer);
+      if (timer) {
+        clearInterval(timer);
+      }
       await inFlight.catch(() => undefined);
     },
   };
+}
+
+function resolveRuntimeEvidenceHeartbeatAt(
+  evidence: ExecuteStoredRunStepRuntimeEvidence,
+  now: () => string,
+): string {
+  return normalizeRuntimeEvidenceTimestamp(evidence.observedAt) ?? now();
+}
+
+function normalizeRuntimeEvidenceForLeaseEvent(
+  evidence: ExecuteStoredRunStepRuntimeEvidence | null,
+): (Record<string, unknown> & ExecuteStoredRunStepRuntimeEvidence) | null {
+  if (!evidence) {
+    return null;
+  }
+  const normalized: Record<string, unknown> & ExecuteStoredRunStepRuntimeEvidence = {};
+  if (typeof evidence.observedAt === 'string' && evidence.observedAt.trim()) {
+    normalized.observedAt = evidence.observedAt;
+  }
+  if (typeof evidence.state === 'string' && evidence.state.trim()) {
+    normalized.state = evidence.state;
+  }
+  if (typeof evidence.source === 'string' && evidence.source.trim()) {
+    normalized.source = evidence.source;
+  }
+  if (typeof evidence.evidenceRef === 'string' && evidence.evidenceRef.trim()) {
+    normalized.evidenceRef = evidence.evidenceRef;
+  }
+  if (typeof evidence.confidence === 'string' && evidence.confidence.trim()) {
+    normalized.confidence = evidence.confidence;
+  }
+  if (evidence.details && typeof evidence.details === 'object' && !Array.isArray(evidence.details)) {
+    normalized.details = evidence.details;
+  }
+  return Object.keys(normalized).length > 0 ? normalized : null;
+}
+
+function normalizeRuntimeEvidenceTimestamp(timestamp: string | null | undefined): string | null {
+  if (!timestamp) {
+    return null;
+  }
+  const parsed = Date.parse(timestamp);
+  if (Number.isNaN(parsed)) {
+    return null;
+  }
+  return new Date(parsed).toISOString();
 }
 
 function addMillisecondsToIsoTimestamp(timestamp: string, milliseconds: number): string {
@@ -957,6 +1051,43 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
+function extractFailureRecoverySharedState(
+  details: Record<string, unknown> | undefined,
+): Partial<Pick<ExecutionRunSharedState, 'artifacts' | 'structuredOutputs' | 'notes'>> | null {
+  if (!details || !isRecord(details.recoverySharedState)) {
+    return null;
+  }
+  const raw = details.recoverySharedState;
+  const artifacts = Array.isArray(raw.artifacts) ? normalizeTeamRunArtifactRefs(raw.artifacts) : [];
+  const structuredOutputs = Array.isArray(raw.structuredOutputs)
+    ? normalizeRuntimeStructuredOutputs(raw.structuredOutputs)
+    : [];
+  const notes = Array.isArray(raw.notes)
+    ? raw.notes.filter((note): note is string => typeof note === 'string' && note.trim().length > 0)
+    : [];
+  if (artifacts.length === 0 && structuredOutputs.length === 0 && notes.length === 0) {
+    return null;
+  }
+  return {
+    artifacts,
+    structuredOutputs,
+    notes,
+  };
+}
+
+function requiresConfiguredStoredStepExecutor(bundle: ExecutionRunRecordBundle): boolean {
+  const auracall = bundle.run.initialInputs?.auracall;
+  if (!isRecord(auracall)) {
+    return false;
+  }
+  const service = typeof auracall.service === 'string' ? auracall.service : null;
+  const agent = typeof auracall.agent === 'string' ? auracall.agent.trim() : '';
+  return (
+    auracall.transport === 'browser' ||
+    (agent.length > 0 && (service === 'chatgpt' || service === 'gemini' || service === 'grok'))
+  );
+}
+
 function mergeSharedStatePatch(
   left: Partial<Pick<ExecutionRunSharedState, 'artifacts' | 'structuredOutputs' | 'notes'>> | undefined,
   right: Partial<Pick<ExecutionRunSharedState, 'artifacts' | 'structuredOutputs' | 'notes'>> | undefined,
@@ -1371,18 +1502,19 @@ function evaluateRequiredRequestedOutputsForStoredRuntime(input: {
 
   const hasMessageOutput =
     typeof input.output.summary === 'string' && input.output.summary.trim().length > 0;
+  const hasJsonMessageOutput =
+    typeof input.output.summary === 'string' && isParseableJsonObjectText(input.output.summary);
   const hasArtifactOutput =
     input.output.artifacts.length > 0 || input.sharedState.artifacts.length > 0;
   const hasStructuredOutput =
-    input.output.structuredData &&
-      Object.keys(input.output.structuredData).length > 0
-      ? true
-      : input.sharedState.structuredOutputs.some((entry) => !isInternalStructuredOutputKey(entry.key));
+    hasNonInternalStepStructuredData(input.output.structuredData) ||
+    input.sharedState.structuredOutputs.some((entry) => !isInternalStructuredOutputKey(entry.key));
 
   const missingRequiredLabels = requestedOutputs
     .filter((requestedOutput) => isRequiredRequestedOutputMissing({
       requestedOutput,
       hasMessageOutput,
+      hasJsonMessageOutput,
       hasArtifactOutput,
       hasStructuredOutput,
     }))
@@ -1413,6 +1545,7 @@ function evaluateRequiredRequestedOutputsForStoredRuntime(input: {
 function isRequiredRequestedOutputMissing(input: {
   requestedOutput: unknown;
   hasMessageOutput: boolean;
+  hasJsonMessageOutput: boolean;
   hasArtifactOutput: boolean;
   hasStructuredOutput: boolean;
 }): boolean {
@@ -1428,9 +1561,20 @@ function isRequiredRequestedOutputMissing(input: {
     return !input.hasArtifactOutput;
   }
   if (kind === 'structured-report' || format === 'json') {
-    return !input.hasStructuredOutput && !input.hasMessageOutput;
+    return !input.hasStructuredOutput && !input.hasJsonMessageOutput;
   }
   return !input.hasMessageOutput && !input.hasArtifactOutput && !input.hasStructuredOutput;
+}
+
+function hasNonInternalStepStructuredData(structuredData: Record<string, unknown> | null | undefined): boolean {
+  if (!structuredData) return false;
+  return Object.keys(structuredData).some((key) => !isInternalStepStructuredDataKey(key));
+}
+
+function isInternalStepStructuredDataKey(key: string): boolean {
+  return key === 'browserRun' ||
+    key === 'localActionRequests' ||
+    key === 'routing';
 }
 
 function isInternalStructuredOutputKey(key: string): boolean {
@@ -1440,6 +1584,27 @@ function isInternalStructuredOutputKey(key: string): boolean {
     key.startsWith('step.consumedTaskTransfers.') ||
     key.startsWith('human.resume.')
   );
+}
+
+function isParseableJsonObjectText(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  const candidates = [trimmed];
+  const fenced = trimmed.match(/```json\s*([\s\S]*?)\s*```/i) ?? trimmed.match(/```\s*([\s\S]*?)\s*```/);
+  if (fenced?.[1]) {
+    candidates.push(fenced[1].trim());
+  }
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate) as unknown;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return true;
+      }
+    } catch {
+      // Keep checking other candidate shapes.
+    }
+  }
+  return false;
 }
 
 function formatTaskStructuredContextPromptContext(

@@ -9,7 +9,7 @@ export type BrowserSetupStepStatus = 'completed' | 'skipped' | 'failed';
 export interface BrowserSetupLoginStep {
   status: BrowserSetupStepStatus;
   exportCookies: boolean;
-  managedProfileSeedPolicy: 'reseed-if-source-newer' | 'force-reseed';
+  managedProfileSeedPolicy: 'bootstrap-only' | 'force-reseed';
   manualLoginProfileDir: string;
   chromeProfile: string;
   launchTargetUrl: string;

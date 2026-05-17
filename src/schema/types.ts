@@ -110,10 +110,18 @@ export const ServiceLiveFollowSchema = z.object({
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const ServiceTenantLimitsSchema = z.object({
+  maxConcurrentChats: z.number().int().positive().optional(),
+  maxChatsPerHour: z.number().int().positive().optional(),
+  maxChatsPerDay: z.number().int().positive().optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const ServiceConfigSchema = z.object({
   url: z.string().optional(),
   identity: ServiceIdentitySchema.optional(),
   liveFollow: ServiceLiveFollowSchema.optional(),
+  tenantLimits: ServiceTenantLimitsSchema.optional(),
   projectId: z.string().optional(),
   projectName: z.string().optional(),
   conversationId: z.string().optional(),

@@ -119,6 +119,7 @@ export const ExecutionResponseSchema: z.ZodType<ExecutionResponse> = z.object({
       executionSummary: z
         .object({
           terminalStepId: z.string().nullable().optional(),
+          createdAt: z.string().nullable().optional(),
           completedAt: z.string().nullable().optional(),
           lastUpdatedAt: z.string().nullable().optional(),
           stepSummaries: z

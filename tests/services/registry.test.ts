@@ -34,6 +34,8 @@ import {
   resolveBundledServiceSelectors,
   resolveBundledServiceUiLabel,
   resolveBundledServiceUiLabelSet,
+  resolveEffectiveServiceUiLabelSet,
+  upsertServiceUiLabelSetAlias,
 } from '../../src/services/registry.js';
 import { parseServicesManifest, parseServicesRegistryCache } from '../../src/services/manifest.js';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
@@ -275,11 +277,39 @@ describe('service registry manifest helpers', () => {
     expect(resolveBundledServiceUiLabelSet('chatgpt', 'project_settings_commit_buttons', [])).toEqual(
       expect.arrayContaining(['save', 'save changes', 'done', 'apply']),
     );
+    expect(resolveBundledServiceUiLabelSet('chatgpt', 'project_create_confirm_buttons', [])).toEqual(
+      expect.arrayContaining(['create project', 'create', 'continue']),
+    );
     expect(resolveBundledServiceUiLabelSet('chatgpt', 'project_source_upload_actions', [])).toEqual(
       expect.arrayContaining(['upload', 'browse', 'upload file']),
     );
     expect(resolveBundledServiceUiLabelSet('chatgpt', 'project_source_upload_markers', [])).toEqual(
       expect.arrayContaining(['add sources', 'drag sources here']),
+    );
+  });
+
+  test('merges user-scoped ui label-set overrides into effective labels', async () => {
+    const testHome = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-registry-overrides-'));
+    setAuracallHomeDirOverrideForTest(testHome);
+
+    const update = await upsertServiceUiLabelSetAlias({
+      service: 'chatgpt',
+      key: 'project_create_confirm_buttons',
+      label: 'Create workspace',
+    });
+
+    expect(update).toMatchObject({
+      object: 'auracall_service_override_update',
+      service: 'chatgpt',
+      key: 'project_create_confirm_buttons',
+      label: 'Create workspace',
+      added: true,
+    });
+    expect(resolveEffectiveServiceUiLabelSet('chatgpt', 'project_create_confirm_buttons', [])).toEqual(
+      expect.arrayContaining(['create project', 'create', 'continue', 'Create workspace']),
+    );
+    expect(resolveBundledServiceUiLabelSet('chatgpt', 'project_create_confirm_buttons', [])).not.toContain(
+      'Create workspace',
     );
   });
 

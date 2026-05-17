@@ -7,17 +7,23 @@ import {
 import { logDomFailure } from '../domDebug.js';
 import { buildClickDispatcher } from './domEvents.js';
 
+const MODEL_SELECTION_EVALUATE_TIMEOUT_MS = 35_000;
+
 export async function ensureModelSelection(
   Runtime: ChromeClient['Runtime'],
   desiredModel: string,
   logger: BrowserLogger,
   strategy: BrowserModelStrategy = 'select',
 ) {
-  const outcome = await Runtime.evaluate({
-    expression: buildModelSelectionExpression(desiredModel, strategy),
-    awaitPromise: true,
-    returnByValue: true,
-  });
+  const outcome = await withStageTimeout(
+    Runtime.evaluate({
+      expression: buildModelSelectionExpression(desiredModel, strategy),
+      awaitPromise: true,
+      returnByValue: true,
+    }),
+    MODEL_SELECTION_EVALUATE_TIMEOUT_MS,
+    `Timed out waiting for ChatGPT model selector after ${Math.round(MODEL_SELECTION_EVALUATE_TIMEOUT_MS / 1000)}s.`,
+  );
 
   const result = outcome.result?.value as
     | { status: 'already-selected'; label?: string | null }
@@ -51,6 +57,18 @@ export async function ensureModelSelection(
       throw new Error('Unable to locate the ChatGPT model selector button.');
     }
   }
+}
+
+function withStageTimeout<T>(task: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const timer = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  return Promise.race([task, timer]).finally(() => {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
+  });
 }
 
 /**

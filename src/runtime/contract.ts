@@ -21,6 +21,7 @@ export interface HeartbeatStoredExecutionRunLeaseInput {
   leaseId: string;
   heartbeatAt: string;
   expiresAt: string;
+  runtimeEvidence?: Record<string, unknown> | null;
 }
 
 export interface ReleaseStoredExecutionRunLeaseInput {
@@ -39,6 +40,7 @@ export interface ListStoredExecutionRunsInput {
   limit?: number;
   status?: ExecutionRunStatus;
   sourceKind?: ExecutionRunSourceKind;
+  updatedSince?: string;
 }
 
 export interface PersistStoredExecutionRunRecordInput {

@@ -482,6 +482,7 @@ export interface ExecutionServiceHostDeps {
   runnerId?: string | null;
   localActionExecutionPolicy?: Partial<LocalActionExecutionPolicy>;
   executeStoredRunStep?: (context: ExecuteStoredRunStepContext) => Promise<ExecuteStoredRunStepResult | undefined>;
+  executionGate?: ExecutionServiceHostExecutionGate;
   leaseHeartbeatIntervalMs?: number;
   leaseHeartbeatTtlMs?: number;
   executeLocalActionRequest?: (
@@ -1769,8 +1770,13 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
       const drained: DrainedStoredExecutionRunResult[] = [];
       const expiredLeaseRunIds: string[] = [];
       const executedRunIds: string[] = [];
+      const deferredExecutions: Array<{
+        runId: string;
+        promise: Promise<ExecutionRunStoredRecord>;
+      }> = [];
       let executedCount = 0;
       const executionOwnerId = runnerId ?? ownerId;
+      const executionGate = options.executionGate ?? deps.executionGate ?? null;
 
       const candidates = await inspectHostDrainCandidates(control, runnersControl, options, now, expiredLeaseRunIds);
       const actionableExecutionPlan = createActionableExecutionPlan(candidates, maxRuns);
@@ -1845,23 +1851,6 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
             record: inspection.record,
           });
           continue;
-        }
-
-        if (
-          (candidate.kind === 'runnable' || candidate.kind === 'recoverable-stranded') &&
-          options.executionGate
-        ) {
-          const gate = await options.executionGate(currentRecord);
-          if (!gate.allowed) {
-            drained.push({
-              runId: currentRecord.runId,
-              result: 'skipped',
-              reason: 'execution-gate',
-              detailReason: gate.reason,
-              record: inspection.record,
-            });
-            continue;
-          }
         }
 
         if (runnerId && !existingLocalLeaseId) {
@@ -1947,47 +1936,92 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
           continue;
         }
 
-        if (runnerId) {
-          await runnersControl.recordRunnerActivity({
-            runnerId,
-            runId: currentRecord.runId,
-            activityAt: now(),
-            eligibilityNote: 'service host started local run',
-          });
+        if (executionGate) {
+          const gate = await executionGate(currentRecord);
+          if (!gate.allowed) {
+            drained.push({
+              runId: currentRecord.runId,
+              result: 'skipped',
+              reason: 'execution-gate',
+              detailReason: gate.reason,
+              record: inspection.record,
+            });
+            continue;
+          }
         }
 
-        const executed = await executeStoredExecutionRunOnce({
-          runId: currentRecord.runId,
-          ownerId: runnerId ?? ownerId,
-          leaseId: existingLocalLeaseId
-            ? undefined
-            : `${currentRecord.runId}:lease:${executionOwnerId.replace(/[^a-z0-9:_-]+/gi, '-')}:${++leaseSequence}`,
-          existingLeaseId: existingLocalLeaseId,
-          now,
-          leaseHeartbeatIntervalMs: deps.leaseHeartbeatIntervalMs,
-          leaseHeartbeatTtlMs: deps.leaseHeartbeatTtlMs,
-          control,
-          executeStep: deps.executeStoredRunStep,
-          executeLocalActionRequest,
-        });
-        if (runnerId) {
-          await runnersControl.recordRunnerActivity({
-            runnerId,
-            runId: executed.runId,
-            activityAt: executed.bundle.run.updatedAt,
-            eligibilityNote: 'service host executed local run',
-          });
-        }
-        if (refreshArchiveIndex) {
-          await refreshRunArchiveIndexBestEffort({ responseId: executed.runId });
-        }
         executedCount += 1;
+        const assignedLeaseId = existingLocalLeaseId
+          ? undefined
+          : `${currentRecord.runId}:lease:${executionOwnerId.replace(/[^a-z0-9:_-]+/gi, '-')}:${++leaseSequence}`;
+        const executeCurrentRun = async (): Promise<ExecutionRunStoredRecord> => {
+          if (runnerId) {
+            await runnersControl.recordRunnerActivity({
+              runnerId,
+              runId: currentRecord.runId,
+              activityAt: now(),
+              eligibilityNote: 'service host started local run',
+            });
+          }
+
+          const executed = await executeStoredExecutionRunOnce({
+            runId: currentRecord.runId,
+            ownerId: runnerId ?? ownerId,
+            leaseId: assignedLeaseId,
+            existingLeaseId: existingLocalLeaseId,
+            now,
+            leaseHeartbeatIntervalMs: deps.leaseHeartbeatIntervalMs,
+            leaseHeartbeatTtlMs: deps.leaseHeartbeatTtlMs,
+            control,
+            executeStep: deps.executeStoredRunStep,
+            executeLocalActionRequest,
+          });
+          if (runnerId) {
+            await runnersControl.recordRunnerActivity({
+              runnerId,
+              runId: executed.runId,
+              activityAt: executed.bundle.run.updatedAt,
+              eligibilityNote: 'service host executed local run',
+            });
+          }
+          if (refreshArchiveIndex) {
+            await refreshRunArchiveIndexBestEffort({ responseId: executed.runId });
+          }
+          return executed;
+        };
+
+        if (maxRuns > 1 && isBrowserBackedStoredExecutionRun(currentRecord)) {
+          deferredExecutions.push({
+            runId: currentRecord.runId,
+            promise: executeCurrentRun(),
+          });
+          continue;
+        }
+
+        const executed = await executeCurrentRun();
         executedRunIds.push(executed.runId);
         drained.push({
           runId: executed.runId,
           result: 'executed',
           record: executed,
         });
+      }
+
+      if (deferredExecutions.length > 0) {
+        const settled = await Promise.all(
+          deferredExecutions.map(async (execution) => ({
+            runId: execution.runId,
+            record: await execution.promise,
+          })),
+        );
+        for (const execution of settled) {
+          executedRunIds.push(execution.record.runId);
+          drained.push({
+            runId: execution.record.runId,
+            result: 'executed',
+            record: execution.record,
+          });
+        }
       }
 
       return {
@@ -2548,6 +2582,19 @@ async function persistOperatorDrainEvent(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isBrowserBackedStoredExecutionRun(record: ExecutionRunStoredRecord): boolean {
+  const auracall = record.bundle.run.initialInputs?.auracall;
+  if (!isRecord(auracall)) {
+    return false;
+  }
+  const service = typeof auracall.service === 'string' ? auracall.service : null;
+  const agent = typeof auracall.agent === 'string' ? auracall.agent.trim() : '';
+  return (
+    auracall.transport === 'browser' ||
+    (agent.length > 0 && (service === 'chatgpt' || service === 'gemini' || service === 'grok'))
+  );
 }
 
 function readExecutionRunOrchestrationTimelineSummaryForRecoveryDetail(

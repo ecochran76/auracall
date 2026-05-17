@@ -14,6 +14,7 @@ export interface ListExecutionRunRecordOptions {
   limit?: number;
   status?: ExecutionRunStatus;
   sourceKind?: ExecutionRunSourceKind;
+  updatedSince?: string;
 }
 
 export interface ExecutionRunStoredRecord {
@@ -90,11 +91,14 @@ export async function listExecutionRunRecordBundles(
     throw error;
   }
 
+  const runEntries = entries.filter((entry) => entry.isDirectory());
+  const candidateEntries = options.updatedSince
+    ? await filterRunEntriesUpdatedSince(runEntries, options.updatedSince)
+    : runEntries;
+
   const bundles = (
     await Promise.all(
-      entries
-        .filter((entry) => entry.isDirectory())
-        .map(async (entry) => readExecutionRunRecordBundle(entry.name)),
+      candidateEntries.map(async (entry) => readExecutionRunRecordBundle(entry.name)),
     )
   ).filter((bundle): bundle is ExecutionRunRecordBundle => bundle !== null);
 
@@ -110,6 +114,31 @@ export async function listExecutionRunRecordBundles(
     return filtered.slice(0, options.limit);
   }
   return filtered;
+}
+
+async function filterRunEntriesUpdatedSince(entries: Dirent[], updatedSince: string): Promise<Dirent[]> {
+  const cutoffMs = Date.parse(updatedSince);
+  if (!Number.isFinite(cutoffMs)) return entries;
+  const checks = await Promise.all(
+    entries.map(async (entry) => {
+      const updated = await hasRunRecordUpdatedSince(entry.name, cutoffMs);
+      return updated ? entry : null;
+    }),
+  );
+  return checks.filter((entry): entry is Dirent => entry !== null);
+}
+
+async function hasRunRecordUpdatedSince(runId: string, cutoffMs: number): Promise<boolean> {
+  for (const filePath of [getExecutionRunRecordPath(runId), getExecutionRunBundlePath(runId)]) {
+    try {
+      const stat = await fs.stat(filePath);
+      if (stat.mtimeMs >= cutoffMs) return true;
+    } catch (error) {
+      if (isMissingFileError(error)) continue;
+      throw error;
+    }
+  }
+  return false;
 }
 
 export async function readExecutionRunStoredRecord(runId: string): Promise<ExecutionRunStoredRecord | null> {

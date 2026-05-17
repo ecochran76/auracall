@@ -47,6 +47,11 @@ prefer semantic intent and keep exact provider-version pins as escape hatches.
   privileged setup, scoped execution, durable observation, response batches,
   and skill split. The ChE grading smoke is one fixture-backed proof of that
   pattern, not a special-purpose API lane.
+- API requests, chat completions, response batches, and team runs should
+  produce archive-ready runtime evidence. Searchable retrieval of uploaded
+  files, generated artifacts, provider conversation ids, and caller-supplied
+  post-processing evidence belongs to Plan 0066 rather than to
+  provider-specific model-selector work.
 - `POST /v1/agent-setup-packages`/MCP `agent_setup_package_create` and the
   redacted `POST /v1/agent-setup-handoffs`/MCP
   `agent_setup_handoff_create` now compose project ensure, registry agent
@@ -151,5 +156,9 @@ Remaining:
   the basic route and response shape.
 - Add first-class batch retry/cancel/priority controls once response-batch
   dogfooding shows the minimal status contract is stable.
+- Ensure `/v1/responses`, `/v1/chat/completions`, `/v1/response-batches`, and
+  `/v1/team-runs` write enough stable metadata for the searchable run
+  cache/archive lane to index uploads, generated artifacts, provider
+  conversation ids, and caller evidence.
 - Promote the generic AuraCall skills into the shared agent-skill source of
   truth after their repo-local versions prove useful.

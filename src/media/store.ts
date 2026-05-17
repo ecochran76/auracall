@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import type { Dirent } from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { getRuntimeDir } from '../runtime/store.js';
@@ -14,6 +15,7 @@ export interface MediaGenerationRecordStore {
   getGenerationDir(id: string): string;
   getArtifactDir(id: string): string;
   readRecord(id: string): Promise<MediaGenerationStoredRecord | null>;
+  listRecords(options?: { limit?: number | null }): Promise<MediaGenerationStoredRecord[]>;
   writeResponse(response: MediaGenerationResponse, options?: { persistedAt?: string }): Promise<MediaGenerationStoredRecord>;
 }
 
@@ -74,8 +76,33 @@ export function createMediaGenerationRecordStore(): MediaGenerationRecordStore {
     getGenerationDir: getMediaGenerationDir,
     getArtifactDir: getMediaGenerationArtifactDir,
     readRecord: readMediaGenerationRecord,
+    listRecords: listMediaGenerationRecords,
     writeResponse: writeMediaGenerationResponse,
   };
+}
+
+export async function listMediaGenerationRecords(
+  options: { limit?: number | null } = {},
+): Promise<MediaGenerationStoredRecord[]> {
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(getMediaGenerationsDir(), { withFileTypes: true });
+  } catch (error) {
+    if (isMissingFileError(error)) return [];
+    throw error;
+  }
+  const records = (
+    await Promise.all(
+      entries
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => readMediaGenerationRecord(entry.name)),
+    )
+  ).filter((record): record is MediaGenerationStoredRecord => record !== null);
+  records.sort((left, right) => right.response.createdAt.localeCompare(left.response.createdAt));
+  if (typeof options.limit === 'number' && options.limit >= 0) {
+    return records.slice(0, options.limit);
+  }
+  return records;
 }
 
 function isMissingFileError(error: unknown): boolean {

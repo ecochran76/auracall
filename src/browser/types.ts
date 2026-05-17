@@ -1,4 +1,5 @@
 import type * as BaseTypes from '../../packages/browser-service/src/types.js';
+import type { ProviderUserIdentity } from './providers/types.js';
 
 export type {
   ChromeClient,
@@ -30,6 +31,11 @@ export interface BrowserPassiveObservation {
   confidence: 'low' | 'medium' | 'high';
 }
 
+export interface BrowserRuntimeEvidence {
+  observation: BrowserPassiveObservation;
+  runtime?: BrowserRuntimeMetadata | null;
+}
+
 type LlmBrowserFields = {
   selectedAgentId?: string | null;
   target?: 'chatgpt' | 'gemini' | 'grok';
@@ -44,6 +50,9 @@ type LlmBrowserFields = {
   thinkingTime?: ThinkingTimeLevel;
   composerTool?: string | null;
   deepResearchPlanAction?: ChatgptDeepResearchPlanAction;
+  expectedUserIdentity?: ProviderUserIdentity | null;
+  expectedServiceAccountId?: string | null;
+  identityPreflightFallbackIdentity?: ProviderUserIdentity | null;
 };
 
 export type BrowserRuntimeMetadata = BaseTypes.BrowserRuntimeMetadata & {
@@ -81,9 +90,11 @@ export type BrowserAutomationConfig = Omit<BaseTypes.BrowserAutomationConfig, 'b
 export type BrowserRunOptions = Omit<BaseTypes.BrowserRunOptions, 'config' | 'runtimeHintCb'> & {
   config?: BrowserAutomationConfig;
   runtimeHintCb?: (hint: BrowserRuntimeMetadata) => void | Promise<void>;
+  runtimeEvidenceCb?: (evidence: BrowserRuntimeEvidence) => void | Promise<void>;
 };
 
 export type BrowserRunResult = BaseTypes.BrowserRunResult & {
+  chromeTargetId?: string | null;
   conversationId?: string;
   composerTool?: string | null;
   thinkingTime?: string;

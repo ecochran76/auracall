@@ -68,6 +68,7 @@ describe('resolveBrowserLoginOptionsFromUserConfig', () => {
       chromePath: '/usr/bin/google-chrome',
       manualLoginProfileDir: '/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt',
       display: ':0.0',
+      managedProfileSeedPolicy: undefined,
     });
   });
 });

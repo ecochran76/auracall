@@ -393,6 +393,23 @@ Lazy mirroring must remain lower priority than API-requested work:
   - Gemini: 6 page reads, 120 conversation rows, 40 artifact rows
   - Grok: 8 page reads, 160 conversation rows, 80 artifact rows
 
+## Boundary With Run Archive
+
+This lane owns provider-account live follow: low-churn discovery of projects,
+conversations, account files, artifacts, media, capabilities, and account
+identity for configured provider accounts.
+
+It does not own the archive of AuraCall-created work. Response runs, response
+batches, team runs, media generations, request uploads, provider conversation
+references created by jobs, generated artifacts, and caller-supplied validation
+evidence belong to
+`docs/dev/plans/0066-2026-05-16-searchable-run-cache-and-artifact-archive.md`.
+
+The two lanes should link to each other by stable ids. Live follow can enrich an
+archived provider conversation with account-history context, but archive
+readback must not require live follow to launch a browser or revisit a provider
+page.
+
 ## Runtime Surfaces
 
 The service should expose mirror status through API and MCP before broadening

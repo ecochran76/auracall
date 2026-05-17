@@ -24,6 +24,8 @@ describe('browser thinking-time selection expression', () => {
     expect(expression).toContain('extended');
     expect(expression).toContain('findSelectedLevelPill');
     expect(expression).toContain('button.__composer-pill, .__composer-pill-composite button');
+    expect(expression).toContain('clientX');
+    expect(expression).toContain('clientY');
   });
 
   it('targets the requested thinking time level', () => {

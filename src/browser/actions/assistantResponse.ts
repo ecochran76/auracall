@@ -12,6 +12,12 @@ import { logDomFailure, logConversationSnapshot, buildConversationDebugExpressio
 import { buildClickDispatcher } from './domEvents.js';
 
 const ASSISTANT_POLL_TIMEOUT_ERROR = 'assistant-response-watchdog-timeout';
+const PASSIVE_DOM_PROBE_INTERVAL_MS = 5_000;
+
+export interface WaitForAssistantResponseOptions {
+  onResponseIncoming?: () => void;
+  onPassiveDomProbe?: () => void;
+}
 
 function isAnswerNowPlaceholderText(normalized: string): boolean {
   const text = normalized.trim();
@@ -30,9 +36,20 @@ export async function waitForAssistantResponse(
   timeoutMs: number,
   logger: BrowserLogger,
   minTurnIndex?: number,
-  options: { onResponseIncoming?: () => void } = {},
+  options: WaitForAssistantResponseOptions = {},
 ): Promise<{ text: string; html?: string; meta: { turnId?: string | null; messageId?: string | null } }> {
   const start = Date.now();
+  let responseIncomingEmitted = false;
+  const waitOptions: WaitForAssistantResponseOptions = {
+    ...options,
+    onResponseIncoming: () => {
+      if (responseIncomingEmitted) {
+        return;
+      }
+      responseIncomingEmitted = true;
+      options.onResponseIncoming?.();
+    },
+  };
   logger('Waiting for ChatGPT response');
   // Learned: two paths are needed:
   // 1) DOM observer (fast when mutations fire),
@@ -52,7 +69,7 @@ export async function waitForAssistantResponse(
     timeoutMs,
     minTurnIndex,
     pollerAbort.signal,
-    options.onResponseIncoming,
+    waitOptions,
   ).then(
     (value) => {
       if (!value) {
@@ -72,7 +89,7 @@ export async function waitForAssistantResponse(
       logger('Captured assistant response via snapshot watchdog');
       evaluationPromise.catch(() => undefined);
       await terminateRuntimeExecution(Runtime);
-      options.onResponseIncoming?.();
+      waitOptions.onResponseIncoming?.();
       return winner.value;
     }
     pollerAbort.abort();
@@ -90,10 +107,10 @@ export async function waitForAssistantResponse(
           timeoutMs,
           logger,
           minTurnIndex,
-          options.onResponseIncoming,
+          waitOptions,
         );
         if (recovered) {
-          options.onResponseIncoming?.();
+          waitOptions.onResponseIncoming?.();
           return recovered;
         }
         await logDomFailure(Runtime, logger, 'assistant-response');
@@ -118,7 +135,7 @@ export async function waitForAssistantResponse(
         remainingMs,
         logger,
         minTurnIndex,
-        options.onResponseIncoming,
+        waitOptions,
       );
       if (recovered) {
         return recovered;
@@ -150,9 +167,9 @@ export async function waitForAssistantResponse(
     ]);
     if (stopVisible) {
       logger('Assistant still generating; waiting for completion');
-      const completed = await pollAssistantCompletion(Runtime, remainingMs, minTurnIndex);
+      const completed = await pollAssistantCompletion(Runtime, remainingMs, minTurnIndex, undefined, waitOptions);
       if (completed) {
-        options.onResponseIncoming?.();
+        waitOptions.onResponseIncoming?.();
         return completed;
       }
     } else if (completionVisible) {
@@ -243,22 +260,27 @@ async function recoverAssistantResponse(
   timeoutMs: number,
   logger: BrowserLogger,
   minTurnIndex?: number,
-  onResponseIncoming?: () => void,
+  options: WaitForAssistantResponseOptions = {},
 ): Promise<{ text: string; html?: string; meta: { turnId?: string | null; messageId?: string | null } } | null> {
   const recoveryTimeoutMs = Math.max(0, timeoutMs);
   if (recoveryTimeoutMs === 0) {
     return null;
   }
-  const recovered = await waitForCondition(
-    async () => {
-      const snapshot = await readAssistantSnapshot(Runtime, minTurnIndex);
-      return normalizeAssistantSnapshot(snapshot);
-    },
+  const quickSnapshot = normalizeAssistantSnapshot(await readAssistantSnapshot(Runtime, minTurnIndex).catch(() => null));
+  if (quickSnapshot) {
+    options.onPassiveDomProbe?.();
+    options.onResponseIncoming?.();
+    logger('Recovered assistant response via immediate snapshot fallback');
+    return quickSnapshot;
+  }
+  const recovered = await pollAssistantCompletion(
+    Runtime,
     recoveryTimeoutMs,
-    400,
+    minTurnIndex,
+    undefined,
+    options,
   );
   if (recovered) {
-    onResponseIncoming?.();
     logger('Recovered assistant response via polling fallback');
     return recovered;
   }
@@ -364,23 +386,29 @@ async function pollAssistantCompletion(
   timeoutMs: number,
   minTurnIndex?: number,
   abortSignal?: AbortSignal,
-  onResponseIncoming?: () => void,
+  options: WaitForAssistantResponseOptions = {},
 ): Promise<{ text: string; html?: string; meta: { turnId?: string | null; messageId?: string | null } } | null> {
   const watchdogDeadline = Date.now() + timeoutMs;
   let previousLength = 0;
   let stableCycles = 0;
   let lastChangeAt = Date.now();
   let responseIncomingEmitted = false;
+  let lastPassiveProbeAt = 0;
   while (Date.now() < watchdogDeadline) {
     if (abortSignal?.aborted) {
       return null;
     }
     const snapshot = await readAssistantSnapshot(Runtime, minTurnIndex);
+    const observedAt = Date.now();
+    if (observedAt - lastPassiveProbeAt >= PASSIVE_DOM_PROBE_INTERVAL_MS) {
+      lastPassiveProbeAt = observedAt;
+      options.onPassiveDomProbe?.();
+    }
     const normalized = normalizeAssistantSnapshot(snapshot);
     if (normalized) {
       if (!responseIncomingEmitted) {
         responseIncomingEmitted = true;
-        onResponseIncoming?.();
+        options.onResponseIncoming?.();
       }
       const currentLength = normalized.text.length;
       if (currentLength > previousLength) {
@@ -511,18 +539,6 @@ function normalizeAssistantSnapshot(
     html: snapshot?.html ?? undefined,
     meta: { turnId: snapshot?.turnId ?? undefined, messageId: snapshot?.messageId ?? undefined },
   };
-}
-
-async function waitForCondition<T>(getter: () => Promise<T | null>, timeoutMs: number, pollIntervalMs = 400): Promise<T | null> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const value = await getter();
-    if (value) {
-      return value;
-    }
-    await delay(pollIntervalMs);
-  }
-  return null;
 }
 
 function buildAssistantSnapshotExpression(minTurnIndex?: number): string {

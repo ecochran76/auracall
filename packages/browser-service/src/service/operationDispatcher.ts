@@ -111,7 +111,10 @@ export function buildBrowserOperationKey(input: BrowserOperationKeyInput): strin
   }
   if (input.rawDevTools?.port) {
     const host = normalizeDevToolsHost(input.rawDevTools.host);
-    return `devtools:${host}:${input.rawDevTools.port}`;
+    const targetId = normalizeDevToolsTargetId(input.rawDevTools.targetId);
+    return targetId
+      ? `devtools:${host}:${input.rawDevTools.port}::target:${targetId}`
+      : `devtools:${host}:${input.rawDevTools.port}`;
   }
   const serviceTarget = normalizeServiceTarget(input.serviceTarget ?? 'unknown');
   const managedProfileDir = path.resolve('unknown');
@@ -126,6 +129,11 @@ export function normalizeServiceTarget(serviceTarget: string): string {
 export function normalizeDevToolsHost(host: string | null | undefined): string {
   const normalized = String(host ?? '').trim().toLowerCase();
   return normalized || '127.0.0.1';
+}
+
+export function normalizeDevToolsTargetId(targetId: string | null | undefined): string | null {
+  const normalized = String(targetId ?? '').trim();
+  return normalized.length > 0 ? normalized : null;
 }
 
 export function createBrowserOperationDispatcher(
