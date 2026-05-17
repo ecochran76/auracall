@@ -17,10 +17,13 @@ import {
   PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
+  Plus,
+  RefreshCcw,
   Search,
   Settings,
   ShieldCheck,
   TerminalSquare,
+  Trash2,
   UsersRound,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -414,6 +417,42 @@ function useRunRecoveryStatus() {
   return state;
 }
 
+function useApiKeyList() {
+  const [state, setState] = useState({
+    status: null,
+    loading: true,
+    error: null,
+    updatedAt: null,
+  });
+
+  async function load() {
+    setState((current) => ({ ...current, loading: true, error: null }));
+    try {
+      const response = await fetch("/v1/config/api-keys", { cache: "no-store" });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      setState({
+        status: payload,
+        loading: false,
+        error: null,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      setState((current) => ({
+        ...current,
+        loading: false,
+        error: error.message || "Unable to load API keys",
+      }));
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  return { ...state, refresh: load };
+}
+
 function SectionList({ title, items }) {
   return (
     <section className="section-list" aria-label={title}>
@@ -429,6 +468,184 @@ function SectionList({ title, items }) {
           </article>
         ))}
       </div>
+    </section>
+  );
+}
+
+function parseIdList(value) {
+  return String(value ?? "").split(/[,\s]+/u).map((item) => item.trim()).filter(Boolean);
+}
+
+function ApiKeysSection() {
+  const apiKeys = useApiKeyList();
+  const [form, setForm] = useState({
+    agentId: "",
+    teamId: "",
+    keyId: "",
+    services: "",
+    runtimeProfiles: "",
+    clientEnvPath: "",
+    overwrite: false,
+  });
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  const keys = apiKeys.status?.apiKeys ?? [];
+
+  function updateForm(name, value) {
+    setForm((current) => ({ ...current, [name]: value }));
+  }
+
+  async function issueKey(event) {
+    event.preventDefault();
+    setBusy(true);
+    setResult(null);
+    try {
+      const body = {};
+      if (form.agentId.trim()) body.agentId = form.agentId.trim();
+      if (form.teamId.trim()) body.teamId = form.teamId.trim();
+      if (form.keyId.trim()) body.keyId = form.keyId.trim();
+      if (form.clientEnvPath.trim()) body.clientEnvPath = form.clientEnvPath.trim();
+      body.services = parseIdList(form.services);
+      body.runtimeProfiles = parseIdList(form.runtimeProfiles);
+      body.overwrite = form.overwrite;
+      const response = await fetch("/v1/config/api-keys/issue", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      setResult({ tone: "ok", payload });
+      await apiKeys.refresh();
+    } catch (error) {
+      setResult({ tone: "bad", message: error.message || "API key issue failed" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteKey(keyId) {
+    if (!window.confirm(`Delete API key ${keyId} from ~/.auracall/api.env? Service restart is still required.`)) return;
+    setBusy(true);
+    setResult(null);
+    try {
+      const response = await fetch(`/v1/config/api-keys/${encodeURIComponent(keyId)}`, {
+        method: "DELETE",
+        cache: "no-store",
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      setResult({ tone: payload.deleted ? "ok" : "warn", payload });
+      await apiKeys.refresh();
+    } catch (error) {
+      setResult({ tone: "bad", message: error.message || "API key delete failed" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="health-section" aria-label="API key management">
+      <div className="section-heading">
+        <h2>API Keys</h2>
+        <span>{apiKeys.loading ? "Loading" : `${formatNumber(keys.length)} configured`}</span>
+      </div>
+      {apiKeys.error ? <div className="health-error">Unable to load API keys: {apiKeys.error}</div> : null}
+      <div className="api-key-actions">
+        <button className="icon-label-button" type="button" disabled={apiKeys.loading || busy} onClick={apiKeys.refresh} title="Refresh API keys">
+          <RefreshCcw size={14} aria-hidden="true" />
+          <span>Refresh</span>
+        </button>
+        <small>{apiKeys.updatedAt ? `Updated ${formatDateTime(apiKeys.updatedAt)}` : apiKeys.status?.envPath ?? "/v1/config/api-keys"}</small>
+      </div>
+      <div className="health-table-wrap">
+        <table className="health-table">
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>Secret</th>
+              <th>Agents</th>
+              <th>Teams</th>
+              <th>Services</th>
+              <th>Runtime</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {keys.map((key) => (
+              <tr key={key.id}>
+                <td>{key.id}</td>
+                <td>{key.hasSecret ? "stored" : "missing"}</td>
+                <td>{(key.agents ?? []).join(", ") || "all"}</td>
+                <td>{(key.teams ?? []).join(", ") || "all"}</td>
+                <td>{(key.services ?? []).join(", ") || "all"}</td>
+                <td>{(key.runtimeProfiles ?? []).join(", ") || "all"}</td>
+                <td>
+                  <button className="icon-label-button danger" type="button" disabled={busy} onClick={() => deleteKey(key.id)} title={`Delete ${key.id}`}>
+                    <Trash2 size={14} aria-hidden="true" />
+                    <span>Delete</span>
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {!keys.length ? (
+              <tr>
+                <td colSpan="7">No API keys were found in the user-scoped service env file.</td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+      <form className="api-key-form" onSubmit={issueKey}>
+        <div className="section-heading">
+          <h3>Issue Scoped Key</h3>
+          <span>Restart required after issue or delete</span>
+        </div>
+        <div className="api-key-form-grid">
+          <label>
+            <span>Agent</span>
+            <input value={form.agentId} placeholder="agent id" onChange={(event) => updateForm("agentId", event.target.value)} />
+          </label>
+          <label>
+            <span>Team</span>
+            <input value={form.teamId} placeholder="team id" onChange={(event) => updateForm("teamId", event.target.value)} />
+          </label>
+          <label>
+            <span>Key ID</span>
+            <input value={form.keyId} placeholder="client id" onChange={(event) => updateForm("keyId", event.target.value)} />
+          </label>
+          <label>
+            <span>Services</span>
+            <input value={form.services} placeholder="chatgpt, gemini" onChange={(event) => updateForm("services", event.target.value)} />
+          </label>
+          <label>
+            <span>Runtime</span>
+            <input value={form.runtimeProfiles} placeholder="default" onChange={(event) => updateForm("runtimeProfiles", event.target.value)} />
+          </label>
+          <label>
+            <span>Client Env</span>
+            <input value={form.clientEnvPath} placeholder="optional handoff path" onChange={(event) => updateForm("clientEnvPath", event.target.value)} />
+          </label>
+        </div>
+        <div className="api-key-form-footer">
+          <label className="checkbox-row">
+            <input type="checkbox" checked={form.overwrite} onChange={(event) => updateForm("overwrite", event.target.checked)} />
+            <span>Overwrite existing key id</span>
+          </label>
+          <button className="primary-action" type="submit" disabled={busy || (!form.agentId.trim() && !form.teamId.trim())} title="Issue API key">
+            <Plus size={16} aria-hidden="true" />
+            <span>{busy ? "Working" : "Issue"}</span>
+          </button>
+        </div>
+      </form>
+      {result ? (
+        <div className={`api-key-result api-key-result-${result.tone}`}>
+          <strong>{result.tone === "ok" ? "Operation complete" : result.tone === "warn" ? "No matching key removed" : "Operation failed"}</strong>
+          {result.message ? <p>{result.message}</p> : null}
+          {result.payload ? <pre>{JSON.stringify(result.payload, null, 2)}</pre> : null}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -522,6 +739,8 @@ function HealthViewport({ apiStatus }) {
           </div>
         </article>
       </div>
+
+      <ApiKeysSection />
 
       <section className="health-section" aria-label="Live follow accounts">
         <div className="section-heading">

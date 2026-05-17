@@ -4837,3 +4837,40 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - preserve external client bearer-key auth while adding explicit operator
     controls for API-key inspection, creation, and deletion.
+
+## Turn 175 | 2026-05-17
+
+- Goal: make operator API-key inspection, creation, and deletion available from
+  the JSON API, MCP, and dashboard.
+- Change:
+  - added secret-free `GET /v1/config/api-keys` for user-scoped service env
+    inspection.
+  - added `DELETE /v1/config/api-keys/{key_id}` for removing a key from
+    `~/.auracall/api.env`.
+  - added the MCP `api_key_delete` tool.
+  - made env-file rewrites omit deleted keys instead of preserving blank
+    deleted variables.
+  - added a Health-page API Keys section with a redacted key table, delete
+    actions, and compact issue form.
+  - kept issue/delete responses explicit that service restart is required for
+    the running auth policy to reload env changes.
+- Verification:
+  - `pnpm exec vitest run tests/http.responsesServer.test.ts -t "issues scoped
+    API keys|configured API keys|agent registry and loaded API-key diagnostics"`
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service`
+  - `curl http://auracall.localhost/status` reported `ok=true`, API-key list
+    and delete routes, and live follow `healthy`.
+  - temp-env HTTP smoke issued, listed, and deleted `operator-ui-smoke` without
+    leaking the secret in the list response.
+  - `agent-browser` verified the Health page renders the API Keys table and
+    issue form.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/api-keys-health.png`
+- Next:
+  - add a safer restart/reload workflow for key mutations so the dashboard can
+    guide or trigger the required service restart explicitly.

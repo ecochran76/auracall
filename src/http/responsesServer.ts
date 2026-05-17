@@ -32,7 +32,8 @@ import {
   createAgentTeamConfigService,
   teamConfigUpsertInputSchema,
 } from '../config/agentConfigService.js';
-import { issueApiKey } from '../config/apiKeyIssuer.js';
+import { readApiKeyDiagnosticsFromEnvFile } from '../config/apiKeyEnvDiagnostics.js';
+import { deleteApiKey, issueApiKey } from '../config/apiKeyIssuer.js';
 import {
   createAgentRegistryStore,
   type AgentRegistryStore,
@@ -644,7 +645,9 @@ interface HttpStatusResponse {
     browserDomDriftObservationAcceptTemplate: string;
     workbenchCapabilitiesList: string;
     agentRegistryDiagnostics: string;
+    configApiKeys: string;
     configApiKeyIssue: string;
+    configApiKeyDeleteTemplate: string;
     configSnapshotExport: string;
     configSnapshotImport: string;
     operatorBrowserDashboard: string;
@@ -2049,6 +2052,47 @@ export async function createResponsesHttpServer(
         return;
       }
 
+      if (req.method === 'GET' && url.pathname === '/v1/config/api-keys') {
+        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+        if (operatorAuthError) {
+          sendJson(res, 403, {
+            error: {
+              message: operatorAuthError,
+              type: 'permission_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        const envPath = url.searchParams.get('envPath') ?? undefined;
+        const diagnostics = await readApiKeyDiagnosticsFromEnvFile(envPath);
+        sendJson(res, 200, {
+          object: 'auracall_api_key_list',
+          envPath: diagnostics.envPath,
+          exists: diagnostics.exists,
+          apiKeys: diagnostics.apiKeys,
+        });
+        return;
+      }
+
+      const configApiKeyId = matchConfigApiKeyRoute(url.pathname);
+      if (configApiKeyId && req.method === 'DELETE') {
+        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+        if (operatorAuthError) {
+          sendJson(res, 403, {
+            error: {
+              message: operatorAuthError,
+              type: 'permission_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        sendJson(res, 200, await deleteApiKey({
+          keyId: configApiKeyId,
+          envPath: url.searchParams.get('envPath') ?? undefined,
+        }));
+        return;
+      }
+
       if (req.method === 'POST' && url.pathname === '/v1/config/snapshots/export') {
         const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
         if (operatorAuthError) {
@@ -3324,7 +3368,9 @@ function createHttpStatusResponse(input: {
       browserDomDriftObservations: '/v1/browser/dom-drift-observations[?service={chatgpt|gemini|grok}&surface={surface}&status=observed|accepted|rejected&limit=50]',
       browserDomDriftObservationAcceptTemplate: 'POST /v1/browser/dom-drift-observations/{observation_id}/accept',
       agentRegistryDiagnostics: '/v1/config/agent-diagnostics',
+      configApiKeys: '/v1/config/api-keys',
       configApiKeyIssue: 'POST /v1/config/api-keys/issue',
+      configApiKeyDeleteTemplate: 'DELETE /v1/config/api-keys/{key_id}',
       configSnapshotExport: 'POST /v1/config/snapshots/export',
       configSnapshotImport: 'POST /v1/config/snapshots/import',
       workbenchCapabilitiesList:
@@ -5895,6 +5941,11 @@ function matchResponseBatchRoute(pathname: string): string | null {
 
 function matchConfigEntityRoute(pathname: string, kind: 'agents' | 'teams'): string | null {
   const match = new RegExp(`^/v1/config/${kind}/([^/]+)$`).exec(pathname);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
+function matchConfigApiKeyRoute(pathname: string): string | null {
+  const match = /^\/v1\/config\/api-keys\/([^/]+)$/.exec(pathname);
   return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 

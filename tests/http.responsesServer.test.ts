@@ -16793,6 +16793,47 @@ describe('http responses adapter', () => {
       expect(clientEnv).toContain('AURACALL_MODEL=agent:worker');
       expect(clientEnv).toContain('AURACALL_STATUS_URL=http://127.0.0.1:18095/status');
       expect(clientEnv).toContain('AURACALL_BATCH_URL=http://127.0.0.1:18095/v1/response-batches');
+
+      const listResponse = await fetch(`http://127.0.0.1:${server.port}/v1/config/api-keys?envPath=${encodeURIComponent(envPath)}`, {
+        headers: { referer: `http://127.0.0.1:${server.port}/dashboard` },
+      });
+      expect(listResponse.status).toBe(200);
+      const listPayload = await listResponse.json() as JsonObject;
+      expect(listPayload).toMatchObject({
+        object: 'auracall_api_key_list',
+        envPath,
+        exists: true,
+        apiKeys: [
+          expect.objectContaining({
+            id: 'worker-client',
+            hasSecret: true,
+            agents: ['worker'],
+            services: ['chatgpt'],
+            runtimeProfiles: ['default'],
+          }),
+        ],
+      });
+      expect(JSON.stringify(listPayload)).not.toContain(String(payload.apiKey));
+
+      const deleteResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/config/api-keys/${encodeURIComponent('worker-client')}?envPath=${encodeURIComponent(envPath)}`,
+        {
+          method: 'DELETE',
+          headers: { referer: `http://127.0.0.1:${server.port}/dashboard` },
+        },
+      );
+      expect(deleteResponse.status).toBe(200);
+      expect(await deleteResponse.json()).toMatchObject({
+        object: 'auracall_api_key_delete',
+        keyId: 'worker-client',
+        envPath,
+        deleted: true,
+        restartRequired: true,
+        remainingKeyIds: [],
+      });
+      const deletedEnv = await fs.readFile(envPath, 'utf8');
+      expect(deletedEnv).not.toContain('worker-client');
+      expect(deletedEnv).not.toContain(String(payload.apiKey));
     } finally {
       await server.close();
     }

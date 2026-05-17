@@ -204,3 +204,29 @@ Validation evidence:
 - `curl http://auracall.localhost/status` reported `ok=true`, auth required with six keys, dashboard URL `http://auracall.localhost/dashboard`, and live follow `healthy`.
 - Plain `curl http://auracall.localhost/v1/models` returned HTTP 401, while the same route with `Referer: http://auracall.localhost/dashboard` returned HTTP 200 and `63` models.
 - `agent-browser` loaded `http://auracall.localhost/dashboard`, verified Search had no API-key field, searched `kind=upload` with query `rubric`, rendered 25 upload results, fetched an asset, then verified Chats had no API-key field and loaded 25 `chatgpt/default` conversations.
+
+## API Key Management Follow-Up
+
+Tenth pass added operator API-key inspection, issue, and delete controls:
+
+- Added `GET /v1/config/api-keys` for secret-free inspection of the user-scoped service env file.
+- Added `DELETE /v1/config/api-keys/{key_id}` to remove a key from `~/.auracall/api.env`; the response reports `restartRequired` because running auth policy is loaded at service start.
+- Added an MCP `api_key_delete` tool with the same secret-free delete contract.
+- Added a Health-page API Keys section that lists key ids, secret presence, scopes, delete actions, and a compact issue form.
+- The issue result can display the one-time secret to the superuser operator; list and delete responses do not expose secrets.
+
+Additional screenshot:
+
+- `/tmp/auracall-operator-ux-dogfood/api-keys-health.png` - Health page API Keys table and issue form, rendered without browser-entered credentials.
+
+Validation evidence:
+
+- `pnpm exec vitest run tests/http.responsesServer.test.ts -t "issues scoped API keys|configured API keys|agent registry and loaded API-key diagnostics"` passed.
+- `pnpm run ux:build` passed.
+- `pnpm exec tsc -p tsconfig.build.json --pretty false` passed.
+- `pnpm run build` passed.
+- `pnpm run install:user-runtime` passed.
+- `systemctl --user restart auracall-api.service` and `systemctl --user is-active auracall-api.service` reported `active`.
+- `curl http://auracall.localhost/status` reported `ok=true`, `routes.configApiKeys=/v1/config/api-keys`, `routes.configApiKeyDeleteTemplate=DELETE /v1/config/api-keys/{key_id}`, and live follow `healthy`.
+- A temp-env smoke issued `operator-ui-smoke`, listed one redacted key without leaking the secret, deleted it, and reported zero remaining temp-env keys.
+- `agent-browser` verified the Health page renders six existing key rows and the issue form, then saved the screenshot above.

@@ -3,7 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { getAuracallHomeDir } from '../../auracallHome.js';
 import { readApiKeyDiagnosticsFromEnvValues } from '../../config/apiKeyEnvDiagnostics.js';
-import { issueApiKey, readEnvFile } from '../../config/apiKeyIssuer.js';
+import { deleteApiKey, issueApiKey, readEnvFile } from '../../config/apiKeyIssuer.js';
 import type {
   AgentTeamConfigService,
 } from '../../config/agentConfigService.js';
@@ -55,6 +55,20 @@ const apiKeyDiagnosticsInputShape = {
   envPath: z.string().trim().min(1).optional(),
 } satisfies z.ZodRawShape;
 
+const apiKeyDeleteInputShape = {
+  keyId: z.string().trim().min(1),
+  envPath: z.string().trim().min(1).optional(),
+} satisfies z.ZodRawShape;
+
+const apiKeyDeleteOutputShape = {
+  object: z.literal('auracall_api_key_delete'),
+  keyId: z.string(),
+  envPath: z.string(),
+  deleted: z.boolean(),
+  restartRequired: z.boolean(),
+  remainingKeyIds: z.array(z.string()),
+} satisfies z.ZodRawShape;
+
 const apiKeyDiagnosticsOutputShape = {
   object: z.literal('auracall_agent_registry_diagnostics'),
   ok: z.boolean(),
@@ -101,6 +115,18 @@ export function registerApiKeyTools(
     },
     createApiKeyDiagnosticsToolHandler(deps.agentTeamConfigService),
   );
+
+  server.registerTool(
+    'api_key_delete',
+    {
+      title: 'Delete an AuraCall API key',
+      description:
+        'Remove a user-scoped AuraCall API key from ~/.auracall/api.env by key id without reading or returning the secret. Restart auracall-api.service afterward.',
+      inputSchema: apiKeyDeleteInputShape,
+      outputSchema: apiKeyDeleteOutputShape,
+    },
+    createApiKeyDeleteToolHandler(),
+  );
 }
 
 export function createApiKeyIssueToolHandler(agentTeamConfigService: AgentTeamConfigService) {
@@ -140,6 +166,24 @@ export function createApiKeyDiagnosticsToolHandler(agentTeamConfigService: Agent
         ...diagnostics,
         envPath,
       },
+    };
+  };
+}
+
+export function createApiKeyDeleteToolHandler() {
+  return async (input: unknown) => {
+    const payload = z.object(apiKeyDeleteInputShape).parse(input ?? {});
+    const structuredContent = await deleteApiKey(payload);
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: structuredContent.deleted
+            ? `Deleted AuraCall API key ${structuredContent.keyId} from ${structuredContent.envPath}. Restart auracall-api.service for the change to take effect.`
+            : `No AuraCall API key ${structuredContent.keyId} was found in ${structuredContent.envPath}.`,
+        },
+      ],
+      structuredContent: structuredContent as unknown as Record<string, unknown>,
     };
   };
 }

@@ -42,9 +42,85 @@ export interface ApiKeyIssueResult {
   restartRequired: boolean;
 }
 
+export interface ApiKeyDeleteInput {
+  keyId: string;
+  envPath?: string;
+}
+
+export interface ApiKeyDeleteResult {
+  object: 'auracall_api_key_delete';
+  keyId: string;
+  envPath: string;
+  deleted: boolean;
+  restartRequired: boolean;
+  remainingKeyIds: string[];
+}
+
 export interface EnvFileState {
   order: string[];
   values: Record<string, string>;
+}
+
+export async function deleteApiKey(input: ApiKeyDeleteInput): Promise<ApiKeyDeleteResult> {
+  const keyId = normalizeKeyId(input.keyId);
+  if (!keyId) {
+    throw new Error('keyId is required.');
+  }
+  const envPath = path.resolve(input.envPath ?? path.join(getAuracallHomeDir(), 'api.env'));
+  const state = await readEnvFile(envPath);
+  const suffix = toApiAuthEnvSuffix(keyId);
+  let deleted = false;
+
+  const keyIds = readDelimitedValueList(state.values.AURACALL_API_KEY_IDS).filter((id) => id !== keyId);
+  if ((state.values.AURACALL_API_KEY_IDS ?? '').split(/[,\s]+/).map((id) => id.trim()).filter(Boolean).includes(keyId)) {
+    deleted = true;
+  }
+  if (keyIds.length > 0) {
+    state.values.AURACALL_API_KEY_IDS = keyIds.join(',');
+  } else {
+    delete state.values.AURACALL_API_KEY_IDS;
+  }
+
+  const scopedKeys = [
+    `AURACALL_API_KEY_${suffix}_ID`,
+    `AURACALL_API_KEY_${suffix}`,
+    `AURACALL_API_KEY_${suffix}_AGENTS`,
+    `AURACALL_API_KEY_${suffix}_TEAMS`,
+    `AURACALL_API_KEY_${suffix}_SERVICES`,
+    `AURACALL_API_KEY_${suffix}_RUNTIME_PROFILES`,
+  ];
+  for (const key of scopedKeys) {
+    if (Object.prototype.hasOwnProperty.call(state.values, key)) {
+      deleted = true;
+      delete state.values[key];
+    }
+  }
+
+  if ((state.values.AURACALL_API_KEY_ID ?? 'env') === keyId || (!state.values.AURACALL_API_KEY_ID && keyId === 'env')) {
+    for (const key of [
+      'AURACALL_API_KEY_ID',
+      'AURACALL_API_KEY',
+      'AURACALL_API_KEY_AGENTS',
+      'AURACALL_API_KEY_TEAMS',
+      'AURACALL_API_KEY_SERVICES',
+      'AURACALL_API_KEY_RUNTIME_PROFILES',
+    ]) {
+      if (Object.prototype.hasOwnProperty.call(state.values, key)) {
+        deleted = true;
+        delete state.values[key];
+      }
+    }
+  }
+
+  await writeEnvFile(envPath, state);
+  return {
+    object: 'auracall_api_key_delete',
+    keyId,
+    envPath,
+    deleted,
+    restartRequired: deleted,
+    remainingKeyIds: readRemainingKeyIds(state.values),
+  };
 }
 
 export async function issueApiKey(
@@ -138,7 +214,8 @@ export async function readEnvFile(envPath: string): Promise<EnvFileState> {
 
 export async function writeEnvFile(envPath: string, state: EnvFileState): Promise<void> {
   await fs.mkdir(path.dirname(envPath), { recursive: true });
-  const keys = [...state.order, ...Object.keys(state.values).filter((key) => !state.order.includes(key))];
+  const orderedKeys = state.order.filter((key) => Object.prototype.hasOwnProperty.call(state.values, key));
+  const keys = [...orderedKeys, ...Object.keys(state.values).filter((key) => !orderedKeys.includes(key))];
   const body = [
     '# AuraCall local API credentials.',
     '# This file is user-scoped runtime state. Do not commit it.',
@@ -178,6 +255,18 @@ function appendDelimitedValue(existing: string | undefined, next: string): strin
   const values = (existing ?? '').split(/[,\s]+/).map((value) => value.trim()).filter(Boolean);
   if (!values.includes(next)) values.push(next);
   return values.join(',');
+}
+
+function readDelimitedValueList(value: string | undefined): string[] {
+  return (value ?? '').split(/[,\s]+/).map((item) => item.trim()).filter(Boolean);
+}
+
+function readRemainingKeyIds(values: Record<string, string>): string[] {
+  const ids = readDelimitedValueList(values.AURACALL_API_KEY_IDS);
+  if (values.AURACALL_API_KEY || values.AURACALL_API_KEY_ID) {
+    ids.unshift(values.AURACALL_API_KEY_ID?.trim() || 'env');
+  }
+  return Array.from(new Set(ids));
 }
 
 function writeOptionalDelimitedValue(target: Record<string, string>, key: string, values: string[]): void {
