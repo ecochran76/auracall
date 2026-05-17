@@ -29498,3 +29498,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Follow-up:
   - wire typed API clients for health, runs, archive search, and account
     mirror status.
+
+## Turn 146 | 2026-05-16
+
+- Goal: serve the new operator UX from the stable AuraCall API service.
+- Change:
+  - `/dashboard` now serves the packaged React/Vite app from `dist/operator-ux`.
+  - `/ops/browser` remains the debug/proof dashboard.
+  - service discovery now distinguishes `dashboardPath` from
+    `debugDashboardPath`.
+  - normal package builds now include `ux:build`.
+  - user-scoped API config now points local and external dashboard URLs to
+    `/dashboard`.
+- Verification:
+  - typecheck, HTTP response server tests, full build, user-runtime install,
+    API service restart, and local/external route probes pass.
+- Follow-up:
+  - make `Health` the first API-backed React page.

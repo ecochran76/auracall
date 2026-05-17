@@ -217,6 +217,9 @@ Current State:
   - the new operator console lives under `ux/operator` as a React/Vite app with
     top navigation, account/context menu, collapsible and resizable panes,
     central workspace, and right-side inspector
+  - `/dashboard` now serves the packaged React app from the stable AuraCall API
+    service port; `/ops/browser` remains the low-level Browser Ops debug
+    surface
   - first slice is read-only shell work; API-backed health, run, archive,
     search, chat, config, agent, and team pages should land incrementally after
     the shell is stable

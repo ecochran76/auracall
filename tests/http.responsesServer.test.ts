@@ -16965,14 +16965,15 @@ describe('http responses adapter', () => {
       {
         host: '127.0.0.1',
         port: 0,
-        dashboardUrl: 'http://auracall.localhost/ops/browser',
-        publicDashboardUrl: 'https://auracall.ecochran.dyndns.org/ops/browser',
+        dashboardUrl: 'http://auracall.localhost/dashboard',
+        publicDashboardUrl: 'https://auracall.ecochran.dyndns.org/dashboard',
         serviceRouting: {
           localHostname: 'auracall.localhost',
           externalHostname: 'auracall.ecochran.dyndns.org',
           localBaseUrl: 'http://auracall.localhost',
           externalBaseUrl: 'https://auracall.ecochran.dyndns.org',
-          dashboardPath: '/ops/browser',
+          dashboardPath: '/dashboard',
+          debugDashboardPath: '/ops/browser',
           accountMirrorPath: '/account-mirror',
           proxyTarget: 'http://127.0.0.1:18095',
           auth: 'authelia',
@@ -17016,7 +17017,8 @@ describe('http responses adapter', () => {
           schedulerPosture: 'disabled',
         },
       });
-      expect((payload.routes as Record<string, unknown>).operatorBrowserDashboard).toBe('/ops/browser');
+      expect((payload.routes as Record<string, unknown>).operatorBrowserDashboard).toBe('/dashboard');
+      expect((payload.routes as Record<string, unknown>).operatorDebugDashboard).toBe('/ops/browser');
       expect((payload.routes as Record<string, unknown>).accountMirrorDashboard).toBe('/account-mirror');
       expect((payload.routes as Record<string, unknown>).accountMirrorCatalogItemTemplate).toContain(
         '/v1/account-mirrors/catalog/items/{item_id}',
@@ -17050,10 +17052,10 @@ describe('http responses adapter', () => {
         '/v1/preflight/lazy-live-follow/runs/{run_id}/log',
       );
       expect((payload.routes as Record<string, unknown>).operatorBrowserDashboardUrl).toBe(
-        'http://auracall.localhost/ops/browser',
+        'http://auracall.localhost/dashboard',
       );
       expect((payload.routes as Record<string, unknown>).publicOperatorBrowserDashboardUrl).toBe(
-        'https://auracall.ecochran.dyndns.org/ops/browser',
+        'https://auracall.ecochran.dyndns.org/dashboard',
       );
       expect((payload.routes as Record<string, unknown>).localServiceBaseUrl).toBe('http://auracall.localhost');
       expect((payload.routes as Record<string, unknown>).externalServiceBaseUrl).toBe(
@@ -17067,17 +17069,18 @@ describe('http responses adapter', () => {
         local: {
           hostname: 'auracall.localhost',
           baseUrl: 'http://auracall.localhost',
-          dashboardUrl: 'http://auracall.localhost/ops/browser',
+          dashboardUrl: 'http://auracall.localhost/dashboard',
           accountMirrorUrl: 'http://auracall.localhost/account-mirror',
         },
         external: {
           hostname: 'auracall.ecochran.dyndns.org',
           baseUrl: 'https://auracall.ecochran.dyndns.org',
-          dashboardUrl: 'https://auracall.ecochran.dyndns.org/ops/browser',
+          dashboardUrl: 'https://auracall.ecochran.dyndns.org/dashboard',
           accountMirrorUrl: 'https://auracall.ecochran.dyndns.org/account-mirror',
         },
         routing: {
-          dashboardPath: '/ops/browser',
+          dashboardPath: '/dashboard',
+          debugDashboardPath: '/ops/browser',
           accountMirrorPath: '/account-mirror',
           proxyTarget: 'http://127.0.0.1:18095',
           auth: 'authelia',
@@ -17190,7 +17193,7 @@ describe('http responses adapter', () => {
       expect(html).toContain('href="/account-mirror/preview-session"');
       expect(html).toContain('href="/config"');
       expect(html).toContain('href="/agents"');
-      expect(html).toContain('data-route-key="dashboardPath"');
+      expect(html).toContain('data-route-key="debugDashboardPath"');
       expect(html).toContain('data-route-key="accountMirrorPath"');
       expect(html).toContain('data-route-key="previewSessionPath"');
       expect(html).toContain('data-route-key="configPath"');
@@ -17727,6 +17730,7 @@ describe('http responses adapter', () => {
       port: 0,
       serviceRouting: {
         dashboardPath: '/operator/browser',
+        debugDashboardPath: '/operator/debug',
         accountMirrorPath: '/operator/account-mirror',
       },
     });
@@ -17735,11 +17739,18 @@ describe('http responses adapter', () => {
       const dashboard = await fetch(`http://127.0.0.1:${server.port}/operator/browser`);
       expect(dashboard.status).toBe(200);
       const dashboardHtml = await dashboard.text();
-      expect(dashboardHtml).toContain('href="/operator/browser"');
-      expect(dashboardHtml).toContain('href="/operator/account-mirror"');
-      expect(dashboardHtml).toContain('href="/operator/account-mirror/preview-session"');
-      expect(dashboardHtml).toContain('href="/config"');
-      expect(dashboardHtml).toContain('href="/agents"');
+      expect(dashboardHtml).toContain('AuraCall Operator');
+
+      const debugDashboard = await fetch(`http://127.0.0.1:${server.port}/operator/debug`);
+      expect(debugDashboard.status).toBe(200);
+      const debugDashboardHtml = await debugDashboard.text();
+      expect(debugDashboardHtml).toContain('href="/operator/debug"');
+      expect(debugDashboardHtml).toContain('data-route-key="debugDashboardPath"');
+      expect(debugDashboardHtml).toContain('href="/operator/browser"');
+      expect(debugDashboardHtml).toContain('href="/operator/account-mirror"');
+      expect(debugDashboardHtml).toContain('href="/operator/account-mirror/preview-session"');
+      expect(debugDashboardHtml).toContain('href="/config"');
+      expect(debugDashboardHtml).toContain('href="/agents"');
 
       const accountMirror = await fetch(`http://127.0.0.1:${server.port}/operator/account-mirror`);
       expect(accountMirror.status).toBe(200);
@@ -17761,6 +17772,7 @@ describe('http responses adapter', () => {
       const payload = await status.json() as { serviceDiscovery?: { routing?: Record<string, string> }; routes?: Record<string, string> };
       expect(payload.serviceDiscovery?.routing).toMatchObject({
         dashboardPath: '/operator/browser',
+        debugDashboardPath: '/operator/debug',
         accountMirrorPath: '/operator/account-mirror',
         previewSessionPath: '/operator/account-mirror/preview-session',
         configPath: '/config',
@@ -17768,6 +17780,7 @@ describe('http responses adapter', () => {
       });
       expect(payload.routes).toMatchObject({
         operatorBrowserDashboard: '/operator/browser',
+        operatorDebugDashboard: '/operator/debug',
         accountMirrorDashboard: '/operator/account-mirror',
         accountMirrorPreviewSessionDashboard: '/operator/account-mirror/preview-session',
         operatorConfigDashboard: '/config',
@@ -17778,14 +17791,14 @@ describe('http responses adapter', () => {
     }
   });
 
-  it('serves the browser operator dashboard from the dashboard alias', async () => {
+  it('serves the React operator UX from the dashboard alias', async () => {
     const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
 
     try {
       const response = await fetch(`http://127.0.0.1:${server.port}/dashboard`);
       expect(response.status).toBe(200);
       const html = await response.text();
-      expect(html).toContain('AuraCall Browser Ops');
+      expect(html).toContain('AuraCall Operator');
     } finally {
       await server.close();
     }

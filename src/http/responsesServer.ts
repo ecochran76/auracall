@@ -3,6 +3,7 @@ import { createReadStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { z, ZodError } from 'zod';
 import CDP from 'chrome-remote-interface';
 import type { OptionValues } from 'commander';
@@ -491,6 +492,7 @@ interface ApiServiceRoutingConfig {
   localBaseUrl?: string;
   externalBaseUrl?: string;
   dashboardPath?: string;
+  debugDashboardPath?: string;
   accountMirrorPath?: string;
   proxyTarget?: string;
   auth?: string;
@@ -520,6 +522,7 @@ type ApiAuthEnv = Record<string, string | undefined>;
 
 interface OperatorDashboardRoutes {
   dashboardPath: string;
+  debugDashboardPath: string;
   accountMirrorPath: string;
   previewSessionPath: string;
   configPath: string;
@@ -547,6 +550,7 @@ interface ApiServiceDiscovery {
   };
   routing: {
     dashboardPath: string;
+    debugDashboardPath: string;
     accountMirrorPath: string;
     previewSessionPath: string;
     configPath: string;
@@ -644,6 +648,7 @@ interface HttpStatusResponse {
     configSnapshotExport: string;
     configSnapshotImport: string;
     operatorBrowserDashboard: string;
+    operatorDebugDashboard: string;
     accountMirrorDashboard: string;
     accountMirrorPreviewSessionDashboard: string;
     operatorConfigDashboard: string;
@@ -1153,8 +1158,15 @@ export async function createResponsesHttpServer(
       }
 
       if (
-        req.method === 'GET'
-        && matchesRoutePath(url.pathname, operatorDashboardRoutes.dashboardPath, '/ops/browser', '/dashboard')
+        (req.method === 'GET' || req.method === 'HEAD')
+        && await maybeSendOperatorUxAsset(res, url.pathname, operatorDashboardRoutes, req.method === 'HEAD')
+      ) {
+        return;
+      }
+
+      if (
+        (req.method === 'GET' || req.method === 'HEAD')
+        && matchesRoutePath(url.pathname, operatorDashboardRoutes.debugDashboardPath, '/ops/browser')
       ) {
         sendHtml(res, 200, createOperatorBrowserDashboardHtml({ activePage: 'browser', routes: operatorDashboardRoutes }));
         return;
@@ -3318,6 +3330,7 @@ function createHttpStatusResponse(input: {
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}[&entrypoint=grok-imagine][&diagnostics=browser-state][&discoveryAction=grok-imagine-video-mode]',
       operatorBrowserDashboard: serviceDiscovery.routing.dashboardPath,
+      operatorDebugDashboard: serviceDiscovery.routing.debugDashboardPath,
       accountMirrorDashboard: serviceDiscovery.routing.accountMirrorPath,
       accountMirrorPreviewSessionDashboard: serviceDiscovery.routing.previewSessionPath,
       operatorConfigDashboard: serviceDiscovery.routing.configPath,
@@ -4460,6 +4473,7 @@ function readApiServiceRoutingConfig(value: unknown): ApiServiceRoutingConfig | 
     localBaseUrl: readNonEmptyString(value.localBaseUrl),
     externalBaseUrl: readNonEmptyString(value.externalBaseUrl),
     dashboardPath: readNonEmptyString(value.dashboardPath),
+    debugDashboardPath: readNonEmptyString(value.debugDashboardPath),
     accountMirrorPath: readNonEmptyString(value.accountMirrorPath),
     proxyTarget: readNonEmptyString(value.proxyTarget),
     auth: readNonEmptyString(value.auth),
@@ -5633,7 +5647,7 @@ function buildApiServiceDiscovery(input: {
   serviceRouting?: ApiServiceRoutingConfig;
 }): ApiServiceDiscovery {
   const routing = input.serviceRouting ?? {};
-  const { dashboardPath, accountMirrorPath, previewSessionPath, configPath, agentsPath } = resolveOperatorDashboardRoutes(routing);
+  const { dashboardPath, debugDashboardPath, accountMirrorPath, previewSessionPath, configPath, agentsPath } = resolveOperatorDashboardRoutes(routing);
   const bindBaseUrl = formatApiBaseUrl(input.host, input.port);
   const localBaseUrl = normalizeBaseUrl(routing.localBaseUrl)
     ?? normalizeBaseUrl(baseUrlFromUrl(input.dashboardUrl))
@@ -5669,6 +5683,7 @@ function buildApiServiceDiscovery(input: {
       : {}),
     routing: {
       dashboardPath,
+      debugDashboardPath,
       accountMirrorPath,
       previewSessionPath,
       configPath,
@@ -5681,10 +5696,12 @@ function buildApiServiceDiscovery(input: {
 }
 
 function resolveOperatorDashboardRoutes(serviceRouting: ApiServiceRoutingConfig | undefined): OperatorDashboardRoutes {
-  const dashboardPath = normalizeRoutePath(serviceRouting?.dashboardPath) ?? '/ops/browser';
+  const dashboardPath = normalizeRoutePath(serviceRouting?.dashboardPath) ?? '/dashboard';
+  const debugDashboardPath = normalizeRoutePath(serviceRouting?.debugDashboardPath) ?? '/ops/browser';
   const accountMirrorPath = normalizeRoutePath(serviceRouting?.accountMirrorPath) ?? '/account-mirror';
   return {
     dashboardPath,
+    debugDashboardPath,
     accountMirrorPath,
     previewSessionPath: joinRoutePath(accountMirrorPath, 'preview-session'),
     configPath: '/config',
@@ -5884,6 +5901,164 @@ function sendHtml(res: http.ServerResponse, statusCode: number, html: string): v
   res.end(html);
 }
 
+async function maybeSendOperatorUxAsset(
+  res: http.ServerResponse,
+  pathname: string,
+  routes: OperatorDashboardRoutes,
+  headOnly = false,
+): Promise<boolean> {
+  const dashboardPath = routes.dashboardPath;
+  if (!matchesDashboardAssetPath(pathname, dashboardPath)) {
+    return false;
+  }
+
+  const assetPath = resolveDashboardAssetPath(pathname, dashboardPath);
+  const distDir = await findOperatorUxDistDir();
+  if (!distDir) {
+    if (assetPath === 'index.html') {
+      sendHtml(res, 200, createMissingOperatorUxHtml());
+      return true;
+    }
+    sendJson(res, 404, {
+      error: {
+        message: 'AuraCall operator UX build assets are not available. Run pnpm run ux:build.',
+        type: 'not_found_error',
+      },
+    } satisfies HttpErrorPayload);
+    return true;
+  }
+
+  const assetFile = path.resolve(distDir, assetPath);
+  const relative = path.relative(distDir, assetFile);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    sendJson(res, 404, {
+      error: {
+        message: 'Operator UX asset path is invalid.',
+        type: 'not_found_error',
+      },
+    } satisfies HttpErrorPayload);
+    return true;
+  }
+
+  let stat;
+  try {
+    stat = await fs.stat(assetFile);
+  } catch {
+    sendJson(res, 404, {
+      error: {
+        message: 'Operator UX asset was not found.',
+        type: 'not_found_error',
+      },
+    } satisfies HttpErrorPayload);
+    return true;
+  }
+  if (!stat.isFile()) {
+    sendJson(res, 404, {
+      error: {
+        message: 'Operator UX asset was not found.',
+        type: 'not_found_error',
+      },
+    } satisfies HttpErrorPayload);
+    return true;
+  }
+
+  res.writeHead(200, {
+    'Content-Type': getStaticContentType(assetFile),
+    'Content-Length': String(stat.size),
+    'Cache-Control': assetPath === 'index.html' ? 'no-store' : 'public, max-age=31536000, immutable',
+    'X-Content-Type-Options': 'nosniff',
+  });
+  if (headOnly) {
+    res.end();
+    return true;
+  }
+  createReadStream(assetFile).on('error', () => {
+    if (!res.headersSent) {
+      sendJson(res, 404, {
+        error: {
+          message: 'Operator UX asset could not be read.',
+          type: 'not_found_error',
+        },
+      } satisfies HttpErrorPayload);
+      return;
+    }
+    res.destroy();
+  }).pipe(res);
+  return true;
+}
+
+function matchesDashboardAssetPath(pathname: string, dashboardPath: string): boolean {
+  return pathname === dashboardPath
+    || pathname === `${dashboardPath}/`
+    || pathname.startsWith(`${dashboardPath}/assets/`);
+}
+
+function resolveDashboardAssetPath(pathname: string, dashboardPath: string): string {
+  if (pathname === dashboardPath || pathname === `${dashboardPath}/`) {
+    return 'index.html';
+  }
+  return decodeURIComponent(pathname.slice(`${dashboardPath}/`.length));
+}
+
+async function findOperatorUxDistDir(): Promise<string | null> {
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.resolve(moduleDir, '../../operator-ux'),
+    path.resolve(process.cwd(), 'dist/operator-ux'),
+  ];
+  for (const candidate of candidates) {
+    try {
+      const stat = await fs.stat(path.join(candidate, 'index.html'));
+      if (stat.isFile()) return candidate;
+    } catch {
+      // Try the next candidate.
+    }
+  }
+  return null;
+}
+
+function getStaticContentType(filePath: string): string {
+  switch (path.extname(filePath).toLowerCase()) {
+    case '.html':
+      return 'text/html; charset=utf-8';
+    case '.js':
+      return 'text/javascript; charset=utf-8';
+    case '.css':
+      return 'text/css; charset=utf-8';
+    case '.svg':
+      return 'image/svg+xml';
+    case '.png':
+      return 'image/png';
+    case '.jpg':
+    case '.jpeg':
+      return 'image/jpeg';
+    case '.webp':
+      return 'image/webp';
+    case '.ico':
+      return 'image/x-icon';
+    default:
+      return 'application/octet-stream';
+  }
+}
+
+function createMissingOperatorUxHtml(): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AuraCall Operator</title>
+</head>
+<body>
+  <div id="root">
+    <h1>AuraCall Operator</h1>
+    <p>The React operator UX build assets are not available in this runtime. Run <code>pnpm run ux:build</code> and restart the API service.</p>
+    <p><a href="/ops/browser">Open Browser Ops debug dashboard</a></p>
+  </div>
+</body>
+</html>`;
+}
+
 function sendCachedAsset(res: http.ServerResponse, asset: CachedCatalogItemAsset): void {
   const headers: Record<string, string> = {
     'Content-Type': asset.mimeType,
@@ -5925,6 +6100,7 @@ function createOperatorBrowserDashboardHtml(input: {
   const activePage = input.activePage ?? 'browser';
   const routes = input.routes ?? resolveOperatorDashboardRoutes(undefined);
   const dashboardPath = escapeHtmlAttribute(routes.dashboardPath);
+  const debugDashboardPath = escapeHtmlAttribute(routes.debugDashboardPath);
   const accountMirrorPath = escapeHtmlAttribute(routes.accountMirrorPath);
   const previewSessionPath = escapeHtmlAttribute(routes.previewSessionPath);
   const configPath = escapeHtmlAttribute(routes.configPath);
@@ -6386,7 +6562,7 @@ function createOperatorBrowserDashboardHtml(input: {
       <button id="refreshStatus">Refresh Status</button>
     </div>
     <nav class="nav" aria-label="AuraCall sections">
-      <a id="navBrowserOps" href="${dashboardPath}" data-route-key="dashboardPath"${browserCurrent}>Browser Ops</a>
+      <a id="navBrowserOps" href="${debugDashboardPath}" data-route-key="debugDashboardPath"${browserCurrent}>Browser Ops</a>
       <a id="navAccountMirror" href="${accountMirrorPath}" data-route-key="accountMirrorPath"${accountMirrorCurrent}>Account Mirror</a>
       <a id="navPreviewSession" href="${previewSessionPath}" data-route-key="previewSessionPath"${previewSessionCurrent}>Preview Session</a>
       <a id="navConfig" href="${configPath}" data-route-key="configPath"${configCurrent}>Config</a>
@@ -7820,17 +7996,19 @@ function createOperatorBrowserDashboardHtml(input: {
     }
 
     function applyServiceDiscoveryRoutes(routing) {
-      const dashboardPath = normalizeDashboardRoutePath(routing && routing.dashboardPath, OPERATOR_DASHBOARD_ROUTES.dashboardPath || '/ops/browser');
+      const dashboardPath = normalizeDashboardRoutePath(routing && routing.dashboardPath, OPERATOR_DASHBOARD_ROUTES.dashboardPath || '/dashboard');
+      const debugDashboardPath = normalizeDashboardRoutePath(routing && routing.debugDashboardPath, OPERATOR_DASHBOARD_ROUTES.debugDashboardPath || '/ops/browser');
       const accountMirrorPath = normalizeDashboardRoutePath(routing && routing.accountMirrorPath, OPERATOR_DASHBOARD_ROUTES.accountMirrorPath || '/account-mirror');
       const previewSessionPath = normalizeDashboardRoutePath(routing && routing.previewSessionPath, OPERATOR_DASHBOARD_ROUTES.previewSessionPath || (accountMirrorPath + '/preview-session'));
       const configPath = normalizeDashboardRoutePath(routing && routing.configPath, OPERATOR_DASHBOARD_ROUTES.configPath || '/config');
       const agentsPath = normalizeDashboardRoutePath(routing && routing.agentsPath, OPERATOR_DASHBOARD_ROUTES.agentsPath || '/agents');
       OPERATOR_DASHBOARD_ROUTES.dashboardPath = dashboardPath;
+      OPERATOR_DASHBOARD_ROUTES.debugDashboardPath = debugDashboardPath;
       OPERATOR_DASHBOARD_ROUTES.accountMirrorPath = accountMirrorPath;
       OPERATOR_DASHBOARD_ROUTES.previewSessionPath = previewSessionPath;
       OPERATOR_DASHBOARD_ROUTES.configPath = configPath;
       OPERATOR_DASHBOARD_ROUTES.agentsPath = agentsPath;
-      setRouteLink('navBrowserOps', dashboardPath);
+      setRouteLink('navBrowserOps', debugDashboardPath);
       setRouteLink('navAccountMirror', accountMirrorPath);
       setRouteLink('navPreviewSession', previewSessionPath);
       setRouteLink('navConfig', configPath);

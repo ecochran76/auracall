@@ -7,6 +7,7 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   root,
+  base: "/dashboard/",
   plugins: [react()],
   build: {
     outDir: path.resolve(root, "../../dist/operator-ux"),

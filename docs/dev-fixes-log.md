@@ -16082,3 +16082,7 @@ browser-stage lifecycle observability, not transcript truncation.
   debug/proof-of-concept surface, not the product UX. Durable operator work now
   belongs in the separate React/Vite app under `ux/operator`, with the debug
   dashboard preserved for low-level probes until replacement pages are ready.
+- 2026-05-16: Cooper ingress should stay pinned to AuraCall's stable API port,
+  not the temporary Vite dev server. `/dashboard` now serves packaged
+  `dist/operator-ux` assets from the API service on port 18095, while
+  `/ops/browser` remains the debug dashboard route.

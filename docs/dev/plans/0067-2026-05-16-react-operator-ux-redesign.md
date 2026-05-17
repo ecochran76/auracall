@@ -20,8 +20,9 @@ operations, logs, and controlled job launch workflows.
 
 Implemented:
 
-- The existing HTML dashboard remains the debug/proof surface at the current
-  operator routes.
+- The existing HTML dashboard remains the debug/proof surface at `/ops/browser`.
+- The React/Vite shell is served by the AuraCall API service at `/dashboard`
+  from packaged `dist/operator-ux` assets.
 - JSON API, CLI, and MCP surfaces now expose durable run status, account mirror
   status, archive search, archive item readback, asset download, asset lookup,
   and evidence attachment.
@@ -36,8 +37,7 @@ Remaining:
 - Define the shell layout, route taxonomy, state ownership, and API client
   boundary before moving feature pages into it.
 - Add real page implementations incrementally after the shell is stable.
-- Decide when `/dashboard` should route to the new app and where the debug
-  dashboard remains mounted.
+- Add real page implementations incrementally after the shell is stable.
 
 ## Product Direction
 
@@ -77,8 +77,9 @@ requires a separate top-level route.
 ## Architecture
 
 The app lives under `ux/operator` and consumes AuraCall's existing JSON API.
-The current debug dashboard remains separate. The app should be buildable with
-Vite and eventually serve as static assets from the AuraCall API service.
+The current debug dashboard remains separate at `/ops/browser`. The app is
+buildable with Vite and is packaged as `dist/operator-ux` static assets served
+from the AuraCall API service at `/dashboard`.
 
 State ownership:
 
@@ -96,6 +97,8 @@ State ownership:
    - implement top bar, nav stubs, collapsible/resizable panes, center
      viewport, right inspector, context menu, and local UI preference storage
    - keep all feature pages read-only placeholders
+   - serve the built app from `/dashboard` on the stable AuraCall API port
+     while preserving `/ops/browser` as the debug dashboard
 
 2. API client and health readback
    - add typed client helpers for `/status`, archive search, run status, and
@@ -131,11 +134,15 @@ State ownership:
 - Pane collapse/resize state persists locally.
 - The old dashboard is explicitly described as debug/proof-of-concept rather
   than treated as the product UX.
+- `/dashboard` serves the React operator UX from the stable AuraCall API port.
+- `/ops/browser` continues to serve the debug dashboard.
 - The shell does not perform provider browser work or mutate jobs.
 
 ## Definition Of Done For First Slice
 
 - `ux/operator` contains a buildable React/Vite shell.
 - `package.json` exposes `ux:dev` and `ux:build`.
+- `package.json` includes `ux:build` in the normal package build so the
+  installed user runtime includes `dist/operator-ux`.
 - Roadmap and plan index reference this plan.
 - Validation passes with `pnpm ux:build` and targeted repository checks.

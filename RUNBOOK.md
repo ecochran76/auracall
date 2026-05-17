@@ -4572,3 +4572,30 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - wire typed API clients for service health, run status, archive search, and
     account mirror status before adding mutation controls.
+
+## Turn 166 | 2026-05-16
+
+- Goal: put the React operator UX on the stable AuraCall API port instead of a
+  temporary Vite port.
+- Change:
+  - changed `/dashboard` to serve packaged React/Vite assets from
+    `dist/operator-ux`.
+  - kept `/ops/browser` as the Browser Ops debug/proof dashboard.
+  - added `debugDashboardPath` to API service discovery and route reporting.
+  - included `ux:build` in the normal package build so installed runtimes carry
+    the operator assets.
+  - updated `~/.auracall/config.json` to advertise
+    `http://auracall.localhost/dashboard` and
+    `https://auracall.ecochran.dyndns.org/dashboard`.
+- Verification:
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - live route checks for `http://auracall.localhost/dashboard`,
+    `/dashboard/assets/...`, `/ops/browser`, `/status`, and external Authelia
+    redirect for `https://auracall.ecochran.dyndns.org/dashboard`
+- Next:
+  - wire the React Health page to the existing `/status` and route-discovery
+    APIs before adding mutation controls.
