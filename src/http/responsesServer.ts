@@ -1146,7 +1146,7 @@ export async function createResponsesHttpServer(
   server.on('request', async (req, res) => {
     try {
       const url = new URL(req.url ?? '/', 'http://127.0.0.1');
-      const apiAuthContext = authorizeApiRequest(req, apiAuthPolicy, url.pathname);
+      const apiAuthContext = authorizeApiRequest(req, apiAuthPolicy, url.pathname, operatorDashboardRoutes);
       if (!apiAuthContext) {
         sendJson(res, 401, {
           error: {
@@ -4181,14 +4181,60 @@ function authorizeApiRequest(
   req: http.IncomingMessage,
   policy: ApiAuthPolicy,
   pathname: string,
+  operatorDashboardRoutes?: OperatorDashboardRoutes,
 ): ApiAuthContext | null {
   if (!policy.required || !pathname.startsWith('/v1/')) {
+    return { policy, key: null };
+  }
+  if (operatorDashboardRoutes && isOperatorDashboardApiRequest(req, operatorDashboardRoutes)) {
     return { policy, key: null };
   }
   const token = readBearerToken(req.headers.authorization) ?? readSingleHeader(req.headers['x-auracall-api-key']);
   if (!token) return null;
   const key = policy.keys.find((candidate) => candidate.secret === token) ?? null;
   return key ? { policy, key } : null;
+}
+
+function isOperatorDashboardApiRequest(req: http.IncomingMessage, routes: OperatorDashboardRoutes): boolean {
+  const host = readSingleHeader(req.headers.host);
+  if (!host) return false;
+
+  const origin = parseRequestHeaderUrl(req.headers.origin);
+  if (origin && sameHost(origin.host, host)) {
+    return true;
+  }
+
+  const referer = parseRequestHeaderUrl(req.headers.referer ?? req.headers.referrer);
+  if (!referer || !sameHost(referer.host, host)) {
+    return false;
+  }
+  return isOperatorDashboardPath(referer.pathname, routes);
+}
+
+function parseRequestHeaderUrl(value: string | string[] | undefined): URL | null {
+  const header = readSingleHeader(value);
+  if (!header) return null;
+  try {
+    return new URL(header);
+  } catch {
+    return null;
+  }
+}
+
+function sameHost(left: string, right: string): boolean {
+  return left.toLowerCase() === right.toLowerCase();
+}
+
+function isOperatorDashboardPath(pathname: string, routes: OperatorDashboardRoutes): boolean {
+  const dashboardRoutes = [
+    routes.dashboardPath,
+    routes.debugDashboardPath,
+    routes.accountMirrorPath,
+    routes.previewSessionPath,
+    routes.configPath,
+    routes.agentsPath,
+  ];
+  return dashboardRoutes.some((route) => pathname === route || pathname.startsWith(`${route.replace(/\/+$/, '')}/`));
 }
 
 function authorizeExecutionRequest(

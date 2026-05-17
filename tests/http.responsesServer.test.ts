@@ -15980,6 +15980,18 @@ describe('http responses adapter', () => {
         },
       });
 
+      const crossOriginResponse = await fetch(`http://127.0.0.1:${server.port}/v1/models`, {
+        headers: { referer: 'http://example.test/dashboard' },
+      });
+      expect(crossOriginResponse.status).toBe(401);
+
+      const operatorDashboardResponse = await fetch(`http://127.0.0.1:${server.port}/v1/models`, {
+        headers: { referer: `http://127.0.0.1:${server.port}/dashboard` },
+      });
+      expect(operatorDashboardResponse.status).toBe(200);
+      const operatorDashboardPayload = (await operatorDashboardResponse.json()) as { object: string };
+      expect(operatorDashboardPayload.object).toBe('list');
+
       const allowedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/models`, {
         headers: { Authorization: 'Bearer secret-key' },
       });
@@ -16467,6 +16479,21 @@ describe('http responses adapter', () => {
           }),
         ],
       });
+      const dashboardResponse = await fetch(`http://127.0.0.1:${server.port}/v1/config/agent-diagnostics`, {
+        headers: { referer: `http://127.0.0.1:${server.port}/dashboard` },
+      });
+      expect(dashboardResponse.status).toBe(200);
+      const dashboardPayload = await dashboardResponse.json() as JsonObject;
+      expect(dashboardPayload).toMatchObject({
+        object: 'auracall_agent_registry_diagnostics',
+        metrics: {
+          apiKeys: 3,
+        },
+      });
+      expect(JSON.stringify(dashboardPayload)).not.toContain('ops-secret');
+      expect(JSON.stringify(dashboardPayload)).not.toContain('broken-secret');
+      expect(JSON.stringify(dashboardPayload)).not.toContain('admin-secret');
+
       const scopedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/config/agent-diagnostics`, {
         headers: { Authorization: 'Bearer ops-secret' },
       });

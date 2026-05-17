@@ -4800,3 +4800,40 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - add transcript search/download and richer related-item previews for
     conversation detail.
+
+## Turn 174 | 2026-05-17
+
+- Goal: remove the operator API-key prompt from the dashboard and keep external
+  API-client auth intact.
+- Change:
+  - added same-origin operator-dashboard superuser access for `/v1/*` browser
+    requests.
+  - kept plain unauthenticated `/v1/*` requests rejected when API auth is
+    required.
+  - removed the dashboard's API-key state, `sessionStorage` use, password
+    fields, bearer headers, and key-required error states from Search, Chats,
+    archive detail, and asset preview.
+  - updated dashboard copy to describe same-origin operator access.
+- Verification:
+  - `pnpm exec vitest run tests/http.responsesServer.test.ts -t "configured API
+    keys|agent registry and loaded API-key diagnostics"`
+  - `pnpm run ux:build`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service`
+  - `curl http://auracall.localhost/status` reported `ok=true`, API auth
+    required, dashboard URL `http://auracall.localhost/dashboard`, and live
+    follow `healthy`.
+  - unauthenticated `curl http://auracall.localhost/v1/models` returned HTTP
+    401; the same route with `Referer: http://auracall.localhost/dashboard`
+    returned HTTP 200 and 63 models.
+  - `agent-browser` verified Search and Chats no longer render API-key fields,
+    Search can load archive results and fetch an asset, and Chats can load 25
+    `chatgpt/default` conversations.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/search-no-key.png`
+  - `/tmp/auracall-operator-ux-dogfood/chat-no-key.png`
+- Next:
+  - preserve external client bearer-key auth while adding explicit operator
+    controls for API-key inspection, creation, and deletion.

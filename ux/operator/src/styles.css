@@ -826,23 +826,12 @@ select:focus-visible {
   outline: 0;
 }
 
-.secret-field {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 6px;
-}
-
-.secret-field button,
 .primary-action {
   min-height: 34px;
   border: 1px solid #314055;
   border-radius: 7px;
   color: #edf2f8;
   cursor: pointer;
-}
-
-.secret-field button {
-  background: #1a222d;
 }
 
 .primary-action {
@@ -894,7 +883,7 @@ select:focus-visible {
 }
 
 .chat-filter-panel {
-  grid-template-columns: minmax(220px, 2fr) minmax(120px, 1fr) minmax(140px, 1fr) 90px auto;
+  grid-template-columns: minmax(120px, 1fr) minmax(140px, 1fr) 90px auto;
 }
 
 .conversation-workbench {

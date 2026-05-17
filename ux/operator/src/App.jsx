@@ -26,7 +26,6 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const STORAGE_KEY = "auracall.operatorUx.v1";
-const ARCHIVE_KEY_STORAGE = "auracall.operatorUx.archiveKey";
 const STATUS_POLL_MS = 30000;
 
 const NAV_ITEMS = [
@@ -103,26 +102,6 @@ function compactText(value, maxLength = 220) {
   const text = String(value ?? "").replace(/\s+/g, " ").trim();
   if (text.length <= maxLength) return text;
   return `${text.slice(0, maxLength - 1)}…`;
-}
-
-function readSessionValue(key) {
-  try {
-    return sessionStorage.getItem(key) ?? "";
-  } catch {
-    return "";
-  }
-}
-
-function writeSessionValue(key, value) {
-  try {
-    if (value) {
-      sessionStorage.setItem(key, value);
-    } else {
-      sessionStorage.removeItem(key);
-    }
-  } catch {
-    // Session storage can be disabled; keep the in-memory value.
-  }
 }
 
 function fileNameFromDisposition(value) {
@@ -632,7 +611,7 @@ function RunsViewport({ runStatus }) {
         <div className="viewport-heading">
           <span>Runtime recovery posture</span>
           <h1>Runs</h1>
-          <p>Read-only runtime state from `/status?recovery=true&sourceKind=all`, showing queue health without exposing API keys in the browser.</p>
+          <p>Read-only runtime state from `/status?recovery=true&sourceKind=all`, showing queue health for the operator dashboard.</p>
         </div>
         <div className="status-readout">
           <span className={`state-dot state-${statusTone(error ? "error" : "ok")}`} />
@@ -687,9 +666,9 @@ function RunsViewport({ runStatus }) {
         </article>
 
         <article className="health-card">
-          <span className="card-kicker">Authenticated APIs</span>
+          <span className="card-kicker">Operator APIs</span>
           <strong>{status?.routes?.runtimeRunsRecent ? "available" : "unknown"}</strong>
-          <p>Deep run listing and inspection remain on bearer-protected `/v1` routes.</p>
+          <p>Deep run listing and inspection are available to the dashboard; external clients still use API keys.</p>
           <div className="metric-row">
             <span>Recent</span>
             <b>{status?.routes?.runtimeRunsRecent ?? "unknown"}</b>
@@ -752,8 +731,6 @@ function emptyArchiveDetailState() {
 
 function ArchiveSearchViewport({
   apiStatus,
-  archiveApiKey,
-  onArchiveApiKeyChange,
   selectedArchiveItem,
   onSelectedArchiveItemChange,
   onSelectedArchiveDetailChange,
@@ -776,16 +753,6 @@ function ArchiveSearchViewport({
       onSelectedArchiveDetailChange(emptyArchiveDetailState());
       return undefined;
     }
-    const trimmedKey = archiveApiKey.trim();
-    if (!trimmedKey) {
-      onSelectedArchiveDetailChange({
-        loading: false,
-        error: "Operator API key required to inspect archive item detail.",
-        result: null,
-        updatedAt: null,
-      });
-      return undefined;
-    }
 
     let alive = true;
     const controller = new AbortController();
@@ -798,9 +765,6 @@ function ArchiveSearchViewport({
 
     fetch(archiveItemRoute(selectedArchiveItem), {
       cache: "no-store",
-      headers: {
-        authorization: `Bearer ${trimmedKey}`,
-      },
       signal: controller.signal,
     })
       .then(async (response) => {
@@ -831,7 +795,7 @@ function ArchiveSearchViewport({
       alive = false;
       controller.abort();
     };
-  }, [archiveApiKey, selectedArchiveItem, onSelectedArchiveDetailChange]);
+  }, [selectedArchiveItem, onSelectedArchiveDetailChange]);
 
   function updateFilter(name, value) {
     setFilters((current) => ({ ...current, [name]: value }));
@@ -839,10 +803,6 @@ function ArchiveSearchViewport({
 
   async function runSearch(event) {
     event?.preventDefault();
-    if (!archiveApiKey.trim()) {
-      setError("Enter an operator API key for read-only archive search.");
-      return;
-    }
     const params = new URLSearchParams();
     if (filters.kind && filters.kind !== "all") params.set("kind", filters.kind);
     if (filters.provider) params.set("provider", filters.provider);
@@ -855,9 +815,6 @@ function ArchiveSearchViewport({
     try {
       const response = await fetch(`/v1/archive?${params.toString()}`, {
         cache: "no-store",
-        headers: {
-          authorization: `Bearer ${archiveApiKey.trim()}`,
-        },
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
@@ -884,36 +841,13 @@ function ArchiveSearchViewport({
           <p>Read-only search over archived responses, batches, uploads, generated artifacts, provider conversations, media, and caller evidence.</p>
         </div>
         <div className="status-readout">
-          <span className={`state-dot state-${statusTone(error ? "error" : archiveApiKey ? "ok" : "waiting")}`} />
-          <strong>{archiveApiKey ? "Operator key loaded" : "Operator key required"}</strong>
+          <span className={`state-dot state-${statusTone(error ? "error" : "ok")}`} />
+          <strong>Operator access</strong>
           <small>{searchedAt ? `Last search ${formatDateTime(searchedAt)}` : archiveRoute}</small>
         </div>
       </div>
 
       <form className="archive-search-panel" onSubmit={runSearch}>
-        <div className="field-row field-row-wide">
-          <label htmlFor="archiveApiKey">Operator API key</label>
-          <div className="secret-field">
-            <input
-              id="archiveApiKey"
-              type="password"
-              value={archiveApiKey}
-              autoComplete="off"
-              placeholder="Paste a scoped AuraCall API key for this browser session"
-              onChange={(event) => onArchiveApiKeyChange(event.target.value)}
-            />
-            <button
-              type="button"
-              title="Forget API key"
-              onClick={() => {
-                onArchiveApiKeyChange("");
-                onSelectedArchiveDetailChange(emptyArchiveDetailState());
-              }}
-            >
-              Forget
-            </button>
-          </div>
-        </div>
         <div className="field-row field-row-wide">
           <label htmlFor="archiveQuery">Query</label>
           <input
@@ -1021,14 +955,14 @@ function ArchiveSearchViewport({
             );
           })}
           {result && !(result.items ?? []).length ? <p className="empty-state">No archive items matched the current filters.</p> : null}
-          {!result ? <p className="empty-state">Enter a session-scoped API key and run a search.</p> : null}
+          {!result ? <p className="empty-state">Run a search to inspect cached archive items.</p> : null}
         </div>
       </section>
     </main>
   );
 }
 
-function ConversationChatViewport({ archiveApiKey, onArchiveApiKeyChange }) {
+function ConversationChatViewport() {
   const [filters, setFilters] = useState({
     provider: "chatgpt",
     runtimeProfile: "default",
@@ -1052,11 +986,6 @@ function ConversationChatViewport({ archiveApiKey, onArchiveApiKeyChange }) {
 
   async function loadConversations(event) {
     event?.preventDefault();
-    const trimmedKey = archiveApiKey.trim();
-    if (!trimmedKey) {
-      setError("Enter an operator API key to read cached conversations.");
-      return;
-    }
     const params = new URLSearchParams({
       provider: filters.provider || "chatgpt",
       runtimeProfile: filters.runtimeProfile || "default",
@@ -1068,7 +997,6 @@ function ConversationChatViewport({ archiveApiKey, onArchiveApiKeyChange }) {
     try {
       const response = await fetch(`/v1/account-mirrors/catalog?${params.toString()}`, {
         cache: "no-store",
-        headers: { authorization: `Bearer ${trimmedKey}` },
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
@@ -1090,11 +1018,6 @@ function ConversationChatViewport({ archiveApiKey, onArchiveApiKeyChange }) {
       setConversationDetail({ loading: false, error: null, result: null });
       return undefined;
     }
-    const trimmedKey = archiveApiKey.trim();
-    if (!trimmedKey) {
-      setConversationDetail({ loading: false, error: "Operator API key required to inspect conversation detail.", result: null });
-      return undefined;
-    }
     const controller = new AbortController();
     let alive = true;
     const params = new URLSearchParams({
@@ -1105,7 +1028,6 @@ function ConversationChatViewport({ archiveApiKey, onArchiveApiKeyChange }) {
     setConversationDetail({ loading: true, error: null, result: null });
     fetch(`/v1/account-mirrors/catalog/items/${encodeURIComponent(selectedConversation.id)}?${params.toString()}`, {
       cache: "no-store",
-      headers: { authorization: `Bearer ${trimmedKey}` },
       signal: controller.signal,
     })
       .then(async (response) => {
@@ -1125,7 +1047,7 @@ function ConversationChatViewport({ archiveApiKey, onArchiveApiKeyChange }) {
       alive = false;
       controller.abort();
     };
-  }, [archiveApiKey, filters.provider, filters.runtimeProfile, selectedConversation]);
+  }, [filters.provider, filters.runtimeProfile, selectedConversation]);
 
   return (
     <main className="viewport" tabIndex="-1">
@@ -1136,27 +1058,13 @@ function ConversationChatViewport({ archiveApiKey, onArchiveApiKeyChange }) {
           <p>Browse mirrored conversations as dialog transcripts with cached artifacts, sources, provider links, and tenant context.</p>
         </div>
         <div className="status-readout">
-          <span className={`state-dot state-${statusTone(error ? "error" : archiveApiKey ? "ok" : "waiting")}`} />
-          <strong>{archiveApiKey ? "Operator key loaded" : "Operator key required"}</strong>
+          <span className={`state-dot state-${statusTone(error ? "error" : "ok")}`} />
+          <strong>Operator access</strong>
           <small>{catalog ? `${formatNumber(conversations.length)} conversations shown` : "/v1/account-mirrors/catalog"}</small>
         </div>
       </div>
 
       <form className="archive-search-panel chat-filter-panel" onSubmit={loadConversations}>
-        <div className="field-row field-row-wide">
-          <label htmlFor="chatApiKey">Operator API key</label>
-          <div className="secret-field">
-            <input
-              id="chatApiKey"
-              type="password"
-              value={archiveApiKey}
-              autoComplete="off"
-              placeholder="Paste a scoped AuraCall API key for this browser session"
-              onChange={(event) => onArchiveApiKeyChange(event.target.value)}
-            />
-            <button type="button" title="Forget API key" onClick={() => onArchiveApiKeyChange("")}>Forget</button>
-          </div>
-        </div>
         <div className="field-row">
           <label htmlFor="chatProvider">Provider</label>
           <input id="chatProvider" value={filters.provider} onChange={(event) => updateFilter("provider", event.target.value)} />
@@ -1254,20 +1162,13 @@ function ConversationChatViewport({ archiveApiKey, onArchiveApiKeyChange }) {
 function MainViewport({
   activeNav,
   apiStatus,
-  archiveApiKey,
-  onArchiveApiKeyChange,
   runStatus,
   selectedArchiveItem,
   onSelectedArchiveItemChange,
   onSelectedArchiveDetailChange,
 }) {
   if (activeNav === "chats") {
-    return (
-      <ConversationChatViewport
-        archiveApiKey={archiveApiKey}
-        onArchiveApiKeyChange={onArchiveApiKeyChange}
-      />
-    );
+    return <ConversationChatViewport />;
   }
   if (activeNav === "health") {
     return <HealthViewport apiStatus={apiStatus} />;
@@ -1279,8 +1180,6 @@ function MainViewport({
     return (
       <ArchiveSearchViewport
         apiStatus={apiStatus}
-        archiveApiKey={archiveApiKey}
-        onArchiveApiKeyChange={onArchiveApiKeyChange}
         selectedArchiveItem={selectedArchiveItem}
         onSelectedArchiveItemChange={onSelectedArchiveItemChange}
         onSelectedArchiveDetailChange={onSelectedArchiveDetailChange}
@@ -1385,7 +1284,7 @@ function LeftPane({ activeNav, apiStatus, runStatus }) {
           },
           {
             title: "Deep inspection",
-            meta: "Bearer-protected /v1 runtime run APIs",
+            meta: "Same-origin operator runtime run APIs",
             status: "warn",
           },
         ]}
@@ -1404,9 +1303,9 @@ function LeftPane({ activeNav, apiStatus, runStatus }) {
             status: "good",
           },
           {
-            title: "Session key",
-            meta: "Stored only in browser sessionStorage",
-            status: "warn",
+            title: "Operator access",
+            meta: "Same-origin dashboard superuser",
+            status: "good",
           },
           {
             title: "Assets",
@@ -1443,7 +1342,7 @@ function LeftPane({ activeNav, apiStatus, runStatus }) {
   return <SectionList title="Context" items={datasets[activeNav]} />;
 }
 
-function ArchiveAssetPreview({ item, apiKey }) {
+function ArchiveAssetPreview({ item }) {
   const [asset, setAsset] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -1465,19 +1364,11 @@ function ArchiveAssetPreview({ item, apiKey }) {
 
   async function fetchAsset() {
     if (!assetRoute) return;
-    const trimmedKey = apiKey.trim();
-    if (!trimmedKey) {
-      setError("Operator API key required to fetch archived assets.");
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
       const response = await fetch(assetRoute, {
         cache: "no-store",
-        headers: {
-          authorization: `Bearer ${trimmedKey}`,
-        },
       });
       if (!response.ok) {
         const text = await response.text().catch(() => "");
@@ -1550,7 +1441,7 @@ function ArchiveAssetPreview({ item, apiKey }) {
   );
 }
 
-function RightPane({ activeNav, apiStatus, archiveApiKey, runStatus, selectedArchiveItem, selectedArchiveDetail }) {
+function RightPane({ activeNav, apiStatus, runStatus, selectedArchiveItem, selectedArchiveDetail }) {
   const labels = {
     chats: "Conversation inspector",
     search: "Result inspector",
@@ -1589,8 +1480,8 @@ function RightPane({ activeNav, apiStatus, archiveApiKey, runStatus, selectedArc
       : activeNav === "search" && status
         ? [
             ["Source", { kind: "route", value: status.routes?.runArchive ?? "/v1/archive", label: "Archive" }],
-            ["Auth", "Bearer key entered by operator"],
-            ["Storage", "sessionStorage only"],
+            ["Auth", "Dashboard superuser"],
+            ["Scope", "Same-origin operator UX"],
             ["Mode", "Read-only archive search"],
           ]
       : activeNav === "runs" && runs
@@ -1598,7 +1489,7 @@ function RightPane({ activeNav, apiStatus, archiveApiKey, runStatus, selectedArc
             ["Source", { kind: "route", value: "/status?recovery=true&sourceKind=all", label: "/status" }],
             ["Recent runs", { kind: "route", value: runs.routes?.runtimeRunsRecent ?? "/v1/runtime-runs/recent", label: "/v1/runtime-runs/recent" }],
             ["Inspect", { kind: "route", value: runs.routes?.runtimeRunInspection ?? "/v1/runtime-runs/inspect", label: "/v1/runtime-runs/inspect" }],
-            ["Auth", "Deep /v1 data requires bearer key"],
+            ["Auth", "Dashboard superuser"],
           ]
       : [
           ["Source of truth", "AuraCall JSON API"],
@@ -1669,7 +1560,7 @@ function RightPane({ activeNav, apiStatus, archiveApiKey, runStatus, selectedArc
         </div>
       ) : null}
       {activeNav === "search" && inspectedArchiveItem ? (
-        <ArchiveAssetPreview item={inspectedArchiveItem} apiKey={archiveApiKey} />
+        <ArchiveAssetPreview item={inspectedArchiveItem} />
       ) : null}
       <div className="json-preview">
         <code>{JSON.stringify(preview, null, 2)}</code>
@@ -1681,7 +1572,6 @@ function RightPane({ activeNav, apiStatus, archiveApiKey, runStatus, selectedArc
 export default function App() {
   const [layout, setLayout] = useState(readLayout);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [archiveApiKey, setArchiveApiKey] = useState(() => readSessionValue(ARCHIVE_KEY_STORAGE));
   const [selectedArchiveItem, setSelectedArchiveItem] = useState(null);
   const [selectedArchiveDetail, setSelectedArchiveDetail] = useState(emptyArchiveDetailState);
   const dragRef = useRef(null);
@@ -1731,11 +1621,6 @@ export default function App() {
   function beginResize(pane) {
     dragRef.current = { pane };
     document.body.classList.add("is-resizing-pane");
-  }
-
-  function updateArchiveApiKey(nextKey) {
-    setArchiveApiKey(nextKey);
-    writeSessionValue(ARCHIVE_KEY_STORAGE, nextKey);
   }
 
   return (
@@ -1828,8 +1713,6 @@ export default function App() {
         <MainViewport
           activeNav={layout.activeNav}
           apiStatus={apiStatus}
-          archiveApiKey={archiveApiKey}
-          onArchiveApiKeyChange={updateArchiveApiKey}
           runStatus={runStatus}
           selectedArchiveItem={selectedArchiveItem}
           onSelectedArchiveItemChange={setSelectedArchiveItem}
@@ -1855,7 +1738,6 @@ export default function App() {
             <RightPane
               activeNav={layout.activeNav}
               apiStatus={apiStatus}
-              archiveApiKey={archiveApiKey}
               runStatus={runStatus}
               selectedArchiveItem={selectedArchiveItem}
               selectedArchiveDetail={selectedArchiveDetail}

@@ -179,3 +179,28 @@ Validation evidence:
 - Installed dashboard at `http://auracall.localhost/dashboard` loaded through `agent-browser` with a throwaway Chrome profile.
 - Authenticated `chatgpt/default` conversation load rendered `25` rows, selected one conversation, and rendered `5` chat turns.
 - Browser eval reported `userTurns=2`, `assistantTurns=3`, header `Fridge Mullion Repair Guide`, and related counts `11 artifacts` / `9 sources`.
+
+## Operator Superuser Follow-Up
+
+Ninth pass removed the operator-entered API key requirement from the dashboard:
+
+- Same-origin dashboard requests to `/v1/*` now receive an operator-superuser auth context.
+- Plain unauthenticated external API requests still require bearer/API-key auth.
+- Search, Chats, archive item detail, and archive asset preview no longer prompt for, store, or send browser-entered API keys.
+- Dashboard copy now describes same-origin operator access instead of `sessionStorage` or bearer headers.
+
+Additional screenshots:
+
+- `/tmp/auracall-operator-ux-dogfood/search-no-key.png` - Search page showing archive results and fetched asset preview without an API-key field.
+- `/tmp/auracall-operator-ux-dogfood/chat-no-key.png` - Chats page showing `chatgpt/default` conversations without an API-key field.
+
+Validation evidence:
+
+- `pnpm exec vitest run tests/http.responsesServer.test.ts -t "configured API keys|agent registry and loaded API-key diagnostics"` passed.
+- `pnpm run ux:build` passed.
+- `pnpm run build` passed.
+- `pnpm run install:user-runtime` passed.
+- `systemctl --user restart auracall-api.service` and `systemctl --user is-active auracall-api.service` reported `active`.
+- `curl http://auracall.localhost/status` reported `ok=true`, auth required with six keys, dashboard URL `http://auracall.localhost/dashboard`, and live follow `healthy`.
+- Plain `curl http://auracall.localhost/v1/models` returned HTTP 401, while the same route with `Referer: http://auracall.localhost/dashboard` returned HTTP 200 and `63` models.
+- `agent-browser` loaded `http://auracall.localhost/dashboard`, verified Search had no API-key field, searched `kind=upload` with query `rubric`, rendered 25 upload results, fetched an asset, then verified Chats had no API-key field and loaded 25 `chatgpt/default` conversations.
