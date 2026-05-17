@@ -16094,3 +16094,7 @@ browser-stage lifecycle observability, not transcript truncation.
   `/v1` routes. The first Runs page uses the unauthenticated recovery summary
   available from `/status?recovery=true&sourceKind=all`; deep run listing and
   inspection stay on bearer-protected APIs until operator auth is designed.
+- 2026-05-17: Archive search can expose private cached content, so it must stay
+  behind bearer auth. The React Search page accepts an operator key for the
+  current browser session only and uses it for read-only `/v1/archive` queries;
+  no API key is embedded in source or persisted to local storage.

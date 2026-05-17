@@ -29547,3 +29547,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     unauthenticated `/v1/runtime-runs/recent` 401 pass.
 - Follow-up:
   - add archive/search read-only views.
+
+## Turn 149 | 2026-05-17
+
+- Goal: make Search a real archive readback page while preserving API auth.
+- Change:
+  - confirmed `/v1/archive` remains bearer-protected.
+  - added a session-scoped operator API key input to the Search page.
+  - added read-only archive filters and result cards for archive kind, status,
+    provider, runtime, agent, timestamps, detail links, asset links, and
+    provider links.
+- Verification:
+  - `pnpm run ux:build` passes.
+  - live `/v1/archive?limit=5` probe with the operator key returns 5 items from
+    1,186 indexed records; the key was not printed.
+  - typecheck, plan audit, full build, user-runtime install, API service
+    restart, dashboard asset probe, authenticated archive probe, and expected
+    unauthenticated `/v1/archive` 401 pass.
+- Follow-up:
+  - add chat-dialog conversation views or archive item detail inspection.

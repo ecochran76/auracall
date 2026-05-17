@@ -21,6 +21,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const STORAGE_KEY = "auracall.operatorUx.v1";
+const ARCHIVE_KEY_STORAGE = "auracall.operatorUx.archiveKey";
 const STATUS_POLL_MS = 30000;
 
 const NAV_ITEMS = [
@@ -37,6 +38,18 @@ const MENU_ITEMS = [
   { label: "Teams", icon: UsersRound },
   { label: "API Keys", icon: KeyRound },
   { label: "Diagnostics", icon: TerminalSquare },
+];
+
+const ARCHIVE_KINDS = [
+  "all",
+  "response",
+  "response_batch",
+  "team_run",
+  "media_generation",
+  "upload",
+  "generated_artifact",
+  "provider_conversation",
+  "evidence",
 ];
 
 const DEFAULT_LAYOUT = {
@@ -79,6 +92,14 @@ function formatUptime(seconds) {
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
+}
+
+function readSessionValue(key) {
+  try {
+    return sessionStorage.getItem(key) ?? "";
+  } catch {
+    return "";
+  }
 }
 
 function statusTone(value) {
@@ -477,12 +498,208 @@ function RunsViewport({ runStatus }) {
   );
 }
 
+function ArchiveSearchViewport({ apiStatus }) {
+  const [apiKey, setApiKey] = useState(() => readSessionValue(ARCHIVE_KEY_STORAGE));
+  const [filters, setFilters] = useState({
+    q: "",
+    kind: "all",
+    provider: "",
+    status: "",
+    limit: "25",
+  });
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [searchedAt, setSearchedAt] = useState(null);
+  const archiveRoute = apiStatus.status?.routes?.runArchive ?? "/v1/archive";
+
+  function saveSessionKey(nextKey) {
+    setApiKey(nextKey);
+    try {
+      if (nextKey) {
+        sessionStorage.setItem(ARCHIVE_KEY_STORAGE, nextKey);
+      } else {
+        sessionStorage.removeItem(ARCHIVE_KEY_STORAGE);
+      }
+    } catch {
+      // Session storage can be disabled; keep the in-memory value.
+    }
+  }
+
+  function updateFilter(name, value) {
+    setFilters((current) => ({ ...current, [name]: value }));
+  }
+
+  async function runSearch(event) {
+    event?.preventDefault();
+    if (!apiKey.trim()) {
+      setError("Enter an operator API key for read-only archive search.");
+      return;
+    }
+    const params = new URLSearchParams();
+    if (filters.kind && filters.kind !== "all") params.set("kind", filters.kind);
+    if (filters.provider) params.set("provider", filters.provider);
+    if (filters.status) params.set("status", filters.status);
+    if (filters.q.trim()) params.set("q", filters.q.trim());
+    params.set("limit", filters.limit || "25");
+
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/v1/archive?${params.toString()}`, {
+        cache: "no-store",
+        headers: {
+          authorization: `Bearer ${apiKey.trim()}`,
+        },
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      }
+      setResult(payload);
+      setSearchedAt(new Date().toISOString());
+    } catch (searchError) {
+      setError(searchError.message || "Archive search failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="viewport" tabIndex="-1">
+      <div className="health-toolbar">
+        <div className="viewport-heading">
+          <span>Searchable cache archive</span>
+          <h1>Search</h1>
+          <p>Read-only search over archived responses, batches, uploads, generated artifacts, provider conversations, media, and caller evidence.</p>
+        </div>
+        <div className="status-readout">
+          <span className={`state-dot state-${statusTone(error ? "error" : apiKey ? "ok" : "waiting")}`} />
+          <strong>{apiKey ? "Operator key loaded" : "Operator key required"}</strong>
+          <small>{searchedAt ? `Last search ${formatDateTime(searchedAt)}` : archiveRoute}</small>
+        </div>
+      </div>
+
+      <form className="archive-search-panel" onSubmit={runSearch}>
+        <div className="field-row field-row-wide">
+          <label htmlFor="archiveApiKey">Operator API key</label>
+          <div className="secret-field">
+            <input
+              id="archiveApiKey"
+              type="password"
+              value={apiKey}
+              autoComplete="off"
+              placeholder="Paste a scoped AuraCall API key for this browser session"
+              onChange={(event) => saveSessionKey(event.target.value)}
+            />
+            <button type="button" onClick={() => saveSessionKey("")}>Forget</button>
+          </div>
+        </div>
+        <div className="field-row field-row-wide">
+          <label htmlFor="archiveQuery">Query</label>
+          <input
+            id="archiveQuery"
+            type="search"
+            value={filters.q}
+            placeholder="Search title, ids, metadata, filenames, schemas, or summaries"
+            onChange={(event) => updateFilter("q", event.target.value)}
+          />
+        </div>
+        <div className="field-row">
+          <label htmlFor="archiveKind">Kind</label>
+          <select id="archiveKind" value={filters.kind} onChange={(event) => updateFilter("kind", event.target.value)}>
+            {ARCHIVE_KINDS.map((kind) => (
+              <option key={kind} value={kind}>{kind}</option>
+            ))}
+          </select>
+        </div>
+        <div className="field-row">
+          <label htmlFor="archiveProvider">Provider</label>
+          <input
+            id="archiveProvider"
+            value={filters.provider}
+            placeholder="chatgpt, gemini, grok"
+            onChange={(event) => updateFilter("provider", event.target.value)}
+          />
+        </div>
+        <div className="field-row">
+          <label htmlFor="archiveStatus">Status</label>
+          <input
+            id="archiveStatus"
+            value={filters.status}
+            placeholder="succeeded, failed, pass"
+            onChange={(event) => updateFilter("status", event.target.value)}
+          />
+        </div>
+        <div className="field-row">
+          <label htmlFor="archiveLimit">Limit</label>
+          <input
+            id="archiveLimit"
+            type="number"
+            min="1"
+            max="100"
+            value={filters.limit}
+            onChange={(event) => updateFilter("limit", event.target.value)}
+          />
+        </div>
+        <button className="primary-action" type="submit" disabled={loading}>
+          {loading ? "Searching" : "Search Archive"}
+        </button>
+      </form>
+
+      {error ? <div className="health-error">Archive search failed: {error}</div> : null}
+
+      <section className="archive-results" aria-label="Archive search results">
+        <div className="section-heading">
+          <h2>Results</h2>
+          <span>{result ? `${formatNumber(result.metrics?.total)} matched / ${formatNumber(result.items?.length)} shown` : "No search yet"}</span>
+        </div>
+        {result ? (
+          <div className="archive-metrics">
+            {Object.entries(result.metrics?.byKind ?? {}).map(([kind, count]) => (
+              <span key={kind}>{kind}: {formatNumber(count)}</span>
+            ))}
+          </div>
+        ) : null}
+        <div className="archive-result-list">
+          {(result?.items ?? []).map((item) => (
+            <article className="archive-result" key={item.id}>
+              <div>
+                <span className={`status-pill status-${statusTone(item.status ?? item.kind)}`}>{item.kind}</span>
+                {item.status ? <span className={`status-pill status-${statusTone(item.status)}`}>{item.status}</span> : null}
+              </div>
+              <strong>{item.title ?? item.fileName ?? item.id}</strong>
+              <p>{item.id}</p>
+              <dl>
+                <div><dt>Provider</dt><dd>{item.provider ?? "none"}</dd></div>
+                <div><dt>Runtime</dt><dd>{item.runtimeProfile ?? "none"}</dd></div>
+                <div><dt>Agent</dt><dd>{item.agentId ?? "none"}</dd></div>
+                <div><dt>Updated</dt><dd>{formatDateTime(item.updatedAt)}</dd></div>
+              </dl>
+              <div className="archive-links">
+                {item.links?.self ? <a href={item.links.self}>Detail</a> : null}
+                {item.links?.asset && item.fileAvailable ? <a href={item.links.asset}>Asset</a> : null}
+                {item.providerConversationUrl ? <a href={item.providerConversationUrl} target="_blank" rel="noreferrer">Provider</a> : null}
+              </div>
+            </article>
+          ))}
+          {result && !(result.items ?? []).length ? <p className="empty-state">No archive items matched the current filters.</p> : null}
+          {!result ? <p className="empty-state">Enter a session-scoped API key and run a search.</p> : null}
+        </div>
+      </section>
+    </main>
+  );
+}
+
 function MainViewport({ activeNav, apiStatus, runStatus }) {
   if (activeNav === "health") {
     return <HealthViewport apiStatus={apiStatus} />;
   }
   if (activeNav === "runs") {
     return <RunsViewport runStatus={runStatus} />;
+  }
+  if (activeNav === "search") {
+    return <ArchiveSearchViewport apiStatus={apiStatus} />;
   }
 
   const content = {
@@ -594,6 +811,30 @@ function LeftPane({ activeNav, apiStatus, runStatus }) {
       />
     );
   }
+  if (activeNav === "search" && status) {
+    return (
+      <SectionList
+        title="Context"
+        items={[
+          {
+            title: "Archive route",
+            meta: status.routes?.runArchive ?? "/v1/archive",
+            status: "good",
+          },
+          {
+            title: "Session key",
+            meta: "Stored only in browser sessionStorage",
+            status: "warn",
+          },
+          {
+            title: "Assets",
+            meta: "Detail and asset links use protected archive routes",
+            status: "planned",
+          },
+        ]}
+      />
+    );
+  }
 
   const datasets = {
     chats: [
@@ -637,6 +878,13 @@ function RightPane({ activeNav, apiStatus, runStatus }) {
           ["Route", status.routes?.operatorBrowserDashboardUrl ?? status.routes?.operatorBrowserDashboard ?? "/dashboard"],
           ["Debug", status.routes?.operatorDebugDashboard ?? "/ops/browser"],
         ]
+      : activeNav === "search" && status
+        ? [
+            ["Source", status.routes?.runArchive ?? "/v1/archive"],
+            ["Auth", "Bearer key entered by operator"],
+            ["Storage", "sessionStorage only"],
+            ["Mode", "Read-only archive search"],
+          ]
       : activeNav === "runs" && runs
         ? [
             ["Source", "/status?recovery=true&sourceKind=all"],
@@ -660,6 +908,13 @@ function RightPane({ activeNav, apiStatus, runStatus }) {
             attention: status.liveFollow?.targets?.attentionNeeded,
           },
         }
+      : activeNav === "search" && status
+        ? {
+            route: status.routes?.runArchive,
+            authRequired: status.auth?.required,
+            keyCount: status.auth?.keyCount,
+            mutable: false,
+          }
       : activeNav === "runs" && runs
         ? {
             totalRuns: runs.recoverySummary?.totalRuns,

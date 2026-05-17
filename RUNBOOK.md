@@ -4655,3 +4655,33 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     expected 401 from unauthenticated `/v1/runtime-runs/recent`
 - Next:
   - add a read-only archive/search page before dashboard mutation controls.
+
+## Turn 169 | 2026-05-17
+
+- Goal: add read-only archive search to the React operator UX without embedding
+  API secrets.
+- Change:
+  - confirmed unauthenticated `/v1/archive` returns 401.
+  - added a Search page that accepts an operator API key for the current
+    browser session only.
+  - wired read-only `/v1/archive` queries with filters for query text, kind,
+    provider, status, and limit.
+  - rendered archive metrics, result cards, protected detail links, protected
+    asset links when files are available, and provider conversation links.
+  - updated Plan 0067 and the durable fixes log to record the session-scoped
+    key boundary.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run plans:audit`
+  - `git diff --check` for the touched UX and docs files
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - live route checks for `http://auracall.localhost/dashboard`,
+    `/dashboard/assets/...`, authenticated `/v1/archive`, and expected 401
+    from unauthenticated `/v1/archive`
+  - live API probe with the user-scoped operator key returned 5 archive items
+    from 1,186 indexed records without printing the secret.
+- Next:
+  - move to chat-dialog conversation views or archive item inspection.

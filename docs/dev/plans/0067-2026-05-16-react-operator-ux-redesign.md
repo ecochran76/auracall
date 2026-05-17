@@ -111,8 +111,8 @@ State ownership:
 3. Archive and chat browsing
    - implement `Chats` as a chat-dialog view over cached conversations and
      archive-linked provider conversations
-   - implement `Search` over archive records first, then wire lexical/semantic
-     search as those APIs mature
+   - implement `Search` over archive records first with a session-scoped
+     operator API key, then wire lexical/semantic search as those APIs mature
    - add artifact/file inspector and download links through stable archive
      asset routes
 
@@ -143,6 +143,8 @@ State ownership:
 - `Runs` reads the live recovery status payload and reports runtime recovery,
   local-claim, and runner-topology posture without requiring a browser-stored
   API key.
+- `Search` can query bearer-protected `/v1/archive` read-only routes with an
+  operator-pasted API key stored only in browser session storage.
 - The shell does not perform provider browser work or mutate jobs.
 
 ## Definition Of Done For First Slice
@@ -166,10 +168,14 @@ State ownership:
   counts, local-claim metrics, runner-topology metrics, and bounded run-id
   lists. Authenticated deep run listing/inspection remains on bearer-protected
   `/v1` APIs until operator-auth UX is designed.
+- Slice 3 is started in read-only form: the Search page can query
+  `/v1/archive` using a bearer key pasted by the operator for the current
+  browser session. The key is not embedded in source and is not written to
+  persistent local storage.
 - The old browser dashboard remains available at `/ops/browser` for low-level
   probes.
 
 Next implementation work should keep moving horizontally through read-only
-operator views: archive search and chat-dialog conversation views. Mutation
-controls should stay out until the read-only surfaces prove the API contracts
-and the operator-auth boundary is explicit.
+operator views: chat-dialog conversation views and richer archive item
+inspection. Mutation controls should stay out until the read-only surfaces
+prove the API contracts and the operator-auth boundary is explicit.
