@@ -80,3 +80,24 @@ Additional screenshots:
 - `systemctl --user restart auracall-api.service`
 - `curl -fsS http://auracall.localhost/status`
 - `agent-browser` desktop and mobile screenshots against `http://auracall.localhost/dashboard`
+
+## Selected Inspector Follow-Up
+
+Fourth pass made archive search behave like a list/detail operator workflow:
+
+- Search now selects the first returned archive item automatically.
+- Each result exposes a compact `Inspect` control with a bounded accessible name.
+- The right inspector shows the selected item kind, status, provider, runtime, agent, updated time, and a compact JSON summary.
+- Route chips can open relative API routes as well as external provider URLs.
+- Result titles are compacted before rendering so huge prompts/transcripts do not poison accessibility snapshots or CDP screenshots.
+- The app shell is fixed to viewport height so result browsing scrolls the center viewport instead of losing the side panes.
+
+Additional screenshot:
+
+- `/tmp/auracall-operator-ux-dogfood/fixed-search-inspector.png` - selected archive result with inspector visible and shell-level scrolling disabled.
+
+Validation evidence:
+
+- Authenticated `/v1/archive?q=chatgpt&limit=25` search rendered `25` results.
+- Browser eval reported `selected=1`, `results=25`, and `bodyScroll=false`.
+- `agent-browser snapshot -i` completed after the large-result compaction fix.

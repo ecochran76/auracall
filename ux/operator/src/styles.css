@@ -36,10 +36,11 @@ select:focus-visible {
 
 .app-shell {
   width: 100%;
+  height: 100vh;
   min-height: 100vh;
   display: grid;
   grid-template-rows: 52px minmax(0, 1fr);
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 .topbar {
@@ -219,6 +220,7 @@ select:focus-visible {
   min-height: 0;
   display: grid;
   grid-template-columns: var(--left-width) minmax(0, 1fr) var(--right-width);
+  overflow: hidden;
   transition: grid-template-columns 180ms ease;
 }
 
@@ -901,8 +903,21 @@ select:focus-visible {
   background: #111820;
 }
 
-.archive-result > div:first-child {
+.archive-result.is-selected {
+  border-color: #4a7f72;
+  background: #13211f;
+}
+
+.archive-result-topline {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.archive-result-topline > span {
+  display: inline-flex;
   flex-wrap: wrap;
   gap: 6px;
 }
@@ -950,15 +965,28 @@ select:focus-visible {
   gap: 6px;
 }
 
-.archive-links a {
+.archive-links a,
+.inspect-action {
   min-height: 26px;
   display: inline-flex;
   align-items: center;
+  gap: 5px;
   padding: 0 8px;
   border: 1px solid #314055;
   border-radius: 6px;
   color: #d7e8ff;
+  background: transparent;
   text-decoration: none;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.archive-links a:hover,
+.inspect-action:hover,
+.inspect-action[aria-pressed="true"] {
+  border-color: #5e789a;
+  background: #1d2734;
+  color: #f2f7ff;
 }
 
 .empty-state {
@@ -1004,6 +1032,17 @@ select:focus-visible {
   margin: 0;
   color: #edf1f7;
   line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.inspector-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid #28303c;
+  border-radius: 8px;
+  background: #171c24;
 }
 
 .route-chip {

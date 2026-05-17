@@ -97,6 +97,12 @@ function formatUptime(seconds) {
   return `${minutes}m`;
 }
 
+function compactText(value, maxLength = 220) {
+  const text = String(value ?? "").replace(/\s+/g, " ").trim();
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 1)}…`;
+}
+
 function readSessionValue(key) {
   try {
     return sessionStorage.getItem(key) ?? "";
@@ -137,10 +143,16 @@ function isUrl(value) {
   return /^https?:\/\//i.test(String(value ?? ""));
 }
 
+function isNavigableRoute(value) {
+  const route = String(value ?? "");
+  return isUrl(route) || route.startsWith("/");
+}
+
 function RouteChip({ value, label }) {
   const [copied, setCopied] = useState(false);
   const fullValue = String(value ?? "unknown");
   const display = label ?? routeLabel(fullValue);
+  const external = isUrl(fullValue);
 
   async function copyRoute() {
     try {
@@ -158,8 +170,8 @@ function RouteChip({ value, label }) {
       <button type="button" aria-label={`Copy ${display}`} title="Copy full route" onClick={copyRoute}>
         {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
       </button>
-      {isUrl(fullValue) ? (
-        <a href={fullValue} aria-label={`Open ${display}`} title="Open route">
+      {isNavigableRoute(fullValue) ? (
+        <a href={fullValue} aria-label={`Open ${display}`} title="Open route" {...(external ? { target: "_blank", rel: "noreferrer" } : {})}>
           <ExternalLink size={13} aria-hidden="true" />
         </a>
       ) : null}
@@ -556,7 +568,21 @@ function RunsViewport({ runStatus }) {
   );
 }
 
-function ArchiveSearchViewport({ apiStatus }) {
+function selectedArchiveSummary(item) {
+  if (!item) return null;
+  return {
+    id: item.id,
+    kind: item.kind,
+    status: item.status,
+    provider: item.provider,
+    runtimeProfile: item.runtimeProfile,
+    agentId: item.agentId,
+    fileAvailable: item.fileAvailable,
+    updatedAt: item.updatedAt,
+  };
+}
+
+function ArchiveSearchViewport({ apiStatus, selectedArchiveItem, onSelectedArchiveItemChange }) {
   const [apiKey, setApiKey] = useState(() => readSessionValue(ARCHIVE_KEY_STORAGE));
   const [filters, setFilters] = useState({
     q: "",
@@ -615,6 +641,7 @@ function ArchiveSearchViewport({ apiStatus }) {
         throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
       }
       setResult(payload);
+      onSelectedArchiveItemChange(payload?.items?.[0] ?? null);
       setSearchedAt(new Date().toISOString());
     } catch (searchError) {
       setError(searchError.message || "Archive search failed");
@@ -721,27 +748,44 @@ function ArchiveSearchViewport({ apiStatus }) {
           </div>
         ) : null}
         <div className="archive-result-list">
-          {(result?.items ?? []).map((item) => (
-            <article className="archive-result" key={item.id}>
-              <div>
-                <span className={`status-pill status-${statusTone(item.status ?? item.kind)}`}>{item.kind}</span>
-                {item.status ? <span className={`status-pill status-${statusTone(item.status)}`}>{item.status}</span> : null}
-              </div>
-              <strong>{item.title ?? item.fileName ?? item.id}</strong>
-              <p>{item.id}</p>
-              <dl>
-                <div><dt>Provider</dt><dd>{item.provider ?? "none"}</dd></div>
-                <div><dt>Runtime</dt><dd>{item.runtimeProfile ?? "none"}</dd></div>
-                <div><dt>Agent</dt><dd>{item.agentId ?? "none"}</dd></div>
-                <div><dt>Updated</dt><dd>{formatDateTime(item.updatedAt)}</dd></div>
-              </dl>
-              <div className="archive-links">
-                {item.links?.self ? <a href={item.links.self}>Detail</a> : null}
-                {item.links?.asset && item.fileAvailable ? <a href={item.links.asset}>Asset</a> : null}
-                {item.providerConversationUrl ? <a href={item.providerConversationUrl} target="_blank" rel="noreferrer">Provider</a> : null}
-              </div>
-            </article>
-          ))}
+          {(result?.items ?? []).map((item) => {
+            const selected = selectedArchiveItem?.id === item.id;
+            const title = compactText(item.title ?? item.fileName ?? item.id);
+            return (
+              <article className={selected ? "archive-result is-selected" : "archive-result"} key={item.id}>
+                <div className="archive-result-topline">
+                  <span>
+                    <span className={`status-pill status-${statusTone(item.status ?? item.kind)}`}>{item.kind}</span>
+                    {item.status ? <span className={`status-pill status-${statusTone(item.status)}`}>{item.status}</span> : null}
+                  </span>
+                  <button
+                    type="button"
+                    className="inspect-action"
+                    aria-label={`Inspect ${item.kind ?? "archive item"} ${item.id}`}
+                    aria-pressed={selected}
+                    title="Inspect result"
+                    onClick={() => onSelectedArchiveItemChange(item)}
+                  >
+                    <Database size={14} aria-hidden="true" />
+                    <span>{selected ? "Selected" : "Inspect"}</span>
+                  </button>
+                </div>
+                <strong>{title}</strong>
+                <p>{item.id}</p>
+                <dl>
+                  <div><dt>Provider</dt><dd>{item.provider ?? "none"}</dd></div>
+                  <div><dt>Runtime</dt><dd>{item.runtimeProfile ?? "none"}</dd></div>
+                  <div><dt>Agent</dt><dd>{item.agentId ?? "none"}</dd></div>
+                  <div><dt>Updated</dt><dd>{formatDateTime(item.updatedAt)}</dd></div>
+                </dl>
+                <div className="archive-links">
+                  {item.links?.self ? <a href={item.links.self}>Detail</a> : null}
+                  {item.links?.asset && item.fileAvailable ? <a href={item.links.asset}>Asset</a> : null}
+                  {item.providerConversationUrl ? <a href={item.providerConversationUrl} target="_blank" rel="noreferrer">Provider</a> : null}
+                </div>
+              </article>
+            );
+          })}
           {result && !(result.items ?? []).length ? <p className="empty-state">No archive items matched the current filters.</p> : null}
           {!result ? <p className="empty-state">Enter a session-scoped API key and run a search.</p> : null}
         </div>
@@ -750,7 +794,7 @@ function ArchiveSearchViewport({ apiStatus }) {
   );
 }
 
-function MainViewport({ activeNav, apiStatus, runStatus }) {
+function MainViewport({ activeNav, apiStatus, runStatus, selectedArchiveItem, onSelectedArchiveItemChange }) {
   if (activeNav === "health") {
     return <HealthViewport apiStatus={apiStatus} />;
   }
@@ -758,7 +802,13 @@ function MainViewport({ activeNav, apiStatus, runStatus }) {
     return <RunsViewport runStatus={runStatus} />;
   }
   if (activeNav === "search") {
-    return <ArchiveSearchViewport apiStatus={apiStatus} />;
+    return (
+      <ArchiveSearchViewport
+        apiStatus={apiStatus}
+        selectedArchiveItem={selectedArchiveItem}
+        onSelectedArchiveItemChange={onSelectedArchiveItemChange}
+      />
+    );
   }
 
   const content = {
@@ -922,7 +972,7 @@ function LeftPane({ activeNav, apiStatus, runStatus }) {
   return <SectionList title="Context" items={datasets[activeNav]} />;
 }
 
-function RightPane({ activeNav, apiStatus, runStatus }) {
+function RightPane({ activeNav, apiStatus, runStatus, selectedArchiveItem }) {
   const labels = {
     chats: "Conversation inspector",
     search: "Result inspector",
@@ -931,6 +981,16 @@ function RightPane({ activeNav, apiStatus, runStatus }) {
   };
   const status = apiStatus.status;
   const runs = runStatus.status;
+  const selectedArchiveDetails = selectedArchiveItem
+    ? [
+        ["Kind", selectedArchiveItem.kind ?? "unknown"],
+        ["Status", selectedArchiveItem.status ?? "none"],
+        ["Provider", selectedArchiveItem.provider ?? "none"],
+        ["Runtime", selectedArchiveItem.runtimeProfile ?? "none"],
+        ["Agent", selectedArchiveItem.agentId ?? "none"],
+        ["Updated", formatDateTime(selectedArchiveItem.updatedAt)],
+      ]
+    : null;
   const details =
     activeNav === "health" && status
       ? [
@@ -939,6 +999,8 @@ function RightPane({ activeNav, apiStatus, runStatus }) {
           ["Route", { kind: "route", value: status.routes?.operatorBrowserDashboardUrl ?? status.routes?.operatorBrowserDashboard ?? "/dashboard", label: "Dashboard" }],
           ["Debug", { kind: "route", value: status.routes?.operatorDebugDashboard ?? "/ops/browser", label: "Debug" }],
         ]
+      : activeNav === "search" && selectedArchiveDetails
+        ? selectedArchiveDetails
       : activeNav === "search" && status
         ? [
             ["Source", { kind: "route", value: status.routes?.runArchive ?? "/v1/archive", label: "Archive" }],
@@ -969,6 +1031,8 @@ function RightPane({ activeNav, apiStatus, runStatus }) {
             attention: status.liveFollow?.targets?.attentionNeeded,
           },
         }
+      : activeNav === "search" && selectedArchiveItem
+        ? selectedArchiveSummary(selectedArchiveItem)
       : activeNav === "search" && status
         ? {
             route: status.routes?.runArchive,
@@ -1002,6 +1066,13 @@ function RightPane({ activeNav, apiStatus, runStatus }) {
           </div>
         ))}
       </dl>
+      {activeNav === "search" && selectedArchiveItem ? (
+        <div className="inspector-actions" aria-label="Selected archive item actions">
+          {selectedArchiveItem.links?.self ? <RouteChip value={selectedArchiveItem.links.self} label="Detail" /> : null}
+          {selectedArchiveItem.links?.asset && selectedArchiveItem.fileAvailable ? <RouteChip value={selectedArchiveItem.links.asset} label="Asset" /> : null}
+          {selectedArchiveItem.providerConversationUrl ? <RouteChip value={selectedArchiveItem.providerConversationUrl} label="Provider" /> : null}
+        </div>
+      ) : null}
       <div className="json-preview">
         <code>{JSON.stringify(preview, null, 2)}</code>
       </div>
@@ -1012,6 +1083,7 @@ function RightPane({ activeNav, apiStatus, runStatus }) {
 export default function App() {
   const [layout, setLayout] = useState(readLayout);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedArchiveItem, setSelectedArchiveItem] = useState(null);
   const dragRef = useRef(null);
   const apiStatus = useApiStatus();
   const runStatus = useRunRecoveryStatus();
@@ -1148,7 +1220,13 @@ export default function App() {
           </button>
         </aside>
 
-        <MainViewport activeNav={layout.activeNav} apiStatus={apiStatus} runStatus={runStatus} />
+        <MainViewport
+          activeNav={layout.activeNav}
+          apiStatus={apiStatus}
+          runStatus={runStatus}
+          selectedArchiveItem={selectedArchiveItem}
+          onSelectedArchiveItemChange={setSelectedArchiveItem}
+        />
 
         <aside className={layout.rightCollapsed ? "pane right-pane is-collapsed" : "pane right-pane"}>
           <button className="resize-handle left" type="button" aria-label="Resize right pane" onPointerDown={() => beginResize("right")}>
@@ -1166,7 +1244,7 @@ export default function App() {
             </button>
           </div>
           <div className="pane-content">
-            <RightPane activeNav={layout.activeNav} apiStatus={apiStatus} runStatus={runStatus} />
+            <RightPane activeNav={layout.activeNav} apiStatus={apiStatus} runStatus={runStatus} selectedArchiveItem={selectedArchiveItem} />
           </div>
         </aside>
       </div>
