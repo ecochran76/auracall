@@ -29748,3 +29748,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the earlier restart-before-conversation smoke failed terminally with a
     specific reattach failure instead of replaying the prompt; that is the
     expected safe behavior when no submitted conversation can be proven.
+
+## Turn 155 | 2026-05-17
+
+- Goal: verify the Transcripts project-bound ChatGPT artifact contract after
+  the downstream first-pass summary retry still reported suspicious idle runner
+  state.
+- Change:
+  - added an execution-runner lease heartbeat callback and wired the service
+    host to record runner activity whenever a run lease is refreshed.
+  - browser-backed evidence heartbeats now keep runner `lastActivityAt` current
+    during active ChatGPT waits, not only before the lease is acquired.
+- Verification:
+  - `pnpm vitest run tests/runtime.runner.test.ts -t "runtime evidence" --maxWorkers 1` passes.
+  - `pnpm exec tsc --noEmit --pretty false` passes.
+  - installed user runtime and `auracall-api.service` were rebuilt/restarted
+    with `pnpm run build && pnpm run install:user-runtime-service`; the service
+    is active.
+  - live non-private smoke `resp_17d3e62c88714fb18e72d686ab4e1722` used
+    `agent:pro-extended-chatgpt-soylei-transcripts`, surfaced
+    `[first_pass_readout.json](sandbox:/mnt/data/first_pass_readout.json)`,
+    and materialized the JSON file at
+    `/home/ecochran76/.auracall/cache/providers/chatgpt/eric.cochran@soylei.com/conversation-attachments/6a0a478e-a56c-83ea-865f-8e1970aa43e0/files/daf8cd54-6420-459f-813f-85ed183e9bc6-download-sandbox-mnt-data-first_pass_readout.json/first_pass_readout.json`.
+- Follow-up:
+  - an overlapping later smoke hit a temporary ChatGPT rate limit during
+    `readConversationContext`; the artifact had been surfaced, but
+    materialization failed after the provider asked for cooldown. Avoid
+    overlapping manual smoke submissions against the same ChatGPT tenant.

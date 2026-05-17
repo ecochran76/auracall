@@ -70,6 +70,13 @@ export interface ExecuteStoredRunOnceOptions {
   executeLocalActionRequest?: (
     context: ExecuteLocalActionRequestContext,
   ) => Promise<ExecuteLocalActionRequestResult | undefined>;
+  onLeaseHeartbeat?: (input: {
+    runId: string;
+    leaseId: string;
+    ownerId: string;
+    heartbeatAt: string;
+    runtimeEvidence?: ExecuteStoredRunStepRuntimeEvidence | null;
+  }) => Promise<void>;
 }
 
 export interface RecoveredExecutionRun {
@@ -200,6 +207,13 @@ export async function executeStoredExecutionRunOnce(
       heartbeatAt,
       expiresAt: addMillisecondsToIsoTimestamp(heartbeatAt, leaseHeartbeatTtlMs),
     });
+    await options.onLeaseHeartbeat?.({
+      runId: options.runId,
+      leaseId,
+      ownerId: options.ownerId,
+      heartbeatAt,
+      runtimeEvidence: null,
+    });
   } else {
     const acquiredAt = now();
     currentRecord = await control.acquireLease({
@@ -209,6 +223,13 @@ export async function executeStoredExecutionRunOnce(
       acquiredAt,
       heartbeatAt: acquiredAt,
       expiresAt: addMillisecondsToIsoTimestamp(acquiredAt, leaseHeartbeatTtlMs),
+    });
+    await options.onLeaseHeartbeat?.({
+      runId: options.runId,
+      leaseId,
+      ownerId: options.ownerId,
+      heartbeatAt: acquiredAt,
+      runtimeEvidence: null,
     });
   }
 
@@ -221,8 +242,10 @@ export async function executeStoredExecutionRunOnce(
     ttlMs: leaseHeartbeatTtlMs,
     runId: options.runId,
     leaseId,
+    ownerId: options.ownerId,
     control,
     now,
+    onHeartbeat: options.onLeaseHeartbeat,
   });
 
   try {
@@ -472,8 +495,16 @@ function startExecutionLeaseHeartbeatLoop(input: {
   ttlMs: number;
   runId: string;
   leaseId: string;
+  ownerId: string;
   control: ExecutionRuntimeControlContract;
   now: () => string;
+  onHeartbeat?: (input: {
+    runId: string;
+    leaseId: string;
+    ownerId: string;
+    heartbeatAt: string;
+    runtimeEvidence?: ExecuteStoredRunStepRuntimeEvidence | null;
+  }) => Promise<void>;
 }): { heartbeat(evidence?: ExecuteStoredRunStepRuntimeEvidence | null): Promise<void>; stop(): Promise<void> } {
   let stopped = false;
   let inFlight: Promise<void> = Promise.resolve();
@@ -496,6 +527,13 @@ function startExecutionLeaseHeartbeatLoop(input: {
           heartbeatAt,
           expiresAt,
           runtimeEvidence,
+        });
+        await input.onHeartbeat?.({
+          runId: input.runId,
+          leaseId: input.leaseId,
+          ownerId: input.ownerId,
+          heartbeatAt,
+          runtimeEvidence: evidenceInput ?? null,
         });
       })
       .catch(() => undefined);

@@ -1975,6 +1975,18 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
             control,
             executeStep: deps.executeStoredRunStep,
             executeLocalActionRequest,
+            onLeaseHeartbeat: runnerId
+              ? async (heartbeat) => {
+                  await runnersControl.recordRunnerActivity({
+                    runnerId,
+                    runId: heartbeat.runId,
+                    activityAt: heartbeat.heartbeatAt,
+                    eligibilityNote: heartbeat.runtimeEvidence
+                      ? 'service host observed browser runtime evidence'
+                      : 'service host refreshed local run lease',
+                  });
+                }
+              : undefined,
           });
           if (runnerId) {
             await runnersControl.recordRunnerActivity({

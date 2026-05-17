@@ -16139,3 +16139,8 @@ browser-stage lifecycle observability, not transcript truncation.
   `chatgpt-reattach-existing-tab` heartbeat, wires passive DOM probe callbacks
   through the reattach wait path, and prefers heartbeat evidence that includes a
   conversation URL plus Chrome host/port when selecting the submitted tab.
+- 2026-05-17: Browser-backed lease heartbeats must also count as runner
+  activity. Runtime lease heartbeat callbacks now let the service host refresh
+  runner activity from browser runtime evidence, so active ChatGPT artifact runs
+  are not misclassified as suspicious-idle solely because the runner activity
+  timestamp predates lease acquisition.

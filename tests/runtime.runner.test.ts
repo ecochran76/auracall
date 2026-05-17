@@ -1911,6 +1911,13 @@ describe('runtime runner', () => {
     };
     const control = createExecutionRuntimeControl();
     await control.createRun(bundle);
+    const leaseHeartbeats: Array<{
+      runId: string;
+      leaseId: string;
+      ownerId: string;
+      heartbeatAt: string;
+      runtimeEvidence?: unknown;
+    }> = [];
 
     const executed = await executeStoredExecutionRunOnce({
       runId: 'run_runtime_evidence_heartbeat',
@@ -1936,6 +1943,9 @@ describe('runtime runner', () => {
           },
         };
       },
+      onLeaseHeartbeat: async (heartbeat) => {
+        leaseHeartbeats.push(heartbeat);
+      },
     });
 
     expect(executed.bundle.run.status).toBe('succeeded');
@@ -1951,6 +1961,18 @@ describe('runtime runner', () => {
         source: 'browser-service',
         evidenceRef: 'chatgpt-thinking-dom',
         confidence: 'medium',
+      },
+    });
+    expect(leaseHeartbeats.map((heartbeat) => heartbeat.heartbeatAt)).toEqual([
+      '2026-04-08T13:11:00.000Z',
+      '2026-04-08T13:11:12.000Z',
+    ]);
+    expect(leaseHeartbeats[1]).toMatchObject({
+      runId: 'run_runtime_evidence_heartbeat',
+      ownerId: 'runner:local-test',
+      runtimeEvidence: {
+        observedAt: '2026-04-08T13:11:12.000Z',
+        evidenceRef: 'chatgpt-thinking-dom',
       },
     });
   });
