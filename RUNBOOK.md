@@ -4713,3 +4713,37 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - add item-specific asset/download preview, then return to chat-dialog
     conversation views.
+
+## Turn 171 | 2026-05-17
+
+- Goal: add protected asset fetch and preview to the React operator Search
+  inspector.
+- Change:
+  - lifted the session-scoped archive API key to the app shell so the right
+    inspector can fetch protected item assets without putting bearer keys in
+    URLs.
+  - added an asset preview card for selected file-backed archive items.
+  - synthesized `/v1/archive/items/{archive_item_id}/asset` for file-available
+    items when the archive payload omits an explicit asset link.
+  - added object URL Open/Download actions and inline previews for small text,
+    JSON, XML, CSV, Markdown, log, image, and PDF assets.
+  - recorded an observed backend gap: generated-artifact archive IDs containing
+    embedded `sandbox:/mnt/data/...` slash text currently return HTTP 400
+    through item and asset routes, while upload archive IDs work.
+- Verification:
+  - `pnpm run ux:build`
+  - copied the built `dist/operator-ux` assets into the installed user runtime
+    because the shared dirty worktree currently blocks full `pnpm run build`
+    with non-UX TypeScript errors.
+  - `systemctl --user restart auracall-api.service`
+  - `curl -fsS http://auracall.localhost/status`
+  - `agent-browser` against `http://auracall.localhost/dashboard` with a
+    throwaway Chrome profile.
+  - authenticated Search for `kind=upload` and query `rubric` rendered 25
+    results, selected one file-backed item, fetched
+    `che4470-seminar-rubric.json`, reported `application/json; charset=utf-8`
+    and `6,785 bytes`, and displayed Open/Download actions plus an inline JSON
+    preview.
+- Next:
+  - fix slash-containing archive item route handling, then return to
+    chat-dialog conversation views.

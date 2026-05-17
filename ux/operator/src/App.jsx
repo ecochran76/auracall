@@ -5,7 +5,9 @@ import {
   Check,
   Copy,
   Database,
+  Download,
   ExternalLink,
+  FileText,
   GripVertical,
   HeartPulse,
   KeyRound,
@@ -109,6 +111,38 @@ function readSessionValue(key) {
   } catch {
     return "";
   }
+}
+
+function writeSessionValue(key, value) {
+  try {
+    if (value) {
+      sessionStorage.setItem(key, value);
+    } else {
+      sessionStorage.removeItem(key);
+    }
+  } catch {
+    // Session storage can be disabled; keep the in-memory value.
+  }
+}
+
+function fileNameFromDisposition(value) {
+  const match = String(value ?? "").match(/filename\*?=(?:UTF-8''|")?([^";]+)/i);
+  return match ? decodeURIComponent(match[1].replace(/"$/u, "")) : null;
+}
+
+function isPreviewableText(mimeType, fileName) {
+  const mime = String(mimeType ?? "").toLowerCase();
+  const name = String(fileName ?? "").toLowerCase();
+  return (
+    mime.startsWith("text/")
+    || ["application/json", "application/xml", "application/javascript"].includes(mime)
+    || /\.(json|txt|md|csv|xml|log)$/u.test(name)
+  );
+}
+
+function archiveItemAssetRoute(item) {
+  if (!item?.fileAvailable) return null;
+  return item.links?.asset ?? `/v1/archive/items/${encodeURIComponent(item.id)}/asset`;
 }
 
 function statusTone(value) {
@@ -614,8 +648,14 @@ function emptyArchiveDetailState() {
   };
 }
 
-function ArchiveSearchViewport({ apiStatus, selectedArchiveItem, onSelectedArchiveItemChange, onSelectedArchiveDetailChange }) {
-  const [apiKey, setApiKey] = useState(() => readSessionValue(ARCHIVE_KEY_STORAGE));
+function ArchiveSearchViewport({
+  apiStatus,
+  archiveApiKey,
+  onArchiveApiKeyChange,
+  selectedArchiveItem,
+  onSelectedArchiveItemChange,
+  onSelectedArchiveDetailChange,
+}) {
   const [filters, setFilters] = useState({
     q: "",
     kind: "all",
@@ -634,7 +674,7 @@ function ArchiveSearchViewport({ apiStatus, selectedArchiveItem, onSelectedArchi
       onSelectedArchiveDetailChange(emptyArchiveDetailState());
       return undefined;
     }
-    const trimmedKey = apiKey.trim();
+    const trimmedKey = archiveApiKey.trim();
     if (!trimmedKey) {
       onSelectedArchiveDetailChange({
         loading: false,
@@ -689,20 +729,7 @@ function ArchiveSearchViewport({ apiStatus, selectedArchiveItem, onSelectedArchi
       alive = false;
       controller.abort();
     };
-  }, [apiKey, selectedArchiveItem, onSelectedArchiveDetailChange]);
-
-  function saveSessionKey(nextKey) {
-    setApiKey(nextKey);
-    try {
-      if (nextKey) {
-        sessionStorage.setItem(ARCHIVE_KEY_STORAGE, nextKey);
-      } else {
-        sessionStorage.removeItem(ARCHIVE_KEY_STORAGE);
-      }
-    } catch {
-      // Session storage can be disabled; keep the in-memory value.
-    }
-  }
+  }, [archiveApiKey, selectedArchiveItem, onSelectedArchiveDetailChange]);
 
   function updateFilter(name, value) {
     setFilters((current) => ({ ...current, [name]: value }));
@@ -710,7 +737,7 @@ function ArchiveSearchViewport({ apiStatus, selectedArchiveItem, onSelectedArchi
 
   async function runSearch(event) {
     event?.preventDefault();
-    if (!apiKey.trim()) {
+    if (!archiveApiKey.trim()) {
       setError("Enter an operator API key for read-only archive search.");
       return;
     }
@@ -727,7 +754,7 @@ function ArchiveSearchViewport({ apiStatus, selectedArchiveItem, onSelectedArchi
       const response = await fetch(`/v1/archive?${params.toString()}`, {
         cache: "no-store",
         headers: {
-          authorization: `Bearer ${apiKey.trim()}`,
+          authorization: `Bearer ${archiveApiKey.trim()}`,
         },
       });
       const payload = await response.json().catch(() => null);
@@ -755,8 +782,8 @@ function ArchiveSearchViewport({ apiStatus, selectedArchiveItem, onSelectedArchi
           <p>Read-only search over archived responses, batches, uploads, generated artifacts, provider conversations, media, and caller evidence.</p>
         </div>
         <div className="status-readout">
-          <span className={`state-dot state-${statusTone(error ? "error" : apiKey ? "ok" : "waiting")}`} />
-          <strong>{apiKey ? "Operator key loaded" : "Operator key required"}</strong>
+          <span className={`state-dot state-${statusTone(error ? "error" : archiveApiKey ? "ok" : "waiting")}`} />
+          <strong>{archiveApiKey ? "Operator key loaded" : "Operator key required"}</strong>
           <small>{searchedAt ? `Last search ${formatDateTime(searchedAt)}` : archiveRoute}</small>
         </div>
       </div>
@@ -768,16 +795,16 @@ function ArchiveSearchViewport({ apiStatus, selectedArchiveItem, onSelectedArchi
             <input
               id="archiveApiKey"
               type="password"
-              value={apiKey}
+              value={archiveApiKey}
               autoComplete="off"
               placeholder="Paste a scoped AuraCall API key for this browser session"
-              onChange={(event) => saveSessionKey(event.target.value)}
+              onChange={(event) => onArchiveApiKeyChange(event.target.value)}
             />
             <button
               type="button"
               title="Forget API key"
               onClick={() => {
-                saveSessionKey("");
+                onArchiveApiKeyChange("");
                 onSelectedArchiveDetailChange(emptyArchiveDetailState());
               }}
             >
@@ -885,7 +912,7 @@ function ArchiveSearchViewport({ apiStatus, selectedArchiveItem, onSelectedArchi
                 </dl>
                 <div className="archive-links">
                   {item.links?.self ? <a href={item.links.self}>Detail</a> : null}
-                  {item.links?.asset && item.fileAvailable ? <a href={item.links.asset}>Asset</a> : null}
+                  {archiveItemAssetRoute(item) ? <a href={archiveItemAssetRoute(item)}>Asset</a> : null}
                   {item.providerConversationUrl ? <a href={item.providerConversationUrl} target="_blank" rel="noreferrer">Provider</a> : null}
                 </div>
               </article>
@@ -902,6 +929,8 @@ function ArchiveSearchViewport({ apiStatus, selectedArchiveItem, onSelectedArchi
 function MainViewport({
   activeNav,
   apiStatus,
+  archiveApiKey,
+  onArchiveApiKeyChange,
   runStatus,
   selectedArchiveItem,
   onSelectedArchiveItemChange,
@@ -917,6 +946,8 @@ function MainViewport({
     return (
       <ArchiveSearchViewport
         apiStatus={apiStatus}
+        archiveApiKey={archiveApiKey}
+        onArchiveApiKeyChange={onArchiveApiKeyChange}
         selectedArchiveItem={selectedArchiveItem}
         onSelectedArchiveItemChange={onSelectedArchiveItemChange}
         onSelectedArchiveDetailChange={onSelectedArchiveDetailChange}
@@ -1085,7 +1116,114 @@ function LeftPane({ activeNav, apiStatus, runStatus }) {
   return <SectionList title="Context" items={datasets[activeNav]} />;
 }
 
-function RightPane({ activeNav, apiStatus, runStatus, selectedArchiveItem, selectedArchiveDetail }) {
+function ArchiveAssetPreview({ item, apiKey }) {
+  const [asset, setAsset] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const assetRoute = archiveItemAssetRoute(item);
+  const canFetch = Boolean(assetRoute);
+
+  useEffect(() => {
+    setAsset((current) => {
+      if (current?.objectUrl) URL.revokeObjectURL(current.objectUrl);
+      return null;
+    });
+    setLoading(false);
+    setError(null);
+  }, [item?.id]);
+
+  useEffect(() => () => {
+    if (asset?.objectUrl) URL.revokeObjectURL(asset.objectUrl);
+  }, [asset?.objectUrl]);
+
+  async function fetchAsset() {
+    if (!assetRoute) return;
+    const trimmedKey = apiKey.trim();
+    if (!trimmedKey) {
+      setError("Operator API key required to fetch archived assets.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(assetRoute, {
+        cache: "no-store",
+        headers: {
+          authorization: `Bearer ${trimmedKey}`,
+        },
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => "");
+        throw new Error(text ? compactText(text, 160) : `HTTP ${response.status}`);
+      }
+      const blob = await response.blob();
+      const mimeType = response.headers.get("content-type") ?? item.mimeType ?? blob.type;
+      const fileName = fileNameFromDisposition(response.headers.get("content-disposition")) ?? item.fileName ?? item.title ?? item.id;
+      const objectUrl = URL.createObjectURL(blob);
+      let textPreview = null;
+      if (blob.size <= 256 * 1024 && isPreviewableText(mimeType, fileName)) {
+        textPreview = compactText(await blob.text(), 5000);
+      }
+      setAsset((current) => {
+        if (current?.objectUrl) URL.revokeObjectURL(current.objectUrl);
+        return {
+          objectUrl,
+          mimeType,
+          fileName,
+          size: blob.size,
+          textPreview,
+        };
+      });
+    } catch (assetError) {
+      setError(assetError.message || "Asset fetch failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!item) return null;
+
+  return (
+    <section className="asset-preview" aria-label="Selected archive asset preview">
+      <div className="asset-preview-head">
+        <span>
+          <FileText size={15} aria-hidden="true" />
+          <strong>Asset</strong>
+        </span>
+        <button
+          type="button"
+          className="icon-label-button"
+          disabled={!canFetch || loading}
+          title={canFetch ? "Fetch archived asset" : "No local asset available"}
+          onClick={fetchAsset}
+        >
+          <Download size={14} aria-hidden="true" />
+          <span>{loading ? "Fetching" : "Fetch"}</span>
+        </button>
+      </div>
+      <dl className="asset-facts">
+        <div><dt>Available</dt><dd>{canFetch ? "yes" : "no"}</dd></div>
+        <div><dt>Name</dt><dd>{asset?.fileName ?? item.fileName ?? item.title ?? "none"}</dd></div>
+        <div><dt>Type</dt><dd>{asset?.mimeType ?? item.mimeType ?? "unknown"}</dd></div>
+        <div><dt>Size</dt><dd>{asset ? `${formatNumber(asset.size)} bytes` : "not fetched"}</dd></div>
+      </dl>
+      {error ? <div className="asset-error">Asset fetch failed: {error}</div> : null}
+      {asset ? (
+        <div className="asset-actions">
+          <a href={asset.objectUrl} target="_blank" rel="noreferrer">Open</a>
+          <a href={asset.objectUrl} download={asset.fileName}>Download</a>
+        </div>
+      ) : null}
+      {asset?.mimeType?.startsWith("image/") ? <img className="asset-image-preview" src={asset.objectUrl} alt="" /> : null}
+      {asset?.mimeType === "application/pdf" ? <iframe className="asset-frame-preview" title="Asset PDF preview" src={asset.objectUrl} /> : null}
+      {asset?.textPreview ? (
+        <pre className="asset-text-preview">{asset.textPreview}</pre>
+      ) : null}
+    </section>
+  );
+}
+
+function RightPane({ activeNav, apiStatus, archiveApiKey, runStatus, selectedArchiveItem, selectedArchiveDetail }) {
   const labels = {
     chats: "Conversation inspector",
     search: "Result inspector",
@@ -1095,8 +1233,10 @@ function RightPane({ activeNav, apiStatus, runStatus, selectedArchiveItem, selec
   const status = apiStatus.status;
   const runs = runStatus.status;
   const inspectedArchiveItem = selectedArchiveDetail?.result?.item ?? selectedArchiveItem;
-  const inspectedArchiveLinks = Object.entries(inspectedArchiveItem?.links ?? {})
-    .filter(([, value]) => typeof value === "string" && value.trim());
+  const inspectedArchiveLinks = Object.entries({
+    ...(inspectedArchiveItem?.links ?? {}),
+    ...(archiveItemAssetRoute(inspectedArchiveItem) ? { asset: archiveItemAssetRoute(inspectedArchiveItem) } : {}),
+  }).filter(([, value]) => typeof value === "string" && value.trim());
   const selectedArchiveDetails = inspectedArchiveItem
     ? [
         ["Kind", inspectedArchiveItem.kind ?? "unknown"],
@@ -1201,6 +1341,9 @@ function RightPane({ activeNav, apiStatus, runStatus, selectedArchiveItem, selec
           {inspectedArchiveItem.providerConversationUrl ? <RouteChip value={inspectedArchiveItem.providerConversationUrl} label="Provider" /> : null}
         </div>
       ) : null}
+      {activeNav === "search" && inspectedArchiveItem ? (
+        <ArchiveAssetPreview item={inspectedArchiveItem} apiKey={archiveApiKey} />
+      ) : null}
       <div className="json-preview">
         <code>{JSON.stringify(preview, null, 2)}</code>
       </div>
@@ -1211,6 +1354,7 @@ function RightPane({ activeNav, apiStatus, runStatus, selectedArchiveItem, selec
 export default function App() {
   const [layout, setLayout] = useState(readLayout);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [archiveApiKey, setArchiveApiKey] = useState(() => readSessionValue(ARCHIVE_KEY_STORAGE));
   const [selectedArchiveItem, setSelectedArchiveItem] = useState(null);
   const [selectedArchiveDetail, setSelectedArchiveDetail] = useState(emptyArchiveDetailState);
   const dragRef = useRef(null);
@@ -1260,6 +1404,11 @@ export default function App() {
   function beginResize(pane) {
     dragRef.current = { pane };
     document.body.classList.add("is-resizing-pane");
+  }
+
+  function updateArchiveApiKey(nextKey) {
+    setArchiveApiKey(nextKey);
+    writeSessionValue(ARCHIVE_KEY_STORAGE, nextKey);
   }
 
   return (
@@ -1352,6 +1501,8 @@ export default function App() {
         <MainViewport
           activeNav={layout.activeNav}
           apiStatus={apiStatus}
+          archiveApiKey={archiveApiKey}
+          onArchiveApiKeyChange={updateArchiveApiKey}
           runStatus={runStatus}
           selectedArchiveItem={selectedArchiveItem}
           onSelectedArchiveItemChange={setSelectedArchiveItem}
@@ -1377,6 +1528,7 @@ export default function App() {
             <RightPane
               activeNav={layout.activeNav}
               apiStatus={apiStatus}
+              archiveApiKey={archiveApiKey}
               runStatus={runStatus}
               selectedArchiveItem={selectedArchiveItem}
               selectedArchiveDetail={selectedArchiveDetail}

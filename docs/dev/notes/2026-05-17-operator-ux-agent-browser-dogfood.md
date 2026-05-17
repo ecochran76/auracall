@@ -120,3 +120,26 @@ Validation evidence:
 - Installed dashboard at `http://auracall.localhost/dashboard` loaded through `agent-browser` with a throwaway Chrome profile.
 - Authenticated search for `first_pass_readout` rendered `25` results and selected one item.
 - Browser eval reported `selected=1`, `results=25`, `status="Detail loaded\n5/17/2026, 11:52:55 AM"`, and `actions=["Response","Runtime Run"]`.
+
+## Archive Asset Preview Follow-Up
+
+Sixth pass made file-backed archive items retrievable from the inspector:
+
+- The Search page keeps the operator key in shell state so the right inspector can fetch protected assets without placing bearer credentials in URLs.
+- The selected inspector now synthesizes `/v1/archive/items/{archive_item_id}/asset` for file-available items, even when the archive item payload does not include an explicit `links.asset`.
+- The asset card shows availability, file name, MIME type, fetched size, and Open/Download object URL actions after a successful fetch.
+- Text, JSON, XML, CSV, Markdown, and log assets under 256 KiB render an inline text preview; images and PDFs use object URL previews.
+
+Additional screenshot:
+
+- `/tmp/auracall-operator-ux-dogfood/archive-asset-preview.png` - fetched upload asset with JSON preview and Open/Download actions.
+
+Validation evidence:
+
+- `kind=upload`, query `rubric` rendered `25` upload results and selected one item.
+- Browser eval after clicking `Fetch` reported `AVAILABLE yes`, `TYPE application/json; charset=utf-8`, `SIZE 6,785 bytes`, `assetActions=["Open","Download"]`, and `hasTextPreview=true`.
+
+Observed backend/API gap:
+
+- Generated-artifact items with local files can have IDs containing embedded slash text from `sandbox:/mnt/data/...`; `/v1/archive/items/{archive_item_id}` and `/asset` currently return HTTP 400 for those encoded IDs.
+- Upload archive IDs without embedded slash text work through the item and asset routes.
