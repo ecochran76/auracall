@@ -21,6 +21,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const STORAGE_KEY = "auracall.operatorUx.v1";
+const STATUS_POLL_MS = 30000;
 
 const NAV_ITEMS = [
   { id: "chats", label: "Chats", icon: MessageSquareText },
@@ -59,6 +60,94 @@ function readLayout() {
   }
 }
 
+function formatNumber(value) {
+  return Number.isFinite(value) ? value.toLocaleString() : "0";
+}
+
+function formatDateTime(value) {
+  if (!value) return "not scheduled";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString();
+}
+
+function formatUptime(seconds) {
+  if (!Number.isFinite(seconds)) return "unknown";
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+}
+
+function statusTone(value) {
+  const normalized = String(value ?? "").toLowerCase();
+  if (["ok", "healthy", "running", "complete", "enabled", "idle_waiting", "scheduled"].includes(normalized)) {
+    return "good";
+  }
+  if (["waiting", "delayed", "eligible", "draft", "planned", "unconfigured"].includes(normalized)) {
+    return "warn";
+  }
+  if (["blocked", "failed", "error", "attention_needed", "attention"].includes(normalized)) {
+    return "bad";
+  }
+  return "neutral";
+}
+
+function useApiStatus() {
+  const [state, setState] = useState({
+    status: null,
+    loading: true,
+    error: null,
+    updatedAt: null,
+  });
+
+  useEffect(() => {
+    let alive = true;
+    let timer = null;
+    let controller = null;
+
+    async function load() {
+      controller?.abort();
+      controller = new AbortController();
+      setState((current) => ({ ...current, loading: true, error: null }));
+      try {
+        const response = await fetch("/status", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const status = await response.json();
+        if (!alive) return;
+        setState({
+          status,
+          loading: false,
+          error: null,
+          updatedAt: new Date().toISOString(),
+        });
+      } catch (error) {
+        if (!alive || error.name === "AbortError") return;
+        setState((current) => ({
+          ...current,
+          loading: false,
+          error: error.message || "Unable to load status",
+        }));
+      }
+    }
+
+    load();
+    timer = window.setInterval(load, STATUS_POLL_MS);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+      controller?.abort();
+    };
+  }, []);
+
+  return state;
+}
+
 function SectionList({ title, items }) {
   return (
     <section className="section-list" aria-label={title}>
@@ -78,7 +167,154 @@ function SectionList({ title, items }) {
   );
 }
 
-function MainViewport({ activeNav }) {
+function HealthViewport({ apiStatus }) {
+  const { status, loading, error, updatedAt } = apiStatus;
+  const liveFollow = status?.liveFollow ?? {};
+  const targets = liveFollow.targets ?? {};
+  const accounts = targets.accounts ?? [];
+  const routes = status?.routes ?? {};
+  const discovery = status?.serviceDiscovery ?? {};
+  const process = status?.process ?? {};
+  const binding = status?.binding ?? {};
+
+  return (
+    <main className="viewport" tabIndex="-1">
+      <div className="health-toolbar">
+        <div className="viewport-heading">
+          <span>Live AuraCall status</span>
+          <h1>Service Health</h1>
+          <p>Read-only status from the running API service, including route discovery and live-follow account posture.</p>
+        </div>
+        <div className="status-readout">
+          <span className={`state-dot state-${statusTone(status?.ok ? "ok" : "error")}`} />
+          <strong>{status?.ok ? "API reachable" : loading ? "Loading" : "API unavailable"}</strong>
+          <small>{updatedAt ? `Updated ${formatDateTime(updatedAt)}` : "Waiting for first poll"}</small>
+        </div>
+      </div>
+
+      {error ? <div className="health-error">Unable to load /status: {error}</div> : null}
+
+      <div className="health-grid">
+        <article className="health-card">
+          <span className="card-kicker">API</span>
+          <strong>{status?.version ?? "unknown"}</strong>
+          <p>
+            {binding.host ?? "127.0.0.1"}:{binding.port ?? "unknown"}
+          </p>
+          <div className="metric-row">
+            <span>Auth</span>
+            <b>{status?.auth?.required ? `${status.auth.scheme ?? "bearer"} (${status.auth.keyCount ?? 0})` : "off"}</b>
+          </div>
+          <div className="metric-row">
+            <span>Scope</span>
+            <b>{status?.auth?.scoped ? "scoped keys" : "global keys"}</b>
+          </div>
+        </article>
+
+        <article className="health-card">
+          <span className="card-kicker">Live Follow</span>
+          <strong>{liveFollow.severity ?? "unknown"}</strong>
+          <p>
+            {liveFollow.schedulerPosture ?? "unknown"} / {liveFollow.schedulerState ?? "unknown"}
+          </p>
+          <div className="metric-row">
+            <span>Active</span>
+            <b>{formatNumber(liveFollow.activeCompletions)}</b>
+          </div>
+          <div className="metric-row">
+            <span>Attention</span>
+            <b>{formatNumber(targets.attentionNeeded)}</b>
+          </div>
+        </article>
+
+        <article className="health-card">
+          <span className="card-kicker">Routing</span>
+          <strong>{discovery.local?.hostname ?? "auracall.localhost"}</strong>
+          <p>
+            {discovery.routing?.ingress ?? "local"} via {discovery.routing?.proxyTarget ?? "API service"}
+          </p>
+          <div className="route-list">
+            <a href={routes.operatorBrowserDashboard ?? "/dashboard"}>Dashboard</a>
+            <a href={routes.operatorDebugDashboard ?? "/ops/browser"}>Debug</a>
+            <a href={routes.accountMirrorDashboard ?? "/account-mirror"}>Mirror</a>
+          </div>
+        </article>
+
+        <article className="health-card">
+          <span className="card-kicker">Runtime</span>
+          <strong>{process.service ?? "auracall-api.service"}</strong>
+          <p>
+            PID {process.pid ?? "unknown"} / uptime {formatUptime(process.uptimeSeconds)}
+          </p>
+          <div className="metric-row">
+            <span>CWD</span>
+            <b>{process.cwd ?? "unknown"}</b>
+          </div>
+          <div className="metric-row">
+            <span>Log</span>
+            <b>{process.logPath ?? "unknown"}</b>
+          </div>
+        </article>
+      </div>
+
+      <section className="health-section" aria-label="Live follow accounts">
+        <div className="section-heading">
+          <h2>Live Follow Accounts</h2>
+          <span>{formatNumber(accounts.length)} targets</span>
+        </div>
+        <div className="health-table-wrap">
+          <table className="health-table">
+            <thead>
+              <tr>
+                <th>Provider</th>
+                <th>Profile</th>
+                <th>Desired</th>
+                <th>Status</th>
+                <th>Mirror</th>
+                <th>Content</th>
+                <th>Next attempt</th>
+              </tr>
+            </thead>
+            <tbody>
+              {accounts.map((account) => {
+                const counts = account.metadataCounts ?? {};
+                return (
+                  <tr key={`${account.provider}-${account.runtimeProfileId}`}>
+                    <td>{account.provider}</td>
+                    <td>{account.runtimeProfileId}</td>
+                    <td>
+                      <span className={`status-pill status-${statusTone(account.desiredState)}`}>{account.desiredState}</span>
+                    </td>
+                    <td>
+                      <span className={`status-pill status-${statusTone(account.actualStatus)}`}>{account.actualStatus}</span>
+                    </td>
+                    <td>{account.mirrorCompleteness ?? "unknown"}</td>
+                    <td>
+                      {formatNumber(counts.conversations)} chats /{" "}
+                      {formatNumber((counts.artifacts ?? 0) + (counts.files ?? 0) + (counts.media ?? 0))} files
+                    </td>
+                    <td>{formatDateTime(account.nextAttemptAt)}</td>
+                  </tr>
+                );
+              })}
+              {!accounts.length ? (
+                <tr>
+                  <td colSpan="7">No live-follow accounts reported yet.</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function MainViewport({ activeNav, apiStatus }) {
+  if (activeNav === "health") {
+    return <HealthViewport apiStatus={apiStatus} />;
+  }
+
   const content = {
     chats: {
       title: "Conversation Archive",
@@ -113,17 +349,6 @@ function MainViewport({ activeNav }) {
         ["Controls", "Start, pause, retry, cancel, and inspect with audit trail"],
       ],
     },
-    health: {
-      title: "Service Health",
-      kicker: "Runtime and provider readiness",
-      body:
-        "Health should show API service state, browser profile readiness, bound account identity, provider guard status, dispatcher locks, rate limits, and recent logs.",
-      rows: [
-        ["API", "HTTP, MCP, scheduler, archive, and config registry"],
-        ["Browsers", "Runtime profiles, locks, auth, DOM drift, and guards"],
-        ["Limits", "Provider-specific rate budgets and cooldowns"],
-      ],
-    },
   }[activeNav];
 
   return (
@@ -155,7 +380,35 @@ function MainViewport({ activeNav }) {
   );
 }
 
-function LeftPane({ activeNav }) {
+function LeftPane({ activeNav, apiStatus }) {
+  const status = apiStatus.status;
+  if (activeNav === "health" && status) {
+    const liveFollow = status.liveFollow ?? {};
+    const targets = liveFollow.targets ?? {};
+    return (
+      <SectionList
+        title="Context"
+        items={[
+          {
+            title: "API service",
+            meta: `${status.binding?.host ?? "127.0.0.1"}:${status.binding?.port ?? "unknown"} / ${status.auth?.keyCount ?? 0} keys`,
+            status: status.ok ? "good" : "bad",
+          },
+          {
+            title: "Live follow",
+            meta: `${targets.enabled ?? 0} enabled, ${targets.running ?? 0} running, ${targets.attentionNeeded ?? 0} attention`,
+            status: statusTone(liveFollow.severity),
+          },
+          {
+            title: "Routes",
+            meta: status.serviceDiscovery?.local?.dashboardUrl ?? "/dashboard",
+            status: "good",
+          },
+        ]}
+      />
+    );
+  }
+
   const datasets = {
     chats: [
       { title: "Recent conversations", meta: "Provider cache and project-bound runs", status: "draft" },
@@ -181,13 +434,40 @@ function LeftPane({ activeNav }) {
   return <SectionList title="Context" items={datasets[activeNav]} />;
 }
 
-function RightPane({ activeNav }) {
+function RightPane({ activeNav, apiStatus }) {
   const labels = {
     chats: "Conversation inspector",
     search: "Result inspector",
     runs: "Run inspector",
     health: "Health inspector",
   };
+  const status = apiStatus.status;
+  const details =
+    activeNav === "health" && status
+      ? [
+          ["Source", "/status"],
+          ["Service", status.process?.service ?? "auracall-api.service"],
+          ["Route", status.routes?.operatorBrowserDashboardUrl ?? status.routes?.operatorBrowserDashboard ?? "/dashboard"],
+          ["Debug", status.routes?.operatorDebugDashboard ?? "/ops/browser"],
+        ]
+      : [
+          ["Source of truth", "AuraCall JSON API"],
+          ["Mode", "Read-only shell scaffold"],
+          ["Debug dashboard", "Keep existing surface for low-level probes"],
+        ];
+  const preview =
+    activeNav === "health" && status
+      ? {
+          ok: status.ok,
+          port: status.binding?.port,
+          liveFollow: {
+            severity: status.liveFollow?.severity,
+            active: status.liveFollow?.activeCompletions,
+            attention: status.liveFollow?.targets?.attentionNeeded,
+          },
+        }
+      : { route: activeNav, mutable: false };
+
   return (
     <aside className="inspector-body" aria-label={labels[activeNav]}>
       <div className="inspector-header">
@@ -195,21 +475,15 @@ function RightPane({ activeNav }) {
         <span>{labels[activeNav]}</span>
       </div>
       <dl>
-        <div>
-          <dt>Source of truth</dt>
-          <dd>AuraCall JSON API</dd>
-        </div>
-        <div>
-          <dt>Mode</dt>
-          <dd>Read-only shell scaffold</dd>
-        </div>
-        <div>
-          <dt>Debug dashboard</dt>
-          <dd>Keep existing surface for low-level probes</dd>
-        </div>
+        {details.map(([term, detail]) => (
+          <div key={term}>
+            <dt>{term}</dt>
+            <dd>{detail}</dd>
+          </div>
+        ))}
       </dl>
       <div className="json-preview">
-        <code>{`{ route: "${activeNav}", mutable: false }`}</code>
+        <code>{JSON.stringify(preview, null, 2)}</code>
       </div>
     </aside>
   );
@@ -219,6 +493,7 @@ export default function App() {
   const [layout, setLayout] = useState(readLayout);
   const [menuOpen, setMenuOpen] = useState(false);
   const dragRef = useRef(null);
+  const apiStatus = useApiStatus();
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
@@ -334,14 +609,14 @@ export default function App() {
             </button>
           </div>
           <div className="pane-content">
-            <LeftPane activeNav={layout.activeNav} />
+            <LeftPane activeNav={layout.activeNav} apiStatus={apiStatus} />
           </div>
           <button className="resize-handle right" type="button" aria-label="Resize left pane" onPointerDown={() => beginResize("left")}>
             <GripVertical size={16} />
           </button>
         </aside>
 
-        <MainViewport activeNav={layout.activeNav} />
+        <MainViewport activeNav={layout.activeNav} apiStatus={apiStatus} />
 
         <aside className={layout.rightCollapsed ? "pane right-pane is-collapsed" : "pane right-pane"}>
           <button className="resize-handle left" type="button" aria-label="Resize right pane" onPointerDown={() => beginResize("right")}>
@@ -358,7 +633,7 @@ export default function App() {
             </button>
           </div>
           <div className="pane-content">
-            <RightPane activeNav={layout.activeNav} />
+            <RightPane activeNav={layout.activeNav} apiStatus={apiStatus} />
           </div>
         </aside>
       </div>

@@ -16086,3 +16086,7 @@ browser-stage lifecycle observability, not transcript truncation.
   not the temporary Vite dev server. `/dashboard` now serves packaged
   `dist/operator-ux` assets from the API service on port 18095, while
   `/ops/browser` remains the debug dashboard route.
+- 2026-05-17: The React operator UX should prove read-only API contracts before
+  adding controls. The `Health` page now consumes `/status` for API, routing,
+  live-follow, runtime, and account-target posture while keeping `/ops/browser`
+  as the low-level debug surface.

@@ -101,9 +101,9 @@ State ownership:
      while preserving `/ops/browser` as the debug dashboard
 
 2. API client and health readback
-   - add typed client helpers for `/status`, archive search, run status, and
-     account mirror status
-   - make `Health` a real read-only status surface
+   - add typed client helpers for archive search, run status, and account
+     mirror status
+   - make `Health` a real read-only status surface using `/status`
    - keep the debug dashboard linked but visually separate
 
 3. Archive and chat browsing
@@ -136,6 +136,8 @@ State ownership:
   than treated as the product UX.
 - `/dashboard` serves the React operator UX from the stable AuraCall API port.
 - `/ops/browser` continues to serve the debug dashboard.
+- `Health` reads the live `/status` payload and reports API, routing,
+  live-follow, and runtime state without mutating jobs.
 - The shell does not perform provider browser work or mutate jobs.
 
 ## Definition Of Done For First Slice
@@ -146,3 +148,18 @@ State ownership:
   installed user runtime includes `dist/operator-ux`.
 - Roadmap and plan index reference this plan.
 - Validation passes with `pnpm ux:build` and targeted repository checks.
+
+## Current State
+
+- Slice 1 is complete: the React shell exists, builds with Vite, and is served
+  from `/dashboard` by the AuraCall API service.
+- Slice 2 is partially complete: the Health page now polls `/status` every 30
+  seconds and renders API service, route discovery, live-follow summary, runtime
+  metadata, and live-follow target rows as read-only operator information.
+- The old browser dashboard remains available at `/ops/browser` for low-level
+  probes.
+
+Next implementation work should keep moving horizontally through read-only
+operator views: run queue/status, archive search, and chat-dialog conversation
+views. Mutation controls should stay out until the read-only surfaces prove the
+API contracts.

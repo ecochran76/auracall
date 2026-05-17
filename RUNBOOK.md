@@ -4599,3 +4599,30 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - wire the React Health page to the existing `/status` and route-discovery
     APIs before adding mutation controls.
+
+## Turn 167 | 2026-05-17
+
+- Goal: make the React operator Health page use live API status instead of
+  placeholder copy.
+- Change:
+  - added a read-only `/status` polling hook to the operator UX.
+  - changed `Health` to render API service, auth, route discovery,
+    live-follow summary, runtime metadata, and per-account live-follow target
+    rows.
+  - changed the left context pane and right inspector to use the same live
+    status payload when Health is active.
+  - updated Plan 0067 to mark Health readback as the first real API-backed
+    operator page.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run plans:audit`
+  - `git diff --check` for the touched UX and docs files
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - live route checks for `http://auracall.localhost/dashboard`,
+    `/dashboard/assets/...`, and `/status`
+- Next:
+  - add read-only run queue/status and archive-search views before exposing
+    any dashboard mutation controls.

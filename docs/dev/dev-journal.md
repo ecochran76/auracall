@@ -29515,3 +29515,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     API service restart, and local/external route probes pass.
 - Follow-up:
   - make `Health` the first API-backed React page.
+
+## Turn 147 | 2026-05-17
+
+- Goal: turn Health into the first live, read-only operator page.
+- Change:
+  - added `/status` polling to the React operator UX.
+  - rendered API, auth, routing, runtime, live-follow summary, and live-follow
+    account rows from the live status payload.
+  - reused the same status payload in the Health left pane and right inspector.
+- Verification:
+  - `pnpm run ux:build` passes.
+  - typecheck, plan audit, full build, user-runtime install, API service
+    restart, and live `/dashboard`/asset/`/status` route checks pass.
+- Follow-up:
+  - add read-only run and archive views before UX mutation controls.
