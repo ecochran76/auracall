@@ -222,6 +222,7 @@ export const TeamRunArtifactRefSchema: z.ZodType<TeamRunArtifactRef> = z.object(
   path: z.string().nullable().optional(),
   uri: z.string().nullable().optional(),
   title: z.string().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 export const TeamRunStructuredOutputSchema: z.ZodType<TeamRunStructuredOutput> = z.object({

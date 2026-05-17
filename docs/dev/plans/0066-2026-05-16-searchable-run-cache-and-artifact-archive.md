@@ -62,12 +62,15 @@ Implemented:
   bound identity keys when browser-run or media-generation metadata contains
   them. Project id filtering is exposed through `/v1/archive`,
   `auracall api archive --project-id`, and MCP `run_archive_search`.
+- Browser response artifact references preserve provider/file metadata into
+  response output and archive records, including provider artifact ids,
+  remote/local paths, checksums, and file sizes when available.
 
 Remaining:
 
 - Fill remaining upload/generated-artifact gaps where provider-specific
-  artifact ids, project ids, or bound identity keys are not yet available from
-  the runner/materializer metadata.
+  artifact ids, project ids, or bound identity keys are not yet exposed by a
+  provider-specific runner/materializer.
 - Surface archive search and retrieval through CLI, API, MCP, and the operator
   dashboard without provider browser work.
 - Add operator dashboard archive search and item/evidence navigation.

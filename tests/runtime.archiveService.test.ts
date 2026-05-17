@@ -32,6 +32,8 @@ describe('run archive service', () => {
     const updatedAt = '2026-05-16T15:05:00.000Z';
     const packetPath = path.join(homeDir, 'packet.pdf');
     await writeFile(packetPath, 'packet content', 'utf8');
+    const generatedArtifactPath = path.join(homeDir, 'feedback-draft.json');
+    await writeFile(generatedArtifactPath, '{"score":5}', 'utf8');
 
     await runStore.writeRecord(createExecutionRunRecordBundle({
       run: createExecutionRun({
@@ -115,8 +117,12 @@ describe('run archive service', () => {
             id: 'feedback_json',
             kind: 'generated',
             title: 'feedback-draft.json',
-            path: '/tmp/feedback-draft.json',
+            path: generatedArtifactPath,
             uri: 'sandbox:/mnt/data/feedback-draft.json',
+            metadata: {
+              providerArtifactId: 'sandbox:/mnt/data/feedback-draft.json',
+              fileName: 'feedback-draft.json',
+            },
           },
         ],
         structuredOutputs: [],
@@ -225,6 +231,17 @@ describe('run archive service', () => {
       projectId: 'project_archive_1',
     });
     expect(projectOnly.items.map((entry) => entry.id)).toContain('provider-conversation:resp_archive_1:chatgpt:conv_archive_1');
+
+    const generatedArtifact = await service.readItem('generated-artifact:resp_archive_1:feedback_json');
+    expect(generatedArtifact?.item).toMatchObject({
+      localPath: generatedArtifactPath,
+      fileAvailable: true,
+      metadata: expect.objectContaining({
+        providerArtifactId: 'sandbox:/mnt/data/feedback-draft.json',
+        fileSizeBytes: Buffer.byteLength('{"score":5}'),
+      }),
+    });
+    expect(generatedArtifact?.item.checksumSha256).toMatch(/^[a-f0-9]{64}$/);
 
     await expect(service.readAsset(`upload:resp_archive_1:resp_archive_1:step:1:upload_packet`)).resolves.toMatchObject({
       object: 'run_archive_asset',

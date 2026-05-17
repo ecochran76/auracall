@@ -171,6 +171,7 @@ export interface TeamRunArtifactRef {
   path?: string | null;
   uri?: string | null;
   title?: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface TeamRunStructuredOutput {

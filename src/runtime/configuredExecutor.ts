@@ -222,24 +222,42 @@ function artifactRefFromFile(value: Record<string, unknown>): TeamRunArtifactRef
   const remoteUrl = asNonEmptyString(value.remoteUrl);
   const id = asNonEmptyString(value.id) ?? localPath ?? remoteUrl;
   if (!id) return null;
+  const sourceMetadata = isRecord(value.metadata) ? value.metadata : {};
   return {
     id,
     kind: 'file',
     title: asNonEmptyString(value.name) ?? asNonEmptyString(value.title),
     path: localPath,
     uri: remoteUrl,
+    metadata: {
+      ...sourceMetadata,
+      fileId: id,
+      fileName: asNonEmptyString(value.name) ?? asNonEmptyString(value.title),
+      mimeType: asNonEmptyString(value.mimeType),
+      remoteUrl,
+      localPath,
+      size: typeof value.size === 'number' && Number.isFinite(value.size) ? value.size : null,
+      checksumSha256: asNonEmptyString(value.checksumSha256) ?? asNonEmptyString(sourceMetadata.checksumSha256),
+    },
   };
 }
 
 function artifactRefFromProviderArtifact(value: Record<string, unknown>): TeamRunArtifactRef | null {
   const id = asNonEmptyString(value.id) ?? asNonEmptyString(value.uri);
   if (!id) return null;
+  const sourceMetadata = isRecord(value.metadata) ? value.metadata : {};
   return {
     id,
     kind: asNonEmptyString(value.kind) ?? 'generated',
     title: asNonEmptyString(value.title),
     path: null,
     uri: asNonEmptyString(value.uri),
+    metadata: {
+      ...sourceMetadata,
+      providerArtifactId: id,
+      providerArtifactKind: asNonEmptyString(value.kind),
+      remoteUrl: asNonEmptyString(value.uri) ?? asNonEmptyString(sourceMetadata.remoteUrl),
+    },
   };
 }
 
@@ -282,6 +300,10 @@ async function materializeBrowserResponseArtifacts(
       path: artifact.path ?? existing?.path ?? null,
       uri: artifact.uri ?? existing?.uri ?? null,
       kind: artifact.kind ?? existing?.kind,
+      metadata: {
+        ...(existing?.metadata ?? {}),
+        ...(artifact.metadata ?? {}),
+      },
     });
   }
   return {

@@ -418,6 +418,8 @@ function mapGeminiFileToMediaArtifact(
     providerArtifactId: artifact.id,
     providerArtifactTitle: artifact.title,
     remoteUrl: file.remoteUrl ?? artifact.uri ?? null,
+    checksumSha256: file.checksumSha256 ?? null,
+    size: file.size ?? null,
   };
   return {
     id: file.id || artifact.id || `gemini_${mediaType}_${ordinal}`,

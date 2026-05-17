@@ -324,13 +324,16 @@ function getStoredResponseOutput(bundle: ExecutionRunRecordBundle): ExecutionRes
       mime_type: inferArtifactMimeType(artifact.title, artifact.path, artifact.uri),
       uri: artifact.uri ?? artifact.path ?? null,
       disposition: artifact.path ? 'attachment' : 'inline',
-      metadata: artifact.path
-        ? {
-            path: artifact.path,
-            localPath: artifact.path,
-            remoteUrl: artifact.uri ?? null,
-          }
-        : null,
+      metadata: {
+        ...(artifact.metadata ?? {}),
+        ...(artifact.path
+          ? {
+              path: artifact.path,
+              localPath: artifact.path,
+              remoteUrl: artifact.uri ?? artifact.metadata?.remoteUrl ?? null,
+            }
+          : {}),
+      },
     }),
   );
   if (structured) {

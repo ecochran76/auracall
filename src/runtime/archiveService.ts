@@ -472,6 +472,7 @@ async function buildRunArchiveItems(records: ExecutionRunStoredRecord[]): Promis
         metadata: {
           stepId: artifact.stepId,
           artifactKind: artifact.kind,
+          ...(artifact.metadata ?? {}),
         },
         links: {
           response: `/v1/responses/${encodeURIComponent(record.runId)}`,
@@ -489,7 +490,7 @@ async function buildRunArchiveItems(records: ExecutionRunStoredRecord[]): Promis
         batchId: batch.batchId,
         batchIndex: batch.batchIndex,
         artifactId: artifact.id,
-        fileName: artifact.title ?? null,
+        fileName: readMetadataString(artifact.metadata, ['fileName', 'name']) ?? artifact.title ?? null,
         mimeType: artifact.mime_type ?? null,
         localPath: readMetadataString(artifact.metadata, ['localPath', 'path']),
         uri: artifact.uri ?? null,
@@ -745,6 +746,7 @@ function listInputArtifacts(steps: ExecutionRunStep[]): Array<{
   title: string | null;
   path: string | null;
   uri: string | null;
+  metadata: Record<string, unknown> | null;
 }> {
   return steps.flatMap((step) =>
     step.input.artifacts.map((artifact) => ({
@@ -754,6 +756,7 @@ function listInputArtifacts(steps: ExecutionRunStep[]): Array<{
       title: artifact.title ?? null,
       path: artifact.path ?? null,
       uri: artifact.uri ?? null,
+      metadata: artifact.metadata ?? null,
     })),
   );
 }
@@ -863,6 +866,7 @@ async function enrichFileMetadata(items: RunArchiveItem[]): Promise<RunArchiveIt
   return Promise.all(items.map(async (item) => {
     const checksumSha256 = readRecordString(item.metadata, ['checksumSha256']) ?? await calculateFileSha256(item.localPath);
     const fileAvailable = item.localPath ? await fileExists(item.localPath) : null;
+    const fileSizeBytes = readRecordNumber(item.metadata, ['fileSizeBytes', 'size']) ?? await readFileSize(item.localPath);
     const cacheKey = checksumSha256
       ? `sha256:${checksumSha256}`
       : item.localPath
@@ -876,6 +880,7 @@ async function enrichFileMetadata(items: RunArchiveItem[]): Promise<RunArchiveIt
       metadata: {
         ...item.metadata,
         ...(checksumSha256 ? { checksumSha256 } : {}),
+        ...(fileSizeBytes !== null ? { fileSizeBytes } : {}),
         ...(fileAvailable !== null ? { fileAvailable } : {}),
       },
     };
@@ -899,6 +904,17 @@ async function fileExists(localPath: string): Promise<boolean> {
     return true;
   } catch (error) {
     if (isMissingFileError(error)) return false;
+    throw error;
+  }
+}
+
+async function readFileSize(localPath: string | null): Promise<number | null> {
+  if (!localPath) return null;
+  try {
+    const stats = await fs.stat(localPath);
+    return stats.isFile() ? stats.size : null;
+  } catch (error) {
+    if (isMissingFileError(error)) return null;
     throw error;
   }
 }
@@ -972,6 +988,15 @@ function readRecordString(value: unknown, keys: string[]): string | null {
   for (const key of keys) {
     const entry = value[key];
     if (typeof entry === 'string' && entry.trim().length > 0) return entry.trim();
+  }
+  return null;
+}
+
+function readRecordNumber(value: unknown, keys: string[]): number | null {
+  if (!isRecord(value)) return null;
+  for (const key of keys) {
+    const entry = value[key];
+    if (typeof entry === 'number' && Number.isFinite(entry) && entry >= 0) return entry;
   }
   return null;
 }

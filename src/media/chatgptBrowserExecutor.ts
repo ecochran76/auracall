@@ -251,6 +251,8 @@ function mapChatgptFileToMediaArtifact(
       provider: 'chatgpt',
       providerArtifactId: providerArtifact.id,
       remoteUrl: file.remoteUrl ?? providerArtifact.uri ?? null,
+      checksumSha256: file.checksumSha256 ?? null,
+      size: file.size ?? null,
       ...(file.metadata ?? {}),
       ...(providerArtifact.metadata ?? {}),
     },
