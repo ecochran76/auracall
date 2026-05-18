@@ -342,7 +342,9 @@ Current limits:
     `auracall api archive-materialize --port <port> <archive_id>` read the
     same API surface and recover missing generated-artifact files; `auracall
     api archive-evidence --payload-file evidence.json` writes caller-owned
-    evidence
+    evidence. When the local service challenges these archive CLI calls with
+    HTTP 401, the CLI retries with the user-scoped key from
+    `AURACALL_API_KEY` or `~/.auracall/api.env`.
 - API-key authorization can be configured in `~/.auracall/config.json` or
   through the installed service dotenv file at `~/.auracall/api.env`. The
   service recognizes `AURACALL_API_KEY` as a bearer key and optional

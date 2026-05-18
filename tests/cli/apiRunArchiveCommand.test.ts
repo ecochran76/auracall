@@ -48,6 +48,47 @@ describe('api run archive CLI helpers', () => {
     });
   });
 
+  test('retries archive search with the local API key after auth challenge', async () => {
+    const previousKey = process.env.AURACALL_API_KEY;
+    process.env.AURACALL_API_KEY = 'local-secret';
+    try {
+      const fetchImpl = vi.fn(async (_url: URL, init?: RequestInit) => {
+        if (fetchImpl.mock.calls.length === 1) {
+          expect(init?.headers).toBeUndefined();
+          return new Response('', { status: 401 });
+        }
+        expect(new Headers(init?.headers).get('authorization')).toBe('Bearer local-secret');
+        return new Response(JSON.stringify({
+          object: 'run_archive',
+          generatedAt: '2026-05-16T17:00:00.000Z',
+          kind: 'generated_artifact',
+          limit: 1,
+          items: [],
+          metrics: {
+            total: 0,
+            byKind: {},
+          },
+        }));
+      });
+
+      await expect(readApiRunArchiveForCli({
+        port: 18095,
+        kind: 'generated_artifact',
+        limit: 1,
+      }, fetchImpl as never)).resolves.toMatchObject({
+        object: 'run_archive',
+        kind: 'generated_artifact',
+      });
+      expect(fetchImpl).toHaveBeenCalledTimes(2);
+    } finally {
+      if (previousKey === undefined) {
+        delete process.env.AURACALL_API_KEY;
+      } else {
+        process.env.AURACALL_API_KEY = previousKey;
+      }
+    }
+  });
+
   test('reads archive item detail and formats compact summaries', async () => {
     const fetchImpl = vi.fn(async (url: URL) => {
       expect(url.toString()).toBe('http://127.0.0.1:18095/v1/archive/items/response%3Aresp_1');

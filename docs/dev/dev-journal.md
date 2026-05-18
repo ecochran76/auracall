@@ -30479,3 +30479,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/runtime.archiveMaterializationService.test.ts tests/browser/providerIdentityPreflight.test.ts tests/cli/profileIdentitySmokeCommand.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
   - `git diff --check`
+
+## Turn 180 | 2026-05-18
+
+- Goal: live-smoke archive materialization after the runtime-profile selector
+  fix without dispatching new prompts.
+- Finding:
+  - raw and CLI archive calls correctly hit HTTP 401 when API auth is enabled
+    and no bearer key is supplied.
+- Change:
+  - archive CLI helpers now retry once with the local user-scoped API key after
+    an HTTP 401 challenge.
+- Verification:
+  - live materialized existing non-private
+    `auracall-target-bound-smoke.txt` artifact on `wsl-chrome-3`; result was
+    `status=materialized`, `fileAvailable=true`, MIME `text/plain`, size
+    `30`, method `captured-anchor-fetch`.
+  - local asset and `/asset` route both produced SHA-256
+    `693421a178f92b1ffb0e36772a46870ee5c27ac7669b3560a1596a8624d231ad`.
+  - `pnpm vitest run tests/cli/apiRunArchiveCommand.test.ts tests/runtime.archiveMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm exec biome lint src/cli/apiRunArchiveCommand.ts tests/cli/apiRunArchiveCommand.test.ts --max-diagnostics 80`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `git diff --check`
+  - `pnpm tsx bin/auracall.ts api archive --port 18095 --kind generated_artifact --provider chatgpt --runtime-profile wsl-chrome-3 --query auracall-target-bound-smoke --limit 2 --json`

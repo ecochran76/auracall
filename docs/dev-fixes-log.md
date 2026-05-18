@@ -16324,3 +16324,9 @@ browser-stage lifecycle observability, not transcript truncation.
   archive item runtime profile before constructing the provider service, so
   ChatGPT app-account checks and managed browser profile resolution cannot
   split across different tenants.
+- 2026-05-18: Archive CLI parity must honor the local API auth posture. The
+  `auracall api archive*` helper calls now retry once with the user-scoped
+  API key from `AURACALL_API_KEY` or `~/.auracall/api.env` after an HTTP 401
+  challenge, preserving unauthenticated behavior for services that do not
+  require auth while making authenticated installed services usable from the
+  CLI.

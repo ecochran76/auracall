@@ -1,3 +1,7 @@
+import path from 'node:path';
+import { getAuracallHomeDir } from '../auracallHome.js';
+import { readEnvFile, toApiAuthEnvSuffix } from '../config/apiKeyIssuer.js';
+
 export interface ApiRunArchiveCliOptions {
   host?: string | null;
   port?: number | null;
@@ -66,9 +70,9 @@ export async function readApiRunArchiveForCli(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetchImpl(url, {
+    const response = await fetchWithLocalApiAuth(url, {
       signal: controller.signal,
-    });
+    }, fetchImpl);
     if (!response.ok) {
       throw new Error(`AuraCall run archive returned HTTP ${response.status}.`);
     }
@@ -89,9 +93,9 @@ export async function readApiRunArchiveItemForCli(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetchImpl(new URL(`http://${host}:${port}/v1/archive/items/${encodeURIComponent(id)}`), {
+    const response = await fetchWithLocalApiAuth(new URL(`http://${host}:${port}/v1/archive/items/${encodeURIComponent(id)}`), {
       signal: controller.signal,
-    });
+    }, fetchImpl);
     if (!response.ok) {
       throw new Error(`AuraCall run archive item returned HTTP ${response.status}.`);
     }
@@ -112,10 +116,10 @@ export async function materializeApiRunArchiveItemForCli(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetchImpl(new URL(`http://${host}:${port}/v1/archive/items/${encodeURIComponent(id)}/materialize`), {
+    const response = await fetchWithLocalApiAuth(new URL(`http://${host}:${port}/v1/archive/items/${encodeURIComponent(id)}/materialize`), {
       method: 'POST',
       signal: controller.signal,
-    });
+    }, fetchImpl);
     if (!response.ok) {
       throw new Error(`AuraCall run archive item materialization returned HTTP ${response.status}.`);
     }
@@ -146,9 +150,9 @@ export async function lookupApiRunArchiveAssetForCli(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetchImpl(url, {
+    const response = await fetchWithLocalApiAuth(url, {
       signal: controller.signal,
-    });
+    }, fetchImpl);
     if (!response.ok) {
       throw new Error(`AuraCall run archive asset lookup returned HTTP ${response.status}.`);
     }
@@ -168,10 +172,10 @@ export async function backfillApiRunArchiveForCli(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetchImpl(new URL(`http://${host}:${port}/v1/archive/backfill`), {
+    const response = await fetchWithLocalApiAuth(new URL(`http://${host}:${port}/v1/archive/backfill`), {
       method: 'POST',
       signal: controller.signal,
-    });
+    }, fetchImpl);
     if (!response.ok) {
       throw new Error(`AuraCall run archive backfill returned HTTP ${response.status}.`);
     }
@@ -191,14 +195,14 @@ export async function attachApiRunArchiveEvidenceForCli(
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetchImpl(new URL(`http://${host}:${port}/v1/archive/evidence`), {
+    const response = await fetchWithLocalApiAuth(new URL(`http://${host}:${port}/v1/archive/evidence`), {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
       },
       body: JSON.stringify(options.payload),
       signal: controller.signal,
-    });
+    }, fetchImpl);
     if (!response.ok) {
       throw new Error(`AuraCall run archive evidence attach returned HTTP ${response.status}.`);
     }
@@ -358,6 +362,43 @@ function normalizeRequiredString(value: string, label: string): string {
   const trimmed = String(value).trim();
   if (!trimmed) throw new Error(`Missing ${label}.`);
   return trimmed;
+}
+
+async function fetchWithLocalApiAuth(
+  url: URL,
+  init: RequestInit,
+  fetchImpl: typeof fetch,
+): Promise<Response> {
+  const response = await fetchImpl(url, init);
+  if (response.status !== 401) return response;
+  const apiKey = await resolveLocalApiKey();
+  if (!apiKey) return response;
+  const headers = new Headers(init.headers);
+  if (!headers.has('authorization')) {
+    headers.set('authorization', `Bearer ${apiKey}`);
+  }
+  return fetchImpl(url, {
+    ...init,
+    headers,
+  });
+}
+
+async function resolveLocalApiKey(): Promise<string | null> {
+  const envKey = readString(process.env.AURACALL_API_KEY);
+  if (envKey) return envKey;
+  const envPath = path.join(getAuracallHomeDir(), 'api.env');
+  const state = await readEnvFile(envPath);
+  const primary = readString(state.values.AURACALL_API_KEY);
+  if (primary) return primary;
+  const keyIds = (state.values.AURACALL_API_KEY_IDS ?? '')
+    .split(/[,\s]+/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+  for (const keyId of keyIds) {
+    const secret = readString(state.values[`AURACALL_API_KEY_${toApiAuthEnvSuffix(keyId)}`]);
+    if (secret) return secret;
+  }
+  return null;
 }
 
 function readString(value: unknown): string | null {
