@@ -1,3 +1,21 @@
+## Turn 199 | 2026-05-18
+
+- Continued implementation plan:
+  `docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md`
+- Goal: make the Search workbench consume `/v1/search` cursor pages lazily
+  instead of loading every page during first paint.
+- Change:
+  - React Search now requests the first 500-row `/v1/search` page, renders a
+    bounded row window, and appends additional cursor pages as the operator
+    scrolls near the loaded-page boundary.
+  - server-provided provider/status facets are preserved while additional pages
+    append.
+  - direct selected-row URLs can continue paging forward until the selected row
+    appears.
+- Validation:
+  - focused UX build, TypeScript build, full build, installed runtime restart,
+    `/status` route smoke, and agent-browser dashboard scroll/reload smoke.
+
 ## Turn 198 | 2026-05-18
 
 - Continued implementation plan:

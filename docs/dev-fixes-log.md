@@ -264,6 +264,13 @@
   includes compact stored conversation turns, and `/agents` renders those turns
   as chat bubbles while keeping raw inspection JSON available.
 
+- 2026-05-18: Search must honor `/v1/search` cursors at the UX boundary, not
+  eagerly hydrate all pages during dashboard load. The React operator Search
+  page now fetches the first page, renders a bounded window, and appends more
+  server cursor pages only as the operator scrolls near the loaded-page
+  boundary. This keeps first paint responsive while preserving direct selected
+  row handoff URLs and server-owned facets.
+
 - 2026-05-05: Account mirror result navigation needs fast keyboard controls.
   The `/account-mirror` page now supports `/` to focus cached catalog search
   and ArrowUp/ArrowDown to move through the current result navigator using the

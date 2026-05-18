@@ -5236,3 +5236,52 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - replace eager page loading with server-cursor incremental loading tied to
     table scroll, then add saved views and richer row actions.
+
+## Turn 186 | 2026-05-18
+
+- Goal: replace eager Search page hydration with cursor-driven incremental
+  loading in the React operator UX.
+- Change:
+  - Search now fetches only the first 500-row `/v1/search` page at first paint.
+  - scrolling near the bottom expands the bounded rendered row window and
+    appends additional `/v1/search` cursor pages when the loaded page boundary
+    is reached.
+  - provider/status facets now prefer the server projection facets instead of
+    only the currently rendered rows.
+  - selected-row direct URLs can page forward until the selected row appears in
+    the loaded cursor set.
+  - client-side sort changes now reset the rendered window without re-fetching
+    the server projection.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `curl -fsS http://127.0.0.1:18095/status` reported `ok=true` and the
+    populated `/v1/search` route.
+  - `agent-browser` opened
+    `http://auracall.localhost/dashboard?nav=search`; initial Search summary
+    was `500 loaded / 3,899 matched / newest first / 80 rendered / more
+    available`.
+  - repeated table scrolling appended cursor pages; Search summary reached
+    `1,500 loaded / 3,899 matched / newest first / 660 rendered / more
+    available`.
+  - selecting a Search row produced a stable
+    `?nav=search&row=<base64url row id>` URL and reloading restored one
+    selected row.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/search-cursor-initial-v2.png`
+  - `/tmp/auracall-operator-ux-dogfood/search-cursor-scroll-v2.png`
+  - `/tmp/auracall-operator-ux-dogfood/search-cursor-selected-reload-v2.png`
+- External links:
+  - `http://auracall.localhost/dashboard?nav=search`
+  - `https://auracall.ecochran.dyndns.org/dashboard?nav=search`
+- Limitations:
+  - the table still uses a bounded render window, not true DOM virtualization.
+  - multi-provider and multi-status filtering remains client-side over loaded
+    rows; single provider/status filters are passed through to `/v1/search`.
+  - semantic/vector ranking and saved views remain open Search workbench items.
+- Next:
+  - add true table virtualization and richer row-specific actions, or move the
+    same URL-state and dense-table treatment to Runs.

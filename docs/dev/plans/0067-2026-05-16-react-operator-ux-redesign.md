@@ -196,8 +196,8 @@ State ownership:
   `/v1/search` with normalized rows, cursor pages, facets, and merged
   account-mirror plus run-archive rows. Lexical ranking is currently simple
   substring matching, semantic ranking is not implemented, and the React table
-  still loads pages eagerly into a bounded render window instead of using true
-  DOM virtualization.
+  now appends server cursor pages on scroll while still using a bounded render
+  window instead of true DOM virtualization.
 - API-key inspection, issue, delete, and API-service restart controls exist on
   the Health page. These are narrow operator-administration controls; they do
   not launch provider work.
