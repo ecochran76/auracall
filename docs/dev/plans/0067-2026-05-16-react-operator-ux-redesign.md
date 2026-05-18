@@ -206,7 +206,10 @@ State ownership:
   apply, and delete browser-local Search views that capture query, facets,
   sort, and table preferences. The right inspector now renders a compact
   archive-aware summary card before raw JSON and Search-selected archive items
-  reuse the asset preview path.
+  reuse the asset preview path. Run/evidence-specific inspector panels now
+  surface response id, batch id, agent/team, runtime, step/output counts,
+  evidence schema, producer, linked archive item, and route chips before raw
+  JSON.
 - API-key inspection, issue, delete, and API-service restart controls exist on
   the Health page. These are narrow operator-administration controls; they do
   not launch provider work.
@@ -294,8 +297,9 @@ Workbench rules:
   before it becomes an API contract.
 - The right inspector should prioritize human-readable chat transcript,
   artifacts, files, run lineage, and evidence before raw JSON. Raw JSON remains
-  collapsible. The first artifact/file inspector slice is live; run lineage and
-  evidence-specific panels remain open.
+  collapsible. The first artifact/file inspector slice is live, and the first
+  run/evidence metadata panel slice is live. Deeper run timelines and a live
+  evidence-row dogfood pass remain open.
 
 Recommended column set:
 

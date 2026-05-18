@@ -1517,6 +1517,110 @@ function SearchInspectorSummary({ row, archiveItem }) {
   );
 }
 
+function mergedSearchMetadata(row, archiveItem) {
+  return {
+    ...(row?.metadata ?? {}),
+    ...(row?.raw?.metadata ?? {}),
+    ...(row?.raw?.metadata?.raw ?? {}),
+    ...(archiveItem?.metadata ?? {}),
+  };
+}
+
+function SearchKindFacts({ facts }) {
+  const visibleFacts = facts.filter(([, value]) => value !== null && value !== undefined && value !== "");
+  if (!visibleFacts.length) return null;
+  return (
+    <div className="search-kind-facts">
+      {visibleFacts.map(([label, value]) => (
+        <div key={label}>
+          <span>{label}</span>
+          <b><DetailValue detail={value} /></b>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SearchRouteStrip({ row, archiveItem, only }) {
+  const allowed = only ? new Set(only) : null;
+  const entries = routeEntriesFromSearch(row, archiveItem)
+    .filter(([key]) => !allowed || allowed.has(key));
+  if (!entries.length) return null;
+  return (
+    <div className="inspector-actions search-kind-actions" aria-label="Selected result routes">
+      {entries.map(([key, value]) => (
+        <RouteChip key={`${key}:${value}`} value={value} label={linkKeyLabel(key)} />
+      ))}
+    </div>
+  );
+}
+
+function RunSearchInspector({ row, archiveItem }) {
+  const kind = row?.kind ?? archiveItem?.kind;
+  const sourceKind = row?.raw?.sourceKind ?? archiveItem?.kind;
+  if (kind !== "run" && !["response", "team_run"].includes(sourceKind)) return null;
+  const metadata = mergedSearchMetadata(row, archiveItem);
+  const responseId = metadata.responseId ?? archiveItem?.responseId ?? row?.raw?.metadata?.responseId;
+  const prompt = row?.title ?? archiveItem?.title;
+  const facts = [
+    ["Source", sourceKind ?? metadata.sourceKind ?? "run"],
+    ["Response", responseId ?? "none"],
+    ["Batch", metadata.batchId ?? archiveItem?.batchId ?? "none"],
+    ["Batch index", metadata.batchIndex ?? archiveItem?.batchIndex ?? "none"],
+    ["Agent", metadata.agentId ?? archiveItem?.agentId ?? "none"],
+    ["Team", metadata.teamId ?? archiveItem?.teamId ?? "none"],
+    ["Steps", metadata.stepCount ?? "not reported"],
+    ["Outputs", metadata.outputItemCount ?? "not reported"],
+    ["Requested outputs", metadata.requestedOutputCount ?? "not reported"],
+    ["Runtime", row?.runtimeProfileId ?? archiveItem?.runtimeProfile ?? "none"],
+  ];
+
+  return (
+    <section className="search-kind-panel" aria-label="Run result inspector">
+      <div className="search-kind-title">
+        <Activity size={14} aria-hidden="true" />
+        <strong>Run</strong>
+        <span>{statusLabel(row?.status ?? archiveItem?.status)}</span>
+      </div>
+      <SearchKindFacts facts={facts} />
+      {prompt ? <p className="search-kind-preview">{compactText(prompt, 360)}</p> : null}
+      <SearchRouteStrip row={row} archiveItem={archiveItem} only={["response", "runtimeRun", "batch", "archiveItem"]} />
+    </section>
+  );
+}
+
+function EvidenceSearchInspector({ row, archiveItem }) {
+  const kind = row?.kind ?? archiveItem?.kind;
+  if (kind !== "evidence") return null;
+  const metadata = mergedSearchMetadata(row, archiveItem);
+  const evidenceData = metadata.data && typeof metadata.data === "object" ? metadata.data : null;
+  const evidencePreview = evidenceData ? compactText(JSON.stringify(evidenceData, null, 2), 1200) : null;
+  const facts = [
+    ["Producer", metadata.producer ?? "not reported"],
+    ["Schema", metadata.schema ?? "not reported"],
+    ["Evidence ID", metadata.evidenceId ?? archiveItem?.id ?? row?.itemId ?? "none"],
+    ["Archive item", metadata.archiveItemId ?? archiveItem?.artifactId ?? "none"],
+    ["Response", metadata.responseId ?? archiveItem?.responseId ?? "none"],
+    ["Batch", metadata.batchId ?? archiveItem?.batchId ?? "none"],
+    ["Conversation", row?.raw?.providerConversationId ?? archiveItem?.providerConversationId ?? "none"],
+    ["Runtime", row?.runtimeProfileId ?? archiveItem?.runtimeProfile ?? "none"],
+  ];
+
+  return (
+    <section className="search-kind-panel" aria-label="Evidence result inspector">
+      <div className="search-kind-title">
+        <FileText size={14} aria-hidden="true" />
+        <strong>Evidence</strong>
+        <span>{statusLabel(row?.status ?? archiveItem?.status)}</span>
+      </div>
+      <SearchKindFacts facts={facts} />
+      {metadata.summary ? <p className="search-kind-preview">{compactText(metadata.summary, 420)}</p> : null}
+      {evidencePreview ? <pre className="search-kind-json">{evidencePreview}</pre> : null}
+      <SearchRouteStrip row={row} archiveItem={archiveItem} only={["response", "batch", "archiveItem", "asset"]} />
+    </section>
+  );
+}
+
 function emptyArchiveDetailState() {
   return {
     loading: false,
@@ -3118,6 +3222,12 @@ function RightPane({
       ) : null}
       {activeNav === "search" && (inspectedSearchRow || inspectedArchiveItem) ? (
         <SearchInspectorSummary row={inspectedSearchRow} archiveItem={inspectedArchiveItem} />
+      ) : null}
+      {activeNav === "search" && (inspectedSearchRow || inspectedArchiveItem) ? (
+        <RunSearchInspector row={inspectedSearchRow} archiveItem={inspectedArchiveItem} />
+      ) : null}
+      {activeNav === "search" && (inspectedSearchRow || inspectedArchiveItem) ? (
+        <EvidenceSearchInspector row={inspectedSearchRow} archiveItem={inspectedArchiveItem} />
       ) : null}
       {activeNav === "search" && inspectedArchiveItem ? (
         <ArchiveAssetPreview item={inspectedArchiveItem} />

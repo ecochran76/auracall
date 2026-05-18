@@ -253,10 +253,13 @@ Current State:
     popover with preferences persisted locally; operators can save, apply, and
     delete local Search views that capture query, facets, sort, and column
     preferences; the right inspector now has a compact archive-aware summary
-    card and reuses the asset preview path for Search-selected archive items
+    card, reuses the asset preview path for Search-selected archive items, and
+    adds run/evidence-specific panels for response id, batch id, agent/team,
+    runtime, step/output counts, evidence schema, producer, and linked routes
   - remaining Search work: semantic/vector ranking, shared/server-backed view
-    presets, richer run/evidence-specific inspector panels, and materialization
-    controls for missing generated artifacts
+    presets, deeper run lineage timelines, live evidence-row dogfooding when
+    evidence rows exist in cache, and materialization controls for missing
+    generated artifacts
   - first slice is read-only shell work; API-backed health, run, archive,
     search, chat, config, agent, and team pages should land incrementally after
     the shell is stable

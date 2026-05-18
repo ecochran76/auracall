@@ -5527,3 +5527,42 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - add run/evidence-specific inspector panels or design materialization
     controls for missing generated artifacts.
+
+## Turn 193 | 2026-05-18
+
+- Goal: add run/evidence-specific panels to the Search right-pane inspector.
+- Change:
+  - added a run inspector panel for response/archive-backed Search rows.
+  - the panel surfaces source kind, response id, batch id/index, agent, team,
+    runtime, step count, output count, requested outputs, prompt preview, and
+    route chips for response/runtime-run/archive links.
+  - added an evidence inspector panel keyed to the same archive/search metadata
+    contract for producer, schema, evidence id, linked archive item, response,
+    batch, conversation, runtime, summary, bounded JSON preview, and routes.
+  - kept the panels compact and separate from the raw JSON preview.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `curl -fsS http://auracall.localhost/status | jq '{ok, port: .binding.port, dashboard: .routes.operatorBrowserDashboardUrl}'`
+  - `agent-browser` opened `http://auracall.localhost/dashboard?nav=search`,
+    filtered to Runs, selected a run row, and verified the served right-pane Run
+    panel showed response, batch, agent, step/output, runtime, and route fields.
+  - `agent-browser` confirmed `/v1/search?kind=evidence&limit=3` currently has
+    `total=0`, so the evidence panel is implemented but could not be live-row
+    dogfooded against current cache contents.
+  - `agent-browser errors` and console tail were empty.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/search-inspector-run-v1.png`
+- External links:
+  - `http://auracall.localhost/dashboard?nav=search`
+  - `https://auracall.ecochran.dyndns.org/dashboard?nav=search`
+- Limitations:
+  - evidence rows are absent in the current cache, so evidence rendering awaits
+    the next evidence-producing workflow for live validation.
+  - deeper run timelines and missing-artifact materialization controls remain
+    open.
+- Next:
+  - add materialization controls for missing generated artifacts, or expand the
+    run inspector into a step/output timeline.

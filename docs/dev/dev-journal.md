@@ -30335,3 +30335,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/runtime.archiveService.test.ts tests/runtime.searchProjectionService.test.ts tests/mcp.runArchive.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+
+## Turn 173 | 2026-05-18
+
+- Goal: make Search-selected runs and evidence rows readable before raw JSON.
+- Change:
+  - added a compact Run inspector panel for response/team-run archive rows with
+    response id, batch id/index, agent/team, runtime, step/output counts,
+    requested output count, prompt preview, and route chips.
+  - added an Evidence inspector panel using the same metadata contract for
+    producer, schema, evidence id, linked archive item, response, batch,
+    provider conversation, runtime, summary, bounded data preview, and routes.
+  - updated the operator UX plan and roadmap to move run/evidence inspector
+    metadata out of the open item list.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `agent-browser` selected a run row on the installed dashboard and verified
+    the new Run panel rendered response, batch, agent, step/output, runtime,
+    and route fields.
+  - `/v1/search?kind=evidence&limit=3` currently returns zero evidence rows, so
+    evidence live-row validation remains pending.

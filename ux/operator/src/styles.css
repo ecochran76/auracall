@@ -2181,6 +2181,89 @@ select:focus-visible {
   overflow-wrap: anywhere;
 }
 
+.search-kind-panel {
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+  border: 1px solid #26303d;
+  border-radius: 8px;
+  background: #101722;
+}
+
+.search-kind-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: #dfe7f2;
+  font-size: 12px;
+}
+
+.search-kind-title strong {
+  font-size: 12px;
+}
+
+.search-kind-title span {
+  margin-left: auto;
+  color: #8d99aa;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.search-kind-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.search-kind-facts div {
+  min-width: 0;
+  padding: 5px;
+  border: 1px solid #202a37;
+  border-radius: 6px;
+  background: #0d131d;
+}
+
+.search-kind-facts span {
+  display: block;
+  margin-bottom: 2px;
+  color: #8390a3;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.search-kind-facts b {
+  display: block;
+  color: #edf1f7;
+  font-size: 10.5px;
+  font-weight: 650;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.search-kind-preview,
+.search-kind-json {
+  margin: 0;
+  padding: 7px;
+  border: 1px solid #202a37;
+  border-radius: 6px;
+  background: #0b111a;
+  color: #aeb9c9;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.search-kind-json {
+  max-height: 180px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.search-kind-actions {
+  padding: 6px;
+}
+
 .asset-preview {
   display: grid;
   gap: 10px;

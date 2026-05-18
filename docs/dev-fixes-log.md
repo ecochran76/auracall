@@ -16281,3 +16281,9 @@ browser-stage lifecycle observability, not transcript truncation.
   value, and `/v1/search` promotes non-terminal runtime states such as
   `finalizing` into the row display status while keeping raw status in
   metadata.
+- 2026-05-18: Search inspectors should use the archive/search metadata contract
+  for run and evidence detail, not force operators into raw JSON. Search run
+  rows now surface response, batch, agent/team, runtime, step/output counts,
+  prompt preview, and routes; evidence rows have a matching panel for producer,
+  schema, linked archive item, response/batch, summary, bounded data preview,
+  and routes when evidence rows exist in the cache.
