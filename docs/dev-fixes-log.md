@@ -16144,3 +16144,8 @@ browser-stage lifecycle observability, not transcript truncation.
   runner activity from browser runtime evidence, so active ChatGPT artifact runs
   are not misclassified as suspicious-idle solely because the runner activity
   timestamp predates lease acquisition.
+- 2026-05-18: React operator UX turns must stay governed by Plan 0067 instead
+  of accumulating adjacent dashboard enhancements by inertia. Before adding
+  another dashboard feature, re-read `AGENTS.md` and the relevant policy files,
+  reconcile Plan 0067 if the implemented auth/control boundary has changed,
+  and state the selected plan slice plus acceptance criteria before editing.

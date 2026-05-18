@@ -23,6 +23,9 @@ Implemented:
 - The existing HTML dashboard remains the debug/proof surface at `/ops/browser`.
 - The React/Vite shell is served by the AuraCall API service at `/dashboard`
   from packaged `dist/operator-ux` assets.
+- Same-origin `/dashboard` requests receive an operator-superuser auth context
+  for browser UX calls into `/v1/*`; external clients still use bearer/API-key
+  authentication.
 - JSON API, CLI, and MCP surfaces now expose durable run status, account mirror
   status, archive search, archive item readback, asset download, asset lookup,
   and evidence attachment.
@@ -32,12 +35,12 @@ Implemented:
 
 Remaining:
 
-- Build a separate React/Vite AuraCall operator app instead of extending the
-  existing inline HTML dashboard.
-- Define the shell layout, route taxonomy, state ownership, and API client
-  boundary before moving feature pages into it.
-- Add real page implementations incrementally after the shell is stable.
-- Add real page implementations incrementally after the shell is stable.
+- Continue moving feature pages into the separate React/Vite AuraCall operator
+  app instead of extending the existing inline HTML dashboard.
+- Tighten the route taxonomy, state ownership, and API client boundary as real
+  pages mature.
+- Keep mutation controls limited to narrow, explicitly validated operator
+  workflows until read-only views prove the API contracts.
 
 ## Product Direction
 
@@ -111,8 +114,8 @@ State ownership:
 3. Archive and chat browsing
    - implement `Chats` as a chat-dialog view over cached conversations and
      archive-linked provider conversations
-   - implement `Search` over archive records first with a session-scoped
-     operator API key, then wire lexical/semantic search as those APIs mature
+   - implement `Search` over archive records through same-origin operator auth,
+     then wire lexical/semantic search as those APIs mature
    - add artifact/file inspector and download links through stable archive
      asset routes
 
@@ -143,8 +146,8 @@ State ownership:
 - `Runs` reads the live recovery status payload and reports runtime recovery,
   local-claim, and runner-topology posture without requiring a browser-stored
   API key.
-- `Search` can query bearer-protected `/v1/archive` read-only routes with an
-  operator-pasted API key stored only in browser session storage.
+- `Search` can query protected `/v1/archive` read-only routes from the
+  same-origin operator dashboard without browser-entered bearer secrets.
 - The shell does not perform provider browser work or mutate jobs.
 
 ## Definition Of Done For First Slice
@@ -162,20 +165,26 @@ State ownership:
   from `/dashboard` by the AuraCall API service.
 - Slice 2 is partially complete: the Health page now polls `/status` every 30
   seconds and renders API service, route discovery, live-follow summary, runtime
-  metadata, and live-follow target rows as read-only operator information.
+  metadata, API-key posture/controls, and live-follow target rows as operator
+  information. Live-follow rows now expose target filters and readable reason
+  chips so unconfigured profile identity gaps are distinct from enabled-target
+  attention.
 - Slice 4 is started in read-only form: the Runs page polls
   `/status?recovery=true&sourceKind=all` every 30 seconds and renders recovery
   counts, local-claim metrics, runner-topology metrics, and bounded run-id
-  lists. Authenticated deep run listing/inspection remains on bearer-protected
-  `/v1` APIs until operator-auth UX is designed.
+  lists. Authenticated deep run listing/inspection can use same-origin operator
+  auth from `/dashboard`; external clients remain bearer-protected.
 - Slice 3 is started in read-only form: the Search page can query
-  `/v1/archive` using a bearer key pasted by the operator for the current
-  browser session. The key is not embedded in source and is not written to
-  persistent local storage.
+  `/v1/archive`, fetch item detail, preview/download archive assets, and browse
+  cached conversations through the `Chats` page without browser-entered API
+  keys.
+- API-key inspection, issue, delete, and API-service restart controls exist on
+  the Health page. These are narrow operator-administration controls; they do
+  not launch provider work.
 - The old browser dashboard remains available at `/ops/browser` for low-level
   probes.
 
-Next implementation work should keep moving horizontally through read-only
-operator views: chat-dialog conversation views and richer archive item
-inspection. Mutation controls should stay out until the read-only surfaces
-prove the API contracts and the operator-auth boundary is explicit.
+Next implementation work should be selected from this plan deliberately, not by
+turn-to-turn momentum. Prefer read-only observability and inspection work unless
+the slice explicitly updates this plan and validates a narrow operator-control
+contract.

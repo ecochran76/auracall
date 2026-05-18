@@ -29794,3 +29794,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Follow-up:
   - diagnose ChatGPT polling-fallback freshness for project-bound runs before
     transcribe-audio scales the remaining first-pass summary queue.
+
+## Turn 157 | 2026-05-18
+
+- Goal: re-anchor the React operator UX lane on repo policy after several
+  dashboard slices had begun choosing the next UI enhancement by local
+  momentum.
+- Audit:
+  - re-read `AGENTS.md`, recent commits, Plan 0067, `ROADMAP.md`, recent
+    `RUNBOOK.md`, and the relevant policy files for architecture guardrails,
+    documentation change control, validation/handoff, turn closeout, git
+    hygiene, and commit/push cadence.
+  - confirmed the active governing UX plan is
+    `docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md`.
+  - found Plan 0067 stale relative to implemented dashboard behavior: Search
+    no longer uses a browser-entered bearer key, same-origin dashboard
+    superuser access now covers operator `/v1/*` reads, Chats/Search/Health are
+    further along, and narrow API-key/restart controls exist.
+- Change:
+  - updated Plan 0067 current state and acceptance language to match the
+    implemented same-origin operator-auth boundary and current Health/Search/
+    Chats behavior.
+  - recorded the discipline correction in the fixes log so future UX turns
+    choose work from the plan rather than from turn-to-turn inertia.
+- Verification:
+  - docs-only slice; `git diff --check` is the relevant gate.
+- Follow-up:
+  - before the next UX implementation slice, select the target from Plan 0067
+    and state the acceptance criteria before editing.
