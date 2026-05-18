@@ -31,6 +31,7 @@ describe('archive materialization service', () => {
         expect(input.artifact.id).toBe('sandbox:/mnt/data/first_pass_readout.json');
         expect(input.artifact.kind).toBe('download');
         expect((input.config as Record<string, unknown>).defaultRuntimeProfile).toBe('wsl-chrome-3');
+        expect((input.config as Record<string, unknown>).auracallProfile).toBe('wsl-chrome-3');
         const localPath = path.join(input.destDir, 'first_pass_readout.json');
         await fs.writeFile(localPath, '{"ok":true}\n', 'utf8');
         return {

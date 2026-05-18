@@ -16317,3 +16317,10 @@ browser-stage lifecycle observability, not transcript truncation.
   browser run onto generated artifacts, allowing the Search Materialize action
   to reach provider auth/preflight instead of failing locally for missing
   conversation context.
+- 2026-05-18: Archive materialization runtime selection must keep identity
+  preflight and browser-service launch selection on the same AuraCall runtime
+  profile. Materialization now sets both the target-shape
+  `defaultRuntimeProfile` and the compatibility `auracallProfile` from the
+  archive item runtime profile before constructing the provider service, so
+  ChatGPT app-account checks and managed browser profile resolution cannot
+  split across different tenants.

@@ -30458,3 +30458,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `provider_auth_conflict` for current ChatGPT web-app account drift inside
     `wsl-chrome-3`; this does not assert anything about Chrome/Google browser
     sign-in.
+
+## Turn 179 | 2026-05-18
+
+- Goal: double-check ChatGPT account resolution after the SoyLei account chip
+  was visible in the managed browser.
+- Finding:
+  - live `wsl-chrome-3` ChatGPT app session identity resolved from
+    `/api/auth/session` as `eric.cochran@soylei.com`, Pro, personal.
+  - `profile identity-smoke --target chatgpt` passed for `wsl-chrome-3` and
+    confirmed the resolver uses ChatGPT app identity, not Chrome/Google browser
+    sign-in.
+- Change:
+  - archive materialization now carries the archive item runtime profile through
+    both `defaultRuntimeProfile` and compatibility `auracallProfile`, so
+    identity resolution and browser-service launch/registry paths select the
+    same AuraCall runtime profile.
+- Verification:
+  - `pnpm tsx bin/auracall.ts --profile wsl-chrome-3 profile identity-smoke --target chatgpt --include-negative --json`
+  - `pnpm vitest run tests/runtime.archiveMaterializationService.test.ts tests/browser/providerIdentityPreflight.test.ts tests/cli/profileIdentitySmokeCommand.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `git diff --check`

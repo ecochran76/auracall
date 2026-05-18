@@ -116,7 +116,7 @@ export function createArchiveMaterializationService(
       const artifact = archiveItemToConversationArtifact(item);
       const destDir = path.join(getRunArchiveDir(), 'materialized', sanitizePathSegment(archiveItemId));
       await fs.mkdir(destDir, { recursive: true });
-      const config = withDefaultRuntimeProfile(deps.config, item.runtimeProfile);
+      const config = withRuntimeProfileSelection(deps.config, item.runtimeProfile);
       const file = deps.materializeConversationArtifact
         ? await deps.materializeConversationArtifact({
             provider,
@@ -282,11 +282,12 @@ function normalizeArtifactKind(value: string | null, uri: string | null): Conver
   return 'generated';
 }
 
-function withDefaultRuntimeProfile(config: ResolvedUserConfig | Record<string, unknown>, runtimeProfile: string | null): Record<string, unknown> {
+function withRuntimeProfileSelection(config: ResolvedUserConfig | Record<string, unknown>, runtimeProfile: string | null): Record<string, unknown> {
   if (!runtimeProfile) return config;
   return {
     ...config,
     defaultRuntimeProfile: runtimeProfile,
+    auracallProfile: runtimeProfile,
   };
 }
 
