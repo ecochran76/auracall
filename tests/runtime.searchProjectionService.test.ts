@@ -257,4 +257,115 @@ describe('search projection service', () => {
     expect(second.rows[0]?.id).not.toBe(first.rows[0]?.id);
     expect(second.nextCursor).toBeNull();
   });
+
+  it('uses transient runtime state as archive row display status', async () => {
+    const accountMirrorCatalogService: AccountMirrorCatalogService = {
+      readCatalog: vi.fn(async () => ({
+        object: 'account_mirror_catalog',
+        generatedAt: '2026-05-18T12:00:00.000Z',
+        kind: 'all',
+        limit: 500,
+        entries: [],
+        metrics: { targets: 0, projects: 0, conversations: 0, artifacts: 0, files: 0, media: 0 },
+      })),
+      readItem: vi.fn(async () => null),
+    };
+    const runArchiveService = {
+      listItems: vi.fn(async () => ({
+        object: 'run_archive',
+        generatedAt: '2026-05-18T12:00:00.000Z',
+        kind: 'all',
+        limit: 500,
+        items: [
+          {
+            id: 'response:resp_finalizing_search',
+            object: 'run_archive_item' as const,
+            kind: 'response' as const,
+            source: 'runtime' as const,
+            createdAt: '2026-05-18T12:00:00.000Z',
+            updatedAt: '2026-05-18T12:01:00.000Z',
+            title: 'Finalizing transcript readout',
+            status: 'running',
+            runtimeState: 'finalizing' as const,
+            provider: 'chatgpt',
+            runtimeProfile: 'wsl-chrome-3',
+            browserProfile: 'wsl-chrome-3',
+            projectId: 'Transcripts',
+            boundIdentityKey: 'ecochran76@gmail.com',
+            agentId: 'pro-extended-chatgpt-soylei-transcripts',
+            teamId: null,
+            responseId: 'resp_finalizing_search',
+            batchId: 'batch_finalizing_search',
+            batchIndex: 0,
+            mediaGenerationId: null,
+            providerConversationId: null,
+            providerConversationUrl: null,
+            artifactId: null,
+            fileName: null,
+            mimeType: null,
+            localPath: null,
+            uri: null,
+            cacheKey: null,
+            checksumSha256: null,
+            fileAvailable: null,
+            metadata: {},
+            links: {},
+          },
+        ],
+        metrics: {
+          total: 1,
+          byKind: {
+            response: 1,
+            response_batch: 0,
+            team_run: 0,
+            media_generation: 0,
+            upload: 0,
+            generated_artifact: 0,
+            provider_conversation: 0,
+            evidence: 0,
+          },
+        },
+      })),
+      readItem: vi.fn(async () => null),
+      readAsset: vi.fn(async () => null),
+      lookupAsset: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+      attachEvidence: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+      upsertResponseItems: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+      upsertBatchItems: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+      upsertMediaGenerationItems: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+      backfillIndex: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+    } satisfies RunArchiveService;
+
+    const service = createSearchProjectionService({
+      accountMirrorCatalogService,
+      runArchiveService,
+      now: () => new Date('2026-05-18T14:00:00.000Z'),
+    });
+
+    const result = await service.search({ status: 'finalizing', limit: 10 });
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]).toMatchObject({
+      id: 'archive:response:resp_finalizing_search',
+      status: 'finalizing',
+      runtimeState: 'finalizing',
+      metadata: {
+        rawStatus: 'running',
+        runtimeState: 'finalizing',
+      },
+    });
+    expect(result.facets.statuses).toEqual([{ value: 'finalizing', count: 1 }]);
+  });
 });

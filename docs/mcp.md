@@ -123,7 +123,9 @@ scoped keys, response batches, attachments, and polling rules, see
   index without provider browser or CDP access. The index covers persisted
   response runs, response batches, team runs, media generations, uploaded input
   artifacts, generated artifacts, provider conversation references, and
-  attached evidence records.
+  attached evidence records. Runtime-backed archive items preserve raw run
+  `status` and expose derived `runtimeState`, so MCP callers can filter for
+  transient states such as `finalizing` without parsing response diagnostics.
 - Backfill: `run_archive_backfill` rebuilds that index from existing runtime
   records and is safe for operator repair workflows because it does not touch
   provider pages.

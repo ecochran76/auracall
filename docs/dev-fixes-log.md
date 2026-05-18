@@ -16275,3 +16275,9 @@ browser-stage lifecycle observability, not transcript truncation.
   archive asset preview path, so artifact/upload rows expose file availability
   and materialization posture without forcing operators to parse the JSON
   preview.
+- 2026-05-18: Search/archive projections should not hide transient browser-run
+  finalization behind raw run status. Run archive items now expose
+  `runtimeState` beside raw `status`, archive status filters match either
+  value, and `/v1/search` promotes non-terminal runtime states such as
+  `finalizing` into the row display status while keeping raw status in
+  metadata.

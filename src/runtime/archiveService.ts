@@ -18,7 +18,7 @@ import {
   type MediaGenerationRecordStore,
 } from '../media/store.js';
 import type { MediaGenerationStoredRecord } from '../media/types.js';
-import type { ExecutionResponseOutputItem } from './apiTypes.js';
+import type { ExecutionResponseOutputItem, ExecutionRuntimeDiagnosticsSummary } from './apiTypes.js';
 import type { ExecutionRunServiceId, ExecutionRunStep } from './types.js';
 import {
   createRunArchiveIndexStore,
@@ -73,6 +73,7 @@ export interface RunArchiveItem {
   updatedAt: string;
   title: string | null;
   status: string | null;
+  runtimeState?: ExecutionRuntimeDiagnosticsSummary['runtimeState'] | null;
   provider: string | null;
   runtimeProfile: string | null;
   browserProfile: string | null;
@@ -494,7 +495,8 @@ async function buildRunArchiveItems(records: ExecutionRunStoredRecord[]): Promis
   for (const record of records) {
     const response = await createExecutionResponseForStoredRecord(record.bundle);
     const firstStep = record.bundle.steps.slice().sort((left, right) => left.order - right.order)[0] ?? null;
-    const base = createBaseRunItem(record, firstStep);
+    const runtimeState = response.metadata?.executionSummary?.runtimeDiagnosticsSummary?.runtimeState ?? null;
+    const base = createBaseRunItem(record, firstStep, runtimeState);
     const batch = readBatchMetadata(record);
     const responseKind: RunArchiveItemKind = record.bundle.run.sourceKind === 'team-run' ? 'team_run' : 'response';
     items.push({
@@ -605,6 +607,7 @@ function buildBatchArchiveItems(records: ResponseBatchRecord[]): RunArchiveItem[
     updatedAt: record.updatedAt,
     title: record.id,
     status: null,
+    runtimeState: null,
     provider: null,
     runtimeProfile: null,
     browserProfile: null,
@@ -652,6 +655,7 @@ function buildMediaArchiveItems(records: MediaGenerationStoredRecord[]): RunArch
       updatedAt: response.updatedAt,
       title: response.prompt,
       status: response.status,
+      runtimeState: null,
       provider: response.provider,
       runtimeProfile: readRecordString(response.metadata, ['runtimeProfileId', 'runtimeProfile']),
       browserProfile: readRecordString(response.metadata, ['browserProfileId', 'browserProfile']),
@@ -715,7 +719,11 @@ function buildMediaArchiveItems(records: MediaGenerationStoredRecord[]): RunArch
   return items;
 }
 
-function createBaseRunItem(record: ExecutionRunStoredRecord, firstStep: ExecutionRunStep | null): RunArchiveItem {
+function createBaseRunItem(
+  record: ExecutionRunStoredRecord,
+  firstStep: ExecutionRunStep | null,
+  runtimeState: ExecutionRuntimeDiagnosticsSummary['runtimeState'] | null,
+): RunArchiveItem {
   const browserRun = readStepBrowserRun(firstStep);
   return {
     id: `response:${record.runId}`,
@@ -726,6 +734,7 @@ function createBaseRunItem(record: ExecutionRunStoredRecord, firstStep: Executio
     updatedAt: record.bundle.run.updatedAt,
     title: record.bundle.run.entryPrompt,
     status: record.bundle.run.status,
+    runtimeState,
     provider: firstStep?.service ?? null,
     runtimeProfile: firstStep?.runtimeProfileId ?? readRecordString(record.bundle.run.initialInputs, ['runtimeProfile']),
     browserProfile: firstStep?.browserProfileId ?? null,
@@ -762,6 +771,7 @@ function buildEvidenceArchiveItem(record: RunArchiveEvidenceRecord): RunArchiveI
     updatedAt: record.updatedAt,
     title: record.title ?? record.summary ?? record.schema,
     status: record.status,
+    runtimeState: null,
     provider: null,
     runtimeProfile: null,
     browserProfile: null,
@@ -891,7 +901,7 @@ function matchesRequest(item: RunArchiveItem, request: RunArchiveListRequest & {
   if (request.team && item.teamId !== request.team) return false;
   if (request.responseId && item.responseId !== request.responseId) return false;
   if (request.batchId && item.batchId !== request.batchId) return false;
-  if (request.status && item.status !== request.status) return false;
+  if (request.status && item.status !== request.status && item.runtimeState !== request.status) return false;
   if (request.query && !itemMatchesQuery(item, request.query)) return false;
   return true;
 }
@@ -945,6 +955,7 @@ function itemMatchesQuery(item: RunArchiveItem, query: string): boolean {
   const haystack = [
     item.id,
     item.title,
+    item.runtimeState,
     item.provider,
     item.runtimeProfile,
     item.projectId,

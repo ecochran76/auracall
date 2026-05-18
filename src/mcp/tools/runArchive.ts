@@ -58,6 +58,11 @@ const runArchiveEvidenceInputShape = {
   metadata: z.record(z.string(), z.unknown()).optional(),
 } satisfies z.ZodRawShape;
 
+const runtimeStateShape = z
+  .enum(['queued', 'running', 'recovering', 'finalizing', 'stranded', 'terminal'])
+  .nullable()
+  .optional();
+
 const archiveItemShape = z.object({
   id: z.string(),
   object: z.literal('run_archive_item'),
@@ -76,6 +81,7 @@ const archiveItemShape = z.object({
   updatedAt: z.string(),
   title: z.string().nullable(),
   status: z.string().nullable(),
+  runtimeState: runtimeStateShape,
   provider: z.string().nullable(),
   runtimeProfile: z.string().nullable(),
   browserProfile: z.string().nullable(),

@@ -35,6 +35,7 @@ export interface SearchProjectionRow {
   tenant: string | null;
   projectId: string | null;
   status: string | null;
+  runtimeState: RunArchiveItem['runtimeState'] | null;
   sortTime: string | null;
   updatedAt: string | null;
   itemId: string | null;
@@ -200,6 +201,7 @@ function rowFromCatalogItem(
     tenant: entry.boundIdentityKey,
     projectId: readString(item, ['projectId', 'projectName', 'projectTitle', 'workspaceName']),
     status: readString(item, ['status', 'state']) ?? entry.status,
+    runtimeState: null,
     sortTime,
     updatedAt: sortTime,
     itemId,
@@ -221,6 +223,8 @@ function rowFromCatalogItem(
 }
 
 function rowFromArchiveItem(item: RunArchiveItem): SearchProjectionRow {
+  const runtimeState = item.runtimeState ?? null;
+  const rawStatus = item.status;
   return {
     id: `archive:${item.id}`,
     object: 'search_result_row',
@@ -234,7 +238,8 @@ function rowFromArchiveItem(item: RunArchiveItem): SearchProjectionRow {
     browserProfileId: item.browserProfile,
     tenant: item.boundIdentityKey,
     projectId: item.projectId,
-    status: item.status,
+    status: displayStatusFromArchiveItem(rawStatus, runtimeState),
+    runtimeState,
     sortTime: item.updatedAt ?? item.createdAt,
     updatedAt: item.updatedAt ?? item.createdAt,
     itemId: item.id,
@@ -252,6 +257,8 @@ function rowFromArchiveItem(item: RunArchiveItem): SearchProjectionRow {
       batchId: item.batchId,
       agentId: item.agentId,
       teamId: item.teamId,
+      rawStatus,
+      runtimeState,
       localPath: item.localPath,
       fileAvailable: item.fileAvailable,
       raw: item.metadata,
@@ -259,11 +266,19 @@ function rowFromArchiveItem(item: RunArchiveItem): SearchProjectionRow {
   };
 }
 
+function displayStatusFromArchiveItem(
+  status: string | null,
+  runtimeState: RunArchiveItem['runtimeState'] | null,
+): string | null {
+  if (!runtimeState || runtimeState === 'terminal') return status;
+  return runtimeState;
+}
+
 function matchesSearchRequest(row: SearchProjectionRow, request: NormalizedSearchProjectionRequest) {
   if (request.provider && row.provider !== request.provider) return false;
   if (request.runtimeProfile && row.runtimeProfileId !== request.runtimeProfile) return false;
   if (request.tenant && row.tenant !== request.tenant) return false;
-  if (request.status && row.status !== request.status) return false;
+  if (request.status && row.status !== request.status && row.runtimeState !== request.status) return false;
   if (request.kind && !searchKindMatches(row, request.kind)) return false;
   if (!request.query) return true;
   const needle = request.query.toLowerCase();
@@ -278,6 +293,7 @@ function matchesSearchRequest(row: SearchProjectionRow, request: NormalizedSearc
     row.tenant,
     row.projectId,
     row.status,
+    row.runtimeState,
     row.itemId,
     JSON.stringify(row.metadata),
   ].filter((value): value is string => typeof value === 'string').join('\n').toLowerCase();

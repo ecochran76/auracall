@@ -288,6 +288,10 @@ Current limits:
     `metrics`, and `nextCursor`
   - supports filters for `q`, `kind`, `provider`, `runtimeProfile`, `tenant`,
     `status`, `limit`, and `cursor`
+  - archive-backed run rows include `runtimeState`; non-terminal states such as
+    `finalizing`, `recovering`, or `stranded` are promoted into the row
+    `status` display field while the raw runtime-run status remains available
+    in row metadata as `rawStatus`
   - row links can include archive item, catalog item, provider, asset, or other
     source-specific routes
 - `GET /v1/archive` is the searchable archive surface for
@@ -300,6 +304,10 @@ Current limits:
     generated artifacts, and provider conversation references
   - supports filters for `kind`, `provider`, `runtimeProfile`, `agent`, `team`,
     `responseId`, `batchId`, `status`, `q`, and `limit`
+  - runtime archive items preserve the raw run `status` and expose derived
+    `runtimeState`; the `status` filter matches either value so operators can
+    query transient states such as `finalizing` without waiting for terminal
+    persistence
   - `GET /v1/archive/items/{archive_item_id}` reads one item detail by stable
     archive id
   - `GET /v1/archive/items/{archive_item_id}/asset` streams the readable local

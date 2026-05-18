@@ -30319,3 +30319,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `agent-browser` selected an artifact row on the installed dashboard and
     verified the summary card, updated MIME/file facts after detail load, and
     the asset preview panel for an unmaterialized sandbox JSON artifact.
+
+## Turn 172 | 2026-05-18
+
+- Goal: make transient response finalization visible through archive/search
+  projections, not only direct response-batch readback.
+- Change:
+  - run archive items now preserve raw run `status` and expose derived
+    `runtimeState` from response diagnostics.
+  - archive status filters match either raw run status or `runtimeState`.
+  - `/v1/search` archive rows use non-terminal runtime states such as
+    `finalizing` as their display `status` and keep the raw run status in row
+    metadata.
+  - MCP run-archive schemas now declare the optional `runtimeState` field.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveService.test.ts tests/runtime.searchProjectionService.test.ts tests/mcp.runArchive.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`

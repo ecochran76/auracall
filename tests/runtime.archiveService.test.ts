@@ -204,6 +204,10 @@ describe('run archive service', () => {
       'generated-artifact:media_archive_1:image_1',
       'provider-conversation:media_archive_1:gemini:gemini_conv_1',
     ]));
+    expect(archive.items.find((item) => item.id === 'response:resp_archive_1')).toMatchObject({
+      status: 'succeeded',
+      runtimeState: 'terminal',
+    });
 
     const uploadOnly = await service.listItems({
       kind: 'upload',
@@ -216,6 +220,7 @@ describe('run archive service', () => {
       fileAvailable: true,
       batchId: 'batch_archive_1',
       batchIndex: 0,
+      runtimeState: 'terminal',
     });
     expect(uploadOnly.items[0]?.checksumSha256).toMatch(/^[a-f0-9]{64}$/);
 
@@ -236,6 +241,7 @@ describe('run archive service', () => {
     expect(generatedArtifact?.item).toMatchObject({
       localPath: generatedArtifactPath,
       fileAvailable: true,
+      runtimeState: 'terminal',
       metadata: expect.objectContaining({
         providerArtifactId: 'sandbox:/mnt/data/feedback-draft.json',
         fileSizeBytes: Buffer.byteLength('{"score":5}'),
@@ -516,6 +522,36 @@ describe('run archive service', () => {
     const indexedIds = (await readRunArchiveIndex())?.items.map((item) => item.id) ?? [];
     expect(indexedIds).not.toContain('upload:resp_target:old-step:old-upload');
   });
+
+  test('matches transient runtime state through archive status filters', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-run-archive-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    await writeRunArchiveIndex([
+      createArchiveItemFixture({
+        id: 'response:resp_finalizing_archive',
+        status: 'running',
+        runtimeState: 'finalizing',
+        responseId: 'resp_finalizing_archive',
+      }),
+    ]);
+
+    const service = createRunArchiveService({
+      now: () => new Date('2026-05-16T19:10:00.000Z'),
+    });
+
+    await expect(service.listItems({ status: 'finalizing' })).resolves.toMatchObject({
+      metrics: {
+        total: 1,
+      },
+      items: [
+        expect.objectContaining({
+          id: 'response:resp_finalizing_archive',
+          status: 'running',
+          runtimeState: 'finalizing',
+        }),
+      ],
+    });
+  });
 });
 
 function createArchiveItemFixture(overrides: Partial<RunArchiveItem>): RunArchiveItem {
@@ -528,6 +564,7 @@ function createArchiveItemFixture(overrides: Partial<RunArchiveItem>): RunArchiv
     updatedAt: '2026-05-16T19:00:00.000Z',
     title: 'Fixture',
     status: 'succeeded',
+    runtimeState: 'terminal',
     provider: 'chatgpt',
     runtimeProfile: 'default',
     browserProfile: null,
