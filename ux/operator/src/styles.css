@@ -2387,6 +2387,12 @@ select:focus-visible {
   color: #bdebd3;
 }
 
+.asset-control-warn {
+  border: 1px solid #4a3e23;
+  background: #1f1a10;
+  color: #ead69a;
+}
+
 .asset-control-bad {
   border: 1px solid #54303a;
   background: #20151a;

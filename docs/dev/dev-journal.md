@@ -30429,3 +30429,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 --testNamePattern "materializes a run archive item through the API surface|reports provider auth preflight failures as materialization conflicts"`
   - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+
+## Turn 178 | 2026-05-18
+
+- Goal: wire the materialization endpoint into the operator Search asset
+  inspector and live-check the real artifact path.
+- Change:
+  - added a Materialize action and route chip to the missing-local-asset panel.
+  - the panel stores a returned materialized item so the `/asset` route becomes
+    available without a page refresh after successful recovery.
+  - live dogfooding exposed and fixed an archive projection gap: generated
+    artifacts now inherit `providerConversationId` and `providerConversationUrl`
+    from the parent browser run.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveService.test.ts tests/runtime.archiveMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 --testNamePattern "materializes a run archive item through the API surface|reports provider auth preflight failures as materialization conflicts|reports development-only posture through the status endpoint"`
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `agent-browser` verified the installed Search inspector shows Materialize
+    and Provider Chat for an unmaterialized `first_pass_readout.json` artifact.
+  - screenshot:
+    `/tmp/auracall-operator-ux-dogfood/search-materialize-action-final-v1.png`
+  - same-origin dashboard backfill rebuilt `1,372` archive items and populated
+    provider conversation fields on the tested generated artifact.
+  - live materialization reached provider auth preflight and returned HTTP 409
+    `provider_auth_conflict` for current `wsl-chrome-3` ChatGPT account drift.

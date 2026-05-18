@@ -229,6 +229,11 @@ function archiveItemAssetRoute(item) {
   return item.links?.asset ?? (route ? `${route}/asset` : null);
 }
 
+function archiveItemMaterializeRoute(item) {
+  const route = archiveItemRoute(item);
+  return route ? `${route}/materialize` : null;
+}
+
 function readStringField(value, fields) {
   if (!value || typeof value !== "object") return null;
   for (const field of fields) {
@@ -2914,24 +2919,30 @@ function LeftPane({ activeNav, apiStatus, runStatus }) {
 
 function ArchiveAssetPreview({ item }) {
   const [asset, setAsset] = useState(null);
+  const [materializedItem, setMaterializedItem] = useState(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [lookupLoading, setLookupLoading] = useState(false);
+  const [materializing, setMaterializing] = useState(false);
   const [error, setError] = useState(null);
   const [controlResult, setControlResult] = useState(null);
   const [lookupResult, setLookupResult] = useState(null);
-  const assetRoute = archiveItemAssetRoute(item);
+  const effectiveItem = materializedItem ?? item;
+  const assetRoute = archiveItemAssetRoute(effectiveItem);
   const canFetch = Boolean(assetRoute);
-  const lookupRoute = archiveItemAssetLookupRoute(item);
+  const lookupRoute = archiveItemAssetLookupRoute(effectiveItem);
+  const materializeRoute = archiveItemMaterializeRoute(effectiveItem);
 
   useEffect(() => {
     setAsset((current) => {
       if (current?.objectUrl) URL.revokeObjectURL(current.objectUrl);
       return null;
     });
+    setMaterializedItem(null);
     setLoading(false);
     setRefreshing(false);
     setLookupLoading(false);
+    setMaterializing(false);
     setError(null);
     setControlResult(null);
     setLookupResult(null);
@@ -2954,8 +2965,8 @@ function ArchiveAssetPreview({ item }) {
         throw new Error(text ? compactText(text, 160) : `HTTP ${response.status}`);
       }
       const blob = await response.blob();
-      const mimeType = response.headers.get("content-type") ?? item.mimeType ?? blob.type;
-      const fileName = fileNameFromDisposition(response.headers.get("content-disposition")) ?? item.fileName ?? item.title ?? item.id;
+      const mimeType = response.headers.get("content-type") ?? effectiveItem.mimeType ?? blob.type;
+      const fileName = fileNameFromDisposition(response.headers.get("content-disposition")) ?? effectiveItem.fileName ?? effectiveItem.title ?? effectiveItem.id;
       const objectUrl = URL.createObjectURL(blob);
       let textPreview = null;
       if (blob.size <= 256 * 1024 && isPreviewableText(mimeType, fileName)) {
@@ -3024,6 +3035,35 @@ function ArchiveAssetPreview({ item }) {
     }
   }
 
+  async function materializeArchiveAsset() {
+    if (!materializeRoute) return;
+    setMaterializing(true);
+    setError(null);
+    setControlResult(null);
+    try {
+      const response = await fetch(materializeRoute, {
+        method: "POST",
+        cache: "no-store",
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      if (payload?.item) {
+        setMaterializedItem(payload.item);
+      }
+      setControlResult({
+        tone: payload?.status === "materialized" || payload?.status === "already_materialized" ? "ok" : "warn",
+        message: payload?.message ?? `Materialization ${payload?.status ?? "requested"}`,
+      });
+    } catch (assetError) {
+      setControlResult({
+        tone: "bad",
+        message: assetError.message || "Archive materialization failed",
+      });
+    } finally {
+      setMaterializing(false);
+    }
+  }
+
   if (!item) return null;
 
   return (
@@ -3046,8 +3086,8 @@ function ArchiveAssetPreview({ item }) {
       </div>
       <dl className="asset-facts">
         <div><dt>Available</dt><dd>{canFetch ? "yes" : "no"}</dd></div>
-        <div><dt>Name</dt><dd>{asset?.fileName ?? item.fileName ?? item.title ?? "none"}</dd></div>
-        <div><dt>Type</dt><dd>{asset?.mimeType ?? item.mimeType ?? "unknown"}</dd></div>
+        <div><dt>Name</dt><dd>{asset?.fileName ?? effectiveItem.fileName ?? effectiveItem.title ?? "none"}</dd></div>
+        <div><dt>Type</dt><dd>{asset?.mimeType ?? effectiveItem.mimeType ?? "unknown"}</dd></div>
         <div><dt>Size</dt><dd>{asset ? `${formatNumber(asset.size)} bytes` : "not fetched"}</dd></div>
       </dl>
       {error ? <div className="asset-error">Asset fetch failed: {error}</div> : null}
@@ -3055,7 +3095,7 @@ function ArchiveAssetPreview({ item }) {
         <div className="asset-missing-controls" aria-label="Missing asset controls">
           <div className="asset-missing-copy">
             <strong>Missing local asset</strong>
-            <span>{assetMissingReason(item)}</span>
+            <span>{assetMissingReason(effectiveItem)}</span>
           </div>
           <div className="asset-actions">
             <button type="button" disabled={refreshing} onClick={refreshArchiveIndex}>
@@ -3066,12 +3106,17 @@ function ArchiveAssetPreview({ item }) {
               <Search size={13} aria-hidden="true" />
               <span>{lookupLoading ? "Checking" : "Lookup"}</span>
             </button>
+            <button type="button" disabled={!materializeRoute || materializing} onClick={materializeArchiveAsset}>
+              <Download size={13} aria-hidden="true" />
+              <span>{materializing ? "Materializing" : "Materialize"}</span>
+            </button>
           </div>
           <div className="inspector-actions search-kind-actions">
-            {item.uri ? <RouteChip value={item.uri} label="Provider URI" /> : null}
-            {item.links?.response ? <RouteChip value={item.links.response} label="Response" /> : null}
-            {item.providerConversationUrl ? <RouteChip value={item.providerConversationUrl} label="Provider Chat" /> : null}
+            {effectiveItem.uri ? <RouteChip value={effectiveItem.uri} label="Provider URI" /> : null}
+            {effectiveItem.links?.response ? <RouteChip value={effectiveItem.links.response} label="Response" /> : null}
+            {effectiveItem.providerConversationUrl ? <RouteChip value={effectiveItem.providerConversationUrl} label="Provider Chat" /> : null}
             {lookupRoute ? <RouteChip value={lookupRoute} label="Asset Lookup" /> : null}
+            {materializeRoute ? <RouteChip value={materializeRoute} label="Materialize" /> : null}
           </div>
         </div>
       ) : null}

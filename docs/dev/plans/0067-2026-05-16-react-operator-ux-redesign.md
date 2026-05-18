@@ -302,8 +302,9 @@ Workbench rules:
   collapsible. The first artifact/file inspector slice is live, and the first
   run/evidence metadata panel slice is live. Deeper run timelines and a live
   evidence-row dogfood pass remain open. Missing-asset diagnostic controls are
-  live; provider-backed artifact materialization should land as a queued job
-  endpoint, not as a dashboard-only browser action.
+  live, and the first provider-backed materialization endpoint is live for
+  foreground operator/API requests. A durable async materialization job queue
+  with persisted progress is still open work.
 
 Recommended column set:
 

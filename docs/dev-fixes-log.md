@@ -16310,3 +16310,9 @@ browser-stage lifecycle observability, not transcript truncation.
   materialization route now returns HTTP 409 `provider_auth_conflict` for
   provider auth preflight failures and preserves the preflight message for
   account-session remediation.
+- 2026-05-18: Generated-artifact archive rows need the parent browser
+  conversation handle for provider recovery. Runtime archive projection now
+  carries `providerConversationId` and `providerConversationUrl` from the
+  browser run onto generated artifacts, allowing the Search Materialize action
+  to reach provider auth/preflight instead of failing locally for missing
+  conversation context.

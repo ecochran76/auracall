@@ -5609,3 +5609,59 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - design and implement a queue-backed artifact materialization job endpoint
     that uses the same browser ownership, rate-limit, and identity gates as
     normal AuraCall work.
+
+## Turn 195 | 2026-05-18
+
+- Goal: add the first provider-backed materialization endpoint for missing
+  generated artifacts.
+- Change:
+  - added `ArchiveMaterializationService` to convert generated-artifact archive
+    records into provider conversation artifact download requests.
+  - added `POST /v1/archive/items/{archive_item_id}/materialize`, surfaced it
+    in `/status.routes`, and wired the route through foreground AuraCall work
+    pressure so lazy live-follow yields while provider recovery runs.
+  - successful recovery writes local path, MIME, SHA-256 checksum, file size,
+    cache key, `fileAvailable`, and `/asset` route facts back into the archive
+    index.
+  - the Search asset inspector now shows a Materialize action beside Backfill
+    and Lookup for missing assets, displays warning/success status, and swaps
+    in the returned archive item so the local asset route becomes available
+    without a page refresh.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveService.test.ts tests/runtime.archiveMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 --testNamePattern "materializes a run archive item through the API surface|reports provider auth preflight failures as materialization conflicts|reports development-only posture through the status endpoint"`
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `/status` returned `ok: true`, port `18095`, and
+    `runArchiveItemMaterializeTemplate`.
+  - `agent-browser` opened `http://auracall.localhost/dashboard?nav=search`,
+    selected an unmaterialized `first_pass_readout.json` artifact, and verified
+    the Asset panel exposed `Materialize`, `Provider Chat`, and route chips.
+  - `agent-browser errors` returned no browser errors.
+  - live backfill through the same-origin dashboard path rebuilt `1,372`
+    archive items and confirmed generated artifacts now carry
+    `providerConversationId` / `providerConversationUrl` from the parent browser
+    run.
+  - live materialization reached the provider auth preflight and returned HTTP
+    `409` with `provider_auth_conflict` because `wsl-chrome-3` is bound to
+    `eric.cochran@soylei.com` but the ChatGPT app session currently reports
+    `ecochran76@gmail.com`.
+- External links:
+  - `http://auracall.localhost/dashboard?nav=search`
+  - `https://auracall.ecochran.dyndns.org/dashboard?nav=search`
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/search-materialize-action-final-v1.png`
+- Limitations:
+  - this slice adds a foreground operator/API recovery path, not a persisted
+    async materialization job with progress polling.
+  - live provider materialization is currently blocked for the tested SoyLei
+    artifact by ChatGPT browser account drift in `wsl-chrome-3`; the endpoint
+    now reports that as an operator-actionable conflict instead of a generic
+    server error.
+- Next:
+  - restore/switch the `wsl-chrome-3` ChatGPT app session to
+    `eric.cochran@soylei.com`, then retry the same materialization route. After
+    that, design the durable async job/progress wrapper if live recovery takes
+    longer than an operator HTTP request should.

@@ -256,12 +256,15 @@ Current State:
     card, reuses the asset preview path for Search-selected archive items, and
     adds run/evidence-specific panels for response id, batch id, agent/team,
     runtime, step/output counts, evidence schema, producer, and linked routes;
-    missing generated artifacts now expose archive backfill, asset lookup, and
-    provider/response handoff routes from the Asset panel
+    missing generated artifacts now expose archive backfill, asset lookup,
+    materialize, and provider/response handoff routes from the Asset panel;
+    `POST /v1/archive/items/{archive_item_id}/materialize` can recover missing
+    generated artifacts through the provider materializer and write local asset
+    facts back to the archive index
   - remaining Search work: semantic/vector ranking, shared/server-backed view
     presets, deeper run lineage timelines, live evidence-row dogfooding when
-    evidence rows exist in cache, and queue-backed provider materialization
-    jobs for missing generated artifacts
+    evidence rows exist in cache, and durable async materialization jobs with
+    persisted progress for long-running provider recovery
   - first slice is read-only shell work; API-backed health, run, archive,
     search, chat, config, agent, and team pages should land incrementally after
     the shell is stable
