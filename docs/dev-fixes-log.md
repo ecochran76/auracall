@@ -16181,3 +16181,11 @@ browser-stage lifecycle observability, not transcript truncation.
   member agents, and create the `dispatch-pool` team only when it is missing.
   Existing dispatch-pool teams return `found` with membership unchanged, and
   existing non-dispatch team ids block before provider/project mutation.
+- 2026-05-18: Browser-backed response batches can eventually succeed after an
+  API restart even when callers briefly observe contradictory no-active-lease
+  states. The latest transcribe-audio batch completed and materialized all
+  three readouts, but child runs were previously visible as `in_progress`
+  without active leases, one cancel returned `run has no active lease to
+  cancel`, and another emitted `lease released: cancelled` before later
+  succeeding. The remaining fix is status/cancel reconciliation around restart
+  recovery, not the ChatGPT artifact-surfacing contract.

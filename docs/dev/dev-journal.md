@@ -29978,3 +29978,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     is tested with live non-private accounts.
   - run a live non-private tenant-pool batch smoke after the remaining browser
     lifecycle issue is stable.
+
+## Turn 162 | 2026-05-18
+
+- Goal: leave a handoff note for the latest transcribe-audio first-pass batch
+  recovery result.
+- Finding:
+  - the three-item transcribe-audio batch eventually completed and all three
+    readouts materialized, but the caller observed a restart/cancel recovery
+    window where child runs appeared `in_progress` without active leases.
+  - one cancel attempt returned `run has no active lease to cancel`; another
+    emitted `lease released: cancelled` but the child later succeeded.
+  - this is a status/reconciliation/cancel-semantics problem, not an artifact
+    contract failure.
+- Artifact:
+  - `docs/dev/notes/2026-05-18-transcribe-batch-restart-recovery-handoff.md`
+- Verification:
+  - direct runtime records later showed `step-succeeded` for
+    `resp_7504789aba714119b23903bfbbed4adf` and
+    `resp_3c57d99d2e5e4601970149345dfab749`.
+  - transcribe-audio batch status later reported `completed=3` and
+    materialized all three readouts.
+  - `systemctl --user is-active auracall-api.service` returned `active`.
