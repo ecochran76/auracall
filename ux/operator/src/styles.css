@@ -1123,6 +1123,11 @@ select:focus-visible {
   overflow: auto;
 }
 
+.search-table-scroll:focus-visible {
+  outline: 1px solid #5bc29f;
+  outline-offset: -1px;
+}
+
 .search-table-grid {
   display: grid;
   min-width: max-content;
@@ -1157,6 +1162,43 @@ select:focus-visible {
 
 .search-th.active {
   color: #e9f1fa;
+}
+
+.search-th.is-pinned,
+.search-row > .is-pinned {
+  position: sticky;
+  z-index: 3;
+}
+
+.search-th.is-pinned {
+  z-index: 6;
+  background: #10161e;
+}
+
+.search-row > .is-pinned {
+  background: #131922;
+}
+
+.search-row:hover > .is-pinned,
+.search-row:focus > .is-pinned {
+  background: #182131;
+}
+
+.search-row.is-selected > .is-pinned {
+  background: #132520;
+}
+
+.pinned-1 {
+  left: var(--search-pin-time);
+}
+
+.pinned-2 {
+  left: var(--search-pin-provider);
+}
+
+.pinned-3 {
+  left: var(--search-pin-tenant);
+  box-shadow: 1px 0 0 #303a47;
 }
 
 .search-th i {

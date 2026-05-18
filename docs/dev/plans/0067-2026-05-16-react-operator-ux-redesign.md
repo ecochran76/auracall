@@ -339,8 +339,9 @@ Implementation roadmap:
      navigation, and accessible grid semantics.
    - Add local column width, order, hidden-column, and sort persistence.
    - Fixed-height row virtualization and local column width/sort persistence
-     are complete. Pinned columns, column order/hide controls, and keyboard row
-     navigation remain open.
+     are complete. Time, Provider, and Tenant columns are pinned, and keyboard
+     row navigation updates the selected-row URL/inspector state. Column
+     order/hide controls remain open.
 
 3. Add unified all-tenant chat rows. [first slice complete]
    - Start with account-mirror conversations from all configured live-follow

@@ -1,3 +1,19 @@
+## Turn 201 | 2026-05-18
+
+- Continued implementation plan:
+  `docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md`
+- Goal: add the next Search table ergonomics layer after virtualization.
+- Change:
+  - pinned the Time, Provider, and Tenant columns so horizontal scrolling keeps
+    the primary row identity visible.
+  - added keyboard row selection on the Search grid for ArrowUp/ArrowDown,
+    PageUp/PageDown, Home, and End.
+  - keyboard selection reuses the existing selected-row URL and inspector path.
+- Validation:
+  - UX build, TypeScript build, full build, installed runtime restart,
+    `/status` route smoke, and agent-browser pinned-column plus keyboard
+    navigation smokes.
+
 ## Turn 200 | 2026-05-18
 
 - Continued implementation plan:

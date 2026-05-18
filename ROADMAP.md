@@ -245,10 +245,11 @@ Current State:
     cursor pages, facets, metrics, and source links; the UX now consumes those
     cursor pages incrementally as the operator scrolls; the table uses a
     fixed-height virtual row window so loaded result sets do not create one DOM
-    node per row
-  - remaining Search work: semantic/vector ranking, saved views, keyboard row
-    navigation, pinned/reorderable/hideable columns, and richer row-specific
-    actions for artifacts, uploads, runs, and evidence
+    node per row; Time, Provider, and Tenant are pinned during horizontal
+    scroll, and keyboard row navigation updates selected-row handoff URLs
+  - remaining Search work: semantic/vector ranking, saved views,
+    reorderable/hideable columns, and richer row-specific actions for
+    artifacts, uploads, runs, and evidence
   - first slice is read-only shell work; API-backed health, run, archive,
     search, chat, config, agent, and team pages should land incrementally after
     the shell is stable

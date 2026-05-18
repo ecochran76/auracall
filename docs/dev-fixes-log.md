@@ -264,6 +264,11 @@
   includes compact stored conversation turns, and `/agents` renders those turns
   as chat bubbles while keeping raw inspection JSON available.
 
+- 2026-05-18: Dense Search tables need stable row identity while operators
+  scroll and inspect. The operator Search grid now pins Time, Provider, and
+  Tenant columns during horizontal scroll, and grid keyboard navigation updates
+  the same selected-row URL state as mouse selection.
+
 - 2026-05-18: Search table virtualization must preserve selected-row handoff
   semantics. The operator Search table now uses a fixed-height virtual row
   window with spacer rows, guards cursor appends with a synchronous single-flight

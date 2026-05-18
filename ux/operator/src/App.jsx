@@ -66,9 +66,9 @@ const SEARCH_KIND_FACETS = [
 ];
 
 const SEARCH_TABLE_COLUMNS = [
-  { id: "sortTime", label: "Time", width: 156, minWidth: 124, sortable: true },
-  { id: "provider", label: "Provider", width: 108, minWidth: 92, sortable: true },
-  { id: "tenant", label: "Tenant", width: 210, minWidth: 150, sortable: true },
+  { id: "sortTime", label: "Time", width: 156, minWidth: 124, sortable: true, pinned: true },
+  { id: "provider", label: "Provider", width: 108, minWidth: 92, sortable: true, pinned: true },
+  { id: "tenant", label: "Tenant", width: 210, minWidth: 150, sortable: true, pinned: true },
   { id: "project", label: "Project", width: 160, minWidth: 120, sortable: true },
   { id: "title", label: "Title", width: 420, minWidth: 220, sortable: true },
   { id: "kind", label: "Kind", width: 104, minWidth: 88, sortable: true },
@@ -1734,9 +1734,67 @@ function ArchiveSearchViewport({
     return SEARCH_TABLE_COLUMNS.map((column) => `${tablePrefs.widths[column.id] ?? column.width}px`).join(" ");
   }
 
+  function columnWidth(columnId) {
+    return tablePrefs.widths[columnId] ?? SEARCH_TABLE_COLUMNS.find((column) => column.id === columnId)?.width ?? 0;
+  }
+
+  function tablePinStyles() {
+    const timeWidth = columnWidth("sortTime");
+    const providerWidth = columnWidth("provider");
+    return {
+      "--search-pin-time": "0px",
+      "--search-pin-provider": `${timeWidth}px`,
+      "--search-pin-tenant": `${timeWidth + providerWidth}px`,
+    };
+  }
+
+  function columnClassName(column, index, baseClassName) {
+    const classNames = [baseClassName];
+    if (column.pinned) {
+      classNames.push("is-pinned", `pinned-${index + 1}`);
+    }
+    return classNames.join(" ");
+  }
+
   function openRow(row) {
     onSelectedArchiveItemChange(null);
     onSelectedSearchRowChange(row);
+  }
+
+  function selectRowAtIndex(index) {
+    if (!filteredRows.length) return;
+    const row = filteredRows[clamp(index, 0, filteredRows.length - 1)];
+    if (row) openRow(row);
+  }
+
+  function selectedRowIndex() {
+    if (!selectedRow?.id) return -1;
+    return filteredRows.findIndex((row) => row.id === selectedRow.id);
+  }
+
+  function handleSearchTableKeyDown(event) {
+    if (!["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const currentIndex = selectedRowIndex();
+    const fallbackIndex = virtualWindow.startIndex;
+    const baseIndex = currentIndex >= 0 ? currentIndex : fallbackIndex;
+    const pageStep = Math.max(1, Math.floor(virtualViewport.height / SEARCH_ROW_HEIGHT) - 2);
+    if (event.key === "ArrowDown" && baseIndex >= filteredRows.length - 1 && catalog?.nextCursor) {
+      loadMoreRows();
+      return;
+    }
+    if (event.key === "End" && catalog?.nextCursor) {
+      loadMoreRows();
+    }
+    const nextIndexByKey = {
+      ArrowDown: baseIndex + 1,
+      ArrowUp: baseIndex - 1,
+      PageDown: baseIndex + pageStep,
+      PageUp: baseIndex - pageStep,
+      Home: 0,
+      End: filteredRows.length - 1,
+    };
+    selectRowAtIndex(nextIndexByKey[event.key]);
   }
 
   return (
@@ -1827,7 +1885,15 @@ function ArchiveSearchViewport({
           <strong>{formatNumber(filteredRows.length)} rows</strong>
         <span>{formatNumber(allRows.length)} loaded / {formatNumber(catalog?.metrics?.total ?? allRows.length)} matched / newest first / {formatNumber(visibleRows.length)} DOM rows{catalog?.nextCursor ? " / more available" : ""}</span>
         </div>
-        <div ref={searchScrollRef} className="search-table-scroll" onScroll={(event) => {
+        <div
+          ref={searchScrollRef}
+          className="search-table-scroll"
+          role="grid"
+          aria-rowcount={filteredRows.length}
+          tabIndex="0"
+          style={tablePinStyles()}
+          onKeyDown={handleSearchTableKeyDown}
+          onScroll={(event) => {
           const element = event.currentTarget;
           setVirtualViewport({ scrollTop: element.scrollTop, height: element.clientHeight });
           const nearBottom = element.scrollTop + element.clientHeight >= element.scrollHeight - 420;
@@ -1836,11 +1902,11 @@ function ArchiveSearchViewport({
           }
         }}>
           <div className="search-table-grid search-table-head" style={{ gridTemplateColumns: gridTemplateColumns() }}>
-            {SEARCH_TABLE_COLUMNS.map((column) => (
+            {SEARCH_TABLE_COLUMNS.map((column, index) => (
               <button
                 key={column.id}
                 type="button"
-                className={tablePrefs.sort.column === column.id ? "search-th active" : "search-th"}
+                className={columnClassName(column, index, tablePrefs.sort.column === column.id ? "search-th active" : "search-th")}
                 onClick={() => setSort(column.id)}
                 title={column.sortable ? `Sort by ${column.label}` : column.label}
               >
@@ -1873,9 +1939,9 @@ function ArchiveSearchViewport({
                   aria-pressed={selected}
                   onClick={() => openRow(row)}
                 >
-                  <span>{formatDateTime(row.sortTime)}</span>
-                  <span><ProviderIcon provider={row.provider} /></span>
-                  <span className="two-line-cell"><b>{row.boundIdentityKey}</b><small>{row.runtimeProfileId}</small></span>
+                  <span className={columnClassName(SEARCH_TABLE_COLUMNS[0], 0, "")}>{formatDateTime(row.sortTime)}</span>
+                  <span className={columnClassName(SEARCH_TABLE_COLUMNS[1], 1, "")}><ProviderIcon provider={row.provider} /></span>
+                  <span className={columnClassName(SEARCH_TABLE_COLUMNS[2], 2, "two-line-cell")}><b>{row.boundIdentityKey}</b><small>{row.runtimeProfileId}</small></span>
                   <span>{row.project}</span>
                   <span className="title-cell"><b>{row.title}</b>{row.summary ? <small>{compactText(row.summary, 120)}</small> : null}</span>
                   <span><span className="status-pill status-neutral">{row.kind}</span></span>

@@ -5335,3 +5335,47 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - add keyboard row navigation and pinned first columns, then add row-specific
     quick actions.
+
+## Turn 188 | 2026-05-18
+
+- Goal: improve Search table ergonomics with pinned identity columns and
+  keyboard row navigation.
+- Change:
+  - Time, Provider, and Tenant columns are now pinned while the Search table
+    scrolls horizontally.
+  - the Search result grid is focusable and handles ArrowUp/ArrowDown,
+    PageUp/PageDown, Home, and End to move selected rows.
+  - keyboard selection uses the same selected-row state, URL handoff, virtual
+    scroll-to-selected behavior, and right-inspector detail loading as mouse
+    selection.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `curl -fsS http://127.0.0.1:18095/status` reported `ok=true` and the
+    populated `/v1/search` route.
+  - `agent-browser` opened
+    `http://auracall.localhost/dashboard?nav=search` and verified the Search
+    grid rendered `500 loaded / 3,900 matched / newest first / 31 DOM rows /
+    more available`.
+  - after setting horizontal scroll to `640`, the pinned Time, Provider, and
+    Tenant cells stayed at the left edge while non-pinned cells scrolled
+    underneath them.
+  - focusing the grid and pressing ArrowDown selected row index `2` and updated
+    the `row=` URL; PageDown moved selection to row index `9` and updated the
+    URL again.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/search-pinned-columns-v1.png`
+  - `/tmp/auracall-operator-ux-dogfood/search-keyboard-nav-v1.png`
+- External links:
+  - `http://auracall.localhost/dashboard?nav=search`
+  - `https://auracall.ecochran.dyndns.org/dashboard?nav=search`
+- Limitations:
+  - column reorder/hide controls remain open.
+  - semantic/vector ranking, saved views, and row-specific quick actions remain
+    open Search workbench items.
+- Next:
+  - add compact row quick actions for copy handoff link, inspect source, and
+    provider/cached asset actions where available.
