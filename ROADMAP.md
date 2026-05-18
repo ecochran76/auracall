@@ -238,6 +238,12 @@ Current State:
     virtualized table of chats, artifacts, uploads, runs, and evidence sorted
     newest-first by default, with adjustable/sortable columns, facet-backed
     filters, URL-addressable selected rows, and right-pane inspection
+  - first Search implementation slice is live for cached account-mirror
+    conversation rows across all tenants with compact controls, known-value
+    facets, persisted column widths/sort, and `?nav=search&row=...` selected
+    row handoff URLs; the unified server-side search projection still needs to
+    add artifact/upload/run/evidence rows, cursor paging, and authoritative
+    facets
   - first slice is read-only shell work; API-backed health, run, archive,
     search, chat, config, agent, and team pages should land incrementally after
     the shell is stable

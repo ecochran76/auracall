@@ -1,3 +1,24 @@
+## Turn 197 | 2026-05-18
+
+- Continued implementation plan:
+  `docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md`
+- Goal: move Search from a bulky archive query form toward the target dense
+  operator workbench.
+- Change:
+  - Search now opens on an all-tenant cached conversation table backed by the
+    account-mirror catalog.
+  - visible limit and provider/status free-text fields were removed in favor of
+    compact command controls and known-value facet chips.
+  - table sort and column widths persist in local storage, selected rows update
+    `?nav=search&row=...`, and the right inspector restores from direct row
+    URLs.
+- Validation:
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `agent-browser` smoke of `/dashboard?nav=search` and a direct selected-row
+    URL.
+
 ## Turn 196 | 2026-05-17
 
 - Goal: make browser-backed response runs keep one prompt per Chrome tab while

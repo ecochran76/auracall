@@ -16189,3 +16189,10 @@ browser-stage lifecycle observability, not transcript truncation.
   cancel`, and another emitted `lease released: cancelled` before later
   succeeding. The remaining fix is status/cancel reconciliation around restart
   recovery, not the ChatGPT artifact-surfacing contract.
+- 2026-05-18: Search operator UX should treat known provider/status/kind values
+  as facets, not arbitrary string fields. The React Search workbench now
+  defaults to an all-tenant cached conversation table with compact controls,
+  persisted table preferences, and URL-addressable selected rows. The remaining
+  durable fix is a server-side `/v1/search` projection that merges account
+  mirror, archive, run, upload, artifact, and evidence rows with cursor paging
+  and authoritative facets.

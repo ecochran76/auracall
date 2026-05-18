@@ -1,5 +1,7 @@
 import {
   Activity,
+  ArrowDown,
+  ArrowUp,
   Bot,
   ChevronDown,
   Check,
@@ -13,6 +15,7 @@ import {
   KeyRound,
   Menu,
   MessageSquareText,
+  MoreHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
   PanelRightClose,
@@ -30,7 +33,10 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const STORAGE_KEY = "auracall.operatorUx.v1";
+const SEARCH_TABLE_STORAGE_KEY = "auracall.operatorUx.searchTable.v1";
 const STATUS_POLL_MS = 30000;
+const SEARCH_REFRESH_MS = 45000;
+const SEARCH_PAGE_SIZE = 80;
 
 const NAV_ITEMS = [
   { id: "chats", label: "Chats", icon: MessageSquareText },
@@ -48,16 +54,26 @@ const MENU_ITEMS = [
   { label: "Diagnostics", icon: TerminalSquare },
 ];
 
-const ARCHIVE_KINDS = [
-  "all",
-  "response",
-  "response_batch",
-  "team_run",
-  "media_generation",
-  "upload",
-  "generated_artifact",
-  "provider_conversation",
-  "evidence",
+const SEARCH_KIND_FACETS = [
+  { id: "all", label: "All" },
+  { id: "conversation", label: "Chats" },
+  { id: "artifact", label: "Artifacts" },
+  { id: "upload", label: "Uploads" },
+  { id: "run", label: "Runs" },
+  { id: "evidence", label: "Evidence" },
+];
+
+const SEARCH_TABLE_COLUMNS = [
+  { id: "sortTime", label: "Time", width: 156, minWidth: 124, sortable: true },
+  { id: "provider", label: "Provider", width: 108, minWidth: 92, sortable: true },
+  { id: "tenant", label: "Tenant", width: 210, minWidth: 150, sortable: true },
+  { id: "project", label: "Project", width: 160, minWidth: 120, sortable: true },
+  { id: "title", label: "Title", width: 420, minWidth: 220, sortable: true },
+  { id: "kind", label: "Kind", width: 104, minWidth: 88, sortable: true },
+  { id: "status", label: "Status", width: 112, minWidth: 92, sortable: true },
+  { id: "files", label: "Files", width: 96, minWidth: 80, sortable: true },
+  { id: "ids", label: "IDs", width: 220, minWidth: 160, sortable: false },
+  { id: "updatedAt", label: "Updated", width: 156, minWidth: 124, sortable: true },
 ];
 
 const DEFAULT_LAYOUT = {
@@ -186,6 +202,14 @@ function readArchiveItemFromUrl() {
   return id ? { id } : null;
 }
 
+function readSearchRowFromUrl() {
+  const params = readUrlParams();
+  const encodedId = params.get("row");
+  if (!encodedId) return null;
+  const id = base64UrlDecodeText(encodedId);
+  return id ? { id } : null;
+}
+
 function archiveItemRoute(item) {
   if (!item?.id) return null;
   return `/v1/archive/items/b64/${base64UrlEncodeText(item.id)}`;
@@ -210,6 +234,27 @@ function readObjectField(value, field) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const candidate = value[field];
   return candidate && typeof candidate === "object" && !Array.isArray(candidate) ? candidate : null;
+}
+
+function readNumberField(value, fields) {
+  if (!value || typeof value !== "object") return null;
+  for (const field of fields) {
+    const candidate = value[field];
+    if (typeof candidate === "number" && Number.isFinite(candidate)) return candidate;
+    if (typeof candidate === "string" && candidate.trim() && Number.isFinite(Number(candidate))) {
+      return Number(candidate);
+    }
+  }
+  return null;
+}
+
+function readArrayField(value, fields) {
+  if (!value || typeof value !== "object") return null;
+  for (const field of fields) {
+    const candidate = value[field];
+    if (Array.isArray(candidate)) return candidate;
+  }
+  return null;
 }
 
 function normalizeChatRole(value) {
@@ -282,6 +327,131 @@ function flattenConversationEntries(payload) {
       mirrorCompleteness: entry.mirrorCompleteness?.state,
     })),
   );
+}
+
+function readCatalogItemId(item, index = 0) {
+  return (
+    readStringField(item, ["id", "conversationId", "providerConversationId", "itemId", "artifactId", "fileId", "mediaId"])
+    ?? `item-${index}`
+  );
+}
+
+function readCatalogItemTitle(item) {
+  return (
+    readStringField(item, ["title", "name", "fileName", "prompt", "summary", "id", "conversationId"])
+    ?? "Untitled"
+  );
+}
+
+function readCatalogItemTime(item) {
+  const explicitTime = readStringField(item, ["updatedAt", "lastMessageAt", "createdAt", "createTime", "timestamp", "time"]);
+  if (explicitTime) return explicitTime;
+  const provider = readStringField(item, ["provider"]);
+  const itemId = readCatalogItemId(item);
+  const timestampPrefix = itemId.match(/^([0-9a-f]{8})-/iu)?.[1];
+  if (provider === "chatgpt" && timestampPrefix) {
+    const seconds = Number.parseInt(timestampPrefix, 16);
+    if (Number.isFinite(seconds)) {
+      const derived = new Date(seconds * 1000);
+      const timestamp = derived.getTime();
+      const earliest = Date.UTC(2022, 0, 1);
+      const latest = Date.now() + 24 * 60 * 60 * 1000;
+      if (timestamp >= earliest && timestamp <= latest) return derived.toISOString();
+    }
+  }
+  return null;
+}
+
+function toSearchRow(entry, item, kind, index) {
+  const itemId = readCatalogItemId(item, index);
+  const provider = entry.provider ?? item.provider ?? "unknown";
+  const runtimeProfileId = entry.runtimeProfileId ?? item.runtimeProfileId ?? "unknown";
+  const rowId = `catalog:${kind}:${provider}:${runtimeProfileId}:${itemId}`;
+  const sortTime = readCatalogItemTime(item);
+  const fileCount =
+    readNumberField(item, ["fileCount", "filesCount", "cachedFileCount", "attachmentCount", "attachmentsCount"])
+    ?? readArrayField(item, ["files", "attachments"])?.length
+    ?? 0;
+  const artifactCount =
+    readNumberField(item, ["artifactCount", "artifactsCount", "cachedArtifactCount"])
+    ?? readArrayField(item, ["artifacts", "generatedArtifacts"])?.length
+    ?? 0;
+  return {
+    id: rowId,
+    source: "account-mirror",
+    kind: kind === "conversations" ? "conversation" : kind.replace(/s$/u, ""),
+    provider,
+    runtimeProfileId,
+    browserProfileId: entry.browserProfileId ?? null,
+    boundIdentityKey: entry.boundIdentityKey ?? "unbound",
+    accountLevel: entry.accountLevel ?? null,
+    mirrorStatus: entry.status ?? "unknown",
+    project: readStringField(item, ["projectName", "projectTitle", "projectId", "workspaceName"]) ?? "none",
+    title: readCatalogItemTitle(item),
+    summary: readStringField(item, ["summary", "description", "snippet"]) ?? null,
+    status: readStringField(item, ["status", "state"]) ?? entry.status ?? "cached",
+    sortTime,
+    updatedAt: sortTime,
+    itemId,
+    messageCount: readNumberField(item, ["messageCount", "messagesCount", "turnCount"]),
+    fileCount,
+    artifactCount,
+    url: readStringField(item, ["url", "providerUrl", "conversationUrl"]),
+    catalogItemRoute: `/v1/account-mirrors/catalog/items/${encodeURIComponent(itemId)}?${new URLSearchParams({
+      provider,
+      runtimeProfile: runtimeProfileId,
+      kind,
+    }).toString()}`,
+    raw: item,
+  };
+}
+
+function flattenSearchCatalogRows(payload) {
+  return (payload?.entries ?? []).flatMap((entry) => {
+    const manifests = entry?.manifests ?? {};
+    return ["conversations"].flatMap((kind) =>
+      (manifests[kind] ?? []).map((item, index) => toSearchRow(entry, item, kind, index)),
+    );
+  });
+}
+
+function readSearchTablePreferences() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(SEARCH_TABLE_STORAGE_KEY) ?? "{}");
+    return {
+      sort: {
+        column: stored?.sort?.column ?? "sortTime",
+        direction: stored?.sort?.direction === "asc" ? "asc" : "desc",
+      },
+      widths: stored?.widths && typeof stored.widths === "object" ? stored.widths : {},
+    };
+  } catch {
+    return {
+      sort: { column: "sortTime", direction: "desc" },
+      widths: {},
+    };
+  }
+}
+
+function compareSearchRows(left, right, sort) {
+  const column = sort?.column ?? "sortTime";
+  const direction = sort?.direction === "asc" ? 1 : -1;
+  let comparison = 0;
+  if (column === "sortTime" || column === "updatedAt") {
+    const leftTime = Date.parse(left[column] ?? "");
+    const rightTime = Date.parse(right[column] ?? "");
+    const leftHasTime = Number.isFinite(leftTime);
+    const rightHasTime = Number.isFinite(rightTime);
+    if (leftHasTime !== rightHasTime) {
+      return leftHasTime ? -1 : 1;
+    }
+    comparison = leftTime - rightTime;
+  } else if (column === "files") {
+    comparison = (left.fileCount + left.artifactCount) - (right.fileCount + right.artifactCount);
+  } else {
+    comparison = String(left[column] ?? "").localeCompare(String(right[column] ?? ""));
+  }
+  return comparison * direction || String(left.title ?? "").localeCompare(String(right.title ?? ""));
 }
 
 function statusTone(value) {
@@ -1179,19 +1349,72 @@ function ArchiveSearchViewport({
   selectedArchiveItem,
   onSelectedArchiveItemChange,
   onSelectedArchiveDetailChange,
+  selectedSearchRow,
+  onSelectedSearchRowChange,
+  onSelectedSearchDetailChange,
 }) {
   const [filters, setFilters] = useState({
     q: "",
     kind: "all",
-    provider: "",
-    status: "",
-    limit: "25",
+    providers: new Set(),
+    statuses: new Set(),
   });
-  const [result, setResult] = useState(null);
+  const [tablePrefs, setTablePrefs] = useState(readSearchTablePreferences);
+  const [catalog, setCatalog] = useState(null);
+  const [visibleCount, setVisibleCount] = useState(SEARCH_PAGE_SIZE);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchedAt, setSearchedAt] = useState(null);
-  const archiveRoute = apiStatus.status?.routes?.runArchive ?? "/v1/archive";
+  const [isLive, setIsLive] = useState(true);
+  const searchRoute = apiStatus.status?.routes?.accountMirrorCatalog ?? "/v1/account-mirrors/catalog";
+  const dragColumnRef = useRef(null);
+  const allRows = useMemo(() => flattenSearchCatalogRows(catalog), [catalog]);
+  const facets = useMemo(() => {
+    const providers = new Map();
+    const statuses = new Map();
+    for (const row of allRows) {
+      providers.set(row.provider, (providers.get(row.provider) ?? 0) + 1);
+      statuses.set(row.status, (statuses.get(row.status) ?? 0) + 1);
+    }
+    return {
+      providers: [...providers.entries()].sort(([left], [right]) => left.localeCompare(right)),
+      statuses: [...statuses.entries()].sort(([left], [right]) => left.localeCompare(right)),
+    };
+  }, [allRows]);
+  const filteredRows = useMemo(() => {
+    const needle = filters.q.trim().toLowerCase();
+    return allRows
+      .filter((row) => filters.kind === "all" || row.kind === filters.kind)
+      .filter((row) => !filters.providers.size || filters.providers.has(row.provider))
+      .filter((row) => !filters.statuses.size || filters.statuses.has(row.status))
+      .filter((row) => {
+        if (!needle) return true;
+        return [
+          row.provider,
+          row.runtimeProfileId,
+          row.boundIdentityKey,
+          row.project,
+          row.title,
+          row.summary,
+          row.kind,
+          row.status,
+          row.itemId,
+          row.url,
+        ].join(" ").toLowerCase().includes(needle);
+      })
+      .sort((left, right) => compareSearchRows(left, right, tablePrefs.sort));
+  }, [allRows, filters, tablePrefs.sort]);
+  const selectedRow = selectedSearchRow?.id ? (allRows.find((row) => row.id === selectedSearchRow.id) ?? selectedSearchRow) : null;
+  const baseVisibleRows = filteredRows.slice(0, visibleCount);
+  const visibleRows =
+    selectedRow?.id && filteredRows.some((row) => row.id === selectedRow.id) && !baseVisibleRows.some((row) => row.id === selectedRow.id)
+      ? [selectedRow, ...baseVisibleRows.slice(0, Math.max(0, baseVisibleRows.length - 1))]
+      : baseVisibleRows;
+  const selectedArchiveLike = selectedArchiveItem?.id && !selectedRow;
+
+  useEffect(() => {
+    localStorage.setItem(SEARCH_TABLE_STORAGE_KEY, JSON.stringify(tablePrefs));
+  }, [tablePrefs]);
 
   useEffect(() => {
     if (!selectedArchiveItem) {
@@ -1242,166 +1465,349 @@ function ArchiveSearchViewport({
     };
   }, [selectedArchiveItem, onSelectedArchiveDetailChange]);
 
-  function updateFilter(name, value) {
-    setFilters((current) => ({ ...current, [name]: value }));
-  }
+  useEffect(() => {
+    if (!selectedRow?.catalogItemRoute) {
+      onSelectedSearchDetailChange(null);
+      return undefined;
+    }
+    let alive = true;
+    const controller = new AbortController();
+    onSelectedSearchDetailChange({
+      loading: true,
+      error: null,
+      result: null,
+      updatedAt: null,
+    });
+    fetch(selectedRow.catalogItemRoute, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+        return payload;
+      })
+      .then((payload) => {
+        if (!alive) return;
+        onSelectedSearchDetailChange({
+          loading: false,
+          error: null,
+          result: payload,
+          updatedAt: new Date().toISOString(),
+        });
+      })
+      .catch((detailError) => {
+        if (!alive || detailError.name === "AbortError") return;
+        onSelectedSearchDetailChange({
+          loading: false,
+          error: detailError.message || "Search row inspection failed",
+          result: null,
+          updatedAt: null,
+        });
+      });
+    return () => {
+      alive = false;
+      controller.abort();
+    };
+  }, [selectedRow?.catalogItemRoute, onSelectedSearchDetailChange]);
 
-  async function runSearch(event) {
-    event?.preventDefault();
-    const params = new URLSearchParams();
-    if (filters.kind && filters.kind !== "all") params.set("kind", filters.kind);
-    if (filters.provider) params.set("provider", filters.provider);
-    if (filters.status) params.set("status", filters.status);
-    if (filters.q.trim()) params.set("q", filters.q.trim());
-    params.set("limit", filters.limit || "25");
+  useEffect(() => {
+    if (!selectedSearchRow?.id) return;
+    if (!allRows.length) return;
+    const replacement = allRows.find((row) => row.id === selectedSearchRow.id);
+    if (replacement && replacement !== selectedSearchRow) onSelectedSearchRowChange(replacement);
+  }, [allRows, onSelectedSearchRowChange, selectedSearchRow]);
 
+  useEffect(() => {
+    if (!isLive) return undefined;
+    loadCatalog();
+    const timer = window.setInterval(loadCatalog, SEARCH_REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, [isLive]);
+
+  useEffect(() => {
+    setVisibleCount(SEARCH_PAGE_SIZE);
+  }, [filters, tablePrefs.sort]);
+
+  async function loadCatalog() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/v1/archive?${params.toString()}`, {
+      const params = new URLSearchParams({
+        kind: "conversations",
+        limit: "500",
+      });
+      const response = await fetch(`/v1/account-mirrors/catalog?${params.toString()}`, {
         cache: "no-store",
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
         throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
       }
-      setResult(payload);
-      onSelectedArchiveItemChange(payload?.items?.[0] ?? null);
+      setCatalog(payload);
       setSearchedAt(new Date().toISOString());
     } catch (searchError) {
-      setError(searchError.message || "Archive search failed");
-      onSelectedArchiveItemChange(null);
-      onSelectedArchiveDetailChange(emptyArchiveDetailState());
+      setError(searchError.message || "Conversation catalog load failed");
     } finally {
       setLoading(false);
     }
+  }
+
+  function updateQuery(value) {
+    setFilters((current) => ({ ...current, q: value }));
+  }
+
+  function updateKind(kind) {
+    setFilters((current) => ({ ...current, kind }));
+  }
+
+  function toggleSetFacet(name, value) {
+    setFilters((current) => {
+      const next = new Set(current[name]);
+      if (next.has(value)) next.delete(value);
+      else next.add(value);
+      return { ...current, [name]: next };
+    });
+  }
+
+  function clearFacets() {
+    setFilters({ q: "", kind: "all", providers: new Set(), statuses: new Set() });
+  }
+
+  function setSort(column) {
+    const descriptor = SEARCH_TABLE_COLUMNS.find((item) => item.id === column);
+    if (!descriptor?.sortable) return;
+    setTablePrefs((current) => ({
+      ...current,
+      sort: {
+        column,
+        direction: current.sort.column === column && current.sort.direction === "desc" ? "asc" : "desc",
+      },
+    }));
+  }
+
+  function beginColumnResize(column, event) {
+    dragColumnRef.current = {
+      column,
+      startX: event.clientX,
+      startWidth: tablePrefs.widths[column] ?? SEARCH_TABLE_COLUMNS.find((item) => item.id === column)?.width ?? 120,
+    };
+    document.body.classList.add("is-resizing-pane");
+  }
+
+  useEffect(() => {
+    function onPointerMove(event) {
+      if (!dragColumnRef.current) return;
+      const { column, startX, startWidth } = dragColumnRef.current;
+      const descriptor = SEARCH_TABLE_COLUMNS.find((item) => item.id === column);
+      const width = Math.max(descriptor?.minWidth ?? 80, startWidth + event.clientX - startX);
+      setTablePrefs((current) => ({
+        ...current,
+        widths: { ...current.widths, [column]: width },
+      }));
+    }
+
+    function onPointerUp() {
+      dragColumnRef.current = null;
+      document.body.classList.remove("is-resizing-pane");
+    }
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    return () => {
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+    };
+  }, []);
+
+  function gridTemplateColumns() {
+    return SEARCH_TABLE_COLUMNS.map((column) => `${tablePrefs.widths[column.id] ?? column.width}px`).join(" ");
+  }
+
+  function openRow(row) {
+    onSelectedArchiveItemChange(null);
+    onSelectedSearchRowChange(row);
   }
 
   return (
     <main className="viewport" tabIndex="-1">
       <div className="health-toolbar">
         <div className="viewport-heading">
-          <span>Searchable cache archive</span>
+          <span>All-tenant cache workbench</span>
           <h1>Search</h1>
         </div>
         <div className="status-readout">
           <span className={`state-dot state-${statusTone(error ? "error" : "ok")}`} />
-          <strong>Operator access</strong>
-          <small>{searchedAt ? `Last search ${formatDateTime(searchedAt)}` : archiveRoute}</small>
+          <strong>{loading ? "Refreshing" : isLive ? "Live cache view" : "Paused"}</strong>
+          <small>{searchedAt ? `Updated ${formatDateTime(searchedAt)}` : searchRoute}</small>
         </div>
       </div>
 
-      <form className="archive-search-panel" onSubmit={runSearch}>
-        <div className="field-row field-row-wide">
-          <label htmlFor="archiveQuery">Query</label>
+      <section className="search-workbench" aria-label="Search workbench">
+        <div className="search-command-bar">
+          <Search size={15} aria-hidden="true" />
           <input
-            id="archiveQuery"
+            id="searchQuery"
             type="search"
             value={filters.q}
-            placeholder="Search title, ids, metadata, filenames, schemas, or summaries"
-            onChange={(event) => updateFilter("q", event.target.value)}
+            placeholder="Search chats, tenants, projects, ids, and cached metadata"
+            onChange={(event) => updateQuery(event.target.value)}
           />
+          <button className={isLive ? "search-live-toggle active" : "search-live-toggle"} type="button" onClick={() => setIsLive((current) => !current)} title={isLive ? "Pause live refresh" : "Resume live refresh"}>
+            <span className={`state-dot state-${isLive ? "good" : "warn"}`} />
+            <span>{isLive ? "Live" : "Paused"}</span>
+          </button>
+          <button className="icon-label-button" type="button" onClick={loadCatalog} disabled={loading} title="Refresh cached conversations">
+            <RefreshCcw size={14} aria-hidden="true" />
+            <span>{loading ? "Refreshing" : "Refresh"}</span>
+          </button>
+          <button className="icon-button" type="button" onClick={clearFacets} title="Clear filters" aria-label="Clear search filters">
+            <MoreHorizontal size={15} aria-hidden="true" />
+          </button>
         </div>
-        <div className="field-row">
-          <label htmlFor="archiveKind">Kind</label>
-          <select id="archiveKind" value={filters.kind} onChange={(event) => updateFilter("kind", event.target.value)}>
-            {ARCHIVE_KINDS.map((kind) => (
-              <option key={kind} value={kind}>{kind}</option>
-            ))}
-          </select>
-        </div>
-        <div className="field-row">
-          <label htmlFor="archiveProvider">Provider</label>
-          <input
-            id="archiveProvider"
-            value={filters.provider}
-            placeholder="chatgpt, gemini, grok"
-            onChange={(event) => updateFilter("provider", event.target.value)}
-          />
-        </div>
-        <div className="field-row">
-          <label htmlFor="archiveStatus">Status</label>
-          <input
-            id="archiveStatus"
-            value={filters.status}
-            placeholder="succeeded, failed, pass"
-            onChange={(event) => updateFilter("status", event.target.value)}
-          />
-        </div>
-        <div className="field-row">
-          <label htmlFor="archiveLimit">Limit</label>
-          <input
-            id="archiveLimit"
-            type="number"
-            min="1"
-            max="100"
-            value={filters.limit}
-            onChange={(event) => updateFilter("limit", event.target.value)}
-          />
-        </div>
-        <button className="primary-action" type="submit" disabled={loading} title="Search archive" aria-label="Search archive">
-          <Search size={16} aria-hidden="true" />
-          <span>{loading ? "Searching" : "Search"}</span>
-        </button>
-      </form>
 
-      {error ? <div className="health-error">Archive search failed: {error}</div> : null}
-
-      <section className="archive-results" aria-label="Archive search results">
-        <div className="section-heading">
-          <h2>Results</h2>
-          <span>{result ? `${formatNumber(result.metrics?.total)} matched / ${formatNumber(result.items?.length)} shown` : "No search yet"}</span>
-        </div>
-        {result ? (
-          <div className="archive-metrics">
-            {Object.entries(result.metrics?.byKind ?? {}).map(([kind, count]) => (
-              <span key={kind}>{kind}: {formatNumber(count)}</span>
+        <div className="search-facet-row" aria-label="Search facets">
+          <div className="facet-group" role="tablist" aria-label="Kind">
+            {SEARCH_KIND_FACETS.map((facet) => (
+              <button
+                key={facet.id}
+                type="button"
+                role="tab"
+                aria-selected={filters.kind === facet.id}
+                className={filters.kind === facet.id ? "filter-chip active" : "filter-chip"}
+                onClick={() => updateKind(facet.id)}
+              >
+                <span>{facet.label}</span>
+              </button>
             ))}
           </div>
-        ) : null}
-        <div className="archive-result-list">
-          {(result?.items ?? []).map((item) => {
-            const selected = selectedArchiveItem?.id === item.id;
-            const title = compactText(item.title ?? item.fileName ?? item.id);
-            return (
-              <article className={selected ? "archive-result is-selected" : "archive-result"} key={item.id}>
-                <div className="archive-result-topline">
-                  <span>
-                    <span className={`status-pill status-${statusTone(item.status ?? item.kind)}`}>{item.kind}</span>
-                    {item.status ? <span className={`status-pill status-${statusTone(item.status)}`}>{item.status}</span> : null}
-                  </span>
-                  <button
-                    type="button"
-                    className="inspect-action"
-                    aria-label={`Inspect ${item.kind ?? "archive item"} ${item.id}`}
-                    aria-pressed={selected}
-                    title="Inspect result"
-                    onClick={() => onSelectedArchiveItemChange(item)}
-                  >
-                    <Database size={14} aria-hidden="true" />
-                    <span>{selected ? "Selected" : "Inspect"}</span>
-                  </button>
-                </div>
-                <strong>{title}</strong>
-                <p>{item.id}</p>
-                <dl>
-                  <div><dt>Provider</dt><dd>{item.provider ? <ProviderIcon provider={item.provider} /> : "none"}</dd></div>
-                  <div><dt>Runtime</dt><dd>{item.runtimeProfile ?? "none"}</dd></div>
-                  <div><dt>Agent</dt><dd>{item.agentId ?? "none"}</dd></div>
-                  <div><dt>Updated</dt><dd>{formatDateTime(item.updatedAt)}</dd></div>
-                </dl>
-                <div className="archive-links">
-                  {item.links?.self ? <a href={item.links.self}>Detail</a> : null}
-                  {archiveItemAssetRoute(item) ? <a href={archiveItemAssetRoute(item)}>Asset</a> : null}
-                  {item.providerConversationUrl ? <a href={item.providerConversationUrl} target="_blank" rel="noreferrer">Provider</a> : null}
-                </div>
-              </article>
-            );
-          })}
-          {result && !(result.items ?? []).length ? <p className="empty-state">No archive items matched the current filters.</p> : null}
-          {!result ? <p className="empty-state">Run a search to inspect cached archive items.</p> : null}
+          <div className="facet-group" aria-label="Providers">
+            {facets.providers.map(([provider, count]) => (
+              <button
+                key={provider}
+                type="button"
+                className={filters.providers.has(provider) ? "filter-chip active provider-filter-chip" : "filter-chip provider-filter-chip"}
+                onClick={() => toggleSetFacet("providers", provider)}
+              >
+                <ProviderIcon provider={provider} embedded />
+                <b>{formatNumber(count)}</b>
+              </button>
+            ))}
+          </div>
+          <div className="facet-group compact-facets" aria-label="Status">
+            {facets.statuses.slice(0, 6).map(([status, count]) => (
+              <button
+                key={status}
+                type="button"
+                className={filters.statuses.has(status) ? "filter-chip active" : "filter-chip"}
+                onClick={() => toggleSetFacet("statuses", status)}
+              >
+                <span>{statusLabel(status)}</span>
+                <b>{formatNumber(count)}</b>
+              </button>
+            ))}
+          </div>
         </div>
       </section>
+
+      {error ? <div className="health-error">Search catalog load failed: {error}</div> : null}
+
+      <section className="search-table-shell" aria-label="All tenant search results">
+        <div className="search-table-summary">
+          <strong>{formatNumber(filteredRows.length)} rows</strong>
+          <span>{formatNumber(allRows.length)} cached conversations / newest first / {formatNumber(visibleRows.length)} rendered</span>
+        </div>
+        <div className="search-table-scroll" onScroll={(event) => {
+          const element = event.currentTarget;
+          if (element.scrollTop + element.clientHeight >= element.scrollHeight - 260 && visibleCount < filteredRows.length) {
+            setVisibleCount((current) => Math.min(current + SEARCH_PAGE_SIZE, filteredRows.length));
+          }
+        }}>
+          <div className="search-table-grid search-table-head" style={{ gridTemplateColumns: gridTemplateColumns() }}>
+            {SEARCH_TABLE_COLUMNS.map((column) => (
+              <button
+                key={column.id}
+                type="button"
+                className={tablePrefs.sort.column === column.id ? "search-th active" : "search-th"}
+                onClick={() => setSort(column.id)}
+                title={column.sortable ? `Sort by ${column.label}` : column.label}
+              >
+                <span>{column.label}</span>
+                {column.sortable && tablePrefs.sort.column === column.id ? (
+                  tablePrefs.sort.direction === "desc" ? <ArrowDown size={12} aria-hidden="true" /> : <ArrowUp size={12} aria-hidden="true" />
+                ) : null}
+                <i
+                  aria-hidden="true"
+                  onPointerDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    beginColumnResize(column.id, event);
+                  }}
+                />
+              </button>
+            ))}
+          </div>
+          <div className="search-table-body">
+            {visibleRows.map((row) => {
+              const selected = selectedRow?.id === row.id;
+              return (
+                <button
+                  key={row.id}
+                  type="button"
+                  className={selected ? "search-table-grid search-row is-selected" : "search-table-grid search-row"}
+                  style={{ gridTemplateColumns: gridTemplateColumns() }}
+                  aria-pressed={selected}
+                  onClick={() => openRow(row)}
+                >
+                  <span>{formatDateTime(row.sortTime)}</span>
+                  <span><ProviderIcon provider={row.provider} /></span>
+                  <span className="two-line-cell"><b>{row.boundIdentityKey}</b><small>{row.runtimeProfileId}</small></span>
+                  <span>{row.project}</span>
+                  <span className="title-cell"><b>{row.title}</b>{row.summary ? <small>{compactText(row.summary, 120)}</small> : null}</span>
+                  <span><span className="status-pill status-neutral">{row.kind}</span></span>
+                  <span><span className={`status-pill status-${statusTone(row.status)}`}>{statusLabel(row.status)}</span></span>
+                  <span>{formatNumber(row.fileCount)} files / {formatNumber(row.artifactCount)} art</span>
+                  <span className="mono-cell">{row.itemId}</span>
+                  <span>{formatDateTime(row.updatedAt)}</span>
+                </button>
+              );
+            })}
+            {!loading && !visibleRows.length ? <p className="empty-state">No cached conversations match the current facets.</p> : null}
+          </div>
+        </div>
+      </section>
+
+      {selectedArchiveLike ? (
+        <section className="archive-results archive-compat-panel" aria-label="Archive compatibility result">
+          <div className="section-heading">
+            <h2>Selected Archive Item</h2>
+            <span>Opened from archiveItem URL compatibility state</span>
+          </div>
+          <div className="archive-result-list">
+            <article className="archive-result is-selected">
+              <div className="archive-result-topline">
+                <span>
+                  <span className="status-pill status-neutral">{selectedArchiveItem.kind ?? "archive"}</span>
+                  {selectedArchiveItem.status ? <span className={`status-pill status-${statusTone(selectedArchiveItem.status)}`}>{selectedArchiveItem.status}</span> : null}
+                </span>
+                <button
+                    type="button"
+                    className="inspect-action"
+                    aria-label={`Inspect archive item ${selectedArchiveItem.id}`}
+                    aria-pressed="true"
+                    title="Inspect archive item"
+                    onClick={() => onSelectedArchiveItemChange(selectedArchiveItem)}
+                  >
+                    <Database size={14} aria-hidden="true" />
+                    <span>Selected</span>
+                </button>
+              </div>
+              <strong>{selectedArchiveItem.title ?? selectedArchiveItem.fileName ?? selectedArchiveItem.id}</strong>
+              <p>{selectedArchiveItem.id}</p>
+            </article>
+          </div>
+        </section>
+      ) : null}
     </main>
   );
 }
@@ -1617,6 +2023,9 @@ function MainViewport({
   selectedArchiveItem,
   onSelectedArchiveItemChange,
   onSelectedArchiveDetailChange,
+  selectedSearchRow,
+  onSelectedSearchRowChange,
+  onSelectedSearchDetailChange,
 }) {
   if (activeNav === "chats") {
     return <ConversationChatViewport />;
@@ -1640,6 +2049,9 @@ function MainViewport({
         selectedArchiveItem={selectedArchiveItem}
         onSelectedArchiveItemChange={onSelectedArchiveItemChange}
         onSelectedArchiveDetailChange={onSelectedArchiveDetailChange}
+        selectedSearchRow={selectedSearchRow}
+        onSelectedSearchRowChange={onSelectedSearchRowChange}
+        onSelectedSearchDetailChange={onSelectedSearchDetailChange}
       />
     );
   }
@@ -1898,7 +2310,16 @@ function ArchiveAssetPreview({ item }) {
   );
 }
 
-function RightPane({ activeNav, apiStatus, runStatus, selectedLiveFollowAccount, selectedArchiveItem, selectedArchiveDetail }) {
+function RightPane({
+  activeNav,
+  apiStatus,
+  runStatus,
+  selectedLiveFollowAccount,
+  selectedArchiveItem,
+  selectedArchiveDetail,
+  selectedSearchRow,
+  selectedSearchDetail,
+}) {
   const labels = {
     chats: "Conversation inspector",
     search: "Result inspector",
@@ -1911,6 +2332,13 @@ function RightPane({ activeNav, apiStatus, runStatus, selectedLiveFollowAccount,
   const selectedLiveFollowCounts = selectedLiveFollowAccount?.metadataCounts ?? selectedMirrorStatusEntry?.metadataCounts ?? {};
   const selectedLiveFollowGuard = selectedLiveFollowAccount?.providerGuard ?? selectedMirrorStatusEntry?.providerGuard ?? {};
   const selectedLiveFollowCompletionRoute = liveFollowAccountCompletionRoute(selectedLiveFollowAccount);
+  const inspectedSearchRow = selectedSearchDetail?.result?.item
+    ? {
+        ...selectedSearchRow,
+        raw: selectedSearchDetail.result.item,
+        title: selectedSearchDetail.result.item.title ?? selectedSearchRow?.title,
+      }
+    : selectedSearchRow;
   const inspectedArchiveItem = selectedArchiveDetail?.result?.item ?? selectedArchiveItem;
   const inspectedArchiveLinks = Object.entries({
     ...(inspectedArchiveItem?.links ?? {}),
@@ -1958,6 +2386,19 @@ function RightPane({ activeNav, apiStatus, runStatus, selectedLiveFollowAccount,
         ]
       : activeNav === "search" && selectedArchiveDetails
         ? selectedArchiveDetails
+      : activeNav === "search" && inspectedSearchRow
+        ? [
+            ["Kind", inspectedSearchRow.kind ?? "unknown"],
+            ["Provider", inspectedSearchRow.provider ? <ProviderIcon provider={inspectedSearchRow.provider} /> : "none"],
+            ["Tenant", inspectedSearchRow.boundIdentityKey ?? "unbound"],
+            ["Runtime", inspectedSearchRow.runtimeProfileId ?? "none"],
+            ["Project", inspectedSearchRow.project ?? "none"],
+            ["Status", statusLabel(inspectedSearchRow.status)],
+            ["Messages", inspectedSearchRow.messageCount ?? "not reported"],
+            ["Files", `${formatNumber(inspectedSearchRow.fileCount ?? 0)} files / ${formatNumber(inspectedSearchRow.artifactCount ?? 0)} artifacts`],
+            ["Catalog", { kind: "route", value: inspectedSearchRow.catalogItemRoute, label: "Catalog Item" }],
+            ["Updated", formatDateTime(inspectedSearchRow.updatedAt)],
+          ]
       : activeNav === "search" && status
         ? [
             ["Source", { kind: "route", value: status.routes?.runArchive ?? "/v1/archive", label: "Archive" }],
@@ -2021,6 +2462,27 @@ function RightPane({ activeNav, apiStatus, runStatus, selectedLiveFollowAccount,
         }
       : activeNav === "search" && inspectedArchiveItem
         ? selectedArchiveSummary(inspectedArchiveItem)
+      : activeNav === "search" && inspectedSearchRow
+        ? {
+            id: inspectedSearchRow.id,
+            source: inspectedSearchRow.source,
+            kind: inspectedSearchRow.kind,
+            title: inspectedSearchRow.title,
+            provider: inspectedSearchRow.provider,
+            tenant: inspectedSearchRow.boundIdentityKey,
+            runtimeProfileId: inspectedSearchRow.runtimeProfileId,
+            status: inspectedSearchRow.status,
+            counts: {
+              messages: inspectedSearchRow.messageCount ?? null,
+              files: inspectedSearchRow.fileCount ?? 0,
+              artifacts: inspectedSearchRow.artifactCount ?? 0,
+            },
+            itemId: inspectedSearchRow.itemId,
+            routes: {
+              catalogItem: inspectedSearchRow.catalogItemRoute,
+              provider: inspectedSearchRow.url ?? null,
+            },
+          }
       : activeNav === "search" && status
         ? {
             route: status.routes?.runArchive,
@@ -2070,6 +2532,21 @@ function RightPane({ activeNav, apiStatus, runStatus, selectedLiveFollowAccount,
           </span>
         </div>
       ) : null}
+      {activeNav === "search" && selectedSearchRow ? (
+        <div className={`inspector-status inspector-status-${selectedSearchDetail?.error ? "bad" : selectedSearchDetail?.loading ? "warn" : "good"}`}>
+          <span className={`state-dot state-${selectedSearchDetail?.error ? "bad" : selectedSearchDetail?.loading ? "warn" : "good"}`} />
+          <span>
+            <strong>{selectedSearchDetail?.error ? "Catalog detail unavailable" : selectedSearchDetail?.loading ? "Loading catalog detail" : "Catalog row selected"}</strong>
+            <small>{selectedSearchDetail?.error ?? (selectedSearchDetail?.updatedAt ? formatDateTime(selectedSearchDetail.updatedAt) : selectedSearchRow.id)}</small>
+          </span>
+        </div>
+      ) : null}
+      {activeNav === "search" && inspectedSearchRow ? (
+        <div className="inspector-actions" aria-label="Selected search row actions">
+          <RouteChip value={inspectedSearchRow.catalogItemRoute} label="Catalog Item" />
+          {inspectedSearchRow.url ? <RouteChip value={inspectedSearchRow.url} label="Provider" /> : null}
+        </div>
+      ) : null}
       {activeNav === "search" && inspectedArchiveItem ? (
         <div className="inspector-actions" aria-label="Selected archive item actions">
           {inspectedArchiveLinks.map(([key, value]) => (
@@ -2094,6 +2571,8 @@ export default function App() {
   const [selectedLiveFollowAccount, setSelectedLiveFollowAccount] = useState(readLiveFollowAccountFromUrl);
   const [selectedArchiveItem, setSelectedArchiveItem] = useState(readArchiveItemFromUrl);
   const [selectedArchiveDetail, setSelectedArchiveDetail] = useState(emptyArchiveDetailState);
+  const [selectedSearchRow, setSelectedSearchRow] = useState(readSearchRowFromUrl);
+  const [selectedSearchDetail, setSelectedSearchDetail] = useState(null);
   const dragRef = useRef(null);
   const apiStatus = useApiStatus();
   const runStatus = useRunRecoveryStatus();
@@ -2122,11 +2601,12 @@ export default function App() {
     replaceUrlParams({
       nav: "search",
       archiveItem: selectedArchiveItem?.id ? base64UrlEncodeText(selectedArchiveItem.id) : null,
+      row: selectedSearchRow?.id ? base64UrlEncodeText(selectedSearchRow.id) : null,
       provider: null,
       runtime: null,
       runtimeProfile: null,
     });
-  }, [layout.activeNav, selectedArchiveItem?.id]);
+  }, [layout.activeNav, selectedArchiveItem?.id, selectedSearchRow?.id]);
 
   useEffect(() => {
     if (layout.activeNav === "health" || layout.activeNav === "search") return;
@@ -2135,6 +2615,7 @@ export default function App() {
       runtime: null,
       runtimeProfile: null,
       archiveItem: null,
+      row: null,
     });
   }, [layout.activeNav]);
 
@@ -2149,6 +2630,8 @@ export default function App() {
       setSelectedLiveFollowAccount(readLiveFollowAccountFromUrl());
       setSelectedArchiveItem(readArchiveItemFromUrl());
       setSelectedArchiveDetail(emptyArchiveDetailState());
+      setSelectedSearchRow(readSearchRowFromUrl());
+      setSelectedSearchDetail(null);
     }
 
     window.addEventListener("popstate", onPopState);
@@ -2296,6 +2779,9 @@ export default function App() {
           selectedArchiveItem={selectedArchiveItem}
           onSelectedArchiveItemChange={setSelectedArchiveItem}
           onSelectedArchiveDetailChange={setSelectedArchiveDetail}
+          selectedSearchRow={selectedSearchRow}
+          onSelectedSearchRowChange={setSelectedSearchRow}
+          onSelectedSearchDetailChange={setSelectedSearchDetail}
         />
 
         <aside className={layout.rightCollapsed ? "pane right-pane is-collapsed" : "pane right-pane"}>
@@ -2321,6 +2807,8 @@ export default function App() {
               selectedLiveFollowAccount={selectedLiveFollowAccount}
               selectedArchiveItem={selectedArchiveItem}
               selectedArchiveDetail={selectedArchiveDetail}
+              selectedSearchRow={selectedSearchRow}
+              selectedSearchDetail={selectedSearchDetail}
             />
           </div>
         </aside>

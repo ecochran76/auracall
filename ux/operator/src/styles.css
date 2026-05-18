@@ -1007,6 +1007,246 @@ select:focus-visible {
   background: #131922;
 }
 
+.search-workbench {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 7px;
+  border: 1px solid #252c37;
+  border-radius: 8px;
+  background: #131922;
+}
+
+.search-command-bar {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 1fr) auto auto auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.search-command-bar > svg {
+  color: #8491a4;
+  margin-left: 4px;
+}
+
+.search-command-bar input {
+  width: 100%;
+  min-height: 30px;
+  border: 1px solid #323b49;
+  border-radius: 7px;
+  background: #0f141b;
+  color: #eef2f7;
+  padding: 0 10px;
+}
+
+.search-command-bar input:focus {
+  border-color: #5e789a;
+  outline: 0;
+}
+
+.search-live-toggle {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px solid #334052;
+  border-radius: 6px;
+  background: #121722;
+  color: #d7e3f4;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.search-live-toggle.active {
+  border-color: #285d4c;
+  color: #91eec3;
+}
+
+.search-live-toggle .state-dot {
+  width: 8px;
+  height: 8px;
+}
+
+.search-facet-row,
+.facet-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.search-facet-row {
+  flex-wrap: wrap;
+  padding-top: 2px;
+}
+
+.facet-group {
+  flex-wrap: wrap;
+  padding-right: 6px;
+  border-right: 1px solid #252d38;
+}
+
+.facet-group:last-child {
+  border-right: 0;
+}
+
+.provider-filter-chip {
+  color: #dce6f2;
+}
+
+.search-table-shell {
+  min-height: 0;
+  margin-top: 8px;
+  border: 1px solid #252c37;
+  border-radius: 8px;
+  background: #131922;
+  overflow: hidden;
+}
+
+.search-table-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #252d38;
+  color: #9aa6b6;
+  font-size: 12px;
+}
+
+.search-table-summary strong {
+  color: #f3f6fa;
+}
+
+.search-table-scroll {
+  max-height: min(62vh, 720px);
+  overflow: auto;
+}
+
+.search-table-grid {
+  display: grid;
+  min-width: max-content;
+}
+
+.search-table-head {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  border-bottom: 1px solid #2c3542;
+  background: #10161e;
+}
+
+.search-th {
+  position: relative;
+  min-width: 0;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid #252d38;
+  background: transparent;
+  color: #8d99aa;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 760;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.search-th.active {
+  color: #e9f1fa;
+}
+
+.search-th i {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+}
+
+.search-table-body {
+  min-width: max-content;
+}
+
+.search-row {
+  width: 100%;
+  min-height: 38px;
+  align-items: stretch;
+  border: 0;
+  border-bottom: 1px solid #252d38;
+  background: #131922;
+  color: #dce3ed;
+  cursor: pointer;
+  text-align: left;
+}
+
+.search-row:hover,
+.search-row:focus {
+  background: #182131;
+}
+
+.search-row.is-selected {
+  background: #132520;
+  box-shadow: inset 3px 0 0 #5bc29f;
+}
+
+.search-row > span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: 5px 8px;
+  border-right: 1px solid #252d38;
+  color: #dce3ed;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-row > span:last-child,
+.search-th:last-child {
+  border-right: 0;
+}
+
+.two-line-cell,
+.title-cell {
+  display: grid !important;
+  align-content: center;
+  gap: 1px;
+}
+
+.two-line-cell b,
+.title-cell b {
+  min-width: 0;
+  color: #f4f7fb;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.two-line-cell small,
+.title-cell small {
+  min-width: 0;
+  color: #8491a4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mono-cell {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  color: #b8c6d8 !important;
+}
+
+.archive-compat-panel {
+  margin-top: 8px;
+}
+
 .field-row {
   min-width: 0;
   display: grid;

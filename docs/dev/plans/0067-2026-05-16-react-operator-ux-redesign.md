@@ -183,17 +183,20 @@ State ownership:
   counts, local-claim metrics, runner-topology metrics, and bounded run-id
   lists. Authenticated deep run listing/inspection can use same-origin operator
   auth from `/dashboard`; external clients remain bearer-protected.
-- Slice 3 is started in read-only form: the Search page can query
-  `/v1/archive`, fetch item detail, preview/download archive assets, and browse
-  cached conversations through the `Chats` page without browser-entered API
-  keys. Search selection is route-addressable with
-  `?nav=search&archiveItem=<base64url archive item id>` so archive-result
-  handoff links can open directly to the selected item inspector.
-- Search is not yet ergonomically correct. The current search form is a
-  temporary archive proof, not the target workbench. It wastes space on bulky
-  controls, exposes implementation strings as free-text filters, and does not
-  yet provide the all-tenant, live-updating, sortable chat/archive table that
-  operators need.
+- Slice 3 is started in read-only form: the Search page can browse all cached
+  account-mirror conversations from all tenants in a compact, live-updating
+  table, while preserving archive item inspection and compatibility handoff
+  links. Search now uses a compact command bar and known-value facet chips
+  instead of a bulky form with visible limit, provider text, and status text
+  inputs. Search selection is route-addressable with
+  `?nav=search&row=<base64url catalog row id>`, and legacy
+  `?nav=search&archiveItem=<base64url archive item id>` links still open the
+  archive-result inspector.
+- Search is still not complete. The first table slice uses
+  `/v1/account-mirrors/catalog?kind=conversations` client-side and only covers
+  conversation rows. A unified server-side `/v1/search` projection is still
+  needed for lexical/semantic ranking, cursor pages, artifact/upload/run rows,
+  authoritative facet metadata, and row-level search scoring.
 - API-key inspection, issue, delete, and API-service restart controls exist on
   the Health page. These are narrow operator-administration controls; they do
   not launch provider work.
@@ -334,7 +337,7 @@ Implementation roadmap:
      navigation, and accessible grid semantics.
    - Add local column width, order, hidden-column, and sort persistence.
 
-3. Add unified all-tenant chat rows.
+3. Add unified all-tenant chat rows. [first slice complete]
    - Start with account-mirror conversations from all configured live-follow
      accounts.
    - Default to descending provider/update time.

@@ -5142,3 +5142,54 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - implement the compact command/facet bar and the first virtualized
     all-tenant conversation table slice before adding archive/artifact rows.
+
+## Turn 184 | 2026-05-18
+
+- Goal: implement the first dense Search workbench slice from Plan 0067.
+- Change:
+  - replaced the bulky Search form with a compact command bar, live/pause and
+    refresh actions, known-value kind/provider/status facet chips, and a dense
+    scrollable all-tenant conversation table.
+  - removed the visible limit field and provider/status free-text inputs from
+    the operator Search page.
+  - added sortable and resizable Search table columns with local preference
+    persistence.
+  - default Search ordering now uses newest-first conversation time where the
+    catalog exposes a timestamp or where ChatGPT conversation ids contain a
+    plausible timestamp prefix; undated Gemini/Grok rows remain visible but do
+    not outrank dated rows.
+  - added `?nav=search&row=<base64url catalog row id>` route state and right
+    inspector restoration for selected catalog rows, while preserving legacy
+    `archiveItem` compatibility.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `curl -fsS http://auracall.localhost/status | jq ...` returned
+    `ok=true`, `liveFollow=healthy`, and `accounts=10`.
+  - `agent-browser` opened `http://auracall.localhost/dashboard?nav=search`
+    and verified 1,454 cached conversation rows, 80 rendered rows, no visible
+    Limit field, no provider/status text inputs, active Time sorting, and a
+    dated ChatGPT row first.
+  - `agent-browser` selected a Search row and reloaded the direct URL; the row
+    remained selected and the right inspector restored the catalog row.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/search-workbench-table-v5.png`
+  - `/tmp/auracall-operator-ux-dogfood/search-workbench-selected-v2.png`
+  - `/tmp/auracall-operator-ux-dogfood/search-workbench-direct-row-v2.png`
+- External links:
+  - `http://auracall.localhost/dashboard?nav=search`
+  - `https://auracall.ecochran.dyndns.org/dashboard?nav=search`
+  - `http://auracall.localhost/dashboard?nav=search&row=Y2F0YWxvZzpjb252ZXJzYXRpb25zOmNoYXRncHQ6d3NsLWNocm9tZS0zOjZhMGIxZWNmLWI0YTAtODNlYS05ZTkzLWEyNDQzNTU1ODRjNw`
+- Limitations:
+  - table virtualization is still a bounded render window, not true DOM
+    virtualization.
+  - provider/project/status facets are derived from loaded catalog rows.
+  - artifact, upload, run, evidence, and semantic search rows still require a
+    unified server-side Search projection.
+- Next:
+  - add a `/v1/search` projection with cursor pages, normalized facets, and
+    merged conversation/archive/run/artifact rows; then wire the table to that
+    endpoint.
