@@ -2293,7 +2293,8 @@ select:focus-visible {
 }
 
 .icon-label-button,
-.asset-actions a {
+.asset-actions a,
+.asset-actions button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -2308,7 +2309,8 @@ select:focus-visible {
   cursor: pointer;
 }
 
-.icon-label-button:disabled {
+.icon-label-button:disabled,
+.asset-actions button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
@@ -2344,6 +2346,51 @@ select:focus-visible {
 .asset-actions {
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.asset-missing-controls,
+.asset-lookup-result {
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid #2d3745;
+  border-radius: 7px;
+  background: #111822;
+}
+
+.asset-missing-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.asset-missing-copy strong {
+  color: #f0f5fc;
+  font-size: 12px;
+}
+
+.asset-missing-copy span,
+.asset-lookup-result span {
+  color: #a7b3c4;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.asset-control-result {
+  padding: 7px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.asset-control-ok {
+  border: 1px solid #244c3a;
+  background: #102018;
+  color: #bdebd3;
+}
+
+.asset-control-bad {
+  border: 1px solid #54303a;
+  background: #20151a;
+  color: #f2bcc7;
 }
 
 .asset-error {

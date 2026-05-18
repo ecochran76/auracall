@@ -255,11 +255,13 @@ Current State:
     preferences; the right inspector now has a compact archive-aware summary
     card, reuses the asset preview path for Search-selected archive items, and
     adds run/evidence-specific panels for response id, batch id, agent/team,
-    runtime, step/output counts, evidence schema, producer, and linked routes
+    runtime, step/output counts, evidence schema, producer, and linked routes;
+    missing generated artifacts now expose archive backfill, asset lookup, and
+    provider/response handoff routes from the Asset panel
   - remaining Search work: semantic/vector ranking, shared/server-backed view
     presets, deeper run lineage timelines, live evidence-row dogfooding when
-    evidence rows exist in cache, and materialization controls for missing
-    generated artifacts
+    evidence rows exist in cache, and queue-backed provider materialization
+    jobs for missing generated artifacts
   - first slice is read-only shell work; API-backed health, run, archive,
     search, chat, config, agent, and team pages should land incrementally after
     the shell is stable

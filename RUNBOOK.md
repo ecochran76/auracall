@@ -5566,3 +5566,46 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - add materialization controls for missing generated artifacts, or expand the
     run inspector into a step/output timeline.
+
+## Turn 194 | 2026-05-18
+
+- Goal: make missing generated-artifact state actionable from the Search
+  inspector without claiming materialization happened.
+- Change:
+  - the archive Asset panel now shows a missing-local-asset control block when
+    a selected archive item has no readable asset route.
+  - the block explains the missing state, including sandbox artifact references
+    that were not locally cached.
+  - added operator controls for archive index backfill and archive asset lookup
+    using checksum/cache/provider artifact/artifact ids when available.
+  - exposed route chips for provider URI, response, provider conversation, and
+    asset lookup from the missing-asset panel.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `agent-browser` opened `http://auracall.localhost/dashboard?nav=search`,
+    filtered to Artifacts, selected an unmaterialized
+    `first_pass_readout.json` sandbox artifact, and verified the missing-local
+    asset controls rendered.
+  - `agent-browser` clicked Lookup and verified the panel reported `0` matching
+    local assets for the selected sandbox artifact.
+  - `agent-browser` clicked Backfill and verified the panel reported
+    `Archive refreshed: 1,372 indexed items`.
+  - `agent-browser errors` was empty; the console tail only contained an
+    unrelated `JQMIGRATE` log from the shared browser context.
+  - `/status` returned `ok: true` on port `18095`.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/search-missing-asset-controls-v1.png`
+- External links:
+  - `http://auracall.localhost/dashboard?nav=search`
+  - `https://auracall.ecochran.dyndns.org/dashboard?nav=search`
+- Limitations:
+  - this is a diagnostic/retry-control slice. It does not add a provider-backed
+    materialize endpoint because that needs an explicit runtime contract to
+    avoid reopening provider tabs from the dashboard without queue ownership.
+- Next:
+  - design and implement a queue-backed artifact materialization job endpoint
+    that uses the same browser ownership, rate-limit, and identity gates as
+    normal AuraCall work.

@@ -1450,6 +1450,28 @@ function selectedArchiveSummary(item) {
   };
 }
 
+function archiveItemAssetLookupRoute(item) {
+  if (!item) return null;
+  const params = new URLSearchParams();
+  const metadata = item.metadata && typeof item.metadata === "object" ? item.metadata : {};
+  const providerArtifactId = metadata.providerArtifactId ?? metadata.remoteUrl ?? item.uri;
+  if (item.checksumSha256) params.set("checksumSha256", item.checksumSha256);
+  if (item.cacheKey) params.set("cacheKey", item.cacheKey);
+  if (typeof providerArtifactId === "string" && providerArtifactId.trim()) params.set("providerArtifactId", providerArtifactId.trim());
+  if (item.artifactId) params.set("artifactId", item.artifactId);
+  if (!Array.from(params.keys()).length) return null;
+  params.set("limit", "10");
+  return `/v1/archive/assets/lookup?${params.toString()}`;
+}
+
+function assetMissingReason(item) {
+  if (!item) return "No selected archive item.";
+  if (item.fileAvailable === false) return "Archive metadata points at a local path that is not readable.";
+  if (item.uri && String(item.uri).startsWith("sandbox:")) return "Provider exposed a sandbox artifact reference, but AuraCall has no local cached file yet.";
+  if (item.uri) return "Provider artifact URI is recorded, but no cache-owned local file is attached.";
+  return "This archive item has metadata only and no cache-owned local file.";
+}
+
 function compactIdentity(value) {
   if (!value) return "none";
   return String(value).replace(/^service-account:/, "").replace(/\|/g, " | ");
@@ -2893,9 +2915,14 @@ function LeftPane({ activeNav, apiStatus, runStatus }) {
 function ArchiveAssetPreview({ item }) {
   const [asset, setAsset] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lookupLoading, setLookupLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [controlResult, setControlResult] = useState(null);
+  const [lookupResult, setLookupResult] = useState(null);
   const assetRoute = archiveItemAssetRoute(item);
   const canFetch = Boolean(assetRoute);
+  const lookupRoute = archiveItemAssetLookupRoute(item);
 
   useEffect(() => {
     setAsset((current) => {
@@ -2903,7 +2930,11 @@ function ArchiveAssetPreview({ item }) {
       return null;
     });
     setLoading(false);
+    setRefreshing(false);
+    setLookupLoading(false);
     setError(null);
+    setControlResult(null);
+    setLookupResult(null);
   }, [item?.id]);
 
   useEffect(() => () => {
@@ -2947,6 +2978,52 @@ function ArchiveAssetPreview({ item }) {
     }
   }
 
+  async function refreshArchiveIndex() {
+    setRefreshing(true);
+    setError(null);
+    setControlResult(null);
+    try {
+      const response = await fetch("/v1/archive/backfill", {
+        method: "POST",
+        cache: "no-store",
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      setControlResult({
+        tone: "ok",
+        message: `Archive refreshed: ${formatNumber(payload?.index?.itemCount ?? 0)} indexed items`,
+      });
+    } catch (assetError) {
+      setControlResult({
+        tone: "bad",
+        message: assetError.message || "Archive refresh failed",
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function lookupArchiveAsset() {
+    if (!lookupRoute) return;
+    setLookupLoading(true);
+    setError(null);
+    setLookupResult(null);
+    try {
+      const response = await fetch(lookupRoute, {
+        cache: "no-store",
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      setLookupResult(payload);
+    } catch (assetError) {
+      setLookupResult({
+        error: assetError.message || "Archive asset lookup failed",
+      });
+    } finally {
+      setLookupLoading(false);
+    }
+  }
+
   if (!item) return null;
 
   return (
@@ -2974,6 +3051,54 @@ function ArchiveAssetPreview({ item }) {
         <div><dt>Size</dt><dd>{asset ? `${formatNumber(asset.size)} bytes` : "not fetched"}</dd></div>
       </dl>
       {error ? <div className="asset-error">Asset fetch failed: {error}</div> : null}
+      {!canFetch ? (
+        <div className="asset-missing-controls" aria-label="Missing asset controls">
+          <div className="asset-missing-copy">
+            <strong>Missing local asset</strong>
+            <span>{assetMissingReason(item)}</span>
+          </div>
+          <div className="asset-actions">
+            <button type="button" disabled={refreshing} onClick={refreshArchiveIndex}>
+              <RefreshCcw size={13} aria-hidden="true" />
+              <span>{refreshing ? "Refreshing" : "Backfill"}</span>
+            </button>
+            <button type="button" disabled={!lookupRoute || lookupLoading} onClick={lookupArchiveAsset}>
+              <Search size={13} aria-hidden="true" />
+              <span>{lookupLoading ? "Checking" : "Lookup"}</span>
+            </button>
+          </div>
+          <div className="inspector-actions search-kind-actions">
+            {item.uri ? <RouteChip value={item.uri} label="Provider URI" /> : null}
+            {item.links?.response ? <RouteChip value={item.links.response} label="Response" /> : null}
+            {item.providerConversationUrl ? <RouteChip value={item.providerConversationUrl} label="Provider Chat" /> : null}
+            {lookupRoute ? <RouteChip value={lookupRoute} label="Asset Lookup" /> : null}
+          </div>
+        </div>
+      ) : null}
+      {controlResult ? (
+        <div className={`asset-control-result asset-control-${controlResult.tone}`}>
+          {controlResult.message}
+        </div>
+      ) : null}
+      {lookupResult ? (
+        <div className="asset-lookup-result">
+          {lookupResult.error ? (
+            <span>Lookup failed: {lookupResult.error}</span>
+          ) : (
+            <>
+              <span>
+                Lookup found {formatNumber(lookupResult.metrics?.total ?? 0)} item{lookupResult.metrics?.total === 1 ? "" : "s"};
+                {" "}{formatNumber(lookupResult.metrics?.fileAvailable ?? 0)} with local assets.
+              </span>
+              <div className="inspector-actions search-kind-actions">
+                {(lookupResult.items ?? []).slice(0, 4).map((resultItem) => (
+                  <RouteChip key={resultItem.id} value={archiveItemRoute(resultItem)} label={compactText(resultItem.title ?? resultItem.fileName ?? resultItem.id, 28)} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      ) : null}
       {asset ? (
         <div className="asset-actions">
           <a href={asset.objectUrl} target="_blank" rel="noreferrer">Open</a>

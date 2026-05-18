@@ -30358,3 +30358,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     and route fields.
   - `/v1/search?kind=evidence&limit=3` currently returns zero evidence rows, so
     evidence live-row validation remains pending.
+
+## Turn 174 | 2026-05-18
+
+- Goal: make unmaterialized generated artifacts actionable from the Search
+  inspector.
+- Change:
+  - added missing-local-asset controls to the archive Asset panel.
+  - exposed archive backfill and asset lookup actions from selected generated
+    artifact rows.
+  - added route chips for provider URI, response, provider conversation, and
+    asset lookup so operators can hand off exact recovery context.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `agent-browser` selected an unmaterialized
+    `first_pass_readout.json` sandbox artifact, verified missing-asset controls,
+    clicked Lookup, and clicked Backfill.
+  - Lookup reported zero local matches for the selected sandbox artifact;
+    Backfill completed with `1,372` indexed items.

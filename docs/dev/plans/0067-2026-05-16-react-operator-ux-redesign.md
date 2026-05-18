@@ -209,7 +209,9 @@ State ownership:
   reuse the asset preview path. Run/evidence-specific inspector panels now
   surface response id, batch id, agent/team, runtime, step/output counts,
   evidence schema, producer, linked archive item, and route chips before raw
-  JSON.
+  JSON. Missing generated artifacts now show a missing-local-asset control
+  block with archive backfill, asset lookup, provider URI, response, provider
+  conversation, and lookup routes.
 - API-key inspection, issue, delete, and API-service restart controls exist on
   the Health page. These are narrow operator-administration controls; they do
   not launch provider work.
@@ -289,7 +291,7 @@ Workbench rules:
 - Table rows expose quick actions by icon with hover hints: open inspector,
   copy handoff link, open provider URL when available, and download cached
   asset when available. Remaining kind-specific actions should add evidence
-  attachment and run/artifact workflows where allowed.
+  attachment and queue-backed run/artifact workflows where allowed.
 - Column preferences should remain local operator UX state unless and until
   named saved views require server-side sharing.
 - Saved views currently remain local operator UX state. Server-backed sharing
@@ -299,7 +301,9 @@ Workbench rules:
   artifacts, files, run lineage, and evidence before raw JSON. Raw JSON remains
   collapsible. The first artifact/file inspector slice is live, and the first
   run/evidence metadata panel slice is live. Deeper run timelines and a live
-  evidence-row dogfood pass remain open.
+  evidence-row dogfood pass remain open. Missing-asset diagnostic controls are
+  live; provider-backed artifact materialization should land as a queued job
+  endpoint, not as a dashboard-only browser action.
 
 Recommended column set:
 

@@ -16287,3 +16287,9 @@ browser-stage lifecycle observability, not transcript truncation.
   prompt preview, and routes; evidence rows have a matching panel for producer,
   schema, linked archive item, response/batch, summary, bounded data preview,
   and routes when evidence rows exist in the cache.
+- 2026-05-18: Missing generated artifacts should surface actionable archive
+  controls without overstating materialization. The Search asset inspector now
+  renders a missing-local-asset block for metadata-only/sandbox artifacts,
+  exposes archive backfill and asset lookup controls, and keeps provider URI,
+  response, provider conversation, and lookup routes available for operator
+  handoff.
