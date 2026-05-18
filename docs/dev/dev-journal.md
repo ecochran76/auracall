@@ -30581,3 +30581,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `eric.cochran@soylei.com` as Pro. The Chrome/Google browser account
     remained `ecochran76@gmail.com` and was correctly reported as
     informational.
+
+## Turn 183 | 2026-05-18
+
+- Goal: retry the SoyLei Transcripts paths after ChatGPT app identity and
+  browser doctor selector preflight were repaired.
+- Verification:
+  - archive materialization of
+    `generated-artifact:resp_5c93dd88b43b4e60a0c5e5b3a1a747ba:fde70a57-7ebe-4785-92c8-b67cb7f35785:download:sandbox:/mnt/data/first_pass_readout.json`
+    returned `status=materialized`, wrote a local JSON file of `17,411`
+    bytes, and indexed SHA-256
+    `5621f405499f8e8b60487237a70f607419ef2a1e6f9f79927ca161d7d72470ed`.
+  - `/v1/models` and `/v1/config/agents` expose the registry-backed
+    `agent:pro-extended-chatgpt-soylei-transcripts` model with project
+    `Transcripts`, runtime profile `wsl-chrome-3`, and source `registry`.
+  - one-item non-private response batch
+    `batch_81e5e66f2edf4b1ab9a0c59ad72c741e` through
+    `agent:pro-extended-chatgpt-soylei-transcripts` completed `1/1`.
+  - batch diagnostics showed active browser evidence in the Transcripts
+    project route and final terminal source `step-succeeded`.
+  - response `resp_f13c5006488140dbab4b3aef0953b39d` returned exactly
+    `AURACALL_TRANSCRIPTS_PROJECT_BOUND_OK`.
