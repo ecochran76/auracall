@@ -159,6 +159,81 @@ describe('tenant execution limits', () => {
     });
   });
 
+  it('separates same-email ChatGPT tenants when plan and structure differ', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-tenant-qualified-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const config = {
+      profiles: {
+        business: {
+          services: {
+            chatgpt: {
+              identity: {
+                email: 'operator@example.com',
+                accountPlanType: 'team',
+                accountStructure: 'workspace',
+              },
+            },
+          },
+        },
+        personal: {
+          services: {
+            chatgpt: {
+              identity: {
+                email: 'operator@example.com',
+                accountPlanType: 'pro',
+                accountStructure: 'personal',
+              },
+            },
+          },
+        },
+      },
+    };
+    const control = createExecutionRuntimeControl();
+    const responsesService = createExecutionResponsesService({
+      control,
+      drainAfterCreate: false,
+      generateResponseId: (() => {
+        const ids = ['resp_business', 'resp_personal'];
+        return () => ids.shift() ?? 'resp_extra';
+      })(),
+      now: () => new Date('2026-05-18T14:00:00.000Z'),
+    });
+    await createChatgptRun(responsesService, 'resp_business', 'business');
+    await createChatgptRun(responsesService, 'resp_personal', 'personal');
+    await addStartedEvent(control, 'resp_business', '2026-05-18T13:30:00.000Z');
+    await addStartedEvent(control, 'resp_personal', '2026-05-18T13:45:00.000Z');
+    await addActiveLease(control, 'resp_business');
+
+    const summary = await summarizeTenantExecutionLimits({
+      control,
+      config,
+      now: () => new Date('2026-05-18T14:00:00.000Z'),
+    });
+
+    expect(summary.providers.chatgpt.entries).toMatchObject([
+      {
+        tenantKey: 'service-account:chatgpt:operator@example.com|plan=pro|structure=personal',
+        runtimeProfileIds: ['personal'],
+        usage: {
+          activeChats: 0,
+          chatsLastHour: 1,
+          chatsLastDay: 1,
+        },
+      },
+      {
+        tenantKey: 'service-account:chatgpt:operator@example.com|plan=team|structure=workspace',
+        runtimeProfileIds: ['business'],
+        usage: {
+          activeChats: 1,
+          chatsLastHour: 1,
+          chatsLastDay: 1,
+        },
+      },
+    ]);
+  });
+
   it('summarizes ChatGPT tenant limits and runtime usage for status readback', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-tenant-limits-status-'));
     cleanup.push(homeDir);

@@ -587,10 +587,13 @@ describe('runtime service host', () => {
       heartbeatTtlMs: 15_000,
       capabilitySummary: {
         serviceIds: ['chatgpt'],
-        runtimeProfileIds: ['default'],
-        browserProfileIds: [],
-        serviceAccountIds: [],
-        browserCapable: false,
+        runtimeProfileIds: ['default', 'wsl-chrome-4'],
+        browserProfileIds: ['default', 'wsl-chrome-4'],
+        serviceAccountIds: [
+          'service-account:chatgpt:operator@example.com',
+          'service-account:chatgpt:operator@example.com|plan=pro|structure=personal',
+        ],
+        browserCapable: true,
       },
       baseLabel: 'test local runner',
     });
@@ -604,6 +607,13 @@ describe('runtime service host', () => {
     const stored = await runnersControl.readRunner('runner:lifecycle-existing');
     expect(stored?.revision).toBe(2);
     expect(stored?.runner.startedAt).toBe('2026-04-20T08:59:00.000Z');
+    expect(stored?.runner.runtimeProfileIds).toEqual(['default', 'wsl-chrome-4']);
+    expect(stored?.runner.browserProfileIds).toEqual(['default', 'wsl-chrome-4']);
+    expect(stored?.runner.serviceAccountIds).toEqual([
+      'service-account:chatgpt:operator@example.com',
+      'service-account:chatgpt:operator@example.com|plan=pro|structure=personal',
+    ]);
+    expect(stored?.runner.browserCapable).toBe(true);
     expect(stored?.runner.eligibilityNote).toBe('test local runner');
   });
 

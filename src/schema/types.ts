@@ -79,11 +79,13 @@ export const BrowserListConfigSchema = z.object({
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const ServiceIdentitySchema = z.object({
+  id: z.string().optional(),
   name: z.string().optional(),
   handle: z.string().optional(),
   email: z.string().optional(),
   accountId: z.string().optional(),
   accountLevel: z.string().optional(),
+  accountLabel: z.string().optional(),
   accountPlanType: z.string().optional(),
   accountStructure: z.string().optional(),
   organizationId: z.string().optional(),

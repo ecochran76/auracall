@@ -10,8 +10,29 @@ function isRecord(value: unknown): value is MutableRecord {
 
 function normalizeServiceAccountIdentityKey(value: unknown): string | null {
   if (typeof value !== 'string') return null;
-  const normalized = value.trim().replace(/\s+/g, ' ').toLowerCase();
+  const normalized = value.trim().replace(/[|=]/g, ' ').replace(/\s+/g, ' ').toLowerCase();
   return normalized.length > 0 ? normalized : null;
+}
+
+function readIdentityKey(identity: MutableRecord, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = normalizeServiceAccountIdentityKey(identity[key]);
+    if (value) return value;
+  }
+  return null;
+}
+
+function readIdentityQualifiers(identity: MutableRecord): Array<[string, string]> {
+  const qualifiers: Array<[string, unknown]> = [
+    ['account-id', identity.accountId],
+    ['org', identity.organizationId],
+    ['plan', identity.accountPlanType],
+    ['structure', identity.accountStructure],
+  ];
+  return qualifiers.flatMap(([key, value]) => {
+    const normalized = normalizeServiceAccountIdentityKey(value);
+    return normalized ? [[key, normalized] as [string, string]] : [];
+  });
 }
 
 export function createConfiguredServiceAccountId(
@@ -19,11 +40,21 @@ export function createConfiguredServiceAccountId(
   serviceConfig: unknown,
 ): string | null {
   if (!isRecord(serviceConfig) || !isRecord(serviceConfig.identity)) return null;
-  const identityKey =
-    normalizeServiceAccountIdentityKey(serviceConfig.identity.email) ??
-    normalizeServiceAccountIdentityKey(serviceConfig.identity.handle) ??
-    normalizeServiceAccountIdentityKey(serviceConfig.identity.name);
-  return identityKey ? `service-account:${serviceId}:${identityKey}` : null;
+  const identity = serviceConfig.identity;
+  const identityKey = readIdentityKey(identity, ['email', 'handle', 'id', 'name']);
+  const qualifiers = readIdentityQualifiers(identity);
+  if (identityKey) {
+    const suffix = qualifiers.map(([key, value]) => `|${key}=${value}`).join('');
+    return `service-account:${serviceId}:${identityKey}${suffix}`;
+  }
+
+  const accountId = normalizeServiceAccountIdentityKey(identity.accountId);
+  if (!accountId) return null;
+  const suffix = qualifiers
+    .filter(([key]) => key !== 'account-id')
+    .map(([key, value]) => `|${key}=${value}`)
+    .join('');
+  return `service-account:${serviceId}:account-id=${accountId}${suffix}`;
 }
 
 export function resolveConfiguredServiceAccountId(

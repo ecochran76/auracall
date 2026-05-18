@@ -440,7 +440,11 @@ Version policy:
       keepBrowser: false,
       services: {
         chatgpt: {
-          identity: { email: "me@example.com" },
+          identity: {
+            email: "me@example.com",
+            accountPlanType: "team",
+            accountStructure: "workspace"
+          },
           projectId: "g-p-123456789"
         }
       }
@@ -452,7 +456,11 @@ Version policy:
       keepBrowser: false,
       services: {
         chatgpt: {
-          identity: { email: "consult@polymerconsultingroup.com" },
+          identity: {
+            email: "consult@polymerconsultingroup.com",
+            accountPlanType: "pro",
+            accountStructure: "personal"
+          },
           // Optional advanced override. By default Aura-Call derives:
           // ~/.auracall/browser-profiles/wsl-chrome-2/chatgpt
           manualLoginProfileDir: "/Users/me/.auracall/browser-profiles/wsl-chrome-2/chatgpt"

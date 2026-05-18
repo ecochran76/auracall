@@ -16181,6 +16181,18 @@ browser-stage lifecycle observability, not transcript truncation.
   member agents, and create the `dispatch-pool` team only when it is missing.
   Existing dispatch-pool teams return `found` with membership unchanged, and
   existing non-dispatch team ids block before provider/project mutation.
+- 2026-05-18: ChatGPT tenant keys must distinguish same-email accounts when
+  OpenAI exposes them as separate account structures. Configured service-account
+  ids now include `accountId`, `organizationId`, `accountPlanType`, and
+  `accountStructure` qualifiers when present, and identity preflight matches
+  those qualifiers against the live provider account. This keeps
+  Business/workspace and Pro/personal ChatGPT tenants from sharing one
+  concurrency/rate-limit budget just because the login email is the same.
+- 2026-05-18: Local runner re-registration must refresh capability metadata
+  after config changes. Existing runner records now update service ids, AuraCall
+  runtime profile ids, browser profile ids, service-account ids, and
+  browser-capable posture during heartbeat, so restarting `auracall-api.service`
+  after adding a tenant makes the runner eligible for the new runtime profile.
 - 2026-05-18: Browser-backed response batches can eventually succeed after an
   API restart even when callers briefly observe contradictory no-active-lease
   states. The latest transcribe-audio batch completed and materialized all

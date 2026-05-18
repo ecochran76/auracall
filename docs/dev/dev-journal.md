@@ -30021,3 +30021,42 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - transcribe-audio batch status later reported `completed=3` and
     materialized all three readouts.
   - `systemctl --user is-active auracall-api.service` returned `active`.
+
+## Turn 163 | 2026-05-18
+
+- Goal: finish onboarding the `ecochran76@gmail.com` Pro personal ChatGPT
+  tenant without collapsing it into the existing same-email Business tenant.
+- Finding:
+  - `wsl-chrome-4` identity smoke verified the live ChatGPT account as
+    `ecochran76@gmail.com`, Pro, `accountPlanType = pro`, and
+    `accountStructure = personal`.
+  - installed `/status?tenantExecutionLimits=usage` initially grouped
+    `default` and `wsl-chrome-4` under the same
+    `service-account:chatgpt:ecochran76@gmail.com` tenant key.
+- Change:
+  - configured service-account ids now carry account qualifiers when present:
+    `accountId`, `organizationId`, `accountPlanType`, and `accountStructure`.
+  - provider identity preflight now matches those qualified service-account
+    ids against live account id, organization id, plan, and structure evidence.
+  - local runner re-registration now refreshes capability metadata during
+    heartbeat so a restarted API service advertises newly added runtime
+    profiles and service-account ids.
+  - docs now call out same-email ChatGPT Business/workspace versus
+    Pro/personal tenant separation.
+- Verification:
+  - `AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 auracall --profile wsl-chrome-4 profile identity-smoke --target chatgpt --include-negative --no-launch-if-needed --json`
+    passed with the qualified Pro/personal service-account id.
+  - `/status` reports separate ChatGPT tenant entries for
+    `ecochran76@gmail.com|account-id=...|plan=pro|structure=personal` and
+    `ecochran76@gmail.com|plan=team|structure=workspace`, both with the
+    4/120/240 defaults.
+  - the active API runner record now includes `wsl-chrome-4`, browser profile
+    `wsl-chrome-4`, and the qualified Pro/personal service-account id.
+  - `pnpm vitest run tests/config.serviceAccountIdentity.test.ts tests/browser/providerIdentityPreflight.test.ts tests/runtime.tenantExecutionLimits.test.ts tests/runtime.serviceHost.test.ts tests/cli/profileIdentitySmokeCommand.test.ts tests/browser/chatgptService.test.ts --maxWorkers 1`
+    passed.
+  - `pnpm run typecheck` was blocked after the other lane introduced untracked
+    `src/runtime/searchProjectionService.ts`; the errors are in that untracked
+    file's search projection typing, not in this tenant identity slice.
+  - targeted Biome lint exited 0 with existing `noNonNullAssertion` warnings
+    in `tests/runtime.serviceHost.test.ts`.
+  - `git diff --check` passed.

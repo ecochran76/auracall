@@ -77,21 +77,73 @@ function expectedIdentityHasAccountKey(identity: ProviderUserIdentity | null): b
     normalizeIdentityComparable(identity.email) ||
       normalizeIdentityComparable(identity.handle) ||
       normalizeIdentityComparable(identity.id) ||
-      normalizeIdentityComparable(identity.name),
+      normalizeIdentityComparable(identity.name) ||
+      normalizeIdentityComparable(identity.accountId) ||
+      normalizeIdentityComparable(identity.organizationId),
   );
 }
 
-function identityMatchesServiceAccountId(serviceAccountId: string | null, actual: ProviderUserIdentity): boolean | null {
-  if (!serviceAccountId) return null;
-  const expectedKey = normalizeIdentityComparable(serviceAccountId.replace(/^service-account:[^:]+:/i, ''));
-  if (!expectedKey) return null;
+function parseServiceAccountBinding(serviceAccountId: string): {
+  base: string | null;
+  qualifiers: Map<string, string>;
+} | null {
+  const accountKey = serviceAccountId.replace(/^service-account:[^:]+:/i, '');
+  const [rawBase, ...rawQualifiers] = accountKey.split('|');
+  const base = normalizeIdentityComparable(rawBase);
+  const qualifiers = new Map<string, string>();
+  for (const qualifier of rawQualifiers) {
+    const separatorIndex = qualifier.indexOf('=');
+    if (separatorIndex <= 0) continue;
+    const key = normalizeIdentityComparable(qualifier.slice(0, separatorIndex));
+    const value = normalizeIdentityComparable(qualifier.slice(separatorIndex + 1));
+    if (key && value) qualifiers.set(key, value);
+  }
+  return base || qualifiers.size > 0 ? { base, qualifiers } : null;
+}
+
+function serviceAccountBaseMatches(base: string | null, actual: ProviderUserIdentity): boolean {
+  if (!base) return true;
+  const explicitAccountId = base.match(/^account-id=(.+)$/i)?.[1] ?? null;
+  if (explicitAccountId) {
+    return normalizeIdentityComparable(actual.accountId) === normalizeIdentityComparable(explicitAccountId);
+  }
   const actualKeys = [
     actual.email,
     actual.handle,
     actual.id,
     actual.name,
+    actual.accountId,
+    actual.organizationId,
   ].map(normalizeIdentityComparable).filter((value): value is string => Boolean(value));
-  return actualKeys.includes(expectedKey);
+  return actualKeys.includes(base);
+}
+
+function serviceAccountQualifiersMatch(
+  qualifiers: Map<string, string>,
+  actual: ProviderUserIdentity,
+): boolean {
+  for (const [key, expected] of qualifiers) {
+    const actualValue =
+      key === 'account-id'
+        ? actual.accountId
+        : key === 'org'
+          ? actual.organizationId
+          : key === 'plan'
+            ? actual.accountPlanType
+            : key === 'structure'
+              ? actual.accountStructure
+              : null;
+    if (normalizeIdentityComparable(actualValue) !== expected) return false;
+  }
+  return true;
+}
+
+function identityMatchesServiceAccountId(serviceAccountId: string | null, actual: ProviderUserIdentity): boolean | null {
+  if (!serviceAccountId) return null;
+  const binding = parseServiceAccountBinding(serviceAccountId);
+  if (!binding) return null;
+  return serviceAccountBaseMatches(binding.base, actual) &&
+    serviceAccountQualifiersMatch(binding.qualifiers, actual);
 }
 
 function identitiesMatch(expected: ProviderUserIdentity, actual: ProviderUserIdentity): boolean {
@@ -103,6 +155,12 @@ function identitiesMatch(expected: ProviderUserIdentity, actual: ProviderUserIde
   if (expectedId && expectedId !== normalizeIdentityComparable(actual.id)) return false;
   const expectedName = normalizeIdentityComparable(expected.name);
   if (expectedName && expectedName !== normalizeIdentityComparable(actual.name)) return false;
+  const expectedAccountId = normalizeIdentityComparable(expected.accountId);
+  if (expectedAccountId && expectedAccountId !== normalizeIdentityComparable(actual.accountId)) return false;
+  const expectedOrganizationId = normalizeIdentityComparable(expected.organizationId);
+  if (expectedOrganizationId && expectedOrganizationId !== normalizeIdentityComparable(actual.organizationId)) {
+    return false;
+  }
   const expectedAccountLevel = normalizeIdentityComparable(expected.accountLevel);
   if (expectedAccountLevel && expectedAccountLevel !== normalizeIdentityComparable(actual.accountLevel)) return false;
   const expectedAccountPlanType = normalizeIdentityComparable(expected.accountPlanType);
@@ -113,7 +171,14 @@ function identitiesMatch(expected: ProviderUserIdentity, actual: ProviderUserIde
   if (expectedAccountStructure && expectedAccountStructure !== normalizeIdentityComparable(actual.accountStructure)) {
     return false;
   }
-  return Boolean(expectedEmail || expectedHandle || expectedId || expectedName);
+  return Boolean(
+    expectedEmail ||
+      expectedHandle ||
+      expectedId ||
+      expectedName ||
+      expectedAccountId ||
+      expectedOrganizationId,
+  );
 }
 
 export function describeProviderIdentity(identity: ProviderUserIdentity | null | undefined): string | null {
@@ -121,7 +186,8 @@ export function describeProviderIdentity(identity: ProviderUserIdentity | null |
   return normalizeStringOrNull(identity.email) ??
     normalizeStringOrNull(identity.handle) ??
     normalizeStringOrNull(identity.name) ??
-    normalizeStringOrNull(identity.id);
+    normalizeStringOrNull(identity.id) ??
+    normalizeStringOrNull(identity.accountId);
 }
 
 export function checkProviderIdentityPreflight(input: {

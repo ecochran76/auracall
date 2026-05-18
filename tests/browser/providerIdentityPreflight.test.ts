@@ -101,6 +101,64 @@ describe('provider identity preflight', () => {
     });
   });
 
+  test('checks qualified service-account bindings for same-email ChatGPT accounts', () => {
+    expect(checkProviderIdentityPreflight({
+      providerId: 'chatgpt',
+      actualIdentity: {
+        email: 'operator@example.com',
+        accountPlanType: 'pro',
+        accountStructure: 'personal',
+        source: 'auth-session',
+      },
+      expectedIdentity: { email: 'operator@example.com', accountPlanType: 'pro', accountStructure: 'personal' },
+      expectedServiceAccountId: 'service-account:chatgpt:operator@example.com|plan=pro|structure=personal',
+    })).toMatchObject({ ok: true, reason: null });
+
+    expect(checkProviderIdentityPreflight({
+      providerId: 'chatgpt',
+      actualIdentity: {
+        email: 'operator@example.com',
+        accountPlanType: 'team',
+        accountStructure: 'workspace',
+        source: 'auth-session',
+      },
+      expectedIdentity: { email: 'operator@example.com', accountPlanType: 'pro', accountStructure: 'personal' },
+      expectedServiceAccountId: 'service-account:chatgpt:operator@example.com|plan=pro|structure=personal',
+    })).toMatchObject({
+      ok: false,
+      reason: 'chatgpt_account_session_drift',
+    });
+  });
+
+  test('checks account-id service-account bindings when account id is the configured key', () => {
+    expect(checkProviderIdentityPreflight({
+      providerId: 'chatgpt',
+      actualIdentity: {
+        email: 'operator@example.com',
+        accountId: 'acct_personal',
+        accountPlanType: 'pro',
+        source: 'auth-session',
+      },
+      expectedIdentity: { accountId: 'acct_personal', accountPlanType: 'pro' },
+      expectedServiceAccountId: 'service-account:chatgpt:account-id=acct_personal|plan=pro',
+    })).toMatchObject({ ok: true, reason: null });
+
+    expect(checkProviderIdentityPreflight({
+      providerId: 'chatgpt',
+      actualIdentity: {
+        email: 'operator@example.com',
+        accountId: 'acct_workspace',
+        accountPlanType: 'team',
+        source: 'auth-session',
+      },
+      expectedIdentity: { accountId: 'acct_personal', accountPlanType: 'pro' },
+      expectedServiceAccountId: 'service-account:chatgpt:account-id=acct_personal|plan=pro',
+    })).toMatchObject({
+      ok: false,
+      reason: 'chatgpt_account_session_drift',
+    });
+  });
+
   test('does not accept capability fields as account identity', () => {
     expect(checkProviderIdentityPreflight({
       providerId: 'chatgpt',

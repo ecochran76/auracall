@@ -601,6 +601,11 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
             runnerId,
             heartbeatAt,
             expiresAt,
+            serviceIds: options.capabilitySummary.serviceIds,
+            runtimeProfileIds: options.capabilitySummary.runtimeProfileIds,
+            browserProfileIds: options.capabilitySummary.browserProfileIds,
+            serviceAccountIds: options.capabilitySummary.serviceAccountIds,
+            browserCapable: options.capabilitySummary.browserCapable,
             eligibilityNote,
           })
         : await runnersControl.registerRunner({
@@ -629,6 +634,11 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         runnerId,
         heartbeatAt,
         expiresAt,
+        serviceIds: options.capabilitySummary.serviceIds,
+        runtimeProfileIds: options.capabilitySummary.runtimeProfileIds,
+        browserProfileIds: options.capabilitySummary.browserProfileIds,
+        serviceAccountIds: options.capabilitySummary.serviceAccountIds,
+        browserCapable: options.capabilitySummary.browserCapable,
         eligibilityNote: createLocalRunnerEligibilityNote({
           phase: 'heartbeat',
           baseLabel: options.baseLabel ?? 'service host local runner',

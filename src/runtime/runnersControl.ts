@@ -16,6 +16,11 @@ export interface HeartbeatExecutionRunnerInput {
   runnerId: string;
   heartbeatAt: string;
   expiresAt: string;
+  serviceIds?: ExecutionRunnerRecord['serviceIds'];
+  runtimeProfileIds?: string[];
+  browserProfileIds?: string[];
+  serviceAccountIds?: string[];
+  browserCapable?: boolean;
   eligibilityNote?: string | null;
 }
 
@@ -81,6 +86,11 @@ export function createExecutionRunnerControl(
           startedAt: record.runner.startedAt,
           lastHeartbeatAt: input.heartbeatAt,
           expiresAt: input.expiresAt,
+          serviceIds: input.serviceIds ?? record.runner.serviceIds,
+          runtimeProfileIds: input.runtimeProfileIds ?? record.runner.runtimeProfileIds,
+          browserProfileIds: input.browserProfileIds ?? record.runner.browserProfileIds,
+          serviceAccountIds: input.serviceAccountIds ?? record.runner.serviceAccountIds,
+          browserCapable: input.browserCapable ?? record.runner.browserCapable,
           eligibilityNote: input.eligibilityNote ?? record.runner.eligibilityNote,
         });
         return { runner: nextRunner };

@@ -178,6 +178,12 @@ ChatGPT tenant budgets from `GET /status` under `tenantExecutionLimits`; add
 `?tenantExecutionLimits=usage` when current lease/event-derived usage counters
 are needed.
 
+When one ChatGPT email maps to multiple OpenAI accounts, configure account
+qualifiers on the runtime profile identity. AuraCall includes `accountId`,
+`organizationId`, `accountPlanType`, and `accountStructure` in the service
+account key when present, which keeps same-email Business/workspace and
+Pro/personal tenants on separate budgets.
+
 Batch children should normally use the same configured `agent:<agent_id>` model
 as one-shot calls. AuraCall applies the same catalog hydration to every child
 request before enqueueing, so scoped clients can submit ordinary OpenAI-style

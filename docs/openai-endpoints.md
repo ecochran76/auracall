@@ -226,7 +226,11 @@ Current limits:
     response batches and one-shot responses. The default tenant budget is
     `maxConcurrentChats = 4`, `maxChatsPerHour = 120`, and
     `maxChatsPerDay = 240`; tenant identity is the configured ChatGPT service
-    account when present, then the AuraCall runtime profile fallback. Configure
+    account when present, then the AuraCall runtime profile fallback.
+    Configured ChatGPT identities that share an email can still become separate
+    tenants when `accountId`, `organizationId`, `accountPlanType`, or
+    `accountStructure` is present, so a Business/workspace account and a
+    Pro/personal account do not share one budget accidentally. Configure
     narrower budgets under `services.chatgpt.tenantLimits` or
     `profiles.<name>.services.chatgpt.tenantLimits`.
   - `GET /status` exposes the current configured ChatGPT tenant budgets under
