@@ -16330,3 +16330,9 @@ browser-stage lifecycle observability, not transcript truncation.
   challenge, preserving unauthenticated behavior for services that do not
   require auth while making authenticated installed services usable from the
   CLI.
+- 2026-05-18: Browser doctor selector diagnosis must not conflate profile
+  health with a currently inactive composer send control. `sendButton` is now
+  treated as prompt-dependent on every provider surface, including existing
+  conversation routes, while conversation output selectors remain required on
+  conversation pages. This keeps ChatGPT app-identity verification from failing
+  just because the current conversation has no typed prompt ready to send.

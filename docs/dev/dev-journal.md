@@ -30524,3 +30524,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `auracall-api.service` remained active at PID `1331644`.
   - repo root snapshot cleanup left `git status --short` clean before this
     journal update.
+
+## Turn 182 | 2026-05-18
+
+- Goal: keep browser doctor profile checks from failing on inactive composer
+  controls after the SoyLei ChatGPT app identity was manually verified.
+- Change:
+  - changed selector diagnosis so `sendButton` is deferred as a
+    prompt-dependent control on conversation surfaces as well as home/workbench
+    surfaces.
+  - kept assistant bubble, assistant role, and copy controls required on
+    conversation routes so broken read/extraction surfaces still fail.
+- Verification:
+  - `pnpm vitest run tests/inspector/doctor.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - live `/home/ecochran76/.local/bin/auracall --profile wsl-chrome-3 doctor
+    --target chatgpt --json` returned `selectorDiagnosis.report.allPassed =
+    true`, `failedRequiredChecks = []`, and verified ChatGPT app identity
+    `eric.cochran@soylei.com` as Pro. The Chrome/Google browser account
+    remained `ecochran76@gmail.com` and was correctly reported as
+    informational.

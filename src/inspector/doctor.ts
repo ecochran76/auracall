@@ -75,6 +75,12 @@ function classifySelectorRequirement(
   surface: DiagnosisSurface,
   checkName: string,
 ): Pick<SelectorCheckResult, 'requirement' | 'deferredReason'> {
+  if (PROMPT_DEPENDENT_CHECKS.has(checkName)) {
+    return {
+      requirement: 'deferred',
+      deferredReason: 'prompt-dependent-control-not-expected-before-input',
+    };
+  }
   if (surface.kind === 'conversation') {
     return { requirement: 'required' };
   }
@@ -82,12 +88,6 @@ function classifySelectorRequirement(
     return {
       requirement: 'deferred',
       deferredReason: 'conversation-output-not-expected-on-current-surface',
-    };
-  }
-  if (PROMPT_DEPENDENT_CHECKS.has(checkName)) {
-    return {
-      requirement: 'deferred',
-      deferredReason: 'prompt-dependent-control-not-expected-before-input',
     };
   }
   if (surface.kind === 'workbench' && WORKBENCH_DEFERRED_CHECKS.has(checkName)) {

@@ -107,7 +107,7 @@ describe('diagnoseProvider', () => {
     });
   });
 
-  test('keeps assistant selectors required on conversation surfaces', async () => {
+  test('keeps assistant selectors required on conversation surfaces while deferring prompt-dependent send control', async () => {
     const counts = {
       ...countsFor(CHATGPT_PROVIDER.selectors.input.slice(0, 1)),
       ...countsFor(CHATGPT_PROVIDER.selectors.modelButton.slice(0, 1)),
@@ -123,9 +123,14 @@ describe('diagnoseProvider', () => {
     expect(report.surface).toMatchObject({
       kind: 'conversation',
       reason: 'conversation-route',
-      deferredChecks: [],
+      deferredChecks: ['sendButton'],
     });
-    expect(report.failedRequiredChecks).toEqual(['sendButton', 'assistantBubble', 'assistantRole', 'copyButton']);
+    expect(report.failedRequiredChecks).toEqual(['assistantBubble', 'assistantRole', 'copyButton']);
+    expect(report.checks.find((check) => check.name === 'sendButton')).toMatchObject({
+      matched: false,
+      requirement: 'deferred',
+      deferredReason: 'prompt-dependent-control-not-expected-before-input',
+    });
     expect(report.checks.find((check) => check.name === 'assistantBubble')).toMatchObject({
       matched: false,
       requirement: 'required',
