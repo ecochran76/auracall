@@ -30417,3 +30417,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the route is a foreground operator/API recovery request that yields
     live-follow pressure while it runs. Persisted async materialization jobs and
     progress polling remain open work for long-running provider recovery.
+
+## Turn 177 | 2026-05-18
+
+- Goal: keep archive materialization auth/session failures operator-readable.
+- Change:
+  - mapped provider browser auth preflight failures during archive
+    materialization to HTTP 409 `provider_auth_conflict`.
+  - preserved the provider preflight message so account-session drift remains
+    visible to API and CLI callers.
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 --testNamePattern "materializes a run archive item through the API surface|reports provider auth preflight failures as materialization conflicts"`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`

@@ -2591,6 +2591,35 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('reports provider auth preflight failures as materialization conflicts', async () => {
+    const materializeItem = vi.fn(async () => {
+      throw new Error('Chatgpt browser auth preflight failed (chatgpt_account_session_drift); account_session_drift: expected eric.cochran@soylei.com, found ecochran76@gmail.com.');
+    });
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        archiveMaterializationService: { materializeItem },
+      },
+    );
+
+    try {
+      const archiveItemId = 'generated-artifact:resp_1:artifact_1';
+      const encoded = Buffer.from(archiveItemId, 'utf8').toString('base64url');
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/archive/items/b64/${encoded}/materialize`, {
+        method: 'POST',
+      });
+      expect(response.status).toBe(409);
+      expect(await response.json()).toMatchObject({
+        error: {
+          type: 'provider_auth_conflict',
+          message: expect.stringContaining('account_session_drift'),
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('reports unified search rows through the API surface', async () => {
     const search = vi.fn(async () => ({
       object: 'search_results' as const,

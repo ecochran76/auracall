@@ -1581,6 +1581,15 @@ export async function createResponsesHttpServer(
             } satisfies HttpErrorPayload);
             return;
           }
+          if (isProviderAuthPreflightError(error)) {
+            sendJson(res, 409, {
+              error: {
+                message: error instanceof Error ? error.message : 'Provider browser auth preflight failed.',
+                type: 'provider_auth_conflict',
+              },
+            } satisfies HttpErrorPayload);
+            return;
+          }
           throw error;
         } finally {
           endForegroundWork();
@@ -5880,6 +5889,13 @@ function parseRunArchiveItemMaterializeId(pathname: string): string {
     throw new Error('Run archive item id is required.');
   }
   return itemId;
+}
+
+function isProviderAuthPreflightError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('browser auth preflight failed')
+    || message.includes('account_session_drift')
+    || message.includes('expected_identity_missing');
 }
 
 function parseRunArchiveItemId(pathname: string): string {

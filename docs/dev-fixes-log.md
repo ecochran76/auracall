@@ -16305,3 +16305,8 @@ browser-stage lifecycle observability, not transcript truncation.
   path, MIME, checksum, file size, cache key, and asset route back into the run
   archive index. CLI parity is `auracall api archive-materialize --port <port>
   <archive_id>` for terminal-side recovery without parsing raw JSON.
+- 2026-05-18: Archive materialization must report provider browser auth/session
+  drift as an operator conflict, not as a generic server failure. The
+  materialization route now returns HTTP 409 `provider_auth_conflict` for
+  provider auth preflight failures and preserves the preflight message for
+  account-session remediation.
