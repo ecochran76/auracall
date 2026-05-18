@@ -1450,6 +1450,73 @@ function selectedArchiveSummary(item) {
   };
 }
 
+function compactIdentity(value) {
+  if (!value) return "none";
+  return String(value).replace(/^service-account:/, "").replace(/\|/g, " | ");
+}
+
+function routeEntriesFromSearch(row, archiveItem) {
+  const links = {
+    ...(row?.links ?? {}),
+    ...(archiveItem?.links ?? {}),
+    catalogItem: row?.catalogItemRoute,
+    archiveItem: row?.archiveItemRoute ?? archiveItemRoute(archiveItem),
+    asset: row?.assetRoute ?? archiveItemAssetRoute(archiveItem),
+    provider: row?.url ?? archiveItem?.providerConversationUrl,
+  };
+  return Object.entries(links).filter(([, value]) => typeof value === "string" && value.trim());
+}
+
+function SearchInspectorSummary({ row, archiveItem }) {
+  if (!row && !archiveItem) return null;
+  const source = archiveItem ?? row ?? {};
+  const metadata = {
+    ...(row?.raw?.metadata ?? {}),
+    ...(row?.metadata ?? {}),
+    ...(archiveItem?.metadata ?? {}),
+  };
+  const routeEntries = routeEntriesFromSearch(row, archiveItem);
+  const facts = [
+    ["Kind", row?.kind ?? archiveItem?.kind ?? "unknown"],
+    ["Status", statusLabel(row?.status ?? archiveItem?.status)],
+    ["Provider", source.provider ? <ProviderIcon provider={source.provider} /> : "none"],
+    ["Runtime", row?.runtimeProfileId ?? archiveItem?.runtimeProfile ?? "none"],
+    ["Tenant", compactIdentity(row?.boundIdentityKey ?? archiveItem?.boundIdentityKey)],
+    ["Project", row?.project ?? archiveItem?.projectId ?? "none"],
+    ["Response", metadata.responseId ?? archiveItem?.responseId ?? "none"],
+    ["Batch", metadata.batchId ?? archiveItem?.batchId ?? "none"],
+    ["Agent", metadata.agentId ?? archiveItem?.agentId ?? "none"],
+    ["File", archiveItem?.fileName ?? source.title ?? "none"],
+    ["MIME", archiveItem?.mimeType ?? "unknown"],
+    ["Asset", archiveItemAssetRoute(archiveItem) || row?.assetRoute ? "cached" : archiveItem?.fileAvailable === false ? "missing" : "not materialized"],
+  ];
+
+  return (
+    <section className="search-inspector-card" aria-label="Selected search result summary">
+      <div className="search-inspector-title">
+        <span className={`status-pill status-${statusTone(row?.status ?? archiveItem?.status)}`}>{statusLabel(row?.status ?? archiveItem?.status)}</span>
+        <strong>{source.title ?? source.fileName ?? source.id ?? "Selected result"}</strong>
+        <small>{row?.summary ?? archiveItem?.uri ?? archiveItem?.localPath ?? row?.itemId ?? archiveItem?.id}</small>
+      </div>
+      <div className="search-inspector-facts">
+        {facts.map(([label, value]) => (
+          <div key={label}>
+            <span>{label}</span>
+            <b><DetailValue detail={value} /></b>
+          </div>
+        ))}
+      </div>
+      {routeEntries.length ? (
+        <div className="inspector-actions" aria-label="Selected search result links">
+          {routeEntries.map(([key, value]) => (
+            <RouteChip key={`${key}:${value}`} value={value} label={linkKeyLabel(key)} />
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function emptyArchiveDetailState() {
   return {
     loading: false,
@@ -2840,6 +2907,8 @@ function RightPane({
   const selectedLiveFollowCounts = selectedLiveFollowAccount?.metadataCounts ?? selectedMirrorStatusEntry?.metadataCounts ?? {};
   const selectedLiveFollowGuard = selectedLiveFollowAccount?.providerGuard ?? selectedMirrorStatusEntry?.providerGuard ?? {};
   const selectedLiveFollowCompletionRoute = liveFollowAccountCompletionRoute(selectedLiveFollowAccount);
+  const fetchedSearchItem = selectedSearchDetail?.result?.item ?? null;
+  const inspectedSearchArchiveItem = fetchedSearchItem?.object === "run_archive_item" ? fetchedSearchItem : null;
   const inspectedSearchRow = selectedSearchDetail?.result?.item
     ? {
         ...selectedSearchRow,
@@ -2847,11 +2916,7 @@ function RightPane({
         title: selectedSearchDetail.result.item.title ?? selectedSearchRow?.title,
       }
     : selectedSearchRow;
-  const inspectedArchiveItem = selectedArchiveDetail?.result?.item ?? selectedArchiveItem;
-  const inspectedArchiveLinks = Object.entries({
-    ...(inspectedArchiveItem?.links ?? {}),
-    ...(archiveItemAssetRoute(inspectedArchiveItem) ? { asset: archiveItemAssetRoute(inspectedArchiveItem) } : {}),
-  }).filter(([, value]) => typeof value === "string" && value.trim());
+  const inspectedArchiveItem = selectedArchiveDetail?.result?.item ?? selectedArchiveItem ?? inspectedSearchArchiveItem;
   const selectedArchiveDetails = inspectedArchiveItem
     ? [
         ["Kind", inspectedArchiveItem.kind ?? "unknown"],
@@ -3051,20 +3116,8 @@ function RightPane({
           </span>
         </div>
       ) : null}
-      {activeNav === "search" && inspectedSearchRow ? (
-        <div className="inspector-actions" aria-label="Selected search row actions">
-          <RouteChip value={inspectedSearchRow.catalogItemRoute} label="Catalog Item" />
-          <RouteChip value={inspectedSearchRow.archiveItemRoute} label="Archive Item" />
-          {inspectedSearchRow.url ? <RouteChip value={inspectedSearchRow.url} label="Provider" /> : null}
-        </div>
-      ) : null}
-      {activeNav === "search" && inspectedArchiveItem ? (
-        <div className="inspector-actions" aria-label="Selected archive item actions">
-          {inspectedArchiveLinks.map(([key, value]) => (
-            <RouteChip key={key} value={value} label={linkKeyLabel(key)} />
-          ))}
-          {inspectedArchiveItem.providerConversationUrl ? <RouteChip value={inspectedArchiveItem.providerConversationUrl} label="Provider" /> : null}
-        </div>
+      {activeNav === "search" && (inspectedSearchRow || inspectedArchiveItem) ? (
+        <SearchInspectorSummary row={inspectedSearchRow} archiveItem={inspectedArchiveItem} />
       ) : null}
       {activeNav === "search" && inspectedArchiveItem ? (
         <ArchiveAssetPreview item={inspectedArchiveItem} />

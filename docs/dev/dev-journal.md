@@ -30297,3 +30297,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/mcp.schema.test.ts tests/mcp.responseBatch.test.ts --maxWorkers 1`
   - `pnpm exec biome lint src/mcp/tools/responseBatch.ts tests/mcp.responseBatch.test.ts --max-diagnostics 80`
   - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+
+## Turn 171 | 2026-05-18
+
+- Goal: make the Search right-pane inspector useful for artifact/run/archive
+  rows before raw JSON.
+- Change:
+  - added a kind-aware Search inspector summary card with title, status,
+    provider, runtime, tenant, project, response, batch, agent, file, MIME, and
+    asset posture.
+  - route chips are now consolidated into that summary card instead of a loose
+    action strip.
+  - Search rows whose fetched detail is a run archive item now feed the archive
+    asset preview path, so generated artifacts and uploads can show file/asset
+    availability from the right pane.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `agent-browser` selected an artifact row on the installed dashboard and
+    verified the summary card, updated MIME/file facts after detail load, and
+    the asset preview panel for an unmaterialized sandbox JSON artifact.

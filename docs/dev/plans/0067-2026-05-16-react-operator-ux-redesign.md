@@ -204,7 +204,9 @@ State ownership:
   non-pinned column order, with Time, Provider, and Tenant kept pinned and
   always visible. The first saved-view slice is local-only: operators can save,
   apply, and delete browser-local Search views that capture query, facets,
-  sort, and table preferences.
+  sort, and table preferences. The right inspector now renders a compact
+  archive-aware summary card before raw JSON and Search-selected archive items
+  reuse the asset preview path.
 - API-key inspection, issue, delete, and API-service restart controls exist on
   the Health page. These are narrow operator-administration controls; they do
   not launch provider work.
@@ -292,7 +294,8 @@ Workbench rules:
   before it becomes an API contract.
 - The right inspector should prioritize human-readable chat transcript,
   artifacts, files, run lineage, and evidence before raw JSON. Raw JSON remains
-  collapsible.
+  collapsible. The first artifact/file inspector slice is live; run lineage and
+  evidence-specific panels remain open.
 
 Recommended column set:
 

@@ -16270,3 +16270,8 @@ browser-stage lifecycle observability, not transcript truncation.
   type child job rows, including `runtimeState` and bounded runtime
   diagnostics, so MCP clients can treat `finalizing` as a first-class display
   state instead of accepting opaque job records.
+- 2026-05-18: Search inspectors should promote archive facts before raw JSON.
+  Search-selected archive items now render a compact fact card and reuse the
+  archive asset preview path, so artifact/upload rows expose file availability
+  and materialization posture without forcing operators to parse the JSON
+  preview.

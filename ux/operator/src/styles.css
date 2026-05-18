@@ -2117,6 +2117,70 @@ select:focus-visible {
   background: #131922;
 }
 
+.search-inspector-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #252c37;
+  border-radius: 8px;
+  background: #131922;
+}
+
+.search-inspector-title {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.search-inspector-title strong {
+  overflow: hidden;
+  color: #f4f7fb;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-inspector-title small {
+  color: #9aa6b6;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.search-inspector-title .status-pill {
+  width: fit-content;
+}
+
+.search-inspector-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.search-inspector-facts div {
+  min-width: 0;
+  padding: 6px;
+  border: 1px solid #222b38;
+  border-radius: 6px;
+  background: #101620;
+}
+
+.search-inspector-facts span {
+  display: block;
+  margin-bottom: 3px;
+  color: #8d99aa;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.search-inspector-facts b {
+  display: block;
+  color: #edf1f7;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .asset-preview {
   display: grid;
   gap: 10px;

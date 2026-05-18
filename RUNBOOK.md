@@ -5491,3 +5491,39 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - improve Search result inspectors for artifacts/runs/evidence, or design the
     server-backed saved-view contract.
+
+## Turn 192 | 2026-05-18
+
+- Goal: improve the Search right-pane inspector for artifact/archive rows.
+- Change:
+  - added a compact Search inspector summary card before raw JSON.
+  - the card surfaces title, status, provider, runtime, tenant, project,
+    response, batch, agent, file, MIME, asset posture, and route chips.
+  - Search rows whose fetched detail is a run archive item now reuse the archive
+    asset preview path, so generated artifacts/uploads can show file and local
+    asset availability in the right pane.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `agent-browser` opened
+    `http://auracall.localhost/dashboard?nav=search`, selected an Artifact
+    row, and verified the summary card updated after detail load from
+    `MIME unknown` to `application/json` for `first_pass_readout.json`.
+  - the same smoke verified the archive Asset panel rendered with
+    `Available: no` for the unmaterialized sandbox artifact and no
+    `Detail unavailable` state.
+  - `agent-browser errors` and console tail were empty after the interaction.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/search-inspector-artifact-v1.png`
+- External links:
+  - `http://auracall.localhost/dashboard?nav=search`
+  - `https://auracall.ecochran.dyndns.org/dashboard?nav=search`
+- Limitations:
+  - run/evidence-specific inspectors remain generic.
+  - missing generated artifacts are reported as not materialized; explicit
+    materialization/retry controls are still open work.
+- Next:
+  - add run/evidence-specific inspector panels or design materialization
+    controls for missing generated artifacts.
