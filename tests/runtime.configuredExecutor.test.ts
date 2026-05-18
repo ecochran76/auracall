@@ -1283,6 +1283,115 @@ describe('configured stored-step executor', () => {
     });
   });
 
+  it('replays recovered ChatGPT steps when only pre-submit project evidence was recorded', async () => {
+    const runBrowserModeImpl = vi.fn(async () => ({
+      answerText: 'AURACALL_REPLAYED_OK',
+      answerMarkdown: 'AURACALL_REPLAYED_OK',
+      tookMs: 700,
+      answerTokens: 8,
+      answerChars: 20,
+      tabUrl: 'https://chatgpt.com/c/replayed-chat',
+      conversationId: 'replayed-chat',
+    }));
+    const resumeBrowserSessionImpl = vi.fn(async () => {
+      throw new Error('pre-submit project evidence should not reattach');
+    });
+
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        runtimeProfiles: {
+          default: {
+            engine: 'browser',
+            defaultService: 'chatgpt',
+            browserProfile: 'default',
+            services: {
+              chatgpt: {
+                manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+              },
+            },
+          },
+        },
+      },
+      { runBrowserModeImpl, resumeBrowserSessionImpl },
+    );
+
+    const result = await executeStoredRunStep?.({
+      record: {
+        runId: 'teamrun_chatgpt_presubmit_1',
+        revision: 3,
+        bundle: {
+          run: {
+            id: 'teamrun_chatgpt_presubmit_1',
+            initialInputs: {},
+          },
+          events: [
+            {
+              id: 'teamrun_chatgpt_presubmit_1:event:runtime',
+              runId: 'teamrun_chatgpt_presubmit_1',
+              type: 'note-added',
+              createdAt: '2026-05-18T15:37:47.498Z',
+              leaseId: 'teamrun_chatgpt_presubmit_1:lease:1',
+              note: 'lease heartbeat from runner:http-responses:127.0.0.1:18095',
+              payload: {
+                runtimeEvidence: {
+                  observedAt: '2026-05-18T15:37:47.498Z',
+                  state: 'browser-runtime-hint',
+                  source: 'browser-service',
+                  evidenceRef: 'https://chatgpt.com/g/g-p-example/project',
+                  confidence: 'medium',
+                  details: {
+                    service: 'chatgpt',
+                    runtimeProfileId: 'default',
+                    browserProfileId: 'default',
+                    agentId: 'chatgpt-recovered-agent',
+                    chromePort: 45012,
+                    chromeHost: '127.0.0.1',
+                    chromeTargetId: 'target-pre-submit',
+                    tabUrl: 'https://chatgpt.com/g/g-p-example/project',
+                    conversationId: null,
+                  },
+                },
+              },
+            },
+            {
+              id: 'teamrun_chatgpt_presubmit_1:event:recovered',
+              runId: 'teamrun_chatgpt_presubmit_1',
+              type: 'note-added',
+              createdAt: '2026-05-18T15:38:10.000Z',
+              stepId: 'teamrun_chatgpt_presubmit_1:step:1',
+              note: 'recovered stranded running step for host replay',
+              payload: {
+                source: 'service-host',
+              },
+            },
+          ],
+        },
+      } as never,
+      step: {
+        id: 'teamrun_chatgpt_presubmit_1:step:1',
+        agentId: 'chatgpt-recovered-agent',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        service: 'chatgpt',
+        input: {
+          prompt: 'Reply exactly with AURACALL_REPLAYED_OK',
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+      } as never,
+    });
+
+    expect(resumeBrowserSessionImpl).not.toHaveBeenCalled();
+    expect(runBrowserModeImpl).toHaveBeenCalledTimes(1);
+    expect(result?.output?.structuredData?.browserRun).toMatchObject({
+      provider: 'chatgpt',
+      service: 'chatgpt',
+      conversationId: 'replayed-chat',
+      tabUrl: 'https://chatgpt.com/c/replayed-chat',
+    });
+  });
+
   it('resolves ChatGPT semantic agent model selectors into browser model and thinking controls', async () => {
     const runBrowserModeImpl = vi.fn(async () => ({
       answerText: 'AURACALL_CHATGPT_SELECTOR_OK',

@@ -4,6 +4,7 @@ import { delay } from './utils.js';
 import { readAssistantSnapshot } from './pageActions.js';
 
 export type TargetInfoLite = {
+  id?: string;
   targetId?: string;
   type?: string;
   url?: string;
@@ -26,7 +27,7 @@ export function pickTarget(
     return undefined;
   }
   if (runtime.chromeTargetId) {
-    const byId = targets.find((t) => t.targetId === runtime.chromeTargetId);
+    const byId = targets.find((t) => readTargetId(t) === runtime.chromeTargetId);
     if (byId) return byId;
   }
   if (runtime.tabUrl) {
@@ -36,6 +37,10 @@ export function pickTarget(
     if (byUrl) return byUrl;
   }
   return targets.find((t) => t.type === 'page') ?? targets[0];
+}
+
+function readTargetId(target: TargetInfoLite): string | undefined {
+  return target.targetId ?? target.id;
 }
 
 export function extractConversationIdFromUrl(url: string): string | null {

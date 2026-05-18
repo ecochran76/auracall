@@ -41,16 +41,7 @@ export function classifyExecutionRunRepairPosture(input: {
         reconciliation,
       };
     case 'active-runner': {
-      if (
-        reconciliation.leaseExpiresAt &&
-        reconciliation.leaseExpiresAt <= input.now &&
-        reconciliation.runner &&
-        activeRunnerNoLongerProtectsExpiredLease({
-          runId: reconciliation.runId,
-          leaseExpiresAt: reconciliation.leaseExpiresAt,
-          runner: reconciliation.runner,
-        })
-      ) {
+      if (reconciliation.leaseExpiresAt && reconciliation.leaseExpiresAt <= input.now) {
         return {
           runId: reconciliation.runId,
           posture: 'locally-reclaimable',
@@ -83,28 +74,6 @@ export function classifyExecutionRunRepairPosture(input: {
       };
     }
   }
-}
-
-function activeRunnerNoLongerProtectsExpiredLease(input: {
-  runId: string;
-  leaseExpiresAt: string;
-  runner: ExecutionRunLeaseRunnerReconciliation['runner'];
-}): boolean {
-  if (!input.runner) return false;
-  if (!input.runner.lastClaimedRunId) {
-    return false;
-  }
-  const lastActivityMs = Date.parse(input.runner.lastActivityAt ?? '');
-  const leaseExpiresAtMs = Date.parse(input.leaseExpiresAt);
-  if (Number.isNaN(lastActivityMs) || Number.isNaN(leaseExpiresAtMs)) {
-    const lastHeartbeatMs = Date.parse(input.runner.lastHeartbeatAt ?? '');
-    return !Number.isNaN(lastHeartbeatMs) && lastHeartbeatMs - leaseExpiresAtMs > 60_000;
-  }
-  if (lastActivityMs > leaseExpiresAtMs) {
-    return true;
-  }
-  const lastHeartbeatMs = Date.parse(input.runner.lastHeartbeatAt ?? '');
-  return !Number.isNaN(lastHeartbeatMs) && lastHeartbeatMs - leaseExpiresAtMs > 60_000;
 }
 
 export async function evaluateStoredExecutionRunRepairClassification(

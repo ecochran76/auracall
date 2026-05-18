@@ -148,6 +148,9 @@ function readLatestRuntimeEvidenceForStep(
     if (!chromeTargetId && !tabUrl && !conversationId) {
       continue;
     }
+    if (service === 'chatgpt' && !isSubmittedChatgptRuntimeEvidence(runtimeEvidence, details)) {
+      continue;
+    }
     const score =
       (conversationId ? 8 : 0) +
       (tabUrl?.includes('/c/') ? 4 : tabUrl ? 2 : 0) +
@@ -160,6 +163,24 @@ function readLatestRuntimeEvidenceForStep(
     }
   }
   return bestEvidence;
+}
+
+function isSubmittedChatgptRuntimeEvidence(evidence: MutableRecord, details: MutableRecord): boolean {
+  const tabUrl = asNonEmptyString(details.tabUrl) ?? asNonEmptyString(evidence.evidenceRef);
+  if (asNonEmptyString(details.conversationId) || extractChatgptConversationIdFromUrl(tabUrl ?? null)) {
+    return true;
+  }
+  const state = asNonEmptyString(evidence.state);
+  const evidenceRef = asNonEmptyString(evidence.evidenceRef);
+  return (
+    evidenceRef === 'chatgpt-prompt-dispatched' ||
+    evidenceRef === 'chatgpt-prompt-submitted' ||
+    evidenceRef === 'chatgpt-passive-dom-probe' ||
+    evidenceRef === 'chatgpt-assistant-snapshot' ||
+    evidenceRef === 'chatgpt-response-finished' ||
+    state === 'response-incoming' ||
+    state === 'response-complete'
+  );
 }
 
 function extractChatgptConversationIdFromUrl(url: string | null): string | null {

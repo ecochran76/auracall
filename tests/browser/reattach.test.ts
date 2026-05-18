@@ -3,7 +3,7 @@ import { resumeBrowserSession, describeReattachFailure, ReattachFailure, __test_
 import { resumeBrowserSessionCore } from '../../src/browser/reattachCore.js';
 import type { BrowserLogger, ChromeClient } from '../../src/browser/types.js';
 
-type FakeTarget = { targetId?: string; type?: string; url?: string };
+type FakeTarget = { id?: string; targetId?: string; type?: string; url?: string };
 type FakeClient = {
   // biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names
   Runtime: {
@@ -133,6 +133,61 @@ describe('resumeBrowserSession', () => {
         'ambiguous: Existing Chrome exposes multiple possible ChatGPT pages for the prior browser profile; refusing to guess.',
       ),
     );
+  });
+
+  test('reattaches by DevTools target id when targetId alias is absent', async () => {
+    const runtime = {
+      chromePort: 51559,
+      chromeHost: '127.0.0.1',
+      chromeTargetId: 'devtools-target-1',
+      tabUrl: 'https://chatgpt.com/g/g-p-demo/c/live',
+    };
+    const listTargets = vi.fn(async () =>
+      [
+        { id: 'devtools-target-1', type: 'page', url: runtime.tabUrl },
+        { id: 'devtools-target-2', type: 'page', url: 'https://chatgpt.com/c/other' },
+      ] satisfies FakeTarget[],
+    ) as unknown as () => Promise<FakeTarget[]>;
+    const evaluate = vi.fn(async ({ expression }: { expression: string }) => {
+      if (expression === 'location.href') {
+        return { result: { value: runtime.tabUrl } };
+      }
+      if (expression === '1+1') {
+        return { result: { value: 2 } };
+      }
+      return { result: { value: null } };
+    });
+    const connect = vi.fn(async () =>
+      ({
+        // biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names
+        Runtime: { enable: vi.fn(), evaluate },
+        // biome-ignore lint/style/useNamingConvention: mirrors DevTools protocol domain names
+        DOM: { enable: vi.fn() },
+        close: vi.fn(async () => {}),
+      } satisfies FakeClient),
+    ) as unknown as (options?: unknown) => Promise<ChromeClient>;
+    const waitForAssistantResponse = vi.fn(async () => ({
+      text: 'Recovered from submitted tab',
+      html: '',
+      meta: { messageId: 'm1', turnId: 'conversation-turn-1' },
+    }));
+    const captureAssistantMarkdown = vi.fn(async () => 'Recovered from submitted tab');
+    const recoverSession = vi.fn(async () => ({
+      answerText: 'fallback',
+      answerMarkdown: 'fallback-md',
+    }));
+    const logger = vi.fn() as BrowserLogger;
+
+    const result = await resumeBrowserSession(
+      runtime,
+      { timeoutMs: 2000 },
+      logger,
+      { listTargets, connect, waitForAssistantResponse, captureAssistantMarkdown, recoverSession },
+    );
+
+    expect(result.answerText).toBe('Recovered from submitted tab');
+    expect(recoverSession).not.toHaveBeenCalled();
+    expect(connect).toHaveBeenCalledWith(expect.objectContaining({ target: 'devtools-target-1' }));
   });
 
   test('classifies same-origin live wrong browser profile before target matching', async () => {
@@ -430,7 +485,7 @@ describe('reattach helpers', () => {
   test('pickTarget prefers chromeTargetId, then tabUrl, then first page', () => {
     const targets = [
       { targetId: 't-1', type: 'page', url: 'https://chatgpt.com/c/first' },
-      { targetId: 't-2', type: 'page', url: 'https://chatgpt.com/c/second' },
+      { id: 't-2', type: 'page', url: 'https://chatgpt.com/c/second' },
       { targetId: 't-3', type: 'page', url: 'about:blank' },
     ];
     expect(pickTarget(targets, { chromeTargetId: 't-2' })).toEqual(targets[1]);

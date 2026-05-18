@@ -2231,7 +2231,7 @@ describe('runtime service host', () => {
     expect(storedRunner?.runner.status).toBe('stale');
   });
 
-  it('does not reclaim an expired lease when the owning runner is still active', async () => {
+  it('reclaims an expired lease when the owning runner is still active', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
     cleanup.push(homeDir);
     setAuracallHomeDirOverrideForTest(homeDir);
@@ -2272,17 +2272,16 @@ describe('runtime service host', () => {
       runId: 'run_active_runner_lease',
     });
 
-    expect(result.expiredLeaseRunIds).toEqual([]);
-    expect(result.executedRunIds).toEqual([]);
+    expect(result.expiredLeaseRunIds).toEqual(['run_active_runner_lease']);
+    expect(result.executedRunIds).toEqual(['run_active_runner_lease']);
     expect(result.drained).toEqual([
       expect.objectContaining({
         runId: 'run_active_runner_lease',
-        result: 'skipped',
-        reason: 'stale-heartbeat',
+        result: 'executed',
       }),
     ]);
     const storedRecord = await control.readRun('run_active_runner_lease');
-    expect(storedRecord?.bundle.leases[0]?.status).toBe('active');
+    expect(storedRecord?.bundle.leases[0]?.status).toBe('expired');
   });
 
   it('keeps real skip reasons for non-executable runs after maxRuns is reached', async () => {

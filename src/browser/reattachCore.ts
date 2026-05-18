@@ -10,6 +10,7 @@ import {
 } from '../../packages/browser-service/src/chromeLifecycle.js';
 
 export type ReattachTargetInfo = {
+  id?: string;
   targetId?: string;
   url?: string;
   type?: string;
@@ -247,7 +248,7 @@ export async function resumeBrowserSessionCore(
     const client: ChromeClient = (await connect({
       host,
       port: runtime.chromePort,
-      target: target?.targetId,
+      target: resolveReattachTargetId(target),
     })) as unknown as ChromeClient;
     const { Page, Runtime, DOM } = client;
     if (Runtime?.enable) {
@@ -503,7 +504,7 @@ function classifyAmbiguousReattachTarget(
   if (!Array.isArray(targets) || targets.length === 0) {
     return null;
   }
-  if (runtime.chromeTargetId && targets.some((target) => target.targetId === runtime.chromeTargetId)) {
+  if (runtime.chromeTargetId && targets.some((target) => resolveReattachTargetId(target) === runtime.chromeTargetId)) {
     return null;
   }
   if (runtime.tabUrl) {
@@ -533,6 +534,10 @@ function classifyAmbiguousReattachTarget(
     chromePort: runtime.chromePort ?? null,
     conversationId: runtime.conversationId ?? null,
   });
+}
+
+function resolveReattachTargetId(target: ReattachTargetInfo | null | undefined): string | undefined {
+  return target?.targetId ?? target?.id;
 }
 
 function urlsRepresentSameReattachTarget(candidateUrl: string, expectedUrl: string): boolean {

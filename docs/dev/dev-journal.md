@@ -30143,3 +30143,33 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the broader `tests/runtime.responsesService.test.ts` suite still has the
     existing `reconstructs the execution request...` browser-backed fixture
     failure where the injected executor returns no result.
+
+## Turn 165 | 2026-05-18
+
+- Goal: close the remaining ChatGPT browser-backed response-batch restart
+  recovery gap before any larger transcript retry batch.
+- Finding:
+  - recovered ChatGPT steps were able to mistake pre-submit project runtime
+    hints for submitted prompt evidence.
+  - exact submitted ChatGPT tabs could still be classified as missing or
+    ambiguous because Chrome DevTools target listings expose `id` rather than
+    `targetId` on the installed path.
+  - after API restart, a stable active runner id could continue protecting an
+    already expired browser-backed run lease even though the browser task had
+    no live executor.
+- Change:
+  - ChatGPT restart recovery now filters reattach evidence to submitted prompt
+    or conversation-bound runtime evidence.
+  - reattach target matching now treats `targetId` and DevTools `id` as the
+    same target identity when selecting and validating the submitted tab.
+  - expired active-runner leases are locally reclaimable based on lease expiry;
+    actual runtime evidence remains the authority for whether a browser-backed
+    run should reattach rather than replay.
+- Verification:
+  - targeted runtime and browser recovery tests passed.
+  - `pnpm run build` passed.
+  - `pnpm run install:user-runtime-service` updated the installed runtime.
+  - installed non-private ChatGPT artifact restart smoke
+    `batch_5a83079d85ce4b17b963573c992654f5` completed after API restart using
+    submitted target `B0850426D4AD41458B0D69234084710D` and terminalized via
+    `step-succeeded`.

@@ -16234,3 +16234,10 @@ browser-stage lifecycle observability, not transcript truncation.
   `cancel-run` can cancel mutable no-active-lease runs. If a terminal state
   already won the race, cancellation reports that terminal outcome instead of
   returning an ambiguous no-active-lease conflict.
+- 2026-05-18: ChatGPT restart recovery must reattach only from submitted prompt
+  evidence, identify Chrome DevTools targets by either `targetId` or `id`, and
+  let expired browser-backed leases be reclaimed even when the API runner id is
+  still active after restart. A non-private installed-service artifact smoke
+  restarted `auracall-api.service`, recovered submitted target
+  `B0850426D4AD41458B0D69234084710D`, and completed
+  `batch_5a83079d85ce4b17b963573c992654f5` via `step-succeeded`.
