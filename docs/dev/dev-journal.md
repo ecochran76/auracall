@@ -30527,6 +30527,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 ## Turn 182 | 2026-05-18
 
+- Goal: continue with a small transcript-only recovery tranche before touching
+  legacy readouts.
+- Change:
+  - materialized the next three missing `first_pass_readout.json` rows on
+    `wsl-chrome-3` with the installed archive CLI.
+- Verification:
+  - all three requests returned `status=materialized`,
+    `fileAvailable=true`, MIME `application/json`, and asset links.
+  - materialization methods were one `download-button` and two
+    `captured-anchor-fetch`.
+  - post-check shows `wsl-chrome-3` generated-artifact missing rows with
+    provider conversation handles reduced to `50`: `29` first-pass readouts,
+    `20` legacy readouts, and `1` legacy download-label row.
+  - `auracall-api.service` remained active at PID `1650782`.
+
+## Turn 182 | 2026-05-18
+
 - Goal: keep browser doctor profile checks from failing on inactive composer
   controls after the SoyLei ChatGPT app identity was manually verified.
 - Change:
