@@ -5420,3 +5420,38 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - continue Search ergonomics with saved views or column visibility/reorder
     controls, or move to richer artifact/run inspectors.
+
+## Turn 190 | 2026-05-18
+
+- Goal: add operator-controlled Search column visibility and ordering.
+- Change:
+  - extended persisted Search table preferences with `hidden` and `order`.
+  - added a compact Columns popover to the Search command bar.
+  - Time, Provider, and Tenant stay pinned and always visible; non-pinned
+    columns can be hidden and moved left/right.
+  - refactored Search row rendering to derive headers and cells from the same
+    active column list so hiding/reordering cannot desynchronize the table.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `agent-browser` opened
+    `http://auracall.localhost/dashboard?nav=search`, reset local Search table
+    preferences, verified 31 virtualized rows and the default header order,
+    opened Columns, hid `IDs`, moved `Status` left, and verified the table
+    rendered 10 cells per row with persisted `hidden:["ids"]` and updated
+    `order`.
+  - `agent-browser errors` and console tail were empty after the interaction.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/search-columns-menu-v1.png`
+- External links:
+  - `http://auracall.localhost/dashboard?nav=search`
+  - `https://auracall.ecochran.dyndns.org/dashboard?nav=search`
+- Limitations:
+  - column preferences are local browser state, not named/shared saved views.
+  - semantic/vector ranking and richer kind-specific artifact/run/evidence
+    workflows remain open.
+- Next:
+  - implement saved Search views or improve the right-side inspectors for
+    artifacts, runs, and evidence.

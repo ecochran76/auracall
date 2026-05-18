@@ -30217,3 +30217,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `?nav=search&row=...` handoff URL.
   - clipboard readback was blocked by browser permission, but the Copy handoff
     link action executed without a frontend exception.
+
+## Turn 167 | 2026-05-18
+
+- Goal: give operators density control over the Search table without adding a
+  bulky configuration page.
+- Change:
+  - extended persisted Search table preferences with hidden columns and
+    non-pinned column order.
+  - added a compact Columns popover in the Search command bar.
+  - Time, Provider, and Tenant remain pinned and always visible; all other
+    columns can be hidden and moved left/right.
+  - refactored row rendering to use the active column list so headers and cells
+    stay aligned when columns are hidden or reordered.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `agent-browser` verified the installed dashboard loaded 31 virtualized rows,
+    opened the Columns menu, hid `IDs`, moved `Status` left, and persisted
+    `hidden:["ids"]` plus the updated order in localStorage.

@@ -1,10 +1,13 @@
 import {
   Activity,
   ArrowDown,
+  ArrowLeft,
+  ArrowRight,
   ArrowUp,
   Bot,
   ChevronDown,
   Check,
+  Columns3,
   Copy,
   Database,
   Download,
@@ -78,6 +81,7 @@ const SEARCH_TABLE_COLUMNS = [
   { id: "ids", label: "IDs", width: 220, minWidth: 160, sortable: false },
   { id: "updatedAt", label: "Updated", width: 156, minWidth: 124, sortable: true },
 ];
+const PINNED_SEARCH_COLUMN_IDS = new Set(SEARCH_TABLE_COLUMNS.filter((column) => column.pinned).map((column) => column.id));
 
 const DEFAULT_LAYOUT = {
   activeNav: "chats",
@@ -451,19 +455,44 @@ function flattenSearchCatalogRows(payload) {
 function readSearchTablePreferences() {
   try {
     const stored = JSON.parse(localStorage.getItem(SEARCH_TABLE_STORAGE_KEY) ?? "{}");
+    const knownColumnIds = new Set(SEARCH_TABLE_COLUMNS.map((column) => column.id));
     return {
       sort: {
         column: stored?.sort?.column ?? "sortTime",
         direction: stored?.sort?.direction === "asc" ? "asc" : "desc",
       },
       widths: stored?.widths && typeof stored.widths === "object" ? stored.widths : {},
+      hidden: Array.isArray(stored?.hidden) ? stored.hidden.filter((id) => knownColumnIds.has(id) && !PINNED_SEARCH_COLUMN_IDS.has(id)) : [],
+      order: Array.isArray(stored?.order) ? stored.order.filter((id) => knownColumnIds.has(id) && !PINNED_SEARCH_COLUMN_IDS.has(id)) : [],
     };
   } catch {
     return {
       sort: { column: "sortTime", direction: "desc" },
       widths: {},
+      hidden: [],
+      order: [],
     };
   }
+}
+
+function orderedSearchColumns(tablePrefs) {
+  const hidden = new Set(tablePrefs.hidden ?? []);
+  const byId = new Map(SEARCH_TABLE_COLUMNS.map((column) => [column.id, column]));
+  const pinnedColumns = SEARCH_TABLE_COLUMNS.filter((column) => column.pinned);
+  const orderedNonPinnedIds = [
+    ...(tablePrefs.order ?? []),
+    ...SEARCH_TABLE_COLUMNS.filter((column) => !column.pinned).map((column) => column.id),
+  ];
+  const seen = new Set();
+  const nonPinnedColumns = [];
+  for (const id of orderedNonPinnedIds) {
+    if (seen.has(id) || hidden.has(id)) continue;
+    const column = byId.get(id);
+    if (!column || column.pinned) continue;
+    seen.add(id);
+    nonPinnedColumns.push(column);
+  }
+  return [...pinnedColumns, ...nonPinnedColumns];
 }
 
 function compareSearchRows(left, right, sort) {
@@ -1400,6 +1429,7 @@ function ArchiveSearchViewport({
   const [error, setError] = useState(null);
   const [searchedAt, setSearchedAt] = useState(null);
   const [isLive, setIsLive] = useState(true);
+  const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false);
   const [copiedRowId, setCopiedRowId] = useState(null);
   const searchRoute = apiStatus.status?.routes?.search ?? "/v1/search";
   const dragColumnRef = useRef(null);
@@ -1461,6 +1491,8 @@ function ArchiveSearchViewport({
   }, [filteredRows, virtualViewport]);
   const visibleRows = virtualWindow.rows;
   const selectedArchiveLike = selectedArchiveItem?.id && !selectedRow;
+  const visibleColumns = orderedSearchColumns(tablePrefs);
+  const hiddenColumnCount = tablePrefs.hidden?.length ?? 0;
 
   useEffect(() => {
     localStorage.setItem(SEARCH_TABLE_STORAGE_KEY, JSON.stringify(tablePrefs));
@@ -1710,6 +1742,42 @@ function ArchiveSearchViewport({
     document.body.classList.add("is-resizing-pane");
   }
 
+  function toggleColumnVisibility(columnId) {
+    if (PINNED_SEARCH_COLUMN_IDS.has(columnId)) return;
+    setTablePrefs((current) => {
+      const hidden = new Set(current.hidden ?? []);
+      if (hidden.has(columnId)) hidden.delete(columnId);
+      else hidden.add(columnId);
+      return { ...current, hidden: [...hidden] };
+    });
+  }
+
+  function moveColumn(columnId, direction) {
+    if (PINNED_SEARCH_COLUMN_IDS.has(columnId)) return;
+    setTablePrefs((current) => {
+      const nonPinnedIds = SEARCH_TABLE_COLUMNS.filter((column) => !column.pinned).map((column) => column.id);
+      const order = [
+        ...(current.order ?? []),
+        ...nonPinnedIds,
+      ].filter((id, index, list) => nonPinnedIds.includes(id) && list.indexOf(id) === index);
+      const index = order.indexOf(columnId);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= order.length) return current;
+      const nextOrder = [...order];
+      [nextOrder[index], nextOrder[nextIndex]] = [nextOrder[nextIndex], nextOrder[index]];
+      return { ...current, order: nextOrder };
+    });
+  }
+
+  function resetColumnPreferences() {
+    setTablePrefs((current) => ({
+      ...current,
+      widths: {},
+      hidden: [],
+      order: [],
+    }));
+  }
+
   useEffect(() => {
     function onPointerMove(event) {
       if (!dragColumnRef.current) return;
@@ -1736,7 +1804,7 @@ function ArchiveSearchViewport({
   }, []);
 
   function gridTemplateColumns() {
-    return SEARCH_TABLE_COLUMNS.map((column) => `${tablePrefs.widths[column.id] ?? column.width}px`).join(" ");
+    return visibleColumns.map((column) => `${tablePrefs.widths[column.id] ?? column.width}px`).join(" ");
   }
 
   function columnWidth(columnId) {
@@ -1759,6 +1827,50 @@ function ArchiveSearchViewport({
       classNames.push("is-pinned", `pinned-${index + 1}`);
     }
     return classNames.join(" ");
+  }
+
+  function cellClassName(column, index, baseClassName = "") {
+    if (column.id === "tenant") return columnClassName(column, index, "two-line-cell");
+    if (column.id === "title") return columnClassName(column, index, "title-cell");
+    if (column.id === "ids") return columnClassName(column, index, "mono-cell");
+    if (column.id === "actions") return columnClassName(column, index, "search-row-actions");
+    return columnClassName(column, index, baseClassName);
+  }
+
+  function renderSearchRowCell(row, column) {
+    if (column.id === "sortTime") return formatDateTime(row.sortTime);
+    if (column.id === "provider") return <ProviderIcon provider={row.provider} />;
+    if (column.id === "tenant") return <><b>{row.boundIdentityKey}</b><small>{row.runtimeProfileId}</small></>;
+    if (column.id === "project") return row.project;
+    if (column.id === "title") return <><b>{row.title}</b>{row.summary ? <small>{compactText(row.summary, 120)}</small> : null}</>;
+    if (column.id === "actions") {
+      return (
+        <>
+          <button type="button" className="row-action-button" title="Inspect row" aria-label={`Inspect ${row.title}`} onClick={(event) => { event.stopPropagation(); openRow(row); }}>
+            <Database size={13} aria-hidden="true" />
+          </button>
+          <button type="button" className="row-action-button" title="Copy handoff link" aria-label={`Copy handoff link for ${row.title}`} onClick={(event) => copySearchRowLink(row, event)}>
+            {copiedRowId === row.id ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
+          </button>
+          {row.url ? (
+            <a className="row-action-button" href={row.url} target="_blank" rel="noreferrer" title="Open provider link" aria-label={`Open provider link for ${row.title}`} onClick={handleSearchRowAction}>
+              <ExternalLink size={13} aria-hidden="true" />
+            </a>
+          ) : null}
+          {row.assetRoute ? (
+            <a className="row-action-button" href={row.assetRoute} download title="Download cached asset" aria-label={`Download cached asset for ${row.title}`} onClick={handleSearchRowAction}>
+              <Download size={13} aria-hidden="true" />
+            </a>
+          ) : null}
+        </>
+      );
+    }
+    if (column.id === "kind") return <span className="status-pill status-neutral">{row.kind}</span>;
+    if (column.id === "status") return <span className={`status-pill status-${statusTone(row.status)}`}>{statusLabel(row.status)}</span>;
+    if (column.id === "files") return `${formatNumber(row.fileCount)} files / ${formatNumber(row.artifactCount)} art`;
+    if (column.id === "ids") return row.itemId;
+    if (column.id === "updatedAt") return formatDateTime(row.updatedAt);
+    return "";
   }
 
   function openRow(row) {
@@ -1860,10 +1972,53 @@ function ArchiveSearchViewport({
             <RefreshCcw size={14} aria-hidden="true" />
             <span>{loading ? "Refreshing" : "Refresh"}</span>
           </button>
+          <button className={isColumnMenuOpen ? "icon-label-button active" : "icon-label-button"} type="button" onClick={() => setIsColumnMenuOpen((current) => !current)} title="Configure visible columns">
+            <Columns3 size={14} aria-hidden="true" />
+            <span>Columns{hiddenColumnCount ? ` -${hiddenColumnCount}` : ""}</span>
+          </button>
           <button className="icon-button" type="button" onClick={clearFacets} title="Clear filters" aria-label="Clear search filters">
             <MoreHorizontal size={15} aria-hidden="true" />
           </button>
         </div>
+
+        {isColumnMenuOpen ? (
+          <div className="search-column-menu" aria-label="Search column controls">
+            <div className="search-column-menu-head">
+              <strong>Columns</strong>
+              <button type="button" className="text-button" onClick={resetColumnPreferences}>Reset</button>
+            </div>
+            <div className="search-column-list">
+              {SEARCH_TABLE_COLUMNS.map((column) => {
+                const hidden = tablePrefs.hidden?.includes(column.id);
+                const pinned = PINNED_SEARCH_COLUMN_IDS.has(column.id);
+                return (
+                  <div key={column.id} className="search-column-row">
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={!hidden}
+                        disabled={pinned}
+                        onChange={() => toggleColumnVisibility(column.id)}
+                      />
+                      <span>{column.label}</span>
+                      {pinned ? <small>Pinned</small> : null}
+                    </label>
+                    {!pinned ? (
+                      <span className="column-move-buttons">
+                        <button type="button" className="row-action-button" title={`Move ${column.label} left`} aria-label={`Move ${column.label} left`} onClick={() => moveColumn(column.id, -1)}>
+                          <ArrowLeft size={12} aria-hidden="true" />
+                        </button>
+                        <button type="button" className="row-action-button" title={`Move ${column.label} right`} aria-label={`Move ${column.label} right`} onClick={() => moveColumn(column.id, 1)}>
+                          <ArrowRight size={12} aria-hidden="true" />
+                        </button>
+                      </span>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
 
         <div className="search-facet-row" aria-label="Search facets">
           <div className="facet-group" role="tablist" aria-label="Kind">
@@ -1933,7 +2088,7 @@ function ArchiveSearchViewport({
           }
         }}>
           <div className="search-table-grid search-table-head" style={{ gridTemplateColumns: gridTemplateColumns() }}>
-            {SEARCH_TABLE_COLUMNS.map((column, index) => (
+            {visibleColumns.map((column, index) => (
               <button
                 key={column.id}
                 type="button"
@@ -1970,34 +2125,11 @@ function ArchiveSearchViewport({
                   aria-selected={selected}
                   onClick={() => openRow(row)}
                 >
-                  <span role="gridcell" className={columnClassName(SEARCH_TABLE_COLUMNS[0], 0, "")}>{formatDateTime(row.sortTime)}</span>
-                  <span role="gridcell" className={columnClassName(SEARCH_TABLE_COLUMNS[1], 1, "")}><ProviderIcon provider={row.provider} /></span>
-                  <span role="gridcell" className={columnClassName(SEARCH_TABLE_COLUMNS[2], 2, "two-line-cell")}><b>{row.boundIdentityKey}</b><small>{row.runtimeProfileId}</small></span>
-                  <span role="gridcell">{row.project}</span>
-                  <span role="gridcell" className="title-cell"><b>{row.title}</b>{row.summary ? <small>{compactText(row.summary, 120)}</small> : null}</span>
-                  <span role="gridcell" className="search-row-actions">
-                    <button type="button" className="row-action-button" title="Inspect row" aria-label={`Inspect ${row.title}`} onClick={(event) => { event.stopPropagation(); openRow(row); }}>
-                      <Database size={13} aria-hidden="true" />
-                    </button>
-                    <button type="button" className="row-action-button" title="Copy handoff link" aria-label={`Copy handoff link for ${row.title}`} onClick={(event) => copySearchRowLink(row, event)}>
-                      {copiedRowId === row.id ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
-                    </button>
-                    {row.url ? (
-                      <a className="row-action-button" href={row.url} target="_blank" rel="noreferrer" title="Open provider link" aria-label={`Open provider link for ${row.title}`} onClick={handleSearchRowAction}>
-                        <ExternalLink size={13} aria-hidden="true" />
-                      </a>
-                    ) : null}
-                    {row.assetRoute ? (
-                      <a className="row-action-button" href={row.assetRoute} download title="Download cached asset" aria-label={`Download cached asset for ${row.title}`} onClick={handleSearchRowAction}>
-                        <Download size={13} aria-hidden="true" />
-                      </a>
-                    ) : null}
-                  </span>
-                  <span role="gridcell"><span className="status-pill status-neutral">{row.kind}</span></span>
-                  <span role="gridcell"><span className={`status-pill status-${statusTone(row.status)}`}>{statusLabel(row.status)}</span></span>
-                  <span role="gridcell">{formatNumber(row.fileCount)} files / {formatNumber(row.artifactCount)} art</span>
-                  <span role="gridcell" className="mono-cell">{row.itemId}</span>
-                  <span role="gridcell">{formatDateTime(row.updatedAt)}</span>
+                  {visibleColumns.map((column, index) => (
+                    <span key={column.id} role="gridcell" className={cellClassName(column, index)}>
+                      {renderSearchRowCell(row, column)}
+                    </span>
+                  ))}
                 </div>
               );
             })}

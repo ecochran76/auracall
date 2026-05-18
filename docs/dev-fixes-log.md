@@ -16251,3 +16251,7 @@ browser-stage lifecycle observability, not transcript truncation.
   grid divs with per-cell roles, which keeps row click/keyboard selection while
   allowing compact inspect, copy-link, provider-open, and cached-asset actions
   inside each row.
+- 2026-05-18: Search column visibility/reorder must drive both headers and row
+  cells from one active column list. The table now derives visible columns from
+  persisted preferences and renders cells by column id, preventing header/body
+  drift when operators hide or move non-pinned columns.

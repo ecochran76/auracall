@@ -200,7 +200,9 @@ State ownership:
   fixed-height virtual window so DOM row count stays bounded. The first row
   action slice is live: visible rows expose compact icon actions for inspect,
   copy handoff link, open provider URL, and download cached asset when the row
-  has those links.
+  has those links. Search table preferences now also persist hidden columns and
+  non-pinned column order, with Time, Provider, and Tenant kept pinned and
+  always visible.
 - API-key inspection, issue, delete, and API-service restart controls exist on
   the Health page. These are narrow operator-administration controls; they do
   not launch provider work.
@@ -281,6 +283,8 @@ Workbench rules:
   copy handoff link, open provider URL when available, and download cached
   asset when available. Remaining kind-specific actions should add evidence
   attachment and run/artifact workflows where allowed.
+- Column preferences should remain local operator UX state unless and until
+  named saved views require server-side sharing.
 - The right inspector should prioritize human-readable chat transcript,
   artifacts, files, run lineage, and evidence before raw JSON. Raw JSON remains
   collapsible.
@@ -369,6 +373,8 @@ Implementation roadmap:
    - Persist operator-owned views such as "failed transcript jobs",
      "SoyLei ChatGPT artifacts", "newest Grok media", and "unmaterialized
      outputs".
+   - Promote the current local hidden-column/order preference model into named
+     presets only when shared saved views are implemented.
    - Add fielded query syntax only after the facet model works.
 
 Search page acceptance criteria:

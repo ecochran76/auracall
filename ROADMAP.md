@@ -248,10 +248,12 @@ Current State:
     node per row; Time, Provider, and Tenant are pinned during horizontal
     scroll; keyboard row navigation updates selected-row handoff URLs; each
     visible row has compact icon actions for inspect, copy handoff link, open
-    provider URL when available, and download cached asset when available
+    provider URL when available, and download cached asset when available;
+    operators can hide and reorder non-pinned columns from a compact Columns
+    popover with preferences persisted locally
   - remaining Search work: semantic/vector ranking, saved views,
-    reorderable/hideable columns, and richer kind-specific actions for
-    artifacts, uploads, runs, and evidence
+    named view presets, and richer kind-specific actions for artifacts,
+    uploads, runs, and evidence
   - first slice is read-only shell work; API-backed health, run, archive,
     search, chat, config, agent, and team pages should land incrementally after
     the shell is stable
