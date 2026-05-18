@@ -30504,3 +30504,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm tsx bin/auracall.ts api archive --port 18095 --kind generated_artifact --provider chatgpt --runtime-profile wsl-chrome-3 --query auracall-target-bound-smoke --limit 2 --json`
   - `pnpm run install:user-runtime`
   - `/home/ecochran76/.local/bin/auracall api archive --port 18095 --kind generated_artifact --provider chatgpt --runtime-profile wsl-chrome-3 --query auracall-target-bound-smoke --limit 2 --json`
+
+## Turn 181 | 2026-05-18
+
+- Goal: run the next controlled artifact-recovery tranche without dispatching
+  new prompts.
+- Change:
+  - materialized the remaining non-readout smoke artifacts for
+    `wsl-chrome-3`: restart-smoke, target-bound-smoke, and
+    project-dispatch-smoke.
+  - materialized three `first_pass_readout.json` rows as a small transcript
+    readout tranche, keeping output limited to archive metadata.
+- Verification:
+  - all six materialization requests returned `status=materialized`,
+    `fileAvailable=true`, and `method=captured-anchor-fetch`.
+  - post-check shows `wsl-chrome-3` generated-artifact missing rows with
+    provider conversation handles reduced to `53`: `32` first-pass readouts,
+    `20` legacy readouts, and `1` legacy download-label row.
+  - `auracall-api.service` remained active at PID `1331644`.
+  - repo root snapshot cleanup left `git status --short` clean before this
+    journal update.
