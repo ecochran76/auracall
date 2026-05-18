@@ -49,6 +49,7 @@ Current endpoints:
 - `PUT /v1/config/teams/{team_id}`
 - `DELETE /v1/config/teams/{team_id}`
 - `POST /v1/projects/ensure`
+- `POST /v1/tenant-pool-teams/ensure`
 - `POST /v1/agent-setup-packages`
 - `POST /v1/agent-setup-handoffs`
 - `POST /v1/responses`
@@ -154,6 +155,22 @@ Current limits:
   - domain-specific setup agents can call this route as a deterministic setup
     step, then hand a scoped execution key and `agent:<agent_id>` model name to
     the downstream client agent
+- `POST /v1/tenant-pool-teams/ensure` is the setup surface for project-bound
+  tenant-pool batch teams:
+  - accepts `teamId`, `service`, `projectName`, optional project/agent/model
+    setup fields, and a non-empty `members[]` list with `agentId`,
+    `runtimeProfile`, optional `service`, and optional per-agent overrides
+  - runs one project ensure per member and binds each member agent to the
+    resolved provider project
+  - creates `teams.<teamId>.type = "dispatch-pool"` with
+    `dispatch.mode = "next_available"` and `projectSync = "none"` only when
+    the team does not already exist
+  - existing dispatch-pool teams return `status = "found"` and keep their
+    membership unchanged; existing non-dispatch teams return
+    `status = "blocked"` before provider/project mutation
+  - returns `object = "auracall_tenant_pool_team_ensure"` with per-member
+    project/agent status, team mutation status, and explicit no-sync warnings
+  - when API auth is enabled, this route requires an unscoped operator key
 - `POST /v1/agent-setup-packages` is the composed privileged setup surface:
   - accepts the project ensure fields plus required `agentId` and
     `clientEnvPath`, and optional key fields such as `keyId`, `apiBaseUrl`,
@@ -187,8 +204,16 @@ Current limits:
     `/v1/responses` body, plus optional `metadata`, caller-supplied `id`, and
     persisted batch limits such as `maxConcurrentRuns` and
     `maxBrowserInteractionsPerMinute`
+  - accepts dispatch-pool team routing with either
+    `{ "dispatch": { "team": "<team_id>" }, "requests": [...] }` or top-level
+    `{ "team": "<team_id>", "requests": [...] }` when
+    `teams.<team_id>.type = "dispatch-pool"`. AuraCall expands every child to
+    the next available member agent before authorization and persistence.
+    Children in a dispatch-pool batch must not pre-pin `auracall.agent` or an
+    `agent:<id>` model.
   - returns `202` with `object = "response_batch_status"`, aggregate counts,
-    and child `responseId` values
+    child `responseId` values, and optional `dispatch` metadata identifying
+    the pool team, projectSync mode, and pool warnings
   - when background drain is enabled, the route schedules the existing
     server-owned drain and returns without waiting for provider execution
   - `GET /v1/response-batches/{batch_id}` reads aggregate status without
@@ -218,6 +243,11 @@ Current limits:
     target-mismatch failure rather than an endlessly renewed lease.
   - the browser dispatcher and provider politeness controls still enforce the
     lower-level CDP/account safety guardrails
+  - dispatch-pool project binding uses `projectSync = "none"` for now. AuraCall
+    can route member agents to their configured projects, but response-batch
+    dispatch does not synchronize project instructions, files, settings, or
+    history between tenant accounts; divergence is surfaced as risk metadata,
+    not treated as an error.
   - deterministic local workflow smoke: `pnpm run smoke:che447-grading-batch`
     verifies the general setup-plus-batch pattern: operator project ensure,
     project-bound agent creation, an agent-scoped API key batch enqueue, two

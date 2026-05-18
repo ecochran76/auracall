@@ -183,6 +183,53 @@ as one-shot calls. AuraCall applies the same catalog hydration to every child
 request before enqueueing, so scoped clients can submit ordinary OpenAI-style
 jobs without duplicating provider routing fields.
 
+Tenant-pool teams are the batch-specific alternative when one logical batch
+should spread across several account-bearing agents. A privileged setup agent
+can call `POST /v1/tenant-pool-teams/ensure` or MCP
+`tenant_pool_team_ensure` with a shared `projectName` and one member entry per
+tenant runtime profile. AuraCall ensures the member projects/agents and creates
+the team only when it does not already exist:
+
+```json
+{
+  "teamId": "chatgpt-pro-pool",
+  "service": "chatgpt",
+  "projectName": "Shared Project",
+  "agentModelSelector": "chatgpt:pro-extended",
+  "members": [
+    { "agentId": "chatgpt-pro-a", "runtimeProfile": "wsl-chrome-1" },
+    { "agentId": "chatgpt-pro-b", "runtimeProfile": "wsl-chrome-2" }
+  ]
+}
+```
+
+Existing dispatch-pool teams return `found` and keep their membership
+unchanged. Existing non-dispatch teams block setup before provider/project
+mutation.
+
+Once the team is configured with `type = "dispatch-pool"`, submit:
+
+```json
+{
+  "dispatch": { "team": "chatgpt-pro-pool" },
+  "requests": [
+    { "model": "gpt-5.1", "input": "Job 1" },
+    { "model": "gpt-5.1", "input": "Job 2" }
+  ]
+}
+```
+
+AuraCall rewrites each child to the next available member agent before
+authorization. Availability is based on persisted runtime evidence for active
+direct-run leases/running steps plus assignments already made in the current
+batch. Batch status and child run metadata include the selected member agent.
+
+For consistent results, keep pool members on equivalent services, models, and
+project configuration. Mixed services/models and project divergence are allowed
+and reported as risk metadata. Project-bound pools currently use
+`projectSync = "none"`; dispatch does not synchronize project instructions,
+files, settings, or history between tenants.
+
 Useful limits:
 
 ```json

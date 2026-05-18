@@ -398,10 +398,26 @@ export const TeamRoleConfigSchema = z.object({
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const TeamDispatchConfigSchema = z.object({
+  mode: z.enum(['next_available']).optional(),
+  projectSync: z.literal('none').optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const TeamProjectConfigSchema = z.object({
+  name: z.string().trim().min(1),
+  createIfMissing: z.boolean().optional(),
+  sync: z.literal('none').optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const TeamConfigSchema = z.object({
+  type: z.enum(['workflow', 'dispatch-pool']).optional(),
   agents: z.array(z.string()).optional(),
   description: z.string().optional(),
   instructions: z.string().optional(),
+  dispatch: TeamDispatchConfigSchema.optional(),
+  project: TeamProjectConfigSchema.optional(),
   roles: z.record(z.string(), TeamRoleConfigSchema).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });

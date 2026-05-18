@@ -74,11 +74,15 @@ describe('mcp server service wiring', () => {
     });
     expect(createResponseBatchService).toHaveBeenCalledWith({
       responsesService,
+      resolveDispatchPool: expect.any(Function),
     });
     expect(services).toEqual({
       resolvedUserConfig: config,
       responsesService,
       responseBatchService,
+      runArchiveService: expect.objectContaining({
+        listItems: expect.any(Function),
+      }),
       mediaGenerationService,
       workbenchCapabilityReporter: workbenchReporter,
       accountMirrorStatusRegistry: expect.objectContaining({
@@ -101,6 +105,9 @@ describe('mcp server service wiring', () => {
         upsertAgent: expect.any(Function),
       }),
       projectEnsureService,
+      tenantPoolTeamEnsureService: expect.objectContaining({
+        ensureTeam: expect.any(Function),
+      }),
       agentSetupPackageService: expect.objectContaining({
         createPackage: expect.any(Function),
       }),

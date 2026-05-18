@@ -96,6 +96,10 @@ import {
   type ResponseBatchService,
 } from '../runtime/responseBatchService.js';
 import {
+  normalizeResponseBatchDispatchRequest,
+  resolveResponseBatchDispatchPool,
+} from '../runtime/responseBatchDispatchPool.js';
+import {
   createTenantExecutionLimitGate,
   summarizeTenantExecutionLimits,
   type TenantExecutionLimitStatusSummary,
@@ -160,6 +164,11 @@ import {
   ProjectEnsureInputSchema,
   type ProjectEnsureService,
 } from '../projects/projectEnsureService.js';
+import {
+  createTenantPoolTeamEnsureService,
+  TenantPoolTeamEnsureInputSchema,
+  type TenantPoolTeamEnsureService,
+} from '../projects/tenantPoolTeamEnsureService.js';
 import { readAuraCallRunStatus } from '../runStatus.js';
 import type { AuraCallRunStatus } from '../runStatus.js';
 import {
@@ -260,6 +269,7 @@ export interface ResponsesHttpServerDeps {
   createProjectEnsureService?: typeof createProjectEnsureService;
   projectEnsureService?: ProjectEnsureService;
   agentSetupPackageService?: AgentSetupPackageService;
+  tenantPoolTeamEnsureService?: TenantPoolTeamEnsureService;
   createResponseBatchService?: typeof createResponseBatchService;
   responseBatchService?: ResponseBatchService;
   runArchiveService?: RunArchiveService;
@@ -636,6 +646,7 @@ interface HttpStatusResponse {
     teamRunsCreate: string;
     teamRunInspection: string;
     projectEnsure: string;
+    tenantPoolTeamEnsure: string;
     agentSetupPackagesCreate: string;
     agentSetupHandoffsCreate: string;
     runtimeRunsRecent: string;
@@ -870,6 +881,12 @@ export async function createResponsesHttpServer(
     projectEnsureService,
     agentTeamConfigService,
   });
+  const tenantPoolTeamEnsureService =
+    deps.tenantPoolTeamEnsureService ??
+    createTenantPoolTeamEnsureService({
+      projectEnsureService,
+      agentTeamConfigService,
+    });
   const resolvedUserConfig = asResolvedUserConfig(configuredRuntimeConfig);
   const accountMirrorPersistence = createAccountMirrorPersistence({
     config: configuredRuntimeConfig,
@@ -2253,6 +2270,28 @@ export async function createResponsesHttpServer(
         }
       }
 
+      if (req.method === 'POST' && url.pathname === '/v1/tenant-pool-teams/ensure') {
+        const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
+        if (operatorAuthError) {
+          sendJson(res, 403, {
+            error: {
+              message: operatorAuthError,
+              type: 'permission_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        const endForegroundWork = beginForegroundAuraCallWork();
+        try {
+          const body = await readRequestBody(req);
+          const payload = TenantPoolTeamEnsureInputSchema.parse(JSON.parse(body || '{}'));
+          sendJson(res, 200, await tenantPoolTeamEnsureService.ensureTeam(payload));
+          return;
+        } finally {
+          endForegroundWork();
+        }
+      }
+
       if (req.method === 'POST' && url.pathname === '/v1/agent-setup-packages') {
         const operatorAuthError = authorizeOperatorConfigAccess(apiAuthContext);
         if (operatorAuthError) {
@@ -2484,15 +2523,41 @@ export async function createResponsesHttpServer(
           const body = await readRequestBody(req);
           const parsedPayload = ResponseBatchCreateRequestSchema.parse(JSON.parse(body || '{}'));
           const catalog = await agentTeamConfigService.effectiveCatalog();
-          const payload = {
-            ...parsedPayload,
-            requests: parsedPayload.requests.map((request) =>
-              hydrateExecutionRequestFromCatalog(
-                createExecutionRequest(mergeExecutionRequestHints(normalizeResponsesApiRequest(request), req.headers)),
-                catalog,
-              ),
+          const { dispatchResolution: _ignoredClientDispatchResolution, ...publicPayload } = parsedPayload;
+          const hydratedRequests = parsedPayload.requests.map((request) =>
+            hydrateExecutionRequestFromCatalog(
+              createExecutionRequest(mergeExecutionRequestHints(normalizeResponsesApiRequest(request), req.headers)),
+              catalog,
             ),
-          };
+          );
+          const dispatchRequest = normalizeResponseBatchDispatchRequest({
+            dispatch: publicPayload.dispatch,
+            team: publicPayload.team,
+          });
+          let dispatchResolution = null;
+          if (dispatchRequest) {
+            try {
+              dispatchResolution = await resolveResponseBatchDispatchPool({
+                dispatch: dispatchRequest,
+                requests: hydratedRequests,
+                catalog,
+                control,
+              });
+            } catch (error) {
+              throw new HttpInvalidRequestError(error instanceof Error ? error.message : String(error));
+            }
+          }
+          const payload = dispatchRequest && dispatchResolution
+            ? {
+                ...publicPayload,
+                dispatch: dispatchRequest,
+                dispatchResolution,
+                requests: dispatchResolution.requests,
+              }
+            : {
+                ...publicPayload,
+                requests: hydratedRequests,
+              };
           for (const request of payload.requests) {
             const authorizationError = authorizeExecutionRequest(apiAuthContext, request, catalog);
             if (authorizationError) {
@@ -2804,6 +2869,12 @@ export async function createResponsesHttpServer(
     (deps.createResponseBatchService ?? createResponseBatchService)({
       responsesService,
       now,
+      resolveDispatchPool: async (input) =>
+        resolveResponseBatchDispatchPool({
+          ...input,
+          catalog: await agentTeamConfigService.effectiveCatalog(),
+          control,
+        }),
     });
 
   if (!deps.executionHost) {
@@ -2963,7 +3034,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   }
   logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
-    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
+    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   if (serverOptions.dashboardUrl) {
@@ -3437,6 +3508,7 @@ function createHttpStatusResponse(input: {
       teamRunInspection:
         '/v1/team-runs/inspect?taskRunSpecId={task_run_spec_id}|teamRunId={team_run_id}|runtimeRunId={runtime_run_id}',
       projectEnsure: 'POST /v1/projects/ensure',
+      tenantPoolTeamEnsure: 'POST /v1/tenant-pool-teams/ensure',
       agentSetupPackagesCreate: 'POST /v1/agent-setup-packages',
       agentSetupHandoffsCreate: 'POST /v1/agent-setup-handoffs',
       runtimeRunsRecent: '/v1/runtime-runs/recent[?sourceKind=team-run|direct][&status=planned|running|succeeded|failed|cancelled][&limit=25]',

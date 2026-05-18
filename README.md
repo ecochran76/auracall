@@ -109,6 +109,20 @@ curl -s http://auracall.localhost/v1/response-batches \
   -H "Content-Type: application/json" \
   -d '{"limits":{"maxConcurrentRuns":1,"maxBrowserInteractionsPerMinute":8},"requests":[{"model":"agent:instant-chatgpt-ecochran76","input":"Job 1"},{"model":"agent:instant-chatgpt-ecochran76","input":"Job 2"}]}'
 
+# Privileged setup for a project-bound tenant-pool team. AuraCall ensures each
+# member project/agent and creates the dispatch-pool team only when missing.
+curl -s http://auracall.localhost/v1/tenant-pool-teams/ensure \
+  -H "Authorization: Bearer <operator-key>" \
+  -H "Content-Type: application/json" \
+  -d '{"teamId":"chatgpt-pro-pool","service":"chatgpt","projectName":"Shared Project","agentModelSelector":"chatgpt:pro-extended","members":[{"agentId":"chatgpt-pro-a","runtimeProfile":"wsl-chrome-1"},{"agentId":"chatgpt-pro-b","runtimeProfile":"wsl-chrome-2"}]}'
+
+# Dispatch a batch through the tenant-pool team. AuraCall expands each child to
+# the next available member agent and records the selected tenant in batch status.
+curl -s http://auracall.localhost/v1/response-batches \
+  -H "Authorization: Bearer <key>" \
+  -H "Content-Type: application/json" \
+  -d '{"dispatch":{"team":"chatgpt-pro-pool"},"requests":[{"model":"gpt-5.1","input":"Job 1"},{"model":"gpt-5.1","input":"Job 2"}]}'
+
 # ChatGPT tenant-wide defaults apply across batches and one-shot responses:
 # at most 4 concurrent chats, 120 chat starts per hour, and 240 chat starts per day.
 # Read configured limits from /status.tenantExecutionLimits.
@@ -176,6 +190,13 @@ Current browser-mode default posture:
   local agents. Use `agent:<agent_id>` model ids, scoped API keys, durable run
   polling, and response batches instead of hard-coded provider model labels;
   see `docs/agent-workflows.md`.
+- tenant-pool teams use `teams.<id>.type = "dispatch-pool"` to spread
+  independent response-batch children across configured member agents. They do
+  not run `/v1/team-runs` workflow steps and they do not synchronize provider
+  projects between tenants; project divergence is reported as operator risk,
+  not an execution error. Use `POST /v1/tenant-pool-teams/ensure` or MCP
+  `tenant_pool_team_ensure` as the privileged setup path when the pool should
+  ensure per-tenant projects and create the team only if missing.
 
 WSL quick start: run `./scripts/bootstrap-wsl.sh` to install Node 22 + WSL Chrome + deps, then follow `docs/wsl-chatgpt-runbook.md` for the ChatGPT browser setup. If you are choosing between WSL Chrome and Windows Chrome from WSL, prefer WSL Chrome first and keep it as the primary browser profile; the Windows relay path is still more brittle and is better kept in a separate named browser profile.
 

@@ -22,6 +22,7 @@ import { registerRuntimeRunsRecentTool } from './tools/runtimeRunsRecent.js';
 import { registerRunArchiveTools } from './tools/runArchive.js';
 import { registerConfigEntityTools } from './tools/configEntities.js';
 import { registerProjectEnsureTool } from './tools/projectEnsure.js';
+import { registerTenantPoolTeamEnsureTool } from './tools/tenantPoolTeamEnsure.js';
 import { registerAgentSetupPackageTool } from './tools/agentSetupPackage.js';
 import { registerApiKeyTools } from './tools/apiKeys.js';
 import { registerAccountMirrorStatusTool } from './tools/accountMirrorStatus.js';
@@ -35,10 +36,12 @@ import { resolveConfig } from '../schema/resolver.js';
 import type { ResolvedUserConfig } from '../config.js';
 import { createMediaGenerationService } from '../media/service.js';
 import { createExecutionResponsesService } from '../runtime/responsesService.js';
+import { createExecutionRuntimeControl } from '../runtime/control.js';
 import {
   createResponseBatchService,
   type ResponseBatchService,
 } from '../runtime/responseBatchService.js';
+import { resolveResponseBatchDispatchPool } from '../runtime/responseBatchDispatchPool.js';
 import { createConfiguredStoredStepExecutor } from '../runtime/configuredExecutor.js';
 import { resolveHostLocalActionExecutionPolicy } from '../config/model.js';
 import { createBrowserMediaGenerationExecutor } from '../media/browserExecutor.js';
@@ -64,6 +67,10 @@ import {
   createProjectEnsureService,
   type ProjectEnsureService,
 } from '../projects/projectEnsureService.js';
+import {
+  createTenantPoolTeamEnsureService,
+  type TenantPoolTeamEnsureService,
+} from '../projects/tenantPoolTeamEnsureService.js';
 import { createRunArchiveService } from '../runtime/archiveService.js';
 
 export interface McpServiceBundle {
@@ -79,6 +86,7 @@ export interface McpServiceBundle {
   runArchiveService: ReturnType<typeof createRunArchiveService>;
   agentTeamConfigService: AgentTeamConfigService;
   projectEnsureService: ProjectEnsureService;
+  tenantPoolTeamEnsureService: TenantPoolTeamEnsureService;
   agentSetupPackageService: AgentSetupPackageService;
 }
 
@@ -135,6 +143,9 @@ export async function startMcpServer(): Promise<void> {
   });
   registerProjectEnsureTool(server, {
     service: services.projectEnsureService,
+  });
+  registerTenantPoolTeamEnsureTool(server, {
+    service: services.tenantPoolTeamEnsureService,
   });
   registerAgentSetupPackageTool(server, {
     service: services.agentSetupPackageService,
@@ -223,6 +234,7 @@ export async function createMcpServicesFromConfig(
     discoverCapabilities: createDiscovery(resolvedUserConfig),
     diagnoseCapabilities: createDiagnostics(resolvedUserConfig),
   });
+  const control = createExecutionRuntimeControl();
   const mediaGenerationService = createMediaService({
     executor: createMediaExecutor(resolvedUserConfig),
     capabilityReporter: workbenchCapabilityReporter,
@@ -232,6 +244,7 @@ export async function createMcpServicesFromConfig(
         : null,
   });
   const responsesService = createResponsesService({
+    control,
     localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(
       resolvedUserConfig as Record<string, unknown>,
     ),
@@ -239,6 +252,12 @@ export async function createMcpServicesFromConfig(
   });
   const responseBatchService = createResponseBatch({
     responsesService,
+    resolveDispatchPool: async (input) =>
+      resolveResponseBatchDispatchPool({
+        ...input,
+        catalog: await agentTeamConfigService.effectiveCatalog(),
+        control,
+      }),
   });
   const runArchiveService = createRunArchiveService();
   const accountMirrorPersistence = createAccountMirrorPersistence({
@@ -276,6 +295,10 @@ export async function createMcpServicesFromConfig(
     projectEnsureService,
     agentTeamConfigService,
   });
+  const tenantPoolTeamEnsureService = createTenantPoolTeamEnsureService({
+    projectEnsureService,
+    agentTeamConfigService,
+  });
   return {
     resolvedUserConfig,
     responsesService,
@@ -289,6 +312,7 @@ export async function createMcpServicesFromConfig(
     accountMirrorCompletionService,
     agentTeamConfigService,
     projectEnsureService,
+    tenantPoolTeamEnsureService,
     agentSetupPackageService,
   };
 }

@@ -10,6 +10,14 @@ import type { ExecutionRuntimeControlContract } from './contract.js';
 import type { ExecutionResponsesService } from './responsesService.js';
 import type { ExecutionRunStoredRecord } from './store.js';
 import { refreshRunArchiveIndexBestEffort } from './archiveIndexRefresh.js';
+import {
+  normalizeResponseBatchDispatchRequest,
+  ResponseBatchDispatchRequestSchema,
+  type ResponseBatchDispatchJobAssignment,
+  type ResponseBatchDispatchRecord,
+  type ResponseBatchDispatchRequest,
+  type ResponseBatchDispatchResolution,
+} from './responseBatchDispatchPool.js';
 
 const RESPONSE_BATCHES_DIRNAME = 'response-batches';
 const RECORD_FILENAME = 'record.json';
@@ -17,6 +25,27 @@ const RECORD_FILENAME = 'record.json';
 // biome-ignore lint/style/useNamingConvention: exported schema names follow the runtime API schema convention.
 export const ResponseBatchCreateRequestSchema = z.object({
   id: z.string().trim().min(1).optional(),
+  team: z.string().trim().min(1).optional(),
+  dispatch: ResponseBatchDispatchRequestSchema.optional(),
+  dispatchResolution: z
+    .object({
+      requests: z.array(ExecutionRequestSchema),
+      dispatch: z.object({
+        team: z.string().trim().min(1),
+        mode: z.literal('next_available'),
+        projectSync: z.literal('none'),
+        memberCount: z.number().int().nonnegative(),
+        projectName: z.string().nullable().optional(),
+        warnings: z.array(z.string()),
+      }),
+      assignments: z.array(z.object({
+        team: z.string().trim().min(1),
+        mode: z.literal('next_available'),
+        memberAgent: z.string().trim().min(1),
+        memberIndex: z.number().int().min(0),
+      })),
+    })
+    .optional(),
   requests: z.array(ExecutionRequestSchema).min(1),
   metadata: z.record(z.string(), z.unknown()).optional(),
   limits: z
@@ -36,6 +65,7 @@ export interface ResponseBatchJobRecord {
   agent: string | null;
   service: string | null;
   runtimeProfile: string | null;
+  dispatch?: ResponseBatchDispatchJobAssignment | null;
   createdAt: string;
 }
 
@@ -49,6 +79,7 @@ export interface ResponseBatchRecord {
     maxConcurrentRuns: number | null;
     maxBrowserInteractionsPerMinute: number | null;
   };
+  dispatch?: ResponseBatchDispatchRecord | null;
   jobs: ResponseBatchJobRecord[];
 }
 
@@ -66,6 +97,7 @@ export interface ResponseBatchStatus {
   updatedAt: string;
   metadata: Record<string, unknown>;
   limits: ResponseBatchRecord['limits'];
+  dispatch: ResponseBatchDispatchRecord | null;
   counts: {
     total: number;
     in_progress: number;
@@ -90,6 +122,10 @@ export interface ResponseBatchService {
 
 export interface ResponseBatchServiceDeps {
   responsesService: Pick<ExecutionResponsesService, 'createResponse' | 'readResponse'>;
+  resolveDispatchPool?: (input: {
+    dispatch: ResponseBatchDispatchRequest;
+    requests: ExecutionRequest[];
+  }) => Promise<ResponseBatchDispatchResolution>;
   now?: () => Date;
   generateBatchId?: () => string;
   store?: ResponseBatchStore;
@@ -112,13 +148,24 @@ export function createResponseBatchService(deps: ResponseBatchServiceDeps): Resp
       const payload = ResponseBatchCreateRequestSchema.parse(input);
       const id = payload.id ?? generateBatchId();
       const createdAt = now().toISOString();
+      const dispatchRequest = normalizeResponseBatchDispatchRequest(payload);
+      const dispatchResolution = await resolveDispatchResolution({
+        dispatch: dispatchRequest,
+        payloadResolution: payload.dispatchResolution,
+        requests: payload.requests,
+        resolver: deps.resolveDispatchPool,
+      });
+      const requests = dispatchResolution?.requests ?? payload.requests;
       const limits = {
         maxConcurrentRuns: payload.limits?.maxConcurrentRuns ?? null,
         maxBrowserInteractionsPerMinute: payload.limits?.maxBrowserInteractionsPerMinute ?? null,
       };
       const jobs: ResponseBatchJobRecord[] = [];
-      for (const [index, request] of payload.requests.entries()) {
-        const response = await deps.responsesService.createResponse(withBatchMetadata(request, id, index, limits));
+      for (const [index, request] of requests.entries()) {
+        const assignment = dispatchResolution?.assignments[index] ?? null;
+        const response = await deps.responsesService.createResponse(
+          withBatchMetadata(request, id, index, limits, dispatchResolution?.dispatch ?? null, assignment),
+        );
         jobs.push({
           index,
           responseId: response.id,
@@ -126,6 +173,7 @@ export function createResponseBatchService(deps: ResponseBatchServiceDeps): Resp
           agent: request.auracall?.agent ?? null,
           service: request.auracall?.service ?? null,
           runtimeProfile: request.auracall?.runtimeProfile ?? null,
+          dispatch: assignment,
           createdAt,
         });
       }
@@ -136,6 +184,7 @@ export function createResponseBatchService(deps: ResponseBatchServiceDeps): Resp
         updatedAt: createdAt,
         metadata: payload.metadata ?? {},
         limits,
+        dispatch: dispatchResolution?.dispatch ?? null,
         jobs,
       };
       await store.writeBatch(record);
@@ -275,6 +324,7 @@ async function summarizeBatchStatus(
     updatedAt: record.updatedAt,
     metadata: record.metadata,
     limits: record.limits,
+    dispatch: record.dispatch ?? null,
     counts,
     jobs,
   };
@@ -295,6 +345,8 @@ function withBatchMetadata(
   batchId: string,
   batchIndex: number,
   limits: ResponseBatchRecord['limits'],
+  dispatch: ResponseBatchDispatchRecord | null,
+  assignment: ResponseBatchDispatchJobAssignment | null,
 ): ExecutionRequest {
   return {
     ...request,
@@ -303,8 +355,57 @@ function withBatchMetadata(
       batchId,
       batchIndex,
       batchLimits: limits,
+      ...(dispatch && assignment
+        ? {
+            batchDispatch: {
+              team: dispatch.team,
+              mode: dispatch.mode,
+              projectSync: dispatch.projectSync,
+              memberAgent: assignment.memberAgent,
+              memberIndex: assignment.memberIndex,
+            },
+          }
+        : {}),
     },
   };
+}
+
+async function resolveDispatchResolution(input: {
+  dispatch: ResponseBatchDispatchRequest | null;
+  payloadResolution: ResponseBatchDispatchResolution | undefined;
+  requests: ExecutionRequest[];
+  resolver: ResponseBatchServiceDeps['resolveDispatchPool'];
+}): Promise<ResponseBatchDispatchResolution | null> {
+  if (!input.dispatch) return null;
+  if (input.payloadResolution) {
+    assertDispatchResolutionMatches(input.dispatch, input.payloadResolution);
+    return input.payloadResolution;
+  }
+  if (!input.resolver) {
+    throw new Error(
+      `Response batch dispatch team "${input.dispatch.team}" requires a dispatch-pool resolver in this runtime surface.`,
+    );
+  }
+  const resolution = await input.resolver({
+    dispatch: input.dispatch,
+    requests: input.requests,
+  });
+  assertDispatchResolutionMatches(input.dispatch, resolution);
+  return resolution;
+}
+
+function assertDispatchResolutionMatches(
+  dispatch: ResponseBatchDispatchRequest,
+  resolution: ResponseBatchDispatchResolution,
+): void {
+  if (resolution.dispatch.team !== dispatch.team) {
+    throw new Error(
+      `Response batch dispatch resolution team "${resolution.dispatch.team}" does not match requested team "${dispatch.team}".`,
+    );
+  }
+  if (resolution.requests.length !== resolution.assignments.length) {
+    throw new Error('Response batch dispatch resolution must provide one assignment per expanded request.');
+  }
 }
 
 function readResponseBatchRunMetadata(record: ExecutionRunStoredRecord): {
@@ -377,6 +478,15 @@ const RESPONSE_BATCH_JOB_RECORD_SCHEMA: z.ZodType<ResponseBatchJobRecord> = z.ob
   agent: z.string().nullable(),
   service: z.string().nullable(),
   runtimeProfile: z.string().nullable(),
+  dispatch: z
+    .object({
+      team: z.string(),
+      mode: z.literal('next_available'),
+      memberAgent: z.string(),
+      memberIndex: z.number().int().min(0),
+    })
+    .nullable()
+    .optional(),
   createdAt: z.string(),
 });
 
@@ -390,6 +500,17 @@ const RESPONSE_BATCH_RECORD_SCHEMA: z.ZodType<ResponseBatchRecord> = z.object({
     maxConcurrentRuns: z.number().int().positive().nullable(),
     maxBrowserInteractionsPerMinute: z.number().int().positive().nullable(),
   }),
+  dispatch: z
+    .object({
+      team: z.string(),
+      mode: z.literal('next_available'),
+      projectSync: z.literal('none'),
+      memberCount: z.number().int().nonnegative(),
+      projectName: z.string().nullable().optional(),
+      warnings: z.array(z.string()),
+    })
+    .nullable()
+    .optional(),
   jobs: z.array(RESPONSE_BATCH_JOB_RECORD_SCHEMA),
 });
 

@@ -9,6 +9,8 @@ type MutableRuntimeProfile = Record<string, unknown>;
 type MutableAgent = Record<string, unknown>;
 type MutableTeam = Record<string, unknown>;
 type ServiceId = 'chatgpt' | 'gemini' | 'grok';
+type TeamType = 'workflow' | 'dispatch-pool';
+type TeamDispatchMode = 'next_available';
 
 export interface ProjectedBrowserProfile {
   id: string;
@@ -45,12 +47,19 @@ export interface ProjectedTeamMember {
   service?: ServiceId;
   model?: string;
   modelSelector?: string;
+  projectId?: string;
+  projectName?: string;
 }
 
 export interface ProjectedTeam {
   id: string;
+  type: TeamType;
   agentIds: string[];
   members: ProjectedTeamMember[];
+  dispatchMode: TeamDispatchMode | null;
+  projectSync: 'none' | null;
+  projectName: string | null;
+  projectCreateIfMissing: boolean | null;
 }
 
 export interface ResolvedAgentSelection {
@@ -62,6 +71,7 @@ export interface ResolvedAgentSelection {
   model?: string;
   modelSelector?: string;
   projectId?: string;
+  projectName?: string;
   exists: boolean;
 }
 
@@ -172,7 +182,12 @@ export interface ConfigModelDoctorIssue {
     | 'team-role-agent-not-in-membership'
     | 'team-role-handoff-role-missing'
     | 'team-role-order-duplicate'
-    | 'team-role-self-handoff';
+    | 'team-role-self-handoff'
+    | 'dispatch-pool-runtime-profile-duplicate'
+    | 'dispatch-pool-mixed-services'
+    | 'dispatch-pool-mixed-models'
+    | 'dispatch-pool-project-sync-disabled'
+    | 'dispatch-pool-project-bindings-diverge';
   severity: 'warning' | 'info';
   message: string;
   auracallRuntimeProfile?: string;
@@ -616,6 +631,30 @@ export function getTeam(
   return isRecord(teams[name]) ? teams[name] : null;
 }
 
+function getTeamType(team: MutableTeam | null | undefined): TeamType {
+  return isRecord(team) && team.type === 'dispatch-pool' ? 'dispatch-pool' : 'workflow';
+}
+
+function getTeamDispatchMode(team: MutableTeam | null | undefined): TeamDispatchMode | null {
+  if (getTeamType(team) !== 'dispatch-pool') return null;
+  return 'next_available';
+}
+
+function getTeamProjectSync(team: MutableTeam | null | undefined): 'none' | null {
+  if (getTeamType(team) !== 'dispatch-pool') return null;
+  return 'none';
+}
+
+function getTeamProjectName(team: MutableTeam | null | undefined): string | null {
+  const project = isRecord(team) && isRecord(team.project) ? team.project : {};
+  return asNonEmptyString(project.name);
+}
+
+function getTeamProjectCreateIfMissing(team: MutableTeam | null | undefined): boolean | null {
+  const project = isRecord(team) && isRecord(team.project) ? team.project : {};
+  return typeof project.createIfMissing === 'boolean' ? project.createIfMissing : null;
+}
+
 export function resolveHostLocalActionExecutionPolicy(
   config: OracleConfig | MutableRecord,
 ): Partial<LocalActionExecutionPolicy> {
@@ -729,6 +768,7 @@ export function resolveAgentSelection(
   const model = asNonEmptyString(isRecord(agent) ? agent.model : undefined);
   const modelSelector = asNonEmptyString(isRecord(agent) ? agent.modelSelector : undefined);
   const projectId = asNonEmptyString(isRecord(agent) ? agent.projectId : undefined);
+  const projectName = asNonEmptyString(isRecord(agent) ? agent.projectName : undefined);
   return {
     agentId: name,
     runtimeProfileId: getAgentRuntimeProfileId(agent),
@@ -738,6 +778,7 @@ export function resolveAgentSelection(
     ...(model ? { model } : {}),
     ...(modelSelector ? { modelSelector } : {}),
     ...(projectId ? { projectId } : {}),
+    ...(projectName ? { projectName } : {}),
     exists: agent !== null,
   };
 }
@@ -985,10 +1026,11 @@ export function projectConfigModel(
   const projectedAgentMap = new Map(agents.map((agent) => [agent.id, agent]));
   const teams = Object.entries(getTeams(config))
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([id]) => {
+    .map(([id, team]) => {
       const resolvedTeam = resolveTeamSelection(config, id);
       return {
         id,
+        type: getTeamType(team),
         agentIds: resolvedTeam.agentIds,
         members: resolvedTeam.members.map((member) => {
           const projectedAgent = projectedAgentMap.get(member.agentId ?? '') ?? null;
@@ -1001,8 +1043,14 @@ export function projectConfigModel(
             ...(member.service ? { service: member.service } : {}),
             ...(member.model ? { model: member.model } : {}),
             ...(member.modelSelector ? { modelSelector: member.modelSelector } : {}),
+            ...(member.projectId ? { projectId: member.projectId } : {}),
+            ...(member.projectName ? { projectName: member.projectName } : {}),
           };
         }),
+        dispatchMode: getTeamDispatchMode(team),
+        projectSync: getTeamProjectSync(team),
+        projectName: getTeamProjectName(team),
+        projectCreateIfMissing: getTeamProjectCreateIfMissing(team),
       };
     });
   return {
@@ -1241,6 +1289,77 @@ export function analyzeConfigModelBridgeHealth(
           message: `Team "${name}" references missing agent "${agentId}".`,
           team: name,
           agent: agentId,
+        });
+      }
+    }
+
+    if (getTeamType(team) === 'dispatch-pool') {
+      const resolvedTeam = resolveTeamSelection(config, name);
+      const runtimeProfileIds = resolvedTeam.members.flatMap((member) => member.runtimeProfileId ? [member.runtimeProfileId] : []);
+      const duplicateRuntimeProfileIds = [...new Set(
+        runtimeProfileIds.filter((runtimeProfileId, index) => runtimeProfileIds.indexOf(runtimeProfileId) !== index),
+      )].sort();
+      if (duplicateRuntimeProfileIds.length > 0) {
+        issues.push({
+          code: 'dispatch-pool-runtime-profile-duplicate',
+          severity: 'warning',
+          message: `Dispatch-pool team "${name}" assigns multiple agents to the same AuraCall runtime profile (${duplicateRuntimeProfileIds.join(', ')}); tenant pools should normally spread members across separate account-bearing runtime profiles.`,
+          team: name,
+        });
+      }
+
+      const services = [...new Set(
+        resolvedTeam.members.flatMap((member) => {
+          const service = member.service ?? member.defaultService;
+          return service ? [service] : [];
+        }),
+      )].sort();
+      if (services.length > 1) {
+        issues.push({
+          code: 'dispatch-pool-mixed-services',
+          severity: 'info',
+          message: `Dispatch-pool team "${name}" spans multiple services (${services.join(', ')}); AuraCall will dispatch the batch, but cross-service output consistency is caller-owned until project/model syncing is implemented.`,
+          team: name,
+        });
+      }
+
+      const modelKeys = [...new Set(
+        resolvedTeam.members.flatMap((member) => {
+          const model = member.modelSelector ?? member.model;
+          return model ? [model] : [];
+        }),
+      )].sort();
+      if (modelKeys.length > 1) {
+        issues.push({
+          code: 'dispatch-pool-mixed-models',
+          severity: 'info',
+          message: `Dispatch-pool team "${name}" has mixed member model bindings (${modelKeys.join(', ')}); dispatch continues, but consistent output requires the caller to keep members on equivalent models.`,
+          team: name,
+        });
+      }
+
+      const teamProjectName = getTeamProjectName(team);
+      if (teamProjectName) {
+        issues.push({
+          code: 'dispatch-pool-project-sync-disabled',
+          severity: 'info',
+          message: `Dispatch-pool team "${name}" is project-bound to "${teamProjectName}" with projectSync=none; AuraCall will not reconcile project instructions, files, or settings between tenants.`,
+          team: name,
+        });
+      }
+
+      const projectNames = [...new Set(
+        resolvedTeam.members.flatMap((member) => {
+          const projectName = member.projectName ?? null;
+          return projectName ? [projectName] : [];
+        }),
+      )].sort();
+      if (teamProjectName && (!projectNames.includes(teamProjectName) || projectNames.length > 1)) {
+        issues.push({
+          code: 'dispatch-pool-project-bindings-diverge',
+          severity: 'info',
+          message: `Dispatch-pool team "${name}" member agents do not all point at project name "${teamProjectName}"; dispatch continues, but project divergence can change results.`,
+          team: name,
         });
       }
     }

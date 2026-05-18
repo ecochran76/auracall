@@ -29938,3 +29938,43 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Coordination:
   - left concurrent non-UX edits in `src/config/model.ts` and
     `src/schema/types.ts` untouched.
+
+## Turn 161 | 2026-05-18
+
+- Goal: define and implement the first tenant-pool team slice for response
+  batches.
+- Change:
+  - added Plan 0068 for dispatch-pool response batches.
+  - extended team config/projection with `type = "dispatch-pool"`,
+    `dispatch.mode = "next_available"`, `projectSync = "none"`, and optional
+    project binding metadata.
+  - added response-batch dispatch expansion that rewrites each child to the
+    next available member agent before authorization and persistence.
+  - persisted dispatch-pool metadata in batch status, per-job records, and
+    child run metadata.
+  - added privileged tenant-pool setup through
+    `POST /v1/tenant-pool-teams/ensure` and MCP `tenant_pool_team_ensure`;
+    setup composes per-member project ensures, creates the pool only when the
+    team is missing, leaves existing dispatch-pool membership unchanged, and
+    blocks non-dispatch team ids before provider/project mutation.
+  - documented the no-sync project behavior and caller-owned consistency risk
+    for mixed services/models/projects.
+- Verification:
+  - `pnpm vitest run tests/projects.tenantPoolTeamEnsureService.test.ts tests/mcp.tenantPoolTeamEnsure.test.ts tests/mcp.server.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.responseBatchService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "response batches|dispatch-pool" --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "tenant-pool|dispatch-pool|response batches" --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "development-only posture|tenant-pool|dispatch-pool|response batches" --maxWorkers 1`
+  - `pnpm vitest run tests/configModel.test.ts tests/runtime.responseBatchService.test.ts tests/mcp.responseBatch.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mcp.server.test.ts tests/mcp.responseBatch.test.ts --maxWorkers 1`
+  - `pnpm run typecheck`
+  - `pnpm exec biome lint src/schema/types.ts src/config/model.ts src/runtime/responseBatchDispatchPool.ts src/runtime/responseBatchService.ts src/http/responsesServer.ts src/mcp/server.ts src/mcp/tools/responseBatch.ts tests/runtime.responseBatchService.test.ts tests/configModel.test.ts tests/mcp.responseBatch.test.ts tests/mcp.server.test.ts --max-diagnostics 80`
+  - `pnpm exec biome lint src/projects/tenantPoolTeamEnsureService.ts src/mcp/tools/tenantPoolTeamEnsure.ts src/http/responsesServer.ts src/mcp/server.ts src/config/model.ts src/runtime/responseBatchDispatchPool.ts src/runtime/responseBatchService.ts src/mcp/tools/responseBatch.ts tests/projects.tenantPoolTeamEnsureService.test.ts tests/mcp.tenantPoolTeamEnsure.test.ts tests/mcp.server.test.ts tests/configModel.test.ts tests/runtime.responseBatchService.test.ts tests/mcp.responseBatch.test.ts --max-diagnostics 100`
+  - `pnpm exec biome lint tests/http.responsesServer.test.ts --max-diagnostics 30`
+    exited 0 with existing `noNonNullAssertion` warning debt outside the
+    tenant-pool route test.
+- Follow-up:
+  - defer project/inter-service syncing to a separate plan after pool dispatch
+    is tested with live non-private accounts.
+  - run a live non-private tenant-pool batch smoke after the remaining browser
+    lifecycle issue is stable.

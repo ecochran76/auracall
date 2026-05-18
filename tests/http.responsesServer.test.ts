@@ -896,6 +896,120 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('ensures tenant-pool teams through an operator-only HTTP route', async () => {
+    const ensureTeam = vi.fn(async () => ({
+      object: 'auracall_tenant_pool_team_ensure' as const,
+      status: 'created' as const,
+      teamId: 'che447-chatgpt-pool',
+      projectName: 'ChE 4470/5470 Seminar Grading',
+      projectSync: 'none' as const,
+      teamCreated: true,
+      team: {
+        id: 'che447-chatgpt-pool',
+        exists: true,
+        type: 'dispatch-pool' as const,
+        agentIds: ['che447-chatgpt-wsl-chrome-3'],
+        mutationTarget: 'registry' as const,
+        blockedReason: null,
+      },
+      members: [],
+      warnings: [
+        'Tenant-pool team "che447-chatgpt-pool" uses projectSync=none; AuraCall will not reconcile project instructions, files, settings, or history between tenants.',
+      ],
+      blockedReason: null,
+    }));
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        config: {
+          api: {
+            auth: {
+              required: true,
+              keys: [
+                {
+                  id: 'operator',
+                  secret: 'operator-secret',
+                },
+                {
+                  id: 'scoped',
+                  secret: 'scoped-secret',
+                  agents: ['che447-chatgpt-wsl-chrome-3'],
+                },
+              ],
+            },
+          },
+        },
+        tenantPoolTeamEnsureService: {
+          ensureTeam,
+        },
+      },
+    );
+
+    try {
+      const scopedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/tenant-pool-teams/ensure`, {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer scoped-secret',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          teamId: 'che447-chatgpt-pool',
+          service: 'chatgpt',
+          projectName: 'ChE 4470/5470 Seminar Grading',
+          members: [
+            {
+              agentId: 'che447-chatgpt-wsl-chrome-3',
+              runtimeProfile: 'wsl-chrome-3',
+            },
+          ],
+        }),
+      });
+      expect(scopedResponse.status).toBe(403);
+      expect(ensureTeam).not.toHaveBeenCalled();
+
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/tenant-pool-teams/ensure`, {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer operator-secret',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          teamId: 'che447-chatgpt-pool',
+          service: 'chatgpt',
+          projectName: 'ChE 4470/5470 Seminar Grading',
+          agentModelSelector: 'chatgpt:pro-extended',
+          members: [
+            {
+              agentId: 'che447-chatgpt-wsl-chrome-3',
+              runtimeProfile: 'wsl-chrome-3',
+            },
+          ],
+        }),
+      });
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        object: 'auracall_tenant_pool_team_ensure',
+        status: 'created',
+        teamId: 'che447-chatgpt-pool',
+        projectSync: 'none',
+      });
+      expect(ensureTeam).toHaveBeenCalledWith({
+        teamId: 'che447-chatgpt-pool',
+        service: 'chatgpt',
+        projectName: 'ChE 4470/5470 Seminar Grading',
+        agentModelSelector: 'chatgpt:pro-extended',
+        members: [
+          {
+            agentId: 'che447-chatgpt-wsl-chrome-3',
+            runtimeProfile: 'wsl-chrome-3',
+          },
+        ],
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('creates and reads response batches over the HTTP API', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-response-batches-'));
     cleanup.push(homeDir);
@@ -909,6 +1023,7 @@ describe('http responses adapter', () => {
       updatedAt: '2026-05-12T14:00:00.000Z',
       metadata: { course: 'ChE 4470' },
       limits: { maxConcurrentRuns: 2, maxBrowserInteractionsPerMinute: 8 },
+      dispatch: null,
       counts: {
         total: 1,
         in_progress: 1,
@@ -940,6 +1055,7 @@ describe('http responses adapter', () => {
       updatedAt: '2026-05-12T14:10:00.000Z',
       metadata: { course: 'ChE 4470' },
       limits: { maxConcurrentRuns: 2, maxBrowserInteractionsPerMinute: 8 },
+      dispatch: null,
       counts: {
         total: 1,
         in_progress: 0,
@@ -1051,6 +1167,180 @@ describe('http responses adapter', () => {
         counts: { completed: 1 },
       });
       expect(readBatchStatus).toHaveBeenCalledWith('batch_http_1');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('expands dispatch-pool teams into tenant-specific response batch jobs', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-response-batch-pools-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const createBatch = vi.fn(async () => ({
+      id: 'batch_pool_http_1',
+      object: 'response_batch_status' as const,
+      status: 'running' as const,
+      createdAt: '2026-05-12T14:00:00.000Z',
+      updatedAt: '2026-05-12T14:00:00.000Z',
+      metadata: {},
+      limits: { maxConcurrentRuns: null, maxBrowserInteractionsPerMinute: null },
+      dispatch: {
+        team: 'chatgpt-pool',
+        mode: 'next_available' as const,
+        projectSync: 'none' as const,
+        memberCount: 2,
+        projectName: 'Shared Project',
+        warnings: ['projectSync=none'],
+      },
+      counts: {
+        total: 3,
+        in_progress: 3,
+        completed: 0,
+        failed: 0,
+        cancelled: 0,
+        missing: 0,
+      },
+      jobs: [
+        {
+          index: 0,
+          responseId: 'resp_pool_http_1',
+          model: 'agent:tenant-a',
+          agent: 'tenant-a',
+          service: 'chatgpt',
+          runtimeProfile: 'wsl-chrome-1',
+          dispatch: { team: 'chatgpt-pool', mode: 'next_available' as const, memberAgent: 'tenant-a', memberIndex: 0 },
+          createdAt: '2026-05-12T14:00:00.000Z',
+          status: 'in_progress' as const,
+          completedAt: null,
+          failure: null,
+        },
+      ],
+    }));
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0, backgroundDrainIntervalMs: 25 },
+      {
+        config: {
+          api: {
+            auth: {
+              required: true,
+              keys: [
+                {
+                  id: 'pool-key',
+                  secret: 'pool-secret',
+                  teams: ['chatgpt-pool'],
+                },
+              ],
+            },
+          },
+          browserProfiles: {
+            'browser-a': {},
+            'browser-b': {},
+          },
+          runtimeProfiles: {
+            'wsl-chrome-1': {
+              browserProfile: 'browser-a',
+              defaultService: 'chatgpt',
+            },
+            'wsl-chrome-2': {
+              browserProfile: 'browser-b',
+              defaultService: 'chatgpt',
+            },
+          },
+          agents: {
+            'tenant-a': {
+              runtimeProfile: 'wsl-chrome-1',
+              service: 'chatgpt',
+              modelSelector: 'chatgpt:pro-extended',
+            },
+            'tenant-b': {
+              runtimeProfile: 'wsl-chrome-2',
+              service: 'chatgpt',
+              modelSelector: 'chatgpt:pro-extended',
+            },
+          },
+          teams: {
+            'chatgpt-pool': {
+              type: 'dispatch-pool',
+              agents: ['tenant-a', 'tenant-b'],
+              project: { name: 'Shared Project', sync: 'none' },
+            },
+          },
+        },
+        responseBatchService: {
+          createBatch,
+          readBatchStatus: vi.fn(),
+        },
+      },
+    );
+
+    try {
+      const create = await fetch(`http://127.0.0.1:${server.port}/v1/response-batches`, {
+        method: 'POST',
+        headers: {
+          authorization: 'Bearer pool-secret',
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          dispatch: { team: 'chatgpt-pool' },
+          requests: [
+            { model: 'gpt-5.1', input: 'Grade student 1.' },
+            { model: 'gpt-5.1', input: 'Grade student 2.' },
+            { model: 'gpt-5.1', input: 'Grade student 3.' },
+          ],
+        }),
+      });
+      expect(create.status).toBe(202);
+      await expect(create.json()).resolves.toMatchObject({
+        id: 'batch_pool_http_1',
+        dispatch: { team: 'chatgpt-pool', projectSync: 'none' },
+      });
+      expect(createBatch).toHaveBeenCalledWith({
+        dispatch: { team: 'chatgpt-pool', mode: 'next_available', projectSync: 'none' },
+        dispatchResolution: expect.objectContaining({
+          dispatch: expect.objectContaining({
+            team: 'chatgpt-pool',
+            mode: 'next_available',
+            projectSync: 'none',
+            memberCount: 2,
+            projectName: 'Shared Project',
+          }),
+          assignments: [
+            { team: 'chatgpt-pool', mode: 'next_available', memberAgent: 'tenant-a', memberIndex: 0 },
+            { team: 'chatgpt-pool', mode: 'next_available', memberAgent: 'tenant-b', memberIndex: 1 },
+            { team: 'chatgpt-pool', mode: 'next_available', memberAgent: 'tenant-a', memberIndex: 0 },
+          ],
+        }),
+        requests: [
+          expect.objectContaining({
+            model: 'agent:tenant-a',
+            auracall: expect.objectContaining({
+              team: 'chatgpt-pool',
+              agent: 'tenant-a',
+              service: 'chatgpt',
+              runtimeProfile: 'wsl-chrome-1',
+            }),
+          }),
+          expect.objectContaining({
+            model: 'agent:tenant-b',
+            auracall: expect.objectContaining({
+              team: 'chatgpt-pool',
+              agent: 'tenant-b',
+              service: 'chatgpt',
+              runtimeProfile: 'wsl-chrome-2',
+            }),
+          }),
+          expect.objectContaining({
+            model: 'agent:tenant-a',
+            auracall: expect.objectContaining({
+              team: 'chatgpt-pool',
+              agent: 'tenant-a',
+              service: 'chatgpt',
+              runtimeProfile: 'wsl-chrome-1',
+            }),
+          }),
+        ],
+      });
     } finally {
       await server.close();
     }
@@ -17460,6 +17750,9 @@ describe('http responses adapter', () => {
       );
       expect((payload.routes as Record<string, unknown>).configSnapshotImport).toBe(
         'POST /v1/config/snapshots/import',
+      );
+      expect((payload.routes as Record<string, unknown>).tenantPoolTeamEnsure).toBe(
+        'POST /v1/tenant-pool-teams/ensure',
       );
       expect((payload.routes as Record<string, unknown>).responseBatchesCreate).toBe('/v1/response-batches');
       expect((payload.routes as Record<string, unknown>).responseBatchesGetTemplate).toBe(

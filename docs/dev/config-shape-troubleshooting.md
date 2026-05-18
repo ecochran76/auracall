@@ -276,6 +276,43 @@ Action:
   contract
 - keep the team role sequence intentional and readable to operators
 
+### `dispatch-pool-runtime-profile-duplicate`
+
+Meaning:
+- `teams.<name>.type = "dispatch-pool"` contains multiple agents that point at
+  the same AuraCall runtime profile
+
+Action:
+- use separate account-bearing AuraCall runtime profiles for true tenant-pool
+  dispatch
+- keep duplicate runtime-profile membership only when you intentionally want
+  several logical agents to share one tenant budget/account
+
+### `dispatch-pool-mixed-services` / `dispatch-pool-mixed-models`
+
+Meaning:
+- a dispatch-pool team spans more than one provider service or member model
+  binding
+
+Action:
+- this is informational, not an error
+- keep the mixed pool if the caller accepts output variance
+- for consistent batch results, keep members on the same service and equivalent
+  model/modelSelector bindings
+
+### `dispatch-pool-project-sync-disabled` / `dispatch-pool-project-bindings-diverge`
+
+Meaning:
+- a dispatch-pool team is project-bound with `projectSync = "none"` or member
+  agents already point at different project ids/names
+
+Action:
+- treat this as caller-owned consistency risk, not a blocked dispatch
+- use the existing project ensure/setup workflow to create equivalent projects
+  per tenant before dispatch
+- do not assume response-batch dispatch synchronizes project instructions,
+  files, settings, or history between tenants
+
 ### `conflicting-runtime-profile-definitions`
 
 Meaning:

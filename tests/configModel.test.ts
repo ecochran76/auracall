@@ -135,6 +135,7 @@ describe('config model helpers', () => {
       teams: [
         {
           id: 'ops',
+          type: 'workflow',
           agentIds: ['researcher', 'analyst'],
           members: [
             {
@@ -152,6 +153,10 @@ describe('config model helpers', () => {
               defaultService: 'grok',
             },
           ],
+          dispatchMode: null,
+          projectSync: null,
+          projectName: null,
+          projectCreateIfMissing: null,
         },
       ],
     });
@@ -176,6 +181,7 @@ describe('config model helpers', () => {
     expect(projectConfigModel(config).teams).toEqual([
       {
         id: 'ops',
+        type: 'workflow',
         agentIds: ['researcher', 'missing-agent'],
         members: [
           {
@@ -193,8 +199,72 @@ describe('config model helpers', () => {
             defaultService: null,
           },
         ],
+        dispatchMode: null,
+        projectSync: null,
+        projectName: null,
+        projectCreateIfMissing: null,
       },
     ]);
+  });
+
+  it('projects dispatch-pool team metadata and reports consistency risks', () => {
+    const config = {
+      browserProfiles: {
+        'browser-a': {},
+        'browser-b': {},
+      },
+      runtimeProfiles: {
+        'wsl-chrome-1': { browserProfile: 'browser-a', defaultService: 'chatgpt' },
+        'wsl-chrome-2': { browserProfile: 'browser-b', defaultService: 'gemini' },
+      },
+      agents: {
+        'tenant-a': {
+          runtimeProfile: 'wsl-chrome-1',
+          service: 'chatgpt',
+          modelSelector: 'chatgpt:pro-extended',
+          projectId: 'proj_a',
+          projectName: 'Different Project',
+        },
+        'tenant-b': {
+          runtimeProfile: 'wsl-chrome-2',
+          service: 'gemini',
+          modelSelector: 'gemini:thinking',
+          projectId: 'proj_b',
+          projectName: 'Shared Project',
+        },
+      },
+      teams: {
+        'tenant-pool': {
+          type: 'dispatch-pool',
+          agents: ['tenant-a', 'tenant-b'],
+          dispatch: { mode: 'next_available', projectSync: 'none' },
+          project: { name: 'Shared Project', createIfMissing: true, sync: 'none' },
+        },
+      },
+    };
+
+    expect(projectConfigModel(config).teams).toMatchObject([
+      {
+        id: 'tenant-pool',
+        type: 'dispatch-pool',
+        dispatchMode: 'next_available',
+        projectSync: 'none',
+        projectName: 'Shared Project',
+        projectCreateIfMissing: true,
+        members: [
+          { agentId: 'tenant-a', projectId: 'proj_a', projectName: 'Different Project' },
+          { agentId: 'tenant-b', projectId: 'proj_b', projectName: 'Shared Project' },
+        ],
+      },
+    ]);
+    expect(analyzeConfigModelBridgeHealth(config).issues.map((issue) => issue.code)).toEqual(
+      expect.arrayContaining([
+        'dispatch-pool-mixed-services',
+        'dispatch-pool-mixed-models',
+        'dispatch-pool-project-sync-disabled',
+        'dispatch-pool-project-bindings-diverge',
+      ]),
+    );
   });
 
   it('projects configured agent service, model, project, and semantic selector intent', () => {

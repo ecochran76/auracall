@@ -16165,3 +16165,19 @@ browser-stage lifecycle observability, not transcript truncation.
   `6a0a8995-ec48-83ea-8a71-f4c41d919d59`, materialized
   `auracall-target-bound-smoke.txt`, and left the ChatGPT tenant with
   `activeChats=0` after completion.
+- 2026-05-18: Batch load spreading belongs in response-batch dispatch, not in
+  sequential team-run semantics. Teams can now opt into `type =
+  "dispatch-pool"` and `/v1/response-batches` can target them with
+  `{ "dispatch": { "team": "<team_id>" } }` or top-level `team`. AuraCall
+  expands each child to the next available member agent before authorization,
+  using active direct-run leases/running steps plus current-batch assignments
+  as runtime evidence. Batch status, job records, and child run metadata now
+  preserve dispatch team/member evidence. Project-bound pools explicitly use
+  `projectSync = "none"`; divergent project configuration is reported as risk
+  metadata and is not an execution error.
+- 2026-05-18: Tenant-pool setup must be privileged and idempotent, not an
+  execution side effect. `POST /v1/tenant-pool-teams/ensure` and MCP
+  `tenant_pool_team_ensure` now compose per-member project ensures, bind
+  member agents, and create the `dispatch-pool` team only when it is missing.
+  Existing dispatch-pool teams return `found` with membership unchanged, and
+  existing non-dispatch team ids block before provider/project mutation.

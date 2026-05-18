@@ -13,6 +13,7 @@ const runningBatch = {
   updatedAt: '2026-05-12T14:00:00.000Z',
   metadata: { course: 'ChE 4470' },
   limits: { maxConcurrentRuns: 2, maxBrowserInteractionsPerMinute: 8 },
+  dispatch: null,
   counts: {
     total: 2,
     in_progress: 2,

@@ -186,6 +186,20 @@ Current State:
     into the same configured-agent `/v1/responses` runtime path and drains
     synchronously before returning; streaming remains deferred until basic
     client dogfooding is proven
+- Tenant-pool response batches are now scoped in
+  [docs/dev/plans/0068-2026-05-18-tenant-pool-response-batches.md](docs/dev/plans/0068-2026-05-18-tenant-pool-response-batches.md):
+  - `teams.<id>.type = "dispatch-pool"` defines batch dispatch teams whose
+    members are separate account-bearing agents rather than sequential
+    `/v1/team-runs` workflow steps
+  - `/v1/response-batches` can route through `{ "dispatch": { "team": ... } }`
+    and expands each child to the next available concrete member agent before
+    authorization
+  - `/v1/tenant-pool-teams/ensure` and MCP `tenant_pool_team_ensure` compose
+    per-member project ensures and create the dispatch-pool team only when it
+    is missing
+  - dispatch selection uses active runtime evidence from leases/running steps
+    plus current-batch assignments; projectSync is explicitly `none` until a
+    later project-sync lane exists
 - DB-backed agent registry migration is now scoped in
   [docs/dev/plans/0065-2026-05-10-db-backed-agent-registry.md](docs/dev/plans/0065-2026-05-10-db-backed-agent-registry.md):
   - `~/.auracall/config.json` remains bootstrap/source config for runtime

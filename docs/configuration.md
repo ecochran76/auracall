@@ -491,6 +491,20 @@ Version policy:
     "chatgpt-memory-ops": {
       agents: ["default-chatgpt-memory-steward", "default-chatgpt-primary"],
       description: "Default ChatGPT mirror plus primary workbench routing"
+    },
+    "chatgpt-pro-pool": {
+      type: "dispatch-pool",
+      agents: ["default-chatgpt-primary", "consult-chatgpt-pro"],
+      dispatch: {
+        mode: "next_available",
+        projectSync: "none"
+      },
+      project: {
+        name: "Shared Project",
+        createIfMissing: true,
+        sync: "none"
+      },
+      description: "Response-batch dispatch pool across separate ChatGPT tenants"
     }
   },
 

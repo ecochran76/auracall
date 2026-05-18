@@ -7,7 +7,8 @@ import {
 } from '../../runtime/responseBatchService.js';
 import { createExecutionResponsesService } from '../../runtime/responsesService.js';
 
-const responseBatchCreateInputShape = ResponseBatchCreateRequestSchema.shape satisfies z.ZodRawShape;
+const { dispatchResolution: _dispatchResolution, ...responseBatchCreateInputShape } =
+  ResponseBatchCreateRequestSchema.shape satisfies z.ZodRawShape;
 
 const responseBatchStatusInputShape = {
   id: z.string().min(1),
@@ -17,6 +18,7 @@ const responseBatchOutputShape = {
   id: z.string(),
   object: z.literal('response_batch_status'),
   status: z.enum(['queued', 'running', 'completed', 'failed', 'cancelled', 'mixed_terminal']),
+  dispatch: z.record(z.string(), z.unknown()).nullable().optional(),
   counts: z.record(z.string(), z.number()),
   jobs: z.array(z.record(z.string(), z.unknown())),
 } satisfies z.ZodRawShape;

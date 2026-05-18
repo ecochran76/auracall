@@ -3,9 +3,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
+import { createEffectiveAgentCatalog } from '../src/config/agentRegistryCatalog.js';
 import type { ExecutionRequest, ExecutionResponse } from '../src/runtime/apiTypes.js';
 import { createExecutionRuntimeControl } from '../src/runtime/control.js';
 import { createExecutionRunEvent } from '../src/runtime/model.js';
+import { resolveResponseBatchDispatchPool } from '../src/runtime/responseBatchDispatchPool.js';
 import { createExecutionResponsesService } from '../src/runtime/responsesService.js';
 import {
   createResponseBatchExecutionGate,
@@ -138,6 +140,206 @@ describe('response batch service', () => {
         { responseId: 'resp_runtime_2', status: 'failed', failure: { code: 'runner_execution_failed' } },
       ],
     });
+  });
+
+  it('records dispatch-pool assignment metadata on child response runs', async () => {
+    const createdRequests: ExecutionRequest[] = [];
+    const responses = new Map<string, ExecutionResponse>();
+    const stored = new Map<string, ResponseBatchRecord>();
+    const service = createResponseBatchService({
+      now: () => new Date('2026-05-12T14:00:00.000Z'),
+      generateBatchId: () => 'batch_pool_1',
+      store: {
+        readBatch: vi.fn(async (id) => stored.get(id) ?? null),
+        writeBatch: vi.fn(async (record) => {
+          stored.set(record.id, record);
+          return record;
+        }),
+      },
+      resolveDispatchPool: vi.fn(async ({ requests }: { requests: ExecutionRequest[] }) => ({
+        requests: requests.map((request: ExecutionRequest, index: number) => {
+          const agentId = index === 0 ? 'tenant-a' : 'tenant-b';
+          return {
+            ...request,
+            model: `agent:${agentId}`,
+            auracall: {
+              ...(request.auracall ?? {}),
+              team: 'chatgpt-pool',
+              agent: agentId,
+              service: 'chatgpt',
+              runtimeProfile: index === 0 ? 'wsl-chrome-1' : 'wsl-chrome-2',
+            },
+          };
+        }),
+        dispatch: {
+          team: 'chatgpt-pool',
+          mode: 'next_available' as const,
+          projectSync: 'none' as const,
+          memberCount: 2,
+          projectName: 'Shared Project',
+          warnings: ['projectSync=none'],
+        },
+        assignments: [
+          { team: 'chatgpt-pool', mode: 'next_available' as const, memberAgent: 'tenant-a', memberIndex: 0 },
+          { team: 'chatgpt-pool', mode: 'next_available' as const, memberAgent: 'tenant-b', memberIndex: 1 },
+        ],
+      })),
+      responsesService: {
+        createResponse: vi.fn(async (request) => {
+          const id = `resp_pool_${createdRequests.length + 1}`;
+          createdRequests.push(request);
+          const response = createResponse(id, 'in_progress');
+          responses.set(id, response);
+          return response;
+        }),
+        readResponse: vi.fn(async (id) => responses.get(id) ?? null),
+      },
+    });
+
+    const status = await service.createBatch({
+      team: 'chatgpt-pool',
+      requests: [
+        { model: 'gpt-5.1', input: 'Grade student 1.' },
+        { model: 'gpt-5.1', input: 'Grade student 2.' },
+      ],
+    });
+
+    expect(createdRequests.map((request) => request.metadata)).toEqual([
+      {
+        batchId: 'batch_pool_1',
+        batchIndex: 0,
+        batchLimits: {
+          maxConcurrentRuns: null,
+          maxBrowserInteractionsPerMinute: null,
+        },
+        batchDispatch: {
+          team: 'chatgpt-pool',
+          mode: 'next_available',
+          projectSync: 'none',
+          memberAgent: 'tenant-a',
+          memberIndex: 0,
+        },
+      },
+      {
+        batchId: 'batch_pool_1',
+        batchIndex: 1,
+        batchLimits: {
+          maxConcurrentRuns: null,
+          maxBrowserInteractionsPerMinute: null,
+        },
+        batchDispatch: {
+          team: 'chatgpt-pool',
+          mode: 'next_available',
+          projectSync: 'none',
+          memberAgent: 'tenant-b',
+          memberIndex: 1,
+        },
+      },
+    ]);
+    expect(status).toMatchObject({
+      id: 'batch_pool_1',
+      dispatch: {
+        team: 'chatgpt-pool',
+        mode: 'next_available',
+        projectSync: 'none',
+        memberCount: 2,
+        warnings: ['projectSync=none'],
+      },
+      jobs: [
+        {
+          model: 'agent:tenant-a',
+          agent: 'tenant-a',
+          service: 'chatgpt',
+          runtimeProfile: 'wsl-chrome-1',
+          dispatch: { memberAgent: 'tenant-a', memberIndex: 0 },
+        },
+        {
+          model: 'agent:tenant-b',
+          agent: 'tenant-b',
+          service: 'chatgpt',
+          runtimeProfile: 'wsl-chrome-2',
+          dispatch: { memberAgent: 'tenant-b', memberIndex: 1 },
+        },
+      ],
+    });
+  });
+
+  it('dispatches pool jobs using active runtime evidence before team order', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-response-batch-pool-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const responsesService = createExecutionResponsesService({
+      control,
+      drainAfterCreate: false,
+      generateResponseId: () => 'resp_busy_tenant_a',
+      now: () => new Date('2026-05-12T15:00:00.000Z'),
+    });
+    await responsesService.createResponse({
+      model: 'agent:tenant-a',
+      input: 'Existing active job.',
+      auracall: { agent: 'tenant-a', service: 'chatgpt', runtimeProfile: 'wsl-chrome-1' },
+    });
+    await control.acquireLease({
+      runId: 'resp_busy_tenant_a',
+      leaseId: 'resp_busy_tenant_a:lease:test',
+      ownerId: 'runner:test',
+      acquiredAt: '2026-05-12T15:00:05.000Z',
+      heartbeatAt: '2026-05-12T15:00:05.000Z',
+      expiresAt: '2026-05-12T15:01:05.000Z',
+    });
+
+    const catalog = createEffectiveAgentCatalog({
+      config: {
+        browserProfiles: {
+          'browser-a': {},
+          'browser-b': {},
+        },
+        runtimeProfiles: {
+          'wsl-chrome-1': { browserProfile: 'browser-a', defaultService: 'chatgpt' },
+          'wsl-chrome-2': { browserProfile: 'browser-b', defaultService: 'chatgpt' },
+        },
+        agents: {
+          'tenant-a': {
+            runtimeProfile: 'wsl-chrome-1',
+            service: 'chatgpt',
+            modelSelector: 'chatgpt:pro-extended',
+          },
+          'tenant-b': {
+            runtimeProfile: 'wsl-chrome-2',
+            service: 'chatgpt',
+            modelSelector: 'chatgpt:pro-extended',
+          },
+        },
+        teams: {
+          'chatgpt-pool': {
+            type: 'dispatch-pool',
+            agents: ['tenant-a', 'tenant-b'],
+            project: { name: 'Shared Project', sync: 'none' },
+          },
+        },
+      },
+    });
+
+    const resolution = await resolveResponseBatchDispatchPool({
+      dispatch: { team: 'chatgpt-pool', mode: 'next_available', projectSync: 'none' },
+      catalog,
+      control,
+      requests: [
+        { model: 'gpt-5.1', input: 'New job 1.' },
+        { model: 'gpt-5.1', input: 'New job 2.' },
+      ],
+    });
+
+    expect(resolution.assignments.map((assignment) => assignment.memberAgent)).toEqual(['tenant-b', 'tenant-a']);
+    expect(resolution.requests.map((request) => request.auracall?.runtimeProfile)).toEqual([
+      'wsl-chrome-2',
+      'wsl-chrome-1',
+    ]);
+    expect(resolution.dispatch.warnings).toContain(
+      'Dispatch-pool team "chatgpt-pool" is project-bound to "Shared Project" with projectSync=none; AuraCall does not reconcile project instructions, files, or settings between tenants.',
+    );
   });
 
   it('builds an execution gate from persisted batch limits', async () => {

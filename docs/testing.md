@@ -240,6 +240,16 @@
         project-bound agent creation, scoped execution key, attachment-bearing
         batch enqueue, batch polling, and child response readback pattern
         without provider or browser dispatcher access
+      - targeted tenant-pool batch coverage:
+        `pnpm vitest run tests/runtime.responseBatchService.test.ts tests/http.responsesServer.test.ts -t "dispatch-pool|active runtime evidence" --maxWorkers 1`;
+        this proves dispatch-pool expansion, team-scoped authorization, batch
+        assignment metadata, and active-runtime-evidence selection without
+        touching live providers
+      - targeted tenant-pool setup coverage:
+        `pnpm vitest run tests/projects.tenantPoolTeamEnsureService.test.ts tests/mcp.tenantPoolTeamEnsure.test.ts tests/mcp.server.test.ts --maxWorkers 1`;
+        this proves per-member project ensure composition, missing-team
+        creation, existing-team no-rewrite semantics, and MCP service wiring
+        without live provider access
       - local deterministic smoke for scoped client handoff workflows:
         `pnpm run smoke:scoped-client-handoff`; it chains the composed
         redacted `POST /v1/agent-setup-handoffs` route, scoped key issuance
@@ -829,6 +839,11 @@
       child should expose a distinct `browserRunSummary.chromeTargetId`, and
       active lease heartbeats should advance from runtime evidence rather than
       from a blind timer
+    - dispatch-pool response batches expand each child to one concrete member
+      agent before authorization and persistence; batch status should expose
+      `dispatch.team`, `dispatch.projectSync`, pool warnings, and per-job
+      dispatch assignment. Availability should use active direct-run lease or
+      running-step evidence before falling back to team order.
     - ChatGPT tenant limits should cap the shared drain path across batches and
       one-shot responses: default 4 concurrent chats, 120 chat starts per hour,
       and 240 chat starts per day per configured ChatGPT service account, with
