@@ -30280,3 +30280,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - full `tests/runtime.responsesService.test.ts` still has the existing
     `reconstructs the execution request...` fixture failure unrelated to this
     patch.
+
+## Turn 170 | 2026-05-18
+
+- Goal: carry the response-batch `runtimeState` contract through the MCP
+  response-batch tools so non-HTTP callers can render transient finalization
+  without reverse-engineering diagnostics.
+- Change:
+  - tightened MCP `response_batch_create` / `response_batch_status` output
+    schemas from unknown job records to typed response-batch job rows.
+  - included `runtimeState` and bounded runtime diagnostics in the MCP schema,
+    including `finalizing`.
+  - documented the MCP polling/readback contract in `docs/mcp.md`.
+- Verification:
+  - `pnpm vitest run tests/mcp.responseBatch.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/mcp.schema.test.ts tests/mcp.responseBatch.test.ts --maxWorkers 1`
+  - `pnpm exec biome lint src/mcp/tools/responseBatch.ts tests/mcp.responseBatch.test.ts --max-diagnostics 80`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`

@@ -16265,3 +16265,8 @@ browser-stage lifecycle observability, not transcript truncation.
   `runtimeDiagnosticsSummary.runtimeState`, and response-batch job rows copy it
   so callers can distinguish `finalizing` from `recovering`, `stranded`, or
   ordinary `running` states without reading raw runtime records.
+- 2026-05-18: MCP response-batch tools should declare the same transient
+  runtime-state contract as the HTTP batch endpoint. Their output schemas now
+  type child job rows, including `runtimeState` and bounded runtime
+  diagnostics, so MCP clients can treat `finalizing` as a first-class display
+  state instead of accepting opaque job records.

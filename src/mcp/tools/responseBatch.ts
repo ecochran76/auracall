@@ -1,5 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { ExecutionResponseStatusSchema } from '../../runtime/apiSchema.js';
 import {
   createResponseBatchService,
   ResponseBatchCreateRequestSchema,
@@ -14,13 +15,69 @@ const responseBatchStatusInputShape = {
   id: z.string().min(1),
 } satisfies z.ZodRawShape;
 
+const responseBatchRuntimeStateSchema = z
+  .enum(['queued', 'running', 'recovering', 'finalizing', 'stranded', 'terminal'])
+  .nullable()
+  .optional();
+
+const responseBatchRuntimeDiagnosticsSummarySchema = z
+  .object({
+    runtimeState: responseBatchRuntimeStateSchema,
+    leaseState: z.enum(['none', 'active', 'released', 'expired', 'mixed']).nullable().optional(),
+    lastLeaseEvent: z
+      .object({
+        type: z.enum(['lease-acquired', 'lease-released']).nullable().optional(),
+        createdAt: z.string().nullable().optional(),
+        leaseId: z.string().nullable().optional(),
+        ownerId: z.string().nullable().optional(),
+        note: z.string().nullable().optional(),
+        releaseReason: z.string().nullable().optional(),
+      })
+      .nullable()
+      .optional(),
+    browserTaskState: z.string().nullable().optional(),
+    lastProviderEvidence: z
+      .object({
+        observedAt: z.string().nullable().optional(),
+        state: z.string().nullable().optional(),
+        source: z.string().nullable().optional(),
+        evidenceRef: z.string().nullable().optional(),
+        confidence: z.string().nullable().optional(),
+        details: z.record(z.string(), z.unknown()).nullable().optional(),
+      })
+      .nullable()
+      .optional(),
+    terminalTransitionSource: z
+      .enum(['step-succeeded', 'step-failed', 'run-cancelled', 'requested-output-policy'])
+      .nullable()
+      .optional(),
+  })
+  .nullable()
+  .optional();
+
+const responseBatchJobOutputSchema = z.object({
+  index: z.number().int().min(0),
+  responseId: z.string(),
+  model: z.string(),
+  agent: z.string().nullable(),
+  service: z.string().nullable(),
+  runtimeProfile: z.string().nullable(),
+  dispatch: z.record(z.string(), z.unknown()).nullable().optional(),
+  createdAt: z.string(),
+  status: z.union([ExecutionResponseStatusSchema, z.literal('missing')]),
+  completedAt: z.string().nullable(),
+  failure: z.unknown().nullable(),
+  diagnostics: responseBatchRuntimeDiagnosticsSummarySchema,
+  runtimeState: responseBatchRuntimeStateSchema,
+});
+
 const responseBatchOutputShape = {
   id: z.string(),
   object: z.literal('response_batch_status'),
   status: z.enum(['queued', 'running', 'completed', 'failed', 'cancelled', 'mixed_terminal']),
   dispatch: z.record(z.string(), z.unknown()).nullable().optional(),
   counts: z.record(z.string(), z.number()),
-  jobs: z.array(z.record(z.string(), z.unknown())),
+  jobs: z.array(responseBatchJobOutputSchema),
 } satisfies z.ZodRawShape;
 
 export interface RegisterResponseBatchToolsDeps {

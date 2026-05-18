@@ -53,7 +53,11 @@ scoped keys, response batches, attachments, and polling rules, see
 - Behavior: creates one durable response run per request and returns
   `object = "response_batch_status"` with aggregate counts and child
   `responseId` values. Each child remains a normal response run, so operators
-  can inspect it with `run_status`.
+  can inspect it with `run_status`. Job rows also expose the child
+  `runtimeState` and bounded runtime `diagnostics` when response readback has
+  browser/runtime evidence; `runtimeState = "finalizing"` means the provider
+  has reached `response-complete` but AuraCall has not yet persisted the final
+  child output.
 - Polling contract: create the batch once, keep the returned batch id, and poll
   `response_batch_status`. Polling is read-only and must not resubmit student
   prompts, domain prompts, or provider workbenches.

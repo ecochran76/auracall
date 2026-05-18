@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 import {
   createResponseBatchCreateToolHandler,
   createResponseBatchStatusToolHandler,
+  registerResponseBatchTools,
 } from '../src/mcp/tools/responseBatch.js';
 import type { ResponseBatchStatus } from '../src/runtime/responseBatchService.js';
 
@@ -122,5 +124,90 @@ describe('mcp response batch tools', () => {
         status: 'completed',
       },
     });
+  });
+
+  it('declares finalizing runtime state in MCP output schemas', () => {
+    const registeredTools = new Map<string, { outputSchema?: z.ZodRawShape }>();
+    const server = {
+      registerTool: vi.fn((name: string, config: { outputSchema?: z.ZodRawShape }) => {
+        registeredTools.set(name, config);
+      }),
+    };
+    registerResponseBatchTools(server as unknown as Parameters<typeof registerResponseBatchTools>[0], {
+      service: {
+        createBatch: vi.fn(),
+        readBatchStatus: vi.fn(),
+      },
+    });
+    const tool = registeredTools.get('response_batch_status');
+    if (!tool?.outputSchema) {
+      throw new Error('expected response_batch_status output schema');
+    }
+    const [job] = runningBatch.jobs;
+    if (!job) {
+      throw new Error('expected response batch job fixture');
+    }
+    const schema = z.object(tool.outputSchema);
+    const finalizingBatch = {
+      ...runningBatch,
+      counts: {
+        total: 1,
+        in_progress: 1,
+        completed: 0,
+        failed: 0,
+        cancelled: 0,
+        missing: 0,
+      },
+      jobs: [
+        {
+          ...job,
+          runtimeState: 'finalizing',
+          diagnostics: {
+            runtimeState: 'finalizing',
+            leaseState: 'expired',
+            browserTaskState: 'response-complete',
+            lastProviderEvidence: {
+              observedAt: '2026-05-12T14:04:30.000Z',
+              state: 'response-complete',
+              source: 'browser-service',
+              evidenceRef: 'chatgpt-response-finished',
+              confidence: 'high',
+              details: {
+                service: 'chatgpt',
+                runtimeProfileId: 'wsl-chrome-3',
+              },
+            },
+            terminalTransitionSource: null,
+          },
+        },
+      ],
+    };
+
+    expect(schema.safeParse(finalizingBatch).success).toBe(true);
+    expect(
+      schema.safeParse({
+        ...finalizingBatch,
+        jobs: [
+          {
+            ...finalizingBatch.jobs[0],
+            runtimeState: 'done-ish',
+          },
+        ],
+      }).success,
+    ).toBe(false);
+    expect(
+      schema.safeParse({
+        ...finalizingBatch,
+        jobs: [
+          {
+            ...finalizingBatch.jobs[0],
+            diagnostics: {
+              ...finalizingBatch.jobs[0].diagnostics,
+              runtimeState: 'done-ish',
+            },
+          },
+        ],
+      }).success,
+    ).toBe(false);
   });
 });
