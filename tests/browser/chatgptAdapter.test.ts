@@ -35,6 +35,7 @@ import {
   readChatgptConversationPayloadWithClient,
   resolveChatgptCanvasArtifactContentText,
   isRetryableChatgptTransientMessage,
+  isChatgptTargetReusableForPreferredUrl,
   resolveChatgptConversationUrl,
   resolveChatgptProjectUrl,
   resolveChatgptProjectMemoryLabel,
@@ -44,6 +45,38 @@ import {
   resolveChatgptProjectSourceUploadActionLabelsForTest,
   serializeChatgptGridRowsToCsv,
 } from '../../src/browser/providers/chatgptAdapter.js';
+
+describe('isChatgptTargetReusableForPreferredUrl', () => {
+  test('does not reuse running conversation tabs for root/library requests', () => {
+    expect(
+      isChatgptTargetReusableForPreferredUrl(
+        'https://chatgpt.com/g/g-p-demo/c/6a0a6f14-7a80-83ea-a77b-81f654b709aa',
+        'https://chatgpt.com/library',
+      ),
+    ).toBe(false);
+    expect(
+      isChatgptTargetReusableForPreferredUrl(
+        'https://chatgpt.com/c/6a0a6f14-7a80-83ea-a77b-81f654b709aa',
+        'https://chatgpt.com/',
+      ),
+    ).toBe(false);
+  });
+
+  test('allows exact conversation reuse only for the matching conversation request', () => {
+    expect(
+      isChatgptTargetReusableForPreferredUrl(
+        'https://chatgpt.com/g/g-p-demo/c/6a0a6f14-7a80-83ea-a77b-81f654b709aa',
+        'https://chatgpt.com/g/g-p-demo/c/6a0a6f14-7a80-83ea-a77b-81f654b709aa',
+      ),
+    ).toBe(true);
+    expect(
+      isChatgptTargetReusableForPreferredUrl(
+        'https://chatgpt.com/c/6a0a6f14-7a80-83ea-a77b-81f654b709aa',
+        'https://chatgpt.com/c/6a0a69aa-1f5c-83ea-bcdc-692457c7e212',
+      ),
+    ).toBe(false);
+  });
+});
 
 describe('normalizeChatgptLibraryItemProbes', () => {
   test('uses provider UUIDs and dedupes duplicated library entries', () => {

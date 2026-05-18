@@ -29822,3 +29822,55 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Follow-up:
   - before the next UX implementation slice, select the target from Plan 0067
     and state the acceptance criteria before editing.
+
+## Turn 158 | 2026-05-18
+
+- Goal: repair ChatGPT browser-backed lease evidence after a transcribe-audio
+  retry proved that a run could keep renewing while its submitted target had
+  navigated to ChatGPT Library.
+- Evidence:
+  - transcribe-audio run `resp_801d7fae735e4a348460029d8ca95ef0` kept emitting
+    `chatgpt-passive-dom-probe` and `browser-runtime-hint` lease heartbeats for
+    more than 90 minutes.
+  - direct CDP inspection showed the recorded target
+    `2DD81FEB230FEF239857872E722DEB56` on `https://chatgpt.com/library`, and
+    no page target matched the expected conversation
+    `6a0a6f14-7a80-83ea-a77b-81f654b709aa`.
+  - AuraCall runtime inspection confirmed `ChatGPT - Library` with
+    `modelResponses=0`, so the lease evidence was not actually bound to a
+    running prompt.
+- Change:
+  - runtime hints now refresh their target id and current URL from the live
+    DevTools target before persisting lease evidence.
+  - passive DOM response-wait callbacks are awaitable, so a target-mismatch
+    guard can abort the run instead of logging asynchronously.
+  - local ChatGPT browser runs now fail with `chatgpt-target-mismatch` when a
+    submitted conversation target moves to Library/root/project or another
+    conversation after the prompt is dispatched.
+  - ChatGPT target selection no longer reuses existing conversation tabs for
+    root/library/project requests, reducing the chance that background
+    ChatGPT work navigates a running prompt tab.
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/pageActions.test.ts` passes.
+  - `pnpm vitest run tests/runtime.configuredExecutor.test.ts` passes.
+  - `pnpm exec tsc --noEmit --pretty false` passes.
+  - `pnpm run install:user-runtime-service` completed, `/home/ecochran76/.local/bin/auracall --version`
+    reports `0.1.1`, and `systemctl --user is-active auracall-api.service`
+    reports `active`.
+  - non-private installed-service ChatGPT artifact smoke
+    `resp_71eed15d1c394897ae5f8f9d815fb842` completed on
+    `wsl-chrome-3`; browser diagnostics stayed on submitted conversation
+    `6a0a8995-ec48-83ea-8a71-f4c41d919d59`, and the final
+    `browserRunSummary.tabUrl` remained the same conversation URL with
+    Chrome target `2D3D7F1617A9F3D17624B42E05F52219`.
+  - the smoke materialized
+    `auracall-target-bound-smoke.txt` under the ChatGPT conversation
+    attachment cache, and the local artifact content was exactly
+    `AURACALL_TARGET_BOUND_SMOKE_OK`.
+  - post-run `/status?tenantExecutionLimits=usage` reported ChatGPT tenant
+    `wsl-chrome-3` `activeChats=0`, `chatsLastHour=1`, and background drain
+    `idle`.
+- Follow-up:
+  - the next private transcribe-audio retry can proceed one item at a time,
+    watching for `chatgpt-target-mismatch` instead of long-running Library
+    leases.

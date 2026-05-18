@@ -1482,8 +1482,11 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     });
   }
 
+  let client: Awaited<ReturnType<typeof connectToChrome>> | null = null;
   let lastTargetId: string | undefined;
   let lastUrl: string | undefined;
+  let submittedConversationId: string | null = null;
+  let promptDispatchedAt: number | null = null;
   let selectedThinkingTime: ThinkingTimeLevel | null = null;
   let selectedChatgptProMode: ChatgptProMode | null = null;
   let selectedChatgptAccountLevel: string | null = null;
@@ -1496,10 +1499,88 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   let chatgptDeepResearchModifyPlanLabel: string | null = null;
   let chatgptDeepResearchModifyPlanVisible: boolean | null = null;
   let chatgptDeepResearchReviewEvidence: Record<string, unknown> | null = null;
+  const refreshRuntimeTargetSnapshot = async (): Promise<void> => {
+    const activeClient = client;
+    if (!activeClient) {
+      return;
+    }
+    try {
+      if (activeClient.Target?.getTargetInfo) {
+        const info = await activeClient.Target.getTargetInfo({});
+        lastTargetId = info?.targetInfo?.targetId ?? lastTargetId;
+        lastUrl = info?.targetInfo?.url ?? lastUrl;
+      }
+    } catch {
+      // Keep the last known target metadata when DevTools target-info refresh fails.
+    }
+    try {
+      const { result } = await activeClient.Runtime.evaluate({
+        expression: 'location.href',
+        returnByValue: true,
+      });
+      if (typeof result?.value === 'string' && result.value.trim()) {
+        lastUrl = result.value;
+      }
+    } catch {
+      // Keep the last known URL when the page cannot answer a lightweight location probe.
+    }
+    const conversationId = lastUrl && isConversationUrl(lastUrl)
+      ? extractConversationIdFromUrl(lastUrl)
+      : undefined;
+    if (conversationId) {
+      submittedConversationId = conversationId;
+    }
+  };
+
+  const assertSubmittedChatgptTargetStillCurrent = async (context: string): Promise<void> => {
+    await refreshRuntimeTargetSnapshot();
+    const currentUrl = lastUrl ?? null;
+    const currentConversationId = currentUrl && isConversationUrl(currentUrl)
+      ? extractConversationIdFromUrl(currentUrl)
+      : undefined;
+    if (currentConversationId) {
+      if (submittedConversationId && currentConversationId !== submittedConversationId) {
+        throw new BrowserAutomationError(
+          `ChatGPT running prompt target moved from conversation ${submittedConversationId} to ${currentConversationId}.`,
+          {
+            stage: 'chatgpt-target-mismatch',
+            context,
+            expectedConversationId: submittedConversationId,
+            currentConversationId,
+            currentUrl,
+            chromeTargetId: lastTargetId ?? null,
+          },
+        );
+      }
+      submittedConversationId = currentConversationId;
+      return;
+    }
+
+    const promptAgeMs = promptDispatchedAt ? Date.now() - promptDispatchedAt : null;
+    const waitedForConversationLongEnough = promptAgeMs !== null && promptAgeMs > 60_000;
+    if (submittedConversationId || waitedForConversationLongEnough) {
+      throw new BrowserAutomationError(
+        submittedConversationId
+          ? `ChatGPT running prompt target left conversation ${submittedConversationId}.`
+          : 'ChatGPT running prompt target never reached a conversation URL after submit.',
+        {
+          stage: 'chatgpt-target-mismatch',
+          context,
+          expectedConversationId: submittedConversationId,
+          currentConversationId: currentConversationId ?? null,
+          currentUrl,
+          chromeTargetId: lastTargetId ?? null,
+          promptAgeMs,
+        },
+      );
+    }
+  };
+
   const emitRuntimeHint = async (): Promise<BrowserRuntimeMetadata | null> => {
     if (!chrome?.port) {
       return null;
     }
+    await refreshRuntimeTargetSnapshot();
     const conversationId = lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined;
     const hint: BrowserRuntimeMetadata = {
       selectedAgentId: config.selectedAgentId ?? null,
@@ -1625,7 +1706,6 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     throw error;
   }
 
-  let client: Awaited<ReturnType<typeof connectToChrome>> | null = null;
   const openDedicatedPromptTarget = async (): Promise<Awaited<ReturnType<typeof connectToChromeTarget>>> => {
     const openedTarget = await openChromeTarget(chrome.port, 'about:blank', chromeHost, logger);
     const targetId = resolveChromeTargetIdForBrowserRun(openedTarget);
@@ -1672,6 +1752,13 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       const message = error instanceof Error ? error.message : String(error);
       logger(`[browser] failed to emit runtime evidence: ${message}`);
     });
+  };
+  const recordTargetBoundPassiveObservation = async (
+    observation: Omit<BrowserPassiveObservation, 'observedAt'>,
+  ): Promise<void> => {
+    await assertSubmittedChatgptTargetStillCurrent(observation.evidenceRef ?? observation.state);
+    const recorded = recordBrowserPassiveObservation(passiveObservations, observation);
+    await emitRuntimeEvidence(recorded);
   };
 
   try {
@@ -1901,6 +1988,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
           const { result } = await Runtime.evaluate({ expression: 'location.href', returnByValue: true });
           if (typeof result?.value === 'string' && result.value.includes('/c/')) {
             lastUrl = result.value;
+            submittedConversationId = extractConversationIdFromUrl(lastUrl) ?? submittedConversationId;
             logger(`[browser] conversation url (${label}) = ${lastUrl}`);
             await emitRuntimeHint();
             return true;
@@ -2074,6 +2162,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
           baselineTurns: baselineTurns ?? undefined,
           inputTimeoutMs: config.inputTimeoutMs ?? undefined,
           onPromptDispatched: async () => {
+            promptDispatchedAt = Date.now();
             await releaseBrowserOperationLock('ChatGPT prompt dispatch');
             recordPassiveObservation({
               state: 'response-incoming',
@@ -2320,22 +2409,20 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         logger,
         baselineTurns ?? undefined,
         {
-          onPassiveDomProbe: () => {
-            recordPassiveObservation({
+          onPassiveDomProbe: () =>
+            recordTargetBoundPassiveObservation({
               state: 'thinking',
               source: 'browser-service',
               evidenceRef: 'chatgpt-passive-dom-probe',
               confidence: 'low',
-            });
-          },
-          onResponseIncoming: () => {
-            recordPassiveObservation({
+            }),
+          onResponseIncoming: () =>
+            recordTargetBoundPassiveObservation({
               state: 'response-incoming',
               source: 'browser-service',
               evidenceRef: 'chatgpt-assistant-snapshot',
               confidence: 'high',
-            });
-          },
+            }),
         },
       ),
     );
@@ -3718,7 +3805,7 @@ async function waitForAssistantResponseWithReload(
   timeoutMs: number,
   logger: BrowserLogger,
   minTurnIndex?: number,
-  options: { onResponseIncoming?: () => void; onPassiveDomProbe?: () => void } = {},
+  options: { onResponseIncoming?: () => void | Promise<void>; onPassiveDomProbe?: () => void | Promise<void> } = {},
 ) {
   try {
     return await waitForAssistantResponse(Runtime, timeoutMs, logger, minTurnIndex, options);

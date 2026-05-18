@@ -15,8 +15,8 @@ const ASSISTANT_POLL_TIMEOUT_ERROR = 'assistant-response-watchdog-timeout';
 const PASSIVE_DOM_PROBE_INTERVAL_MS = 5_000;
 
 export interface WaitForAssistantResponseOptions {
-  onResponseIncoming?: () => void;
-  onPassiveDomProbe?: () => void;
+  onResponseIncoming?: () => void | Promise<void>;
+  onPassiveDomProbe?: () => void | Promise<void>;
 }
 
 function isAnswerNowPlaceholderText(normalized: string): boolean {
@@ -42,12 +42,12 @@ export async function waitForAssistantResponse(
   let responseIncomingEmitted = false;
   const waitOptions: WaitForAssistantResponseOptions = {
     ...options,
-    onResponseIncoming: () => {
+    onResponseIncoming: async () => {
       if (responseIncomingEmitted) {
         return;
       }
       responseIncomingEmitted = true;
-      options.onResponseIncoming?.();
+      await options.onResponseIncoming?.();
     },
   };
   logger('Waiting for ChatGPT response');
@@ -89,7 +89,7 @@ export async function waitForAssistantResponse(
       logger('Captured assistant response via snapshot watchdog');
       evaluationPromise.catch(() => undefined);
       await terminateRuntimeExecution(Runtime);
-      waitOptions.onResponseIncoming?.();
+      await waitOptions.onResponseIncoming?.();
       return winner.value;
     }
     pollerAbort.abort();
@@ -110,7 +110,7 @@ export async function waitForAssistantResponse(
           waitOptions,
         );
         if (recovered) {
-          waitOptions.onResponseIncoming?.();
+          await waitOptions.onResponseIncoming?.();
           return recovered;
         }
         await logDomFailure(Runtime, logger, 'assistant-response');
@@ -169,7 +169,7 @@ export async function waitForAssistantResponse(
       logger('Assistant still generating; waiting for completion');
       const completed = await pollAssistantCompletion(Runtime, remainingMs, minTurnIndex, undefined, waitOptions);
       if (completed) {
-        waitOptions.onResponseIncoming?.();
+        await waitOptions.onResponseIncoming?.();
         return completed;
       }
     } else if (completionVisible) {
@@ -268,8 +268,8 @@ async function recoverAssistantResponse(
   }
   const quickSnapshot = normalizeAssistantSnapshot(await readAssistantSnapshot(Runtime, minTurnIndex).catch(() => null));
   if (quickSnapshot) {
-    options.onPassiveDomProbe?.();
-    options.onResponseIncoming?.();
+    await options.onPassiveDomProbe?.();
+    await options.onResponseIncoming?.();
     logger('Recovered assistant response via immediate snapshot fallback');
     return quickSnapshot;
   }
@@ -402,13 +402,13 @@ async function pollAssistantCompletion(
     const observedAt = Date.now();
     if (observedAt - lastPassiveProbeAt >= PASSIVE_DOM_PROBE_INTERVAL_MS) {
       lastPassiveProbeAt = observedAt;
-      options.onPassiveDomProbe?.();
+      await options.onPassiveDomProbe?.();
     }
     const normalized = normalizeAssistantSnapshot(snapshot);
     if (normalized) {
       if (!responseIncomingEmitted) {
         responseIncomingEmitted = true;
-        options.onResponseIncoming?.();
+        await options.onResponseIncoming?.();
       }
       const currentLength = normalized.text.length;
       if (currentLength > previousLength) {

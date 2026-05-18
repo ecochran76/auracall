@@ -816,6 +816,10 @@
       probe lease evidence when the provider has not surfaced readable
       progress text; missing assistant/status text alone is not evidence that
       the run stopped
+    - passive DOM probe evidence must stay bound to the submitted conversation
+      target; a target that has moved to ChatGPT Library/root/project or a
+      different conversation should fail with `chatgpt-target-mismatch` instead
+      of extending the lease
     - after restart recovery, a stranded browser-backed ChatGPT step should
       reattach to the persisted submitted tab target when available; it should
       fail for operator review rather than replaying the prompt into a new tab

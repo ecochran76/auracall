@@ -281,6 +281,29 @@ describe('waitForAssistantResponse', () => {
     expect(responseIncoming).toHaveBeenCalledTimes(1);
   });
 
+  test('fails response waiting when passive DOM probe rejects', async () => {
+    const runtime = {
+      evaluate: vi.fn().mockImplementation(async (params: { expression?: string }) => {
+        const expression = String(params?.expression ?? '');
+        if (expression.includes('extractAssistantTurn')) {
+          return { result: { value: null } };
+        }
+        if (expression.startsWith('Boolean(document.querySelector')) {
+          return { result: { value: false } };
+        }
+        return { result: { value: null } };
+      }),
+    } as unknown as ChromeClient['Runtime'];
+
+    await expect(
+      waitForAssistantResponse(runtime, 5200, logger, undefined, {
+        onPassiveDomProbe: async () => {
+          throw new Error('target mismatch');
+        },
+      }),
+    ).rejects.toThrow('target mismatch');
+  });
+
   test('response observer watches character data mutations', async () => {
     let capturedExpression = '';
     const runtime = {

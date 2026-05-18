@@ -16149,3 +16149,19 @@ browser-stage lifecycle observability, not transcript truncation.
   another dashboard feature, re-read `AGENTS.md` and the relevant policy files,
   reconcile Plan 0067 if the implemented auth/control boundary has changed,
   and state the selected plan slice plus acceptance criteria before editing.
+- 2026-05-18: ChatGPT passive DOM lease evidence must be target-bound, not
+  stale-metadata-bound. A transcribe-audio retry proved that
+  `chatgpt-passive-dom-probe` heartbeats could keep renewing after the recorded
+  submitted target had navigated to ChatGPT Library and no live tab matched the
+  expected conversation. Runtime hints now refresh the actual DevTools target
+  URL before heartbeat persistence, passive probe callbacks can abort response
+  waits, ChatGPT runs fail with `chatgpt-target-mismatch` when the submitted
+  target leaves the expected conversation, and root/library/project requests no
+  longer reuse existing conversation tabs.
+- 2026-05-18: Target-bound lease fixes need an installed-service artifact smoke
+  before private transcript retries resume. The non-private ChatGPT smoke
+  `resp_71eed15d1c394897ae5f8f9d815fb842` completed on `wsl-chrome-3`,
+  kept diagnostics on submitted conversation
+  `6a0a8995-ec48-83ea-8a71-f4c41d919d59`, materialized
+  `auracall-target-bound-smoke.txt`, and left the ChatGPT tenant with
+  `activeChats=0` after completion.

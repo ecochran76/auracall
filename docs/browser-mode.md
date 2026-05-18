@@ -53,8 +53,12 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
      mutation lock is held through launch, navigation, prompt insertion, and
      send only; after the prompt is dispatched, response-batch drains may start
      another browser-backed run on the same runtime profile, which gets its own
-     target. API run summaries include the `chromeTargetId` so operators can
-     confirm the one-running-prompt-per-tab boundary after completion.
+     target. Passive DOM lease evidence is accepted only from the current
+     submitted conversation target; if that target navigates to Library, root,
+     project, or another conversation, the run fails with a target-mismatch
+     diagnostic instead of renewing indefinitely. API run summaries include the
+     `chromeTargetId` so operators can confirm the one-running-prompt-per-tab
+     boundary after completion.
 3. **Session integration** – browser sessions use the normal log writer, add `mode: "browser"` plus `browser.config/runtime/context` metadata, and log the Chrome PID/port so `auracall session <id>` (or `auracall status <id>`) shows a marker for the background Chrome process. The context records provider/project/conversation IDs plus any resolved names and cache profile key.
 4. **Usage accounting** – we estimate input tokens with the same tokenizer used for API runs and estimate output tokens via `estimateTokenCount`. `auracall status` therefore shows comparable cost/timing info even though the call ran through the browser.
 

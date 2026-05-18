@@ -212,6 +212,10 @@ Current limits:
     is still loading or thinking. Startup recovery uses persisted submitted-tab
     evidence to reattach stranded ChatGPT work; if AuraCall cannot prove the
     original tab, it fails the run instead of replaying the prompt.
+  - Passive DOM evidence for a running ChatGPT prompt must still be attached to
+    the submitted conversation target. Library, root, project, or wrong-chat
+    targets do not count as running-prompt evidence and should produce a
+    target-mismatch failure rather than an endlessly renewed lease.
   - the browser dispatcher and provider politeness controls still enforce the
     lower-level CDP/account safety guardrails
   - deterministic local workflow smoke: `pnpm run smoke:che447-grading-batch`

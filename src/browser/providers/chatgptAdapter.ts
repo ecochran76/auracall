@@ -1561,6 +1561,23 @@ export function extractChatgptConversationIdFromUrl(url: string): string | null 
   }
 }
 
+export function isChatgptTargetReusableForPreferredUrl(
+  targetUrl: string | null | undefined,
+  preferredUrl: string | null | undefined,
+): boolean {
+  const target = String(targetUrl ?? '').trim();
+  const preferred = String(preferredUrl ?? '').trim();
+  if (!target || !preferred || !isChatgptUrl(target)) {
+    return false;
+  }
+  const preferredConversationId = extractChatgptConversationIdFromUrl(preferred);
+  const targetConversationId = extractChatgptConversationIdFromUrl(target);
+  if (preferredConversationId) {
+    return targetConversationId === preferredConversationId;
+  }
+  return !targetConversationId;
+}
+
 export function findChatgptProjectByName<T extends { id: string; name: string; url?: string }>(
   projects: readonly T[],
   name: string,
@@ -3226,12 +3243,19 @@ async function connectToChatgptTab(
   let host = options?.host ?? '127.0.0.1';
   let port = options?.port ?? resolvePortFromEnv();
   let failedTargetId: string | undefined;
+  const preferredUrl = urlOverride ?? options?.configuredUrl ?? CHATGPT_HOME_URL;
   if (options?.tabTargetId && port) {
     try {
       const client = await connectToChromeTarget({ host, port, target: options.tabTargetId });
       await enableChatgptTargetDomains(client, options.tabTargetId);
       setClientSuppressFocus(client, resolveBrowserTabPolicy(options).suppressFocus);
       await dismissCreateProjectDialogIfOpen(client.Runtime).catch(() => undefined);
+      const currentUrl = await readChatgptLocationHref(client.Runtime).catch(() => null);
+      if (!isChatgptTargetReusableForPreferredUrl(currentUrl, preferredUrl)) {
+        throw new Error(
+          `ChatGPT target ${options.tabTargetId} is on ${currentUrl ?? '(unknown URL)'}, not the expected ${preferredUrl}.`,
+        );
+      }
       return {
         client,
         targetId: options.tabTargetId,
@@ -3240,7 +3264,10 @@ async function connectToChatgptTab(
         port,
         usedExisting: true,
       };
-    } catch {
+    } catch (error) {
+      if (!providerNavigationAllowed(options)) {
+        throw error;
+      }
       failedTargetId = options.tabTargetId;
       // Fall back to rescanning below when the previously resolved target id went stale.
     }
@@ -3255,7 +3282,6 @@ async function connectToChatgptTab(
         }) => Promise<{ host?: string; port?: number; tab?: { targetId?: string; id?: string } | null }>;
       })
     | undefined;
-  const preferredUrl = urlOverride ?? options?.configuredUrl ?? CHATGPT_HOME_URL;
   let resolvedTargetIdFromService: string | undefined;
   const hasExplicitEndpoint = options?.port !== undefined || options?.host !== undefined;
   if (!hasExplicitEndpoint && serviceResolver?.resolveServiceTarget) {
@@ -3287,6 +3313,7 @@ async function connectToChatgptTab(
   const candidates = targets.filter((target) =>
     target.type === 'page' &&
     isChatgptUrl(target.url ?? '') &&
+    isChatgptTargetReusableForPreferredUrl(target.url ?? '', preferredUrl) &&
     resolveChatgptTargetId(target) !== failedTargetId,
   );
   const serviceResolved = resolvedTargetIdFromService
@@ -3302,7 +3329,7 @@ async function connectToChatgptTab(
       ? { target: await openChromeTarget(resolvedPort, preferredUrl, host), reused: false }
       : await openOrReuseChromeTarget(resolvedPort, preferredUrl, {
           host,
-          reusePolicy: 'same-origin',
+          reusePolicy: extractChatgptConversationIdFromUrl(preferredUrl) ? 'same-origin' : 'new',
           compatibleHosts: CHATGPT_COMPATIBLE_HOSTS,
           matchingTabLimit: tabPolicy.serviceTabLimit,
           blankTabLimit: tabPolicy.blankTabLimit,
@@ -3352,6 +3379,14 @@ async function enableChatgptTargetDomains(client: ChromeClient, targetId?: strin
     CHATGPT_CDP_LIST_TIMEOUT_MS,
     `Timed out enabling ChatGPT page target${targetId ? ` ${targetId}` : ''}; the Chrome endpoint is alive but the selected page target is unresponsive.`,
   );
+}
+
+async function readChatgptLocationHref(Runtime: ChromeClient['Runtime']): Promise<string | null> {
+  const { result } = await Runtime.evaluate({
+    expression: 'location.href',
+    returnByValue: true,
+  });
+  return typeof result?.value === 'string' && result.value.trim() ? result.value : null;
 }
 
 type ChatgptCreateProjectDialogState = {
