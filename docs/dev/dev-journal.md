@@ -30189,3 +30189,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `batch_5a83079d85ce4b17b963573c992654f5` completed after API restart using
     submitted target `B0850426D4AD41458B0D69234084710D` and terminalized via
     `step-succeeded`.
+
+## Turn 166 | 2026-05-18
+
+- Goal: make Search workbench rows actionable without expanding the row height
+  or reverting to large text buttons.
+- Change:
+  - added a compact Actions column to the virtualized Search table.
+  - each visible row can now inspect the row, copy a route-addressable handoff
+    link, open the provider URL when available, and download a cached asset
+    when the search projection exposes one.
+  - converted Search rows from nested-button markup to grid rows so row-level
+    click handling and per-row buttons/links remain valid HTML.
+  - cleaned the table-cell class helper so empty base classes do not emit
+    leading whitespace.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `agent-browser` verified
+    `http://auracall.localhost/dashboard?nav=search` rendered 31 virtualized
+    DOM rows, 31 action cells, 74 compact action controls, 8 provider links,
+    and 4 cached-asset links in the first loaded window.
+  - clicking the Inspect row action selected one row and produced a stable
+    `?nav=search&row=...` handoff URL.
+  - clipboard readback was blocked by browser permission, but the Copy handoff
+    link action executed without a frontend exception.

@@ -197,7 +197,10 @@ State ownership:
   account-mirror plus run-archive rows. Lexical ranking is currently simple
   substring matching, semantic ranking is not implemented, and the React table
   now appends server cursor pages on scroll and renders rows through a
-  fixed-height virtual window so DOM row count stays bounded.
+  fixed-height virtual window so DOM row count stays bounded. The first row
+  action slice is live: visible rows expose compact icon actions for inspect,
+  copy handoff link, open provider URL, and download cached asset when the row
+  has those links.
 - API-key inspection, issue, delete, and API-service restart controls exist on
   the Health page. These are narrow operator-administration controls; they do
   not launch provider work.
@@ -274,9 +277,10 @@ Workbench rules:
 - Search syntax should support plain text first, then optional field prefixes:
   `provider:chatgpt`, `tenant:soylei`, `project:"Transcripts"`,
   `kind:conversation`, `has:artifact`, `status:failed`, `after:2026-05-01`.
-- Table rows should expose quick actions by icon with hover hints: open
-  inspector, copy handoff link, open provider URL when available, download
-  cached asset when available, and attach evidence where allowed.
+- Table rows expose quick actions by icon with hover hints: open inspector,
+  copy handoff link, open provider URL when available, and download cached
+  asset when available. Remaining kind-specific actions should add evidence
+  attachment and run/artifact workflows where allowed.
 - The right inspector should prioritize human-readable chat transcript,
   artifacts, files, run lineage, and evidence before raw JSON. Raw JSON remains
   collapsible.
@@ -358,7 +362,8 @@ Implementation roadmap:
 5. Add archive/artifact/run rows into the same table.
    - Merge generated artifacts, uploads, responses, batches, media, and
      evidence into the same row model.
-   - Keep row actions and inspector panels kind-specific.
+   - Keep row actions and inspector panels kind-specific. The first generic
+     action set now covers inspect, copy link, provider URL, and cached asset.
 
 6. Add saved views and advanced search.
    - Persist operator-owned views such as "failed transcript jobs",

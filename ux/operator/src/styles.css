@@ -1289,6 +1289,31 @@ select:focus-visible {
   color: #b8c6d8 !important;
 }
 
+.search-row-actions {
+  gap: 4px;
+}
+
+.row-action-button {
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid #2e3948;
+  border-radius: 6px;
+  background: #121822;
+  color: #aebbd0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.row-action-button:hover,
+.row-action-button:focus-visible {
+  border-color: #5bc29f;
+  background: #162620;
+  color: #f5fffb;
+}
+
 .archive-compat-panel {
   margin-top: 8px;
 }

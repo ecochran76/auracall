@@ -246,9 +246,11 @@ Current State:
     cursor pages incrementally as the operator scrolls; the table uses a
     fixed-height virtual row window so loaded result sets do not create one DOM
     node per row; Time, Provider, and Tenant are pinned during horizontal
-    scroll, and keyboard row navigation updates selected-row handoff URLs
+    scroll; keyboard row navigation updates selected-row handoff URLs; each
+    visible row has compact icon actions for inspect, copy handoff link, open
+    provider URL when available, and download cached asset when available
   - remaining Search work: semantic/vector ranking, saved views,
-    reorderable/hideable columns, and richer row-specific actions for
+    reorderable/hideable columns, and richer kind-specific actions for
     artifacts, uploads, runs, and evidence
   - first slice is read-only shell work; API-backed health, run, archive,
     search, chat, config, agent, and team pages should land incrementally after

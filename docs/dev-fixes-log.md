@@ -16246,3 +16246,8 @@ browser-stage lifecycle observability, not transcript truncation.
   restarted `auracall-api.service`, recovered submitted target
   `B0850426D4AD41458B0D69234084710D`, and completed
   `batch_5a83079d85ce4b17b963573c992654f5` via `step-succeeded`.
+- 2026-05-18: Search row quick actions should use valid grid-row markup, not
+  nested interactive controls. The Search workbench rows are now `role="row"`
+  grid divs with per-cell roles, which keeps row click/keyboard selection while
+  allowing compact inspect, copy-link, provider-open, and cached-asset actions
+  inside each row.

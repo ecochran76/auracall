@@ -5379,3 +5379,44 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - add compact row quick actions for copy handoff link, inspect source, and
     provider/cached asset actions where available.
+
+## Turn 189 | 2026-05-18
+
+- Goal: add compact Search row quick actions without increasing table bulk.
+- Change:
+  - added an Actions column to the virtualized Search table.
+  - visible rows now expose icon-only actions with hover labels for Inspect row,
+    Copy handoff link, Open provider link, and Download cached asset when the
+    search projection exposes those links.
+  - switched Search rows from nested button rows to valid grid-row markup so
+    row selection, keyboard navigation, and per-row action buttons can coexist.
+  - cleaned table cell class generation to avoid empty class tokens.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `/status` returned `ok=true` after restart and advertised `/v1/search`.
+  - `agent-browser` opened
+    `http://auracall.localhost/dashboard?nav=search` and verified 31 visible
+    virtualized rows, 31 action cells, 74 compact action controls, 8 provider
+    links, and 4 cached-asset links.
+  - clicking Inspect row selected one row and produced a stable
+    `?nav=search&row=...` URL.
+  - clipboard readback was blocked by browser permission, but the Copy handoff
+    link button executed without a frontend exception.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/search-row-actions-v2.png`
+  - `/tmp/auracall-operator-ux-dogfood/search-row-actions-installed-v1.png`
+- External links:
+  - `http://auracall.localhost/dashboard?nav=search`
+  - `https://auracall.ecochran.dyndns.org/dashboard?nav=search`
+- Limitations:
+  - semantic/vector ranking, saved views, and reorderable/hideable columns are
+    still open.
+  - kind-specific artifact/run/evidence actions still need their own workflows
+    beyond the generic inspect/link/open/download actions.
+- Next:
+  - continue Search ergonomics with saved views or column visibility/reorder
+    controls, or move to richer artifact/run inspectors.

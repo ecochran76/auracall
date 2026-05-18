@@ -71,6 +71,7 @@ const SEARCH_TABLE_COLUMNS = [
   { id: "tenant", label: "Tenant", width: 210, minWidth: 150, sortable: true, pinned: true },
   { id: "project", label: "Project", width: 160, minWidth: 120, sortable: true },
   { id: "title", label: "Title", width: 420, minWidth: 220, sortable: true },
+  { id: "actions", label: "Actions", width: 116, minWidth: 104, sortable: false },
   { id: "kind", label: "Kind", width: 104, minWidth: 88, sortable: true },
   { id: "status", label: "Status", width: 112, minWidth: 92, sortable: true },
   { id: "files", label: "Files", width: 96, minWidth: 80, sortable: true },
@@ -433,6 +434,9 @@ function flattenSearchCatalogRows(payload) {
       url: row.links?.provider ?? row.links?.providerConversation ?? null,
       catalogItemRoute: row.links?.catalogItem ?? null,
       archiveItemRoute: row.links?.archiveItem ?? null,
+      assetRoute: row.links?.asset ?? (row.links?.archiveItem && row.metadata?.fileAvailable ? `${row.links.archiveItem}/asset` : null),
+      fileAvailable: Boolean(row.metadata?.fileAvailable),
+      links: row.links ?? {},
       raw: row,
     }));
   }
@@ -1396,6 +1400,7 @@ function ArchiveSearchViewport({
   const [error, setError] = useState(null);
   const [searchedAt, setSearchedAt] = useState(null);
   const [isLive, setIsLive] = useState(true);
+  const [copiedRowId, setCopiedRowId] = useState(null);
   const searchRoute = apiStatus.status?.routes?.search ?? "/v1/search";
   const dragColumnRef = useRef(null);
   const searchScrollRef = useRef(null);
@@ -1749,7 +1754,7 @@ function ArchiveSearchViewport({
   }
 
   function columnClassName(column, index, baseClassName) {
-    const classNames = [baseClassName];
+    const classNames = baseClassName ? [baseClassName] : [];
     if (column.pinned) {
       classNames.push("is-pinned", `pinned-${index + 1}`);
     }
@@ -1759,6 +1764,32 @@ function ArchiveSearchViewport({
   function openRow(row) {
     onSelectedArchiveItemChange(null);
     onSelectedSearchRowChange(row);
+  }
+
+  function searchRowHandoffUrl(row) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("nav", "search");
+    url.searchParams.delete("archiveItem");
+    url.searchParams.delete("provider");
+    url.searchParams.delete("runtime");
+    if (row?.id) url.searchParams.set("row", base64UrlEncodeText(row.id));
+    return url.toString();
+  }
+
+  async function copySearchRowLink(row, event) {
+    event.stopPropagation();
+    if (!row?.id) return;
+    try {
+      await navigator.clipboard.writeText(searchRowHandoffUrl(row));
+      setCopiedRowId(row.id);
+      window.setTimeout(() => setCopiedRowId((current) => (current === row.id ? null : current)), 1200);
+    } catch {
+      setCopiedRowId(null);
+    }
+  }
+
+  function handleSearchRowAction(event) {
+    event.stopPropagation();
   }
 
   function selectRowAtIndex(index) {
@@ -1930,26 +1961,44 @@ function ArchiveSearchViewport({
             {visibleRows.map((row, offset) => {
               const selected = selectedRow?.id === row.id;
               return (
-                <button
+                <div
                   key={row.id}
-                  type="button"
+                  role="row"
                   className={selected ? "search-table-grid search-row is-selected" : "search-table-grid search-row"}
                   style={{ gridTemplateColumns: gridTemplateColumns() }}
                   aria-rowindex={virtualWindow.startIndex + offset + 1}
-                  aria-pressed={selected}
+                  aria-selected={selected}
                   onClick={() => openRow(row)}
                 >
-                  <span className={columnClassName(SEARCH_TABLE_COLUMNS[0], 0, "")}>{formatDateTime(row.sortTime)}</span>
-                  <span className={columnClassName(SEARCH_TABLE_COLUMNS[1], 1, "")}><ProviderIcon provider={row.provider} /></span>
-                  <span className={columnClassName(SEARCH_TABLE_COLUMNS[2], 2, "two-line-cell")}><b>{row.boundIdentityKey}</b><small>{row.runtimeProfileId}</small></span>
-                  <span>{row.project}</span>
-                  <span className="title-cell"><b>{row.title}</b>{row.summary ? <small>{compactText(row.summary, 120)}</small> : null}</span>
-                  <span><span className="status-pill status-neutral">{row.kind}</span></span>
-                  <span><span className={`status-pill status-${statusTone(row.status)}`}>{statusLabel(row.status)}</span></span>
-                  <span>{formatNumber(row.fileCount)} files / {formatNumber(row.artifactCount)} art</span>
-                  <span className="mono-cell">{row.itemId}</span>
-                  <span>{formatDateTime(row.updatedAt)}</span>
-                </button>
+                  <span role="gridcell" className={columnClassName(SEARCH_TABLE_COLUMNS[0], 0, "")}>{formatDateTime(row.sortTime)}</span>
+                  <span role="gridcell" className={columnClassName(SEARCH_TABLE_COLUMNS[1], 1, "")}><ProviderIcon provider={row.provider} /></span>
+                  <span role="gridcell" className={columnClassName(SEARCH_TABLE_COLUMNS[2], 2, "two-line-cell")}><b>{row.boundIdentityKey}</b><small>{row.runtimeProfileId}</small></span>
+                  <span role="gridcell">{row.project}</span>
+                  <span role="gridcell" className="title-cell"><b>{row.title}</b>{row.summary ? <small>{compactText(row.summary, 120)}</small> : null}</span>
+                  <span role="gridcell" className="search-row-actions">
+                    <button type="button" className="row-action-button" title="Inspect row" aria-label={`Inspect ${row.title}`} onClick={(event) => { event.stopPropagation(); openRow(row); }}>
+                      <Database size={13} aria-hidden="true" />
+                    </button>
+                    <button type="button" className="row-action-button" title="Copy handoff link" aria-label={`Copy handoff link for ${row.title}`} onClick={(event) => copySearchRowLink(row, event)}>
+                      {copiedRowId === row.id ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
+                    </button>
+                    {row.url ? (
+                      <a className="row-action-button" href={row.url} target="_blank" rel="noreferrer" title="Open provider link" aria-label={`Open provider link for ${row.title}`} onClick={handleSearchRowAction}>
+                        <ExternalLink size={13} aria-hidden="true" />
+                      </a>
+                    ) : null}
+                    {row.assetRoute ? (
+                      <a className="row-action-button" href={row.assetRoute} download title="Download cached asset" aria-label={`Download cached asset for ${row.title}`} onClick={handleSearchRowAction}>
+                        <Download size={13} aria-hidden="true" />
+                      </a>
+                    ) : null}
+                  </span>
+                  <span role="gridcell"><span className="status-pill status-neutral">{row.kind}</span></span>
+                  <span role="gridcell"><span className={`status-pill status-${statusTone(row.status)}`}>{statusLabel(row.status)}</span></span>
+                  <span role="gridcell">{formatNumber(row.fileCount)} files / {formatNumber(row.artifactCount)} art</span>
+                  <span role="gridcell" className="mono-cell">{row.itemId}</span>
+                  <span role="gridcell">{formatDateTime(row.updatedAt)}</span>
+                </div>
               );
             })}
             {virtualWindow.bottomPadding ? <div className="search-table-spacer" style={{ height: `${virtualWindow.bottomPadding}px` }} /> : null}
