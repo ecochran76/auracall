@@ -173,7 +173,9 @@ State ownership:
   status, and catalog links without starting provider browser work. The Health
   surface has started moving from card-stack diagnostics toward a denser
   operator layout with a compact status strip, collapsed API-key administration,
-  tighter table rows, and a denser right inspector.
+  tighter table rows, and a denser right inspector. Health selection is now
+  route-addressable with `?nav=health&provider=<provider>&runtime=<profile>` so
+  operator links can open directly to a provider/runtime inspection state.
 - Slice 4 is started in read-only form: the Runs page polls
   `/status?recovery=true&sourceKind=all` every 30 seconds and renders recovery
   counts, local-claim metrics, runner-topology metrics, and bounded run-id

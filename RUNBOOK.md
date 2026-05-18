@@ -5034,3 +5034,38 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - continue density work on the Runs/Search surfaces or make Health selected
     state route-addressable.
+
+## Turn 181 | 2026-05-18
+
+- Goal: make the Health live-follow inspector route-addressable.
+- Change:
+  - the React operator shell now reads `?nav=health&provider=<provider>&runtime=<profile>`
+    on load.
+  - a direct Health URL preserves the selected provider/runtime while `/status`
+    is still loading, then highlights the matching live-follow row and populates
+    the inspector when account data arrives.
+  - selecting a live-follow row updates the URL to the selected
+    provider/runtime.
+  - top navigation updates the `nav` query parameter, and browser `popstate`
+    restores nav and selected live-follow account state.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run build && pnpm run install:user-runtime`
+  - `agent-browser` opened
+    `http://auracall.localhost/dashboard?nav=health&provider=chatgpt&runtime=wsl-chrome-3`
+    and verified the Health nav, selected row, and inspector populated for
+    `eric.cochran@soylei.com`.
+  - `agent-browser` selected `gemini / default` and verified the URL changed to
+    `?nav=health&provider=gemini&runtime=default`.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/health-route-selected-loaded.png`
+- External links:
+  - `http://auracall.localhost/dashboard?nav=health&provider=chatgpt&runtime=wsl-chrome-3`
+  - `https://auracall.ecochran.dyndns.org/dashboard?nav=health&provider=chatgpt&runtime=wsl-chrome-3`
+- Coordination:
+  - left the parallel tenant-pool/API dirty files and docs untouched.
+- Next:
+  - continue density work on Runs/Search, or add route-addressable run/archive
+    item selection using the same URL-state pattern.

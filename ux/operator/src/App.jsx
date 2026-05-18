@@ -67,6 +67,14 @@ const DEFAULT_LAYOUT = {
   rightWidth: 320,
 };
 
+function readUrlParams() {
+  try {
+    return new URLSearchParams(window.location.search);
+  } catch {
+    return new URLSearchParams();
+  }
+}
+
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
@@ -74,10 +82,36 @@ function clamp(value, min, max) {
 function readLayout() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}");
-    return { ...DEFAULT_LAYOUT, ...stored };
+    const params = readUrlParams();
+    const activeNav = params.get("nav");
+    return {
+      ...DEFAULT_LAYOUT,
+      ...stored,
+      ...(NAV_ITEMS.some((item) => item.id === activeNav) ? { activeNav } : {}),
+    };
   } catch {
     return DEFAULT_LAYOUT;
   }
+}
+
+function readLiveFollowAccountFromUrl() {
+  const params = readUrlParams();
+  const provider = params.get("provider");
+  const runtimeProfileId = params.get("runtime") ?? params.get("runtimeProfile");
+  if (!provider || !runtimeProfileId) return null;
+  return { provider, runtimeProfileId };
+}
+
+function replaceUrlParams(updates) {
+  const url = new URL(window.location.href);
+  for (const [key, value] of Object.entries(updates)) {
+    if (value === null || value === undefined || value === "") {
+      url.searchParams.delete(key);
+    } else {
+      url.searchParams.set(key, value);
+    }
+  }
+  window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
 function formatNumber(value) {
@@ -767,6 +801,7 @@ function HealthViewport({ apiStatus, selectedLiveFollowAccount, onSelectedLiveFo
 
   useEffect(() => {
     if (!selectedLiveFollowKey) return;
+    if (!accounts.length) return;
     const replacement = accounts.find((account) => liveFollowAccountKey(account) === selectedLiveFollowKey);
     if (!replacement) {
       onSelectedLiveFollowAccountChange(null);
@@ -2010,7 +2045,7 @@ function RightPane({ activeNav, apiStatus, runStatus, selectedLiveFollowAccount,
 export default function App() {
   const [layout, setLayout] = useState(readLayout);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [selectedLiveFollowAccount, setSelectedLiveFollowAccount] = useState(null);
+  const [selectedLiveFollowAccount, setSelectedLiveFollowAccount] = useState(readLiveFollowAccountFromUrl);
   const [selectedArchiveItem, setSelectedArchiveItem] = useState(null);
   const [selectedArchiveDetail, setSelectedArchiveDetail] = useState(emptyArchiveDetailState);
   const dragRef = useRef(null);
@@ -2020,6 +2055,35 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
   }, [layout]);
+
+  useEffect(() => {
+    replaceUrlParams({ nav: layout.activeNav === DEFAULT_LAYOUT.activeNav ? null : layout.activeNav });
+  }, [layout.activeNav]);
+
+  useEffect(() => {
+    if (layout.activeNav !== "health") return;
+    replaceUrlParams({
+      nav: "health",
+      provider: selectedLiveFollowAccount?.provider ?? null,
+      runtime: selectedLiveFollowAccount?.runtimeProfileId ?? null,
+      runtimeProfile: null,
+    });
+  }, [layout.activeNav, selectedLiveFollowAccount]);
+
+  useEffect(() => {
+    function onPopState() {
+      const params = readUrlParams();
+      const activeNav = params.get("nav");
+      setLayout((current) => ({
+        ...current,
+        ...(NAV_ITEMS.some((item) => item.id === activeNav) ? { activeNav } : { activeNav: DEFAULT_LAYOUT.activeNav }),
+      }));
+      setSelectedLiveFollowAccount(readLiveFollowAccountFromUrl());
+    }
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   useEffect(() => {
     function onPointerMove(event) {
@@ -2062,6 +2126,10 @@ export default function App() {
     document.body.classList.add("is-resizing-pane");
   }
 
+  function setActiveNav(activeNav) {
+    setLayout((current) => ({ ...current, activeNav }));
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -2081,7 +2149,7 @@ export default function App() {
                 key={item.id}
                 aria-label={item.label}
                 title={item.label}
-                onClick={() => setLayout((current) => ({ ...current, activeNav: item.id }))}
+                onClick={() => setActiveNav(item.id)}
               >
                 <Icon size={17} aria-hidden="true" />
                 <span className="nav-label">{item.label}</span>
