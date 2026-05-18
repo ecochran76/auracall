@@ -142,6 +142,123 @@ describe('response batch service', () => {
     });
   });
 
+  it('surfaces child runtime diagnostics and keeps status readable after a child read failure', async () => {
+    const stored = new Map<string, ResponseBatchRecord>();
+    stored.set('batch_diagnostics_1', {
+      id: 'batch_diagnostics_1',
+      object: 'response_batch',
+      createdAt: '2026-05-12T14:00:00.000Z',
+      updatedAt: '2026-05-12T14:00:00.000Z',
+      metadata: {},
+      limits: {
+        maxConcurrentRuns: 1,
+        maxBrowserInteractionsPerMinute: 8,
+      },
+      dispatch: null,
+      jobs: [
+        {
+          index: 0,
+          responseId: 'resp_diag_1',
+          model: 'agent:pro-extended-chatgpt-soylei',
+          agent: 'pro-extended-chatgpt-soylei',
+          service: 'chatgpt',
+          runtimeProfile: 'wsl-chrome-3',
+          createdAt: '2026-05-12T14:00:00.000Z',
+        },
+        {
+          index: 1,
+          responseId: 'resp_read_error_1',
+          model: 'agent:pro-extended-chatgpt-soylei',
+          agent: 'pro-extended-chatgpt-soylei',
+          service: 'chatgpt',
+          runtimeProfile: 'wsl-chrome-3',
+          createdAt: '2026-05-12T14:00:00.000Z',
+        },
+      ],
+    });
+    const diagnosticResponse: ExecutionResponse = {
+      ...createResponse('resp_diag_1', 'in_progress'),
+      metadata: {
+        runId: 'resp_diag_1',
+        executionSummary: {
+          completedAt: null,
+          failureSummary: null,
+          runtimeDiagnosticsSummary: {
+            leaseState: 'released',
+            browserTaskState: 'thinking',
+            lastLeaseEvent: {
+              type: 'lease-released',
+              createdAt: '2026-05-12T14:01:00.000Z',
+              leaseId: 'resp_diag_1:lease:runner',
+              ownerId: 'runner:chatgpt',
+              note: 'lease released: cancelled',
+              releaseReason: 'cancelled',
+            },
+            lastProviderEvidence: {
+              observedAt: '2026-05-12T14:00:45.000Z',
+              state: 'thinking',
+              source: 'browser-service',
+              evidenceRef: 'chatgpt-passive-dom-thinking',
+              confidence: 'medium',
+              details: {
+                service: 'chatgpt',
+                runtimeProfileId: 'wsl-chrome-3',
+                browserProfileId: 'wsl-chrome-3',
+              },
+            },
+            terminalTransitionSource: null,
+          },
+        },
+      },
+    };
+    const service = createResponseBatchService({
+      store: {
+        readBatch: vi.fn(async (id) => stored.get(id) ?? null),
+        writeBatch: vi.fn(async (record) => record),
+      },
+      responsesService: {
+        createResponse: vi.fn(),
+        readResponse: vi.fn(async (id) => {
+          if (id === 'resp_read_error_1') {
+            throw new SyntaxError('Expected double-quoted property name in JSON at position 1048544');
+          }
+          return id === 'resp_diag_1' ? diagnosticResponse : null;
+        }),
+      },
+    });
+
+    await expect(service.readBatchStatus('batch_diagnostics_1')).resolves.toMatchObject({
+      id: 'batch_diagnostics_1',
+      status: 'running',
+      counts: {
+        total: 2,
+        in_progress: 1,
+        missing: 1,
+      },
+      jobs: [
+        {
+          responseId: 'resp_diag_1',
+          status: 'in_progress',
+          diagnostics: {
+            leaseState: 'released',
+            browserTaskState: 'thinking',
+            lastLeaseEvent: {
+              releaseReason: 'cancelled',
+            },
+          },
+        },
+        {
+          responseId: 'resp_read_error_1',
+          status: 'missing',
+          failure: {
+            code: 'response_read_failed',
+            message: 'Expected double-quoted property name in JSON at position 1048544',
+          },
+        },
+      ],
+    });
+  });
+
   it('records dispatch-pool assignment metadata on child response runs', async () => {
     const createdRequests: ExecutionRequest[] = [];
     const responses = new Map<string, ExecutionResponse>();

@@ -245,6 +245,39 @@ export const ExecutionResponseSchema: z.ZodType<ExecutionResponse> = z.object({
             .nullable()
             .optional(),
           browserRunSummary: z.record(z.string(), z.unknown()).nullable().optional(),
+          runtimeDiagnosticsSummary: z
+            .object({
+              leaseState: z.enum(['none', 'active', 'released', 'expired', 'mixed']).nullable().optional(),
+              lastLeaseEvent: z
+                .object({
+                  type: z.enum(['lease-acquired', 'lease-released']).nullable().optional(),
+                  createdAt: z.string().nullable().optional(),
+                  leaseId: z.string().nullable().optional(),
+                  ownerId: z.string().nullable().optional(),
+                  note: z.string().nullable().optional(),
+                  releaseReason: z.string().nullable().optional(),
+                })
+                .nullable()
+                .optional(),
+              browserTaskState: z.string().nullable().optional(),
+              lastProviderEvidence: z
+                .object({
+                  observedAt: z.string().nullable().optional(),
+                  state: z.string().nullable().optional(),
+                  source: z.string().nullable().optional(),
+                  evidenceRef: z.string().nullable().optional(),
+                  confidence: z.string().nullable().optional(),
+                  details: z.record(z.string(), z.unknown()).nullable().optional(),
+                })
+                .nullable()
+                .optional(),
+              terminalTransitionSource: z
+                .enum(['step-succeeded', 'step-failed', 'run-cancelled', 'requested-output-policy'])
+                .nullable()
+                .optional(),
+            })
+            .nullable()
+            .optional(),
           cancellationSummary: z
             .object({
               cancelledAt: z.string().nullable().optional(),

@@ -77,6 +77,56 @@ describe('runtime execution store', () => {
     expect(getExecutionRunRecordPath('team_run_1')).toContain('record.json');
   });
 
+  it('retries a transient partial JSON runtime record read', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-store-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const bundle = createExecutionRunRecordBundleFromTeamRun(
+      createTeamRunBundle({
+        runId: 'team_run_partial_read',
+        teamId: 'ops',
+        createdAt: '2026-04-07T00:00:00.000Z',
+        trigger: 'service',
+        steps: [
+          {
+            id: 'team_run_partial_read:step:1',
+            agentId: 'analyst',
+            runtimeProfileId: 'default',
+            browserProfileId: 'default',
+            service: 'chatgpt',
+            kind: 'analysis',
+            status: 'ready',
+            order: 1,
+            input: {
+              prompt: 'Retry partial record.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+          },
+        ],
+      }),
+    );
+
+    await writeExecutionRunStoredRecord(bundle);
+    const recordPath = getExecutionRunRecordPath('team_run_partial_read');
+    const validRecord = await fs.readFile(recordPath, 'utf8');
+    await fs.writeFile(recordPath, '{', 'utf8');
+    const repair = new Promise<void>((resolve, reject) => {
+      setTimeout(() => {
+        fs.writeFile(recordPath, validRecord, 'utf8').then(resolve, reject);
+      }, 5);
+    });
+
+    const recovered = await readExecutionRunStoredRecord('team_run_partial_read');
+    await repair;
+
+    expect(recovered?.runId).toBe('team_run_partial_read');
+    expect(recovered?.revision).toBe(1);
+  });
+
   it('lists persisted bundles in reverse chronological order with filters', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-store-'));
     cleanup.push(homeDir);

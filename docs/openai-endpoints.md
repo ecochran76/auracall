@@ -246,6 +246,15 @@ Current limits:
     the submitted conversation target. Library, root, project, or wrong-chat
     targets do not count as running-prompt evidence and should produce a
     target-mismatch failure rather than an endlessly renewed lease.
+  - Response-batch job rows include bounded runtime diagnostics when child
+    response readback has runtime evidence: `leaseState`, `lastLeaseEvent`,
+    `browserTaskState`, `lastProviderEvidence`, and
+    `terminalTransitionSource`. If a child runtime record is being rewritten
+    and briefly cannot be parsed, the batch remains readable and marks that
+    child with a `response_read_failed` failure until the next successful poll.
+  - `cancel-run` can cancel mutable browser-backed runs that have already lost
+    their active lease. If completion already won the race, AuraCall reports the
+    terminal state instead of returning an ambiguous no-active-lease conflict.
   - the browser dispatcher and provider politeness controls still enforce the
     lower-level CDP/account safety guardrails
   - dispatch-pool project binding uses `projectSync = "none"` for now. AuraCall

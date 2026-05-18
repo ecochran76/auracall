@@ -4933,6 +4933,59 @@ describe('runtime service host', () => {
     expect(storedRecord?.bundle.leases).toEqual([]);
   });
 
+  it('cancels a running run after its lease was already released', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const bundle = createDirectBundle('run_cancel_released_lease', '2026-04-08T15:00:00.000Z', 'running');
+    bundle.steps[0] = {
+      ...bundle.steps[0]!,
+      status: 'running',
+      startedAt: '2026-04-08T15:00:00.000Z',
+    };
+    await control.createRun(bundle);
+    await control.acquireLease({
+      runId: 'run_cancel_released_lease',
+      leaseId: 'run_cancel_released_lease:lease:runner',
+      ownerId: 'runner:cancel-local',
+      acquiredAt: '2026-04-08T15:00:00.000Z',
+      heartbeatAt: '2026-04-08T15:00:10.000Z',
+      expiresAt: '2026-04-08T15:10:00.000Z',
+    });
+    await control.releaseLease({
+      runId: 'run_cancel_released_lease',
+      leaseId: 'run_cancel_released_lease:lease:runner',
+      releasedAt: '2026-04-08T15:02:00.000Z',
+      releaseReason: 'cancelled',
+    });
+
+    const host = createExecutionServiceHost({
+      control,
+      ownerId: 'host:test',
+      runnerId: 'runner:cancel-local',
+      now: () => '2026-04-08T15:05:00.000Z',
+    });
+
+    const result = await host.cancelOwnedRun('run_cancel_released_lease');
+
+    expect(result).toEqual({
+      action: 'cancel-run',
+      runId: 'run_cancel_released_lease',
+      status: 'cancelled',
+      cancelled: true,
+      reason: 'run without active lease cancelled by service host operator control',
+    });
+
+    const storedRecord = await control.readRun('run_cancel_released_lease');
+    expect(storedRecord?.bundle.run.status).toBe('cancelled');
+    expect(storedRecord?.bundle.sharedState.status).toBe('cancelled');
+    expect(storedRecord?.bundle.steps[0]?.status).toBe('cancelled');
+    expect(storedRecord?.bundle.leases[0]?.status).toBe('released');
+    expect(storedRecord?.bundle.leases[0]?.releaseReason).toBe('cancelled');
+  });
+
   it('drains multiple runnable steps on one run across passes', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
     cleanup.push(homeDir);

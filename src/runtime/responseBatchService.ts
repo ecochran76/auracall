@@ -5,7 +5,12 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { getRuntimeDir } from './store.js';
 import { ExecutionRequestSchema } from './apiSchema.js';
-import type { ExecutionRequest, ExecutionResponseStatus } from './apiTypes.js';
+import type {
+  ExecutionRequest,
+  ExecutionResponse,
+  ExecutionResponseStatus,
+  ExecutionRuntimeDiagnosticsSummary,
+} from './apiTypes.js';
 import type { ExecutionRuntimeControlContract } from './contract.js';
 import type { ExecutionResponsesService } from './responsesService.js';
 import type { ExecutionRunStoredRecord } from './store.js';
@@ -87,6 +92,7 @@ export interface ResponseBatchJobStatus extends ResponseBatchJobRecord {
   status: ExecutionResponseStatus | 'missing';
   completedAt: string | null;
   failure: unknown | null;
+  diagnostics?: ExecutionRuntimeDiagnosticsSummary | null;
 }
 
 export interface ResponseBatchStatus {
@@ -300,12 +306,13 @@ async function summarizeBatchStatus(
 ): Promise<ResponseBatchStatus> {
   const jobs: ResponseBatchJobStatus[] = [];
   for (const job of record.jobs) {
-    const response = await responsesService.readResponse(job.responseId);
+    const { response, readFailure } = await readBatchJobResponse(responsesService, job.responseId);
     jobs.push({
       ...job,
       status: response?.status ?? 'missing',
       completedAt: (response?.metadata?.executionSummary?.completedAt as string | null | undefined) ?? null,
-      failure: response?.metadata?.executionSummary?.failureSummary ?? null,
+      failure: readFailure ?? response?.metadata?.executionSummary?.failureSummary ?? null,
+      diagnostics: response?.metadata?.executionSummary?.runtimeDiagnosticsSummary ?? null,
     });
   }
   const counts = {
@@ -328,6 +335,29 @@ async function summarizeBatchStatus(
     counts,
     jobs,
   };
+}
+
+async function readBatchJobResponse(
+  responsesService: Pick<ExecutionResponsesService, 'readResponse'>,
+  responseId: string,
+): Promise<{
+  response: ExecutionResponse | null;
+  readFailure: { code: 'response_read_failed'; message: string } | null;
+}> {
+  try {
+    return {
+      response: await responsesService.readResponse(responseId),
+      readFailure: null,
+    };
+  } catch (error) {
+    return {
+      response: null,
+      readFailure: {
+        code: 'response_read_failed',
+        message: error instanceof Error ? error.message : String(error),
+      },
+    };
+  }
 }
 
 function resolveBatchStatus(counts: ResponseBatchStatus['counts']): ResponseBatchStatus['status'] {

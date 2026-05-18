@@ -1463,24 +1463,55 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
 
       const activeLease = getActiveExecutionRunLease(record);
       if (!activeLease) {
-        if (record.bundle.run.status === 'planned') {
-          const cancelledBundle = cancelExecutionRun({
-            bundle: record.bundle,
-            cancelledAt,
-            note: note ?? 'planned run cancelled by service host operator control',
-            source: 'operator',
-          });
-          await control.persistRun({
-            runId,
-            bundle: cancelledBundle,
-            expectedRevision: record.revision,
-          });
+        if (record.bundle.run.status === 'cancelled') {
           return {
             action: 'cancel-run',
             runId,
             status: 'cancelled',
             cancelled: true,
-            reason: note ?? 'planned run cancelled by service host operator control',
+            reason: 'run was already cancelled',
+          };
+        }
+        if (isTerminalExecutionRunStatus(record.bundle.run.status)) {
+          return {
+            action: 'cancel-run',
+            runId,
+            status: 'not-active',
+            cancelled: false,
+            reason: `run already ${record.bundle.run.status}; cancellation was not applied`,
+          };
+        }
+        if (hasCancelableExecutionRunWork(record)) {
+          const cancellationReason =
+            note ??
+            (record.bundle.run.status === 'planned'
+              ? 'planned run cancelled by service host operator control'
+              : 'run without active lease cancelled by service host operator control');
+          const cancelledBundle = cancelExecutionRun({
+            bundle: record.bundle,
+            cancelledAt,
+            note: cancellationReason,
+            source: 'operator',
+          });
+          try {
+            await control.persistRun({
+              runId,
+              bundle: cancelledBundle,
+              expectedRevision: record.revision,
+            });
+          } catch (error) {
+            const latest = await control.readRun(runId);
+            if (latest && isTerminalExecutionRunStatus(latest.bundle.run.status)) {
+              return createTerminalCancelRaceResult(latest);
+            }
+            throw error;
+          }
+          return {
+            action: 'cancel-run',
+            runId,
+            status: 'cancelled',
+            cancelled: true,
+            reason: cancellationReason,
           };
         }
         return {
@@ -1509,17 +1540,39 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         note: note ?? 'run cancelled by service host operator control',
         source: 'operator',
       });
-      await control.persistRun({
-        runId,
-        bundle: cancelledBundle,
-        expectedRevision: record.revision,
-      });
-      await control.releaseLease({
-        runId,
-        leaseId: activeLease.id,
-        releasedAt: cancelledAt,
-        releaseReason: 'cancelled',
-      });
+      try {
+        await control.persistRun({
+          runId,
+          bundle: cancelledBundle,
+          expectedRevision: record.revision,
+        });
+      } catch (error) {
+        const latest = await control.readRun(runId);
+        if (latest && isTerminalExecutionRunStatus(latest.bundle.run.status)) {
+          return createTerminalCancelRaceResult(latest);
+        }
+        throw error;
+      }
+      try {
+        await control.releaseLease({
+          runId,
+          leaseId: activeLease.id,
+          releasedAt: cancelledAt,
+          releaseReason: 'cancelled',
+        });
+      } catch (error) {
+        const latest = await control.readRun(runId);
+        if (latest && latest.bundle.run.status === 'cancelled' && !getActiveExecutionRunLease(latest)) {
+          return {
+            action: 'cancel-run',
+            runId,
+            status: 'cancelled',
+            cancelled: true,
+            reason: note ?? 'run cancelled by service host operator control',
+          };
+        }
+        throw error;
+      }
       return {
         action: 'cancel-run',
         runId,
@@ -2425,6 +2478,30 @@ async function evaluateAndRepairStaleHeartbeatLease(input: {
 
 function isTerminalExecutionRunStatus(status: ExecutionRunStoredRecord['bundle']['run']['status']): boolean {
   return status === 'succeeded' || status === 'failed' || status === 'cancelled';
+}
+
+function hasCancelableExecutionRunWork(record: ExecutionRunStoredRecord): boolean {
+  const mutableStatuses = new Set(['planned', 'runnable', 'running', 'blocked']);
+  return record.bundle.steps.some((step) => mutableStatuses.has(step.status));
+}
+
+function createTerminalCancelRaceResult(record: ExecutionRunStoredRecord): ExecutionServiceHostCancelActionResult {
+  if (record.bundle.run.status === 'cancelled') {
+    return {
+      action: 'cancel-run',
+      runId: record.runId,
+      status: 'cancelled',
+      cancelled: true,
+      reason: 'run was already cancelled',
+    };
+  }
+  return {
+    action: 'cancel-run',
+    runId: record.runId,
+    status: 'not-active',
+    cancelled: false,
+    reason: `run already ${record.bundle.run.status}; cancellation was not applied`,
+  };
 }
 
 const ACTIVE_LEASE_IDLE_ACTIVITY_THRESHOLD_MS = 60_000;

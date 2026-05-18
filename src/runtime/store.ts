@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import type { Dirent } from 'node:fs';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { getAuracallHomeDir } from '../auracallHome.js';
 import { ExecutionRunRecordBundleSchema } from './schema.js';
 import type { ExecutionRunRecordBundle, ExecutionRunSourceKind, ExecutionRunStatus } from './types.js';
@@ -9,6 +10,7 @@ const RUNTIME_DIRNAME = 'runtime';
 const RUNS_DIRNAME = 'runs';
 const BUNDLE_FILENAME = 'bundle.json';
 const RECORD_FILENAME = 'record.json';
+const JSON_READ_RETRY_DELAYS_MS = [10, 25, 50];
 
 export interface ListExecutionRunRecordOptions {
   limit?: number;
@@ -72,8 +74,7 @@ export async function readExecutionRunRecordBundle(runId: string): Promise<Execu
   if (record) return record.bundle;
   const bundlePath = getExecutionRunBundlePath(runId);
   try {
-    const raw = await fs.readFile(bundlePath, 'utf8');
-    return ExecutionRunRecordBundleSchema.parse(JSON.parse(raw));
+    return await readJsonFileWithRetries(bundlePath, (value) => ExecutionRunRecordBundleSchema.parse(value));
   } catch (error) {
     if (isMissingFileError(error)) return null;
     throw error;
@@ -144,8 +145,7 @@ async function hasRunRecordUpdatedSince(runId: string, cutoffMs: number): Promis
 export async function readExecutionRunStoredRecord(runId: string): Promise<ExecutionRunStoredRecord | null> {
   const recordPath = getExecutionRunRecordPath(runId);
   try {
-    const raw = await fs.readFile(recordPath, 'utf8');
-    return parseStoredRecord(JSON.parse(raw));
+    return await readJsonFileWithRetries(recordPath, parseStoredRecord);
   } catch (error) {
     if (isMissingFileError(error)) return null;
     throw error;
@@ -179,8 +179,8 @@ export async function writeExecutionRunStoredRecord(
   const recordPath = getExecutionRunRecordPath(parsedBundle.run.id);
   const bundlePath = getExecutionRunBundlePath(parsedBundle.run.id);
   await fs.mkdir(runDir, { recursive: true });
-  await fs.writeFile(recordPath, `${JSON.stringify(nextRecord, null, 2)}\n`, 'utf8');
-  await fs.writeFile(bundlePath, `${JSON.stringify(parsedBundle, null, 2)}\n`, 'utf8');
+  await writeJsonFileAtomically(recordPath, nextRecord);
+  await writeJsonFileAtomically(bundlePath, parsedBundle);
   return nextRecord;
 }
 
@@ -197,6 +197,41 @@ export function createExecutionRunRecordStore(): ExecutionRunRecordStore {
 
 function isMissingFileError(error: unknown): boolean {
   return error instanceof Error && 'code' in error && error.code === 'ENOENT';
+}
+
+async function readJsonFileWithRetries<T>(filePath: string, parse: (value: unknown) => T): Promise<T> {
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt <= JSON_READ_RETRY_DELAYS_MS.length; attempt += 1) {
+    try {
+      const raw = await fs.readFile(filePath, 'utf8');
+      return parse(JSON.parse(raw));
+    } catch (error) {
+      if (isMissingFileError(error) || !(error instanceof SyntaxError)) {
+        throw error;
+      }
+      lastError = error;
+      if (attempt >= JSON_READ_RETRY_DELAYS_MS.length) {
+        break;
+      }
+      await sleep(JSON_READ_RETRY_DELAYS_MS[attempt] ?? 0);
+    }
+  }
+  throw lastError;
+}
+
+async function writeJsonFileAtomically(filePath: string, value: unknown): Promise<void> {
+  const tempPath = `${filePath}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`;
+  try {
+    await fs.writeFile(tempPath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+    await fs.rename(tempPath, filePath);
+  } catch (error) {
+    await fs.rm(tempPath, { force: true }).catch(() => undefined);
+    throw error;
+  }
+}
+
+function sleep(delayMs: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
 }
 
 function parseStoredRecord(value: unknown): ExecutionRunStoredRecord {

@@ -76,6 +76,33 @@ export type ExecutionResponseOutputItem =
   | ExecutionResponseMessageOutputItem
   | ExecutionResponseArtifactOutputItem;
 
+export interface ExecutionRuntimeDiagnosticsSummary {
+  leaseState?: 'none' | 'active' | 'released' | 'expired' | 'mixed' | null;
+  lastLeaseEvent?: {
+    type?: 'lease-acquired' | 'lease-released' | null;
+    createdAt?: string | null;
+    leaseId?: string | null;
+    ownerId?: string | null;
+    note?: string | null;
+    releaseReason?: string | null;
+  } | null;
+  browserTaskState?: string | null;
+  lastProviderEvidence?: {
+    observedAt?: string | null;
+    state?: string | null;
+    source?: string | null;
+    evidenceRef?: string | null;
+    confidence?: string | null;
+    details?: Record<string, unknown> | null;
+  } | null;
+  terminalTransitionSource?:
+    | 'step-succeeded'
+    | 'step-failed'
+    | 'run-cancelled'
+    | 'requested-output-policy'
+    | null;
+}
+
 export interface ExecutionResponse {
   id: string;
   object: 'response';
@@ -183,6 +210,7 @@ export interface ExecutionResponse {
         totalTokens?: number;
       } | null;
       browserRunSummary?: Record<string, unknown> | null;
+      runtimeDiagnosticsSummary?: ExecutionRuntimeDiagnosticsSummary | null;
       cancellationSummary?: {
         cancelledAt?: string | null;
         source?: 'operator' | 'service-host' | null;

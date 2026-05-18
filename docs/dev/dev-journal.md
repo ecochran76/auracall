@@ -30075,3 +30075,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - targeted Biome lint exited 0 with existing `noNonNullAssertion` warnings
     in `tests/runtime.serviceHost.test.ts`.
   - `git diff --check` passed.
+
+## Turn 164 | 2026-05-18
+
+- Goal: fix the response-batch restart/cancel ambiguity from the
+  transcribe-audio handoff without touching the parallel operator UX lane.
+- Change:
+  - runtime run records now write `record.json` and `bundle.json` through
+    temp-file replacement and retry short-lived invalid JSON reads.
+  - response readback now includes a bounded `runtimeDiagnosticsSummary` with
+    lease state, last lease event, latest passive provider evidence, browser
+    task state, and terminal transition source.
+  - response-batch job rows copy those diagnostics and keep the batch status
+    readable when one child response read temporarily fails.
+  - `cancel-run` now cancels mutable no-active-lease runs, including runs whose
+    lease was already released as `cancelled`; terminal races report the
+    terminal outcome instead of an ambiguous no-active-lease conflict.
+- Verification:
+  - `pnpm vitest run tests/runtime.store.test.ts`
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts -t "cancels a running run after its lease was already released"`
+  - `pnpm vitest run tests/runtime.responsesService.test.ts -t "projects lease and passive runtime diagnostics"`
+  - `pnpm vitest run tests/runtime.responseBatchService.test.ts -t "surfaces child runtime diagnostics"`
+  - `git diff --check`
+- Known blockers:
+  - full `pnpm exec tsc --noEmit --pretty false` is still blocked by the
+    parallel search-projection lane's
+    `tests/runtime.searchProjectionService.test.ts` literal typing errors.
+  - the broader `tests/runtime.responsesService.test.ts` suite still has the
+    existing `reconstructs the execution request...` browser-backed fixture
+    failure where the injected executor returns no result.

@@ -12,6 +12,7 @@ import type {
   ExecutionResponseArtifactOutputItem,
   ExecutionResponseFromRunRecordInput,
   ExecutionResponseMessageOutputItem,
+  ExecutionRuntimeDiagnosticsSummary,
 } from './apiTypes.js';
 
 export function createExecutionRequest(input: ExecutionRequest): ExecutionRequest {
@@ -115,6 +116,11 @@ export function createExecutionResponseFromRunRecord(
   const requestedOutputSummary = readExecutionRunRequestedOutputSummary(parsed.runRecord, parsed.output, terminalStep);
   const requestedOutputPolicy = readExecutionRunRequestedOutputPolicySummary(requestedOutputSummary);
   const browserRunSummary = readExecutionRunBrowserRunSummary(parsed.runRecord, terminalStep?.id ?? null);
+  const runtimeDiagnosticsSummary = readExecutionRunRuntimeDiagnosticsSummary({
+    runRecord: parsed.runRecord,
+    terminalStep,
+    requestedOutputPolicy,
+  });
   return createExecutionResponse({
     id: parsed.responseId,
     object: 'response',
@@ -143,6 +149,7 @@ export function createExecutionResponseFromRunRecord(
         handoffTransferSummary: readExecutionRunHandoffTransferSummary(parsed.runRecord, terminalStep?.id ?? null),
         providerUsageSummary: readExecutionRunProviderUsageSummary(parsed.runRecord, terminalStep?.id ?? null),
         ...(browserRunSummary ? { browserRunSummary } : {}),
+        runtimeDiagnosticsSummary,
         cancellationSummary: readExecutionRunCancellationSummary(parsed.runRecord),
         operatorControlSummary: readExecutionRunOperatorControlSummary(parsed.runRecord),
         orchestrationTimelineSummary: readExecutionRunOrchestrationTimelineSummary(parsed.runRecord),
@@ -203,6 +210,156 @@ function readExecutionRunBrowserRunSummary(
       ? browserRun.chatgptDeepResearchReviewEvidence
       : null,
   };
+}
+
+function readExecutionRunRuntimeDiagnosticsSummary(input: {
+  runRecord: ExecutionResponseFromRunRecordInput['runRecord'];
+  terminalStep: ExecutionResponseFromRunRecordInput['runRecord']['steps'][number] | undefined;
+  requestedOutputPolicy:
+    | {
+        status: 'satisfied' | 'missing-required';
+        message: string;
+        missingRequiredLabels: string[];
+      }
+    | null;
+}): ExecutionRuntimeDiagnosticsSummary {
+  const lastProviderEvidence = readLastProviderRuntimeEvidence(input.runRecord);
+  return {
+    leaseState: readExecutionRunLeaseState(input.runRecord),
+    lastLeaseEvent: readLastExecutionRunLeaseEvent(input.runRecord),
+    browserTaskState: lastProviderEvidence?.state ?? null,
+    lastProviderEvidence,
+    terminalTransitionSource: readExecutionRunTerminalTransitionSource({
+      runRecord: input.runRecord,
+      terminalStep: input.terminalStep,
+      requestedOutputPolicy: input.requestedOutputPolicy,
+    }),
+  };
+}
+
+function readExecutionRunLeaseState(
+  runRecord: ExecutionResponseFromRunRecordInput['runRecord'],
+): NonNullable<ExecutionRuntimeDiagnosticsSummary['leaseState']> {
+  const activeLease = runRecord.leases.find((lease) => lease.status === 'active');
+  if (activeLease) {
+    return 'active';
+  }
+  if (runRecord.leases.length === 0) {
+    return 'none';
+  }
+  const latestLease = runRecord.leases
+    .slice()
+    .sort((left, right) => readLeaseSortTimestamp(right) - readLeaseSortTimestamp(left))[0];
+  if (latestLease?.status === 'released' || latestLease?.status === 'expired') {
+    return latestLease.status;
+  }
+  return 'mixed';
+}
+
+function readLeaseSortTimestamp(
+  lease: ExecutionResponseFromRunRecordInput['runRecord']['leases'][number],
+): number {
+  const timestamp = lease.releasedAt ?? lease.heartbeatAt ?? lease.acquiredAt;
+  const parsed = Date.parse(timestamp);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function readLastExecutionRunLeaseEvent(
+  runRecord: ExecutionResponseFromRunRecordInput['runRecord'],
+): NonNullable<ExecutionRuntimeDiagnosticsSummary['lastLeaseEvent']> | null {
+  const event = runRecord.events
+    .slice()
+    .reverse()
+    .find((candidate) => candidate.type === 'lease-acquired' || candidate.type === 'lease-released');
+  if (!event) {
+    return null;
+  }
+  const eventType = event.type === 'lease-acquired' || event.type === 'lease-released' ? event.type : null;
+  if (!eventType) {
+    return null;
+  }
+  const payload = isRecord(event.payload) ? event.payload : null;
+  const matchingLease = event.leaseId ? runRecord.leases.find((lease) => lease.id === event.leaseId) : null;
+  return {
+    type: eventType,
+    createdAt: event.createdAt ?? null,
+    leaseId: event.leaseId ?? null,
+    ownerId: readString(payload?.ownerId) ?? matchingLease?.ownerId ?? null,
+    note: event.note ?? null,
+    releaseReason: readString(payload?.releaseReason) ?? matchingLease?.releaseReason ?? null,
+  };
+}
+
+function readLastProviderRuntimeEvidence(
+  runRecord: ExecutionResponseFromRunRecordInput['runRecord'],
+): NonNullable<ExecutionRuntimeDiagnosticsSummary['lastProviderEvidence']> | null {
+  for (let index = runRecord.events.length - 1; index >= 0; index -= 1) {
+    const event = runRecord.events[index];
+    const payload = isRecord(event?.payload) ? event?.payload : null;
+    const runtimeEvidence = isRecord(payload?.runtimeEvidence) ? payload.runtimeEvidence : null;
+    if (!runtimeEvidence) {
+      continue;
+    }
+    return {
+      observedAt: readString(runtimeEvidence.observedAt) ?? event?.createdAt ?? null,
+      state: readString(runtimeEvidence.state),
+      source: readString(runtimeEvidence.source),
+      evidenceRef: readString(runtimeEvidence.evidenceRef),
+      confidence: readString(runtimeEvidence.confidence),
+      details: readRuntimeEvidenceDetailsSummary(runtimeEvidence.details),
+    };
+  }
+  return null;
+}
+
+function readRuntimeEvidenceDetailsSummary(value: unknown): Record<string, unknown> | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const details: Record<string, unknown> = {};
+  for (const key of [
+    'service',
+    'runtimeProfileId',
+    'browserProfileId',
+    'agentId',
+    'chromeTargetId',
+    'tabUrl',
+    'conversationId',
+    'chromeHost',
+    'chromePort',
+  ]) {
+    const entry = value[key];
+    if (typeof entry === 'string' || typeof entry === 'number' || typeof entry === 'boolean') {
+      details[key] = entry;
+    }
+  }
+  return Object.keys(details).length > 0 ? details : null;
+}
+
+function readExecutionRunTerminalTransitionSource(input: {
+  runRecord: ExecutionResponseFromRunRecordInput['runRecord'];
+  terminalStep: ExecutionResponseFromRunRecordInput['runRecord']['steps'][number] | undefined;
+  requestedOutputPolicy:
+    | {
+        status: 'satisfied' | 'missing-required';
+        message: string;
+        missingRequiredLabels: string[];
+      }
+    | null;
+}): NonNullable<ExecutionRuntimeDiagnosticsSummary['terminalTransitionSource']> | null {
+  if (input.runRecord.run.status === 'succeeded' && input.requestedOutputPolicy?.status === 'missing-required') {
+    return 'requested-output-policy';
+  }
+  if (input.runRecord.run.status === 'succeeded' || input.terminalStep?.status === 'succeeded') {
+    return 'step-succeeded';
+  }
+  if (input.runRecord.run.status === 'failed' || input.terminalStep?.status === 'failed') {
+    return 'step-failed';
+  }
+  if (input.runRecord.run.status === 'cancelled' || input.terminalStep?.status === 'cancelled') {
+    return 'run-cancelled';
+  }
+  return null;
 }
 
 function readExecutionRunStepSummaries(

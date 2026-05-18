@@ -527,6 +527,136 @@ describe('runtime responses service', () => {
     });
   });
 
+  it('projects lease and passive runtime diagnostics for a detached browser response', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const service = createExecutionResponsesService({
+      control,
+      now: () => new Date('2026-04-08T14:18:00.000Z'),
+      generateResponseId: () => 'resp_service_detached_1',
+      drainAfterCreate: false,
+    });
+
+    await service.createResponse({
+      model: 'agent:chatgpt-detached',
+      input: 'Persist and detach.',
+      auracall: {
+        agent: 'chatgpt-detached',
+        runtimeProfile: 'wsl-chrome-3',
+        service: 'chatgpt',
+      },
+    });
+
+    const createdRecord = await control.readRun('resp_service_detached_1');
+    if (!createdRecord) {
+      throw new Error('expected detached response runtime record');
+    }
+    await control.persistRun({
+      runId: 'resp_service_detached_1',
+      expectedRevision: createdRecord.revision,
+      bundle: {
+        ...createdRecord.bundle,
+        run: {
+          ...createdRecord.bundle.run,
+          status: 'running',
+          updatedAt: '2026-04-08T14:18:05.000Z',
+        },
+        steps: createdRecord.bundle.steps.map((step) =>
+          step.id === 'resp_service_detached_1:step:1'
+            ? {
+                ...step,
+                status: 'running',
+                runtimeProfileId: 'wsl-chrome-3',
+                browserProfileId: 'wsl-chrome-3',
+                service: 'chatgpt',
+                startedAt: '2026-04-08T14:18:05.000Z',
+              }
+            : step,
+        ),
+      },
+    });
+    await control.acquireLease({
+      runId: 'resp_service_detached_1',
+      leaseId: 'resp_service_detached_1:lease:runner',
+      ownerId: 'runner:chatgpt',
+      acquiredAt: '2026-04-08T14:18:05.000Z',
+      heartbeatAt: '2026-04-08T14:18:05.000Z',
+      expiresAt: '2026-04-08T14:19:05.000Z',
+    });
+    await control.heartbeatLease({
+      runId: 'resp_service_detached_1',
+      leaseId: 'resp_service_detached_1:lease:runner',
+      heartbeatAt: '2026-04-08T14:18:30.000Z',
+      expiresAt: '2026-04-08T14:19:30.000Z',
+      runtimeEvidence: {
+        observedAt: '2026-04-08T14:18:29.000Z',
+        state: 'thinking',
+        source: 'browser-service',
+        evidenceRef: 'chatgpt-passive-dom-thinking',
+        confidence: 'medium',
+        details: {
+          service: 'chatgpt',
+          runtimeProfileId: 'wsl-chrome-3',
+          browserProfileId: 'wsl-chrome-3',
+          agentId: 'chatgpt-detached',
+          chromeTargetId: 'target-detached',
+          tabUrl: 'https://chatgpt.com/c/detached',
+          conversationId: 'detached',
+          ignoredPrivatePayload: { prompt: 'not surfaced' },
+        },
+      },
+    });
+    await control.releaseLease({
+      runId: 'resp_service_detached_1',
+      leaseId: 'resp_service_detached_1:lease:runner',
+      releasedAt: '2026-04-08T14:18:45.000Z',
+      releaseReason: 'cancelled',
+    });
+
+    const reread = await service.readResponse('resp_service_detached_1');
+
+    expect(reread).toMatchObject({
+      id: 'resp_service_detached_1',
+      status: 'in_progress',
+      metadata: {
+        executionSummary: {
+          runtimeDiagnosticsSummary: {
+            leaseState: 'released',
+            browserTaskState: 'thinking',
+            lastLeaseEvent: {
+              type: 'lease-released',
+              createdAt: '2026-04-08T14:18:45.000Z',
+              releaseReason: 'cancelled',
+            },
+            lastProviderEvidence: {
+              observedAt: '2026-04-08T14:18:29.000Z',
+              state: 'thinking',
+              source: 'browser-service',
+              evidenceRef: 'chatgpt-passive-dom-thinking',
+              confidence: 'medium',
+              details: {
+                service: 'chatgpt',
+                runtimeProfileId: 'wsl-chrome-3',
+                browserProfileId: 'wsl-chrome-3',
+                agentId: 'chatgpt-detached',
+                chromeTargetId: 'target-detached',
+                tabUrl: 'https://chatgpt.com/c/detached',
+                conversationId: 'detached',
+              },
+            },
+            terminalTransitionSource: null,
+          },
+        },
+      },
+    });
+    expect(
+      reread?.metadata?.executionSummary?.runtimeDiagnosticsSummary?.lastProviderEvidence?.details,
+    ).not.toHaveProperty('ignoredPrivatePayload');
+  });
+
   it('returns cancelled response state with bounded cancellation summary', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-responses-'));
     cleanup.push(homeDir);

@@ -16213,3 +16213,11 @@ browser-stage lifecycle observability, not transcript truncation.
   run-archive records into one row contract with facets, metrics, source links,
   and opaque cursors. The remaining UX fix is to consume those cursors lazily
   during table scroll instead of eagerly loading all pages into client memory.
+- 2026-05-18: Browser-backed response-batch recovery states must be classified
+  by stored runtime evidence instead of surfacing as bare `in_progress`.
+  Runtime records now write through atomic temp-file replacement with short
+  invalid-JSON read retries, batch status catches transient child read failures,
+  child jobs surface bounded lease/runtime diagnostics, and explicit
+  `cancel-run` can cancel mutable no-active-lease runs. If a terminal state
+  already won the race, cancellation reports that terminal outcome instead of
+  returning an ambiguous no-active-lease conflict.
