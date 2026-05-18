@@ -5110,3 +5110,35 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - implement a real Runs list/detail selection model, then apply the same URL
     state pattern to run ids.
+
+## Turn 183 | 2026-05-18
+
+- Goal: define the target Search workbench before implementing another
+  incremental patch on the bulky current page.
+- Decision:
+  - the current Search form is a temporary archive proof, not the target
+    operator UX.
+  - Search should become a dense all-tenant workbench whose default view is all
+    cached conversations across all configured providers and tenants, newest
+    first, with live updates.
+  - the main page surface should be a virtualized, infinitely scrollable table
+    with adjustable/sortable/hideable columns and a compact command/facet bar,
+    not a large form with provider/status string fields or a visible limit box.
+  - provider, tenant, project, kind, status, agent/team, and artifact/file
+    presence must be known-value facets. Unsupported free-text filter strings
+    should not be accepted silently.
+- Roadmap:
+  - updated Plan 0067 with the Target Search Workbench design, wireframe, data
+    model/API needs, route-state target, implementation roadmap, and acceptance
+    criteria.
+  - updated `ROADMAP.md` so the operator UX lane names the Search workbench as
+    a dense all-tenant, live-updating table with facet filters and selected-row
+    handoff URLs.
+- Verification:
+  - `git diff --check -- ROADMAP.md RUNBOOK.md docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md`
+- External links:
+  - `http://auracall.localhost/dashboard?nav=search`
+  - `https://auracall.ecochran.dyndns.org/dashboard?nav=search`
+- Next:
+  - implement the compact command/facet bar and the first virtualized
+    all-tenant conversation table slice before adding archive/artifact rows.

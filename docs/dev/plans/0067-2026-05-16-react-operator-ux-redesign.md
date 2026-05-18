@@ -189,6 +189,11 @@ State ownership:
   keys. Search selection is route-addressable with
   `?nav=search&archiveItem=<base64url archive item id>` so archive-result
   handoff links can open directly to the selected item inspector.
+- Search is not yet ergonomically correct. The current search form is a
+  temporary archive proof, not the target workbench. It wastes space on bulky
+  controls, exposes implementation strings as free-text filters, and does not
+  yet provide the all-tenant, live-updating, sortable chat/archive table that
+  operators need.
 - API-key inspection, issue, delete, and API-service restart controls exist on
   the Health page. These are narrow operator-administration controls; they do
   not launch provider work.
@@ -200,3 +205,172 @@ turn-to-turn momentum. Prefer read-only observability and inspection work unless
 the slice explicitly updates this plan and validates a narrow operator-control
 contract. The next route-addressable candidate is Runs once the page has a
 concrete run-list and run-inspection selection model.
+
+## Target Search Workbench
+
+The Search page should become the primary archive and account-mirror discovery
+surface. It should feel closer to a dense mail/search client or database table
+than a web form. The default view is "all chats from all eligible tenants,
+newest first", with live updates as mirror/archive indexes change.
+
+Primary operator goals:
+
+- See the newest ChatGPT/Gemini/Grok conversations and AuraCall-generated
+  artifacts across all configured tenants without choosing a provider first.
+- Sort, filter, inspect, and hand off records without losing table position.
+- Search exact text, semantic matches, filenames, provider ids, project names,
+  agent/team ids, response ids, batch ids, and evidence metadata from one
+  command bar.
+- Open stable URLs for a selected chat, archive item, artifact, uploaded file,
+  batch, run, or provider conversation.
+
+Layout target:
+
+```text
+Search | command bar.................................................. [view]
+        [All] [Chats] [Artifacts] [Uploads] [Runs] [Evidence]   live: on
+        provider chips  tenant chips  project chips  date range  saved views
+---------------------------------------------------------------------------
+date/time        provider  tenant/account   project   title/summary   kind
+agent/team       status    files/artifacts   run/batch ids            updated
+---------------------------------------------------------------------------
+infinite virtualized rows, newest first, live-updating
+selected row keeps inspector open in the right pane
+```
+
+Workbench rules:
+
+- The result table is the page. The toolbar must be one compact row plus an
+  optional secondary facet row; no large filter cards.
+- Default dataset is every cached conversation across every configured provider
+  and bound identity, sorted by descending provider/update time.
+- Results use infinite scroll or virtualized paging with stable row heights,
+  not a small `limit` field. A page size can exist internally, but operators
+  should not spend screen area on it.
+- Columns are resizable, reorderable, hideable, and sortable. Column state
+  persists locally and can be reset.
+- The first columns are pinned: timestamp, provider, tenant/account, and title.
+  Remaining columns can be operator-managed.
+- The selected row is URL-addressable and drives the right inspector; clicking
+  rows should not navigate away from the table.
+- Live updates should add or update rows without stealing scroll position.
+  When the operator is scrolled away from the top, show a small "new results"
+  affordance instead of jumping.
+- Provider, tenant/account, project, kind, status, agent/team, and artifact
+  presence are facets with known values, not free-text input boxes.
+- Facets should be represented by compact menus/chips with counts and clear
+  buttons. Raw string entry remains available only in an advanced query mode.
+- `Kind` must be backed by a single normalized enum shared with the archive and
+  mirror catalog APIs. Values that do not map to the API must not be shown.
+- Status must be normalized across archive records, response runs, batches,
+  live-follow mirror records, and provider catalog rows before it appears as a
+  filter.
+- Provider filters use the provider icon badges. Tenant filters show bound
+  identity and runtime profile, with account level where known.
+- Search syntax should support plain text first, then optional field prefixes:
+  `provider:chatgpt`, `tenant:soylei`, `project:"Transcripts"`,
+  `kind:conversation`, `has:artifact`, `status:failed`, `after:2026-05-01`.
+- Table rows should expose quick actions by icon with hover hints: open
+  inspector, copy handoff link, open provider URL when available, download
+  cached asset when available, and attach evidence where allowed.
+- The right inspector should prioritize human-readable chat transcript,
+  artifacts, files, run lineage, and evidence before raw JSON. Raw JSON remains
+  collapsible.
+
+Recommended column set:
+
+- `time`: provider/update timestamp; default descending sort.
+- `provider`: icon badge plus service.
+- `tenant`: bound identity, runtime profile, account level.
+- `project`: provider project/workspace when known.
+- `title`: conversation title, file name, prompt summary, or artifact title.
+- `kind`: normalized conversation, response, batch, upload, generated artifact,
+  provider artifact, evidence, media, or run.
+- `status`: normalized operational state.
+- `agent/team`: configured agent/team ids when an AuraCall job created it.
+- `files`: attachment/generated-artifact counts and cache materialization
+  state.
+- `ids`: compact run/response/batch/provider ids with copy affordances.
+- `updated`: cache/index update timestamp for freshness diagnostics.
+
+Data/API requirements:
+
+- Add a unified `GET /v1/search` or equivalent aggregate read endpoint that can
+  merge account-mirror conversations with run-archive records. The dashboard
+  should not join several large endpoints client-side as the normal path.
+- The endpoint should return cursor-based pages ordered by `sort` plus a
+  stable `nextCursor`; avoid offset-only paging for live-updating data.
+- Return facet metadata for the current query: providers, tenants, projects,
+  kinds, statuses, agents, teams, and artifact/file presence.
+- Return normalized row objects with stable `id`, `kind`, `sortTime`,
+  `provider`, `runtimeProfileId`, `boundIdentityKey`, `title`, `summary`,
+  `status`, `counts`, `links`, and `sourceRefs`.
+- Return enough link metadata for direct handoff URLs: selected row route,
+  archive item route, mirror catalog item route, provider URL, asset routes,
+  and run/batch/response inspection routes.
+- Keep archive-only `/v1/archive` and account-mirror `/v1/account-mirrors/*`
+  endpoints as lower-level APIs; Search should consume a purpose-built
+  operator search projection.
+
+Route-state target:
+
+- `?nav=search&q=<query>&view=<saved-view>&row=<base64url row id>` for a
+  selected row.
+- Facets should be encoded as compact query params only when needed:
+  `provider=chatgpt,gemini`, `tenant=<bound identity key>`,
+  `kind=conversation,generated_artifact`, `status=failed`.
+- Existing `archiveItem=<base64url archive item id>` remains supported as a
+  compatibility alias and should resolve to the corresponding unified row.
+
+Implementation roadmap:
+
+1. Replace the bulky form with a compact command bar and facet chip row.
+   - Remove the visible `Limit` field.
+   - Replace provider/status free-text inputs with menu-backed facets.
+   - Replace the broken `Kind` dropdown with normalized facet chips.
+
+2. Build the virtualized result table.
+   - Use fixed row heights, sticky headers, pinned first columns, keyboard row
+     navigation, and accessible grid semantics.
+   - Add local column width, order, hidden-column, and sort persistence.
+
+3. Add unified all-tenant chat rows.
+   - Start with account-mirror conversations from all configured live-follow
+     accounts.
+   - Default to descending provider/update time.
+   - Preserve the existing right inspector and URL-selected row behavior.
+
+4. Add live updates.
+   - Poll initially, then move to server-sent events or a lightweight event
+     feed when available.
+   - Update visible rows in place and show a "new results" affordance when the
+     operator is scrolled away from the top.
+
+5. Add archive/artifact/run rows into the same table.
+   - Merge generated artifacts, uploads, responses, batches, media, and
+     evidence into the same row model.
+   - Keep row actions and inspector panels kind-specific.
+
+6. Add saved views and advanced search.
+   - Persist operator-owned views such as "failed transcript jobs",
+     "SoyLei ChatGPT artifacts", "newest Grok media", and "unmaterialized
+     outputs".
+   - Add fielded query syntax only after the facet model works.
+
+Search page acceptance criteria:
+
+- Opening `/dashboard?nav=search` immediately shows all cached conversations
+  from all tenants, newest first, without submitting a form.
+- The table can scroll through hundreds or thousands of rows without loading
+  all DOM nodes.
+- Sort order, column widths, and visible columns persist across reloads.
+- Provider, tenant, kind, status, project, and artifact filters are selectable
+  from known values and cannot silently send unsupported strings.
+- Selecting a row updates the URL and right inspector without leaving the
+  table.
+- A direct Search URL restores query, facets, sort, column state where
+  applicable, selected row, and inspector state.
+- Live updates do not steal focus, change scroll position unexpectedly, or
+  reorder the row under the pointer while the operator is interacting.
+- Archive and account-mirror lower-level routes remain inspectable from the
+  selected row.

@@ -234,6 +234,10 @@ Current State:
   - `/dashboard` now serves the packaged React app from the stable AuraCall API
     service port; `/ops/browser` remains the low-level Browser Ops debug
     surface
+  - the Search page target is now a dense all-tenant workbench: a live-updating
+    virtualized table of chats, artifacts, uploads, runs, and evidence sorted
+    newest-first by default, with adjustable/sortable columns, facet-backed
+    filters, URL-addressable selected rows, and right-pane inspection
   - first slice is read-only shell work; API-backed health, run, archive,
     search, chat, config, agent, and team pages should land incrementally after
     the shell is stable
