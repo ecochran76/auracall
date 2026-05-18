@@ -184,6 +184,7 @@ describe('response batch service', () => {
           completedAt: null,
           failureSummary: null,
           runtimeDiagnosticsSummary: {
+            runtimeState: 'recovering',
             leaseState: 'released',
             browserTaskState: 'thinking',
             lastLeaseEvent: {
@@ -239,7 +240,9 @@ describe('response batch service', () => {
         {
           responseId: 'resp_diag_1',
           status: 'in_progress',
+          runtimeState: 'recovering',
           diagnostics: {
+            runtimeState: 'recovering',
             leaseState: 'released',
             browserTaskState: 'thinking',
             lastLeaseEvent: {
@@ -253,6 +256,104 @@ describe('response batch service', () => {
           failure: {
             code: 'response_read_failed',
             message: 'Expected double-quoted property name in JSON at position 1048544',
+          },
+        },
+      ],
+    });
+  });
+
+  it('surfaces finalizing runtime state for response-complete browser jobs that have not terminalized yet', async () => {
+    const stored = new Map<string, ResponseBatchRecord>();
+    stored.set('batch_finalizing_1', {
+      id: 'batch_finalizing_1',
+      object: 'response_batch',
+      createdAt: '2026-05-12T14:00:00.000Z',
+      updatedAt: '2026-05-12T14:00:00.000Z',
+      metadata: {},
+      limits: {
+        maxConcurrentRuns: 1,
+        maxBrowserInteractionsPerMinute: 4,
+      },
+      dispatch: null,
+      jobs: [
+        {
+          index: 0,
+          responseId: 'resp_finalizing_1',
+          model: 'agent:pro-extended-chatgpt-soylei',
+          agent: 'pro-extended-chatgpt-soylei',
+          service: 'chatgpt',
+          runtimeProfile: 'wsl-chrome-3',
+          createdAt: '2026-05-12T14:00:00.000Z',
+        },
+      ],
+    });
+    const finalizingResponse: ExecutionResponse = {
+      ...createResponse('resp_finalizing_1', 'in_progress'),
+      metadata: {
+        runId: 'resp_finalizing_1',
+        executionSummary: {
+          completedAt: null,
+          failureSummary: null,
+          runtimeDiagnosticsSummary: {
+            runtimeState: 'finalizing',
+            leaseState: 'expired',
+            browserTaskState: 'response-complete',
+            lastLeaseEvent: {
+              type: 'lease-released',
+              createdAt: '2026-05-12T14:06:00.000Z',
+              leaseId: 'resp_finalizing_1:lease:runner',
+              ownerId: 'runner:chatgpt',
+              note: 'lease expired',
+              releaseReason: 'lease expired',
+            },
+            lastProviderEvidence: {
+              observedAt: '2026-05-12T14:05:45.000Z',
+              state: 'response-complete',
+              source: 'browser-service',
+              evidenceRef: 'chatgpt-response-finished',
+              confidence: 'high',
+              details: {
+                service: 'chatgpt',
+                runtimeProfileId: 'wsl-chrome-3',
+                browserProfileId: 'wsl-chrome-3',
+              },
+            },
+            terminalTransitionSource: null,
+          },
+        },
+      },
+    };
+    const service = createResponseBatchService({
+      store: {
+        readBatch: vi.fn(async (id) => stored.get(id) ?? null),
+        writeBatch: vi.fn(async (record) => record),
+      },
+      responsesService: {
+        createResponse: vi.fn(),
+        readResponse: vi.fn(async (id) => (id === 'resp_finalizing_1' ? finalizingResponse : null)),
+      },
+    });
+
+    await expect(service.readBatchStatus('batch_finalizing_1')).resolves.toMatchObject({
+      id: 'batch_finalizing_1',
+      status: 'running',
+      counts: {
+        total: 1,
+        in_progress: 1,
+      },
+      jobs: [
+        {
+          responseId: 'resp_finalizing_1',
+          status: 'in_progress',
+          runtimeState: 'finalizing',
+          diagnostics: {
+            runtimeState: 'finalizing',
+            leaseState: 'expired',
+            browserTaskState: 'response-complete',
+            lastProviderEvidence: {
+              state: 'response-complete',
+              evidenceRef: 'chatgpt-response-finished',
+            },
           },
         },
       ],

@@ -30259,3 +30259,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `agent-browser` verified the installed dashboard saved a `Transcript
     ChatGPT` view, persisted its query/provider state, applied it back to the
     workbench, and deleted a temporary `Delete Smoke` view.
+
+## Turn 169 | 2026-05-18
+
+- Goal: make browser-backed response-batch finalization state explicit after
+  transcribe-audio observed `response-complete` plus an expired lease before
+  the child flipped to terminal.
+- Change:
+  - added `runtimeDiagnosticsSummary.runtimeState` to response readback.
+  - response-batch child rows now copy `runtimeState` beside the existing
+    diagnostics block.
+  - `response-complete` runtime evidence on a still-running browser-backed run
+    now reports `runtimeState = "finalizing"` instead of leaving operators to
+    infer state from `leaseState=expired`.
+  - documented the new response-batch diagnostic in `docs/openai-endpoints.md`.
+- Verification:
+  - `pnpm vitest run tests/runtime.responsesService.test.ts -t "finalizing|detached browser response" --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.responseBatchService.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - full `tests/runtime.responsesService.test.ts` still has the existing
+    `reconstructs the execution request...` fixture failure unrelated to this
+    patch.

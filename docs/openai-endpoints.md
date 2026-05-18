@@ -247,11 +247,14 @@ Current limits:
     targets do not count as running-prompt evidence and should produce a
     target-mismatch failure rather than an endlessly renewed lease.
   - Response-batch job rows include bounded runtime diagnostics when child
-    response readback has runtime evidence: `leaseState`, `lastLeaseEvent`,
-    `browserTaskState`, `lastProviderEvidence`, and
-    `terminalTransitionSource`. If a child runtime record is being rewritten
-    and briefly cannot be parsed, the batch remains readable and marks that
-    child with a `response_read_failed` failure until the next successful poll.
+    response readback has runtime evidence: `runtimeState`, `leaseState`,
+    `lastLeaseEvent`, `browserTaskState`, `lastProviderEvidence`, and
+    `terminalTransitionSource`. `runtimeState = "finalizing"` means passive
+    provider evidence has reached `response-complete` while AuraCall is still
+    persisting the final child output, so the row is not a generic stranded
+    expired-lease state. If a child runtime record is being rewritten and
+    briefly cannot be parsed, the batch remains readable and marks that child
+    with a `response_read_failed` failure until the next successful poll.
   - `cancel-run` can cancel mutable browser-backed runs that have already lost
     their active lease. If completion already won the race, AuraCall reports the
     terminal state instead of returning an ambiguous no-active-lease conflict.

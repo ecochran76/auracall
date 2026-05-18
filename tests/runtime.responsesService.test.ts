@@ -624,6 +624,7 @@ describe('runtime responses service', () => {
       metadata: {
         executionSummary: {
           runtimeDiagnosticsSummary: {
+            runtimeState: 'recovering',
             leaseState: 'released',
             browserTaskState: 'thinking',
             lastLeaseEvent: {
@@ -655,6 +656,117 @@ describe('runtime responses service', () => {
     expect(
       reread?.metadata?.executionSummary?.runtimeDiagnosticsSummary?.lastProviderEvidence?.details,
     ).not.toHaveProperty('ignoredPrivatePayload');
+  });
+
+  it('marks response-complete browser evidence as finalizing while the run is still in progress', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const service = createExecutionResponsesService({
+      control,
+      now: () => new Date('2026-04-08T14:19:00.000Z'),
+      generateResponseId: () => 'resp_service_finalizing_1',
+      drainAfterCreate: false,
+    });
+
+    await service.createResponse({
+      model: 'agent:chatgpt-finalizing',
+      input: 'Persist and finalize.',
+      auracall: {
+        agent: 'chatgpt-finalizing',
+        runtimeProfile: 'wsl-chrome-3',
+        service: 'chatgpt',
+      },
+    });
+
+    const createdRecord = await control.readRun('resp_service_finalizing_1');
+    if (!createdRecord) {
+      throw new Error('expected finalizing response runtime record');
+    }
+    await control.persistRun({
+      runId: 'resp_service_finalizing_1',
+      expectedRevision: createdRecord.revision,
+      bundle: {
+        ...createdRecord.bundle,
+        run: {
+          ...createdRecord.bundle.run,
+          status: 'running',
+          updatedAt: '2026-04-08T14:19:05.000Z',
+        },
+        steps: createdRecord.bundle.steps.map((step) =>
+          step.id === 'resp_service_finalizing_1:step:1'
+            ? {
+                ...step,
+                status: 'running',
+                runtimeProfileId: 'wsl-chrome-3',
+                browserProfileId: 'wsl-chrome-3',
+                service: 'chatgpt',
+                startedAt: '2026-04-08T14:19:05.000Z',
+              }
+            : step,
+        ),
+      },
+    });
+    await control.acquireLease({
+      runId: 'resp_service_finalizing_1',
+      leaseId: 'resp_service_finalizing_1:lease:runner',
+      ownerId: 'runner:chatgpt',
+      acquiredAt: '2026-04-08T14:19:05.000Z',
+      heartbeatAt: '2026-04-08T14:19:05.000Z',
+      expiresAt: '2026-04-08T14:19:20.000Z',
+    });
+    await control.heartbeatLease({
+      runId: 'resp_service_finalizing_1',
+      leaseId: 'resp_service_finalizing_1:lease:runner',
+      heartbeatAt: '2026-04-08T14:19:15.000Z',
+      expiresAt: '2026-04-08T14:19:30.000Z',
+      runtimeEvidence: {
+        observedAt: '2026-04-08T14:19:14.000Z',
+        state: 'response-complete',
+        source: 'browser-service',
+        evidenceRef: 'chatgpt-response-finished',
+        confidence: 'high',
+        details: {
+          service: 'chatgpt',
+          runtimeProfileId: 'wsl-chrome-3',
+          browserProfileId: 'wsl-chrome-3',
+          agentId: 'chatgpt-finalizing',
+          chromeTargetId: 'target-finalizing',
+          tabUrl: 'https://chatgpt.com/c/finalizing',
+          conversationId: 'finalizing',
+        },
+      },
+    });
+    await control.releaseLease({
+      runId: 'resp_service_finalizing_1',
+      leaseId: 'resp_service_finalizing_1:lease:runner',
+      releasedAt: '2026-04-08T14:19:45.000Z',
+      releaseReason: 'lease expired',
+    });
+
+    const reread = await service.readResponse('resp_service_finalizing_1');
+
+    expect(reread).toMatchObject({
+      id: 'resp_service_finalizing_1',
+      status: 'in_progress',
+      metadata: {
+        executionSummary: {
+          runtimeDiagnosticsSummary: {
+            runtimeState: 'finalizing',
+            leaseState: 'released',
+            browserTaskState: 'response-complete',
+            lastProviderEvidence: {
+              state: 'response-complete',
+              evidenceRef: 'chatgpt-response-finished',
+              confidence: 'high',
+            },
+            terminalTransitionSource: null,
+          },
+        },
+      },
+    });
   });
 
   it('returns cancelled response state with bounded cancellation summary', async () => {

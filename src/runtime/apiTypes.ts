@@ -77,6 +77,7 @@ export type ExecutionResponseOutputItem =
   | ExecutionResponseArtifactOutputItem;
 
 export interface ExecutionRuntimeDiagnosticsSummary {
+  runtimeState?: 'queued' | 'running' | 'recovering' | 'finalizing' | 'stranded' | 'terminal' | null;
   leaseState?: 'none' | 'active' | 'released' | 'expired' | 'mixed' | null;
   lastLeaseEvent?: {
     type?: 'lease-acquired' | 'lease-released' | null;

@@ -93,6 +93,7 @@ export interface ResponseBatchJobStatus extends ResponseBatchJobRecord {
   completedAt: string | null;
   failure: unknown | null;
   diagnostics?: ExecutionRuntimeDiagnosticsSummary | null;
+  runtimeState?: ExecutionRuntimeDiagnosticsSummary['runtimeState'] | null;
 }
 
 export interface ResponseBatchStatus {
@@ -307,12 +308,14 @@ async function summarizeBatchStatus(
   const jobs: ResponseBatchJobStatus[] = [];
   for (const job of record.jobs) {
     const { response, readFailure } = await readBatchJobResponse(responsesService, job.responseId);
+    const diagnostics = response?.metadata?.executionSummary?.runtimeDiagnosticsSummary ?? null;
     jobs.push({
       ...job,
       status: response?.status ?? 'missing',
       completedAt: (response?.metadata?.executionSummary?.completedAt as string | null | undefined) ?? null,
       failure: readFailure ?? response?.metadata?.executionSummary?.failureSummary ?? null,
-      diagnostics: response?.metadata?.executionSummary?.runtimeDiagnosticsSummary ?? null,
+      diagnostics,
+      runtimeState: diagnostics?.runtimeState ?? null,
     });
   }
   const counts = {

@@ -247,6 +247,10 @@ export const ExecutionResponseSchema: z.ZodType<ExecutionResponse> = z.object({
           browserRunSummary: z.record(z.string(), z.unknown()).nullable().optional(),
           runtimeDiagnosticsSummary: z
             .object({
+              runtimeState: z
+                .enum(['queued', 'running', 'recovering', 'finalizing', 'stranded', 'terminal'])
+                .nullable()
+                .optional(),
               leaseState: z.enum(['none', 'active', 'released', 'expired', 'mixed']).nullable().optional(),
               lastLeaseEvent: z
                 .object({

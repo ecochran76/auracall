@@ -16259,3 +16259,9 @@ browser-stage lifecycle observability, not transcript truncation.
   new API contract. The first view slice stores query, facets, sort, and column
   preferences in browser localStorage; server-shared view presets can reuse the
   same shape when the Search API has named-view ownership semantics.
+- 2026-05-18: Response-batch children with passive provider
+  `response-complete` evidence should display as finalizing, not as a generic
+  expired-lease `in_progress` ambiguity. Response readback now includes
+  `runtimeDiagnosticsSummary.runtimeState`, and response-batch job rows copy it
+  so callers can distinguish `finalizing` from `recovering`, `stranded`, or
+  ordinary `running` states without reading raw runtime records.

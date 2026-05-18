@@ -224,17 +224,49 @@ function readExecutionRunRuntimeDiagnosticsSummary(input: {
     | null;
 }): ExecutionRuntimeDiagnosticsSummary {
   const lastProviderEvidence = readLastProviderRuntimeEvidence(input.runRecord);
+  const leaseState = readExecutionRunLeaseState(input.runRecord);
+  const terminalTransitionSource = readExecutionRunTerminalTransitionSource({
+    runRecord: input.runRecord,
+    terminalStep: input.terminalStep,
+    requestedOutputPolicy: input.requestedOutputPolicy,
+  });
   return {
-    leaseState: readExecutionRunLeaseState(input.runRecord),
+    runtimeState: readExecutionRunRuntimeState({
+      runRecord: input.runRecord,
+      leaseState,
+      lastProviderEvidence,
+      terminalTransitionSource,
+    }),
+    leaseState,
     lastLeaseEvent: readLastExecutionRunLeaseEvent(input.runRecord),
     browserTaskState: lastProviderEvidence?.state ?? null,
     lastProviderEvidence,
-    terminalTransitionSource: readExecutionRunTerminalTransitionSource({
-      runRecord: input.runRecord,
-      terminalStep: input.terminalStep,
-      requestedOutputPolicy: input.requestedOutputPolicy,
-    }),
+    terminalTransitionSource,
   };
+}
+
+function readExecutionRunRuntimeState(input: {
+  runRecord: ExecutionResponseFromRunRecordInput['runRecord'];
+  leaseState: NonNullable<ExecutionRuntimeDiagnosticsSummary['leaseState']>;
+  lastProviderEvidence: NonNullable<ExecutionRuntimeDiagnosticsSummary['lastProviderEvidence']> | null;
+  terminalTransitionSource: NonNullable<ExecutionRuntimeDiagnosticsSummary['terminalTransitionSource']> | null;
+}): NonNullable<ExecutionRuntimeDiagnosticsSummary['runtimeState']> {
+  if (input.terminalTransitionSource) {
+    return 'terminal';
+  }
+  if (input.runRecord.run.status === 'planned') {
+    return 'queued';
+  }
+  if (input.lastProviderEvidence?.state === 'response-complete') {
+    return 'finalizing';
+  }
+  if (input.leaseState === 'active') {
+    return 'running';
+  }
+  if (input.lastProviderEvidence) {
+    return 'recovering';
+  }
+  return 'stranded';
 }
 
 function readExecutionRunLeaseState(
