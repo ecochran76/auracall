@@ -135,7 +135,9 @@ import {
   formatApiRunArchiveCliSummary,
   formatApiRunArchiveEvidenceCliSummary,
   formatApiRunArchiveItemCliSummary,
+  formatApiRunArchiveItemMaterializeCliSummary,
   lookupApiRunArchiveAssetForCli,
+  materializeApiRunArchiveItemForCli,
   readApiRunArchiveForCli,
   readApiRunArchiveItemForCli,
 } from '../src/cli/apiRunArchiveCommand.js';
@@ -1288,6 +1290,34 @@ apiCommand
       return;
     }
     console.log(formatApiRunArchiveItemCliSummary(result));
+  });
+
+apiCommand
+  .command('archive-materialize')
+  .description('Ask the provider runtime to materialize one missing generated artifact archive item.')
+  .argument('<id>', 'Run archive item id.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP write timeout in milliseconds.', parseIntOption, 60000)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const result = await materializeApiRunArchiveItemForCli({
+      id,
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiRunArchiveItemMaterializeCliSummary(result));
   });
 
 apiCommand

@@ -725,6 +725,8 @@ function createBaseRunItem(
   runtimeState: ExecutionRuntimeDiagnosticsSummary['runtimeState'] | null,
 ): RunArchiveItem {
   const browserRun = readStepBrowserRun(firstStep);
+  const providerConversationId = readRecordString(browserRun, ['conversationId', 'conversation_id']);
+  const providerConversationUrl = readRecordString(browserRun, ['tabUrl', 'conversationUrl', 'url']);
   return {
     id: `response:${record.runId}`,
     object: 'run_archive_item',
@@ -735,7 +737,7 @@ function createBaseRunItem(
     title: record.bundle.run.entryPrompt,
     status: record.bundle.run.status,
     runtimeState,
-    provider: firstStep?.service ?? null,
+    provider: readRecordString(browserRun, ['provider', 'service']) ?? firstStep?.service ?? null,
     runtimeProfile: firstStep?.runtimeProfileId ?? readRecordString(record.bundle.run.initialInputs, ['runtimeProfile']),
     browserProfile: firstStep?.browserProfileId ?? null,
     projectId: readRecordString(browserRun, ['projectId', 'project']),
@@ -746,8 +748,8 @@ function createBaseRunItem(
     batchId: null,
     batchIndex: null,
     mediaGenerationId: null,
-    providerConversationId: null,
-    providerConversationUrl: null,
+    providerConversationId,
+    providerConversationUrl,
     artifactId: null,
     fileName: null,
     mimeType: null,

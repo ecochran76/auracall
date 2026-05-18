@@ -7,7 +7,9 @@ import {
   formatApiRunArchiveCliSummary,
   formatApiRunArchiveEvidenceCliSummary,
   formatApiRunArchiveItemCliSummary,
+  formatApiRunArchiveItemMaterializeCliSummary,
   lookupApiRunArchiveAssetForCli,
+  materializeApiRunArchiveItemForCli,
   readApiRunArchiveForCli,
   readApiRunArchiveItemForCli,
 } from '../../src/cli/apiRunArchiveCommand.js';
@@ -194,6 +196,45 @@ describe('api run archive CLI helpers', () => {
     }, fetchImpl as never);
 
     expect(formatApiRunArchiveAssetLookupCliSummary(result)).toContain('Canonical: generated-artifact:resp_1:file_1');
+  });
+
+  test('materializes an archive item through the local API', async () => {
+    const fetchImpl = vi.fn(async (url: URL, init?: RequestInit) => {
+      expect(url.toString()).toBe(
+        'http://127.0.0.1:18095/v1/archive/items/generated-artifact%3Aresp_1%3Aartifact_1/materialize',
+      );
+      expect(init?.method).toBe('POST');
+      return new Response(JSON.stringify({
+        object: 'run_archive_item_materialization',
+        generatedAt: '2026-05-18T18:30:00.000Z',
+        status: 'materialized',
+        message: 'Archive item materialized and indexed.',
+        item: {
+          id: 'generated-artifact:resp_1:artifact_1',
+          fileName: 'first_pass_readout.json',
+          localPath: '/tmp/first_pass_readout.json',
+          links: {
+            asset: '/v1/archive/items/b64/Z2VuZXJhdGVk/asset',
+          },
+        },
+        file: {
+          name: 'first_pass_readout.json',
+          localPath: '/tmp/first_pass_readout.json',
+        },
+      }));
+    });
+
+    const result = await materializeApiRunArchiveItemForCli({
+      port: 18095,
+      id: 'generated-artifact:resp_1:artifact_1',
+    }, fetchImpl as never);
+
+    expect(formatApiRunArchiveItemMaterializeCliSummary(result)).toContain(
+      'Run archive item materialization: materialized',
+    );
+    expect(formatApiRunArchiveItemMaterializeCliSummary(result)).toContain(
+      'Local path: /tmp/first_pass_readout.json',
+    );
   });
 
   test('requests archive index backfill from the local API', async () => {

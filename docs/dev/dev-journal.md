@@ -30394,3 +30394,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/cli/apiRunArchiveCommand.test.ts --maxWorkers 1`
   - `pnpm exec biome lint src/cli/apiRunArchiveCommand.ts tests/cli/apiRunArchiveCommand.test.ts --max-diagnostics 80`
   - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+
+## Turn 176 | 2026-05-18
+
+- Goal: add a provider-backed recovery path for missing generated artifacts in
+  Search/archive.
+- Change:
+  - added `ArchiveMaterializationService` for generated-artifact archive items.
+  - added `POST /v1/archive/items/{archive_item_id}/materialize` and advertised
+    the route from `/status`.
+  - the materializer calls the provider artifact download path, stores the
+    recovered local path, MIME, checksum, size, cache key, and asset route in
+    the run archive index, and returns the updated item.
+  - added CLI parity with `auracall api archive-materialize <archive_id>` and a
+    compact text summary for recovered local path, file name, and asset route.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 --testNamePattern "materializes a run archive item through the API surface|reports status with service discovery metadata"`
+  - `pnpm vitest run tests/cli/apiRunArchiveCommand.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+- Follow-up:
+  - the route is a foreground operator/API recovery request that yields
+    live-follow pressure while it runs. Persisted async materialization jobs and
+    progress polling remain open work for long-running provider recovery.

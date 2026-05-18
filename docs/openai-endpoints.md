@@ -62,6 +62,7 @@ Current endpoints:
 - `POST /v1/archive/evidence`
 - `GET /v1/archive/items/{archive_item_id}`
 - `GET /v1/archive/items/{archive_item_id}/asset`
+- `POST /v1/archive/items/{archive_item_id}/materialize`
 
 Workflow-oriented guidance lives in `docs/agent-workflows.md`. Treat this file
 as the endpoint contract and that file as the agent/app integration playbook.
@@ -316,6 +317,13 @@ Current limits:
   - `GET /v1/archive/items/{archive_item_id}/asset` streams the readable local
     file for file-bearing archive items, returning 404 for non-file items or
     missing local paths
+  - `POST /v1/archive/items/{archive_item_id}/materialize` asks the provider
+    materializer to recover a missing generated artifact through the normal
+    provider runtime path, then writes the local file facts back into the
+    archive index. The first implementation is a foreground operator/API
+    request that makes live-follow yield while it runs; CLI parity is
+    `auracall api archive-materialize --port <port> <archive_id>`. A durable
+    async materialization job queue remains separate follow-up work.
   - `POST /v1/archive/backfill` rebuilds the index from existing runtime
     records without browser work; CLI parity is
     `auracall api archive-backfill --port <port>`
@@ -331,8 +339,10 @@ Current limits:
     domain validators to AuraCall core
   - CLI parity: `auracall api archive --port <port> --kind upload --batch-id
     <batch_id>`, `auracall api archive-item --port <port> <archive_id>`, and
-    `auracall api archive-evidence --payload-file evidence.json` read/write
-    the same API surface
+    `auracall api archive-materialize --port <port> <archive_id>` read the
+    same API surface and recover missing generated-artifact files; `auracall
+    api archive-evidence --payload-file evidence.json` writes caller-owned
+    evidence
 - API-key authorization can be configured in `~/.auracall/config.json` or
   through the installed service dotenv file at `~/.auracall/api.env`. The
   service recognizes `AURACALL_API_KEY` as a bearer key and optional

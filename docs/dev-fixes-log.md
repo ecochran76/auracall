@@ -16298,3 +16298,10 @@ browser-stage lifecycle observability, not transcript truncation.
   `api archive-item` text now render non-terminal `runtimeState` as the
   display status and keep raw run status in parentheses, e.g.
   `finalizing (raw: running)`.
+- 2026-05-18: Missing generated artifacts need a provider-backed recovery path,
+  not only lookup/backfill diagnostics. `POST
+  /v1/archive/items/{archive_item_id}/materialize` now asks the provider
+  artifact materializer to download a generated artifact, then stores local
+  path, MIME, checksum, file size, cache key, and asset route back into the run
+  archive index. CLI parity is `auracall api archive-materialize --port <port>
+  <archive_id>` for terminal-side recovery without parsing raw JSON.

@@ -2511,6 +2511,86 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('materializes a run archive item through the API surface', async () => {
+    const materializeItem = vi.fn(async (request: { archiveItemId: string }) => ({
+      object: 'run_archive_item_materialization' as const,
+      generatedAt: '2026-05-18T18:15:00.000Z',
+      status: 'materialized' as const,
+      item: {
+        id: request.archiveItemId,
+        object: 'run_archive_item' as const,
+        kind: 'generated_artifact' as const,
+        source: 'runtime' as const,
+        createdAt: '2026-05-18T18:00:00.000Z',
+        updatedAt: '2026-05-18T18:15:00.000Z',
+        title: 'first_pass_readout.json',
+        status: 'succeeded',
+        provider: 'chatgpt',
+        runtimeProfile: 'wsl-chrome-3',
+        browserProfile: 'wsl-chrome-3',
+        projectId: 'Transcripts',
+        boundIdentityKey: 'service-account:chatgpt:eric.cochran@soylei.com',
+        agentId: 'pro-extended-chatgpt-soylei',
+        teamId: null,
+        responseId: 'resp_1',
+        batchId: 'batch_1',
+        batchIndex: 0,
+        mediaGenerationId: null,
+        providerConversationId: 'conv_1',
+        providerConversationUrl: 'https://chatgpt.com/c/conv_1',
+        artifactId: 'artifact_1',
+        fileName: 'first_pass_readout.json',
+        mimeType: 'application/json',
+        localPath: '/tmp/first_pass_readout.json',
+        uri: 'sandbox:/mnt/data/first_pass_readout.json',
+        cacheKey: 'sha256:fixture',
+        checksumSha256: 'fixture',
+        fileAvailable: true,
+        metadata: {},
+        links: {
+          asset: `/v1/archive/items/b64/${Buffer.from(request.archiveItemId, 'utf8').toString('base64url')}/asset`,
+        },
+      },
+      file: {
+        id: 'sandbox:/mnt/data/first_pass_readout.json',
+        name: 'first_pass_readout.json',
+        localPath: '/tmp/first_pass_readout.json',
+        remoteUrl: 'sandbox:/mnt/data/first_pass_readout.json',
+        mimeType: 'application/json',
+        size: 12,
+      },
+      message: 'Archive item materialized and indexed.',
+    }));
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        archiveMaterializationService: { materializeItem },
+      },
+    );
+
+    try {
+      const archiveItemId = 'generated-artifact:resp_1:artifact_1';
+      const encoded = Buffer.from(archiveItemId, 'utf8').toString('base64url');
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/archive/items/b64/${encoded}/materialize`, {
+        method: 'POST',
+      });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        object: 'run_archive_item_materialization',
+        status: 'materialized',
+        item: {
+          id: archiveItemId,
+          links: {
+            asset: expect.stringContaining('/v1/archive/items/b64/'),
+          },
+        },
+      });
+      expect(materializeItem).toHaveBeenCalledWith({ archiveItemId });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('reports unified search rows through the API surface', async () => {
     const search = vi.fn(async () => ({
       object: 'search_results' as const,
@@ -17846,6 +17926,9 @@ describe('http responses adapter', () => {
       expect((payload.routes as Record<string, unknown>).responseBatchesCreate).toBe('/v1/response-batches');
       expect((payload.routes as Record<string, unknown>).responseBatchesGetTemplate).toBe(
         '/v1/response-batches/{batch_id}',
+      );
+      expect((payload.routes as Record<string, unknown>).runArchiveItemMaterializeTemplate).toBe(
+        '/v1/archive/items/{archive_item_id}/materialize',
       );
       expect((payload.routes as Record<string, unknown>).preflightRunTemplate).toBe(
         '/v1/preflight/lazy-live-follow/runs/{run_id}',

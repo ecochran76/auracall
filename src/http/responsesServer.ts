@@ -90,6 +90,12 @@ import {
   type RunArchiveService,
 } from '../runtime/archiveService.js';
 import {
+  ArchiveMaterializationError,
+  createArchiveMaterializationService,
+  type ArchiveItemMaterializationResult,
+  type ArchiveMaterializationService,
+} from '../runtime/archiveMaterializationService.js';
+import {
   createSearchProjectionService,
   type SearchProjectionRequest,
   type SearchProjectionResult,
@@ -279,6 +285,7 @@ export interface ResponsesHttpServerDeps {
   createResponseBatchService?: typeof createResponseBatchService;
   responseBatchService?: ResponseBatchService;
   runArchiveService?: RunArchiveService;
+  archiveMaterializationService?: ArchiveMaterializationService;
   searchProjectionService?: SearchProjectionService;
   executionHost?: ExecutionServiceHost;
   localActionExecutionPolicy?: ExecutionServiceHostDeps['localActionExecutionPolicy'];
@@ -674,6 +681,7 @@ interface HttpStatusResponse {
     runArchiveEvidenceCreate: string;
     runArchiveItemTemplate: string;
     runArchiveItemAssetTemplate: string;
+    runArchiveItemMaterializeTemplate: string;
     runStatusTemplate: string;
     apiLogTail: string;
     preflightRunTemplate: string;
@@ -918,6 +926,11 @@ export async function createResponsesHttpServer(
     now,
   });
   const runArchiveService = deps.runArchiveService ?? createRunArchiveService({
+    now,
+  });
+  const archiveMaterializationService = deps.archiveMaterializationService ?? createArchiveMaterializationService({
+    config: resolvedUserConfig ?? {},
+    runArchiveService,
     now,
   });
   const searchProjectionService = deps.searchProjectionService ?? createSearchProjectionService({
@@ -1547,6 +1560,31 @@ export async function createResponsesHttpServer(
         const result: HttpRunArchiveEvidenceResponse = await runArchiveService.attachEvidence(payload);
         sendJson(res, 201, result);
         return;
+      }
+
+      if (req.method === 'POST' && isRunArchiveItemMaterializeRoute(url.pathname)) {
+        const endForegroundWork = beginForegroundAuraCallWork();
+        try {
+          const itemId = parseRunArchiveItemMaterializeId(url.pathname);
+          const result: ArchiveItemMaterializationResult = await archiveMaterializationService.materializeItem({
+            archiveItemId: itemId,
+          });
+          sendJson(res, result.status === 'materialized' || result.status === 'already_materialized' ? 200 : 202, result);
+          return;
+        } catch (error) {
+          if (error instanceof ArchiveMaterializationError) {
+            sendJson(res, error.statusCode, {
+              error: {
+                message: error.message,
+                type: error.statusCode === 404 ? 'not_found_error' : 'invalid_request_error',
+              },
+            } satisfies HttpErrorPayload);
+            return;
+          }
+          throw error;
+        } finally {
+          endForegroundWork();
+        }
       }
 
       if (req.method === 'GET' && isRunArchiveItemAssetRoute(url.pathname)) {
@@ -3054,7 +3092,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   }
   logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
-    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/search, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
+    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/search, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, POST /v1/archive/items/{archive_item_id}/materialize, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   if (serverOptions.dashboardUrl) {
@@ -3550,6 +3588,7 @@ function createHttpStatusResponse(input: {
       runArchiveEvidenceCreate: '/v1/archive/evidence',
       runArchiveItemTemplate: '/v1/archive/items/{archive_item_id}',
       runArchiveItemAssetTemplate: '/v1/archive/items/{archive_item_id}/asset',
+      runArchiveItemMaterializeTemplate: '/v1/archive/items/{archive_item_id}/materialize',
       runStatusTemplate: '/v1/runs/{run_id}/status[?diagnostics=browser-state]',
       apiLogTail: '/v1/api/logs/tail[?maxBytes=32768]',
       preflightRunTemplate: '/v1/preflight/lazy-live-follow/runs/{run_id}',
@@ -5813,9 +5852,26 @@ function isRunArchiveItemAssetRoute(pathname: string): boolean {
   return pathname.startsWith('/v1/archive/items/') && pathname.endsWith('/asset');
 }
 
+function isRunArchiveItemMaterializeRoute(pathname: string): boolean {
+  return pathname.startsWith('/v1/archive/items/') && pathname.endsWith('/materialize');
+}
+
 function parseRunArchiveItemAssetId(pathname: string): string {
   const prefix = '/v1/archive/items/';
   const suffix = '/asset';
+  const encodedItemId = pathname.startsWith(prefix) && pathname.endsWith(suffix)
+    ? pathname.slice(prefix.length, -suffix.length)
+    : '';
+  const itemId = decodeRunArchiveItemPathSegment(encodedItemId).trim();
+  if (!itemId) {
+    throw new Error('Run archive item id is required.');
+  }
+  return itemId;
+}
+
+function parseRunArchiveItemMaterializeId(pathname: string): string {
+  const prefix = '/v1/archive/items/';
+  const suffix = '/materialize';
   const encodedItemId = pathname.startsWith(prefix) && pathname.endsWith(suffix)
     ? pathname.slice(prefix.length, -suffix.length)
     : '';

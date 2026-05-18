@@ -242,6 +242,8 @@ describe('run archive service', () => {
       localPath: generatedArtifactPath,
       fileAvailable: true,
       runtimeState: 'terminal',
+      providerConversationId: 'conv_archive_1',
+      providerConversationUrl: 'https://chatgpt.com/c/conv_archive_1',
       metadata: expect.objectContaining({
         providerArtifactId: 'sandbox:/mnt/data/feedback-draft.json',
         fileSizeBytes: Buffer.byteLength('{"score":5}'),

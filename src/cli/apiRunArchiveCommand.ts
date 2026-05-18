@@ -22,6 +22,8 @@ export interface ApiRunArchiveItemCliOptions {
   id: string;
 }
 
+export interface ApiRunArchiveItemMaterializeCliOptions extends ApiRunArchiveItemCliOptions {}
+
 export interface ApiRunArchiveAssetLookupCliOptions {
   host?: string | null;
   port?: number | null;
@@ -92,6 +94,30 @@ export async function readApiRunArchiveItemForCli(
     });
     if (!response.ok) {
       throw new Error(`AuraCall run archive item returned HTTP ${response.status}.`);
+    }
+    return response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function materializeApiRunArchiveItemForCli(
+  options: ApiRunArchiveItemMaterializeCliOptions,
+  fetchImpl: typeof fetch = fetch,
+): Promise<unknown> {
+  const host = normalizeHost(options.host);
+  const port = normalizePort(options.port);
+  const timeoutMs = normalizeTimeoutMs(options.timeoutMs);
+  const id = normalizeRequiredString(options.id, 'archive item id');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchImpl(new URL(`http://${host}:${port}/v1/archive/items/${encodeURIComponent(id)}/materialize`), {
+      method: 'POST',
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`AuraCall run archive item materialization returned HTTP ${response.status}.`);
     }
     return response.json();
   } finally {
@@ -217,6 +243,26 @@ export function formatApiRunArchiveItemCliSummary(payload: unknown): string {
   if (uri) lines.push(`URI: ${uri}`);
   const conversationId = readString(item.providerConversationId);
   if (conversationId) lines.push(`Provider conversation: ${conversationId}`);
+  return lines.join('\n');
+}
+
+export function formatApiRunArchiveItemMaterializeCliSummary(payload: unknown): string {
+  const record = isRecord(payload) ? payload : {};
+  const item = isRecord(record.item) ? record.item : {};
+  const file = isRecord(record.file) ? record.file : {};
+  const lines = [
+    `Run archive item materialization: ${readString(record.status) ?? 'unknown'}`,
+    `Item: ${readString(item.id) ?? 'unknown'}`,
+  ];
+  const message = readString(record.message);
+  if (message) lines.push(`Message: ${message}`);
+  const localPath = readString(file.localPath) ?? readString(item.localPath);
+  if (localPath) lines.push(`Local path: ${localPath}`);
+  const fileName = readString(file.name) ?? readString(item.fileName);
+  if (fileName) lines.push(`File: ${fileName}`);
+  const links = isRecord(item.links) ? item.links : {};
+  const asset = readString(links.asset);
+  if (asset) lines.push(`Asset: ${asset}`);
   return lines.join('\n');
 }
 
