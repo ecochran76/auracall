@@ -30379,3 +30379,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     clicked Lookup, and clicked Backfill.
   - Lookup reported zero local matches for the selected sandbox artifact;
     Backfill completed with `1,372` indexed items.
+
+## Turn 175 | 2026-05-18
+
+- Goal: keep CLI archive summaries aligned with the transient runtime-state
+  display contract.
+- Change:
+  - `auracall api archive` compact text now renders non-terminal
+    `runtimeState` as the display status.
+  - raw run status remains visible in parentheses, e.g.
+    `finalizing (raw: running)`.
+  - archive item detail formatting uses the same status projection.
+- Verification:
+  - `pnpm vitest run tests/cli/apiRunArchiveCommand.test.ts --maxWorkers 1`
+  - `pnpm exec biome lint src/cli/apiRunArchiveCommand.ts tests/cli/apiRunArchiveCommand.test.ts --max-diagnostics 80`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`

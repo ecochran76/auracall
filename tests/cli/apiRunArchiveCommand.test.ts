@@ -103,6 +103,54 @@ describe('api run archive CLI helpers', () => {
     })).toContain('project=project_1');
   });
 
+  test('formats transient runtime state as archive display status', () => {
+    const item = {
+      id: 'response:resp_finalizing_cli',
+      object: 'run_archive_item',
+      kind: 'response',
+      source: 'runtime',
+      createdAt: '2026-05-18T17:00:00.000Z',
+      updatedAt: '2026-05-18T17:05:00.000Z',
+      title: 'Prompt',
+      status: 'running',
+      runtimeState: 'finalizing',
+      provider: 'chatgpt',
+      runtimeProfile: 'wsl-chrome-3',
+      browserProfile: 'wsl-chrome-3',
+      projectId: 'Transcripts',
+      boundIdentityKey: 'ecochran76@gmail.com',
+      agentId: 'pro-extended-chatgpt-soylei-transcripts',
+      teamId: null,
+      responseId: 'resp_finalizing_cli',
+      batchId: 'batch_finalizing_cli',
+      batchIndex: 0,
+      mediaGenerationId: null,
+      providerConversationId: null,
+      providerConversationUrl: null,
+      artifactId: null,
+      fileName: null,
+      mimeType: null,
+      localPath: null,
+      uri: null,
+      cacheKey: null,
+      checksumSha256: null,
+      fileAvailable: null,
+      metadata: {},
+      links: {},
+    };
+
+    expect(formatApiRunArchiveCliSummary({
+      object: 'run_archive',
+      kind: 'response',
+      items: [item],
+      metrics: { total: 1 },
+    })).toContain('status=finalizing (raw: running)');
+    expect(formatApiRunArchiveItemCliSummary({
+      object: 'run_archive_item_detail',
+      item,
+    })).toContain('Status: finalizing (raw: running)');
+  });
+
   test('looks up archive assets by checksum through the local API', async () => {
     const fetchImpl = vi.fn(async (url: URL) => {
       expect(url.toString()).toBe(

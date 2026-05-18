@@ -16293,3 +16293,8 @@ browser-stage lifecycle observability, not transcript truncation.
   exposes archive backfill and asset lookup controls, and keeps provider URI,
   response, provider conversation, and lookup routes available for operator
   handoff.
+- 2026-05-18: CLI archive summaries should follow the same transient
+  finalization display contract as search rows. Compact `api archive` and
+  `api archive-item` text now render non-terminal `runtimeState` as the
+  display status and keep raw run status in parentheses, e.g.
+  `finalizing (raw: running)`.

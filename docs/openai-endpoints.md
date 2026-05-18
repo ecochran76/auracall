@@ -308,6 +308,9 @@ Current limits:
     `runtimeState`; the `status` filter matches either value so operators can
     query transient states such as `finalizing` without waiting for terminal
     persistence
+  - compact CLI archive summaries display non-terminal `runtimeState` as the
+    item status and keep raw run status in parentheses, for example
+    `status=finalizing (raw: running)`
   - `GET /v1/archive/items/{archive_item_id}` reads one item detail by stable
     archive id
   - `GET /v1/archive/items/{archive_item_id}/asset` streams the readable local

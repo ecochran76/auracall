@@ -193,7 +193,7 @@ export function formatApiRunArchiveCliSummary(payload: unknown): string {
   for (const item of items.slice(0, 25)) {
     if (!isRecord(item)) continue;
     lines.push(
-      `- ${readString(item.kind) ?? 'unknown'} ${readString(item.id) ?? 'unknown'} status=${readString(item.status) ?? 'n/a'} provider=${readString(item.provider) ?? 'n/a'} project=${readString(item.projectId) ?? 'n/a'} response=${readString(item.responseId) ?? 'n/a'} batch=${readString(item.batchId) ?? 'n/a'} title=${readString(item.title) ?? ''}`.trim(),
+      `- ${readString(item.kind) ?? 'unknown'} ${readString(item.id) ?? 'unknown'} ${formatArchiveStatusInline(item)} provider=${readString(item.provider) ?? 'n/a'} project=${readString(item.projectId) ?? 'n/a'} response=${readString(item.responseId) ?? 'n/a'} batch=${readString(item.batchId) ?? 'n/a'} title=${readString(item.title) ?? ''}`.trim(),
     );
   }
   return lines.join('\n');
@@ -205,7 +205,7 @@ export function formatApiRunArchiveItemCliSummary(payload: unknown): string {
   const lines = [
     `Run archive item: ${readString(item.id) ?? 'unknown'}`,
     `Kind: ${readString(item.kind) ?? 'unknown'}`,
-    `Status: ${readString(item.status) ?? 'n/a'}`,
+    `Status: ${formatArchiveStatusDisplay(item)}`,
     `Provider: ${readString(item.provider) ?? 'n/a'}`,
     `Project: ${readString(item.projectId) ?? 'n/a'}`,
     `Response: ${readString(item.responseId) ?? 'n/a'}`,
@@ -218,6 +218,24 @@ export function formatApiRunArchiveItemCliSummary(payload: unknown): string {
   const conversationId = readString(item.providerConversationId);
   if (conversationId) lines.push(`Provider conversation: ${conversationId}`);
   return lines.join('\n');
+}
+
+function formatArchiveStatusInline(item: Record<string, unknown>): string {
+  const display = formatArchiveStatusDisplay(item);
+  const runtimeState = readString(item.runtimeState);
+  if (runtimeState && runtimeState !== 'terminal') {
+    return `status=${display}`;
+  }
+  return `status=${readString(item.status) ?? 'n/a'}`;
+}
+
+function formatArchiveStatusDisplay(item: Record<string, unknown>): string {
+  const status = readString(item.status);
+  const runtimeState = readString(item.runtimeState);
+  if (!runtimeState || runtimeState === 'terminal' || runtimeState === status) {
+    return status ?? 'n/a';
+  }
+  return `${runtimeState} (raw: ${status ?? 'n/a'})`;
 }
 
 export function formatApiRunArchiveAssetLookupCliSummary(payload: unknown): string {
