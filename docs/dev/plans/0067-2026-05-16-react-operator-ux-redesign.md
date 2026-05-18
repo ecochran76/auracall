@@ -170,7 +170,10 @@ State ownership:
   chips so unconfigured profile identity gaps are distinct from enabled-target
   attention. Selecting a live-follow account populates the right inspector with
   joined live-follow/account-mirror identity, guard, timing, count, completion,
-  status, and catalog links without starting provider browser work.
+  status, and catalog links without starting provider browser work. The Health
+  surface has started moving from card-stack diagnostics toward a denser
+  operator layout with a compact status strip, collapsed API-key administration,
+  tighter table rows, and a denser right inspector.
 - Slice 4 is started in read-only form: the Runs page polls
   `/status?recovery=true&sourceKind=all` every 30 seconds and renders recovery
   counts, local-claim metrics, runner-topology metrics, and bounded run-id

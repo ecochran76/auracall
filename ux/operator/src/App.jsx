@@ -523,6 +523,7 @@ function parseIdList(value) {
 
 function ApiKeysSection() {
   const apiKeys = useApiKeyList();
+  const [expanded, setExpanded] = useState(false);
   const [form, setForm] = useState({
     agentId: "",
     teamId: "",
@@ -620,7 +621,7 @@ function ApiKeysSection() {
     <section className="health-section" aria-label="API key management">
       <div className="section-heading">
         <h2>API Keys</h2>
-        <span>{apiKeys.loading ? "Loading" : `${formatNumber(keys.length)} configured`}</span>
+        <span>{apiKeys.loading ? "Loading" : `${formatNumber(keys.length)} configured / ${apiKeys.status?.envPath ?? "~/.auracall/api.env"}`}</span>
       </div>
       {apiKeys.error ? <div className="health-error">Unable to load API keys: {apiKeys.error}</div> : null}
       <div className="api-key-actions">
@@ -628,93 +629,101 @@ function ApiKeysSection() {
           <RefreshCcw size={14} aria-hidden="true" />
           <span>Refresh</span>
         </button>
+        <button className="icon-label-button" type="button" onClick={() => setExpanded((current) => !current)} title={expanded ? "Collapse API key controls" : "Expand API key controls"}>
+          <ChevronDown className={expanded ? "rotated-icon" : ""} size={14} aria-hidden="true" />
+          <span>{expanded ? "Hide" : "Manage"}</span>
+        </button>
         <button className="icon-label-button" type="button" disabled={busy || restarting} onClick={restartApiService} title="Restart API service">
           <RefreshCcw size={14} aria-hidden="true" />
           <span>{restarting ? "Restarting" : "Restart API"}</span>
         </button>
-        <small>{apiKeys.updatedAt ? `Updated ${formatDateTime(apiKeys.updatedAt)}` : apiKeys.status?.envPath ?? "/v1/config/api-keys"}</small>
+        <small>{apiKeys.updatedAt ? `Updated ${formatDateTime(apiKeys.updatedAt)}` : "/v1/config/api-keys"}</small>
       </div>
-      <div className="health-table-wrap">
-        <table className="health-table">
-          <thead>
-            <tr>
-              <th>Key</th>
-              <th>Secret</th>
-              <th>Agents</th>
-              <th>Teams</th>
-              <th>Services</th>
-              <th>Runtime</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {keys.map((key) => (
-              <tr key={key.id}>
-                <td>{key.id}</td>
-                <td>{key.hasSecret ? "stored" : "missing"}</td>
-                <td>{(key.agents ?? []).join(", ") || "all"}</td>
-                <td>{(key.teams ?? []).join(", ") || "all"}</td>
-                <td>{(key.services ?? []).join(", ") || "all"}</td>
-                <td>{(key.runtimeProfiles ?? []).join(", ") || "all"}</td>
-                <td>
-                  <button className="icon-label-button danger" type="button" disabled={busy} onClick={() => deleteKey(key.id)} title={`Delete ${key.id}`}>
-                    <Trash2 size={14} aria-hidden="true" />
-                    <span>Delete</span>
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {!keys.length ? (
-              <tr>
-                <td colSpan="7">No API keys were found in the user-scoped service env file.</td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
-      <form className="api-key-form" onSubmit={issueKey}>
-        <div className="section-heading">
-          <h3>Issue Scoped Key</h3>
-          <span>Restart required after issue or delete</span>
-        </div>
-        <div className="api-key-form-grid">
-          <label>
-            <span>Agent</span>
-            <input value={form.agentId} placeholder="agent id" onChange={(event) => updateForm("agentId", event.target.value)} />
-          </label>
-          <label>
-            <span>Team</span>
-            <input value={form.teamId} placeholder="team id" onChange={(event) => updateForm("teamId", event.target.value)} />
-          </label>
-          <label>
-            <span>Key ID</span>
-            <input value={form.keyId} placeholder="client id" onChange={(event) => updateForm("keyId", event.target.value)} />
-          </label>
-          <label>
-            <span>Services</span>
-            <input value={form.services} placeholder="chatgpt, gemini" onChange={(event) => updateForm("services", event.target.value)} />
-          </label>
-          <label>
-            <span>Runtime</span>
-            <input value={form.runtimeProfiles} placeholder="default" onChange={(event) => updateForm("runtimeProfiles", event.target.value)} />
-          </label>
-          <label>
-            <span>Client Env</span>
-            <input value={form.clientEnvPath} placeholder="optional handoff path" onChange={(event) => updateForm("clientEnvPath", event.target.value)} />
-          </label>
-        </div>
-        <div className="api-key-form-footer">
-          <label className="checkbox-row">
-            <input type="checkbox" checked={form.overwrite} onChange={(event) => updateForm("overwrite", event.target.checked)} />
-            <span>Overwrite existing key id</span>
-          </label>
-          <button className="primary-action" type="submit" disabled={busy || (!form.agentId.trim() && !form.teamId.trim())} title="Issue API key">
-            <Plus size={16} aria-hidden="true" />
-            <span>{busy ? "Working" : "Issue"}</span>
-          </button>
-        </div>
-      </form>
-      {result ? (
+      {expanded ? (
+        <>
+          <div className="health-table-wrap">
+            <table className="health-table compact-table">
+              <thead>
+                <tr>
+                  <th>Key</th>
+                  <th>Secret</th>
+                  <th>Agents</th>
+                  <th>Teams</th>
+                  <th>Services</th>
+                  <th>Runtime</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {keys.map((key) => (
+                  <tr key={key.id}>
+                    <td>{key.id}</td>
+                    <td>{key.hasSecret ? "stored" : "missing"}</td>
+                    <td>{(key.agents ?? []).join(", ") || "all"}</td>
+                    <td>{(key.teams ?? []).join(", ") || "all"}</td>
+                    <td>{(key.services ?? []).join(", ") || "all"}</td>
+                    <td>{(key.runtimeProfiles ?? []).join(", ") || "all"}</td>
+                    <td>
+                      <button className="icon-label-button danger" type="button" disabled={busy} onClick={() => deleteKey(key.id)} title={`Delete ${key.id}`}>
+                        <Trash2 size={14} aria-hidden="true" />
+                        <span>Delete</span>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {!keys.length ? (
+                  <tr>
+                    <td colSpan="7">No API keys found.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+          <form className="api-key-form" onSubmit={issueKey}>
+            <div className="section-heading">
+              <h3>Issue Scoped Key</h3>
+              <span>Restart required after issue or delete</span>
+            </div>
+            <div className="api-key-form-grid">
+              <label>
+                <span>Agent</span>
+                <input value={form.agentId} placeholder="agent id" onChange={(event) => updateForm("agentId", event.target.value)} />
+              </label>
+              <label>
+                <span>Team</span>
+                <input value={form.teamId} placeholder="team id" onChange={(event) => updateForm("teamId", event.target.value)} />
+              </label>
+              <label>
+                <span>Key ID</span>
+                <input value={form.keyId} placeholder="client id" onChange={(event) => updateForm("keyId", event.target.value)} />
+              </label>
+              <label>
+                <span>Services</span>
+                <input value={form.services} placeholder="chatgpt, gemini" onChange={(event) => updateForm("services", event.target.value)} />
+              </label>
+              <label>
+                <span>Runtime</span>
+                <input value={form.runtimeProfiles} placeholder="default" onChange={(event) => updateForm("runtimeProfiles", event.target.value)} />
+              </label>
+              <label>
+                <span>Client Env</span>
+                <input value={form.clientEnvPath} placeholder="optional handoff path" onChange={(event) => updateForm("clientEnvPath", event.target.value)} />
+              </label>
+            </div>
+            <div className="api-key-form-footer">
+              <label className="checkbox-row">
+                <input type="checkbox" checked={form.overwrite} onChange={(event) => updateForm("overwrite", event.target.checked)} />
+                <span>Overwrite existing key id</span>
+              </label>
+              <button className="primary-action" type="submit" disabled={busy || (!form.agentId.trim() && !form.teamId.trim())} title="Issue API key">
+                <Plus size={16} aria-hidden="true" />
+                <span>{busy ? "Working" : "Issue"}</span>
+              </button>
+            </div>
+          </form>
+        </>
+      ) : null}
+      {result && expanded ? (
         <div className={`api-key-result api-key-result-${result.tone}`}>
           <strong>{result.tone === "ok" ? "Operation complete" : result.tone === "warn" ? "No matching key removed" : "Operation failed"}</strong>
           {restartRequired ? <p>Restart the API service before external clients rely on this key change.</p> : null}
@@ -772,9 +781,8 @@ function HealthViewport({ apiStatus, selectedLiveFollowAccount, onSelectedLiveFo
     <main className="viewport" tabIndex="-1">
       <div className="health-toolbar">
         <div className="viewport-heading">
-          <span>Live AuraCall status</span>
-          <h1>Service Health</h1>
-          <p>Read-only status from the running API service, including route discovery and live-follow account posture.</p>
+          <span>Live status</span>
+          <h1>Health</h1>
         </div>
         <div className="status-readout">
           <span className={`state-dot state-${statusTone(status?.ok ? "ok" : "error")}`} />
@@ -785,74 +793,41 @@ function HealthViewport({ apiStatus, selectedLiveFollowAccount, onSelectedLiveFo
 
       {error ? <div className="health-error">Unable to load /status: {error}</div> : null}
 
-      <div className="health-grid">
-        <article className="health-card">
-          <span className="card-kicker">API</span>
+      <section className="ops-strip" aria-label="Health summary">
+        <article>
+          <span>API</span>
           <strong>{status?.version ?? "unknown"}</strong>
-          <p>
-            {binding.host ?? "127.0.0.1"}:{binding.port ?? "unknown"}
-          </p>
-          <div className="metric-row">
-            <span>Auth</span>
-            <b>{status?.auth?.required ? `${status.auth.scheme ?? "bearer"} (${status.auth.keyCount ?? 0})` : "off"}</b>
-          </div>
-          <div className="metric-row">
-            <span>Scope</span>
-            <b>{status?.auth?.scoped ? "scoped keys" : "global keys"}</b>
-          </div>
+          <small>{binding.host ?? "127.0.0.1"}:{binding.port ?? "unknown"} / {status?.auth?.keyCount ?? 0} keys</small>
         </article>
-
-        <article className="health-card">
-          <span className="card-kicker">Live Follow</span>
+        <article>
+          <span>Live follow</span>
           <strong>{liveFollow.severity ?? "unknown"}</strong>
-          <p>
-            {liveFollow.schedulerPosture ?? "unknown"} / {liveFollow.schedulerState ?? "unknown"}
-          </p>
-          <div className="metric-row">
-            <span>Active</span>
-            <b>{formatNumber(liveFollow.activeCompletions)}</b>
-          </div>
-          <div className="metric-row">
-            <span>Attention</span>
-            <b>{formatNumber(attentionAccountCount)}</b>
-          </div>
-          <div className="metric-row">
-            <span>Configured</span>
-            <b>
-              {formatNumber(enabledAccountCount)} enabled / {formatNumber(unconfiguredAccountCount)} unconfigured
-            </b>
-          </div>
+          <small>{formatNumber(liveFollow.activeCompletions)} active / {formatNumber(attentionAccountCount)} attention</small>
         </article>
-
-        <article className="health-card">
-          <span className="card-kicker">Routing</span>
-          <strong>{discovery.local?.hostname ?? "auracall.localhost"}</strong>
-          <p>
-            {discovery.routing?.ingress ?? "local"} via {discovery.routing?.proxyTarget ?? "API service"}
-          </p>
+        <article>
+          <span>Targets</span>
+          <strong>{formatNumber(enabledAccountCount)} enabled</strong>
+          <small>{formatNumber(unconfiguredAccountCount)} unconfigured / {formatNumber(runningAccountCount)} running</small>
+        </article>
+        <article>
+          <span>Scheduler</span>
+          <strong>{liveFollow.schedulerPosture ?? "unknown"}</strong>
+          <small>{liveFollow.schedulerState ?? "unknown"}</small>
+        </article>
+        <article>
+          <span>Runtime</span>
+          <strong>{process.service ?? "auracall-api.service"}</strong>
+          <small>PID {process.pid ?? "unknown"} / {formatUptime(process.uptimeSeconds)}</small>
+        </article>
+        <article className="ops-strip-routes">
+          <span>{discovery.local?.hostname ?? "auracall.localhost"}</span>
           <div className="route-list">
             <a href={routes.operatorBrowserDashboard ?? "/dashboard"}>Dashboard</a>
             <a href={routes.operatorDebugDashboard ?? "/ops/browser"}>Debug</a>
             <a href={routes.accountMirrorDashboard ?? "/account-mirror"}>Mirror</a>
           </div>
         </article>
-
-        <article className="health-card">
-          <span className="card-kicker">Runtime</span>
-          <strong>{process.service ?? "auracall-api.service"}</strong>
-          <p>
-            PID {process.pid ?? "unknown"} / uptime {formatUptime(process.uptimeSeconds)}
-          </p>
-          <div className="metric-row">
-            <span>CWD</span>
-            <b>{process.cwd ?? "unknown"}</b>
-          </div>
-          <div className="metric-row">
-            <span>Log</span>
-            <b>{process.logPath ?? "unknown"}</b>
-          </div>
-        </article>
-      </div>
+      </section>
 
       <ApiKeysSection />
 
@@ -1005,9 +980,8 @@ function RunsViewport({ runStatus }) {
     <main className="viewport" tabIndex="-1">
       <div className="health-toolbar">
         <div className="viewport-heading">
-          <span>Runtime recovery posture</span>
+          <span>Runtime posture</span>
           <h1>Runs</h1>
-          <p>Read-only runtime state from `/status?recovery=true&sourceKind=all`, showing queue health for the operator dashboard.</p>
         </div>
         <div className="status-readout">
           <span className={`state-dot state-${statusTone(error ? "error" : "ok")}`} />
@@ -1234,7 +1208,6 @@ function ArchiveSearchViewport({
         <div className="viewport-heading">
           <span>Searchable cache archive</span>
           <h1>Search</h1>
-          <p>Read-only search over archived responses, batches, uploads, generated artifacts, provider conversations, media, and caller evidence.</p>
         </div>
         <div className="status-readout">
           <span className={`state-dot state-${statusTone(error ? "error" : "ok")}`} />
@@ -1451,7 +1424,6 @@ function ConversationChatViewport() {
         <div className="viewport-heading">
           <span>Cache-backed chat review</span>
           <h1>Chats</h1>
-          <p>Browse mirrored conversations as dialog transcripts with cached artifacts, sources, provider links, and tenant context.</p>
         </div>
         <div className="status-readout">
           <span className={`state-dot state-${statusTone(error ? "error" : "ok")}`} />

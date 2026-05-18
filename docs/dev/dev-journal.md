@@ -29906,3 +29906,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next:
   - choose the next UX slice from Plan 0067 deliberately; likely candidates are
     route-addressable selected state or a denser run/batch inspector.
+
+## Turn 160 | 2026-05-18
+
+- Goal: start the aesthetics/density pass for the operator UX after the Health
+  inspector slice proved the current surface was still too panel-heavy.
+- Change:
+  - replaced the Health page card stack with a compact status strip.
+  - removed nonessential explanatory heading copy from the primary work
+    surfaces.
+  - collapsed API-key administration behind a compact `Manage` control while
+    keeping refresh and restart visible.
+  - tightened top chrome, viewport padding, table rows, filter chips,
+    archive/chat forms, and right-inspector detail spacing.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run build && pnpm run install:user-runtime`
+  - `agent-browser` verified the installed Health page, selected
+    `chatgpt / wsl-chrome-3`, and confirmed the inspector still populated.
+  - `agent-browser` checked a 390px viewport and reported no document-level
+    horizontal overflow.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/health-density-desktop-loaded.png`
+  - `/tmp/auracall-operator-ux-dogfood/health-density-inspector.png`
+  - `/tmp/auracall-operator-ux-dogfood/health-density-mobile.png`
+- External links:
+  - `http://auracall.localhost/dashboard`
+  - `https://auracall.ecochran.dyndns.org/dashboard`
+- Coordination:
+  - left concurrent non-UX edits in `src/config/model.ts` and
+    `src/schema/types.ts` untouched.

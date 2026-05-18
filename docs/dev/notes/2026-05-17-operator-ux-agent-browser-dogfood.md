@@ -331,3 +331,42 @@ Validation evidence:
   `Inspect chatgpt wsl-chrome-3` control, verified the right inspector shows
   identity, account level, guard, timing, counts, and route chips, then saved
   the screenshot above.
+
+## Health Density Follow-Up
+
+Fifteenth pass tightened the Health surface aesthetics and density:
+
+- Replaced the four large Health cards with a single compact status strip for
+  API, live-follow, target, scheduler, runtime, and route posture.
+- Removed explanatory heading copy from the primary pages that was consuming
+  operator screen space without adding decision value.
+- Collapsed API-key administration behind a compact `Manage` control so the
+  live-follow table is visible sooner; refresh and restart controls remain
+  directly available.
+- Tightened top chrome, viewport padding, table rows, filter chips, archive/chat
+  forms, and the right inspector detail layout.
+- Preserved same-origin operator-superuser behavior; this was visual/layout
+  work only.
+
+Additional screenshots:
+
+- `/tmp/auracall-operator-ux-dogfood/health-density-desktop-loaded.png` -
+  compact Health surface with the status strip and collapsed API-key admin.
+- `/tmp/auracall-operator-ux-dogfood/health-density-inspector.png` - selected
+  live-follow account in the denser right inspector.
+- `/tmp/auracall-operator-ux-dogfood/health-density-mobile.png` - 390px mobile
+  viewport smoke with no document-level horizontal overflow.
+
+Validation evidence:
+
+- `pnpm run ux:build` passed.
+- `pnpm exec tsc -p tsconfig.build.json --pretty false` passed.
+- `pnpm run build && pnpm run install:user-runtime` passed after clearing a
+  stale incremental TypeScript state with `pnpm exec tsc -p
+  tsconfig.build.json --pretty false --incremental false`.
+- `agent-browser` verified the installed dashboard at
+  `http://auracall.localhost/dashboard`, clicked `Inspect chatgpt wsl-chrome-3`,
+  and confirmed the inspector still shows identity, account level, guard,
+  timing, counts, and route chips.
+- `agent-browser` checked a 390px viewport and reported
+  `hasHorizontalOverflow=false`.

@@ -4999,3 +4999,38 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - keep choosing UX slices from Plan 0067; route-addressable selected state or
     run/batch drill-down are the next reasonable read-only candidates.
+
+## Turn 180 | 2026-05-18
+
+- Goal: begin moving the React Health page from a stack of large diagnostic
+  panels toward a denser operator console.
+- Change:
+  - replaced the four Health cards with one compact status strip.
+  - collapsed API-key management behind a `Manage` control while leaving
+    refresh and restart directly reachable.
+  - removed explanatory top-of-page copy from Health, Runs, Search, and Chats.
+  - tightened global top chrome, viewport spacing, tables, filter chips,
+    archive/chat controls, and the right inspector.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run build && pnpm run install:user-runtime`
+  - `agent-browser` verified the installed dashboard at
+    `http://auracall.localhost/dashboard`, selected `chatgpt / wsl-chrome-3`,
+    and confirmed the Health inspector still populated correctly.
+  - `agent-browser` verified a 390px viewport reports no document-level
+    horizontal overflow.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/health-density-desktop-loaded.png`
+  - `/tmp/auracall-operator-ux-dogfood/health-density-inspector.png`
+  - `/tmp/auracall-operator-ux-dogfood/health-density-mobile.png`
+- External links:
+  - `http://auracall.localhost/dashboard`
+  - `https://auracall.ecochran.dyndns.org/dashboard`
+- Coordination:
+  - non-UX dirty files from the parallel lane remain untouched:
+    `src/config/model.ts` and `src/schema/types.ts`.
+- Next:
+  - continue density work on the Runs/Search surfaces or make Health selected
+    state route-addressable.
