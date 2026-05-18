@@ -5646,8 +5646,9 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     run.
   - live materialization reached the provider auth preflight and returned HTTP
     `409` with `provider_auth_conflict` because `wsl-chrome-3` is bound to
-    `eric.cochran@soylei.com` but the ChatGPT app session currently reports
-    `ecochran76@gmail.com`.
+    ChatGPT identity `eric.cochran@soylei.com` but the ChatGPT web-app session
+    currently reports `ecochran76@gmail.com`. This is not a Chrome/Google
+    browser sign-in assertion.
 - External links:
   - `http://auracall.localhost/dashboard?nav=search`
   - `https://auracall.ecochran.dyndns.org/dashboard?nav=search`
@@ -5657,11 +5658,12 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - this slice adds a foreground operator/API recovery path, not a persisted
     async materialization job with progress polling.
   - live provider materialization is currently blocked for the tested SoyLei
-    artifact by ChatGPT browser account drift in `wsl-chrome-3`; the endpoint
-    now reports that as an operator-actionable conflict instead of a generic
-    server error.
+    artifact by ChatGPT web-app account drift inside `wsl-chrome-3`; the
+    endpoint now reports that as an operator-actionable conflict instead of a
+    generic server error. The Chrome/Google browser sign-in may be different
+    and is not the identity being evaluated here.
 - Next:
-  - restore/switch the `wsl-chrome-3` ChatGPT app session to
+  - restore/switch the ChatGPT web-app session inside `wsl-chrome-3` to
     `eric.cochran@soylei.com`, then retry the same materialization route. After
     that, design the durable async job/progress wrapper if live recovery takes
     longer than an operator HTTP request should.

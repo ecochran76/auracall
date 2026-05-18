@@ -30455,4 +30455,6 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - same-origin dashboard backfill rebuilt `1,372` archive items and populated
     provider conversation fields on the tested generated artifact.
   - live materialization reached provider auth preflight and returned HTTP 409
-    `provider_auth_conflict` for current `wsl-chrome-3` ChatGPT account drift.
+    `provider_auth_conflict` for current ChatGPT web-app account drift inside
+    `wsl-chrome-3`; this does not assert anything about Chrome/Google browser
+    sign-in.

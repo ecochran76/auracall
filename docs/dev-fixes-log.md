@@ -16309,7 +16309,8 @@ browser-stage lifecycle observability, not transcript truncation.
   drift as an operator conflict, not as a generic server failure. The
   materialization route now returns HTTP 409 `provider_auth_conflict` for
   provider auth preflight failures and preserves the preflight message for
-  account-session remediation.
+  ChatGPT/Gemini/Grok web-app account-session remediation. This is distinct
+  from Chrome/Google browser sign-in state.
 - 2026-05-18: Generated-artifact archive rows need the parent browser
   conversation handle for provider recovery. Runtime archive projection now
   carries `providerConversationId` and `providerConversationUrl` from the
