@@ -754,6 +754,50 @@ select:focus-visible {
   font-size: 13px;
 }
 
+.health-table .selectable-row {
+  cursor: pointer;
+}
+
+.health-table .selectable-row:hover td,
+.health-table .selectable-row:focus td {
+  background: #182131;
+}
+
+.health-table .selectable-row.is-selected td {
+  background: #132520;
+}
+
+.health-table .selectable-row.is-selected td:first-child {
+  box-shadow: inset 3px 0 0 #5bc29f;
+}
+
+.row-inspect-button {
+  min-width: 0;
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 7px;
+  border: 1px solid #2f3949;
+  border-radius: 6px;
+  background: #111820;
+  color: #dce6f2;
+  cursor: pointer;
+}
+
+.row-inspect-button:hover {
+  border-color: #5d748f;
+  background: #203044;
+  color: #ffffff;
+}
+
+.row-inspect-button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .status-reason {
   min-width: 150px;
   display: grid;

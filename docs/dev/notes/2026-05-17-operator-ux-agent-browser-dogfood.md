@@ -298,3 +298,36 @@ Validation evidence:
 - `pnpm run ux:build` passed.
 - `pnpm run install:user-runtime` passed.
 - `agent-browser` loaded `http://auracall.localhost/dashboard`, clicked `Unconfigured`, verified 4 visible rows, clicked `Attention`, verified 0 rows and the empty-state message, then closed the browser.
+
+## Live Follow Inspector Follow-Up
+
+Fourteenth pass added a read-only drill-down path for live-follow accounts:
+
+- Selecting a live-follow account now updates the right inspector instead of
+  requiring operators to correlate `/status` JSON manually.
+- The inspector joins `/status.liveFollow.targets.accounts[]` with
+  `/status.accountMirrorStatus.entries[]` so it can show expected/detected
+  identity, account level, browser profile, provider guard state, timing,
+  content counts, mirror completeness, active completion, and API route chips.
+- A compact provider-cell inspect button was added because row-ref clicks were
+  unreliable in `agent-browser`; the full row remains selectable for normal
+  pointer and keyboard use.
+
+Additional screenshot:
+
+- `/tmp/auracall-operator-ux-dogfood/live-follow-account-inspector.png` -
+  Health page right inspector populated for `chatgpt / wsl-chrome-3`, including
+  SoyLei expected/detected identity and Pro account level.
+
+Validation evidence:
+
+- `pnpm run ux:build` passed.
+- `pnpm exec tsc -p tsconfig.build.json --pretty false` passed.
+- `pnpm run install:user-runtime` passed.
+- `curl http://auracall.localhost/status` reported `ok=true`, live follow
+  `healthy`, 9 live-follow accounts, 5 enabled accounts, and 0 attention
+  targets.
+- `agent-browser` loaded `http://auracall.localhost/dashboard`, clicked the
+  `Inspect chatgpt wsl-chrome-3` control, verified the right inspector shows
+  identity, account level, guard, timing, counts, and route chips, then saved
+  the screenshot above.

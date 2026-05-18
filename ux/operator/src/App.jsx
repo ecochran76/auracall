@@ -254,6 +254,40 @@ function statusLabel(value) {
     .toLowerCase();
 }
 
+function liveFollowAccountKey(account) {
+  if (!account) return null;
+  return `${account.provider ?? "unknown"}:${account.runtimeProfileId ?? "unknown"}`;
+}
+
+function liveFollowAccountStatusRoute(account) {
+  if (!account?.provider || !account?.runtimeProfileId) return "/v1/account-mirrors/status";
+  const params = new URLSearchParams({
+    provider: account.provider,
+    runtimeProfile: account.runtimeProfileId,
+  });
+  return `/v1/account-mirrors/status?${params.toString()}`;
+}
+
+function liveFollowAccountCatalogRoute(account) {
+  if (!account?.provider || !account?.runtimeProfileId) return "/v1/account-mirrors/catalog";
+  const params = new URLSearchParams({
+    provider: account.provider,
+    runtimeProfile: account.runtimeProfileId,
+  });
+  return `/v1/account-mirrors/catalog?${params.toString()}`;
+}
+
+function liveFollowAccountCompletionRoute(account) {
+  if (!account?.activeCompletionId) return null;
+  return `/v1/account-mirrors/completions/${encodeURIComponent(account.activeCompletionId)}`;
+}
+
+function findMirrorStatusEntry(status, account) {
+  const key = liveFollowAccountKey(account);
+  if (!key) return null;
+  return (status?.accountMirrorStatus?.entries ?? []).find((entry) => liveFollowAccountKey(entry) === key) ?? null;
+}
+
 function routeLabel(value) {
   const route = String(value ?? "").trim();
   if (!route) return "unknown";
@@ -692,12 +726,13 @@ function ApiKeysSection() {
   );
 }
 
-function HealthViewport({ apiStatus }) {
+function HealthViewport({ apiStatus, selectedLiveFollowAccount, onSelectedLiveFollowAccountChange }) {
   const { status, loading, error, updatedAt } = apiStatus;
   const [liveFollowFilter, setLiveFollowFilter] = useState("all");
   const liveFollow = status?.liveFollow ?? {};
   const targets = liveFollow.targets ?? {};
   const accounts = targets.accounts ?? [];
+  const selectedLiveFollowKey = liveFollowAccountKey(selectedLiveFollowAccount);
   const enabledAccountCount = targets.enabled ?? accounts.filter((account) => account.desiredEnabled || account.desiredState === "enabled").length;
   const unconfiguredAccountCount = targets.unconfigured ?? accounts.filter((account) => account.desiredState === "unconfigured").length;
   const attentionAccountCount = targets.attentionNeeded ?? accounts.filter((account) => account.attentionNeeded).length;
@@ -720,6 +755,18 @@ function HealthViewport({ apiStatus }) {
   const discovery = status?.serviceDiscovery ?? {};
   const process = status?.process ?? {};
   const binding = status?.binding ?? {};
+
+  useEffect(() => {
+    if (!selectedLiveFollowKey) return;
+    const replacement = accounts.find((account) => liveFollowAccountKey(account) === selectedLiveFollowKey);
+    if (!replacement) {
+      onSelectedLiveFollowAccountChange(null);
+      return;
+    }
+    if (replacement !== selectedLiveFollowAccount) {
+      onSelectedLiveFollowAccountChange(replacement);
+    }
+  }, [accounts, onSelectedLiveFollowAccountChange, selectedLiveFollowAccount, selectedLiveFollowKey]);
 
   return (
     <main className="viewport" tabIndex="-1">
@@ -848,12 +895,41 @@ function HealthViewport({ apiStatus }) {
             </thead>
             <tbody>
               {filteredAccounts.map((account) => {
+                const accountKey = liveFollowAccountKey(account);
+                const selected = selectedLiveFollowKey === accountKey;
                 const counts = account.metadataCounts ?? {};
                 const reasonLabel =
                   account.attentionNeeded && account.desiredState !== "unconfigured" ? "attention" : account.statusReason ?? "clear";
                 return (
-                  <tr key={`${account.provider}-${account.runtimeProfileId}`}>
-                    <td>{account.provider}</td>
+                  <tr
+                    key={accountKey}
+                    className={selected ? "selectable-row is-selected" : "selectable-row"}
+                    tabIndex="0"
+                    aria-selected={selected}
+                    title="Inspect live-follow account"
+                    onClick={() => onSelectedLiveFollowAccountChange(account)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onSelectedLiveFollowAccountChange(account);
+                      }
+                    }}
+                  >
+                    <td>
+                      <button
+                        className="row-inspect-button"
+                        type="button"
+                        aria-label={`Inspect ${account.provider ?? "provider"} ${account.runtimeProfileId ?? "runtime"}`}
+                        title="Inspect account"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onSelectedLiveFollowAccountChange(account);
+                        }}
+                      >
+                        <Database size={13} aria-hidden="true" />
+                        <span>{account.provider}</span>
+                      </button>
+                    </td>
                     <td>{account.runtimeProfileId}</td>
                     <td>
                       <span className={`status-pill status-${statusTone(account.desiredState)}`}>{statusLabel(account.desiredState)}</span>
@@ -1483,6 +1559,8 @@ function MainViewport({
   activeNav,
   apiStatus,
   runStatus,
+  selectedLiveFollowAccount,
+  onSelectedLiveFollowAccountChange,
   selectedArchiveItem,
   onSelectedArchiveItemChange,
   onSelectedArchiveDetailChange,
@@ -1491,7 +1569,13 @@ function MainViewport({
     return <ConversationChatViewport />;
   }
   if (activeNav === "health") {
-    return <HealthViewport apiStatus={apiStatus} />;
+    return (
+      <HealthViewport
+        apiStatus={apiStatus}
+        selectedLiveFollowAccount={selectedLiveFollowAccount}
+        onSelectedLiveFollowAccountChange={onSelectedLiveFollowAccountChange}
+      />
+    );
   }
   if (activeNav === "runs") {
     return <RunsViewport runStatus={runStatus} />;
@@ -1761,7 +1845,7 @@ function ArchiveAssetPreview({ item }) {
   );
 }
 
-function RightPane({ activeNav, apiStatus, runStatus, selectedArchiveItem, selectedArchiveDetail }) {
+function RightPane({ activeNav, apiStatus, runStatus, selectedLiveFollowAccount, selectedArchiveItem, selectedArchiveDetail }) {
   const labels = {
     chats: "Conversation inspector",
     search: "Result inspector",
@@ -1770,6 +1854,10 @@ function RightPane({ activeNav, apiStatus, runStatus, selectedArchiveItem, selec
   };
   const status = apiStatus.status;
   const runs = runStatus.status;
+  const selectedMirrorStatusEntry = findMirrorStatusEntry(status, selectedLiveFollowAccount);
+  const selectedLiveFollowCounts = selectedLiveFollowAccount?.metadataCounts ?? selectedMirrorStatusEntry?.metadataCounts ?? {};
+  const selectedLiveFollowGuard = selectedLiveFollowAccount?.providerGuard ?? selectedMirrorStatusEntry?.providerGuard ?? {};
+  const selectedLiveFollowCompletionRoute = liveFollowAccountCompletionRoute(selectedLiveFollowAccount);
   const inspectedArchiveItem = selectedArchiveDetail?.result?.item ?? selectedArchiveItem;
   const inspectedArchiveLinks = Object.entries({
     ...(inspectedArchiveItem?.links ?? {}),
@@ -1788,7 +1876,27 @@ function RightPane({ activeNav, apiStatus, runStatus, selectedArchiveItem, selec
       ]
     : null;
   const details =
-    activeNav === "health" && status
+    activeNav === "health" && status && selectedLiveFollowAccount
+      ? [
+          ["Account", `${selectedLiveFollowAccount.provider ?? "unknown"} / ${selectedLiveFollowAccount.runtimeProfileId ?? "unknown"}`],
+          ["Mirror status", { kind: "route", value: liveFollowAccountStatusRoute(selectedLiveFollowAccount), label: "Status" }],
+          ["Catalog", { kind: "route", value: liveFollowAccountCatalogRoute(selectedLiveFollowAccount), label: "Catalog" }],
+          ...(selectedLiveFollowCompletionRoute
+            ? [["Completion", { kind: "route", value: selectedLiveFollowCompletionRoute, label: selectedLiveFollowAccount.activeCompletionId }]]
+            : []),
+          ["Desired", statusLabel(selectedLiveFollowAccount.desiredState ?? selectedMirrorStatusEntry?.liveFollow?.state)],
+          ["Actual", statusLabel(selectedLiveFollowAccount.actualStatus ?? selectedMirrorStatusEntry?.status)],
+          ["Reason", statusLabel(selectedLiveFollowAccount.statusReason ?? selectedMirrorStatusEntry?.reason)],
+          ["Expected identity", selectedMirrorStatusEntry?.expectedIdentityKey ?? "not reported"],
+          ["Detected identity", selectedMirrorStatusEntry?.detectedIdentityKey ?? "not reported"],
+          ["Account level", selectedMirrorStatusEntry?.accountLevel ?? "not reported"],
+          ["Browser profile", selectedMirrorStatusEntry?.browserProfileId ?? "not reported"],
+          ["Guard", selectedLiveFollowGuard.summary ?? selectedLiveFollowGuard.state ?? "clear"],
+          ["Next attempt", formatDateTime(selectedLiveFollowAccount.nextAttemptAt ?? selectedMirrorStatusEntry?.eligibleAt)],
+          ["Last success", formatDateTime(selectedMirrorStatusEntry?.lastSuccessAt)],
+          ["Last failure", formatDateTime(selectedMirrorStatusEntry?.lastFailureAt)],
+        ]
+      : activeNav === "health" && status
       ? [
           ["Source", { kind: "route", value: "/status" }],
           ["Service", status.process?.service ?? "auracall-api.service"],
@@ -1817,7 +1925,38 @@ function RightPane({ activeNav, apiStatus, runStatus, selectedArchiveItem, selec
           ["Debug dashboard", "Keep existing surface for low-level probes"],
         ];
   const preview =
-    activeNav === "health" && status
+    activeNav === "health" && status && selectedLiveFollowAccount
+      ? {
+          account: {
+            provider: selectedLiveFollowAccount.provider,
+            runtimeProfileId: selectedLiveFollowAccount.runtimeProfileId,
+            browserProfileId: selectedMirrorStatusEntry?.browserProfileId,
+            expectedIdentityKey: selectedMirrorStatusEntry?.expectedIdentityKey,
+            detectedIdentityKey: selectedMirrorStatusEntry?.detectedIdentityKey,
+            accountLevel: selectedMirrorStatusEntry?.accountLevel,
+          },
+          state: {
+            desired: selectedLiveFollowAccount.desiredState,
+            actual: selectedLiveFollowAccount.actualStatus,
+            reason: selectedLiveFollowAccount.statusReason ?? selectedMirrorStatusEntry?.reason,
+            activeCompletionId: selectedLiveFollowAccount.activeCompletionId ?? null,
+            nextAttemptAt: selectedLiveFollowAccount.nextAttemptAt ?? selectedMirrorStatusEntry?.eligibleAt,
+          },
+          guard: {
+            state: selectedLiveFollowGuard.state,
+            kind: selectedLiveFollowGuard.kind,
+            cooldownUntil: selectedLiveFollowGuard.cooldownUntil,
+            summary: selectedLiveFollowGuard.summary,
+          },
+          counts: {
+            conversations: selectedLiveFollowCounts.conversations ?? 0,
+            artifacts: selectedLiveFollowCounts.artifacts ?? 0,
+            files: selectedLiveFollowCounts.files ?? 0,
+            media: selectedLiveFollowCounts.media ?? 0,
+          },
+          mirrorCompleteness: selectedLiveFollowAccount.mirrorCompleteness ?? selectedMirrorStatusEntry?.mirrorCompleteness?.state,
+        }
+      : activeNav === "health" && status
       ? {
           ok: status.ok,
           port: status.binding?.port,
@@ -1862,6 +2001,13 @@ function RightPane({ activeNav, apiStatus, runStatus, selectedArchiveItem, selec
           </div>
         ))}
       </dl>
+      {activeNav === "health" && selectedLiveFollowAccount ? (
+        <div className="inspector-actions" aria-label="Selected live-follow account links">
+          <RouteChip value={liveFollowAccountStatusRoute(selectedLiveFollowAccount)} label="Mirror Status" />
+          <RouteChip value={liveFollowAccountCatalogRoute(selectedLiveFollowAccount)} label="Catalog" />
+          {selectedLiveFollowCompletionRoute ? <RouteChip value={selectedLiveFollowCompletionRoute} label="Completion" /> : null}
+        </div>
+      ) : null}
       {activeNav === "search" && selectedArchiveItem ? (
         <div className={`inspector-status inspector-status-${selectedArchiveDetail?.error ? "bad" : selectedArchiveDetail?.loading ? "warn" : "good"}`}>
           <span className={`state-dot state-${selectedArchiveDetail?.error ? "bad" : selectedArchiveDetail?.loading ? "warn" : "good"}`} />
@@ -1892,6 +2038,7 @@ function RightPane({ activeNav, apiStatus, runStatus, selectedArchiveItem, selec
 export default function App() {
   const [layout, setLayout] = useState(readLayout);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedLiveFollowAccount, setSelectedLiveFollowAccount] = useState(null);
   const [selectedArchiveItem, setSelectedArchiveItem] = useState(null);
   const [selectedArchiveDetail, setSelectedArchiveDetail] = useState(emptyArchiveDetailState);
   const dragRef = useRef(null);
@@ -2034,6 +2181,8 @@ export default function App() {
           activeNav={layout.activeNav}
           apiStatus={apiStatus}
           runStatus={runStatus}
+          selectedLiveFollowAccount={selectedLiveFollowAccount}
+          onSelectedLiveFollowAccountChange={setSelectedLiveFollowAccount}
           selectedArchiveItem={selectedArchiveItem}
           onSelectedArchiveItemChange={setSelectedArchiveItem}
           onSelectedArchiveDetailChange={setSelectedArchiveDetail}
@@ -2059,6 +2208,7 @@ export default function App() {
               activeNav={layout.activeNav}
               apiStatus={apiStatus}
               runStatus={runStatus}
+              selectedLiveFollowAccount={selectedLiveFollowAccount}
               selectedArchiveItem={selectedArchiveItem}
               selectedArchiveDetail={selectedArchiveDetail}
             />

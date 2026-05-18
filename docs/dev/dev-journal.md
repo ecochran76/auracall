@@ -29874,3 +29874,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the next private transcribe-audio retry can proceed one item at a time,
     watching for `chatgpt-target-mismatch` instead of long-running Library
     leases.
+
+## Turn 159 | 2026-05-18
+
+- Goal: continue Plan 0067 with a read-only Health inspection slice instead of
+  adding another broad dashboard panel.
+- Change:
+  - added selected live-follow account state to the React operator shell.
+  - made live-follow account rows selectable and added compact provider-cell
+    inspect buttons for reliable browser automation and keyboard/pointer use.
+  - joined selected `/status.liveFollow.targets.accounts[]` data with
+    `/status.accountMirrorStatus.entries[]` in the right inspector.
+  - exposed selected account identity, browser profile, account level, guard
+    state, timing, active completion, content counts, mirror completeness, and
+    same-origin API route chips.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false`
+  - `pnpm run install:user-runtime`
+  - `curl http://auracall.localhost/status` reported `ok=true`, live follow
+    `healthy`, 9 accounts, 5 enabled, and 0 attention.
+  - `agent-browser` clicked `Inspect chatgpt wsl-chrome-3` on the installed
+    dashboard and verified the right inspector showed
+    `eric.cochran@soylei.com`, account level `Pro`, guard `clear`, counts, and
+    status/catalog/completion links.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/live-follow-account-inspector.png`
+- External links:
+  - `http://auracall.localhost/dashboard`
+  - `https://auracall.ecochran.dyndns.org/dashboard`
+- Next:
+  - choose the next UX slice from Plan 0067 deliberately; likely candidates are
+    route-addressable selected state or a denser run/batch inspector.

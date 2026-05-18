@@ -4968,3 +4968,34 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - make the table denser with provider/profile chips or add row drill-down
     before adding more status panels.
+
+## Turn 179 | 2026-05-18
+
+- Goal: add a read-only live-follow account drill-down to the React Health
+  page under Plan 0067.
+- Change:
+  - added selected live-follow account state and compact inspect controls in
+    the live-follow accounts table.
+  - joined the selected live-follow target with account-mirror status entries
+    in the right inspector.
+  - the inspector now exposes identity, account level, browser profile,
+    provider guard state, next/last timing, active completion, content counts,
+    mirror completeness, and same-origin status/catalog/completion route chips.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false`
+  - `pnpm run install:user-runtime`
+  - `curl http://auracall.localhost/status` reported `ok=true`, live follow
+    `healthy`, 9 accounts, 5 enabled, and 0 attention.
+  - `agent-browser` clicked `Inspect chatgpt wsl-chrome-3` on
+    `http://auracall.localhost/dashboard` and verified the right inspector
+    showed SoyLei expected/detected identity, account level `Pro`, guard
+    `clear`, counts, and status/catalog/completion links.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/live-follow-account-inspector.png`
+- External links:
+  - `http://auracall.localhost/dashboard`
+  - `https://auracall.ecochran.dyndns.org/dashboard`
+- Next:
+  - keep choosing UX slices from Plan 0067; route-addressable selected state or
+    run/batch drill-down are the next reasonable read-only candidates.

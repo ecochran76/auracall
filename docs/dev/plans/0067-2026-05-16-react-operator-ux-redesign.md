@@ -168,7 +168,9 @@ State ownership:
   metadata, API-key posture/controls, and live-follow target rows as operator
   information. Live-follow rows now expose target filters and readable reason
   chips so unconfigured profile identity gaps are distinct from enabled-target
-  attention.
+  attention. Selecting a live-follow account populates the right inspector with
+  joined live-follow/account-mirror identity, guard, timing, count, completion,
+  status, and catalog links without starting provider browser work.
 - Slice 4 is started in read-only form: the Runs page polls
   `/status?recovery=true&sourceKind=all` every 30 seconds and renders recovery
   counts, local-claim metrics, runner-topology metrics, and bounded run-id
