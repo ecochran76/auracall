@@ -29775,3 +29775,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `readConversationContext`; the artifact had been surfaced, but
     materialization failed after the provider asked for cooldown. Avoid
     overlapping manual smoke submissions against the same ChatGPT tenant.
+
+## Turn 156 | 2026-05-18
+
+- Goal: preserve the downstream transcribe-audio stale-response failure as an
+  AuraCall-owned handoff boundary.
+- Evidence:
+  - transcribe-audio batch `batch_4201009fb3e84b498957ae992866191e` completed
+    two materialized `first_pass_readout.json` artifacts and failed one child,
+    `resp_3168e7286aa94bef85f02eaca860e58f`.
+  - failed child message:
+    `Stale ChatGPT assistant response detected after send.`
+  - the previous stale-runner active-lease problem did not recur; status showed
+    fresh runner activity from browser runtime evidence.
+- Change:
+  - added
+    `docs/dev/notes/2026-05-18-transcribe-stale-chatgpt-response-handoff.md`.
+- Follow-up:
+  - diagnose ChatGPT polling-fallback freshness for project-bound runs before
+    transcribe-audio scales the remaining first-pass summary queue.
