@@ -202,7 +202,9 @@ State ownership:
   copy handoff link, open provider URL, and download cached asset when the row
   has those links. Search table preferences now also persist hidden columns and
   non-pinned column order, with Time, Provider, and Tenant kept pinned and
-  always visible.
+  always visible. The first saved-view slice is local-only: operators can save,
+  apply, and delete browser-local Search views that capture query, facets,
+  sort, and table preferences.
 - API-key inspection, issue, delete, and API-service restart controls exist on
   the Health page. These are narrow operator-administration controls; they do
   not launch provider work.
@@ -285,6 +287,9 @@ Workbench rules:
   attachment and run/artifact workflows where allowed.
 - Column preferences should remain local operator UX state unless and until
   named saved views require server-side sharing.
+- Saved views currently remain local operator UX state. Server-backed sharing
+  needs explicit ownership, tenant visibility, and export/import semantics
+  before it becomes an API contract.
 - The right inspector should prioritize human-readable chat transcript,
   artifacts, files, run lineage, and evidence before raw JSON. Raw JSON remains
   collapsible.
@@ -375,6 +380,8 @@ Implementation roadmap:
      outputs".
    - Promote the current local hidden-column/order preference model into named
      presets only when shared saved views are implemented.
+   - Local saved views now exist; the remaining work is shared/server-backed
+     presets and advanced fielded or semantic search semantics.
    - Add fielded query syntax only after the facet model works.
 
 Search page acceptance criteria:

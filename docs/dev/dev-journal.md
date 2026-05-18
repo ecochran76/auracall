@@ -30238,3 +30238,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `agent-browser` verified the installed dashboard loaded 31 virtualized rows,
     opened the Columns menu, hid `IDs`, moved `Status` left, and persisted
     `hidden:["ids"]` plus the updated order in localStorage.
+
+## Turn 168 | 2026-05-18
+
+- Goal: let operators save and reapply Search workbench states without adding
+  server-side view management yet.
+- Change:
+  - added local saved Search views under
+    `auracall.operatorUx.searchViews.v1`.
+  - saved views capture query text, kind/provider/status facets, sort, column
+    widths, hidden columns, and non-pinned column order.
+  - added a compact Views popover with save, apply, and delete controls.
+  - active view state clears when the operator changes filters, sort, or table
+    layout.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `agent-browser` verified the installed dashboard saved a `Transcript
+    ChatGPT` view, persisted its query/provider state, applied it back to the
+    workbench, and deleted a temporary `Delete Smoke` view.

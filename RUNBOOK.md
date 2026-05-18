@@ -5455,3 +5455,39 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - implement saved Search views or improve the right-side inspectors for
     artifacts, runs, and evidence.
+
+## Turn 191 | 2026-05-18
+
+- Goal: add local saved Search views for common operator workbench states.
+- Change:
+  - added `auracall.operatorUx.searchViews.v1` browser-local storage for saved
+    Search views.
+  - saved views capture query text, kind/provider/status facets, table sort,
+    column widths, hidden columns, and non-pinned column order.
+  - added a compact Views popover for save, apply, and delete.
+  - active view indication clears when filters, sort, or table layout are
+    manually changed.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `agent-browser` opened
+    `http://auracall.localhost/dashboard?nav=search`, reset local Search view
+    and table preference stores, saved a `Transcript ChatGPT` view with query
+    and provider facet state, applied the view back to the workbench, and
+    verified delete behavior with a temporary `Delete Smoke` view.
+  - `agent-browser errors` and console tail were empty after the interaction.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/search-saved-views-v1.png`
+- External links:
+  - `http://auracall.localhost/dashboard?nav=search`
+  - `https://auracall.ecochran.dyndns.org/dashboard?nav=search`
+- Limitations:
+  - saved views are local browser state only; shared/server-backed presets need
+    an explicit API ownership model.
+  - semantic/vector ranking and richer kind-specific artifact/run/evidence
+    workflows remain open.
+- Next:
+  - improve Search result inspectors for artifacts/runs/evidence, or design the
+    server-backed saved-view contract.

@@ -16255,3 +16255,7 @@ browser-stage lifecycle observability, not transcript truncation.
   cells from one active column list. The table now derives visible columns from
   persisted preferences and renders cells by column id, preventing header/body
   drift when operators hide or move non-pinned columns.
+- 2026-05-18: Search saved views should start as local operator UX state, not a
+  new API contract. The first view slice stores query, facets, sort, and column
+  preferences in browser localStorage; server-shared view presets can reuse the
+  same shape when the Search API has named-view ownership semantics.

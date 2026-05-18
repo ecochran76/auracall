@@ -37,6 +37,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 const STORAGE_KEY = "auracall.operatorUx.v1";
 const SEARCH_TABLE_STORAGE_KEY = "auracall.operatorUx.searchTable.v1";
+const SEARCH_VIEWS_STORAGE_KEY = "auracall.operatorUx.searchViews.v1";
 const STATUS_POLL_MS = 30000;
 const SEARCH_REFRESH_MS = 45000;
 const SEARCH_PAGE_SIZE = 80;
@@ -472,6 +473,58 @@ function readSearchTablePreferences() {
       hidden: [],
       order: [],
     };
+  }
+}
+
+function normalizeSearchTablePreferences(value) {
+  const knownColumnIds = new Set(SEARCH_TABLE_COLUMNS.map((column) => column.id));
+  return {
+    sort: {
+      column: knownColumnIds.has(value?.sort?.column) ? value.sort.column : "sortTime",
+      direction: value?.sort?.direction === "asc" ? "asc" : "desc",
+    },
+    widths: value?.widths && typeof value.widths === "object" ? value.widths : {},
+    hidden: Array.isArray(value?.hidden) ? value.hidden.filter((id) => knownColumnIds.has(id) && !PINNED_SEARCH_COLUMN_IDS.has(id)) : [],
+    order: Array.isArray(value?.order) ? value.order.filter((id) => knownColumnIds.has(id) && !PINNED_SEARCH_COLUMN_IDS.has(id)) : [],
+  };
+}
+
+function serializeSearchFilters(filters) {
+  return {
+    q: filters.q ?? "",
+    kind: filters.kind ?? "all",
+    providers: [...(filters.providers ?? new Set())],
+    statuses: [...(filters.statuses ?? new Set())],
+  };
+}
+
+function hydrateSearchFilters(filters) {
+  const kinds = new Set(SEARCH_KIND_FACETS.map((facet) => facet.id));
+  return {
+    q: filters?.q ?? "",
+    kind: kinds.has(filters?.kind) ? filters.kind : "all",
+    providers: new Set(Array.isArray(filters?.providers) ? filters.providers : []),
+    statuses: new Set(Array.isArray(filters?.statuses) ? filters.statuses : []),
+  };
+}
+
+function readSearchViews() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(SEARCH_VIEWS_STORAGE_KEY) ?? "[]");
+    if (!Array.isArray(stored)) return [];
+    return stored
+      .filter((view) => view && typeof view === "object" && typeof view.name === "string")
+      .map((view) => ({
+        id: String(view.id ?? `view-${view.name}`),
+        name: view.name.trim() || "Saved view",
+        createdAt: view.createdAt ?? new Date().toISOString(),
+        updatedAt: view.updatedAt ?? view.createdAt ?? new Date().toISOString(),
+        filters: serializeSearchFilters(hydrateSearchFilters(view.filters)),
+        tablePrefs: normalizeSearchTablePreferences(view.tablePrefs),
+      }))
+      .slice(0, 20);
+  } catch {
+    return [];
   }
 }
 
@@ -1430,6 +1483,10 @@ function ArchiveSearchViewport({
   const [searchedAt, setSearchedAt] = useState(null);
   const [isLive, setIsLive] = useState(true);
   const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false);
+  const [isViewsMenuOpen, setIsViewsMenuOpen] = useState(false);
+  const [savedViews, setSavedViews] = useState(readSearchViews);
+  const [newViewName, setNewViewName] = useState("");
+  const [activeViewId, setActiveViewId] = useState(null);
   const [copiedRowId, setCopiedRowId] = useState(null);
   const searchRoute = apiStatus.status?.routes?.search ?? "/v1/search";
   const dragColumnRef = useRef(null);
@@ -1497,6 +1554,10 @@ function ArchiveSearchViewport({
   useEffect(() => {
     localStorage.setItem(SEARCH_TABLE_STORAGE_KEY, JSON.stringify(tablePrefs));
   }, [tablePrefs]);
+
+  useEffect(() => {
+    localStorage.setItem(SEARCH_VIEWS_STORAGE_KEY, JSON.stringify(savedViews));
+  }, [savedViews]);
 
   useEffect(() => {
     if (!selectedArchiveItem) {
@@ -1702,13 +1763,16 @@ function ArchiveSearchViewport({
 
   function updateQuery(value) {
     setFilters((current) => ({ ...current, q: value }));
+    setActiveViewId(null);
   }
 
   function updateKind(kind) {
     setFilters((current) => ({ ...current, kind }));
+    setActiveViewId(null);
   }
 
   function toggleSetFacet(name, value) {
+    setActiveViewId(null);
     setFilters((current) => {
       const next = new Set(current[name]);
       if (next.has(value)) next.delete(value);
@@ -1719,6 +1783,7 @@ function ArchiveSearchViewport({
 
   function clearFacets() {
     setFilters({ q: "", kind: "all", providers: new Set(), statuses: new Set() });
+    setActiveViewId(null);
   }
 
   function setSort(column) {
@@ -1731,9 +1796,11 @@ function ArchiveSearchViewport({
         direction: current.sort.column === column && current.sort.direction === "desc" ? "asc" : "desc",
       },
     }));
+    setActiveViewId(null);
   }
 
   function beginColumnResize(column, event) {
+    setActiveViewId(null);
     dragColumnRef.current = {
       column,
       startX: event.clientX,
@@ -1744,6 +1811,7 @@ function ArchiveSearchViewport({
 
   function toggleColumnVisibility(columnId) {
     if (PINNED_SEARCH_COLUMN_IDS.has(columnId)) return;
+    setActiveViewId(null);
     setTablePrefs((current) => {
       const hidden = new Set(current.hidden ?? []);
       if (hidden.has(columnId)) hidden.delete(columnId);
@@ -1754,6 +1822,7 @@ function ArchiveSearchViewport({
 
   function moveColumn(columnId, direction) {
     if (PINNED_SEARCH_COLUMN_IDS.has(columnId)) return;
+    setActiveViewId(null);
     setTablePrefs((current) => {
       const nonPinnedIds = SEARCH_TABLE_COLUMNS.filter((column) => !column.pinned).map((column) => column.id);
       const order = [
@@ -1776,6 +1845,46 @@ function ArchiveSearchViewport({
       hidden: [],
       order: [],
     }));
+    setActiveViewId(null);
+  }
+
+  function defaultViewName() {
+    const parts = [];
+    if (filters.q.trim()) parts.push(filters.q.trim());
+    if (filters.kind !== "all") parts.push(SEARCH_KIND_FACETS.find((facet) => facet.id === filters.kind)?.label ?? filters.kind);
+    if (filters.providers.size) parts.push([...filters.providers].join("+"));
+    if (filters.statuses.size) parts.push([...filters.statuses].map(statusLabel).join("+"));
+    return parts.join(" / ") || `Search view ${savedViews.length + 1}`;
+  }
+
+  function saveCurrentView() {
+    const name = (newViewName.trim() || defaultViewName()).slice(0, 80);
+    const now = new Date().toISOString();
+    const id = `view-${now.replace(/[^0-9]/g, "")}-${Math.random().toString(36).slice(2, 7)}`;
+    const view = {
+      id,
+      name,
+      createdAt: now,
+      updatedAt: now,
+      filters: serializeSearchFilters(filters),
+      tablePrefs,
+    };
+    setSavedViews((current) => [view, ...current.filter((item) => item.name.toLowerCase() !== name.toLowerCase())].slice(0, 20));
+    setNewViewName("");
+    setActiveViewId(id);
+  }
+
+  function applySavedView(view) {
+    setFilters(hydrateSearchFilters(view.filters));
+    setTablePrefs(normalizeSearchTablePreferences(view.tablePrefs));
+    setActiveViewId(view.id);
+    setIsViewsMenuOpen(false);
+  }
+
+  function deleteSavedView(viewId, event) {
+    event.stopPropagation();
+    setSavedViews((current) => current.filter((view) => view.id !== viewId));
+    if (activeViewId === viewId) setActiveViewId(null);
   }
 
   useEffect(() => {
@@ -1976,10 +2085,46 @@ function ArchiveSearchViewport({
             <Columns3 size={14} aria-hidden="true" />
             <span>Columns{hiddenColumnCount ? ` -${hiddenColumnCount}` : ""}</span>
           </button>
+          <button className={isViewsMenuOpen ? "icon-label-button active" : "icon-label-button"} type="button" onClick={() => setIsViewsMenuOpen((current) => !current)} title="Save or apply Search views">
+            <FileText size={14} aria-hidden="true" />
+            <span>{activeViewId ? savedViews.find((view) => view.id === activeViewId)?.name ?? "View" : `Views${savedViews.length ? ` ${savedViews.length}` : ""}`}</span>
+          </button>
           <button className="icon-button" type="button" onClick={clearFacets} title="Clear filters" aria-label="Clear search filters">
             <MoreHorizontal size={15} aria-hidden="true" />
           </button>
         </div>
+
+        {isViewsMenuOpen ? (
+          <div className="search-view-menu" aria-label="Saved Search views">
+            <div className="search-view-save">
+              <input
+                type="text"
+                value={newViewName}
+                placeholder={defaultViewName()}
+                onChange={(event) => setNewViewName(event.target.value)}
+              />
+              <button type="button" className="icon-label-button" onClick={saveCurrentView} title="Save current Search view">
+                <Plus size={13} aria-hidden="true" />
+                <span>Save</span>
+              </button>
+            </div>
+            <div className="search-view-list">
+              {savedViews.length ? savedViews.map((view) => (
+                <div key={view.id} className={activeViewId === view.id ? "search-view-row active" : "search-view-row"}>
+                  <button type="button" onClick={() => applySavedView(view)} title={`Apply ${view.name}`}>
+                    <span>
+                      <strong>{view.name}</strong>
+                      <small>{view.filters.kind === "all" ? "all kinds" : view.filters.kind} / {view.filters.providers.length || "all"} providers / {view.filters.statuses.length || "all"} statuses</small>
+                    </span>
+                  </button>
+                  <button type="button" className="row-action-button" title={`Delete ${view.name}`} aria-label={`Delete ${view.name}`} onClick={(event) => deleteSavedView(view.id, event)}>
+                    <Trash2 size={13} aria-hidden="true" />
+                  </button>
+                </div>
+              )) : <p>No saved views yet.</p>}
+            </div>
+          </div>
+        ) : null}
 
         {isColumnMenuOpen ? (
           <div className="search-column-menu" aria-label="Search column controls">
