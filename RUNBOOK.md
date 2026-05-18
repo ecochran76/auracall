@@ -5285,3 +5285,53 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - add true table virtualization and richer row-specific actions, or move the
     same URL-state and dense-table treatment to Runs.
+
+## Turn 187 | 2026-05-18
+
+- Goal: make the Search workbench table truly virtualized while preserving
+  cursor paging and selected-row handoff URLs.
+- Change:
+  - Search rows now render through a fixed 38px row-height virtual window with
+    top/bottom spacers, so the scroll height represents the loaded result set
+    while the DOM contains only viewport rows plus overscan.
+  - bottom-scroll cursor loading is guarded by a synchronous single-flight ref
+    so rapid scroll events cannot append the same cursor page twice.
+  - live polling refreshes the first page without resetting scroll position;
+    explicit filter, sort, and refresh actions still reset the table to the top.
+  - direct `?nav=search&row=<base64url row id>` URLs now continue cursor paging
+    after the first page loads, and when the selected row appears the virtual
+    table scrolls it into view.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `curl -fsS http://127.0.0.1:18095/status` reported `ok=true` and the
+    populated `/v1/search` route.
+  - `agent-browser` opened
+    `http://auracall.localhost/dashboard?nav=search`; initial Search summary
+    was `500 loaded / 3,900 matched / newest first / 31 DOM rows / more
+    available`.
+  - after scrolling to the loaded bottom, Search advanced to `1,000 loaded`
+    while staying at roughly 26 DOM rows.
+  - a selected row from a later loaded page produced a stable `row=` URL; after
+    reload, Search paged forward to `1,500 loaded` and restored one selected
+    row in the virtual table.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/search-virtual-initial-v1.png`
+  - `/tmp/auracall-operator-ux-dogfood/search-virtual-midscroll-v1.png`
+  - `/tmp/auracall-operator-ux-dogfood/search-virtual-cursor-v4.png`
+  - `/tmp/auracall-operator-ux-dogfood/search-virtual-selected-reload-v3.png`
+- External links:
+  - `http://auracall.localhost/dashboard?nav=search`
+  - `https://auracall.ecochran.dyndns.org/dashboard?nav=search`
+- Limitations:
+  - pinned columns, column reorder/hide controls, and keyboard row navigation
+    remain open Search table work.
+  - semantic/vector ranking and saved views are still not implemented.
+  - multi-provider and multi-status filters still apply client-side over loaded
+    rows unless exactly one provider/status is selected.
+- Next:
+  - add keyboard row navigation and pinned first columns, then add row-specific
+    quick actions.

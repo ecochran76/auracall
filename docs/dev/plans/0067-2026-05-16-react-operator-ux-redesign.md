@@ -196,8 +196,8 @@ State ownership:
   `/v1/search` with normalized rows, cursor pages, facets, and merged
   account-mirror plus run-archive rows. Lexical ranking is currently simple
   substring matching, semantic ranking is not implemented, and the React table
-  now appends server cursor pages on scroll while still using a bounded render
-  window instead of true DOM virtualization.
+  now appends server cursor pages on scroll and renders rows through a
+  fixed-height virtual window so DOM row count stays bounded.
 - API-key inspection, issue, delete, and API-service restart controls exist on
   the Health page. These are narrow operator-administration controls; they do
   not launch provider work.
@@ -338,6 +338,9 @@ Implementation roadmap:
    - Use fixed row heights, sticky headers, pinned first columns, keyboard row
      navigation, and accessible grid semantics.
    - Add local column width, order, hidden-column, and sort persistence.
+   - Fixed-height row virtualization and local column width/sort persistence
+     are complete. Pinned columns, column order/hide controls, and keyboard row
+     navigation remain open.
 
 3. Add unified all-tenant chat rows. [first slice complete]
    - Start with account-mirror conversations from all configured live-follow

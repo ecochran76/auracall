@@ -243,10 +243,12 @@ Current State:
     `?nav=search&row=...` selected row handoff URLs; `/v1/search` now merges
     account-mirror catalog rows with archive rows and returns normalized rows,
     cursor pages, facets, metrics, and source links; the UX now consumes those
-    cursor pages incrementally as the operator scrolls
-  - remaining Search work: true DOM virtualization, semantic/vector ranking,
-    saved views, and richer row-specific actions for artifacts, uploads, runs,
-    and evidence
+    cursor pages incrementally as the operator scrolls; the table uses a
+    fixed-height virtual row window so loaded result sets do not create one DOM
+    node per row
+  - remaining Search work: semantic/vector ranking, saved views, keyboard row
+    navigation, pinned/reorderable/hideable columns, and richer row-specific
+    actions for artifacts, uploads, runs, and evidence
   - first slice is read-only shell work; API-backed health, run, archive,
     search, chat, config, agent, and team pages should land incrementally after
     the shell is stable

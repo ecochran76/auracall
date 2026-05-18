@@ -264,6 +264,12 @@
   includes compact stored conversation turns, and `/agents` renders those turns
   as chat bubbles while keeping raw inspection JSON available.
 
+- 2026-05-18: Search table virtualization must preserve selected-row handoff
+  semantics. The operator Search table now uses a fixed-height virtual row
+  window with spacer rows, guards cursor appends with a synchronous single-flight
+  ref, and scrolls to a selected row after a direct `?nav=search&row=...` URL
+  pages far enough to load it.
+
 - 2026-05-18: Search must honor `/v1/search` cursors at the UX boundary, not
   eagerly hydrate all pages during dashboard load. The React operator Search
   page now fetches the first page, renders a bounded window, and appends more

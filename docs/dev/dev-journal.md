@@ -1,3 +1,24 @@
+## Turn 200 | 2026-05-18
+
+- Continued implementation plan:
+  `docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md`
+- Goal: replace the Search table's bounded growing render window with actual
+  virtualized row rendering.
+- Change:
+  - Search rows now render through a fixed-row-height virtual window with
+    spacer rows, keeping DOM row count near the viewport size while preserving
+    full loaded scroll height.
+  - cursor fetches are now guarded as single-flight requests so a bottom-scroll
+    cannot append the same page more than once.
+  - direct selected-row URLs page forward until the selected row is loaded,
+    then scroll the virtual table to that row.
+  - live refresh keeps current scroll position unless the operator explicitly
+    changes filters, sort, or presses refresh.
+- Validation:
+  - UX build, TypeScript build, full build, installed runtime restart,
+    `/status` route smoke, and agent-browser virtual-table scroll/reload
+    smokes.
+
 ## Turn 199 | 2026-05-18
 
 - Continued implementation plan:

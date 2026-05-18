@@ -37,6 +37,8 @@ const SEARCH_TABLE_STORAGE_KEY = "auracall.operatorUx.searchTable.v1";
 const STATUS_POLL_MS = 30000;
 const SEARCH_REFRESH_MS = 45000;
 const SEARCH_PAGE_SIZE = 80;
+const SEARCH_ROW_HEIGHT = 38;
+const SEARCH_OVERSCAN_ROWS = 8;
 
 const NAV_ITEMS = [
   { id: "chats", label: "Chats", icon: MessageSquareText },
@@ -1388,7 +1390,7 @@ function ArchiveSearchViewport({
   });
   const [tablePrefs, setTablePrefs] = useState(readSearchTablePreferences);
   const [catalog, setCatalog] = useState(null);
-  const [visibleCount, setVisibleCount] = useState(SEARCH_PAGE_SIZE);
+  const [virtualViewport, setVirtualViewport] = useState({ scrollTop: 0, height: 560 });
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
@@ -1396,6 +1398,8 @@ function ArchiveSearchViewport({
   const [isLive, setIsLive] = useState(true);
   const searchRoute = apiStatus.status?.routes?.search ?? "/v1/search";
   const dragColumnRef = useRef(null);
+  const searchScrollRef = useRef(null);
+  const loadingMoreRef = useRef(false);
   const allRows = useMemo(() => flattenSearchCatalogRows(catalog), [catalog]);
   const facets = useMemo(() => {
     if (catalog?.facets) {
@@ -1439,11 +1443,18 @@ function ArchiveSearchViewport({
       .sort((left, right) => compareSearchRows(left, right, tablePrefs.sort));
   }, [allRows, filters, tablePrefs.sort]);
   const selectedRow = selectedSearchRow?.id ? (allRows.find((row) => row.id === selectedSearchRow.id) ?? selectedSearchRow) : null;
-  const baseVisibleRows = filteredRows.slice(0, visibleCount);
-  const visibleRows =
-    selectedRow?.id && filteredRows.some((row) => row.id === selectedRow.id) && !baseVisibleRows.some((row) => row.id === selectedRow.id)
-      ? [selectedRow, ...baseVisibleRows.slice(0, Math.max(0, baseVisibleRows.length - 1))]
-      : baseVisibleRows;
+  const virtualWindow = useMemo(() => {
+    const visibleCapacity = Math.ceil(virtualViewport.height / SEARCH_ROW_HEIGHT);
+    const startIndex = clamp(Math.floor(virtualViewport.scrollTop / SEARCH_ROW_HEIGHT) - SEARCH_OVERSCAN_ROWS, 0, filteredRows.length);
+    const endIndex = clamp(startIndex + visibleCapacity + SEARCH_OVERSCAN_ROWS * 2, startIndex, filteredRows.length);
+    return {
+      rows: filteredRows.slice(startIndex, endIndex),
+      startIndex,
+      topPadding: startIndex * SEARCH_ROW_HEIGHT,
+      bottomPadding: Math.max(0, (filteredRows.length - endIndex) * SEARCH_ROW_HEIGHT),
+    };
+  }, [filteredRows, virtualViewport]);
+  const visibleRows = virtualWindow.rows;
   const selectedArchiveLike = selectedArchiveItem?.id && !selectedRow;
 
   useEffect(() => {
@@ -1554,14 +1565,28 @@ function ArchiveSearchViewport({
   }, [allRows, onSelectedSearchRowChange, selectedSearchRow]);
 
   useEffect(() => {
-    if (!selectedSearchRow?.id || !allRows.length || !catalog?.nextCursor || loadingMore) return;
+    if (!selectedSearchRow?.id || !allRows.length || !catalog?.nextCursor || loading || loadingMore) return;
     if (allRows.some((row) => row.id === selectedSearchRow.id)) return;
     loadMoreRows();
-  }, [allRows, catalog?.nextCursor, loadingMore, selectedSearchRow?.id]);
+  }, [allRows, catalog?.nextCursor, loading, loadingMore, selectedSearchRow?.id]);
+
+  useEffect(() => {
+    if (!selectedRow?.id || !filteredRows.length) return;
+    const selectedIndex = filteredRows.findIndex((row) => row.id === selectedRow.id);
+    if (selectedIndex < 0) return;
+    const rowTop = selectedIndex * SEARCH_ROW_HEIGHT;
+    const rowBottom = rowTop + SEARCH_ROW_HEIGHT;
+    const viewTop = virtualViewport.scrollTop;
+    const viewBottom = viewTop + virtualViewport.height;
+    if (rowTop >= viewTop && rowBottom <= viewBottom) return;
+    const nextScrollTop = Math.max(0, rowTop - SEARCH_ROW_HEIGHT * 2);
+    setVirtualViewport((current) => ({ ...current, scrollTop: nextScrollTop }));
+    if (searchScrollRef.current) searchScrollRef.current.scrollTop = nextScrollTop;
+  }, [filteredRows, selectedRow?.id, virtualViewport.height, virtualViewport.scrollTop]);
 
   useEffect(() => {
     if (!isLive) return undefined;
-    const timer = window.setInterval(loadCatalog, SEARCH_REFRESH_MS);
+    const timer = window.setInterval(() => loadCatalog(false), SEARCH_REFRESH_MS);
     return () => window.clearInterval(timer);
   }, [isLive, filters]);
 
@@ -1570,7 +1595,8 @@ function ArchiveSearchViewport({
   }, [filters]);
 
   useEffect(() => {
-    setVisibleCount(SEARCH_PAGE_SIZE);
+    setVirtualViewport((current) => ({ ...current, scrollTop: 0 }));
+    if (searchScrollRef.current) searchScrollRef.current.scrollTop = 0;
   }, [tablePrefs.sort]);
 
   function searchParamsForRequest(cursor = null) {
@@ -1595,13 +1621,17 @@ function ArchiveSearchViewport({
     return payload;
   }
 
-  async function loadCatalog() {
+  async function loadCatalog(resetScroll = true) {
     setLoading(true);
     setError(null);
+    loadingMoreRef.current = false;
     try {
       const firstPage = await fetchSearchPage();
       setCatalog(firstPage);
-      setVisibleCount(SEARCH_PAGE_SIZE);
+      if (resetScroll) {
+        setVirtualViewport((current) => ({ ...current, scrollTop: 0 }));
+        if (searchScrollRef.current) searchScrollRef.current.scrollTop = 0;
+      }
       setSearchedAt(new Date().toISOString());
     } catch (searchError) {
       setError(searchError.message || "Search projection load failed");
@@ -1611,7 +1641,8 @@ function ArchiveSearchViewport({
   }
 
   async function loadMoreRows() {
-    if (loading || loadingMore || !catalog?.nextCursor) return;
+    if (loading || loadingMore || loadingMoreRef.current || !catalog?.nextCursor) return;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
     setError(null);
     try {
@@ -1623,11 +1654,11 @@ function ArchiveSearchViewport({
         facets: page?.facets ?? current?.facets,
         nextCursor: page?.nextCursor ?? null,
       }));
-      setVisibleCount((current) => current + SEARCH_PAGE_SIZE);
       setSearchedAt(new Date().toISOString());
     } catch (searchError) {
       setError(searchError.message || "Search projection page load failed");
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
   }
@@ -1736,7 +1767,7 @@ function ArchiveSearchViewport({
             <span className={`state-dot state-${isLive ? "good" : "warn"}`} />
             <span>{isLive ? "Live" : "Paused"}</span>
           </button>
-          <button className="icon-label-button" type="button" onClick={loadCatalog} disabled={loading} title="Refresh search projection">
+          <button className="icon-label-button" type="button" onClick={() => loadCatalog()} disabled={loading} title="Refresh search projection">
             <RefreshCcw size={14} aria-hidden="true" />
             <span>{loading ? "Refreshing" : "Refresh"}</span>
           </button>
@@ -1794,16 +1825,13 @@ function ArchiveSearchViewport({
       <section className="search-table-shell" aria-label="All tenant search results">
         <div className="search-table-summary">
           <strong>{formatNumber(filteredRows.length)} rows</strong>
-        <span>{formatNumber(allRows.length)} loaded / {formatNumber(catalog?.metrics?.total ?? allRows.length)} matched / newest first / {formatNumber(visibleRows.length)} rendered{catalog?.nextCursor ? " / more available" : ""}</span>
+        <span>{formatNumber(allRows.length)} loaded / {formatNumber(catalog?.metrics?.total ?? allRows.length)} matched / newest first / {formatNumber(visibleRows.length)} DOM rows{catalog?.nextCursor ? " / more available" : ""}</span>
         </div>
-        <div className="search-table-scroll" onScroll={(event) => {
+        <div ref={searchScrollRef} className="search-table-scroll" onScroll={(event) => {
           const element = event.currentTarget;
-          const nearBottom = element.scrollTop + element.clientHeight >= element.scrollHeight - 260;
-          if (!nearBottom) return;
-          if (visibleCount < filteredRows.length) {
-            setVisibleCount((current) => Math.min(current + SEARCH_PAGE_SIZE, filteredRows.length));
-          }
-          if (catalog?.nextCursor && visibleCount + SEARCH_PAGE_SIZE >= filteredRows.length) {
+          setVirtualViewport({ scrollTop: element.scrollTop, height: element.clientHeight });
+          const nearBottom = element.scrollTop + element.clientHeight >= element.scrollHeight - 420;
+          if (nearBottom && catalog?.nextCursor) {
             loadMoreRows();
           }
         }}>
@@ -1831,8 +1859,9 @@ function ArchiveSearchViewport({
               </button>
             ))}
           </div>
-          <div className="search-table-body">
-            {visibleRows.map((row) => {
+          <div className="search-table-body" style={{ minHeight: `${filteredRows.length * SEARCH_ROW_HEIGHT}px` }}>
+            {virtualWindow.topPadding ? <div className="search-table-spacer" style={{ height: `${virtualWindow.topPadding}px` }} /> : null}
+            {visibleRows.map((row, offset) => {
               const selected = selectedRow?.id === row.id;
               return (
                 <button
@@ -1840,6 +1869,7 @@ function ArchiveSearchViewport({
                   type="button"
                   className={selected ? "search-table-grid search-row is-selected" : "search-table-grid search-row"}
                   style={{ gridTemplateColumns: gridTemplateColumns() }}
+                  aria-rowindex={virtualWindow.startIndex + offset + 1}
                   aria-pressed={selected}
                   onClick={() => openRow(row)}
                 >
@@ -1856,6 +1886,7 @@ function ArchiveSearchViewport({
                 </button>
               );
             })}
+            {virtualWindow.bottomPadding ? <div className="search-table-spacer" style={{ height: `${virtualWindow.bottomPadding}px` }} /> : null}
             {!loading && !visibleRows.length ? <p className="empty-state">No search rows match the current facets.</p> : null}
             {loadingMore ? <p className="empty-state">Loading more rows...</p> : null}
           </div>
