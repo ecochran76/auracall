@@ -22,6 +22,7 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  Sparkles,
   TerminalSquare,
   Trash2,
   UsersRound,
@@ -163,6 +164,26 @@ function base64UrlEncodeText(value) {
     binary += String.fromCharCode(byte);
   });
   return btoa(binary).replace(/\+/gu, "-").replace(/\//gu, "_").replace(/=+$/u, "");
+}
+
+function base64UrlDecodeText(value) {
+  try {
+    const normalized = String(value ?? "").replace(/-/gu, "+").replace(/_/gu, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  } catch {
+    return null;
+  }
+}
+
+function readArchiveItemFromUrl() {
+  const params = readUrlParams();
+  const encodedId = params.get("archiveItem");
+  if (!encodedId) return null;
+  const id = base64UrlDecodeText(encodedId);
+  return id ? { id } : null;
 }
 
 function archiveItemRoute(item) {
@@ -388,6 +409,26 @@ function DetailValue({ detail }) {
     return <RouteChip value={detail.value} label={detail.label} />;
   }
   return detail;
+}
+
+function providerTone(provider) {
+  const normalized = String(provider ?? "unknown").toLowerCase();
+  if (normalized.includes("chatgpt") || normalized.includes("openai")) return "chatgpt";
+  if (normalized.includes("gemini") || normalized.includes("google")) return "gemini";
+  if (normalized.includes("grok") || normalized.includes("xai")) return "grok";
+  return "unknown";
+}
+
+function ProviderIcon({ provider, embedded = false, label = true }) {
+  const tone = providerTone(provider);
+  const Icon = tone === "gemini" ? Sparkles : tone === "grok" ? TerminalSquare : tone === "chatgpt" ? Bot : Database;
+  const display = String(provider ?? "unknown");
+  return (
+    <span className={`provider-badge provider-${tone}${embedded ? " embedded" : ""}`} title={display}>
+      <Icon size={13} aria-hidden="true" />
+      {label ? <span>{display}</span> : null}
+    </span>
+  );
 }
 
 function useApiStatus() {
@@ -936,8 +977,7 @@ function HealthViewport({ apiStatus, selectedLiveFollowAccount, onSelectedLiveFo
                           onSelectedLiveFollowAccountChange(account);
                         }}
                       >
-                        <Database size={13} aria-hidden="true" />
-                        <span>{account.provider}</span>
+                        <ProviderIcon provider={account.provider} embedded />
                       </button>
                     </td>
                     <td>{account.runtimeProfileId}</td>
@@ -1345,7 +1385,7 @@ function ArchiveSearchViewport({
                 <strong>{title}</strong>
                 <p>{item.id}</p>
                 <dl>
-                  <div><dt>Provider</dt><dd>{item.provider ?? "none"}</dd></div>
+                  <div><dt>Provider</dt><dd>{item.provider ? <ProviderIcon provider={item.provider} /> : "none"}</dd></div>
                   <div><dt>Runtime</dt><dd>{item.runtimeProfile ?? "none"}</dd></div>
                   <div><dt>Agent</dt><dd>{item.agentId ?? "none"}</dd></div>
                   <div><dt>Updated</dt><dd>{formatDateTime(item.updatedAt)}</dd></div>
@@ -1506,7 +1546,10 @@ function ConversationChatViewport() {
                   onClick={() => setSelectedConversation(conversation)}
                 >
                   <strong>{compactText(conversation.title ?? conversation.id, 76)}</strong>
-                  <span>{conversation.provider ?? "provider"} / {conversation.runtimeProfileId ?? "runtime"}</span>
+                  <span className="conversation-provider-line">
+                    <ProviderIcon provider={conversation.provider ?? "provider"} />
+                    <span>{conversation.runtimeProfileId ?? "runtime"}</span>
+                  </span>
                   <small>{conversation.messageCount ? `${conversation.messageCount} messages` : conversation.hasCachedTranscript ? "cached transcript" : "metadata only"}</small>
                 </button>
               );
@@ -1522,7 +1565,10 @@ function ConversationChatViewport() {
               <div className="chat-dialog-header">
                 <span>
                   <strong>{selectedItem.title ?? selectedItem.id}</strong>
-                  <small>{selectedItem.provider ?? filters.provider} / {filters.runtimeProfile}</small>
+                  <small className="conversation-provider-line">
+                    <ProviderIcon provider={selectedItem.provider ?? filters.provider} />
+                    <span>{filters.runtimeProfile}</span>
+                  </small>
                 </span>
                 {selectedItem.url ? <a href={selectedItem.url} target="_blank" rel="noreferrer">Provider</a> : null}
               </div>
@@ -1874,7 +1920,7 @@ function RightPane({ activeNav, apiStatus, runStatus, selectedLiveFollowAccount,
     ? [
         ["Kind", inspectedArchiveItem.kind ?? "unknown"],
         ["Status", inspectedArchiveItem.status ?? "none"],
-        ["Provider", inspectedArchiveItem.provider ?? "none"],
+        ["Provider", inspectedArchiveItem.provider ? <ProviderIcon provider={inspectedArchiveItem.provider} /> : "none"],
         ["Runtime", inspectedArchiveItem.runtimeProfile ?? "none"],
         ["Project", inspectedArchiveItem.projectId ?? "none"],
         ["File", inspectedArchiveItem.fileName ?? inspectedArchiveItem.mimeType ?? "none"],
@@ -1885,7 +1931,7 @@ function RightPane({ activeNav, apiStatus, runStatus, selectedLiveFollowAccount,
   const details =
     activeNav === "health" && status && selectedLiveFollowAccount
       ? [
-          ["Account", `${selectedLiveFollowAccount.provider ?? "unknown"} / ${selectedLiveFollowAccount.runtimeProfileId ?? "unknown"}`],
+          ["Account", <span className="detail-provider-line"><ProviderIcon provider={selectedLiveFollowAccount.provider} /><span>{selectedLiveFollowAccount.runtimeProfileId ?? "unknown"}</span></span>],
           ["Mirror status", { kind: "route", value: liveFollowAccountStatusRoute(selectedLiveFollowAccount), label: "Status" }],
           ["Catalog", { kind: "route", value: liveFollowAccountCatalogRoute(selectedLiveFollowAccount), label: "Catalog" }],
           ...(selectedLiveFollowCompletionRoute
@@ -2046,7 +2092,7 @@ export default function App() {
   const [layout, setLayout] = useState(readLayout);
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedLiveFollowAccount, setSelectedLiveFollowAccount] = useState(readLiveFollowAccountFromUrl);
-  const [selectedArchiveItem, setSelectedArchiveItem] = useState(null);
+  const [selectedArchiveItem, setSelectedArchiveItem] = useState(readArchiveItemFromUrl);
   const [selectedArchiveDetail, setSelectedArchiveDetail] = useState(emptyArchiveDetailState);
   const dragRef = useRef(null);
   const apiStatus = useApiStatus();
@@ -2067,8 +2113,30 @@ export default function App() {
       provider: selectedLiveFollowAccount?.provider ?? null,
       runtime: selectedLiveFollowAccount?.runtimeProfileId ?? null,
       runtimeProfile: null,
+      archiveItem: null,
     });
   }, [layout.activeNav, selectedLiveFollowAccount]);
+
+  useEffect(() => {
+    if (layout.activeNav !== "search") return;
+    replaceUrlParams({
+      nav: "search",
+      archiveItem: selectedArchiveItem?.id ? base64UrlEncodeText(selectedArchiveItem.id) : null,
+      provider: null,
+      runtime: null,
+      runtimeProfile: null,
+    });
+  }, [layout.activeNav, selectedArchiveItem?.id]);
+
+  useEffect(() => {
+    if (layout.activeNav === "health" || layout.activeNav === "search") return;
+    replaceUrlParams({
+      provider: null,
+      runtime: null,
+      runtimeProfile: null,
+      archiveItem: null,
+    });
+  }, [layout.activeNav]);
 
   useEffect(() => {
     function onPopState() {
@@ -2079,6 +2147,8 @@ export default function App() {
         ...(NAV_ITEMS.some((item) => item.id === activeNav) ? { activeNav } : { activeNav: DEFAULT_LAYOUT.activeNav }),
       }));
       setSelectedLiveFollowAccount(readLiveFollowAccountFromUrl());
+      setSelectedArchiveItem(readArchiveItemFromUrl());
+      setSelectedArchiveDetail(emptyArchiveDetailState());
     }
 
     window.addEventListener("popstate", onPopState);

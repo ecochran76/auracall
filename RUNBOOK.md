@@ -5069,3 +5069,44 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - continue density work on Runs/Search, or add route-addressable run/archive
     item selection using the same URL-state pattern.
+
+## Turn 182 | 2026-05-18
+
+- Goal: add compact provider service icons and make Search archive selection
+  route-addressable for operator handoff links.
+- Change:
+  - added reusable provider badges for ChatGPT, Gemini, Grok, and unknown
+    providers across Health, Search, and Chats surfaces.
+  - Search now reads and writes
+    `?nav=search&archiveItem=<base64url archive item id>`.
+  - direct Search URLs initialize a placeholder archive item, fetch the stable
+    `/v1/archive/items/b64/<id>` detail route, and populate the right
+    inspector plus asset actions without running a new search.
+  - Health selection clears archive item URL state, Search selection clears
+    provider/runtime state, and other nav surfaces clear stale selection
+    parameters.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false`
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `agent-browser` opened
+    `http://auracall.localhost/dashboard?nav=search&archiveItem=cmVzcG9uc2U6cmVzcF8zYzU3ZDk5ZDJlNWU0NjAxOTcwMTQ5MzQ1ZGZhYjc0OQ`
+    and verified the Search nav, selected archive id, detail-loaded state, and
+    ChatGPT provider badge.
+  - `agent-browser` opened `http://auracall.localhost/dashboard?nav=health`
+    and verified Health rows render distinct ChatGPT, Gemini, and Grok provider
+    badge classes.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/search-route-selected.png`
+  - `/tmp/auracall-operator-ux-dogfood/provider-icons-health.png`
+- External links:
+  - `http://auracall.localhost/dashboard?nav=search&archiveItem=cmVzcG9uc2U6cmVzcF8zYzU3ZDk5ZDJlNWU0NjAxOTcwMTQ5MzQ1ZGZhYjc0OQ`
+  - `https://auracall.ecochran.dyndns.org/dashboard?nav=search&archiveItem=cmVzcG9uc2U6cmVzcF8zYzU3ZDk5ZDJlNWU0NjAxOTcwMTQ5MzQ1ZGZhYjc0OQ`
+- Coordination:
+  - left the parallel tenant-pool/API dirty files and docs untouched.
+- Next:
+  - implement a real Runs list/detail selection model, then apply the same URL
+    state pattern to run ids.

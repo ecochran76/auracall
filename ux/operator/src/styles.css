@@ -420,6 +420,63 @@ select:focus-visible {
   color: #c8d0dc;
 }
 
+.provider-badge {
+  max-width: 100%;
+  min-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 6px;
+  border: 1px solid #2f3949;
+  border-radius: 6px;
+  background: #111820;
+  color: #dce6f2;
+  vertical-align: middle;
+}
+
+.provider-badge svg {
+  flex: 0 0 auto;
+}
+
+.provider-badge span {
+  min-width: 0;
+  color: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-badge.embedded {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.provider-chatgpt {
+  border-color: #285d4c;
+  background: #10261f;
+  color: #91eec3;
+}
+
+.provider-gemini {
+  border-color: #31537a;
+  background: #101c2e;
+  color: #9fcaff;
+}
+
+.provider-grok {
+  border-color: #464f5d;
+  background: #151a22;
+  color: #dce3ed;
+}
+
+.provider-unknown {
+  border-color: #353d49;
+  background: #161b23;
+  color: #c8d0dc;
+}
+
 .viewport {
   min-width: 0;
   min-height: 0;
@@ -844,6 +901,10 @@ select:focus-visible {
   color: #ffffff;
 }
 
+.row-inspect-button:hover .provider-badge.embedded {
+  color: #ffffff;
+}
+
 .row-inspect-button span {
   min-width: 0;
   overflow: hidden;
@@ -1232,6 +1293,26 @@ select:focus-visible {
 .conversation-row span {
   color: #9fb0c5;
   font-size: 12px;
+}
+
+.conversation-provider-line,
+.detail-provider-line {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.conversation-provider-line .provider-badge {
+  flex: 0 0 auto;
+}
+
+.conversation-provider-line > span:last-child,
+.detail-provider-line > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .conversation-row small {

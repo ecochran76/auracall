@@ -176,6 +176,8 @@ State ownership:
   tighter table rows, and a denser right inspector. Health selection is now
   route-addressable with `?nav=health&provider=<provider>&runtime=<profile>` so
   operator links can open directly to a provider/runtime inspection state.
+  Provider rows and inspectors use compact service badges for ChatGPT, Gemini,
+  and Grok instead of plain provider text.
 - Slice 4 is started in read-only form: the Runs page polls
   `/status?recovery=true&sourceKind=all` every 30 seconds and renders recovery
   counts, local-claim metrics, runner-topology metrics, and bounded run-id
@@ -184,7 +186,9 @@ State ownership:
 - Slice 3 is started in read-only form: the Search page can query
   `/v1/archive`, fetch item detail, preview/download archive assets, and browse
   cached conversations through the `Chats` page without browser-entered API
-  keys.
+  keys. Search selection is route-addressable with
+  `?nav=search&archiveItem=<base64url archive item id>` so archive-result
+  handoff links can open directly to the selected item inspector.
 - API-key inspection, issue, delete, and API-service restart controls exist on
   the Health page. These are narrow operator-administration controls; they do
   not launch provider work.
@@ -194,4 +198,5 @@ State ownership:
 Next implementation work should be selected from this plan deliberately, not by
 turn-to-turn momentum. Prefer read-only observability and inspection work unless
 the slice explicitly updates this plan and validates a narrow operator-control
-contract.
+contract. The next route-addressable candidate is Runs once the page has a
+concrete run-list and run-inspection selection model.
