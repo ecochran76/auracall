@@ -90,6 +90,12 @@ import {
   type RunArchiveService,
 } from '../runtime/archiveService.js';
 import {
+  createSearchProjectionService,
+  type SearchProjectionRequest,
+  type SearchProjectionResult,
+  type SearchProjectionService,
+} from '../runtime/searchProjectionService.js';
+import {
   createResponseBatchExecutionGate,
   createResponseBatchService,
   ResponseBatchCreateRequestSchema,
@@ -273,6 +279,7 @@ export interface ResponsesHttpServerDeps {
   createResponseBatchService?: typeof createResponseBatchService;
   responseBatchService?: ResponseBatchService;
   runArchiveService?: RunArchiveService;
+  searchProjectionService?: SearchProjectionService;
   executionHost?: ExecutionServiceHost;
   localActionExecutionPolicy?: ExecutionServiceHostDeps['localActionExecutionPolicy'];
   probeRuntimeRunServiceState?: (
@@ -662,6 +669,7 @@ interface HttpStatusResponse {
     mediaGenerationsStatusTemplate: string;
     runArchive: string;
     runArchiveAssetLookup: string;
+    search: string;
     runArchiveBackfill: string;
     runArchiveEvidenceCreate: string;
     runArchiveItemTemplate: string;
@@ -910,6 +918,11 @@ export async function createResponsesHttpServer(
     now,
   });
   const runArchiveService = deps.runArchiveService ?? createRunArchiveService({
+    now,
+  });
+  const searchProjectionService = deps.searchProjectionService ?? createSearchProjectionService({
+    accountMirrorCatalogService,
+    runArchiveService,
     now,
   });
   const accountMirrorSchedulerService = deps.accountMirrorSchedulerService ?? createAccountMirrorSchedulerPassService({
@@ -1504,6 +1517,13 @@ export async function createResponsesHttpServer(
       if (req.method === 'GET' && url.pathname === '/v1/archive') {
         const query = parseRunArchiveQuery(url.searchParams);
         const result: HttpRunArchiveResponse = await runArchiveService.listItems(query);
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/search') {
+        const query = parseSearchProjectionQuery(url.searchParams);
+        const result: SearchProjectionResult = await searchProjectionService.search(query);
         sendJson(res, 200, result);
         return;
       }
@@ -3034,7 +3054,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   }
   logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
-    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
+    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/search, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   if (serverOptions.dashboardUrl) {
@@ -3525,6 +3545,7 @@ function createHttpStatusResponse(input: {
       mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
       runArchive: '/v1/archive[?kind=response|response_batch|team_run|media_generation|upload|generated_artifact|provider_conversation|evidence][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&projectId={provider_project_id}][&agent={agent_id}][&team={team_id}][&responseId={response_id}][&batchId={batch_id}][&status={status}][&q={query}][&limit=50]',
       runArchiveAssetLookup: '/v1/archive/assets/lookup?checksumSha256={sha256}|cacheKey={cache_key}|providerArtifactId={provider_artifact_id}|artifactId={artifact_id}[&limit=50]',
+      search: '/v1/search[?q={query}][&kind=conversation|artifact|upload|run|evidence][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&tenant={bound_identity_key}][&status={status}][&limit=80][&cursor={cursor}]',
       runArchiveBackfill: '/v1/archive/backfill',
       runArchiveEvidenceCreate: '/v1/archive/evidence',
       runArchiveItemTemplate: '/v1/archive/items/{archive_item_id}',
@@ -5677,6 +5698,35 @@ function parseRunArchiveQuery(searchParams: URLSearchParams): ParsedRunArchiveQu
     status: parsed.status,
     query: parsed.q,
     limit: parsed.limit,
+  };
+}
+
+function parseSearchProjectionQuery(searchParams: URLSearchParams): SearchProjectionRequest {
+  const raw: Record<string, unknown> = {};
+  for (const key of ['q', 'provider', 'runtimeProfile', 'tenant', 'kind', 'status', 'limit', 'cursor']) {
+    if (searchParams.has(key)) {
+      raw[key] = searchParams.get(key);
+    }
+  }
+  const parsed = z.object({
+    q: z.string().trim().min(1).optional(),
+    provider: z.string().trim().min(1).optional(),
+    runtimeProfile: z.string().trim().min(1).optional(),
+    tenant: z.string().trim().min(1).optional(),
+    kind: z.string().trim().min(1).optional(),
+    status: z.string().trim().min(1).optional(),
+    limit: z.coerce.number().int().positive().max(500).optional(),
+    cursor: z.string().trim().min(1).optional(),
+  }).parse(raw);
+  return {
+    query: parsed.q,
+    provider: parsed.provider,
+    runtimeProfile: parsed.runtimeProfile,
+    tenant: parsed.tenant,
+    kind: parsed.kind,
+    status: parsed.status,
+    limit: parsed.limit,
+    cursor: parsed.cursor,
   };
 }
 

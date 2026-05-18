@@ -1,3 +1,18 @@
+## Turn 198 | 2026-05-18
+
+- Continued implementation plan:
+  `docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md`
+- Goal: move Search aggregation out of the browser and into a read-only API
+  projection.
+- Change:
+  - added `GET /v1/search` with normalized rows, facets, metrics, opaque
+    cursors, and links across account-mirror catalog and run-archive records.
+  - React Search now reads `/v1/search` instead of using
+    `/v1/account-mirrors/catalog` as its primary table source.
+- Validation:
+  - targeted TypeScript, service tests, HTTP route test, full build, installed
+    runtime restart, `/status` route smoke, and agent-browser dashboard smoke.
+
 ## Turn 197 | 2026-05-18
 
 - Continued implementation plan:

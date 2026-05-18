@@ -407,6 +407,33 @@ function toSearchRow(entry, item, kind, index) {
 }
 
 function flattenSearchCatalogRows(payload) {
+  if (Array.isArray(payload?.rows)) {
+    return payload.rows.map((row) => ({
+      id: row.id,
+      source: row.source ?? "search",
+      kind: row.kind ?? row.sourceKind ?? "unknown",
+      provider: row.provider ?? "unknown",
+      runtimeProfileId: row.runtimeProfileId ?? "unknown",
+      browserProfileId: row.browserProfileId ?? null,
+      boundIdentityKey: row.tenant ?? "unbound",
+      accountLevel: null,
+      mirrorStatus: row.status ?? "unknown",
+      project: row.projectId ?? "none",
+      title: row.title ?? row.id,
+      summary: row.summary ?? null,
+      status: row.status ?? "cached",
+      sortTime: row.sortTime ?? row.updatedAt ?? null,
+      updatedAt: row.updatedAt ?? row.sortTime ?? null,
+      itemId: row.itemId ?? row.id,
+      messageCount: row.counts?.messages ?? null,
+      fileCount: row.counts?.files ?? 0,
+      artifactCount: row.counts?.artifacts ?? 0,
+      url: row.links?.provider ?? row.links?.providerConversation ?? null,
+      catalogItemRoute: row.links?.catalogItem ?? null,
+      archiveItemRoute: row.links?.archiveItem ?? null,
+      raw: row,
+    }));
+  }
   return (payload?.entries ?? []).flatMap((entry) => {
     const manifests = entry?.manifests ?? {};
     return ["conversations"].flatMap((kind) =>
@@ -1366,7 +1393,7 @@ function ArchiveSearchViewport({
   const [error, setError] = useState(null);
   const [searchedAt, setSearchedAt] = useState(null);
   const [isLive, setIsLive] = useState(true);
-  const searchRoute = apiStatus.status?.routes?.accountMirrorCatalog ?? "/v1/account-mirrors/catalog";
+  const searchRoute = apiStatus.status?.routes?.search ?? "/v1/search";
   const dragColumnRef = useRef(null);
   const allRows = useMemo(() => flattenSearchCatalogRows(catalog), [catalog]);
   const facets = useMemo(() => {
@@ -1466,7 +1493,8 @@ function ArchiveSearchViewport({
   }, [selectedArchiveItem, onSelectedArchiveDetailChange]);
 
   useEffect(() => {
-    if (!selectedRow?.catalogItemRoute) {
+    const detailRoute = selectedRow?.catalogItemRoute ?? selectedRow?.archiveItemRoute ?? null;
+    if (!detailRoute) {
       onSelectedSearchDetailChange(null);
       return undefined;
     }
@@ -1478,7 +1506,7 @@ function ArchiveSearchViewport({
       result: null,
       updatedAt: null,
     });
-    fetch(selectedRow.catalogItemRoute, {
+    fetch(detailRoute, {
       cache: "no-store",
       signal: controller.signal,
     })
@@ -1509,7 +1537,7 @@ function ArchiveSearchViewport({
       alive = false;
       controller.abort();
     };
-  }, [selectedRow?.catalogItemRoute, onSelectedSearchDetailChange]);
+  }, [selectedRow?.archiveItemRoute, selectedRow?.catalogItemRoute, onSelectedSearchDetailChange]);
 
   useEffect(() => {
     if (!selectedSearchRow?.id) return;
@@ -1533,21 +1561,31 @@ function ArchiveSearchViewport({
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({
-        kind: "conversations",
-        limit: "500",
-      });
-      const response = await fetch(`/v1/account-mirrors/catalog?${params.toString()}`, {
-        cache: "no-store",
-      });
-      const payload = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      const pages = [];
+      let cursor = null;
+      for (let page = 0; page < 20; page += 1) {
+        const params = new URLSearchParams({ limit: "500" });
+        if (cursor) params.set("cursor", cursor);
+        const response = await fetch(`/v1/search?${params.toString()}`, {
+          cache: "no-store",
+        });
+        const payload = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+        }
+        pages.push(payload);
+        cursor = payload?.nextCursor ?? null;
+        if (!cursor) break;
       }
-      setCatalog(payload);
+      const [firstPage] = pages;
+      setCatalog({
+        ...(firstPage ?? {}),
+        rows: pages.flatMap((page) => page?.rows ?? []),
+        nextCursor: cursor,
+      });
       setSearchedAt(new Date().toISOString());
     } catch (searchError) {
-      setError(searchError.message || "Conversation catalog load failed");
+      setError(searchError.message || "Search projection load failed");
     } finally {
       setLoading(false);
     }
@@ -1657,7 +1695,7 @@ function ArchiveSearchViewport({
             <span className={`state-dot state-${isLive ? "good" : "warn"}`} />
             <span>{isLive ? "Live" : "Paused"}</span>
           </button>
-          <button className="icon-label-button" type="button" onClick={loadCatalog} disabled={loading} title="Refresh cached conversations">
+          <button className="icon-label-button" type="button" onClick={loadCatalog} disabled={loading} title="Refresh search projection">
             <RefreshCcw size={14} aria-hidden="true" />
             <span>{loading ? "Refreshing" : "Refresh"}</span>
           </button>
@@ -1715,7 +1753,7 @@ function ArchiveSearchViewport({
       <section className="search-table-shell" aria-label="All tenant search results">
         <div className="search-table-summary">
           <strong>{formatNumber(filteredRows.length)} rows</strong>
-          <span>{formatNumber(allRows.length)} cached conversations / newest first / {formatNumber(visibleRows.length)} rendered</span>
+        <span>{formatNumber(allRows.length)} loaded / {formatNumber(catalog?.metrics?.total ?? allRows.length)} matched / newest first / {formatNumber(visibleRows.length)} rendered</span>
         </div>
         <div className="search-table-scroll" onScroll={(event) => {
           const element = event.currentTarget;
@@ -2397,6 +2435,7 @@ function RightPane({
             ["Messages", inspectedSearchRow.messageCount ?? "not reported"],
             ["Files", `${formatNumber(inspectedSearchRow.fileCount ?? 0)} files / ${formatNumber(inspectedSearchRow.artifactCount ?? 0)} artifacts`],
             ["Catalog", { kind: "route", value: inspectedSearchRow.catalogItemRoute, label: "Catalog Item" }],
+            ["Archive", { kind: "route", value: inspectedSearchRow.archiveItemRoute, label: "Archive Item" }],
             ["Updated", formatDateTime(inspectedSearchRow.updatedAt)],
           ]
       : activeNav === "search" && status
@@ -2480,6 +2519,7 @@ function RightPane({
             itemId: inspectedSearchRow.itemId,
             routes: {
               catalogItem: inspectedSearchRow.catalogItemRoute,
+              archiveItem: inspectedSearchRow.archiveItemRoute,
               provider: inspectedSearchRow.url ?? null,
             },
           }
@@ -2536,7 +2576,7 @@ function RightPane({
         <div className={`inspector-status inspector-status-${selectedSearchDetail?.error ? "bad" : selectedSearchDetail?.loading ? "warn" : "good"}`}>
           <span className={`state-dot state-${selectedSearchDetail?.error ? "bad" : selectedSearchDetail?.loading ? "warn" : "good"}`} />
           <span>
-            <strong>{selectedSearchDetail?.error ? "Catalog detail unavailable" : selectedSearchDetail?.loading ? "Loading catalog detail" : "Catalog row selected"}</strong>
+            <strong>{selectedSearchDetail?.error ? "Detail unavailable" : selectedSearchDetail?.loading ? "Loading detail" : "Search row selected"}</strong>
             <small>{selectedSearchDetail?.error ?? (selectedSearchDetail?.updatedAt ? formatDateTime(selectedSearchDetail.updatedAt) : selectedSearchRow.id)}</small>
           </span>
         </div>
@@ -2544,6 +2584,7 @@ function RightPane({
       {activeNav === "search" && inspectedSearchRow ? (
         <div className="inspector-actions" aria-label="Selected search row actions">
           <RouteChip value={inspectedSearchRow.catalogItemRoute} label="Catalog Item" />
+          <RouteChip value={inspectedSearchRow.archiveItemRoute} label="Archive Item" />
           {inspectedSearchRow.url ? <RouteChip value={inspectedSearchRow.url} label="Provider" /> : null}
         </div>
       ) : null}

@@ -16208,3 +16208,8 @@ browser-stage lifecycle observability, not transcript truncation.
   durable fix is a server-side `/v1/search` projection that merges account
   mirror, archive, run, upload, artifact, and evidence rows with cursor paging
   and authoritative facets.
+- 2026-05-18: Search aggregation belongs behind an API projection, not in the
+  React table. `GET /v1/search` now normalizes account-mirror catalog and
+  run-archive records into one row contract with facets, metrics, source links,
+  and opaque cursors. The remaining UX fix is to consume those cursors lazily
+  during table scroll instead of eagerly loading all pages into client memory.

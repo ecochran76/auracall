@@ -56,6 +56,7 @@ Current endpoints:
 - `GET /v1/responses/{response_id}`
 - `POST /v1/response-batches`
 - `GET /v1/response-batches/{batch_id}`
+- `GET /v1/search`
 - `GET /v1/archive`
 - `POST /v1/archive/backfill`
 - `POST /v1/archive/evidence`
@@ -267,6 +268,16 @@ Current limits:
     handoff env, calls `/v1/models`, submits one `/v1/responses` request, and
     polls the response to completion without using any repo-internal setup
     privileges
+- `GET /v1/search` is the operator search projection for cross-surface
+  discovery:
+  - merges account-mirror catalog rows with run-archive rows without launching
+    provider browsers
+  - returns `object = "search_results"` with normalized `rows`, `facets`,
+    `metrics`, and `nextCursor`
+  - supports filters for `q`, `kind`, `provider`, `runtimeProfile`, `tenant`,
+    `status`, `limit`, and `cursor`
+  - row links can include archive item, catalog item, provider, asset, or other
+    source-specific routes
 - `GET /v1/archive` is the searchable archive surface for
   AuraCall-created work:
   - reads the user-scoped archive index under the AuraCall runtime tree and

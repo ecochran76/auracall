@@ -2511,6 +2511,95 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('reports unified search rows through the API surface', async () => {
+    const search = vi.fn(async () => ({
+      object: 'search_results' as const,
+      generatedAt: '2026-05-18T14:00:00.000Z',
+      query: {
+        q: 'readout',
+        provider: 'chatgpt',
+        runtimeProfile: 'wsl-chrome-3',
+        tenant: null,
+        kind: 'artifact',
+        status: null,
+        limit: 2,
+        cursor: null,
+      },
+      rows: [
+        {
+          id: 'archive:generated_artifact:resp_1:legacy_readout.json',
+          object: 'search_result_row' as const,
+          source: 'run_archive' as const,
+          sourceKind: 'generated_artifact',
+          kind: 'artifact',
+          title: 'legacy_readout.json',
+          summary: null,
+          provider: 'chatgpt',
+          runtimeProfileId: 'wsl-chrome-3',
+          browserProfileId: 'wsl-chrome-3',
+          tenant: 'eric.cochran@soylei.com',
+          projectId: 'Transcripts',
+          status: 'succeeded',
+          sortTime: '2026-05-18T13:00:00.000Z',
+          updatedAt: '2026-05-18T13:00:00.000Z',
+          itemId: 'generated_artifact:resp_1:legacy_readout.json',
+          counts: { messages: null, files: 0, artifacts: 1 },
+          links: {
+            archiveItem: '/v1/archive/items/b64/Z2VuZXJhdGVkX2FydGlmYWN0OnJlc3BfMTpsZWdhY3lfcmVhZG91dC5qc29u',
+          },
+          metadata: {},
+        },
+      ],
+      nextCursor: null,
+      metrics: { total: 1, returned: 1 },
+      facets: {
+        providers: [{ value: 'chatgpt', count: 1 }],
+        tenants: [{ value: 'eric.cochran@soylei.com', count: 1 }],
+        runtimeProfiles: [{ value: 'wsl-chrome-3', count: 1 }],
+        kinds: [{ value: 'artifact', count: 1 }],
+        statuses: [{ value: 'succeeded', count: 1 }],
+      },
+    }));
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        searchProjectionService: { search },
+      },
+    );
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/search?q=readout&provider=chatgpt&runtimeProfile=wsl-chrome-3&kind=artifact&limit=2`,
+      );
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        object: 'search_results',
+        rows: [
+          {
+            kind: 'artifact',
+            title: 'legacy_readout.json',
+            provider: 'chatgpt',
+          },
+        ],
+        facets: {
+          providers: [{ value: 'chatgpt', count: 1 }],
+        },
+      });
+      expect(search).toHaveBeenCalledWith({
+        query: 'readout',
+        provider: 'chatgpt',
+        runtimeProfile: 'wsl-chrome-3',
+        tenant: undefined,
+        kind: 'artifact',
+        status: undefined,
+        limit: 2,
+        cursor: undefined,
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('lists account mirror completion operations through the API surface', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-account-mirror-completions-'));
     cleanup.push(homeDir);

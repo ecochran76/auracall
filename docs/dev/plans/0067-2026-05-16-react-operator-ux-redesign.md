@@ -192,11 +192,12 @@ State ownership:
   `?nav=search&row=<base64url catalog row id>`, and legacy
   `?nav=search&archiveItem=<base64url archive item id>` links still open the
   archive-result inspector.
-- Search is still not complete. The first table slice uses
-  `/v1/account-mirrors/catalog?kind=conversations` client-side and only covers
-  conversation rows. A unified server-side `/v1/search` projection is still
-  needed for lexical/semantic ranking, cursor pages, artifact/upload/run rows,
-  authoritative facet metadata, and row-level search scoring.
+- Search is still not complete. The first server projection slice exposes
+  `/v1/search` with normalized rows, cursor pages, facets, and merged
+  account-mirror plus run-archive rows. Lexical ranking is currently simple
+  substring matching, semantic ranking is not implemented, and the React table
+  still loads pages eagerly into a bounded render window instead of using true
+  DOM virtualization.
 - API-key inspection, issue, delete, and API-service restart controls exist on
   the Health page. These are narrow operator-administration controls; they do
   not launch provider work.
@@ -301,6 +302,7 @@ Data/API requirements:
 - Add a unified `GET /v1/search` or equivalent aggregate read endpoint that can
   merge account-mirror conversations with run-archive records. The dashboard
   should not join several large endpoints client-side as the normal path.
+  [first slice complete]
 - The endpoint should return cursor-based pages ordered by `sort` plus a
   stable `nextCursor`; avoid offset-only paging for live-updating data.
 - Return facet metadata for the current query: providers, tenants, projects,

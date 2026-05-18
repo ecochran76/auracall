@@ -5193,3 +5193,46 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - add a `/v1/search` projection with cursor pages, normalized facets, and
     merged conversation/archive/run/artifact rows; then wire the table to that
     endpoint.
+
+## Turn 185 | 2026-05-18
+
+- Goal: add the first server-side Search projection and wire the React Search
+  workbench to it.
+- Change:
+  - added `GET /v1/search`, backed by a new read-only search projection service
+    that merges account-mirror catalog rows with run-archive rows.
+  - search rows now normalize source, source kind, display kind, provider,
+    runtime profile, tenant, project, status, title, sort time, counts, links,
+    and metadata.
+  - the endpoint returns `object = "search_results"`, `rows`, `metrics`,
+    `facets`, and opaque `nextCursor` values.
+  - the React Search page now loads `/v1/search` pages instead of joining the
+    account-mirror catalog in the browser; archive-backed rows can expose
+    archive item links while mirror-backed rows retain catalog item links.
+- Verification:
+  - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
+  - `pnpm vitest run tests/runtime.searchProjectionService.test.ts tests/http.responsesServer.test.ts -t "search projection|unified search" --maxWorkers 1`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `/status` reported `ok=true`, `liveFollow=healthy`, `accounts=10`, and a
+    populated `/v1/search` route.
+  - `agent-browser` same-origin fetch to `/v1/search?limit=5` returned
+    `object=search_results`, `rows=5`, `total=3894`, facet kinds for
+    conversation/artifact/upload/run/project, and `nextCursor=true`.
+  - `agent-browser` verified the Search table rendered `/v1/search` rows and
+    direct `?nav=search&row=...` restoration selected a row after reload.
+- Evidence:
+  - `/tmp/auracall-operator-ux-dogfood/search-v1-projection-loaded-v2.png`
+  - `/tmp/auracall-operator-ux-dogfood/search-v1-projection-selected-v2.png`
+- External links:
+  - `http://auracall.localhost/dashboard?nav=search`
+  - `https://auracall.ecochran.dyndns.org/dashboard?nav=search`
+- Limitations:
+  - `/v1/search` uses simple substring query matching, not lexical ranking or
+    semantic/vector ranking yet.
+  - the React table still eagerly loads pages into client memory and uses a
+    bounded render window, not true DOM virtualization.
+- Next:
+  - replace eager page loading with server-cursor incremental loading tied to
+    table scroll, then add saved views and richer row actions.
