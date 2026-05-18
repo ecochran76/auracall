@@ -30502,3 +30502,5 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm exec tsc -p tsconfig.build.json --pretty false --incremental false`
   - `git diff --check`
   - `pnpm tsx bin/auracall.ts api archive --port 18095 --kind generated_artifact --provider chatgpt --runtime-profile wsl-chrome-3 --query auracall-target-bound-smoke --limit 2 --json`
+  - `pnpm run install:user-runtime`
+  - `/home/ecochran76/.local/bin/auracall api archive --port 18095 --kind generated_artifact --provider chatgpt --runtime-profile wsl-chrome-3 --query auracall-target-bound-smoke --limit 2 --json`
