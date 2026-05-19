@@ -16351,3 +16351,9 @@ browser-stage lifecycle observability, not transcript truncation.
   control and failed before submit. Do not treat a mixed-account
   `chatgpt:pro-extended` pool as equivalent until each member proves the same
   model/thinking selector surface.
+
+- 2026-05-19: ChatGPT Pro thinking effort can now live behind the model
+  picker's Configure dialog as a Radix select, not a menu. The thinking-time
+  selector now recognizes `role=listbox` / Radix select viewports and
+  `role=option` / Radix select items, allowing `wsl-chrome-4` to switch from
+  `Pro / Standard` to `Pro / Extended` before submitting browser-backed runs.

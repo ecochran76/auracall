@@ -20,6 +20,10 @@ describe('browser thinking-time selection expression', () => {
     expect(expression).toContain('configure');
     expect(expression).toContain('[role="dialog"]');
     expect(expression).toContain('[role="combobox"]');
+    expect(expression).toContain('[role="listbox"]');
+    expect(expression).toContain('[role="option"]');
+    expect(expression).toContain('[data-radix-select-viewport]');
+    expect(expression).toContain('[data-radix-select-item]');
     expect(expression).toContain('normalize');
     expect(expression).toContain('extended');
     expect(expression).toContain('findSelectedLevelPill');

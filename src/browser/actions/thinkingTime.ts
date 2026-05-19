@@ -146,6 +146,16 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
 
     const MENU_CONTAINER_SELECTOR = ${menuContainerLiteral};
     const MENU_ITEM_SELECTOR = ${menuItemLiteral};
+    const THINKING_MENU_CONTAINER_SELECTOR = [
+      MENU_CONTAINER_SELECTOR,
+      '[role="listbox"]',
+      '[data-radix-select-viewport]',
+    ].join(', ');
+    const THINKING_MENU_ITEM_SELECTOR = [
+      MENU_ITEM_SELECTOR,
+      '[role="option"]',
+      '[data-radix-select-item]',
+    ].join(', ');
     const TARGET_LEVELS = ${targetLevelsLiteral};
 
     const CHIP_SELECTORS = [
@@ -232,7 +242,7 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
       let depthComboOpened = false;
 
       const findMenu = () => {
-        const menus = document.querySelectorAll(MENU_CONTAINER_SELECTOR + ', [role="group"]');
+        const menus = document.querySelectorAll(THINKING_MENU_CONTAINER_SELECTOR + ', [role="group"]');
         for (const menu of menus) {
           const label = menu.querySelector?.('.__menu-label, [class*="menu-label"]');
           if (normalize(label?.textContent ?? '').includes('thinking time')) {
@@ -266,7 +276,7 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
         });
 
       const findTargetOption = (menu) => {
-        const items = menu.querySelectorAll(MENU_ITEM_SELECTOR);
+        const items = menu.querySelectorAll(THINKING_MENU_ITEM_SELECTOR);
         for (const item of items) {
           const text = normalize(item.textContent ?? '');
           if (TARGET_LEVELS.some((target) => text.includes(target))) {

@@ -30669,6 +30669,46 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `wsl-chrome-4` model/thinking-control mismatch is fixed or the pool uses a
     selector all three accounts expose consistently.
 
+## Turn 186 | 2026-05-19
+
+- Goal: fix the `wsl-chrome-4` ChatGPT Pro Extended selector drift found by
+  the dispatch-pool dogfood.
+- Finding:
+  - the active ChatGPT model picker now shows Pro effort in a Configure dialog:
+    the model menu contains `Pro / Standard`, Configure opens an Intelligence
+    dialog, and the final effort options are a Radix select listbox with
+    `role="option"` rows for `Standard` and `Extended`.
+  - the previous thinking-time selector searched only menu/menuitem surfaces,
+    so it could not see the final listbox options.
+- Change:
+  - extended the ChatGPT thinking-time expression to inspect
+    `role="listbox"`, `data-radix-select-viewport`, `role="option"`, and
+    `data-radix-select-item` surfaces in addition to the existing menu
+    selectors.
+  - added regression assertions to the thinking-time expression test so this
+    drift shape stays covered.
+- Verification:
+  - `pnpm vitest run tests/browser/thinkingTime.test.ts --maxWorkers 1`
+    passed.
+  - `pnpm vitest run tests/browser/thinkingTime.test.ts
+    tests/browser/chatgptAdapter.test.ts --maxWorkers 1` passed.
+  - source live smoke on `wsl-chrome-4` with
+    `--model gpt-5.2-pro --browser-thinking-time extended` selected
+    `Thinking time: Extended`, submitted, and returned exactly
+    `AURACALL_WSL4_EXTENDED_SELECTOR_SMOKE`.
+  - `pnpm run install:user-runtime` succeeded after stopping the active API
+    service and rerunning the installer; the first attempt failed at runtime
+    prefix replacement with `ENOTEMPTY` while the service was still active.
+  - installed-service API batch `batch_fe103d27353b4f3ab409e72cab79feb5`
+    through `agent:pro-extended-chatgpt-ecochran76-personal-transcripts`
+    completed on `wsl-chrome-4`; log evidence showed `Model picker:
+    Pro• Standard`, then `Thinking time: Extended`, then `Clicked send
+    button`.
+  - response `resp_77956bfa1bb8496291c86084e943b20a` returned exactly
+    `AURACALL_WSL4_INSTALLED_API_EXTENDED_SELECTOR_SMOKE`.
+  - `systemctl --user is-active auracall-api.service` returned `active`, and
+    `/status` returned `ok=true`.
+
 ## Turn 187 | 2026-05-19
 
 - Goal: continue Search ergonomics by making the default result grid less
