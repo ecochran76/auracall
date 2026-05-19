@@ -34,7 +34,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const STORAGE_KEY = "auracall.operatorUx.v1";
-const SEARCH_TABLE_STORAGE_KEY = "auracall.operatorUx.searchTable.v1";
+const SEARCH_TABLE_STORAGE_KEY = "auracall.operatorUx.searchTable.v2";
 const SEARCH_VIEWS_STORAGE_KEY = "auracall.operatorUx.searchViews.v1";
 const STATUS_POLL_MS = 30000;
 const SEARCH_REFRESH_MS = 45000;
@@ -69,11 +69,11 @@ const SEARCH_KIND_FACETS = [
 
 const SEARCH_TABLE_COLUMNS = [
   { id: "sortTime", label: "Time", width: 156, minWidth: 124, sortable: true, pinned: true },
-  { id: "provider", label: "Provider", width: 108, minWidth: 92, sortable: true, pinned: true },
-  { id: "tenant", label: "Tenant", width: 210, minWidth: 150, sortable: true, pinned: true },
+  { id: "provider", label: "Provider", width: 98, minWidth: 82, sortable: true, pinned: true },
+  { id: "tenant", label: "Tenant", width: 190, minWidth: 148, sortable: true, pinned: true },
   { id: "project", label: "Project", width: 160, minWidth: 120, sortable: true },
-  { id: "title", label: "Title", width: 420, minWidth: 220, sortable: true },
-  { id: "actions", label: "Actions", width: 116, minWidth: 104, sortable: false },
+  { id: "title", label: "Title", width: 480, minWidth: 240, sortable: true },
+  { id: "actions", label: "Actions", width: 118, minWidth: 104, sortable: false },
   { id: "kind", label: "Kind", width: 104, minWidth: 88, sortable: true },
   { id: "status", label: "Status", width: 112, minWidth: 92, sortable: true },
   { id: "files", label: "Files", width: 96, minWidth: 80, sortable: true },
@@ -81,6 +81,14 @@ const SEARCH_TABLE_COLUMNS = [
   { id: "updatedAt", label: "Updated", width: 156, minWidth: 124, sortable: true },
 ];
 const PINNED_SEARCH_COLUMN_IDS = new Set(SEARCH_TABLE_COLUMNS.filter((column) => column.pinned).map((column) => column.id));
+const DEFAULT_SEARCH_TABLE_HIDDEN = ["project", "ids", "updatedAt"];
+const DEFAULT_SEARCH_TABLE_ORDER = ["title", "status", "kind", "files", "actions", "project", "ids", "updatedAt"];
+const DEFAULT_SEARCH_TABLE_PREFS = {
+  sort: { column: "sortTime", direction: "desc" },
+  widths: {},
+  hidden: DEFAULT_SEARCH_TABLE_HIDDEN,
+  order: DEFAULT_SEARCH_TABLE_ORDER,
+};
 
 const DEFAULT_LAYOUT = {
   activeNav: "chats",
@@ -466,16 +474,11 @@ function readSearchTablePreferences() {
         direction: stored?.sort?.direction === "asc" ? "asc" : "desc",
       },
       widths: stored?.widths && typeof stored.widths === "object" ? stored.widths : {},
-      hidden: Array.isArray(stored?.hidden) ? stored.hidden.filter((id) => knownColumnIds.has(id) && !PINNED_SEARCH_COLUMN_IDS.has(id)) : [],
-      order: Array.isArray(stored?.order) ? stored.order.filter((id) => knownColumnIds.has(id) && !PINNED_SEARCH_COLUMN_IDS.has(id)) : [],
+      hidden: Array.isArray(stored?.hidden) ? stored.hidden.filter((id) => knownColumnIds.has(id) && !PINNED_SEARCH_COLUMN_IDS.has(id)) : DEFAULT_SEARCH_TABLE_PREFS.hidden,
+      order: Array.isArray(stored?.order) ? stored.order.filter((id) => knownColumnIds.has(id) && !PINNED_SEARCH_COLUMN_IDS.has(id)) : DEFAULT_SEARCH_TABLE_PREFS.order,
     };
   } catch {
-    return {
-      sort: { column: "sortTime", direction: "desc" },
-      widths: {},
-      hidden: [],
-      order: [],
-    };
+    return DEFAULT_SEARCH_TABLE_PREFS;
   }
 }
 
@@ -1484,7 +1487,30 @@ function assetMissingReason(item) {
 
 function compactIdentity(value) {
   if (!value) return "none";
-  return String(value).replace(/^service-account:/, "").replace(/\|/g, " | ");
+  const text = String(value);
+  const withoutPrefix = text.replace(/^service-account:/, "");
+  const accountPart = withoutPrefix.split("|")[0] ?? withoutPrefix;
+  const providerScopedMatch = accountPart.match(/^[^:]+:(.+@.+)$/u);
+  return (providerScopedMatch?.[1] ?? accountPart).replace(/\|/g, " | ");
+}
+
+function compactRuntimeProfile(value) {
+  return String(value ?? "unknown").replace(/^auracall-/, "");
+}
+
+function searchRowCellTitle(row, column) {
+  if (column.id === "sortTime") return formatDateTime(row.sortTime);
+  if (column.id === "provider") return row.provider;
+  if (column.id === "tenant") return `${row.boundIdentityKey ?? "unbound"} / ${row.runtimeProfileId ?? "unknown"}`;
+  if (column.id === "project") return row.project;
+  if (column.id === "title") return compactText([row.title, row.summary].filter(Boolean).join("\n"), 520);
+  if (column.id === "actions") return "Inspect, copy handoff link, open provider link, or download cached asset";
+  if (column.id === "kind") return row.kind;
+  if (column.id === "status") return statusLabel(row.status);
+  if (column.id === "files") return `${formatNumber(row.fileCount)} files / ${formatNumber(row.artifactCount)} artifacts`;
+  if (column.id === "ids") return row.itemId;
+  if (column.id === "updatedAt") return formatDateTime(row.updatedAt);
+  return "";
 }
 
 function routeEntriesFromSearch(row, archiveItem) {
@@ -2045,8 +2071,8 @@ function ArchiveSearchViewport({
     setTablePrefs((current) => ({
       ...current,
       widths: {},
-      hidden: [],
-      order: [],
+      hidden: DEFAULT_SEARCH_TABLE_PREFS.hidden,
+      order: DEFAULT_SEARCH_TABLE_PREFS.order,
     }));
     setActiveViewId(null);
   }
@@ -2152,25 +2178,26 @@ function ArchiveSearchViewport({
   function renderSearchRowCell(row, column) {
     if (column.id === "sortTime") return formatDateTime(row.sortTime);
     if (column.id === "provider") return <ProviderIcon provider={row.provider} />;
-    if (column.id === "tenant") return <><b>{row.boundIdentityKey}</b><small>{row.runtimeProfileId}</small></>;
+    if (column.id === "tenant") return <><b>{compactIdentity(row.boundIdentityKey)}</b><small>{compactRuntimeProfile(row.runtimeProfileId)}</small></>;
     if (column.id === "project") return row.project;
-    if (column.id === "title") return <><b>{row.title}</b>{row.summary ? <small>{compactText(row.summary, 120)}</small> : null}</>;
+    if (column.id === "title") return <><b>{compactText(row.title, 150)}</b>{row.summary ? <small>{compactText(row.summary, 100)}</small> : null}</>;
     if (column.id === "actions") {
+      const actionLabel = compactText(row.title, 96);
       return (
         <>
-          <button type="button" className="row-action-button" title="Inspect row" aria-label={`Inspect ${row.title}`} onClick={(event) => { event.stopPropagation(); openRow(row); }}>
+          <button type="button" className="row-action-button" title="Inspect row" aria-label={`Inspect ${actionLabel}`} onClick={(event) => { event.stopPropagation(); openRow(row); }}>
             <Database size={13} aria-hidden="true" />
           </button>
-          <button type="button" className="row-action-button" title="Copy handoff link" aria-label={`Copy handoff link for ${row.title}`} onClick={(event) => copySearchRowLink(row, event)}>
+          <button type="button" className="row-action-button" title="Copy handoff link" aria-label={`Copy handoff link for ${actionLabel}`} onClick={(event) => copySearchRowLink(row, event)}>
             {copiedRowId === row.id ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
           </button>
           {row.url ? (
-            <a className="row-action-button" href={row.url} target="_blank" rel="noreferrer" title="Open provider link" aria-label={`Open provider link for ${row.title}`} onClick={handleSearchRowAction}>
+            <a className="row-action-button" href={row.url} target="_blank" rel="noreferrer" title="Open provider link" aria-label={`Open provider link for ${actionLabel}`} onClick={handleSearchRowAction}>
               <ExternalLink size={13} aria-hidden="true" />
             </a>
           ) : null}
           {row.assetRoute ? (
-            <a className="row-action-button" href={row.assetRoute} download title="Download cached asset" aria-label={`Download cached asset for ${row.title}`} onClick={handleSearchRowAction}>
+            <a className="row-action-button" href={row.assetRoute} download title="Download cached asset" aria-label={`Download cached asset for ${actionLabel}`} onClick={handleSearchRowAction}>
               <Download size={13} aria-hidden="true" />
             </a>
           ) : null}
@@ -2474,7 +2501,7 @@ function ArchiveSearchViewport({
                   onClick={() => openRow(row)}
                 >
                   {visibleColumns.map((column, index) => (
-                    <span key={column.id} role="gridcell" className={cellClassName(column, index)}>
+                    <span key={column.id} role="gridcell" className={cellClassName(column, index)} title={searchRowCellTitle(row, column)}>
                       {renderSearchRowCell(row, column)}
                     </span>
                   ))}

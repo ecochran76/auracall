@@ -1498,12 +1498,12 @@ select:focus-visible {
 }
 
 .search-row-actions {
-  gap: 4px;
+  gap: 3px;
 }
 
 .row-action-button {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   display: inline-grid;
   place-items: center;
   flex: 0 0 auto;
@@ -2533,6 +2533,7 @@ select:focus-visible {
 }
 
 .json-preview {
+  max-height: 260px;
   padding: 8px;
   border: 1px solid #2c3542;
   border-radius: 8px;

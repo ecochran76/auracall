@@ -30668,3 +30668,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `chatgpt:pro-extended` pool is not yet behaviorally equivalent until the
     `wsl-chrome-4` model/thinking-control mismatch is fixed or the pool uses a
     selector all three accounts expose consistently.
+
+## Turn 187 | 2026-05-19
+
+- Goal: continue Search ergonomics by making the default result grid less
+  noisy and more operator-dense.
+- Change:
+  - bumped the Search table preference key to `v2` and made the default visible
+    columns Time, Provider, Tenant, Title, Status, Kind, Files, and Actions.
+  - reset column preferences now restores those dense defaults instead of
+    revealing every column.
+  - compacted tenant labels by stripping service-account metadata and provider
+    prefixes while keeping full values available in hover/detail surfaces.
+  - bounded visible title text and row action accessible labels so prompt-sized
+    run rows do not dominate table snapshots or button labels.
+  - capped the right-pane raw JSON preview height.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check` passed.
+  - `pnpm run install:user-runtime` rebuilt and installed the local runtime.
+  - `systemctl --user restart auracall-api.service` restarted the installed
+    service.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK`.
+  - `agent-browser batch "open http://127.0.0.1:18095/dashboard?nav=search"
+    "wait 2500" "snapshot -i"` loaded Search with the compact default
+    columns.
+  - follow-up `agent-browser batch "wait 3000" "snapshot -i"` showed
+    provider/status facets and rows with bounded long prompt labels.
+- Note:
+  - `docs/dev-fixes-log.md`, `src/browser/actions/thinkingTime.ts`, and
+    `tests/browser/thinkingTime.test.ts` were dirty from another lane and left
+    untouched.
