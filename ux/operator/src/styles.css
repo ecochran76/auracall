@@ -1465,6 +1465,37 @@ select:focus-visible {
   background: #132520;
 }
 
+.search-th.is-sticky-action,
+.search-row > .is-sticky-action {
+  position: sticky;
+  right: 0;
+  box-shadow: -1px 0 0 #303a47;
+}
+
+.search-th.is-sticky-action {
+  z-index: 7;
+  background: #10161e;
+}
+
+.search-th.is-sticky-action:hover,
+.search-th.is-sticky-action:focus-visible {
+  background: #151d28;
+}
+
+.search-row > .is-sticky-action {
+  z-index: 4;
+  background: #131922;
+}
+
+.search-row:hover > .is-sticky-action,
+.search-row:focus > .is-sticky-action {
+  background: #182131;
+}
+
+.search-row.is-selected > .is-sticky-action {
+  background: #132520;
+}
+
 .pinned-1 {
   left: var(--search-pin-time);
 }

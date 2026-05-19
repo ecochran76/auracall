@@ -2214,6 +2214,9 @@ function ArchiveSearchViewport({
     if (column.pinned) {
       classNames.push("is-pinned", `pinned-${index + 1}`);
     }
+    if (column.id === "actions") {
+      classNames.push("is-sticky-action");
+    }
     return classNames.join(" ");
   }
 

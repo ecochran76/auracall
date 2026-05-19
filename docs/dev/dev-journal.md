@@ -30971,3 +30971,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `runArchiveMaterializationTemplate`.
   - live create/poll smoke with a deliberately missing archive item produced a
     terminal `not_found_error` job without provider browser work.
+
+## Turn 197 | 2026-05-19
+
+- Goal: keep Search row actions reachable while operators horizontally inspect
+  wide tenant/cache rows.
+- Change:
+  - marked the Search Actions column as a right-edge sticky column.
+  - added matching sticky styling for the Actions header and row cells, with a
+    subtle left divider and state-aware row backgrounds.
+  - preserved the compact icon rail and accessible action labels from the prior
+    density slice.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check` passed.
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK`.
+  - `agent-browser` loaded Search, forced horizontal table scroll, and
+    confirmed both the Actions header and row cell report `position: sticky`
+    while staying at the scroll viewport's right edge.
