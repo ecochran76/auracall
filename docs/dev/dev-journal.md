@@ -30900,3 +30900,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     descending`, seven sortable indicators, eight resize rails, and exactly one
     selected row with `aria-selected=true` and `aria-current=true` after row
     selection.
+
+## Turn 194 | 2026-05-19
+
+- Goal: make the Search right-pane inspector easier to scan after a row
+  selection without removing handoff or raw diagnostic data.
+- Change:
+  - moved selected-result route chips out of the summary card into a compact
+    Routes section with a link count.
+  - kept summary, run/evidence panels, and asset preview behavior unchanged.
+  - collapsed the raw JSON preview by default for selected Search rows while
+    leaving non-selection raw context expanded.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check` passed.
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK`.
+  - `agent-browser` loaded Search, selected a result row, confirmed the URL
+    gained a `row=` handoff parameter, confirmed the Routes section showed
+    four links, and confirmed the Raw JSON section existed but was collapsed.

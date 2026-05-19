@@ -2424,6 +2424,61 @@ select:focus-visible {
   padding: 6px;
 }
 
+.search-route-section,
+.raw-inspector-section {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #252c37;
+  border-radius: 8px;
+  background: #101720;
+}
+
+.inspector-section-head,
+.raw-inspector-section summary {
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #dfe7f2;
+}
+
+.raw-inspector-section summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.raw-inspector-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.inspector-section-head strong,
+.raw-inspector-section summary strong {
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.inspector-section-head span,
+.raw-inspector-section summary span {
+  color: #8d99aa;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.search-route-section .inspector-actions {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.raw-inspector-section .json-preview {
+  max-height: 320px;
+  margin-top: 2px;
+}
+
 .asset-preview {
   display: grid;
   gap: 10px;

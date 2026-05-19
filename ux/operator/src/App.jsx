@@ -1535,7 +1535,6 @@ function SearchInspectorSummary({ row, archiveItem }) {
     ...(row?.metadata ?? {}),
     ...(archiveItem?.metadata ?? {}),
   };
-  const routeEntries = routeEntriesFromSearch(row, archiveItem);
   const title = String(source.title ?? source.fileName ?? source.id ?? "Selected result");
   const subtitle = row?.summary ?? archiveItem?.uri ?? archiveItem?.localPath ?? row?.itemId ?? archiveItem?.id;
   const fileSummary = `${formatNumber(row?.fileCount ?? 0)} files / ${formatNumber(row?.artifactCount ?? 0)} artifacts`;
@@ -1577,13 +1576,6 @@ function SearchInspectorSummary({ row, archiveItem }) {
           </div>
         ))}
       </div>
-      {routeEntries.length ? (
-        <div className="inspector-actions" aria-label="Selected search result links">
-          {routeEntries.map(([key, value]) => (
-            <RouteChip key={`${key}:${value}`} value={value} label={linkKeyLabel(key)} />
-          ))}
-        </div>
-      ) : null}
     </section>
   );
 }
@@ -1623,6 +1615,46 @@ function SearchRouteStrip({ row, archiveItem, only }) {
         <RouteChip key={`${key}:${value}`} value={value} label={linkKeyLabel(key)} />
       ))}
     </div>
+  );
+}
+
+function SearchRouteSection({ row, archiveItem }) {
+  const entries = routeEntriesFromSearch(row, archiveItem);
+  if (!entries.length) return null;
+  return (
+    <section className="search-route-section" aria-label="Selected search result routes">
+      <div className="inspector-section-head">
+        <strong>Routes</strong>
+        <span>{formatNumber(entries.length)} links</span>
+      </div>
+      <div className="inspector-actions search-kind-actions">
+        {entries.map(([key, value]) => (
+          <RouteChip key={`${key}:${value}`} value={value} label={linkKeyLabel(key)} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RawPreviewSection({ preview, collapsed }) {
+  if (!preview) return null;
+  if (!collapsed) {
+    return (
+      <div className="json-preview">
+        <code>{JSON.stringify(preview, null, 2)}</code>
+      </div>
+    );
+  }
+  return (
+    <details className="raw-inspector-section">
+      <summary>
+        <strong>Raw</strong>
+        <span>JSON preview</span>
+      </summary>
+      <div className="json-preview">
+        <code>{JSON.stringify(preview, null, 2)}</code>
+      </div>
+    </details>
   );
 }
 
@@ -3427,6 +3459,7 @@ function RightPane({
           }
       : { route: activeNav, mutable: false };
   const showDetailsList = !(activeNav === "search" && (inspectedSearchRow || inspectedArchiveItem));
+  const hasSearchSelection = activeNav === "search" && (inspectedSearchRow || inspectedArchiveItem);
 
   return (
     <aside className="inspector-body" aria-label={labels[activeNav]}>
@@ -3471,21 +3504,22 @@ function RightPane({
           </span>
         </div>
       ) : null}
-      {activeNav === "search" && (inspectedSearchRow || inspectedArchiveItem) ? (
+      {hasSearchSelection ? (
         <SearchInspectorSummary row={inspectedSearchRow} archiveItem={inspectedArchiveItem} />
       ) : null}
-      {activeNav === "search" && (inspectedSearchRow || inspectedArchiveItem) ? (
+      {hasSearchSelection ? (
+        <SearchRouteSection row={inspectedSearchRow} archiveItem={inspectedArchiveItem} />
+      ) : null}
+      {hasSearchSelection ? (
         <RunSearchInspector row={inspectedSearchRow} archiveItem={inspectedArchiveItem} />
       ) : null}
-      {activeNav === "search" && (inspectedSearchRow || inspectedArchiveItem) ? (
+      {hasSearchSelection ? (
         <EvidenceSearchInspector row={inspectedSearchRow} archiveItem={inspectedArchiveItem} />
       ) : null}
       {activeNav === "search" && inspectedArchiveItem ? (
         <ArchiveAssetPreview item={inspectedArchiveItem} />
       ) : null}
-      <div className="json-preview">
-        <code>{JSON.stringify(preview, null, 2)}</code>
-      </div>
+      <RawPreviewSection preview={preview} collapsed={hasSearchSelection} />
     </aside>
   );
 }
