@@ -30602,3 +30602,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     project route and final terminal source `step-succeeded`.
   - response `resp_f13c5006488140dbab4b3aef0953b39d` returned exactly
     `AURACALL_TRANSCRIPTS_PROJECT_BOUND_OK`.
+
+## Turn 184 | 2026-05-19
+
+- Goal: resume operator UX hardening with a focused Search density pass.
+- Change:
+  - made the Search viewport table-first so the virtualized result grid owns
+    the center pane instead of sitting below oversized workbench chrome.
+  - compacted Search toolbar actions to icon buttons with accessible names and
+    hover titles.
+  - switched Search initial loading to the existing page-size constant instead
+    of a fixed 500-row pull, preserving infinite-scroll paging.
+  - replaced generic provider glyphs with compact provider marks for faster
+    table and facet scanning.
+- Verification:
+  - `pnpm run ux:build`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK`.
+  - `agent-browser batch "open http://127.0.0.1:18095/dashboard?nav=search"
+    "snapshot -i"` loaded the Search page; a follow-up wait/snapshot showed
+    provider/status facets and virtualized grid rows.
+- Note:
+  - `pnpm exec biome lint ux/operator/src/App.jsx ux/operator/src/styles.css`
+    processed no files because the UX source paths are ignored by the current
+    Biome config.
+  - `src/browser/providers/chatgptAdapter.ts` was already dirty from another
+    lane and was left untouched.

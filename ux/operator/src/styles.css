@@ -425,8 +425,8 @@ select:focus-visible {
   min-height: 22px;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 0 6px;
+  gap: 4px;
+  padding: 0 5px 0 3px;
   border: 1px solid #2f3949;
   border-radius: 6px;
   background: #111820;
@@ -434,11 +434,22 @@ select:focus-visible {
   vertical-align: middle;
 }
 
-.provider-badge svg {
-  flex: 0 0 auto;
+.provider-mark {
+  width: 24px;
+  height: 16px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 8%);
+  color: inherit;
+  font-size: 8px;
+  font-weight: 820;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
-.provider-badge span {
+.provider-badge > span:not(.provider-mark) {
   min-width: 0;
   color: inherit;
   overflow: hidden;
@@ -451,6 +462,11 @@ select:focus-visible {
   padding: 0;
   border: 0;
   background: transparent;
+}
+
+.provider-badge.embedded .provider-mark {
+  width: 22px;
+  height: 16px;
 }
 
 .provider-chatgpt {
@@ -482,6 +498,15 @@ select:focus-visible {
   min-height: 0;
   padding: 16px clamp(14px, 2vw, 28px);
   overflow: auto;
+}
+
+.search-viewport {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  gap: 6px;
+  padding: 10px clamp(10px, 1.5vw, 18px);
+  overflow: hidden;
 }
 
 .viewport-heading {
@@ -1009,9 +1034,9 @@ select:focus-visible {
 
 .search-workbench {
   display: grid;
-  gap: 6px;
-  margin-top: 10px;
-  padding: 7px;
+  gap: 5px;
+  margin-top: 0;
+  padding: 6px;
   border: 1px solid #252c37;
   border-radius: 8px;
   background: #131922;
@@ -1021,7 +1046,7 @@ select:focus-visible {
   display: grid;
   grid-template-columns: auto minmax(220px, 1fr) auto auto auto auto auto;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .search-command-bar > svg {
@@ -1031,12 +1056,13 @@ select:focus-visible {
 
 .search-command-bar input {
   width: 100%;
-  min-height: 30px;
+  min-height: 28px;
   border: 1px solid #323b49;
-  border-radius: 7px;
+  border-radius: 6px;
   background: #0f141b;
   color: #eef2f7;
-  padding: 0 10px;
+  padding: 0 9px;
+  font-size: 12px;
 }
 
 .search-command-bar input:focus {
@@ -1045,6 +1071,7 @@ select:focus-visible {
 }
 
 .search-live-toggle {
+  min-width: 66px;
   min-height: 28px;
   display: inline-flex;
   align-items: center;
@@ -1056,6 +1083,26 @@ select:focus-visible {
   color: #d7e3f4;
   cursor: pointer;
   font-size: 12px;
+}
+
+.search-toolbar-button {
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  justify-content: center;
+  padding: 0;
+}
+
+.search-toolbar-button > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .search-live-toggle.active {
@@ -1070,7 +1117,7 @@ select:focus-visible {
 
 .search-view-menu,
 .search-column-menu {
-  padding: 8px;
+  padding: 6px;
   border: 1px solid #293342;
   border-radius: 8px;
   background: #10161f;
@@ -1253,7 +1300,9 @@ select:focus-visible {
 
 .search-table-shell {
   min-height: 0;
-  margin-top: 8px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  margin-top: 0;
   border: 1px solid #252c37;
   border-radius: 8px;
   background: #131922;
@@ -1265,7 +1314,8 @@ select:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 8px;
+  min-height: 29px;
+  padding: 3px 7px;
   border-bottom: 1px solid #252d38;
   color: #9aa6b6;
   font-size: 12px;
@@ -1276,7 +1326,8 @@ select:focus-visible {
 }
 
 .search-table-scroll {
-  max-height: min(62vh, 720px);
+  min-height: 0;
+  max-height: none;
   overflow: auto;
 }
 
@@ -1301,11 +1352,11 @@ select:focus-visible {
 .search-th {
   position: relative;
   min-width: 0;
-  min-height: 30px;
+  min-height: 28px;
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 0 8px;
+  padding: 0 7px;
   border: 0;
   border-right: 1px solid #252d38;
   background: transparent;
@@ -1377,7 +1428,7 @@ select:focus-visible {
 
 .search-row {
   width: 100%;
-  height: 38px;
+  height: 34px;
   align-items: stretch;
   border: 0;
   border-bottom: 1px solid #252d38;
@@ -1401,10 +1452,10 @@ select:focus-visible {
   min-width: 0;
   display: flex;
   align-items: center;
-  padding: 5px 8px;
+  padding: 3px 7px;
   border-right: 1px solid #252d38;
   color: #dce3ed;
-  font-size: 12px;
+  font-size: 11.5px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

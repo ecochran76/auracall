@@ -18,7 +18,6 @@ import {
   KeyRound,
   Menu,
   MessageSquareText,
-  MoreHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
   PanelRightClose,
@@ -28,7 +27,6 @@ import {
   Search,
   Settings,
   ShieldCheck,
-  Sparkles,
   TerminalSquare,
   Trash2,
   UsersRound,
@@ -41,7 +39,7 @@ const SEARCH_VIEWS_STORAGE_KEY = "auracall.operatorUx.searchViews.v1";
 const STATUS_POLL_MS = 30000;
 const SEARCH_REFRESH_MS = 45000;
 const SEARCH_PAGE_SIZE = 80;
-const SEARCH_ROW_HEIGHT = 38;
+const SEARCH_ROW_HEIGHT = 34;
 const SEARCH_OVERSCAN_ROWS = 8;
 
 const NAV_ITEMS = [
@@ -709,13 +707,20 @@ function providerTone(provider) {
   return "unknown";
 }
 
+const PROVIDER_MARKS = {
+  chatgpt: "GPT",
+  gemini: "Gem",
+  grok: "xAI",
+  unknown: "--",
+};
+
 function ProviderIcon({ provider, embedded = false, label = true }) {
   const tone = providerTone(provider);
-  const Icon = tone === "gemini" ? Sparkles : tone === "grok" ? TerminalSquare : tone === "chatgpt" ? Bot : Database;
   const display = String(provider ?? "unknown");
+  const mark = PROVIDER_MARKS[tone] ?? PROVIDER_MARKS.unknown;
   return (
     <span className={`provider-badge provider-${tone}${embedded ? " embedded" : ""}`} title={display}>
-      <Icon size={13} aria-hidden="true" />
+      <span className="provider-mark" aria-hidden="true">{mark}</span>
       {label ? <span>{display}</span> : null}
     </span>
   );
@@ -1896,7 +1901,7 @@ function ArchiveSearchViewport({
   }, [tablePrefs.sort]);
 
   function searchParamsForRequest(cursor = null) {
-    const params = new URLSearchParams({ limit: "500" });
+    const params = new URLSearchParams({ limit: String(SEARCH_PAGE_SIZE) });
     const query = filters.q.trim();
     if (query) params.set("q", query);
     if (filters.kind !== "all") params.set("kind", filters.kind);
@@ -2248,7 +2253,7 @@ function ArchiveSearchViewport({
   }
 
   return (
-    <main className="viewport" tabIndex="-1">
+    <main className="viewport search-viewport" tabIndex="-1">
       <div className="health-toolbar">
         <div className="viewport-heading">
           <span>All-tenant cache workbench</span>
@@ -2275,20 +2280,20 @@ function ArchiveSearchViewport({
             <span className={`state-dot state-${isLive ? "good" : "warn"}`} />
             <span>{isLive ? "Live" : "Paused"}</span>
           </button>
-          <button className="icon-label-button" type="button" onClick={() => loadCatalog()} disabled={loading} title="Refresh search projection">
+          <button className="icon-label-button search-toolbar-button" type="button" onClick={() => loadCatalog()} disabled={loading} title="Refresh search projection" aria-label="Refresh search projection">
             <RefreshCcw size={14} aria-hidden="true" />
             <span>{loading ? "Refreshing" : "Refresh"}</span>
           </button>
-          <button className={isColumnMenuOpen ? "icon-label-button active" : "icon-label-button"} type="button" onClick={() => setIsColumnMenuOpen((current) => !current)} title="Configure visible columns">
+          <button className={isColumnMenuOpen ? "icon-label-button search-toolbar-button active" : "icon-label-button search-toolbar-button"} type="button" onClick={() => setIsColumnMenuOpen((current) => !current)} title="Configure visible columns" aria-label="Configure visible columns">
             <Columns3 size={14} aria-hidden="true" />
             <span>Columns{hiddenColumnCount ? ` -${hiddenColumnCount}` : ""}</span>
           </button>
-          <button className={isViewsMenuOpen ? "icon-label-button active" : "icon-label-button"} type="button" onClick={() => setIsViewsMenuOpen((current) => !current)} title="Save or apply Search views">
+          <button className={isViewsMenuOpen ? "icon-label-button search-toolbar-button active" : "icon-label-button search-toolbar-button"} type="button" onClick={() => setIsViewsMenuOpen((current) => !current)} title="Save or apply Search views" aria-label="Save or apply Search views">
             <FileText size={14} aria-hidden="true" />
             <span>{activeViewId ? savedViews.find((view) => view.id === activeViewId)?.name ?? "View" : `Views${savedViews.length ? ` ${savedViews.length}` : ""}`}</span>
           </button>
           <button className="icon-button" type="button" onClick={clearFacets} title="Clear filters" aria-label="Clear search filters">
-            <MoreHorizontal size={15} aria-hidden="true" />
+            <Trash2 size={14} aria-hidden="true" />
           </button>
         </div>
 
@@ -2412,7 +2417,7 @@ function ArchiveSearchViewport({
       <section className="search-table-shell" aria-label="All tenant search results">
         <div className="search-table-summary">
           <strong>{formatNumber(filteredRows.length)} rows</strong>
-        <span>{formatNumber(allRows.length)} loaded / {formatNumber(catalog?.metrics?.total ?? allRows.length)} matched / newest first / {formatNumber(visibleRows.length)} DOM rows{catalog?.nextCursor ? " / more available" : ""}</span>
+          <span>{formatNumber(allRows.length)} loaded / {formatNumber(catalog?.metrics?.total ?? allRows.length)} matched / newest first / {formatNumber(visibleRows.length)} DOM rows{catalog?.nextCursor ? " / more available" : ""}</span>
         </div>
         <div
           ref={searchScrollRef}
