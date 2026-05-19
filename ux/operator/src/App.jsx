@@ -73,7 +73,7 @@ const SEARCH_TABLE_COLUMNS = [
   { id: "tenant", label: "Tenant", width: 190, minWidth: 148, sortable: true, pinned: true },
   { id: "project", label: "Project", width: 160, minWidth: 120, sortable: true },
   { id: "title", label: "Title", width: 480, minWidth: 240, sortable: true },
-  { id: "actions", label: "Actions", width: 118, minWidth: 104, sortable: false },
+  { id: "actions", label: "Actions", width: 102, minWidth: 92, sortable: false },
   { id: "kind", label: "Kind", width: 104, minWidth: 88, sortable: true },
   { id: "status", label: "Status", width: 112, minWidth: 92, sortable: true },
   { id: "files", label: "Files", width: 96, minWidth: 80, sortable: true },
@@ -2194,22 +2194,21 @@ function ArchiveSearchViewport({
     if (column.id === "project") return row.project;
     if (column.id === "title") return <><b>{compactText(row.title, 150)}</b>{row.summary ? <small>{compactText(row.summary, 100)}</small> : null}</>;
     if (column.id === "actions") {
-      const actionLabel = compactText(row.title, 96);
       return (
         <>
-          <button type="button" className="row-action-button" title="Inspect row" aria-label={`Inspect ${actionLabel}`} onClick={(event) => { event.stopPropagation(); openRow(row); }}>
+          <button type="button" className="row-action-button" title="Inspect row" aria-label="Inspect result" onClick={(event) => { event.stopPropagation(); openRow(row); }}>
             <Database size={13} aria-hidden="true" />
           </button>
-          <button type="button" className="row-action-button" title="Copy handoff link" aria-label={`Copy handoff link for ${actionLabel}`} onClick={(event) => copySearchRowLink(row, event)}>
+          <button type="button" className="row-action-button" title="Copy handoff link" aria-label="Copy handoff link" onClick={(event) => copySearchRowLink(row, event)}>
             {copiedRowId === row.id ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
           </button>
           {row.url ? (
-            <a className="row-action-button" href={row.url} target="_blank" rel="noreferrer" title="Open provider link" aria-label={`Open provider link for ${actionLabel}`} onClick={handleSearchRowAction}>
+            <a className="row-action-button" href={row.url} target="_blank" rel="noreferrer" title="Open provider link" aria-label="Open provider link" onClick={handleSearchRowAction}>
               <ExternalLink size={13} aria-hidden="true" />
             </a>
           ) : null}
           {row.assetRoute ? (
-            <a className="row-action-button" href={row.assetRoute} download title="Download cached asset" aria-label={`Download cached asset for ${actionLabel}`} onClick={handleSearchRowAction}>
+            <a className="row-action-button" href={row.assetRoute} download title="Download cached asset" aria-label="Download cached asset" onClick={handleSearchRowAction}>
               <Download size={13} aria-hidden="true" />
             </a>
           ) : null}

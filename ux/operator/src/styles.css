@@ -1498,11 +1498,11 @@ select:focus-visible {
 }
 
 .search-row-actions {
-  gap: 3px;
+  gap: 2px;
 }
 
 .row-action-button {
-  width: 22px;
+  width: 21px;
   height: 22px;
   display: inline-grid;
   place-items: center;

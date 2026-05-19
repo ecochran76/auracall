@@ -30795,3 +30795,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed `/status?tenantExecutionLimits=usage` reports `activeChats=0`
     and `chatsLastHour=4`, matching one pre-existing `wsl-chrome-4` smoke plus
     three unique dispatch starts.
+
+## Turn 190 | 2026-05-19
+
+- Goal: tighten the Search table action column so icon controls stop repeating
+  long titles and prompts in operator snapshots.
+- Change:
+  - replaced row-specific action accessible labels with stable command labels:
+    `Inspect result`, `Copy handoff link`, `Open provider link`, and
+    `Download cached asset`.
+  - narrowed the Actions column default/min width and tightened the icon-button
+    gap/width.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check` passed.
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK`.
+  - `agent-browser` loaded Search and confirmed action cells now read like
+    `Inspect result Copy handoff link` rather than echoing prompt-sized titles.
