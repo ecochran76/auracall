@@ -2591,6 +2591,74 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('queues and reads a durable run archive materialization job through the API surface', async () => {
+    const job = {
+      object: 'run_archive_materialization_job' as const,
+      id: 'ramj_test_1',
+      archiveItemId: 'generated-artifact:resp_1:artifact_1',
+      status: 'queued' as const,
+      createdAt: '2026-05-19T12:00:00.000Z',
+      updatedAt: '2026-05-19T12:00:00.000Z',
+      startedAt: null,
+      completedAt: null,
+      attemptCount: 0,
+      result: null,
+      error: null,
+      message: 'Archive materialization job queued.',
+    };
+    const createJob = vi.fn(async (request: { archiveItemId: string }) => ({
+      object: 'run_archive_materialization_job_create_result' as const,
+      generatedAt: '2026-05-19T12:00:00.000Z',
+      reused: false,
+      job: {
+        ...job,
+        archiveItemId: request.archiveItemId,
+      },
+    }));
+    const readJob = vi.fn(async (id: string) => (id === job.id ? job : null));
+    const recoverInterruptedJobs = vi.fn(async () => 0);
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        archiveMaterializationJobService: {
+          createJob,
+          readJob,
+          recoverInterruptedJobs,
+          runJob: vi.fn(),
+        },
+      },
+    );
+
+    try {
+      const createResponse = await fetch(`http://127.0.0.1:${server.port}/v1/archive/materializations`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ archiveItemId: 'generated-artifact:resp_1:artifact_1' }),
+      });
+      expect(createResponse.status).toBe(202);
+      expect(await createResponse.json()).toMatchObject({
+        object: 'run_archive_materialization_job_create_result',
+        job: {
+          id: 'ramj_test_1',
+          status: 'queued',
+        },
+      });
+
+      const readResponse = await fetch(`http://127.0.0.1:${server.port}/v1/archive/materializations/ramj_test_1`);
+      expect(readResponse.status).toBe(200);
+      expect(await readResponse.json()).toMatchObject({
+        object: 'run_archive_materialization_job',
+        id: 'ramj_test_1',
+      });
+      expect(createJob).toHaveBeenCalledWith({ archiveItemId: 'generated-artifact:resp_1:artifact_1' });
+      expect(recoverInterruptedJobs).toHaveBeenCalled();
+    } finally {
+      await server.close();
+    }
+  });
+
   it('reports provider auth preflight failures as materialization conflicts', async () => {
     const materializeItem = vi.fn(async () => {
       throw new Error('Chatgpt browser auth preflight failed (chatgpt_account_session_drift); account_session_drift: expected eric.cochran@soylei.com, found ecochran76@gmail.com.');

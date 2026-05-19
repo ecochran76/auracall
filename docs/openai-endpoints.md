@@ -60,6 +60,8 @@ Current endpoints:
 - `GET /v1/archive`
 - `POST /v1/archive/backfill`
 - `POST /v1/archive/evidence`
+- `POST /v1/archive/materializations`
+- `GET /v1/archive/materializations/{job_id}`
 - `GET /v1/archive/items/{archive_item_id}`
 - `GET /v1/archive/items/{archive_item_id}/asset`
 - `POST /v1/archive/items/{archive_item_id}/materialize`
@@ -320,10 +322,21 @@ Current limits:
   - `POST /v1/archive/items/{archive_item_id}/materialize` asks the provider
     materializer to recover a missing generated artifact through the normal
     provider runtime path, then writes the local file facts back into the
-    archive index. The first implementation is a foreground operator/API
-    request that makes live-follow yield while it runs; CLI parity is
-    `auracall api archive-materialize --port <port> <archive_id>`. A durable
-    async materialization job queue remains separate follow-up work.
+    archive index. This foreground compatibility route makes live-follow yield
+    while it runs; CLI parity is `auracall api archive-materialize --port
+    <port> <archive_id>`.
+  - `POST /v1/archive/materializations` queues the same provider-backed
+    recovery as a persisted job and returns
+    `object = "run_archive_materialization_job_create_result"` with a job id.
+    The job store is user-scoped under the run archive tree, de-duplicates
+    active jobs for the same archive item, records provider/auth failures as
+    terminal job errors, and marks interrupted active jobs failed on API/MCP
+    startup instead of leaving them forever running. Poll with
+    `GET /v1/archive/materializations/{job_id}`. CLI parity is
+    `auracall api archive-materialization-create --port <port> <archive_id>`
+    and `auracall api archive-materialization-status --port <port> <job_id>`.
+    MCP parity is `run_archive_materialization_create` and
+    `run_archive_materialization_job`.
   - `POST /v1/archive/backfill` rebuilds the index from existing runtime
     records without browser work; CLI parity is
     `auracall api archive-backfill --port <port>`

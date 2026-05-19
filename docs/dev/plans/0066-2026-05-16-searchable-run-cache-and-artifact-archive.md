@@ -69,6 +69,16 @@ Implemented:
   work by SHA-256 checksum, cache key, provider artifact id, or AuraCall
   artifact id through `/v1/archive/assets/lookup`,
   `auracall api archive-asset-lookup`, and MCP `run_archive_asset_lookup`.
+- Provider-backed generated-artifact recovery now has a durable async job
+  wrapper through `POST /v1/archive/materializations`,
+  `GET /v1/archive/materializations/{job_id}`,
+  `auracall api archive-materialization-create`,
+  `auracall api archive-materialization-status`, and MCP
+  `run_archive_materialization_create` / `run_archive_materialization_job`.
+  Active jobs for the same archive item are de-duplicated, job state is
+  persisted under the user-scoped run archive tree, and interrupted active jobs
+  are marked failed on API/MCP startup instead of remaining indefinitely
+  running.
 
 Remaining:
 
@@ -78,6 +88,8 @@ Remaining:
 - Surface archive search and retrieval through the operator dashboard without
   provider browser work.
 - Add operator dashboard archive search and item/evidence navigation.
+- Add operator dashboard polling/control affordances for async materialization
+  jobs.
 - Promote asset lookup results into a canonical dedupe manifest if callers need
   a persisted duplicate-group table instead of on-demand lookup.
 

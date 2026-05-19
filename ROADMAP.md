@@ -260,11 +260,14 @@ Current State:
     materialize, and provider/response handoff routes from the Asset panel;
     `POST /v1/archive/items/{archive_item_id}/materialize` can recover missing
     generated artifacts through the provider materializer and write local asset
-    facts back to the archive index
+    facts back to the archive index; `POST /v1/archive/materializations` and
+    `GET /v1/archive/materializations/{job_id}` wrap the same recovery path in
+    persisted, de-duplicated async jobs with CLI/MCP parity and interrupted-job
+    recovery on API/MCP startup
   - remaining Search work: semantic/vector ranking, shared/server-backed view
     presets, deeper run lineage timelines, live evidence-row dogfooding when
-    evidence rows exist in cache, and durable async materialization jobs with
-    persisted progress for long-running provider recovery
+    evidence rows exist in cache, and operator dashboard polling/control
+    affordances for async materialization jobs
   - first slice is read-only shell work; API-backed health, run, archive,
     search, chat, config, agent, and team pages should land incrementally after
     the shell is stable

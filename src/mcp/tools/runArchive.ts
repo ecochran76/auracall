@@ -4,6 +4,9 @@ import {
   createRunArchiveService,
   type RunArchiveService,
 } from '../../runtime/archiveService.js';
+import {
+  type ArchiveMaterializationJobService,
+} from '../../runtime/archiveMaterializationJobService.js';
 
 const runArchiveKindShape = z.enum([
   'all',
@@ -32,6 +35,14 @@ const runArchiveSearchInputShape = {
 } satisfies z.ZodRawShape;
 
 const runArchiveItemInputShape = {
+  id: z.string().min(1),
+} satisfies z.ZodRawShape;
+
+const runArchiveMaterializationCreateInputShape = {
+  archiveItemId: z.string().min(1),
+} satisfies z.ZodRawShape;
+
+const runArchiveMaterializationJobInputShape = {
   id: z.string().min(1),
 } satisfies z.ZodRawShape;
 
@@ -178,8 +189,37 @@ const runArchiveEvidenceOutputShape = {
   item: archiveItemShape,
 } satisfies z.ZodRawShape;
 
+const archiveMaterializationJobShape = z.object({
+  object: z.literal('run_archive_materialization_job'),
+  id: z.string(),
+  archiveItemId: z.string(),
+  status: z.enum(['queued', 'running', 'succeeded', 'skipped', 'failed']),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  startedAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  attemptCount: z.number(),
+  result: z.unknown().nullable(),
+  error: z.object({
+    message: z.string(),
+    type: z.enum(['invalid_request_error', 'not_found_error', 'provider_auth_conflict', 'internal_error']),
+    statusCode: z.number(),
+  }).nullable(),
+  message: z.string(),
+});
+
+const runArchiveMaterializationCreateOutputShape = {
+  object: z.literal('run_archive_materialization_job_create_result'),
+  generatedAt: z.string(),
+  reused: z.boolean(),
+  job: archiveMaterializationJobShape,
+} satisfies z.ZodRawShape;
+
+const runArchiveMaterializationJobOutputShape = archiveMaterializationJobShape.shape;
+
 export interface RegisterRunArchiveToolsDeps {
   service?: RunArchiveService;
+  materializationJobService?: ArchiveMaterializationJobService;
 }
 
 export function registerRunArchiveTools(
@@ -242,6 +282,30 @@ export function registerRunArchiveTools(
     },
     createRunArchiveAttachEvidenceToolHandler({ service }),
   );
+  if (deps.materializationJobService) {
+    server.registerTool(
+      'run_archive_materialization_create',
+      {
+        title: 'Queue AuraCall archive materialization',
+        description:
+          'Queue a durable provider-backed job that materializes one generated artifact archive item.',
+        inputSchema: runArchiveMaterializationCreateInputShape,
+        outputSchema: runArchiveMaterializationCreateOutputShape,
+      },
+      createRunArchiveMaterializationCreateToolHandler({ service: deps.materializationJobService }),
+    );
+    server.registerTool(
+      'run_archive_materialization_job',
+      {
+        title: 'Read AuraCall archive materialization job',
+        description:
+          'Read one durable archive materialization job by id.',
+        inputSchema: runArchiveMaterializationJobInputShape,
+        outputSchema: runArchiveMaterializationJobOutputShape,
+      },
+      createRunArchiveMaterializationJobToolHandler({ service: deps.materializationJobService }),
+    );
+  }
 }
 
 export function createRunArchiveSearchToolHandler(input: {
@@ -337,6 +401,53 @@ export function createRunArchiveAttachEvidenceToolHandler(input: {
         {
           type: 'text' as const,
           text: `Run archive evidence attached: ${result.item.id}.`,
+        },
+      ],
+      structuredContent: result as typeof result & Record<string, unknown>,
+    };
+  };
+}
+
+export function createRunArchiveMaterializationCreateToolHandler(input: {
+  service: ArchiveMaterializationJobService;
+}) {
+  return async (rawInput: unknown) => {
+    const payload = z.object(runArchiveMaterializationCreateInputShape).parse(rawInput);
+    const result = await input.service.createJob(payload);
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `Archive materialization job ${result.job.id}: ${result.job.status}.`,
+        },
+      ],
+      structuredContent: result as typeof result & Record<string, unknown>,
+    };
+  };
+}
+
+export function createRunArchiveMaterializationJobToolHandler(input: {
+  service: ArchiveMaterializationJobService;
+}) {
+  return async (rawInput: unknown) => {
+    const payload = z.object(runArchiveMaterializationJobInputShape).parse(rawInput);
+    const result = await input.service.readJob(payload.id);
+    if (!result) {
+      return {
+        isError: true,
+        content: [
+          {
+            type: 'text' as const,
+            text: `Archive materialization job ${payload.id} was not found.`,
+          },
+        ],
+      };
+    }
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `Archive materialization job ${result.id}: ${result.status}.`,
         },
       ],
       structuredContent: result as typeof result & Record<string, unknown>,

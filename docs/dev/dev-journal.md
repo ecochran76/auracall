@@ -30944,3 +30944,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `agent-browser` loaded Search and confirmed the first row action rail is
     82px wide, uses 18px by 20px icon controls, and exposes labels/titles for
     Inspect and Copy handoff link.
+
+## Turn 196 | 2026-05-19
+
+- Goal: implement the highest-value backend archive slice from the roadmap and
+  runbook audit: durable async materialization jobs.
+- Change:
+  - added a persisted `ArchiveMaterializationJobService` that queues and
+    serializes provider-backed generated-artifact recovery jobs.
+  - added HTTP endpoints `POST /v1/archive/materializations` and
+    `GET /v1/archive/materializations/{job_id}`.
+  - added CLI parity with `auracall api archive-materialization-create` and
+    `auracall api archive-materialization-status`.
+  - added MCP parity with `run_archive_materialization_create` and
+    `run_archive_materialization_job`.
+  - updated Plan 0066, the roadmap, runbook, endpoint docs, and durable fixes
+    log.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveMaterializationJobService.test.ts tests/cli/apiRunArchiveCommand.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "run archive materialization" --maxWorkers 1`
+  - `pnpm run build`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `/status` advertised `runArchiveMaterializationsCreate` and
+    `runArchiveMaterializationTemplate`.
+  - live create/poll smoke with a deliberately missing archive item produced a
+    terminal `not_found_error` job without provider browser work.

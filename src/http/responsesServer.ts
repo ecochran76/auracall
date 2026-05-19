@@ -96,6 +96,11 @@ import {
   type ArchiveMaterializationService,
 } from '../runtime/archiveMaterializationService.js';
 import {
+  createArchiveMaterializationJobService,
+  type ArchiveMaterializationJobCreateResult,
+  type ArchiveMaterializationJobService,
+} from '../runtime/archiveMaterializationJobService.js';
+import {
   createSearchProjectionService,
   type SearchProjectionRequest,
   type SearchProjectionResult,
@@ -286,6 +291,7 @@ export interface ResponsesHttpServerDeps {
   responseBatchService?: ResponseBatchService;
   runArchiveService?: RunArchiveService;
   archiveMaterializationService?: ArchiveMaterializationService;
+  archiveMaterializationJobService?: ArchiveMaterializationJobService;
   searchProjectionService?: SearchProjectionService;
   executionHost?: ExecutionServiceHost;
   localActionExecutionPolicy?: ExecutionServiceHostDeps['localActionExecutionPolicy'];
@@ -682,6 +688,8 @@ interface HttpStatusResponse {
     runArchiveItemTemplate: string;
     runArchiveItemAssetTemplate: string;
     runArchiveItemMaterializeTemplate: string;
+    runArchiveMaterializationsCreate: string;
+    runArchiveMaterializationTemplate: string;
     runStatusTemplate: string;
     apiLogTail: string;
     preflightRunTemplate: string;
@@ -933,6 +941,7 @@ export async function createResponsesHttpServer(
     runArchiveService,
     now,
   });
+  let archiveMaterializationJobService = deps.archiveMaterializationJobService;
   const searchProjectionService = deps.searchProjectionService ?? createSearchProjectionService({
     accountMirrorCatalogService,
     runArchiveService,
@@ -1093,6 +1102,19 @@ export async function createResponsesHttpServer(
       foregroundAuraCallWorkCount = Math.max(0, foregroundAuraCallWorkCount - 1);
     };
   };
+  archiveMaterializationJobService = archiveMaterializationJobService ?? createArchiveMaterializationJobService({
+    materializationService: archiveMaterializationService,
+    now,
+    withForegroundWork: async (work) => {
+      const endForegroundWork = beginForegroundAuraCallWork();
+      try {
+        return await work();
+      } finally {
+        endForegroundWork();
+      }
+    },
+  });
+  await archiveMaterializationJobService.recoverInterruptedJobs();
   const reserveForegroundAuraCallDrain = () => {
     foregroundAuraCallDrainReservations += 1;
     accountMirrorFollowUpAfterNextDrain = true;
@@ -1559,6 +1581,43 @@ export async function createResponsesHttpServer(
         const payload = parseRunArchiveEvidenceCreateBody(JSON.parse(body || '{}'));
         const result: HttpRunArchiveEvidenceResponse = await runArchiveService.attachEvidence(payload);
         sendJson(res, 201, result);
+        return;
+      }
+
+      if (req.method === 'POST' && url.pathname === '/v1/archive/materializations') {
+        try {
+          const body = await readRequestBody(req);
+          const payload = parseRunArchiveMaterializationCreateBody(JSON.parse(body || '{}'));
+          const result: ArchiveMaterializationJobCreateResult = await archiveMaterializationJobService.createJob(payload);
+          sendJson(res, 202, result);
+          return;
+        } catch (error) {
+          if (error instanceof ArchiveMaterializationError) {
+            sendJson(res, error.statusCode, {
+              error: {
+                message: error.message,
+                type: error.statusCode === 404 ? 'not_found_error' : 'invalid_request_error',
+              },
+            } satisfies HttpErrorPayload);
+            return;
+          }
+          throw error;
+        }
+      }
+
+      if (req.method === 'GET' && isRunArchiveMaterializationJobRoute(url.pathname)) {
+        const jobId = parseRunArchiveMaterializationJobId(url.pathname);
+        const result = await archiveMaterializationJobService.readJob(jobId);
+        if (!result) {
+          sendJson(res, 404, {
+            error: {
+              message: `Archive materialization job ${jobId} was not found.`,
+              type: 'not_found_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        sendJson(res, 200, result);
         return;
       }
 
@@ -3101,7 +3160,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   }
   logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
-    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/search, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, POST /v1/archive/items/{archive_item_id}/materialize, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
+    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/search, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, POST /v1/archive/materializations, GET /v1/archive/materializations/{job_id}, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, POST /v1/archive/items/{archive_item_id}/materialize, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   if (serverOptions.dashboardUrl) {
@@ -3598,6 +3657,8 @@ function createHttpStatusResponse(input: {
       runArchiveItemTemplate: '/v1/archive/items/{archive_item_id}',
       runArchiveItemAssetTemplate: '/v1/archive/items/{archive_item_id}/asset',
       runArchiveItemMaterializeTemplate: '/v1/archive/items/{archive_item_id}/materialize',
+      runArchiveMaterializationsCreate: '/v1/archive/materializations',
+      runArchiveMaterializationTemplate: '/v1/archive/materializations/{job_id}',
       runStatusTemplate: '/v1/runs/{run_id}/status[?diagnostics=browser-state]',
       apiLogTail: '/v1/api/logs/tail[?maxBytes=32768]',
       preflightRunTemplate: '/v1/preflight/lazy-live-follow/runs/{run_id}',
@@ -5815,6 +5876,18 @@ function parseRunArchiveEvidenceCreateBody(value: unknown) {
   }).parse(value);
 }
 
+function parseRunArchiveMaterializationCreateBody(value: unknown) {
+  const parsed = z.object({
+    archiveItemId: z.string().trim().min(1).optional(),
+    archive_item_id: z.string().trim().min(1).optional(),
+  }).parse(value);
+  const archiveItemId = parsed.archiveItemId ?? parsed.archive_item_id;
+  if (!archiveItemId) {
+    throw new ArchiveMaterializationError('Archive item id is required.');
+  }
+  return { archiveItemId };
+}
+
 function parseDomDriftObservationQuery(searchParams: URLSearchParams): ParsedDomDriftObservationQuery {
   const raw: Record<string, unknown> = {};
   if (searchParams.has('service')) {
@@ -5859,6 +5932,19 @@ function isAccountMirrorCatalogItemAssetRoute(pathname: string): boolean {
 
 function isRunArchiveItemAssetRoute(pathname: string): boolean {
   return pathname.startsWith('/v1/archive/items/') && pathname.endsWith('/asset');
+}
+
+function isRunArchiveMaterializationJobRoute(pathname: string): boolean {
+  return pathname.startsWith('/v1/archive/materializations/');
+}
+
+function parseRunArchiveMaterializationJobId(pathname: string): string {
+  const prefix = '/v1/archive/materializations/';
+  const jobId = decodeURIComponent(pathname.startsWith(prefix) ? pathname.slice(prefix.length) : '').trim();
+  if (!jobId) {
+    throw new Error('Archive materialization job id is required.');
+  }
+  return jobId;
 }
 
 function isRunArchiveItemMaterializeRoute(pathname: string): boolean {

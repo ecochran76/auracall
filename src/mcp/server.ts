@@ -72,6 +72,11 @@ import {
   type TenantPoolTeamEnsureService,
 } from '../projects/tenantPoolTeamEnsureService.js';
 import { createRunArchiveService } from '../runtime/archiveService.js';
+import { createArchiveMaterializationService } from '../runtime/archiveMaterializationService.js';
+import {
+  createArchiveMaterializationJobService,
+  type ArchiveMaterializationJobService,
+} from '../runtime/archiveMaterializationJobService.js';
 
 export interface McpServiceBundle {
   resolvedUserConfig: ResolvedUserConfig;
@@ -84,6 +89,7 @@ export interface McpServiceBundle {
   accountMirrorCatalogService: ReturnType<typeof createAccountMirrorCatalogService>;
   accountMirrorCompletionService: ReturnType<typeof createAccountMirrorCompletionService>;
   runArchiveService: ReturnType<typeof createRunArchiveService>;
+  archiveMaterializationJobService: ArchiveMaterializationJobService;
   agentTeamConfigService: AgentTeamConfigService;
   projectEnsureService: ProjectEnsureService;
   tenantPoolTeamEnsureService: TenantPoolTeamEnsureService;
@@ -137,6 +143,7 @@ export async function startMcpServer(): Promise<void> {
   registerRuntimeInspectTool(server);
   registerRunArchiveTools(server, {
     service: services.runArchiveService,
+    materializationJobService: services.archiveMaterializationJobService,
   });
   registerConfigEntityTools(server, {
     service: services.agentTeamConfigService,
@@ -260,6 +267,14 @@ export async function createMcpServicesFromConfig(
       }),
   });
   const runArchiveService = createRunArchiveService();
+  const archiveMaterializationService = createArchiveMaterializationService({
+    config: resolvedUserConfig as Record<string, unknown>,
+    runArchiveService,
+  });
+  const archiveMaterializationJobService = createArchiveMaterializationJobService({
+    materializationService: archiveMaterializationService,
+  });
+  await archiveMaterializationJobService.recoverInterruptedJobs();
   const accountMirrorPersistence = createAccountMirrorPersistence({
     config: resolvedUserConfig as Record<string, unknown>,
   });
@@ -304,6 +319,7 @@ export async function createMcpServicesFromConfig(
     responsesService,
     responseBatchService,
     runArchiveService,
+    archiveMaterializationJobService,
     mediaGenerationService,
     workbenchCapabilityReporter,
     accountMirrorStatusRegistry,

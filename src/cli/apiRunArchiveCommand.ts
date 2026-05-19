@@ -28,6 +28,15 @@ export interface ApiRunArchiveItemCliOptions {
 
 export interface ApiRunArchiveItemMaterializeCliOptions extends ApiRunArchiveItemCliOptions {}
 
+export interface ApiRunArchiveMaterializationJobCliOptions extends ApiRunArchiveItemCliOptions {}
+
+export interface ApiRunArchiveMaterializationJobStatusCliOptions {
+  host?: string | null;
+  port?: number | null;
+  timeoutMs?: number | null;
+  id: string;
+}
+
 export interface ApiRunArchiveAssetLookupCliOptions {
   host?: string | null;
   port?: number | null;
@@ -122,6 +131,57 @@ export async function materializeApiRunArchiveItemForCli(
     }, fetchImpl);
     if (!response.ok) {
       throw new Error(`AuraCall run archive item materialization returned HTTP ${response.status}.`);
+    }
+    return response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function createApiRunArchiveMaterializationJobForCli(
+  options: ApiRunArchiveMaterializationJobCliOptions,
+  fetchImpl: typeof fetch = fetch,
+): Promise<unknown> {
+  const host = normalizeHost(options.host);
+  const port = normalizePort(options.port);
+  const timeoutMs = normalizeTimeoutMs(options.timeoutMs);
+  const id = normalizeRequiredString(options.id, 'archive item id');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchWithLocalApiAuth(new URL(`http://${host}:${port}/v1/archive/materializations`), {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ archiveItemId: id }),
+      signal: controller.signal,
+    }, fetchImpl);
+    if (!response.ok) {
+      throw new Error(`AuraCall run archive materialization job create returned HTTP ${response.status}.`);
+    }
+    return response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function readApiRunArchiveMaterializationJobForCli(
+  options: ApiRunArchiveMaterializationJobStatusCliOptions,
+  fetchImpl: typeof fetch = fetch,
+): Promise<unknown> {
+  const host = normalizeHost(options.host);
+  const port = normalizePort(options.port);
+  const timeoutMs = normalizeTimeoutMs(options.timeoutMs);
+  const id = normalizeRequiredString(options.id, 'archive materialization job id');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchWithLocalApiAuth(new URL(`http://${host}:${port}/v1/archive/materializations/${encodeURIComponent(id)}`), {
+      signal: controller.signal,
+    }, fetchImpl);
+    if (!response.ok) {
+      throw new Error(`AuraCall run archive materialization job returned HTTP ${response.status}.`);
     }
     return response.json();
   } finally {
@@ -267,6 +327,30 @@ export function formatApiRunArchiveItemMaterializeCliSummary(payload: unknown): 
   const links = isRecord(item.links) ? item.links : {};
   const asset = readString(links.asset);
   if (asset) lines.push(`Asset: ${asset}`);
+  return lines.join('\n');
+}
+
+export function formatApiRunArchiveMaterializationJobCliSummary(payload: unknown): string {
+  const record = isRecord(payload) ? payload : {};
+  const job = isRecord(record.job) ? record.job : record;
+  const result = isRecord(job.result) ? job.result : {};
+  const resultItem = isRecord(result.item) ? result.item : {};
+  const resultFile = isRecord(result.file) ? result.file : {};
+  const error = isRecord(job.error) ? job.error : {};
+  const lines = [
+    `Run archive materialization job: ${readString(job.id) ?? 'unknown'}`,
+    `Status: ${readString(job.status) ?? 'unknown'}`,
+    `Archive item: ${readString(job.archiveItemId) ?? readString(resultItem.id) ?? 'unknown'}`,
+  ];
+  if (typeof record.reused === 'boolean') {
+    lines.push(`Reused active job: ${record.reused ? 'yes' : 'no'}`);
+  }
+  const message = readString(job.message) ?? readString(result.message);
+  if (message) lines.push(`Message: ${message}`);
+  const localPath = readString(resultFile.localPath) ?? readString(resultItem.localPath);
+  if (localPath) lines.push(`Local path: ${localPath}`);
+  const errorMessage = readString(error.message);
+  if (errorMessage) lines.push(`Error: ${errorMessage}`);
   return lines.join('\n');
 }
 

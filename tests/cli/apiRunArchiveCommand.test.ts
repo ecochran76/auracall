@@ -2,14 +2,17 @@ import { describe, expect, test, vi } from 'vitest';
 import {
   attachApiRunArchiveEvidenceForCli,
   backfillApiRunArchiveForCli,
+  createApiRunArchiveMaterializationJobForCli,
   formatApiRunArchiveAssetLookupCliSummary,
   formatApiRunArchiveBackfillCliSummary,
   formatApiRunArchiveCliSummary,
   formatApiRunArchiveEvidenceCliSummary,
   formatApiRunArchiveItemCliSummary,
   formatApiRunArchiveItemMaterializeCliSummary,
+  formatApiRunArchiveMaterializationJobCliSummary,
   lookupApiRunArchiveAssetForCli,
   materializeApiRunArchiveItemForCli,
+  readApiRunArchiveMaterializationJobForCli,
   readApiRunArchiveForCli,
   readApiRunArchiveItemForCli,
 } from '../../src/cli/apiRunArchiveCommand.js';
@@ -276,6 +279,74 @@ describe('api run archive CLI helpers', () => {
     expect(formatApiRunArchiveItemMaterializeCliSummary(result)).toContain(
       'Local path: /tmp/first_pass_readout.json',
     );
+  });
+
+  test('queues and reads archive materialization jobs through the local API', async () => {
+    const fetchImpl = vi.fn(async (url: URL, init?: RequestInit) => {
+      if (url.pathname === '/v1/archive/materializations') {
+        expect(url.toString()).toBe('http://127.0.0.1:18095/v1/archive/materializations');
+        expect(init?.method).toBe('POST');
+        expect(init?.headers).toEqual({ 'content-type': 'application/json' });
+        expect(JSON.parse(String(init?.body))).toMatchObject({
+          archiveItemId: 'generated-artifact:resp_1:artifact_1',
+        });
+        return new Response(JSON.stringify({
+          object: 'run_archive_materialization_job_create_result',
+          generatedAt: '2026-05-19T12:00:00.000Z',
+          reused: false,
+          job: {
+            object: 'run_archive_materialization_job',
+            id: 'ramj_test_1',
+            archiveItemId: 'generated-artifact:resp_1:artifact_1',
+            status: 'queued',
+            createdAt: '2026-05-19T12:00:00.000Z',
+            updatedAt: '2026-05-19T12:00:00.000Z',
+            startedAt: null,
+            completedAt: null,
+            attemptCount: 0,
+            result: null,
+            error: null,
+            message: 'Archive materialization job queued.',
+          },
+        }));
+      }
+      expect(url.toString()).toBe('http://127.0.0.1:18095/v1/archive/materializations/ramj_test_1');
+      return new Response(JSON.stringify({
+        object: 'run_archive_materialization_job',
+        id: 'ramj_test_1',
+        archiveItemId: 'generated-artifact:resp_1:artifact_1',
+        status: 'succeeded',
+        createdAt: '2026-05-19T12:00:00.000Z',
+        updatedAt: '2026-05-19T12:01:00.000Z',
+        startedAt: '2026-05-19T12:00:01.000Z',
+        completedAt: '2026-05-19T12:01:00.000Z',
+        attemptCount: 1,
+        result: {
+          status: 'already_materialized',
+          item: {
+            id: 'generated-artifact:resp_1:artifact_1',
+            localPath: '/tmp/first_pass_readout.json',
+          },
+        },
+        error: null,
+        message: 'Archive item already has a readable local asset.',
+      }));
+    });
+
+    const created = await createApiRunArchiveMaterializationJobForCli({
+      port: 18095,
+      id: 'generated-artifact:resp_1:artifact_1',
+    }, fetchImpl as never);
+    expect(formatApiRunArchiveMaterializationJobCliSummary(created)).toContain(
+      'Run archive materialization job: ramj_test_1',
+    );
+
+    const read = await readApiRunArchiveMaterializationJobForCli({
+      port: 18095,
+      id: 'ramj_test_1',
+    }, fetchImpl as never);
+    expect(formatApiRunArchiveMaterializationJobCliSummary(read)).toContain('Status: succeeded');
+    expect(formatApiRunArchiveMaterializationJobCliSummary(read)).toContain('Local path: /tmp/first_pass_readout.json');
   });
 
   test('requests archive index backfill from the local API', async () => {

@@ -130,14 +130,17 @@ import {
 import {
   attachApiRunArchiveEvidenceForCli,
   backfillApiRunArchiveForCli,
+  createApiRunArchiveMaterializationJobForCli,
   formatApiRunArchiveAssetLookupCliSummary,
   formatApiRunArchiveBackfillCliSummary,
   formatApiRunArchiveCliSummary,
   formatApiRunArchiveEvidenceCliSummary,
   formatApiRunArchiveItemCliSummary,
   formatApiRunArchiveItemMaterializeCliSummary,
+  formatApiRunArchiveMaterializationJobCliSummary,
   lookupApiRunArchiveAssetForCli,
   materializeApiRunArchiveItemForCli,
+  readApiRunArchiveMaterializationJobForCli,
   readApiRunArchiveForCli,
   readApiRunArchiveItemForCli,
 } from '../src/cli/apiRunArchiveCommand.js';
@@ -1318,6 +1321,62 @@ apiCommand
       return;
     }
     console.log(formatApiRunArchiveItemMaterializeCliSummary(result));
+  });
+
+apiCommand
+  .command('archive-materialization-create')
+  .description('Queue a durable provider-backed archive materialization job for one generated artifact archive item.')
+  .argument('<id>', 'Run archive item id.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP write timeout in milliseconds.', parseIntOption, 10000)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const result = await createApiRunArchiveMaterializationJobForCli({
+      id,
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiRunArchiveMaterializationJobCliSummary(result));
+  });
+
+apiCommand
+  .command('archive-materialization-status')
+  .description('Read a durable archive materialization job.')
+  .argument('<id>', 'Archive materialization job id.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const result = await readApiRunArchiveMaterializationJobForCli({
+      id,
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiRunArchiveMaterializationJobCliSummary(result));
   });
 
 apiCommand

@@ -16371,3 +16371,11 @@ browser-stage lifecycle observability, not transcript truncation.
   reset in-memory sequence, and generated-artifact materialization sends
   `browser-response-artifact-finalizing` heartbeats so long downloads do not
   look like evidence-free hangs.
+
+- 2026-05-19: Missing generated-artifact recovery should not depend on a single
+  long foreground HTTP request. Archive materialization now has a persisted
+  async job surface (`POST /v1/archive/materializations`,
+  `GET /v1/archive/materializations/{job_id}`) with CLI/MCP parity,
+  active-job de-duplication per archive item, serialized in-process execution,
+  terminal provider/auth error recording, and startup recovery that marks
+  interrupted queued/running jobs failed instead of leaving stale active jobs.

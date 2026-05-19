@@ -5667,3 +5667,46 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     `eric.cochran@soylei.com`, then retry the same materialization route. After
     that, design the durable async job/progress wrapper if live recovery takes
     longer than an operator HTTP request should.
+
+## Turn 196 | 2026-05-19
+
+- Goal: add the durable async materialization job wrapper for missing
+  generated-artifact recovery without changing the existing foreground route.
+- Change:
+  - added `ArchiveMaterializationJobService` with a user-scoped persisted job
+    store under the run archive tree.
+  - added `POST /v1/archive/materializations` to queue provider-backed archive
+    materialization and `GET /v1/archive/materializations/{job_id}` to poll the
+    job.
+  - active jobs for the same archive item are de-duplicated, job execution is
+    serialized in-process, provider/auth failures are persisted as terminal job
+    errors, and queued/running jobs left by a previous API/MCP process are
+    marked failed on startup instead of remaining indefinitely active.
+  - added CLI parity with `auracall api archive-materialization-create` and
+    `auracall api archive-materialization-status`.
+  - added MCP parity with `run_archive_materialization_create` and
+    `run_archive_materialization_job`.
+  - kept `POST /v1/archive/items/{archive_item_id}/materialize` as the
+    foreground compatibility route.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveMaterializationJobService.test.ts tests/cli/apiRunArchiveCommand.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "run archive materialization" --maxWorkers 1`
+  - `pnpm run build`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - `/status` returned `ok: true` with `runArchiveMaterializationsCreate` and
+    `runArchiveMaterializationTemplate`.
+  - live `POST /v1/archive/materializations` with a deliberately missing
+    archive id returned a queued job, and subsequent
+    `GET /v1/archive/materializations/{job_id}` returned terminal `failed`
+    with `not_found_error` without launching provider browser work.
+- Notes:
+  - an initial broad `tests/http.responsesServer.test.ts` run was stopped after
+    it entered unrelated browser-heavy cases; the targeted HTTP materialization
+    route test passed after narrowing.
+- Next:
+  - wire operator dashboard polling/control affordances for async
+    materialization jobs before using the async path as the primary private
+    transcript recovery path.
