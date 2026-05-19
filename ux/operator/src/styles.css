@@ -2170,59 +2170,70 @@ select:focus-visible {
 
 .search-inspector-card {
   display: grid;
-  gap: 8px;
-  padding: 10px;
+  gap: 7px;
+  padding: 8px;
   border: 1px solid #252c37;
   border-radius: 8px;
-  background: #131922;
+  background: #111720;
 }
 
 .search-inspector-title {
   min-width: 0;
   display: grid;
-  gap: 4px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 6px;
+  align-items: center;
 }
 
 .search-inspector-title strong {
   overflow: hidden;
   color: #f4f7fb;
-  font-size: 14px;
+  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .search-inspector-title small {
+  grid-column: 1 / -1;
   color: #9aa6b6;
   font-size: 11px;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .search-inspector-title .status-pill {
+  grid-column: 2;
+  grid-row: 1;
   width: fit-content;
 }
 
+.search-inspector-meta,
 .search-inspector-facts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px;
 }
 
+.search-inspector-meta > span,
 .search-inspector-facts div {
   min-width: 0;
-  padding: 6px;
+  padding: 5px 6px;
   border: 1px solid #222b38;
   border-radius: 6px;
-  background: #101620;
+  background: #0f151e;
 }
 
+.search-inspector-meta small,
 .search-inspector-facts span {
   display: block;
-  margin-bottom: 3px;
+  margin-top: 2px;
   color: #8d99aa;
   font-size: 10px;
   text-transform: uppercase;
 }
 
+.search-inspector-meta b,
 .search-inspector-facts b {
   display: block;
   color: #edf1f7;
@@ -2230,6 +2241,10 @@ select:focus-visible {
   font-weight: 650;
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+.search-inspector-meta .provider-badge {
+  width: fit-content;
 }
 
 .search-kind-panel {

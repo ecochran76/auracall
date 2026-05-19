@@ -1515,6 +1515,7 @@ function searchRowCellTitle(row, column) {
 
 function routeEntriesFromSearch(row, archiveItem) {
   const links = {
+    handoff: row?.id ? `/dashboard?nav=search&row=${base64UrlEncodeText(row.id)}` : null,
     ...(row?.links ?? {}),
     ...(archiveItem?.links ?? {}),
     catalogItem: row?.catalogItemRoute,
@@ -1534,27 +1535,38 @@ function SearchInspectorSummary({ row, archiveItem }) {
     ...(archiveItem?.metadata ?? {}),
   };
   const routeEntries = routeEntriesFromSearch(row, archiveItem);
+  const title = String(source.title ?? source.fileName ?? source.id ?? "Selected result");
+  const subtitle = row?.summary ?? archiveItem?.uri ?? archiveItem?.localPath ?? row?.itemId ?? archiveItem?.id;
+  const fileSummary = `${formatNumber(row?.fileCount ?? 0)} files / ${formatNumber(row?.artifactCount ?? 0)} artifacts`;
   const facts = [
-    ["Kind", row?.kind ?? archiveItem?.kind ?? "unknown"],
-    ["Status", statusLabel(row?.status ?? archiveItem?.status)],
-    ["Provider", source.provider ? <ProviderIcon provider={source.provider} /> : "none"],
-    ["Runtime", row?.runtimeProfileId ?? archiveItem?.runtimeProfile ?? "none"],
-    ["Tenant", compactIdentity(row?.boundIdentityKey ?? archiveItem?.boundIdentityKey)],
-    ["Project", row?.project ?? archiveItem?.projectId ?? "none"],
     ["Response", metadata.responseId ?? archiveItem?.responseId ?? "none"],
     ["Batch", metadata.batchId ?? archiveItem?.batchId ?? "none"],
     ["Agent", metadata.agentId ?? archiveItem?.agentId ?? "none"],
-    ["File", archiveItem?.fileName ?? source.title ?? "none"],
-    ["MIME", archiveItem?.mimeType ?? "unknown"],
     ["Asset", archiveItemAssetRoute(archiveItem) || row?.assetRoute ? "cached" : archiveItem?.fileAvailable === false ? "missing" : "not materialized"],
+  ];
+  const meta = [
+    [source.provider ? <ProviderIcon provider={source.provider} /> : "none", "Provider"],
+    [compactIdentity(row?.boundIdentityKey ?? archiveItem?.boundIdentityKey), "Tenant"],
+    [compactRuntimeProfile(row?.runtimeProfileId ?? archiveItem?.runtimeProfile), "Runtime"],
+    [row?.project ?? archiveItem?.projectId ?? "No project", "Project"],
+    [row?.kind ?? archiveItem?.kind ?? "unknown", "Kind"],
+    [fileSummary, "Files"],
   ];
 
   return (
     <section className="search-inspector-card" aria-label="Selected search result summary">
       <div className="search-inspector-title">
         <span className={`status-pill status-${statusTone(row?.status ?? archiveItem?.status)}`}>{statusLabel(row?.status ?? archiveItem?.status)}</span>
-        <strong>{source.title ?? source.fileName ?? source.id ?? "Selected result"}</strong>
-        <small>{row?.summary ?? archiveItem?.uri ?? archiveItem?.localPath ?? row?.itemId ?? archiveItem?.id}</small>
+        <strong title={title}>{compactText(title, 160)}</strong>
+        {subtitle ? <small title={String(subtitle)}>{compactText(subtitle, 180)}</small> : null}
+      </div>
+      <div className="search-inspector-meta" aria-label="Selected result routing context">
+        {meta.map(([value, label]) => (
+          <span key={label}>
+            <b><DetailValue detail={value} /></b>
+            <small>{label}</small>
+          </span>
+        ))}
       </div>
       <div className="search-inspector-facts">
         {facts.map(([label, value]) => (
@@ -3380,6 +3392,7 @@ function RightPane({
             activeRunners: runs.runnerTopology?.metrics?.activeRunnerCount,
           }
       : { route: activeNav, mutable: false };
+  const showDetailsList = !(activeNav === "search" && (inspectedSearchRow || inspectedArchiveItem));
 
   return (
     <aside className="inspector-body" aria-label={labels[activeNav]}>
@@ -3387,16 +3400,18 @@ function RightPane({
         <Database size={18} />
         <span>{labels[activeNav]}</span>
       </div>
-      <dl>
-        {details.map(([term, detail]) => (
-          <div key={term}>
-            <dt>{term}</dt>
-            <dd>
-              <DetailValue detail={detail} />
-            </dd>
-          </div>
-        ))}
-      </dl>
+      {showDetailsList ? (
+        <dl>
+          {details.map(([term, detail]) => (
+            <div key={term}>
+              <dt>{term}</dt>
+              <dd>
+                <DetailValue detail={detail} />
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
       {activeNav === "health" && selectedLiveFollowAccount ? (
         <div className="inspector-actions" aria-label="Selected live-follow account links">
           <RouteChip value={liveFollowAccountStatusRoute(selectedLiveFollowAccount)} label="Mirror Status" />

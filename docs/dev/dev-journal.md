@@ -30740,3 +30740,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `docs/dev-fixes-log.md`, `src/browser/actions/thinkingTime.ts`, and
     `tests/browser/thinkingTime.test.ts` were dirty from another lane and left
     untouched.
+
+## Turn 188 | 2026-05-19
+
+- Goal: continue Search UX density by turning selected rows into a cleaner
+  operator handoff inspector.
+- Change:
+  - added a Search row handoff route to selected-result route chips.
+  - replaced the duplicate selected-row definition list with a compact selected
+    result summary when Search has an active row or archive item.
+  - condensed the selected-result card into a title/status header, provider /
+    tenant / runtime / project / kind / file meta grid, and only the most useful
+    response/batch/agent/asset facts.
+  - tightened summary card padding and prevented nested provider badge spans
+    from inheriting grid-cell styling.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check` passed.
+  - `pnpm run install:user-runtime` completed and installed the operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK`.
+  - `agent-browser` loaded the Search page, selected a cached artifact row, and
+    confirmed the right pane shows `Result inspector`, selected-row status,
+    Handoff / Archive Item / Response / Asset / Provider route chips, and asset
+    facts.
