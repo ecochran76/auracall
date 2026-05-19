@@ -478,6 +478,7 @@ function countTenantStartedChats(input: {
 }): number {
   let count = 0;
   const startedRunIds = new Set<string>();
+  const startedChatKeys = new Set<string>();
   for (const record of input.records) {
     const stepsById = new Map(record.bundle.steps.map((step) => [step.id, step]));
     for (const event of record.bundle.events) {
@@ -486,6 +487,9 @@ function countTenantStartedChats(input: {
       if (!Number.isFinite(createdAtMs) || createdAtMs < input.cutoffMs) continue;
       const step = event.stepId ? stepsById.get(event.stepId) ?? null : selectExecutionScopeStep(record);
       if (!stepMatchesTenantScope(input.config, step, input.scope)) continue;
+      const chatKey = event.stepId ? `${record.runId}\0${event.stepId}` : record.runId;
+      if (startedChatKeys.has(chatKey)) continue;
+      startedChatKeys.add(chatKey);
       startedRunIds.add(record.runId);
       count += 1;
     }

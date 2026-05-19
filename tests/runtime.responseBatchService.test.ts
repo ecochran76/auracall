@@ -570,7 +570,14 @@ describe('response batch service', () => {
       control,
       drainAfterCreate: false,
       generateResponseId: (() => {
-        const ids = ['resp_batch_gate_1', 'resp_batch_gate_2', 'resp_batch_gate_3', 'resp_batch_gate_4'];
+        const ids = [
+          'resp_batch_gate_1',
+          'resp_batch_gate_2',
+          'resp_batch_gate_3',
+          'resp_batch_gate_4',
+          'resp_batch_gate_5',
+          'resp_batch_gate_6',
+        ];
         return () => ids.shift() ?? 'resp_batch_gate_extra';
       })(),
       now: () => new Date('2026-05-12T15:00:00.000Z'),
@@ -578,7 +585,7 @@ describe('response batch service', () => {
     const service = createResponseBatchService({
       responsesService,
       generateBatchId: (() => {
-        const ids = ['batch_concurrency_gate', 'batch_rate_gate'];
+        const ids = ['batch_concurrency_gate', 'batch_rate_gate', 'batch_recovery_rate_gate'];
         return () => ids.shift() ?? 'batch_extra';
       })(),
       now: () => new Date('2026-05-12T15:00:00.000Z'),
@@ -668,5 +675,42 @@ describe('response batch service', () => {
       allowed: false,
       reason: expect.stringContaining('browser interaction rate limit reached: 1/1 per minute'),
     });
+
+    await service.createBatch({
+      limits: { maxBrowserInteractionsPerMinute: 2 },
+      requests: [
+        { model: 'agent:pro-extended-chatgpt-soylei', input: 'Grade student 5.' },
+        { model: 'agent:pro-extended-chatgpt-soylei', input: 'Grade student 6.' },
+      ],
+    });
+    const recoveredRateRecord = await control.readRun('resp_batch_gate_5');
+    if (!recoveredRateRecord) throw new Error('expected recovered rate-limit batch run');
+    await control.persistRun({
+      runId: recoveredRateRecord.runId,
+      expectedRevision: recoveredRateRecord.revision,
+      bundle: {
+        ...recoveredRateRecord.bundle,
+        events: [
+          ...recoveredRateRecord.bundle.events,
+          createExecutionRunEvent({
+            id: 'resp_batch_gate_5:event:step-started:first',
+            runId: recoveredRateRecord.runId,
+            type: 'step-started',
+            createdAt: '2026-05-12T15:00:05.000Z',
+            stepId: 'resp_batch_gate_5:step:1',
+          }),
+          createExecutionRunEvent({
+            id: 'resp_batch_gate_5:event:step-started:recovered',
+            runId: recoveredRateRecord.runId,
+            type: 'step-started',
+            createdAt: '2026-05-12T15:00:06.000Z',
+            stepId: 'resp_batch_gate_5:step:1',
+          }),
+        ],
+      },
+    });
+    const secondRecoveredRateRecord = await control.readRun('resp_batch_gate_6');
+    if (!secondRecoveredRateRecord) throw new Error('expected second recovered rate-limit batch run');
+    await expect(gate(secondRecoveredRateRecord)).resolves.toEqual({ allowed: true });
   });
 });

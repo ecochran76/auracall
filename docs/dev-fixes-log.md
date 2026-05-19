@@ -16357,3 +16357,9 @@ browser-stage lifecycle observability, not transcript truncation.
   selector now recognizes `role=listbox` / Radix select viewports and
   `role=option` / Radix select items, allowing `wsl-chrome-4` to switch from
   `Pro / Standard` to `Pro / Extended` before submitting browser-backed runs.
+
+- 2026-05-19: ChatGPT recovery replay must not spend an extra tenant or
+  response-batch rate budget when it reattaches an existing browser tab. Tenant
+  hourly/daily chat-start usage and response-batch browser-interaction counts
+  now dedupe repeated `step-started` events for the same response step, while
+  still counting separate response steps independently.

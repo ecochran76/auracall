@@ -429,6 +429,10 @@ Current limits:
       `providers.chatgpt.entries[].usage.chatsLastDay`
     - usage is derived from persisted active leases and `step-started` events;
       this status path does not acquire leases or execute work
+    - recovery replays can write more than one `step-started` event for the
+      same response step; usage counts that step once so reattaching an
+      existing ChatGPT tab does not spend an extra hourly/daily chat-start
+      budget
   - when called with `?recovery=1` (or `?recovery=true`) it also returns:
     - `recoverySummary.totalRuns`
     - reclaimable run IDs in `recoverySummary.reclaimableRunIds`

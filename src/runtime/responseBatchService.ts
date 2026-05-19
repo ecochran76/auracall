@@ -483,6 +483,7 @@ async function countRecentlyStartedBatchRuns(
 ): Promise<number> {
   const cutoff = input.now.getTime() - input.windowMs;
   const records = await control.listRuns({ sourceKind: 'direct' });
+  const startedStepKeys = new Set<string>();
   return records.reduce((count, record) => {
     if (readResponseBatchRunMetadata(record)?.batchId !== input.batchId) return count;
     return (
@@ -490,7 +491,11 @@ async function countRecentlyStartedBatchRuns(
       record.bundle.events.filter((event) => {
         if (event.type !== 'step-started') return false;
         const createdAt = Date.parse(event.createdAt);
-        return Number.isFinite(createdAt) && createdAt >= cutoff;
+        if (!Number.isFinite(createdAt) || createdAt < cutoff) return false;
+        const key = event.stepId ? `${record.runId}\0${event.stepId}` : record.runId;
+        if (startedStepKeys.has(key)) return false;
+        startedStepKeys.add(key);
+        return true;
       }).length
     );
   }, 0);

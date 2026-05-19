@@ -30766,3 +30766,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     confirmed the right pane shows `Result inspector`, selected-row status,
     Handoff / Archive Item / Response / Asset / Provider route chips, and asset
     facts.
+
+## Turn 189 | 2026-05-19
+
+- Goal: dogfood the three-tenant ChatGPT dispatch pool after the `wsl-chrome-4`
+  Pro Extended selector fix and tighten tenant/batch usage accounting exposed
+  by recovery replay.
+- Change:
+  - deduped ChatGPT tenant hourly/daily chat-start counts by response step, so
+    a recovered run that reattaches an existing tab does not count twice.
+  - deduped response-batch browser interaction rate counts by response step for
+    the same recovery replay case.
+  - documented that `/status?tenantExecutionLimits=usage` and response-batch
+    gates count recovered same-step starts once.
+- Verification:
+  - transcribe-audio dispatch batch `batch_6a07fcef576343a1a6c053ba849f2029`
+    assigned one child each to `wsl-chrome-2`, `wsl-chrome-3`, and
+    `wsl-chrome-4`; all completed and materialized.
+  - status evidence showed one Chrome target/conversation URL per running
+    prompt, with passive DOM `thinking`, `response-complete`, or
+    `response-incoming` evidence.
+  - `pnpm vitest run tests/runtime.tenantExecutionLimits.test.ts
+    tests/runtime.responseBatchService.test.ts --maxWorkers 1` passed.
+  - `pnpm run build` passed.
+  - `pnpm run install:user-runtime-service` installed the runtime and API
+    service.
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - installed `/status?tenantExecutionLimits=usage` reports `activeChats=0`
+    and `chatsLastHour=4`, matching one pre-existing `wsl-chrome-4` smoke plus
+    three unique dispatch starts.

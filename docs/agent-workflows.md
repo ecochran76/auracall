@@ -176,7 +176,9 @@ identity is configured. Per-batch `maxConcurrentRuns` may be lower, but it
 cannot raise a tenant above that budget. Operators can read the configured
 ChatGPT tenant budgets from `GET /status` under `tenantExecutionLimits`; add
 `?tenantExecutionLimits=usage` when current lease/event-derived usage counters
-are needed.
+are needed. Recovery replays that reattach an existing ChatGPT tab can record a
+second `step-started` event for the same response step; tenant and batch
+rate-limit usage counts that response step once.
 
 When one ChatGPT email maps to multiple OpenAI accounts, configure account
 qualifiers on the runtime profile identity. AuraCall includes `accountId`,

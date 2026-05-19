@@ -272,6 +272,7 @@ describe('tenant execution limits', () => {
     await createChatgptRun(responsesService, 'resp_status_1', 'wsl-chrome-3');
     await createChatgptRun(responsesService, 'resp_status_2', 'wsl-chrome-4');
     await addStartedEvent(control, 'resp_status_1', '2026-05-17T20:30:00.000Z');
+    await addStartedEvent(control, 'resp_status_1', '2026-05-17T20:35:00.000Z');
     await addStartedEvent(control, 'resp_status_2', '2026-05-17T20:40:00.000Z');
     await addActiveLease(control, 'resp_status_1');
 
