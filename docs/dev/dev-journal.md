@@ -31038,3 +31038,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     materialization is not cooperatively abortable yet.
 - Verification:
   - `pnpm vitest run tests/runtime.archiveMaterializationJobService.test.ts tests/cli/apiRunArchiveCommand.test.ts tests/http.responsesServer.test.ts -t "archive materialization" --maxWorkers 1`
+
+## Turn 199 | 2026-05-19
+
+- Goal: make Search table row selection operable and inspectable from the
+  keyboard, not just pointer clicks.
+- Change:
+  - added `aria-activedescendant` to the Search results grid using stable row
+    DOM ids derived from row ids.
+  - added an explicit grid label documenting Arrow-key movement and Enter
+    inspection.
+  - added Enter and Space handling to inspect the selected or current visible
+    row.
+  - strengthened the selected-row ring while the grid has keyboard focus.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check` passed.
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK`.
+  - `agent-browser` focused the Search grid, pressed ArrowDown, confirmed
+    `aria-activedescendant` points at an existing row with `aria-current=true`,
+    pressed Enter, and confirmed the URL gained a `row=` handoff parameter and
+    the inspector reported `Search row selected`.

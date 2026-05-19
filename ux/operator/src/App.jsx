@@ -2307,17 +2307,25 @@ function ArchiveSearchViewport({
     if (row) openRow(row);
   }
 
+  function searchRowDomId(row) {
+    return row?.id ? `search-row-${base64UrlEncodeText(row.id).slice(0, 80)}` : undefined;
+  }
+
   function selectedRowIndex() {
     if (!selectedRow?.id) return -1;
     return filteredRows.findIndex((row) => row.id === selectedRow.id);
   }
 
   function handleSearchTableKeyDown(event) {
-    if (!["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End"].includes(event.key)) return;
+    if (!["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", "Enter", " "].includes(event.key)) return;
     event.preventDefault();
     const currentIndex = selectedRowIndex();
     const fallbackIndex = virtualWindow.startIndex;
     const baseIndex = currentIndex >= 0 ? currentIndex : fallbackIndex;
+    if (event.key === "Enter" || event.key === " ") {
+      selectRowAtIndex(baseIndex);
+      return;
+    }
     const pageStep = Math.max(1, Math.floor(virtualViewport.height / SEARCH_ROW_HEIGHT) - 2);
     if (event.key === "ArrowDown" && baseIndex >= filteredRows.length - 1 && catalog?.nextCursor) {
       loadMoreRows();
@@ -2520,6 +2528,8 @@ function ArchiveSearchViewport({
           className="search-table-scroll"
           role="grid"
           aria-rowcount={filteredRows.length}
+          aria-activedescendant={searchRowDomId(selectedRow)}
+          aria-label="Search results. Use arrow keys to move selection and Enter to inspect the selected row."
           tabIndex="0"
           style={tablePinStyles()}
           onKeyDown={handleSearchTableKeyDown}
@@ -2572,6 +2582,7 @@ function ArchiveSearchViewport({
               const selected = selectedRow?.id === row.id;
               return (
                 <div
+                  id={searchRowDomId(row)}
                   key={row.id}
                   role="row"
                   className={selected ? "search-table-grid search-row is-selected" : "search-table-grid search-row"}

@@ -1370,6 +1370,13 @@ select:focus-visible {
   outline-offset: -1px;
 }
 
+.search-table-scroll:focus-visible .search-row.is-selected {
+  box-shadow:
+    inset 3px 0 0 #5bc29f,
+    inset 0 0 0 1px rgba(91, 194, 159, 0.32),
+    inset 0 0 0 2px rgba(143, 216, 255, 0.12);
+}
+
 .search-table-grid {
   display: grid;
   min-width: max-content;
