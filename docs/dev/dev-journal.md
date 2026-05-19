@@ -30974,6 +30974,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 ## Turn 197 | 2026-05-19
 
+- Goal: keep the async materialization job surface pollable by backend clients
+  before the UX session wires controls.
+- Change:
+  - added status/archive-item/limit filtered job listing to
+    `ArchiveMaterializationJobService`.
+  - added `GET /v1/archive/materializations`.
+  - added CLI `auracall api archive-materialization-jobs`.
+  - added MCP `run_archive_materialization_jobs`.
+  - updated Plan 0066, roadmap, runbook, endpoint docs, and fixes log.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveMaterializationJobService.test.ts tests/cli/apiRunArchiveCommand.test.ts tests/http.responsesServer.test.ts -t "archive materialization" --maxWorkers 1`
+  - `pnpm run build`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `/status` advertised `runArchiveMaterializationsList`.
+  - live `GET /v1/archive/materializations?status=terminal&limit=5` returned
+    the persisted terminal missing-id smoke job with `active = 0`.
+
+## Turn 197 | 2026-05-19
+
 - Goal: keep Search row actions reachable while operators horizontally inspect
   wide tenant/cache rows.
 - Change:

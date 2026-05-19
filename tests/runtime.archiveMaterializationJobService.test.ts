@@ -75,6 +75,54 @@ describe('archive materialization job service', () => {
     expect(materializeItem).toHaveBeenCalledWith({ archiveItemId: 'generated-artifact:resp_1:artifact_1' });
   });
 
+  it('lists persisted jobs with status and archive item filters', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialize-list-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const service = createArchiveMaterializationJobService({
+      materializationService: {
+        materializeItem: async (request) => ({
+          object: 'run_archive_item_materialization' as const,
+          generatedAt: '2026-05-19T12:11:00.000Z',
+          status: request.archiveItemId.endsWith('skip') ? 'skipped' as const : 'already_materialized' as const,
+          item: createGeneratedArtifactItem(request.archiveItemId),
+          file: null,
+          message: request.archiveItemId.endsWith('skip') ? 'Provider artifact materializer did not produce a local file.' : 'Archive item already has a readable local asset.',
+        }),
+      },
+      generateId: sequenceId(['ramj_list_1', 'ramj_list_2', 'ramj_list_3']),
+      now: sequenceNow([
+        '2026-05-19T12:10:00.000Z',
+        '2026-05-19T12:10:01.000Z',
+        '2026-05-19T12:10:02.000Z',
+        '2026-05-19T12:10:03.000Z',
+        '2026-05-19T12:10:04.000Z',
+        '2026-05-19T12:10:05.000Z',
+        '2026-05-19T12:10:06.000Z',
+      ]),
+      schedule: () => {},
+    });
+    await service.createJob({ archiveItemId: 'generated-artifact:resp_1:artifact_1' });
+    await service.createJob({ archiveItemId: 'generated-artifact:resp_2:artifact_skip' });
+    await service.runJob('ramj_list_2');
+    await service.createJob({ archiveItemId: 'generated-artifact:resp_3:artifact_3' });
+
+    const active = await service.listJobs({ status: 'active' });
+    expect(active.metrics).toMatchObject({ total: 2, active: 2, terminal: 0 });
+    expect(active.jobs.map((job) => job.id)).toEqual(['ramj_list_3', 'ramj_list_1']);
+
+    const skipped = await service.listJobs({ status: 'skipped' });
+    expect(skipped.metrics).toMatchObject({ total: 1, active: 0, terminal: 1 });
+    expect(skipped.jobs[0]?.archiveItemId).toBe('generated-artifact:resp_2:artifact_skip');
+
+    const byItem = await service.listJobs({
+      archiveItemId: 'generated-artifact:resp_1:artifact_1',
+      limit: 1,
+    });
+    expect(byItem.limit).toBe(1);
+    expect(byItem.jobs).toHaveLength(1);
+    expect(byItem.jobs[0]?.id).toBe('ramj_list_1');
+  });
+
   it('recovers active jobs after process interruption instead of leaving them running forever', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialize-recover-'));
     setAuracallHomeDirOverrideForTest(homeDir);
@@ -110,6 +158,11 @@ describe('archive materialization job service', () => {
 function sequenceNow(values: string[]): () => Date {
   let index = 0;
   return () => new Date(values[Math.min(index++, values.length - 1)]);
+}
+
+function sequenceId(values: string[]): () => string {
+  let index = 0;
+  return () => values[Math.min(index++, values.length - 1)];
 }
 
 function createGeneratedArtifactItem(id: string): RunArchiveItem {

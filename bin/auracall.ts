@@ -138,6 +138,8 @@ import {
   formatApiRunArchiveItemCliSummary,
   formatApiRunArchiveItemMaterializeCliSummary,
   formatApiRunArchiveMaterializationJobCliSummary,
+  formatApiRunArchiveMaterializationJobsCliSummary,
+  listApiRunArchiveMaterializationJobsForCli,
   lookupApiRunArchiveAssetForCli,
   materializeApiRunArchiveItemForCli,
   readApiRunArchiveMaterializationJobForCli,
@@ -1377,6 +1379,38 @@ apiCommand
       return;
     }
     console.log(formatApiRunArchiveMaterializationJobCliSummary(result));
+  });
+
+apiCommand
+  .command('archive-materialization-jobs')
+  .description('List durable archive materialization jobs.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--status <status>', 'Filter by queued, running, succeeded, skipped, failed, active, or terminal.')
+  .option('--archive-item-id <id>', 'Filter by run archive item id.')
+  .option('--limit <count>', 'Maximum jobs to read.', parseIntOption, 50)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const result = await listApiRunArchiveMaterializationJobsForCli({
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+      status: commandOptions.status,
+      archiveItemId: commandOptions.archiveItemId,
+      limit: commandOptions.limit,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiRunArchiveMaterializationJobsCliSummary(result));
   });
 
 apiCommand

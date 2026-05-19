@@ -61,6 +61,7 @@ Current endpoints:
 - `POST /v1/archive/backfill`
 - `POST /v1/archive/evidence`
 - `POST /v1/archive/materializations`
+- `GET /v1/archive/materializations`
 - `GET /v1/archive/materializations/{job_id}`
 - `GET /v1/archive/items/{archive_item_id}`
 - `GET /v1/archive/items/{archive_item_id}/asset`
@@ -331,12 +332,17 @@ Current limits:
     The job store is user-scoped under the run archive tree, de-duplicates
     active jobs for the same archive item, records provider/auth failures as
     terminal job errors, and marks interrupted active jobs failed on API/MCP
-    startup instead of leaving them forever running. Poll with
-    `GET /v1/archive/materializations/{job_id}`. CLI parity is
+    startup instead of leaving them forever running. Poll one job with
+    `GET /v1/archive/materializations/{job_id}` or list jobs with
+    `GET /v1/archive/materializations?status=active|terminal|queued|running|succeeded|skipped|failed&archiveItemId=<archive_id>&limit=50`.
+    CLI parity is
     `auracall api archive-materialization-create --port <port> <archive_id>`
-    and `auracall api archive-materialization-status --port <port> <job_id>`.
+    plus `auracall api archive-materialization-status --port <port> <job_id>`
+    and `auracall api archive-materialization-jobs --port <port> --status
+    active`.
     MCP parity is `run_archive_materialization_create` and
-    `run_archive_materialization_job`.
+    `run_archive_materialization_job`, plus `run_archive_materialization_jobs`
+    for list/polling surfaces.
   - `POST /v1/archive/backfill` rebuilds the index from existing runtime
     records without browser work; CLI parity is
     `auracall api archive-backfill --port <port>`

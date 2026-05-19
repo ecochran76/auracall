@@ -10,7 +10,9 @@ import {
   formatApiRunArchiveItemCliSummary,
   formatApiRunArchiveItemMaterializeCliSummary,
   formatApiRunArchiveMaterializationJobCliSummary,
+  formatApiRunArchiveMaterializationJobsCliSummary,
   lookupApiRunArchiveAssetForCli,
+  listApiRunArchiveMaterializationJobsForCli,
   materializeApiRunArchiveItemForCli,
   readApiRunArchiveMaterializationJobForCli,
   readApiRunArchiveForCli,
@@ -347,6 +349,57 @@ describe('api run archive CLI helpers', () => {
     }, fetchImpl as never);
     expect(formatApiRunArchiveMaterializationJobCliSummary(read)).toContain('Status: succeeded');
     expect(formatApiRunArchiveMaterializationJobCliSummary(read)).toContain('Local path: /tmp/first_pass_readout.json');
+  });
+
+  test('lists archive materialization jobs through the local API', async () => {
+    const fetchImpl = vi.fn(async (url: URL) => {
+      expect(url.toString()).toBe(
+        'http://127.0.0.1:18095/v1/archive/materializations?status=terminal&archiveItemId=generated-artifact%3Aresp_1%3Aartifact_1&limit=2',
+      );
+      return new Response(JSON.stringify({
+        object: 'run_archive_materialization_jobs',
+        generatedAt: '2026-05-19T12:05:00.000Z',
+        status: 'terminal',
+        archiveItemId: 'generated-artifact:resp_1:artifact_1',
+        limit: 2,
+        jobs: [
+          {
+            object: 'run_archive_materialization_job',
+            id: 'ramj_test_1',
+            archiveItemId: 'generated-artifact:resp_1:artifact_1',
+            status: 'succeeded',
+            createdAt: '2026-05-19T12:00:00.000Z',
+            updatedAt: '2026-05-19T12:01:00.000Z',
+            startedAt: '2026-05-19T12:00:01.000Z',
+            completedAt: '2026-05-19T12:01:00.000Z',
+            attemptCount: 1,
+            result: null,
+            error: null,
+            message: 'Archive item already has a readable local asset.',
+          },
+        ],
+        metrics: {
+          total: 1,
+          byStatus: { succeeded: 1 },
+          active: 0,
+          terminal: 1,
+        },
+      }));
+    });
+
+    const result = await listApiRunArchiveMaterializationJobsForCli({
+      port: 18095,
+      status: 'terminal',
+      archiveItemId: 'generated-artifact:resp_1:artifact_1',
+      limit: 2,
+    }, fetchImpl as never);
+
+    expect(formatApiRunArchiveMaterializationJobsCliSummary(result)).toContain(
+      'Run archive materialization jobs: 1 job',
+    );
+    expect(formatApiRunArchiveMaterializationJobsCliSummary(result)).toContain(
+      'ramj_test_1 status=succeeded',
+    );
   });
 
   test('requests archive index backfill from the local API', async () => {

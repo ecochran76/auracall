@@ -5710,3 +5710,34 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - wire operator dashboard polling/control affordances for async
     materialization jobs before using the async path as the primary private
     transcript recovery path.
+
+## Turn 197 | 2026-05-19
+
+- Goal: add the backend polling foundation for async archive materialization
+  jobs without touching operator UX files.
+- Change:
+  - added `ArchiveMaterializationJobService.listJobs(...)` with status,
+    archive item id, and limit filters.
+  - added `GET /v1/archive/materializations` for job list polling, while
+    preserving `POST /v1/archive/materializations` and
+    `GET /v1/archive/materializations/{job_id}`.
+  - added CLI parity with `auracall api archive-materialization-jobs`.
+  - added MCP parity with `run_archive_materialization_jobs`.
+  - updated the roadmap, Plan 0066, OpenAI endpoint docs, dev journal, and
+    durable fixes log.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveMaterializationJobService.test.ts tests/cli/apiRunArchiveCommand.test.ts tests/http.responsesServer.test.ts -t "archive materialization" --maxWorkers 1`
+  - `pnpm run build`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - `/status` returned `ok: true` with `runArchiveMaterializationsCreate`,
+    `runArchiveMaterializationsList`, and `runArchiveMaterializationTemplate`.
+  - live `GET /v1/archive/materializations?status=terminal&limit=5` returned
+    `object = "run_archive_materialization_jobs"`, one terminal failed smoke
+    job from the prior missing-id probe, and `active = 0`.
+- Next:
+  - hand the list endpoint to the UX session for dashboard polling/control
+    wiring, or add a backend cancel action if operators need explicit
+    cancellation before UX integration.

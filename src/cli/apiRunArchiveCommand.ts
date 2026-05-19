@@ -37,6 +37,15 @@ export interface ApiRunArchiveMaterializationJobStatusCliOptions {
   id: string;
 }
 
+export interface ApiRunArchiveMaterializationJobListCliOptions {
+  host?: string | null;
+  port?: number | null;
+  timeoutMs?: number | null;
+  status?: string | null;
+  archiveItemId?: string | null;
+  limit?: number | null;
+}
+
 export interface ApiRunArchiveAssetLookupCliOptions {
   host?: string | null;
   port?: number | null;
@@ -182,6 +191,34 @@ export async function readApiRunArchiveMaterializationJobForCli(
     }, fetchImpl);
     if (!response.ok) {
       throw new Error(`AuraCall run archive materialization job returned HTTP ${response.status}.`);
+    }
+    return response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function listApiRunArchiveMaterializationJobsForCli(
+  options: ApiRunArchiveMaterializationJobListCliOptions = {},
+  fetchImpl: typeof fetch = fetch,
+): Promise<unknown> {
+  const host = normalizeHost(options.host);
+  const port = normalizePort(options.port);
+  const timeoutMs = normalizeTimeoutMs(options.timeoutMs);
+  const url = new URL(`http://${host}:${port}/v1/archive/materializations`);
+  appendOptionalSearchParam(url, 'status', options.status);
+  appendOptionalSearchParam(url, 'archiveItemId', options.archiveItemId);
+  if (typeof options.limit === 'number' && Number.isFinite(options.limit)) {
+    url.searchParams.set('limit', String(Math.max(0, Math.trunc(options.limit))));
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchWithLocalApiAuth(url, {
+      signal: controller.signal,
+    }, fetchImpl);
+    if (!response.ok) {
+      throw new Error(`AuraCall run archive materialization jobs returned HTTP ${response.status}.`);
     }
     return response.json();
   } finally {
@@ -351,6 +388,24 @@ export function formatApiRunArchiveMaterializationJobCliSummary(payload: unknown
   if (localPath) lines.push(`Local path: ${localPath}`);
   const errorMessage = readString(error.message);
   if (errorMessage) lines.push(`Error: ${errorMessage}`);
+  return lines.join('\n');
+}
+
+export function formatApiRunArchiveMaterializationJobsCliSummary(payload: unknown): string {
+  const record = isRecord(payload) ? payload : {};
+  const jobs = Array.isArray(record.jobs) ? record.jobs : [];
+  const metrics = isRecord(record.metrics) ? record.metrics : {};
+  const lines = [
+    `Run archive materialization jobs: ${readNumber(metrics.total) ?? jobs.length} job${(readNumber(metrics.total) ?? jobs.length) === 1 ? '' : 's'}`,
+    `Active: ${readNumber(metrics.active) ?? 0}`,
+    `Terminal: ${readNumber(metrics.terminal) ?? 0}`,
+  ];
+  for (const job of jobs.slice(0, 25)) {
+    if (!isRecord(job)) continue;
+    lines.push(
+      `- ${readString(job.id) ?? 'unknown'} status=${readString(job.status) ?? 'unknown'} item=${readString(job.archiveItemId) ?? 'unknown'} updated=${readString(job.updatedAt) ?? 'unknown'}`,
+    );
+  }
   return lines.join('\n');
 }
 

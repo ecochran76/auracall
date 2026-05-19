@@ -98,6 +98,7 @@ import {
 import {
   createArchiveMaterializationJobService,
   type ArchiveMaterializationJobCreateResult,
+  type ArchiveMaterializationJobListResult,
   type ArchiveMaterializationJobService,
 } from '../runtime/archiveMaterializationJobService.js';
 import {
@@ -689,6 +690,7 @@ interface HttpStatusResponse {
     runArchiveItemAssetTemplate: string;
     runArchiveItemMaterializeTemplate: string;
     runArchiveMaterializationsCreate: string;
+    runArchiveMaterializationsList: string;
     runArchiveMaterializationTemplate: string;
     runStatusTemplate: string;
     apiLogTail: string;
@@ -1603,6 +1605,13 @@ export async function createResponsesHttpServer(
           }
           throw error;
         }
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/archive/materializations') {
+        const query = parseRunArchiveMaterializationJobListQuery(url.searchParams);
+        const result: ArchiveMaterializationJobListResult = await archiveMaterializationJobService.listJobs(query);
+        sendJson(res, 200, result);
+        return;
       }
 
       if (req.method === 'GET' && isRunArchiveMaterializationJobRoute(url.pathname)) {
@@ -3160,7 +3169,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   }
   logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
-    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/search, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, POST /v1/archive/materializations, GET /v1/archive/materializations/{job_id}, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, POST /v1/archive/items/{archive_item_id}/materialize, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
+    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/search, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET/POST /v1/archive/materializations, GET /v1/archive/materializations/{job_id}, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, POST /v1/archive/items/{archive_item_id}/materialize, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   if (serverOptions.dashboardUrl) {
@@ -3658,6 +3667,7 @@ function createHttpStatusResponse(input: {
       runArchiveItemAssetTemplate: '/v1/archive/items/{archive_item_id}/asset',
       runArchiveItemMaterializeTemplate: '/v1/archive/items/{archive_item_id}/materialize',
       runArchiveMaterializationsCreate: '/v1/archive/materializations',
+      runArchiveMaterializationsList: '/v1/archive/materializations[?status=queued|running|succeeded|skipped|failed|active|terminal][&archiveItemId={archive_item_id}][&limit=50]',
       runArchiveMaterializationTemplate: '/v1/archive/materializations/{job_id}',
       runStatusTemplate: '/v1/runs/{run_id}/status[?diagnostics=browser-state]',
       apiLogTail: '/v1/api/logs/tail[?maxBytes=32768]',
@@ -5886,6 +5896,20 @@ function parseRunArchiveMaterializationCreateBody(value: unknown) {
     throw new ArchiveMaterializationError('Archive item id is required.');
   }
   return { archiveItemId };
+}
+
+function parseRunArchiveMaterializationJobListQuery(searchParams: URLSearchParams) {
+  const raw: Record<string, unknown> = {};
+  for (const key of ['status', 'archiveItemId', 'limit']) {
+    if (searchParams.has(key)) {
+      raw[key] = searchParams.get(key);
+    }
+  }
+  return z.object({
+    status: z.enum(['queued', 'running', 'succeeded', 'skipped', 'failed', 'active', 'terminal']).optional(),
+    archiveItemId: z.string().trim().min(1).optional(),
+    limit: z.coerce.number().int().min(0).max(500).optional(),
+  }).parse(raw);
 }
 
 function parseDomDriftObservationQuery(searchParams: URLSearchParams): ParsedDomDriftObservationQuery {

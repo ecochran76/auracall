@@ -2616,12 +2616,29 @@ describe('http responses adapter', () => {
       },
     }));
     const readJob = vi.fn(async (id: string) => (id === job.id ? job : null));
+    const listJobs = vi.fn(async (request: { status?: string; archiveItemId?: string; limit?: number }) => ({
+      object: 'run_archive_materialization_jobs' as const,
+      generatedAt: '2026-05-19T12:00:01.000Z',
+      status: request.status ?? null,
+      archiveItemId: request.archiveItemId ?? null,
+      limit: request.limit ?? 50,
+      jobs: [job],
+      metrics: {
+        total: 1,
+        byStatus: {
+          queued: 1,
+        },
+        active: 1,
+        terminal: 0,
+      },
+    }));
     const recoverInterruptedJobs = vi.fn(async () => 0);
     const server = await createResponsesHttpServer(
       { host: '127.0.0.1', port: 0 },
       {
         archiveMaterializationJobService: {
           createJob,
+          listJobs,
           readJob,
           recoverInterruptedJobs,
           runJob: vi.fn(),
@@ -2652,7 +2669,22 @@ describe('http responses adapter', () => {
         object: 'run_archive_materialization_job',
         id: 'ramj_test_1',
       });
+      const listResponse = await fetch(`http://127.0.0.1:${server.port}/v1/archive/materializations?status=active&archiveItemId=generated-artifact%3Aresp_1%3Aartifact_1&limit=10`);
+      expect(listResponse.status).toBe(200);
+      expect(await listResponse.json()).toMatchObject({
+        object: 'run_archive_materialization_jobs',
+        status: 'active',
+        archiveItemId: 'generated-artifact:resp_1:artifact_1',
+        metrics: {
+          active: 1,
+        },
+      });
       expect(createJob).toHaveBeenCalledWith({ archiveItemId: 'generated-artifact:resp_1:artifact_1' });
+      expect(listJobs).toHaveBeenCalledWith({
+        status: 'active',
+        archiveItemId: 'generated-artifact:resp_1:artifact_1',
+        limit: 10,
+      });
       expect(recoverInterruptedJobs).toHaveBeenCalled();
     } finally {
       await server.close();

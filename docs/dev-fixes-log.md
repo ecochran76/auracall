@@ -16379,3 +16379,10 @@ browser-stage lifecycle observability, not transcript truncation.
   active-job de-duplication per archive item, serialized in-process execution,
   terminal provider/auth error recording, and startup recovery that marks
   interrupted queued/running jobs failed instead of leaving stale active jobs.
+
+- 2026-05-19: Async materialization clients need a backend list/polling
+  contract, not only create/read-by-id. `GET /v1/archive/materializations`
+  now lists persisted jobs by status, archive item id, and limit, with CLI
+  `auracall api archive-materialization-jobs` and MCP
+  `run_archive_materialization_jobs` parity so operator surfaces can recover
+  recent job state without retaining a transient create response.

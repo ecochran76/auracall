@@ -41,8 +41,30 @@ export interface ArchiveMaterializationJobCreateResult {
   job: ArchiveMaterializationJob;
 }
 
+export interface ArchiveMaterializationJobListRequest {
+  status?: ArchiveMaterializationJobStatus | 'active' | 'terminal' | null;
+  archiveItemId?: string | null;
+  limit?: number | null;
+}
+
+export interface ArchiveMaterializationJobListResult {
+  object: 'run_archive_materialization_jobs';
+  generatedAt: string;
+  status: ArchiveMaterializationJobListRequest['status'] | null;
+  archiveItemId: string | null;
+  limit: number;
+  jobs: ArchiveMaterializationJob[];
+  metrics: {
+    total: number;
+    byStatus: Record<string, number>;
+    active: number;
+    terminal: number;
+  };
+}
+
 export interface ArchiveMaterializationJobService {
   createJob(request: { archiveItemId: string }): Promise<ArchiveMaterializationJobCreateResult>;
+  listJobs(request?: ArchiveMaterializationJobListRequest): Promise<ArchiveMaterializationJobListResult>;
   readJob(id: string): Promise<ArchiveMaterializationJob | null>;
   runJob(id: string): Promise<ArchiveMaterializationJob>;
   recoverInterruptedJobs(): Promise<number>;
@@ -120,6 +142,27 @@ export function createArchiveMaterializationJobService(
         generatedAt,
         reused: false,
         job,
+      };
+    },
+
+    async listJobs(request = {}) {
+      const status = request.status ?? null;
+      const archiveItemId = normalizeOptionalString(request.archiveItemId);
+      const limit = normalizeListLimit(request.limit);
+      const allJobs = await store.listJobs();
+      const filtered = allJobs.filter((job) =>
+        matchesStatusFilter(job, status)
+        && (!archiveItemId || job.archiveItemId === archiveItemId)
+      );
+      const jobs = filtered.slice(0, limit);
+      return {
+        object: 'run_archive_materialization_jobs',
+        generatedAt: now().toISOString(),
+        status,
+        archiveItemId,
+        limit,
+        jobs,
+        metrics: summarizeJobs(filtered),
       };
     },
 
@@ -237,6 +280,48 @@ async function findActiveJobForArchiveItem(
 
 function isActiveStatus(status: ArchiveMaterializationJobStatus): boolean {
   return status === 'queued' || status === 'running';
+}
+
+function matchesStatusFilter(
+  job: ArchiveMaterializationJob,
+  status: ArchiveMaterializationJobListRequest['status'] | null,
+): boolean {
+  if (!status) return true;
+  if (status === 'active') return isActiveStatus(job.status);
+  if (status === 'terminal') return !isActiveStatus(job.status);
+  return job.status === status;
+}
+
+function normalizeOptionalString(value: string | null | undefined): string | null {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  return normalized || null;
+}
+
+function normalizeListLimit(value: number | null | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return 50;
+  }
+  return Math.max(0, Math.min(500, Math.trunc(value)));
+}
+
+function summarizeJobs(jobs: ArchiveMaterializationJob[]): ArchiveMaterializationJobListResult['metrics'] {
+  const byStatus: Record<string, number> = {};
+  let active = 0;
+  let terminal = 0;
+  for (const job of jobs) {
+    byStatus[job.status] = (byStatus[job.status] ?? 0) + 1;
+    if (isActiveStatus(job.status)) {
+      active += 1;
+    } else {
+      terminal += 1;
+    }
+  }
+  return {
+    total: jobs.length,
+    byStatus,
+    active,
+    terminal,
+  };
 }
 
 async function readJobStoreFile(filePath: string): Promise<ArchiveMaterializationJob[]> {
