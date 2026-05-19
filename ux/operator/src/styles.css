@@ -1592,28 +1592,35 @@ select:focus-visible {
 }
 
 .search-row-actions {
-  gap: 2px;
+  justify-content: flex-end;
+  gap: 1px;
+  padding-inline: 4px !important;
 }
 
 .row-action-button {
-  width: 21px;
-  height: 22px;
+  width: 18px;
+  height: 20px;
   display: inline-grid;
   place-items: center;
   flex: 0 0 auto;
-  border: 1px solid #2e3948;
-  border-radius: 6px;
-  background: #121822;
-  color: #aebbd0;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: #93a1b4;
   cursor: pointer;
   text-decoration: none;
 }
 
 .row-action-button:hover,
 .row-action-button:focus-visible {
-  border-color: #5bc29f;
-  background: #162620;
+  border-color: #344256;
+  background: #18202b;
   color: #f5fffb;
+}
+
+.row-action-button:focus-visible {
+  outline: 1px solid #5bc29f;
+  outline-offset: 1px;
 }
 
 .archive-compat-panel {

@@ -74,7 +74,7 @@ const SEARCH_TABLE_COLUMNS = [
   { id: "tenant", label: "Tenant", width: 190, minWidth: 148, sortable: true, pinned: true },
   { id: "project", label: "Project", width: 160, minWidth: 120, sortable: true },
   { id: "title", label: "Title", width: 480, minWidth: 240, sortable: true },
-  { id: "actions", label: "Actions", width: 102, minWidth: 92, sortable: false },
+  { id: "actions", label: "Actions", width: 82, minWidth: 72, sortable: false },
   { id: "kind", label: "Kind", width: 104, minWidth: 88, sortable: true },
   { id: "status", label: "Status", width: 112, minWidth: 92, sortable: true },
   { id: "files", label: "Files", width: 96, minWidth: 80, sortable: true },

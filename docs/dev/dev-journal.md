@@ -30922,3 +30922,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `agent-browser` loaded Search, selected a result row, confirmed the URL
     gained a `row=` handoff parameter, confirmed the Routes section showed
     four links, and confirmed the Raw JSON section existed but was collapsed.
+
+## Turn 195 | 2026-05-19
+
+- Goal: continue Search density work by reducing row action chrome while
+  preserving keyboard and screen-reader affordances.
+- Change:
+  - reduced the default Search actions column from 102px to 82px.
+  - changed row action controls from bordered mini-buttons to a compact
+    icon rail with transparent default chrome.
+  - kept action titles and accessible labels for inspect, handoff copy,
+    provider open, and asset download actions.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check` passed.
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - first `curl` during restart failed to connect while the service was down;
+    retry after activation returned `HTTP/1.1 200 OK`.
+  - `agent-browser` loaded Search and confirmed the first row action rail is
+    82px wide, uses 18px by 20px icon controls, and exposes labels/titles for
+    Inspect and Copy handoff link.
