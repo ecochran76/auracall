@@ -920,6 +920,68 @@ export function createConfiguredStoredStepExecutor(
         details: buildBrowserRuntimeEvidenceDetails(runtime),
       });
     };
+    const startBrowserResponseFinalizationHeartbeat = (
+      result: Pick<BrowserRunResult, 'chromeHost' | 'chromePort' | 'chromeTargetId' | 'tabUrl' | 'conversationId'>,
+      evidenceRef: string,
+    ): (() => Promise<void>) => {
+      let stopped = false;
+      let inFlight: Promise<void> = Promise.resolve();
+      const emit = async (): Promise<void> => {
+        if (stopped) return;
+        const observedAt = new Date().toISOString();
+        recordLiveRuntimeRunServiceState({
+          ...liveBrowserServiceStateKey,
+          service,
+          state: 'response-complete',
+          source: 'browser-service',
+          evidenceRef,
+          confidence: 'medium',
+          observedAt,
+        });
+        await heartbeatRuntimeEvidence({
+          observedAt,
+          state: 'response-complete',
+          source: 'browser-service',
+          evidenceRef,
+          confidence: 'medium',
+          details: buildBrowserRuntimeEvidenceDetails(result),
+        });
+      };
+      const schedule = (): Promise<void> => {
+        inFlight = inFlight
+          .catch(() => undefined)
+          .then(emit)
+          .catch((error) => {
+            const message = error instanceof Error ? error.message : String(error);
+            deps.logger?.(`failed to persist browser response finalization heartbeat: ${message}`);
+          });
+        return inFlight;
+      };
+      const timer = setInterval(() => {
+        void schedule();
+      }, 5_000);
+      if (typeof timer.unref === 'function') {
+        timer.unref();
+      }
+      void schedule();
+      return async () => {
+        stopped = true;
+        clearInterval(timer);
+        await inFlight.catch(() => undefined);
+      };
+    };
+    const withBrowserResponseFinalizationHeartbeat = async <T>(
+      result: Pick<BrowserRunResult, 'chromeHost' | 'chromePort' | 'chromeTargetId' | 'tabUrl' | 'conversationId'>,
+      evidenceRef: string,
+      action: () => Promise<T>,
+    ): Promise<T> => {
+      const stop = startBrowserResponseFinalizationHeartbeat(result, evidenceRef);
+      try {
+        return await action();
+      } finally {
+        await stop();
+      }
+    };
 
     const browserRunOptions: BrowserRunOptions = {
       prompt: promptTransport.prompt,
@@ -1157,7 +1219,11 @@ export function createConfiguredStoredStepExecutor(
     };
     if (shouldMaterializeBrowserResponseArtifacts(structuredMetadata)) {
       try {
-        const materialized = await materializeBrowserResult(browserResult);
+        const materialized = await withBrowserResponseFinalizationHeartbeat(
+          browserResult,
+          'browser-response-artifact-finalizing',
+          () => materializeBrowserResult(browserResult),
+        );
         responseArtifacts = materialized.artifacts;
         responseArtifactNotes = materialized.notes;
       } catch (error) {
@@ -1202,7 +1268,11 @@ export function createConfiguredStoredStepExecutor(
           },
         });
         try {
-          const materialized = await materializeBrowserResult(browserResult);
+          const materialized = await withBrowserResponseFinalizationHeartbeat(
+            browserResult,
+            'browser-response-artifact-finalizing',
+            () => materializeBrowserResult(browserResult),
+          );
           responseArtifacts = materialized.artifacts;
           responseArtifactNotes = [
             ...responseArtifactNotes,

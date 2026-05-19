@@ -1605,6 +1605,7 @@ describe('configured stored-step executor', () => {
       ],
       notes: ['browser response artifact materialization: discovered=1 materialized=1'],
     }));
+    const runtimeEvidenceHeartbeat = vi.fn(async () => undefined);
 
     const executeStoredRunStep = createConfiguredStoredStepExecutor(
       {
@@ -1673,6 +1674,9 @@ describe('configured stored-step executor', () => {
           notes: [],
         },
       } as never,
+      runtimeEvidence: {
+        heartbeat: runtimeEvidenceHeartbeat,
+      },
     });
 
     expect(browserResponseArtifactMaterializer).toHaveBeenCalledWith(
@@ -1729,6 +1733,25 @@ describe('configured stored-step executor', () => {
         },
       ],
     });
+    expect(runtimeEvidenceHeartbeat).toHaveBeenCalledWith(
+      expect.objectContaining({
+        state: 'response-complete',
+        source: 'browser-service',
+        evidenceRef: 'browser-response-artifact-finalizing',
+        confidence: 'medium',
+        details: expect.objectContaining({
+          service: 'chatgpt',
+          runtimeProfileId: 'registry-chatgpt-profile',
+          browserProfileId: 'default',
+          agentId: 'registry-pro-researcher',
+          chromePort: 45011,
+          chromeHost: '127.0.0.1',
+          chromeTargetId: 'target-artifact',
+          tabUrl: 'https://chatgpt.com/g/proj_registry/c/mock-registry-artifact',
+          conversationId: 'mock-registry-artifact',
+        }),
+      }),
+    );
   });
 
   it('fails declared browser response artifact runs when only status text is returned', async () => {

@@ -16363,3 +16363,11 @@ browser-stage lifecycle observability, not transcript truncation.
   hourly/daily chat-start usage and response-batch browser-interaction counts
   now dedupe repeated `step-started` events for the same response step, while
   still counting separate response steps independently.
+
+- 2026-05-19: Browser-backed response leases must remain unique across service
+  restarts, and artifact finalization must keep emitting runtime evidence after
+  the provider has reached `response-complete`. The service host now allocates
+  a new lease id against the stored run's existing leases instead of trusting a
+  reset in-memory sequence, and generated-artifact materialization sends
+  `browser-response-artifact-finalizing` heartbeats so long downloads do not
+  look like evidence-free hangs.

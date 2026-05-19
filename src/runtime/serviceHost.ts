@@ -75,6 +75,24 @@ function shouldRequireOperatorApprovalForLocalAction(context: ExecuteLocalAction
   );
 }
 
+function sanitizeLeaseOwnerFragment(ownerId: string): string {
+  return ownerId.replace(/[^a-z0-9:_-]+/gi, '-');
+}
+
+function nextUniqueExecutionLeaseId(input: {
+  runId: string;
+  ownerId: string;
+  existingLeaseIds: Set<string>;
+  nextSequence: () => number;
+}): string {
+  const ownerFragment = sanitizeLeaseOwnerFragment(input.ownerId);
+  let leaseId: string;
+  do {
+    leaseId = `${input.runId}:lease:${ownerFragment}:${input.nextSequence()}`;
+  } while (input.existingLeaseIds.has(leaseId));
+  return leaseId;
+}
+
 export interface DrainStoredExecutionRunsOnceOptions {
   runId?: string;
   sourceKind?: ExecutionRunSourceKind;
@@ -2016,7 +2034,12 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         executedCount += 1;
         const assignedLeaseId = existingLocalLeaseId
           ? undefined
-          : `${currentRecord.runId}:lease:${executionOwnerId.replace(/[^a-z0-9:_-]+/gi, '-')}:${++leaseSequence}`;
+          : nextUniqueExecutionLeaseId({
+              runId: currentRecord.runId,
+              ownerId: executionOwnerId,
+              existingLeaseIds: new Set(currentRecord.bundle.leases.map((lease) => lease.id)),
+              nextSequence: () => ++leaseSequence,
+            });
         const executeCurrentRun = async (): Promise<ExecutionRunStoredRecord> => {
           if (runnerId) {
             await runnersControl.recordRunnerActivity({

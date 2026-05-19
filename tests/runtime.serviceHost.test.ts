@@ -1062,6 +1062,95 @@ describe('runtime service host', () => {
     ).toBe(true);
   });
 
+  it('does not reuse prior run lease ids after service host restart', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    const runId = 'run_host_restarted_lease_unique';
+    const priorLeaseId = `${runId}:lease:runner:restart-local:1`;
+    const bundle = createBrowserDirectBundle(runId, '2026-04-08T15:00:00.000Z');
+    bundle.leases = [
+      {
+        id: priorLeaseId,
+        runId,
+        ownerId: 'runner:restart-local',
+        status: 'expired',
+        acquiredAt: '2026-04-08T15:00:10.000Z',
+        heartbeatAt: '2026-04-08T15:00:12.000Z',
+        expiresAt: '2026-04-08T15:00:27.000Z',
+        releasedAt: '2026-04-08T15:00:40.000Z',
+        releaseReason: 'lease expired',
+      },
+    ];
+    await control.createRun(bundle);
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:restart-local',
+        hostId: 'host:http-responses:127.0.0.1:18095',
+        startedAt: '2026-04-08T15:00:50.000Z',
+        lastHeartbeatAt: '2026-04-08T15:01:00.000Z',
+        expiresAt: '2026-04-08T15:05:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const host = createExecutionServiceHost({
+      control,
+      runnersControl,
+      ownerId: 'host:test',
+      runnerId: 'runner:restart-local',
+      now: () => '2026-04-08T15:01:05.000Z',
+      leaseHeartbeatTtlMs: 15_000,
+      executeStoredRunStep: async (context) => {
+        await context.runtimeEvidence?.heartbeat({
+          observedAt: '2026-04-08T15:01:06.000Z',
+          state: 'thinking',
+          source: 'browser-service',
+          evidenceRef: 'chatgpt-passive-dom-probe',
+          confidence: 'low',
+          details: {
+            service: 'chatgpt',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            agentId: 'api-responses',
+            chromeTargetId: 'target-restarted-lease',
+            tabUrl: 'https://chatgpt.com/c/restarted-lease',
+            conversationId: 'restarted-lease',
+          },
+        });
+        return {
+          output: {
+            summary: 'recovered browser step completed',
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        };
+      },
+    });
+
+    const result = await host.drainRunsOnce({ runId });
+
+    expect(result.executedRunIds).toEqual([runId]);
+    const stored = await control.readRun(runId);
+    const leaseIds = stored?.bundle.leases.map((lease) => lease.id) ?? [];
+    const recoveredLeaseId = `${runId}:lease:runner:restart-local:2`;
+    expect(leaseIds).toContain(priorLeaseId);
+    expect(leaseIds).toContain(recoveredLeaseId);
+    expect(new Set(leaseIds).size).toBe(leaseIds.length);
+    expect(
+      stored?.bundle.events.some((event) =>
+        event.leaseId === recoveredLeaseId &&
+        event.note === 'lease heartbeat from runner:restart-local' &&
+        event.payload?.runtimeEvidence,
+      ),
+    ).toBe(true);
+  });
+
   it('refuses to claim runnable work when the configured runner owner is unavailable', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
     cleanup.push(homeDir);

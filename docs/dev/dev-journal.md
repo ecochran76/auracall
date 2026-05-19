@@ -30816,3 +30816,39 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `HTTP/1.1 200 OK`.
   - `agent-browser` loaded Search and confirmed action cells now read like
     `Inspect result Copy handoff link` rather than echoing prompt-sized titles.
+
+## Turn 191 | 2026-05-19
+
+- Goal: tighten browser-backed response recovery so restarted service hosts do
+  not reuse lease ids and artifact finalization remains backed by runtime
+  evidence.
+- Change:
+  - added unique lease-id allocation against the stored run's existing leases,
+    so a service restart with a reset in-memory sequence cannot create a new
+    lease id that collides with an expired lease.
+  - added browser response artifact finalization heartbeats while generated
+    artifacts are being materialized after `response-complete` provider
+    evidence.
+  - covered both paths with focused runtime regression tests.
+- Verification:
+  - transcribe-audio final retry batch
+    `batch_47814beb6daf4478aebfcc0e32130f84` completed and materialized the
+    remaining first-pass readout after the unique lease-id fix.
+  - the live retry also exposed the finalization window: provider evidence was
+    `response-complete`, then artifact materialization succeeded after the
+    lease had expired. The finalization heartbeat patch covers that window for
+    subsequent runs.
+  - `pnpm vitest run tests/runtime.configuredExecutor.test.ts
+    tests/runtime.serviceHost.test.ts
+    tests/runtime.responseBatchService.test.ts
+    tests/runtime.tenantExecutionLimits.test.ts --maxWorkers 1` passed.
+  - `pnpm run build` passed.
+  - `git diff --check` passed.
+  - `pnpm run install:user-runtime-service` installed the runtime and API
+    service.
+  - installed runtime files contain `nextUniqueExecutionLeaseId` and
+    `browser-response-artifact-finalizing`.
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - installed `/status?tenantExecutionLimits=usage` returned `ok=true`,
+    `activeChats=0`, `tenantCount=4`, `chatsLastHour=6`, and
+    `chatsLastDay=24`.
