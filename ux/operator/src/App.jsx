@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
+  ArrowUpDown,
   Bot,
   ChevronDown,
   Check,
@@ -2192,6 +2193,12 @@ function ArchiveSearchViewport({
     return columnClassName(column, index, baseClassName);
   }
 
+  function sortButtonLabel(column) {
+    if (!column.sortable) return column.label;
+    if (tablePrefs.sort.column !== column.id) return `Sort by ${column.label}`;
+    return `Sort by ${column.label}, currently ${tablePrefs.sort.direction === "desc" ? "descending" : "ascending"}`;
+  }
+
   function renderSearchRowCell(row, column) {
     if (column.id === "sortTime") return formatDateTime(row.sortTime);
     if (column.id === "provider") return <ProviderIcon provider={row.provider} />;
@@ -2494,13 +2501,24 @@ function ArchiveSearchViewport({
               <button
                 key={column.id}
                 type="button"
-                className={columnClassName(column, index, tablePrefs.sort.column === column.id ? "search-th active" : "search-th")}
+                className={columnClassName(column, index, [
+                  "search-th",
+                  column.sortable ? "is-sortable" : "",
+                  tablePrefs.sort.column === column.id ? `active sort-${tablePrefs.sort.direction}` : "",
+                ].filter(Boolean).join(" "))}
                 onClick={() => setSort(column.id)}
-                title={column.sortable ? `Sort by ${column.label}` : column.label}
+                title={sortButtonLabel(column)}
+                aria-label={sortButtonLabel(column)}
               >
                 <span>{column.label}</span>
-                {column.sortable && tablePrefs.sort.column === column.id ? (
-                  tablePrefs.sort.direction === "desc" ? <ArrowDown size={12} aria-hidden="true" /> : <ArrowUp size={12} aria-hidden="true" />
+                {column.sortable ? (
+                  <span className="sort-indicator" aria-hidden="true">
+                    {tablePrefs.sort.column === column.id
+                      ? tablePrefs.sort.direction === "desc"
+                        ? <ArrowDown size={12} />
+                        : <ArrowUp size={12} />
+                      : <ArrowUpDown size={11} />}
+                  </span>
                 ) : null}
                 <i
                   aria-hidden="true"
@@ -2525,6 +2543,7 @@ function ArchiveSearchViewport({
                   style={{ gridTemplateColumns: gridTemplateColumns() }}
                   aria-rowindex={virtualWindow.startIndex + offset + 1}
                   aria-selected={selected}
+                  aria-current={selected ? "true" : undefined}
                   onClick={() => openRow(row)}
                 >
                   {visibleColumns.map((column, index) => (

@@ -30875,3 +30875,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `80 loaded / ALL`, Clear is hidden, provider chips report
     `aria-pressed=false`, and selecting ChatGPT changes the summary to
     `1 ACTIVE`, shows Clear, and sets `aria-pressed=true`.
+
+## Turn 193 | 2026-05-19
+
+- Goal: improve the Search table header and selected-row affordances without
+  adding bulk.
+- Change:
+  - added inactive and active sort indicators to sortable Search headers.
+  - added descriptive sort button labels such as
+    `Sort by Time, currently descending`.
+  - made header resize rails visible on column separators, with stronger hover
+    contrast.
+  - strengthened selected-row styling and marked the selected row with
+    `aria-current=true`.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check` passed.
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - initial `curl` during restart reset the connection; retry after service
+    activation returned `HTTP/1.1 200 OK`.
+  - `agent-browser` loaded Search and confirmed `Sort by Time, currently
+    descending`, seven sortable indicators, eight resize rails, and exactly one
+    selected row with `aria-selected=true` and `aria-current=true` after row
+    selection.

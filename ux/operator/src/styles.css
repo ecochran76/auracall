@@ -1402,8 +1402,34 @@ select:focus-visible {
   text-transform: uppercase;
 }
 
+.search-th.is-sortable {
+  padding-right: 18px;
+}
+
+.search-th:hover,
+.search-th:focus-visible {
+  background: #151d28;
+  color: #d8e4f4;
+  outline: 0;
+}
+
 .search-th.active {
+  background: #162132;
   color: #e9f1fa;
+}
+
+.sort-indicator {
+  position: absolute;
+  right: 6px;
+  width: 12px;
+  height: 12px;
+  display: inline-grid;
+  place-items: center;
+  color: #5f7086;
+}
+
+.search-th.active .sort-indicator {
+  color: #8fd8ff;
 }
 
 .search-th.is-pinned,
@@ -1415,6 +1441,15 @@ select:focus-visible {
 .search-th.is-pinned {
   z-index: 6;
   background: #10161e;
+}
+
+.search-th.is-pinned:hover,
+.search-th.is-pinned:focus-visible {
+  background: #151d28;
+}
+
+.search-th.is-pinned.active {
+  background: #162132;
 }
 
 .search-row > .is-pinned {
@@ -1446,10 +1481,28 @@ select:focus-visible {
 .search-th i {
   position: absolute;
   top: 0;
-  right: -4px;
-  width: 8px;
+  right: -3px;
+  width: 7px;
   height: 100%;
   cursor: col-resize;
+}
+
+.search-th i::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 3px;
+  width: 1px;
+  height: calc(100% - 12px);
+  border-radius: 1px;
+  background: #3a4555;
+  opacity: 0.65;
+}
+
+.search-th:hover i::after,
+.search-th:focus-visible i::after {
+  background: #6c819b;
+  opacity: 1;
 }
 
 .search-table-body {
@@ -1478,8 +1531,15 @@ select:focus-visible {
 }
 
 .search-row.is-selected {
-  background: #132520;
-  box-shadow: inset 3px 0 0 #5bc29f;
+  background: #142820;
+  box-shadow:
+    inset 3px 0 0 #5bc29f,
+    inset 0 0 0 1px rgba(91, 194, 159, 0.16);
+  color: #f3fff9;
+}
+
+.search-row.is-selected > span {
+  color: #f3fff9;
 }
 
 .search-row > span {
