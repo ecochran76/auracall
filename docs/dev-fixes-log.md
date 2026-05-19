@@ -16336,3 +16336,18 @@ browser-stage lifecycle observability, not transcript truncation.
   conversation routes, while conversation output selectors remain required on
   conversation pages. This keeps ChatGPT app-identity verification from failing
   just because the current conversation has no typed prompt ready to send.
+
+- 2026-05-19: ChatGPT project creation must tolerate first-project account
+  layouts where the sidebar exposes a `Projects` row but no separate
+  `New project` button. The adapter now treats `Projects` as a valid sidebar
+  readiness marker and falls back to pressing or revealing its create action
+  before declaring project creation unavailable.
+
+- 2026-05-19: Dispatch-pool team routing can assign one batch across multiple
+  ChatGPT Pro tenants, but selector parity still belongs to each member
+  runtime. The `transcribe-audio-chatgpt-pro-pool` dogfood routed one child to
+  each Pro transcript agent; `wsl-chrome-2` and `wsl-chrome-3` completed, while
+  `wsl-chrome-4` exposed `Pro / Standard` without the `Extended` thinking
+  control and failed before submit. Do not treat a mixed-account
+  `chatgpt:pro-extended` pool as equivalent until each member proves the same
+  model/thinking selector surface.

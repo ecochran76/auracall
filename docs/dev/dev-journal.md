@@ -30631,3 +30631,40 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     Biome config.
   - `src/browser/providers/chatgptAdapter.ts` was already dirty from another
     lane and was left untouched.
+
+## Turn 185 | 2026-05-19
+
+- Goal: dogfood the dispatch-pool team type for transcribe-audio with one
+  project-bound ChatGPT Pro agent on each Pro AuraCall runtime profile.
+- Change:
+  - created registry team `transcribe-audio-chatgpt-pro-pool` with
+    `next_available` dispatch and `projectSync=none`.
+  - bound member agents to the ChatGPT `Transcripts` project on
+    `wsl-chrome-2`, `wsl-chrome-3`, and `wsl-chrome-4`.
+  - issued the transcribe-audio scoped key for that team and all three runtime
+    profiles.
+  - hardened ChatGPT project creation so accounts with only a visible
+    `Projects` row, and no separate `New project` button, can still open the
+    create-project dialog.
+- Verification:
+  - targeted Vitest coverage passed:
+    `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/projects.tenantPoolTeamEnsureService.test.ts tests/runtime.responseBatchService.test.ts -t "create-project|tenant-pool|dispatch-pool|active runtime evidence" --maxWorkers 1`.
+  - `pnpm run install:user-runtime` rebuilt and installed the local runtime.
+  - `systemctl --user restart auracall-api.service` restarted the installed
+    API; the service is active.
+  - `/v1/config/api-keys/diagnose` shows the transcribe key expands to the
+    three transcript agents with no missing agents, teams, services, or
+    runtime profiles.
+  - transcribe-audio submitted batch
+    `batch_4f25217d09324207a48607164dcb5451`; dispatch assigned its three
+    children to `wsl-chrome-2`, `wsl-chrome-3`, and `wsl-chrome-4`.
+  - `wsl-chrome-2` and `wsl-chrome-3` completed with passive
+    `response-complete` evidence and materialized valid readouts.
+  - `wsl-chrome-4` failed before submit because ChatGPT selected
+    `Pro / Standard` and did not expose the expected `Extended` thinking-time
+    control.
+- Note:
+  - the team routing and project binding are proven, but the three-agent
+    `chatgpt:pro-extended` pool is not yet behaviorally equivalent until the
+    `wsl-chrome-4` model/thinking-control mismatch is fixed or the pool uses a
+    selector all three accounts expose consistently.

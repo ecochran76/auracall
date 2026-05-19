@@ -29,6 +29,7 @@ import {
   closeDialog,
   DEFAULT_DIALOG_SELECTORS,
   dismissOverlayRoot,
+  hoverAndReveal,
   hoverElement,
   openAndSelectRevealedRowMenuItem,
   type PressButtonOptions,
@@ -150,6 +151,7 @@ const CHATGPT_PROJECT_DELETE_BUTTON_LABEL = normalizeUiText(
 const CHATGPT_NEW_PROJECT_LABEL = normalizeUiText(
   resolveBundledServiceUiLabel('chatgpt', 'new_project', 'new project'),
 ).toLowerCase();
+const CHATGPT_PROJECTS_LABEL = 'projects';
 const CHATGPT_OPEN_SIDEBAR_LABEL = normalizeUiText(
   resolveBundledServiceUiLabel('chatgpt', 'open_sidebar', 'open sidebar'),
 ).toLowerCase();
@@ -3545,7 +3547,10 @@ async function ensureChatgptSidebarOpen(client: ChromeClient): Promise<void> {
         ...Array.from(document.querySelectorAll('button,a,[role="button"]'))
           .map((node) => String(node.getAttribute('aria-label') || node.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase()),
       ];
-      return sidebarMarkers.includes(${JSON.stringify(CHATGPT_NEW_PROJECT_LABEL)}) ? { ok: true } : null;
+      return (
+        sidebarMarkers.includes(${JSON.stringify(CHATGPT_NEW_PROJECT_LABEL)}) ||
+        sidebarMarkers.includes(${JSON.stringify(CHATGPT_PROJECTS_LABEL)})
+      ) ? { ok: true } : null;
     })()`,
     { timeoutMs: 800 },
   );
@@ -3561,7 +3566,10 @@ async function ensureChatgptSidebarOpen(client: ChromeClient): Promise<void> {
   await waitForPredicate(
     client.Runtime,
     `(() => Array.from(document.querySelectorAll('button,a,[role="button"]'))
-      .some((node) => String(node.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase() === ${JSON.stringify(CHATGPT_NEW_PROJECT_LABEL)}) || null)()`,
+      .some((node) => {
+        const label = String(node.textContent || node.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+        return label === ${JSON.stringify(CHATGPT_NEW_PROJECT_LABEL)} || label === ${JSON.stringify(CHATGPT_PROJECTS_LABEL)};
+      }) || null)()`,
     { timeoutMs: 3000 },
   );
 }
@@ -4115,7 +4123,10 @@ async function openCreateProjectModalWithClient(client: ChromeClient): Promise<v
         timeoutMs: 3000,
       });
       if (!pressed.ok) {
-        throw new Error(pressed.reason || 'New project button not found');
+        const openedFromProjects = await openCreateProjectModalFromProjectsRow(client);
+        if (!openedFromProjects) {
+          throw new Error(pressed.reason || 'New project button not found');
+        }
       }
       const ready = await waitForCreateProjectDialogReady(client, 6000);
       if (!ready) {
@@ -4127,6 +4138,70 @@ async function openCreateProjectModalWithClient(client: ChromeClient): Promise<v
       candidateSelectors: ['button', '[role="button"]', 'dialog', '[role="dialog"]'],
     },
   );
+}
+
+async function openCreateProjectModalFromProjectsRow(client: ChromeClient): Promise<boolean> {
+  const rootSelectors = ['nav', 'aside', '#stage-slideover-sidebar'];
+  const direct = await pressButton(client.Runtime, {
+    match: { exact: [CHATGPT_PROJECTS_LABEL] },
+    rootSelectors,
+    requireVisible: true,
+    timeoutMs: 2000,
+  });
+  if (direct.ok && await waitForCreateProjectDialogReady(client, 2000)) {
+    return true;
+  }
+
+  const tagged = await client.Runtime.evaluate({
+    expression: `(() => {
+      const rootSelectors = ${JSON.stringify(rootSelectors)};
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const roots = rootSelectors.map((selector) => document.querySelector(selector)).filter(Boolean);
+      const root = roots[0] || document;
+      const nodes = Array.from(root.querySelectorAll('button,a,[role="button"],li,div'));
+      const row = nodes.find((node) => normalize(node.textContent || node.getAttribute('aria-label') || '') === ${JSON.stringify(CHATGPT_PROJECTS_LABEL)});
+      if (!(row instanceof HTMLElement)) {
+        return { ok: false, reason: 'Projects row not found' };
+      }
+      row.setAttribute('data-auracall-chatgpt-projects-row', 'true');
+      return { ok: true };
+    })()`,
+    returnByValue: true,
+  });
+  const tagInfo = tagged.result?.value as { ok?: boolean; reason?: string } | undefined;
+  if (!tagInfo?.ok) {
+    return false;
+  }
+
+  await hoverAndReveal(client.Runtime, client.Input, {
+    rowSelector: '[data-auracall-chatgpt-projects-row="true"]',
+    rootSelectors,
+    timeoutMs: 1500,
+  }).catch(() => undefined);
+
+  const revealed = await client.Runtime.evaluate({
+    expression: `(() => {
+      const row = document.querySelector('[data-auracall-chatgpt-projects-row="true"]');
+      if (!row) return { ok: false, reason: 'Projects row missing' };
+      const button = Array.from(row.querySelectorAll('button,[role="button"],a'))
+        .find((node) => node !== row);
+      if (!(button instanceof HTMLElement)) {
+        return { ok: false, reason: 'Projects row action not found' };
+      }
+      button.setAttribute('data-auracall-chatgpt-projects-action', 'true');
+      return { ok: true };
+    })()`,
+    returnByValue: true,
+  });
+  const revealedInfo = revealed.result?.value as { ok?: boolean; reason?: string } | undefined;
+  if (!revealedInfo?.ok) {
+    return false;
+  }
+  const clicked = await pressButton(client.Runtime, {
+    selector: '[data-auracall-chatgpt-projects-action="true"]',
+    timeoutMs: 2000,
+  });
+  return clicked.ok && await waitForCreateProjectDialogReady(client, 3000);
 }
 
 async function waitForCreateProjectDialogReady(client: ChromeClient, timeoutMs: number): Promise<boolean> {
