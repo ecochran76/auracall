@@ -16386,3 +16386,11 @@ browser-stage lifecycle observability, not transcript truncation.
   `auracall api archive-materialization-jobs` and MCP
   `run_archive_materialization_jobs` parity so operator surfaces can recover
   recent job state without retaining a transient create response.
+
+- 2026-05-19: Archive materialization cancellation must not imply that running
+  browser/provider work can be stopped when the materializer has no abort
+  signal. `POST /v1/archive/materializations/{job_id}` with
+  `{"action":"cancel"}` now moves queued jobs to terminal `cancelled`; running
+  or already terminal jobs return a conflict. CLI parity is
+  `auracall api archive-materialization-cancel`, and MCP parity is
+  `run_archive_materialization_cancel`.

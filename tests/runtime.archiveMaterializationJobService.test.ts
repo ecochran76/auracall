@@ -123,6 +123,77 @@ describe('archive materialization job service', () => {
     expect(byItem.jobs[0]?.id).toBe('ramj_list_1');
   });
 
+  it('cancels queued jobs before provider work starts', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialize-cancel-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const materializeItem = vi.fn(async () => {
+      throw new Error('provider should not be called');
+    });
+    const service = createArchiveMaterializationJobService({
+      materializationService: { materializeItem },
+      generateId: () => 'ramj_cancel_1',
+      now: sequenceNow([
+        '2026-05-19T12:20:00.000Z',
+        '2026-05-19T12:20:01.000Z',
+        '2026-05-19T12:20:02.000Z',
+      ]),
+      schedule: () => {},
+    });
+    await service.createJob({ archiveItemId: 'generated-artifact:resp_1:artifact_1' });
+
+    const cancelled = await service.cancelJob('ramj_cancel_1');
+    const rerun = await service.runJob('ramj_cancel_1');
+    const listed = await service.listJobs({ status: 'cancelled' });
+
+    expect(cancelled).toMatchObject({
+      status: 'cancelled',
+      completedAt: '2026-05-19T12:20:01.000Z',
+      message: 'Archive materialization job cancelled before provider work started.',
+    });
+    expect(rerun.status).toBe('cancelled');
+    expect(listed.metrics).toMatchObject({ total: 1, active: 0, terminal: 1 });
+    expect(materializeItem).not.toHaveBeenCalled();
+  });
+
+  it('rejects cancellation after provider work starts', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialize-cancel-running-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    let releaseMaterializer!: () => void;
+    const service = createArchiveMaterializationJobService({
+      materializationService: {
+        materializeItem: async (request) => {
+          await new Promise<void>((resolve) => {
+            releaseMaterializer = resolve;
+          });
+          return {
+            object: 'run_archive_item_materialization' as const,
+            generatedAt: '2026-05-19T12:31:00.000Z',
+            status: 'already_materialized' as const,
+            item: createGeneratedArtifactItem(request.archiveItemId),
+            file: null,
+            message: 'Archive item already has a readable local asset.',
+          };
+        },
+      },
+      generateId: () => 'ramj_running_1',
+      now: sequenceNow([
+        '2026-05-19T12:30:00.000Z',
+        '2026-05-19T12:30:01.000Z',
+        '2026-05-19T12:30:02.000Z',
+      ]),
+      schedule: () => {},
+    });
+    await service.createJob({ archiveItemId: 'generated-artifact:resp_1:artifact_1' });
+    const runningPromise = service.runJob('ramj_running_1');
+    await waitForJobStatus(service, 'ramj_running_1', 'running');
+
+    await expect(service.cancelJob('ramj_running_1')).rejects.toThrow(
+      'only queued jobs can be cancelled before provider work starts',
+    );
+    releaseMaterializer();
+    await expect(runningPromise).resolves.toMatchObject({ status: 'succeeded' });
+  });
+
   it('recovers active jobs after process interruption instead of leaving them running forever', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialize-recover-'));
     setAuracallHomeDirOverrideForTest(homeDir);
@@ -163,6 +234,20 @@ function sequenceNow(values: string[]): () => Date {
 function sequenceId(values: string[]): () => string {
   let index = 0;
   return () => values[Math.min(index++, values.length - 1)];
+}
+
+async function waitForJobStatus(
+  service: ReturnType<typeof createArchiveMaterializationJobService>,
+  id: string,
+  status: string,
+): Promise<void> {
+  const deadline = Date.now() + 1000;
+  while (Date.now() < deadline) {
+    const job = await service.readJob(id);
+    if (job?.status === status) return;
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  throw new Error(`Timed out waiting for ${id} to reach ${status}.`);
 }
 
 function createGeneratedArtifactItem(id: string): RunArchiveItem {

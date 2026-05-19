@@ -5741,3 +5741,38 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - hand the list endpoint to the UX session for dashboard polling/control
     wiring, or add a backend cancel action if operators need explicit
     cancellation before UX integration.
+
+## Turn 198 | 2026-05-19
+
+- Goal: add explicit backend cancellation semantics for async archive
+  materialization jobs before UX control wiring.
+- Change:
+  - added terminal `cancelled` status for archive materialization jobs.
+  - added `ArchiveMaterializationJobService.cancelJob(...)`.
+  - added `POST /v1/archive/materializations/{job_id}` with
+    `{"action":"cancel"}` for queued-job cancellation.
+  - added CLI parity with `auracall api archive-materialization-cancel`.
+  - added MCP parity with `run_archive_materialization_cancel`.
+  - kept running jobs non-abortable: cancellation after provider work starts
+    returns conflict instead of claiming to stop live browser work.
+  - updated the roadmap, Plan 0066, OpenAI endpoint docs, dev journal, and
+    durable fixes log.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveMaterializationJobService.test.ts tests/cli/apiRunArchiveCommand.test.ts tests/http.responsesServer.test.ts -t "archive materialization" --maxWorkers 1`
+  - `pnpm run build`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - `/status` returned `ok: true` with
+    `runArchiveMaterializationTemplate = "/v1/archive/materializations/{job_id}"`.
+  - live cancel-route smoke created a missing-id materialization job and then
+    posted `{"action":"cancel"}` to the job route. The job had already failed
+    before the cancel request reached the service, so the route returned HTTP
+    `409 conflict_error` with the documented "only queued jobs can be
+    cancelled" message. Unit coverage proves the queued cancellation path
+    itself without launching provider browser work.
+- Next:
+  - hand the cancel/list/status endpoints to the UX session; add cooperative
+    cancellation to provider materializers only if running-job abort becomes a
+    required operator workflow.

@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from 'vitest';
 import {
   attachApiRunArchiveEvidenceForCli,
   backfillApiRunArchiveForCli,
+  cancelApiRunArchiveMaterializationJobForCli,
   createApiRunArchiveMaterializationJobForCli,
   formatApiRunArchiveAssetLookupCliSummary,
   formatApiRunArchiveBackfillCliSummary,
@@ -399,6 +400,39 @@ describe('api run archive CLI helpers', () => {
     );
     expect(formatApiRunArchiveMaterializationJobsCliSummary(result)).toContain(
       'ramj_test_1 status=succeeded',
+    );
+  });
+
+  test('cancels archive materialization jobs through the local API', async () => {
+    const fetchImpl = vi.fn(async (url: URL, init?: RequestInit) => {
+      expect(url.toString()).toBe('http://127.0.0.1:18095/v1/archive/materializations/ramj_test_1');
+      expect(init?.method).toBe('POST');
+      expect(init?.headers).toEqual({ 'content-type': 'application/json' });
+      expect(JSON.parse(String(init?.body))).toEqual({ action: 'cancel' });
+      return new Response(JSON.stringify({
+        object: 'run_archive_materialization_job',
+        id: 'ramj_test_1',
+        archiveItemId: 'generated-artifact:resp_1:artifact_1',
+        status: 'cancelled',
+        createdAt: '2026-05-19T12:00:00.000Z',
+        updatedAt: '2026-05-19T12:00:30.000Z',
+        startedAt: null,
+        completedAt: '2026-05-19T12:00:30.000Z',
+        attemptCount: 0,
+        result: null,
+        error: null,
+        message: 'Archive materialization job cancelled before provider work started.',
+      }));
+    });
+
+    const result = await cancelApiRunArchiveMaterializationJobForCli({
+      port: 18095,
+      id: 'ramj_test_1',
+    }, fetchImpl as never);
+
+    expect(formatApiRunArchiveMaterializationJobCliSummary(result)).toContain('Status: cancelled');
+    expect(formatApiRunArchiveMaterializationJobCliSummary(result)).toContain(
+      'Archive materialization job cancelled before provider work started.',
     );
   });
 

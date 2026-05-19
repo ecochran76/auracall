@@ -13,7 +13,8 @@ export type ArchiveMaterializationJobStatus =
   | 'running'
   | 'succeeded'
   | 'skipped'
-  | 'failed';
+  | 'failed'
+  | 'cancelled';
 
 export interface ArchiveMaterializationJob {
   object: 'run_archive_materialization_job';
@@ -66,8 +67,20 @@ export interface ArchiveMaterializationJobService {
   createJob(request: { archiveItemId: string }): Promise<ArchiveMaterializationJobCreateResult>;
   listJobs(request?: ArchiveMaterializationJobListRequest): Promise<ArchiveMaterializationJobListResult>;
   readJob(id: string): Promise<ArchiveMaterializationJob | null>;
+  cancelJob(id: string): Promise<ArchiveMaterializationJob>;
   runJob(id: string): Promise<ArchiveMaterializationJob>;
   recoverInterruptedJobs(): Promise<number>;
+}
+
+export class ArchiveMaterializationJobControlError extends Error {
+  constructor(
+    message: string,
+    readonly statusCode: 400 | 404 | 409 = 400,
+    readonly type = statusCode === 404 ? 'not_found_error' : statusCode === 409 ? 'conflict_error' : 'invalid_request_error',
+  ) {
+    super(message);
+    this.name = 'ArchiveMaterializationJobControlError';
+  }
 }
 
 export interface ArchiveMaterializationJobServiceDeps {
@@ -168,6 +181,37 @@ export function createArchiveMaterializationJobService(
 
     async readJob(id) {
       return store.readJob(id.trim());
+    },
+
+    async cancelJob(id) {
+      const jobId = id.trim();
+      if (!jobId) {
+        throw new ArchiveMaterializationJobControlError('Archive materialization job id is required.');
+      }
+      const job = await store.readJob(jobId);
+      if (!job) {
+        throw new ArchiveMaterializationJobControlError(`Archive materialization job ${jobId} was not found.`, 404);
+      }
+      if (job.status === 'cancelled') {
+        return job;
+      }
+      if (job.status !== 'queued') {
+        throw new ArchiveMaterializationJobControlError(
+          `Archive materialization job ${jobId} is ${job.status}; only queued jobs can be cancelled before provider work starts.`,
+          409,
+        );
+      }
+      const cancelledAt = now().toISOString();
+      const cancelled: ArchiveMaterializationJob = {
+        ...job,
+        status: 'cancelled',
+        updatedAt: cancelledAt,
+        completedAt: cancelledAt,
+        error: null,
+        message: 'Archive materialization job cancelled before provider work started.',
+      };
+      await store.upsertJob(cancelled);
+      return cancelled;
     },
 
     async runJob(id) {

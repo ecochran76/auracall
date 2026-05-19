@@ -63,6 +63,7 @@ Current endpoints:
 - `POST /v1/archive/materializations`
 - `GET /v1/archive/materializations`
 - `GET /v1/archive/materializations/{job_id}`
+- `POST /v1/archive/materializations/{job_id}`
 - `GET /v1/archive/items/{archive_item_id}`
 - `GET /v1/archive/items/{archive_item_id}/asset`
 - `POST /v1/archive/items/{archive_item_id}/materialize`
@@ -334,15 +335,21 @@ Current limits:
     terminal job errors, and marks interrupted active jobs failed on API/MCP
     startup instead of leaving them forever running. Poll one job with
     `GET /v1/archive/materializations/{job_id}` or list jobs with
-    `GET /v1/archive/materializations?status=active|terminal|queued|running|succeeded|skipped|failed&archiveItemId=<archive_id>&limit=50`.
+    `GET /v1/archive/materializations?status=active|terminal|queued|running|succeeded|skipped|failed|cancelled&archiveItemId=<archive_id>&limit=50`.
+    Queued jobs can be cancelled before provider work starts with
+    `POST /v1/archive/materializations/{job_id}` and body
+    `{"action":"cancel"}`; running jobs return HTTP 409 because the provider
+    materializer is not yet abortable once browser work has started.
     CLI parity is
     `auracall api archive-materialization-create --port <port> <archive_id>`
     plus `auracall api archive-materialization-status --port <port> <job_id>`
     and `auracall api archive-materialization-jobs --port <port> --status
-    active`.
+    active`, plus `auracall api archive-materialization-cancel --port <port>
+    <job_id>`.
     MCP parity is `run_archive_materialization_create` and
     `run_archive_materialization_job`, plus `run_archive_materialization_jobs`
-    for list/polling surfaces.
+    for list/polling surfaces and `run_archive_materialization_cancel` for
+    queued-job cancellation.
   - `POST /v1/archive/backfill` rebuilds the index from existing runtime
     records without browser work; CLI parity is
     `auracall api archive-backfill --port <port>`

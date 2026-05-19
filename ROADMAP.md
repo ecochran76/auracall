@@ -263,8 +263,8 @@ Current State:
     facts back to the archive index; `POST /v1/archive/materializations` and
     `GET /v1/archive/materializations[/{job_id}]` wrap the same recovery path
     in persisted, de-duplicated async jobs with status/archive-item filtered
-    list polling, CLI/MCP parity, and interrupted-job recovery on API/MCP
-    startup
+    list polling, queued-job cancellation, CLI/MCP parity, and
+    interrupted-job recovery on API/MCP startup
   - remaining Search work: semantic/vector ranking, shared/server-backed view
     presets, deeper run lineage timelines, live evidence-row dogfooding when
     evidence rows exist in cache, and operator dashboard polling/control

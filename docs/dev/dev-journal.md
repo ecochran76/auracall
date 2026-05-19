@@ -30989,6 +30989,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run install:user-runtime`
   - `systemctl --user restart auracall-api.service`
+  - `/status` advertised `runArchiveMaterializationTemplate`.
+  - live cancel-route smoke returned the expected HTTP 409 conflict once a
+    deliberately missing archive item had already failed before the cancel
+    request arrived; queued cancellation remains covered by unit tests.
+  - `pnpm run build`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
   - `/status` advertised `runArchiveMaterializationsList`.
   - live `GET /v1/archive/materializations?status=terminal&limit=5` returned
     the persisted terminal missing-id smoke job with `active = 0`.
@@ -31014,3 +31022,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `agent-browser` loaded Search, forced horizontal table scroll, and
     confirmed both the Actions header and row cell report `position: sticky`
     while staying at the scroll viewport's right edge.
+
+## Turn 198 | 2026-05-19
+
+- Goal: add backend cancellation control for async archive materialization
+  jobs without touching operator UX files.
+- Change:
+  - added `cancelled` as a terminal archive materialization job status.
+  - added queued-job cancellation to `ArchiveMaterializationJobService`.
+  - added `POST /v1/archive/materializations/{job_id}` with
+    `{"action":"cancel"}`.
+  - added CLI `auracall api archive-materialization-cancel`.
+  - added MCP `run_archive_materialization_cancel`.
+  - documented that running jobs return conflict because provider
+    materialization is not cooperatively abortable yet.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveMaterializationJobService.test.ts tests/cli/apiRunArchiveCommand.test.ts tests/http.responsesServer.test.ts -t "archive materialization" --maxWorkers 1`

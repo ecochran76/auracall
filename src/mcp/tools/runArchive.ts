@@ -47,7 +47,7 @@ const runArchiveMaterializationJobInputShape = {
 } satisfies z.ZodRawShape;
 
 const runArchiveMaterializationListInputShape = {
-  status: z.enum(['queued', 'running', 'succeeded', 'skipped', 'failed', 'active', 'terminal']).optional(),
+  status: z.enum(['queued', 'running', 'succeeded', 'skipped', 'failed', 'cancelled', 'active', 'terminal']).optional(),
   archiveItemId: z.string().min(1).optional(),
   limit: z.number().int().nonnegative().optional(),
 } satisfies z.ZodRawShape;
@@ -199,7 +199,7 @@ const archiveMaterializationJobShape = z.object({
   object: z.literal('run_archive_materialization_job'),
   id: z.string(),
   archiveItemId: z.string(),
-  status: z.enum(['queued', 'running', 'succeeded', 'skipped', 'failed']),
+  status: z.enum(['queued', 'running', 'succeeded', 'skipped', 'failed', 'cancelled']),
   createdAt: z.string(),
   updatedAt: z.string(),
   startedAt: z.string().nullable(),
@@ -226,7 +226,7 @@ const runArchiveMaterializationJobOutputShape = archiveMaterializationJobShape.s
 const runArchiveMaterializationListOutputShape = {
   object: z.literal('run_archive_materialization_jobs'),
   generatedAt: z.string(),
-  status: z.enum(['queued', 'running', 'succeeded', 'skipped', 'failed', 'active', 'terminal']).nullable(),
+  status: z.enum(['queued', 'running', 'succeeded', 'skipped', 'failed', 'cancelled', 'active', 'terminal']).nullable(),
   archiveItemId: z.string().nullable(),
   limit: z.number(),
   jobs: z.array(archiveMaterializationJobShape),
@@ -325,6 +325,17 @@ export function registerRunArchiveTools(
         outputSchema: runArchiveMaterializationCreateOutputShape,
       },
       createRunArchiveMaterializationCreateToolHandler({ service: deps.materializationJobService }),
+    );
+    server.registerTool(
+      'run_archive_materialization_cancel',
+      {
+        title: 'Cancel AuraCall archive materialization job',
+        description:
+          'Cancel a queued archive materialization job before provider browser work starts.',
+        inputSchema: runArchiveMaterializationJobInputShape,
+        outputSchema: runArchiveMaterializationJobOutputShape,
+      },
+      createRunArchiveMaterializationCancelToolHandler({ service: deps.materializationJobService }),
     );
     server.registerTool(
       'run_archive_materialization_job',
@@ -469,6 +480,24 @@ export function createRunArchiveMaterializationJobsToolHandler(input: {
         {
           type: 'text' as const,
           text: `Archive materialization jobs: ${result.metrics.total} job${result.metrics.total === 1 ? '' : 's'}.`,
+        },
+      ],
+      structuredContent: result as typeof result & Record<string, unknown>,
+    };
+  };
+}
+
+export function createRunArchiveMaterializationCancelToolHandler(input: {
+  service: ArchiveMaterializationJobService;
+}) {
+  return async (rawInput: unknown) => {
+    const payload = z.object(runArchiveMaterializationJobInputShape).parse(rawInput);
+    const result = await input.service.cancelJob(payload.id);
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `Archive materialization job ${result.id}: ${result.status}.`,
         },
       ],
       structuredContent: result as typeof result & Record<string, unknown>,

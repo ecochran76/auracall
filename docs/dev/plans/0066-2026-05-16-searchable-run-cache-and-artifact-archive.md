@@ -75,14 +75,19 @@ Implemented:
   `GET /v1/archive/materializations/{job_id}`,
   `auracall api archive-materialization-create`,
   `auracall api archive-materialization-jobs`,
+  `auracall api archive-materialization-cancel`,
   `auracall api archive-materialization-status`, and MCP
   `run_archive_materialization_create` /
+  `run_archive_materialization_cancel` /
   `run_archive_materialization_jobs` / `run_archive_materialization_job`.
   Active jobs for the same archive item are de-duplicated, job state is
   persisted under the user-scoped run archive tree, and interrupted active jobs
   are marked failed on API/MCP startup instead of remaining indefinitely
   running. Listing supports status, archive item id, and limit filters so
-  operator surfaces can poll without retaining job ids out of band.
+  operator surfaces can poll without retaining job ids out of band. Queued jobs
+  can be cancelled before provider work starts; running jobs remain
+  non-abortable until the provider materializer accepts cooperative
+  cancellation.
 
 Remaining:
 

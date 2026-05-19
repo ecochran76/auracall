@@ -2632,11 +2632,20 @@ describe('http responses adapter', () => {
         terminal: 0,
       },
     }));
+    const cancelJob = vi.fn(async (id: string) => ({
+      ...job,
+      id,
+      status: 'cancelled' as const,
+      updatedAt: '2026-05-19T12:00:30.000Z',
+      completedAt: '2026-05-19T12:00:30.000Z',
+      message: 'Archive materialization job cancelled before provider work started.',
+    }));
     const recoverInterruptedJobs = vi.fn(async () => 0);
     const server = await createResponsesHttpServer(
       { host: '127.0.0.1', port: 0 },
       {
         archiveMaterializationJobService: {
+          cancelJob,
           createJob,
           listJobs,
           readJob,
@@ -2685,6 +2694,20 @@ describe('http responses adapter', () => {
         archiveItemId: 'generated-artifact:resp_1:artifact_1',
         limit: 10,
       });
+      const cancelResponse = await fetch(`http://127.0.0.1:${server.port}/v1/archive/materializations/ramj_test_1`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'cancel' }),
+      });
+      expect(cancelResponse.status).toBe(200);
+      expect(await cancelResponse.json()).toMatchObject({
+        object: 'run_archive_materialization_job',
+        id: 'ramj_test_1',
+        status: 'cancelled',
+      });
+      expect(cancelJob).toHaveBeenCalledWith('ramj_test_1');
       expect(recoverInterruptedJobs).toHaveBeenCalled();
     } finally {
       await server.close();

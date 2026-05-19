@@ -130,6 +130,7 @@ import {
 import {
   attachApiRunArchiveEvidenceForCli,
   backfillApiRunArchiveForCli,
+  cancelApiRunArchiveMaterializationJobForCli,
   createApiRunArchiveMaterializationJobForCli,
   formatApiRunArchiveAssetLookupCliSummary,
   formatApiRunArchiveBackfillCliSummary,
@@ -1369,6 +1370,34 @@ apiCommand
       process.env,
     ));
     const result = await readApiRunArchiveMaterializationJobForCli({
+      id,
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiRunArchiveMaterializationJobCliSummary(result));
+  });
+
+apiCommand
+  .command('archive-materialization-cancel')
+  .description('Cancel a queued archive materialization job before provider work starts.')
+  .argument('<id>', 'Archive materialization job id.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP write timeout in milliseconds.', parseIntOption, 5000)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const result = await cancelApiRunArchiveMaterializationJobForCli({
       id,
       host: commandOptions.host ?? apiConfig.host,
       port: commandOptions.port ?? apiConfig.port,

@@ -37,6 +37,8 @@ export interface ApiRunArchiveMaterializationJobStatusCliOptions {
   id: string;
 }
 
+export interface ApiRunArchiveMaterializationJobCancelCliOptions extends ApiRunArchiveMaterializationJobStatusCliOptions {}
+
 export interface ApiRunArchiveMaterializationJobListCliOptions {
   host?: string | null;
   port?: number | null;
@@ -191,6 +193,34 @@ export async function readApiRunArchiveMaterializationJobForCli(
     }, fetchImpl);
     if (!response.ok) {
       throw new Error(`AuraCall run archive materialization job returned HTTP ${response.status}.`);
+    }
+    return response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function cancelApiRunArchiveMaterializationJobForCli(
+  options: ApiRunArchiveMaterializationJobCancelCliOptions,
+  fetchImpl: typeof fetch = fetch,
+): Promise<unknown> {
+  const host = normalizeHost(options.host);
+  const port = normalizePort(options.port);
+  const timeoutMs = normalizeTimeoutMs(options.timeoutMs);
+  const id = normalizeRequiredString(options.id, 'archive materialization job id');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchWithLocalApiAuth(new URL(`http://${host}:${port}/v1/archive/materializations/${encodeURIComponent(id)}`), {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ action: 'cancel' }),
+      signal: controller.signal,
+    }, fetchImpl);
+    if (!response.ok) {
+      throw new Error(`AuraCall run archive materialization job cancel returned HTTP ${response.status}.`);
     }
     return response.json();
   } finally {
