@@ -1284,6 +1284,40 @@ select:focus-visible {
   padding-top: 2px;
 }
 
+.facet-summary {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px;
+  border: 1px solid #293342;
+  border-radius: 6px;
+  background: #10161f;
+  color: #95a1b4;
+  font-size: 11px;
+}
+
+.facet-summary.active {
+  border-color: #37516d;
+  background: #131d2b;
+  color: #c9d8eb;
+}
+
+.facet-summary strong {
+  color: #edf5ff;
+  font-size: 12px;
+}
+
+.facet-summary b {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: #223045;
+  color: #d7e8ff;
+  font-size: 10px;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
 .facet-group {
   flex-wrap: wrap;
   padding-right: 6px;

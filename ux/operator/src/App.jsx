@@ -1791,6 +1791,11 @@ function ArchiveSearchViewport({
   const selectedArchiveLike = selectedArchiveItem?.id && !selectedRow;
   const visibleColumns = orderedSearchColumns(tablePrefs);
   const hiddenColumnCount = tablePrefs.hidden?.length ?? 0;
+  const activeFilterCount = (filters.q.trim() ? 1 : 0)
+    + (filters.kind !== "all" ? 1 : 0)
+    + filters.providers.size
+    + filters.statuses.size;
+  const hasActiveFilters = activeFilterCount > 0;
 
   useEffect(() => {
     localStorage.setItem(SEARCH_TABLE_STORAGE_KEY, JSON.stringify(tablePrefs));
@@ -2330,9 +2335,11 @@ function ArchiveSearchViewport({
             <FileText size={14} aria-hidden="true" />
             <span>{activeViewId ? savedViews.find((view) => view.id === activeViewId)?.name ?? "View" : `Views${savedViews.length ? ` ${savedViews.length}` : ""}`}</span>
           </button>
-          <button className="icon-button" type="button" onClick={clearFacets} title="Clear filters" aria-label="Clear search filters">
-            <Trash2 size={14} aria-hidden="true" />
-          </button>
+          {hasActiveFilters ? (
+            <button className="icon-button" type="button" onClick={clearFacets} title="Clear filters" aria-label="Clear search filters">
+              <Trash2 size={14} aria-hidden="true" />
+            </button>
+          ) : null}
         </div>
 
         {isViewsMenuOpen ? (
@@ -2407,6 +2414,11 @@ function ArchiveSearchViewport({
         ) : null}
 
         <div className="search-facet-row" aria-label="Search facets">
+          <div className={hasActiveFilters ? "facet-summary active" : "facet-summary"} aria-label="Search filter summary">
+            <strong>{formatNumber(filteredRows.length)}</strong>
+            <span>loaded</span>
+            {hasActiveFilters ? <b>{formatNumber(activeFilterCount)} active</b> : <b>all</b>}
+          </div>
           <div className="facet-group" role="tablist" aria-label="Kind">
             {SEARCH_KIND_FACETS.map((facet) => (
               <button
@@ -2426,7 +2438,9 @@ function ArchiveSearchViewport({
               <button
                 key={provider}
                 type="button"
+                aria-pressed={filters.providers.has(provider)}
                 className={filters.providers.has(provider) ? "filter-chip active provider-filter-chip" : "filter-chip provider-filter-chip"}
+                title={`Filter provider: ${provider}`}
                 onClick={() => toggleSetFacet("providers", provider)}
               >
                 <ProviderIcon provider={provider} embedded />
@@ -2439,7 +2453,9 @@ function ArchiveSearchViewport({
               <button
                 key={status}
                 type="button"
+                aria-pressed={filters.statuses.has(status)}
                 className={filters.statuses.has(status) ? "filter-chip active" : "filter-chip"}
+                title={`Filter status: ${statusLabel(status)}`}
                 onClick={() => toggleSetFacet("statuses", status)}
               >
                 <span>{statusLabel(status)}</span>

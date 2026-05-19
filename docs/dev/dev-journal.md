@@ -30852,3 +30852,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed `/status?tenantExecutionLimits=usage` returned `ok=true`,
     `activeChats=0`, `tenantCount=4`, `chatsLastHour=6`, and
     `chatsLastDay=24`.
+
+## Turn 192 | 2026-05-19
+
+- Goal: tighten the Search workbench filter toolbar so active filter state is
+  visible without keeping extra controls on screen.
+- Change:
+  - added a compact facet summary showing loaded row count and `all` versus
+    active filter count.
+  - hid the Clear filters icon until at least one query/kind/provider/status
+    filter is active.
+  - added `aria-pressed` and targeted titles to provider/status facet chips.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check` passed.
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK`.
+  - `agent-browser` loaded Search and confirmed the default summary reads
+    `80 loaded / ALL`, Clear is hidden, provider chips report
+    `aria-pressed=false`, and selecting ChatGPT changes the summary to
+    `1 ACTIVE`, shows Clear, and sets `aria-pressed=true`.
