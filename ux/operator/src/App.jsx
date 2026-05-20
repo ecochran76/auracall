@@ -2478,7 +2478,11 @@ function ArchiveSearchViewport({
           <button
             className={showAdvancedFilters ? "icon-label-button search-toolbar-button active" : "icon-label-button search-toolbar-button"}
             type="button"
-            onClick={() => setShowAdvancedFilters((current) => !current)}
+            onClick={() => {
+              setShowAdvancedFilters((current) => !current);
+              setIsColumnMenuOpen(false);
+              setIsViewsMenuOpen(false);
+            }}
             title={showAdvancedFilters ? "Hide advanced filters" : "Show advanced filters"}
             aria-label={showAdvancedFilters ? "Hide advanced search filters" : "Show advanced search filters"}
             aria-expanded={showAdvancedFilters}
@@ -2493,6 +2497,7 @@ function ArchiveSearchViewport({
             onClick={() => {
               setIsColumnMenuOpen((current) => !current);
               setIsViewsMenuOpen(false);
+              setShowAdvancedFilters(false);
             }}
             title="Configure visible columns"
             aria-label="Configure visible columns"
@@ -2508,6 +2513,7 @@ function ArchiveSearchViewport({
             onClick={() => {
               setIsViewsMenuOpen((current) => !current);
               setIsColumnMenuOpen(false);
+              setShowAdvancedFilters(false);
             }}
             title="Save or apply Search views"
             aria-label="Save or apply Search views"
@@ -2596,52 +2602,61 @@ function ArchiveSearchViewport({
         ) : null}
 
         {showAdvancedFilters ? (
-        <div id="searchAdvancedFilters" className="search-facet-row" aria-label="Search facets">
-          <div className="facet-group" role="tablist" aria-label="Kind">
-            {SEARCH_KIND_FACETS.map((facet) => (
-              <button
-                key={facet.id}
-                type="button"
-                role="tab"
-                aria-selected={filters.kind === facet.id}
-                className={filters.kind === facet.id ? "filter-chip active" : "filter-chip"}
-                onClick={() => updateKind(facet.id)}
-              >
-                <span>{facet.label}</span>
-              </button>
-            ))}
+          <div id="searchAdvancedFilters" className="search-facet-popover" aria-label="Search facets">
+            <div className="facet-section">
+              <strong>Kind</strong>
+              <div className="facet-group" role="tablist" aria-label="Kind">
+                {SEARCH_KIND_FACETS.map((facet) => (
+                  <button
+                    key={facet.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={filters.kind === facet.id}
+                    className={filters.kind === facet.id ? "filter-chip active" : "filter-chip"}
+                    onClick={() => updateKind(facet.id)}
+                  >
+                    <span>{facet.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="facet-section">
+              <strong>Provider</strong>
+              <div className="facet-group" aria-label="Providers">
+                {facets.providers.map(([provider, count]) => (
+                  <button
+                    key={provider}
+                    type="button"
+                    aria-pressed={filters.providers.has(provider)}
+                    className={filters.providers.has(provider) ? "filter-chip active provider-filter-chip" : "filter-chip provider-filter-chip"}
+                    title={`Filter provider: ${provider}`}
+                    onClick={() => toggleSetFacet("providers", provider)}
+                  >
+                    <ProviderIcon provider={provider} embedded />
+                    <b>{formatNumber(count)}</b>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="facet-section">
+              <strong>Status</strong>
+              <div className="facet-group compact-facets" aria-label="Status">
+                {facets.statuses.slice(0, 6).map(([status, count]) => (
+                  <button
+                    key={status}
+                    type="button"
+                    aria-pressed={filters.statuses.has(status)}
+                    className={filters.statuses.has(status) ? "filter-chip active" : "filter-chip"}
+                    title={`Filter status: ${statusLabel(status)}`}
+                    onClick={() => toggleSetFacet("statuses", status)}
+                  >
+                    <span>{statusLabel(status)}</span>
+                    <b>{formatNumber(count)}</b>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-          <div className="facet-group" aria-label="Providers">
-            {facets.providers.map(([provider, count]) => (
-              <button
-                key={provider}
-                type="button"
-                aria-pressed={filters.providers.has(provider)}
-                className={filters.providers.has(provider) ? "filter-chip active provider-filter-chip" : "filter-chip provider-filter-chip"}
-                title={`Filter provider: ${provider}`}
-                onClick={() => toggleSetFacet("providers", provider)}
-              >
-                <ProviderIcon provider={provider} embedded />
-                <b>{formatNumber(count)}</b>
-              </button>
-            ))}
-          </div>
-          <div className="facet-group compact-facets" aria-label="Status">
-            {facets.statuses.slice(0, 6).map(([status, count]) => (
-              <button
-                key={status}
-                type="button"
-                aria-pressed={filters.statuses.has(status)}
-                className={filters.statuses.has(status) ? "filter-chip active" : "filter-chip"}
-                title={`Filter status: ${statusLabel(status)}`}
-                onClick={() => toggleSetFacet("statuses", status)}
-              >
-                <span>{statusLabel(status)}</span>
-                <b>{formatNumber(count)}</b>
-              </button>
-            ))}
-          </div>
-        </div>
         ) : null}
       </section>
 

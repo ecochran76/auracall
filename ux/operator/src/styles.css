@@ -1131,7 +1131,8 @@ select:focus-visible {
 }
 
 .search-view-menu,
-.search-column-menu {
+.search-column-menu,
+.search-facet-popover {
   position: absolute;
   top: calc(100% + 4px);
   right: 6px;
@@ -1148,6 +1149,12 @@ select:focus-visible {
 
 .search-view-menu {
   width: min(500px, calc(100% - 12px));
+}
+
+.search-facet-popover {
+  width: min(680px, calc(100% - 12px));
+  display: grid;
+  gap: 7px;
 }
 
 .search-view-save {
@@ -1298,17 +1305,45 @@ select:focus-visible {
   gap: 3px;
 }
 
-.search-facet-row,
+.search-facet-popover,
 .facet-group {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.search-facet-row {
-  flex-wrap: wrap;
-  padding: 4px 0 0;
-  border-top: 1px solid #202936;
+.search-facet-popover {
+  display: grid;
+  align-items: stretch;
+}
+
+.facet-section {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.facet-section > strong {
+  color: #8f9bad;
+  font-size: 10px;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.search-facet-popover .filter-chip {
+  min-height: 22px;
+  gap: 4px;
+  padding: 0 6px;
+  font-size: 11px;
+}
+
+.search-facet-popover .filter-chip b {
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
 }
 
 .command-facet-summary {
@@ -1352,12 +1387,6 @@ select:focus-visible {
 
 .facet-group {
   flex-wrap: wrap;
-  padding-right: 6px;
-  border-right: 1px solid #252d38;
-}
-
-.facet-group:last-child {
-  border-right: 0;
 }
 
 .provider-filter-chip {
@@ -1410,6 +1439,11 @@ select:focus-visible {
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
+  }
+
+  .facet-section {
+    grid-template-columns: 1fr;
+    gap: 4px;
   }
 }
 

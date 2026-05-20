@@ -31374,3 +31374,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - live Search artifact readback returned run-archive artifact rows with
     archive-item routes and asset routes for rows whose local files are
     currently readable.
+
+## Turn 210 | 2026-05-20
+
+- Goal: keep Search filter controls dense and preserve results-table real
+  estate while operators adjust facets.
+- Change:
+  - converted advanced Search filters from an inline row into an anchored
+    popover, matching the Columns and Views behavior.
+  - made Filters mutually exclusive with Columns and Views so secondary panels
+    do not stack.
+  - grouped facets into compact Kind, Provider, and Status sections with
+    smaller filter chips and responsive one-column mobile sections.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check -- ux/operator/src/App.jsx
+    ux/operator/src/styles.css` passed.
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - A retry of `curl -fsSI
+    'http://127.0.0.1:18095/dashboard?nav=search'` returned `HTTP/1.1 200 OK`
+    after the restart listener was ready.
+  - `agent-browser` opened the installed Search dashboard at 1280px, opened
+    Filters, and confirmed the filter menu rendered as `position: absolute`,
+    the table top stayed fixed at 166px, chips were 22px tall, Columns was not
+    visible, and there was no horizontal overflow.
+  - `agent-browser` opened Columns next and confirmed Filters closed,
+    `aria-expanded` states updated, the table top stayed fixed at 166px, and
+    there was no horizontal overflow.
+  - `agent-browser` repeated the Filters check at 560px and confirmed the
+    filter menu was absolute, the table top stayed fixed, the facet section
+    collapsed to one column, and there was no horizontal overflow.
