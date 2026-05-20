@@ -266,9 +266,8 @@ Current State:
     list polling, queued-job cancellation, CLI/MCP parity, and
     interrupted-job recovery on API/MCP startup
   - remaining Search work: semantic/vector ranking, shared/server-backed view
-    presets, deeper run lineage timelines, live evidence-row dogfooding when
-    evidence rows exist in cache, and broader operator dashboard controls for
-    non-archive async jobs
+    presets, live evidence-row dogfooding when evidence rows exist in cache,
+    and broader operator dashboard controls for non-archive async jobs
   - first slice is read-only shell work; API-backed health, run, archive,
     search, chat, config, agent, and team pages should land incrementally after
     the shell is stable

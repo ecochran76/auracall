@@ -31185,3 +31185,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     catalog detail, not an archive item route, so the Asset panel render path
     was build-validated but not live-clicked against a generated-artifact
     archive row in this runtime state.
+
+## Turn 204 | 2026-05-20
+
+- Goal: make run lineage easier to scan from the Search inspector without
+  adding another API route.
+- Change:
+  - added a compact Run lineage strip to the existing run-specific inspector.
+  - derived lineage from existing row/archive metadata: source, response or
+    batch, agent/team owner, AuraCall runtime profile/state, and output/step
+    counts.
+  - made the lineage strip collapse to one column inside the mobile selected
+    right-pane overlay.
+  - updated the roadmap to remove deeper run lineage timelines from remaining
+    Search work.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check` passed.
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK`.
+  - `/status` returned `ok = true`, version `0.1.1`, and 66 routes.
+  - `agent-browser` opened the installed Search dashboard, inspected the first
+    Run row, and confirmed `.run-lineage-timeline` rendered Source, Response,
+    Agent, Runtime, and Outputs from the live row.

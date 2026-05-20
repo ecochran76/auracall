@@ -2476,6 +2476,59 @@ select:focus-visible {
   text-transform: uppercase;
 }
 
+.run-lineage-timeline {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.run-lineage-step {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 7px;
+  border: 1px solid #283342;
+  border-radius: 6px;
+  background: #101720;
+}
+
+.run-lineage-step span {
+  color: #8d99aa;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.run-lineage-step strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #edf4ff;
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.run-lineage-step small {
+  min-width: 0;
+  overflow: hidden;
+  color: #9fb0c4;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.run-lineage-good {
+  border-color: #244c3a;
+}
+
+.run-lineage-warn {
+  border-color: #4a3e23;
+}
+
+.run-lineage-bad {
+  border-color: #54303a;
+}
+
 .search-kind-facts {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2927,6 +2980,7 @@ select:focus-visible {
 
   .right-pane.has-selection:not(.is-collapsed) .search-inspector-meta,
   .right-pane.has-selection:not(.is-collapsed) .search-inspector-facts,
+  .right-pane.has-selection:not(.is-collapsed) .run-lineage-timeline,
   .right-pane.has-selection:not(.is-collapsed) .search-kind-facts,
   .right-pane.has-selection:not(.is-collapsed) .asset-facts {
     grid-template-columns: 1fr;

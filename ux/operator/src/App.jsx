@@ -1665,6 +1665,62 @@ function SearchRouteSection({ row, archiveItem }) {
   );
 }
 
+function RunLineageStep({ label, value, detail, tone = "neutral" }) {
+  return (
+    <div className={`run-lineage-step run-lineage-${tone}`}>
+      <span>{label}</span>
+      <strong title={String(value ?? "")}>{compactText(value ?? "none", 58)}</strong>
+      {detail ? <small title={String(detail)}>{compactText(detail, 86)}</small> : null}
+    </div>
+  );
+}
+
+function RunLineageTimeline({ row, archiveItem, metadata, responseId, sourceKind }) {
+  const batchLabel = metadata.batchId ?? archiveItem?.batchId;
+  const batchIndex = metadata.batchIndex ?? archiveItem?.batchIndex;
+  const agentId = metadata.agentId ?? archiveItem?.agentId;
+  const teamId = metadata.teamId ?? archiveItem?.teamId;
+  const runtime = row?.runtimeProfileId ?? archiveItem?.runtimeProfile;
+  const runtimeState = archiveItem?.runtimeState ?? metadata.runtimeState ?? row?.status ?? archiveItem?.status;
+  const outputCount = metadata.outputItemCount ?? "not reported";
+  const requestedOutputCount = metadata.requestedOutputCount ?? null;
+  const stepCount = metadata.stepCount ?? null;
+
+  return (
+    <div className="run-lineage-timeline" aria-label="Run lineage timeline">
+      <RunLineageStep
+        label="Source"
+        value={sourceKind ?? metadata.sourceKind ?? row?.kind ?? archiveItem?.kind ?? "run"}
+        detail={archiveItem?.id ?? row?.itemId}
+      />
+      <RunLineageStep
+        label={batchLabel ? "Batch" : "Response"}
+        value={batchLabel ?? responseId ?? archiveItem?.responseId ?? row?.itemId}
+        detail={batchIndex !== null && batchIndex !== undefined ? `index ${batchIndex}` : responseId ? `response ${responseId}` : null}
+      />
+      <RunLineageStep
+        label={teamId ? "Team" : "Agent"}
+        value={teamId ?? agentId ?? "none"}
+        detail={teamId && agentId ? `agent ${agentId}` : null}
+      />
+      <RunLineageStep
+        label="Runtime"
+        value={runtime ?? "none"}
+        detail={runtimeState ? `state ${runtimeState}` : null}
+        tone={statusTone(row?.status ?? archiveItem?.status)}
+      />
+      <RunLineageStep
+        label="Outputs"
+        value={`${outputCount}`}
+        detail={[
+          requestedOutputCount !== null ? `${requestedOutputCount} requested` : null,
+          stepCount !== null ? `${stepCount} steps` : null,
+        ].filter(Boolean).join(" / ")}
+      />
+    </div>
+  );
+}
+
 function RawPreviewSection({ preview, collapsed }) {
   if (!preview) return null;
   if (!collapsed) {
@@ -1714,6 +1770,13 @@ function RunSearchInspector({ row, archiveItem }) {
         <strong>Run</strong>
         <span>{statusLabel(row?.status ?? archiveItem?.status)}</span>
       </div>
+      <RunLineageTimeline
+        row={row}
+        archiveItem={archiveItem}
+        metadata={metadata}
+        responseId={responseId}
+        sourceKind={sourceKind}
+      />
       <SearchKindFacts facts={facts} />
       {prompt ? <p className="search-kind-preview">{compactText(prompt, 360)}</p> : null}
       <SearchRouteStrip row={row} archiveItem={archiveItem} only={["response", "runtimeRun", "batch", "archiveItem"]} />

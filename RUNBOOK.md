@@ -5836,3 +5836,29 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - keep the next slice on deeper run-lineage or semantic/vector ranking unless
     live artifact materialization exposes a provider-specific failure.
+
+## Turn 204 | 2026-05-20
+
+- Goal: make run lineage scannable in the Search inspector without widening the
+  API surface.
+- Change:
+  - added a compact lineage strip to the existing run-specific inspector.
+  - uses existing row/archive metadata for source, response or batch, owner,
+    AuraCall runtime profile/state, and output/step counts.
+  - keeps the strip responsive in the mobile selected-inspector overlay.
+  - updated the roadmap and durable fixes log.
+- Verification:
+  - `pnpm run ux:build`
+  - `git diff --check`
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK`.
+  - `/status` returned `ok = true`, version `0.1.1`, and 66 routes.
+  - `agent-browser` opened the installed Search dashboard, inspected the first
+    Run row, and confirmed `.run-lineage-timeline` rendered Source, Response,
+    Agent, Runtime, and Outputs from the live row.
+- Next:
+  - continue the Search roadmap with semantic/vector ranking or
+    shared/server-backed view presets.

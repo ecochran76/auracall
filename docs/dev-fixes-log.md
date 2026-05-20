@@ -16408,3 +16408,8 @@ browser-stage lifecycle observability, not transcript truncation.
   materialization remains non-abortable. Search row inspection now prefers the
   archive item route over catalog detail when both are present so artifact rows
   reach the Asset panel instead of stopping at catalog metadata.
+
+- 2026-05-20: Run lineage in the Search inspector should be scannable without
+  forcing operators into raw JSON. The Run panel now renders a compact lineage
+  strip from the existing row/archive metadata: source, response or batch,
+  agent/team owner, AuraCall runtime profile/state, and output/step counts.
