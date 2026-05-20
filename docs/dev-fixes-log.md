@@ -16399,3 +16399,12 @@ browser-stage lifecycle observability, not transcript truncation.
   job waits behind another provider recovery in the serialized runner. The
   regression test now proves a cancelled queued job is re-read from persisted
   state when its turn arrives and does not invoke the provider materializer.
+
+- 2026-05-20: Operator archive recovery UX should use the persisted async job
+  surface as its primary control plane. The Search Asset panel now queues
+  materialization through `POST /v1/archive/materializations`, polls the latest
+  active job for the selected archive item, shows terminal job evidence, and
+  only exposes cancellation for queued jobs because running provider
+  materialization remains non-abortable. Search row inspection now prefers the
+  archive item route over catalog detail when both are present so artifact rows
+  reach the Asset panel instead of stopping at catalog metadata.

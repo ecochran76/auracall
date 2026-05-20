@@ -31127,3 +31127,61 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `agent-browser` checked 1440px, 900px, and 560px viewports; desktop stayed
     grid, tablet wrapped the summary below the query, mobile switched to flex,
     and all three reported no page-level horizontal overflow.
+
+## Turn 202 | 2026-05-20
+
+- Goal: make the selected Search inspector reachable on mobile after a row is
+  selected, without changing the desktop pane model.
+- Change:
+  - marked the right pane with `has-selection` when Search has a selected row
+    or archive item.
+  - added a mobile-only fixed right-pane overlay for selected Search details
+    when the pane is expanded.
+  - restored right-pane content display inside that overlay and reduced
+    inspector meta/fact grids to one column for narrow widths.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check` passed.
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK`.
+  - `agent-browser` confirmed desktop right pane remains relative/320px, and
+    at 560px selecting a Search row turns the pane into a fixed 430px overlay
+    with visible inspector content, single-column metadata/facts, preserved
+    `row=` URL state, and no page-level horizontal overflow.
+
+## Turn 203 | 2026-05-20
+
+- Goal: connect the Search Asset panel to the persisted async archive
+  materialization job contract.
+- Change:
+  - changed the missing-asset Materialize control to queue
+    `POST /v1/archive/materializations` jobs instead of depending on the
+    foreground materialize request.
+  - added latest-job lookup, active queued/running polling, compact status
+    display, and queued-job cancellation from the Asset panel.
+  - made Search row inspection prefer an archive item route over a catalog
+    route when both are present, so artifact rows render the Asset panel.
+  - kept lookup, provider, response, job-list, job-detail, and foreground
+    materialize routes visible as route chips for operator handoff/debugging.
+  - updated the roadmap to remove async archive materialization polling/control
+    affordances from the remaining Search work.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check` passed.
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK`.
+  - `/status` advertised the async materialization create/list/job routes.
+  - `auracall api archive-materialization-jobs --status terminal --limit 1
+    --json` returned `object = "run_archive_materialization_jobs"` with
+    `active = 0`.
+  - `agent-browser` opened the installed Search dashboard, switched to
+    Artifacts, and inspected an artifact row. The live row only exposed
+    catalog detail, not an archive item route, so the Asset panel render path
+    was build-validated but not live-clicked against a generated-artifact
+    archive row in this runtime state.

@@ -5798,3 +5798,41 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `systemctl --user is-active auracall-api.service` returned `active`.
 - Next:
   - hand the locked cancellation/list/status contract to the UX session.
+
+## Turn 202 | 2026-05-20
+
+- Goal: wire the operator Search Asset panel to the async archive
+  materialization job contract.
+- Change:
+  - changed missing-asset materialization from a foreground-only control to
+    async job creation through `POST /v1/archive/materializations`.
+  - added latest-job lookup by archive item id, active queued/running polling,
+    compact job status display, job list/detail route chips, and queued-job
+    cancellation.
+  - changed Search row detail selection to prefer archive item detail over
+    catalog detail when both routes are available, so artifact rows render the
+    Asset panel.
+  - kept the foreground materialize route visible as an explicit handoff/debug
+    route instead of making it the primary operator action.
+  - updated the roadmap and durable fixes log.
+- Verification:
+  - `pnpm run ux:build`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK`.
+  - `/status` advertised `runArchiveMaterializationsCreate`,
+    `runArchiveMaterializationsList`, and `runArchiveMaterializationTemplate`.
+  - `pnpm tsx bin/auracall.ts api archive-materialization-jobs --port 18095
+    --status terminal --limit 1 --json` returned
+    `object = "run_archive_materialization_jobs"` and `active = 0`.
+  - `agent-browser` opened the installed Search dashboard, selected the
+    Artifacts filter, and inspected an artifact row. The live row only exposed
+    catalog detail, not an archive item route, so the Asset panel render path
+    was build-validated but not live-clicked against a generated-artifact
+    archive row in this runtime state.
+- Next:
+  - keep the next slice on deeper run-lineage or semantic/vector ranking unless
+    live artifact materialization exposes a provider-specific failure.

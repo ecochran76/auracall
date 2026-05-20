@@ -242,6 +242,34 @@ function archiveItemMaterializeRoute(item) {
   return route ? `${route}/materialize` : null;
 }
 
+function archiveMaterializationCreateRoute() {
+  return "/v1/archive/materializations";
+}
+
+function archiveMaterializationJobsRoute(item, limit = 5) {
+  if (!item?.id) return null;
+  const params = new URLSearchParams();
+  params.set("archiveItemId", item.id);
+  params.set("limit", String(limit));
+  return `${archiveMaterializationCreateRoute()}?${params.toString()}`;
+}
+
+function archiveMaterializationJobRoute(job) {
+  const id = typeof job === "string" ? job : job?.id;
+  return id ? `${archiveMaterializationCreateRoute()}/${encodeURIComponent(id)}` : null;
+}
+
+function archiveMaterializationStatusTone(status) {
+  if (status === "succeeded") return "ok";
+  if (status === "failed" || status === "cancelled") return "bad";
+  if (status === "skipped") return "warn";
+  return "warn";
+}
+
+function isActiveArchiveMaterializationJob(job) {
+  return job?.status === "queued" || job?.status === "running";
+}
+
 function readStringField(value, fields) {
   if (!value || typeof value !== "object") return null;
   for (const field of fields) {
@@ -1890,7 +1918,7 @@ function ArchiveSearchViewport({
   }, [selectedArchiveItem, onSelectedArchiveDetailChange]);
 
   useEffect(() => {
-    const detailRoute = selectedRow?.catalogItemRoute ?? selectedRow?.archiveItemRoute ?? null;
+    const detailRoute = selectedRow?.archiveItemRoute ?? selectedRow?.catalogItemRoute ?? null;
     if (!detailRoute) {
       onSelectedSearchDetailChange(null);
       return undefined;
@@ -3064,6 +3092,8 @@ function ArchiveAssetPreview({ item }) {
   const [refreshing, setRefreshing] = useState(false);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [materializing, setMaterializing] = useState(false);
+  const [materializationJob, setMaterializationJob] = useState(null);
+  const [jobLoading, setJobLoading] = useState(false);
   const [error, setError] = useState(null);
   const [controlResult, setControlResult] = useState(null);
   const [lookupResult, setLookupResult] = useState(null);
@@ -3072,6 +3102,11 @@ function ArchiveAssetPreview({ item }) {
   const canFetch = Boolean(assetRoute);
   const lookupRoute = archiveItemAssetLookupRoute(effectiveItem);
   const materializeRoute = archiveItemMaterializeRoute(effectiveItem);
+  const materializationCreateRoute = archiveMaterializationCreateRoute();
+  const materializationJobsRoute = archiveMaterializationJobsRoute(effectiveItem);
+  const materializationJobRoute = archiveMaterializationJobRoute(materializationJob);
+  const activeMaterializationJob = isActiveArchiveMaterializationJob(materializationJob);
+  const canCancelMaterializationJob = materializationJob?.status === "queued";
 
   useEffect(() => {
     setAsset((current) => {
@@ -3083,6 +3118,8 @@ function ArchiveAssetPreview({ item }) {
     setRefreshing(false);
     setLookupLoading(false);
     setMaterializing(false);
+    setMaterializationJob(null);
+    setJobLoading(false);
     setError(null);
     setControlResult(null);
     setLookupResult(null);
@@ -3091,6 +3128,19 @@ function ArchiveAssetPreview({ item }) {
   useEffect(() => () => {
     if (asset?.objectUrl) URL.revokeObjectURL(asset.objectUrl);
   }, [asset?.objectUrl]);
+
+  useEffect(() => {
+    if (!item?.id || canFetch) return;
+    void loadLatestMaterializationJob();
+  }, [item?.id, canFetch]);
+
+  useEffect(() => {
+    if (!materializationJob?.id || !activeMaterializationJob) return;
+    const interval = window.setInterval(() => {
+      void refreshMaterializationJob(materializationJob.id, { silent: true });
+    }, 4000);
+    return () => window.clearInterval(interval);
+  }, [materializationJob?.id, activeMaterializationJob]);
 
   async function fetchAsset() {
     if (!assetRoute) return;
@@ -3175,24 +3225,86 @@ function ArchiveAssetPreview({ item }) {
     }
   }
 
-  async function materializeArchiveAsset() {
-    if (!materializeRoute) return;
-    setMaterializing(true);
-    setError(null);
-    setControlResult(null);
+  function applyMaterializationJob(job, options = {}) {
+    if (!job) return;
+    setMaterializationJob(job);
+    if (job.result?.item) {
+      setMaterializedItem(job.result.item);
+    }
+    if (options.quiet) return;
+    const message = job.result?.message ?? job.error?.message ?? `Materialization job ${job.status}`;
+    setControlResult({
+      tone: archiveMaterializationStatusTone(job.status),
+      message,
+    });
+  }
+
+  async function loadLatestMaterializationJob(options = {}) {
+    const route = archiveMaterializationJobsRoute(item, 1);
+    if (!route) return;
+    if (!options.silent) setJobLoading(true);
     try {
-      const response = await fetch(materializeRoute, {
-        method: "POST",
+      const response = await fetch(route, {
         cache: "no-store",
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
-      if (payload?.item) {
-        setMaterializedItem(payload.item);
+      const job = payload?.jobs?.[0] ?? null;
+      if (job) applyMaterializationJob(job, { quiet: true });
+    } catch (assetError) {
+      if (!options.silent) {
+        setControlResult({
+          tone: "bad",
+          message: assetError.message || "Materialization job lookup failed",
+        });
       }
+    } finally {
+      if (!options.silent) setJobLoading(false);
+    }
+  }
+
+  async function refreshMaterializationJob(jobId, options = {}) {
+    const route = archiveMaterializationJobRoute(jobId);
+    if (!route) return;
+    if (!options.silent) setJobLoading(true);
+    try {
+      const response = await fetch(route, {
+        cache: "no-store",
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      applyMaterializationJob(payload?.job ?? payload, { quiet: options.silent && isActiveArchiveMaterializationJob(payload?.job ?? payload) });
+    } catch (assetError) {
+      if (!options.silent) {
+        setControlResult({
+          tone: "bad",
+          message: assetError.message || "Materialization job refresh failed",
+        });
+      }
+    } finally {
+      if (!options.silent) setJobLoading(false);
+    }
+  }
+
+  async function materializeArchiveAsset() {
+    if (!effectiveItem?.id) return;
+    setMaterializing(true);
+    setError(null);
+    setControlResult(null);
+    try {
+      const response = await fetch(materializationCreateRoute, {
+        method: "POST",
+        cache: "no-store",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ archiveItemId: effectiveItem.id }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      const job = payload?.job ?? null;
+      if (job) applyMaterializationJob(job, { quiet: true });
       setControlResult({
-        tone: payload?.status === "materialized" || payload?.status === "already_materialized" ? "ok" : "warn",
-        message: payload?.message ?? `Materialization ${payload?.status ?? "requested"}`,
+        tone: payload?.reused ? "warn" : "ok",
+        message: payload?.reused ? `Using existing ${job?.status ?? "active"} materialization job` : `Queued materialization job ${job?.id ?? ""}`.trim(),
       });
     } catch (assetError) {
       setControlResult({
@@ -3201,6 +3313,36 @@ function ArchiveAssetPreview({ item }) {
       });
     } finally {
       setMaterializing(false);
+    }
+  }
+
+  async function cancelMaterializationJob() {
+    if (!materializationJobRoute) return;
+    setJobLoading(true);
+    setControlResult(null);
+    try {
+      const response = await fetch(materializationJobRoute, {
+        method: "POST",
+        cache: "no-store",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "cancel" }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      const job = payload?.job ?? payload;
+      applyMaterializationJob(job, { quiet: true });
+      setControlResult({
+        tone: "warn",
+        message: `Cancelled materialization job ${job?.id ?? ""}`.trim(),
+      });
+    } catch (assetError) {
+      setControlResult({
+        tone: "bad",
+        message: assetError.message || "Materialization cancellation failed",
+      });
+      await loadLatestMaterializationJob({ silent: true });
+    } finally {
+      setJobLoading(false);
     }
   }
 
@@ -3246,17 +3388,32 @@ function ArchiveAssetPreview({ item }) {
               <Search size={13} aria-hidden="true" />
               <span>{lookupLoading ? "Checking" : "Lookup"}</span>
             </button>
-            <button type="button" disabled={!materializeRoute || materializing} onClick={materializeArchiveAsset}>
+            <button type="button" disabled={!effectiveItem?.id || materializing || activeMaterializationJob} onClick={materializeArchiveAsset}>
               <Download size={13} aria-hidden="true" />
-              <span>{materializing ? "Materializing" : "Materialize"}</span>
+              <span>{materializing ? "Queuing" : activeMaterializationJob ? materializationJob.status : "Materialize"}</span>
+            </button>
+            <button type="button" disabled={!canCancelMaterializationJob || jobLoading} onClick={cancelMaterializationJob}>
+              <Trash2 size={13} aria-hidden="true" />
+              <span>{jobLoading && canCancelMaterializationJob ? "Cancelling" : "Cancel"}</span>
             </button>
           </div>
+          {materializationJob ? (
+            <div className={`asset-job-status asset-job-${archiveMaterializationStatusTone(materializationJob.status)}`}>
+              <div className="asset-job-head">
+                <strong>{materializationJob.status}</strong>
+                <span>{materializationJob.updatedAt ? `Updated ${formatDateTime(materializationJob.updatedAt)}` : materializationJob.id}</span>
+              </div>
+              <span>{materializationJob.result?.message ?? materializationJob.error?.message ?? `Job ${materializationJob.id}`}</span>
+            </div>
+          ) : null}
           <div className="inspector-actions search-kind-actions">
             {effectiveItem.uri ? <RouteChip value={effectiveItem.uri} label="Provider URI" /> : null}
             {effectiveItem.links?.response ? <RouteChip value={effectiveItem.links.response} label="Response" /> : null}
             {effectiveItem.providerConversationUrl ? <RouteChip value={effectiveItem.providerConversationUrl} label="Provider Chat" /> : null}
             {lookupRoute ? <RouteChip value={lookupRoute} label="Asset Lookup" /> : null}
-            {materializeRoute ? <RouteChip value={materializeRoute} label="Materialize" /> : null}
+            {materializationJobsRoute ? <RouteChip value={materializationJobsRoute} label="Materialization Jobs" /> : null}
+            {materializationJobRoute ? <RouteChip value={materializationJobRoute} label="Materialization Job" /> : null}
+            {materializeRoute ? <RouteChip value={materializeRoute} label="Foreground Materialize" /> : null}
           </div>
         </div>
       ) : null}
@@ -3565,6 +3722,7 @@ export default function App() {
   const dragRef = useRef(null);
   const apiStatus = useApiStatus();
   const runStatus = useRunRecoveryStatus();
+  const rightPaneHasSelection = layout.activeNav === "search" && Boolean(selectedSearchRow || selectedArchiveItem);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
@@ -3773,7 +3931,12 @@ export default function App() {
           onSelectedSearchDetailChange={setSelectedSearchDetail}
         />
 
-        <aside className={layout.rightCollapsed ? "pane right-pane is-collapsed" : "pane right-pane"}>
+        <aside className={[
+          "pane",
+          "right-pane",
+          layout.rightCollapsed ? "is-collapsed" : "",
+          rightPaneHasSelection ? "has-selection" : "",
+        ].filter(Boolean).join(" ")}>
           <button className="resize-handle left" type="button" aria-label="Resize right pane" onPointerDown={() => beginResize("right")}>
             <GripVertical size={16} />
           </button>
