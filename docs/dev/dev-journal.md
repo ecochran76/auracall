@@ -31340,3 +31340,37 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `agent-browser` opened Views and confirmed Columns closed, Views opened as
     `position: absolute`, `aria-expanded` states updated, the table top stayed
     fixed at 166px, and there was no horizontal overflow.
+
+## Turn 209 | 2026-05-20
+
+- Goal: keep backend archive/cache file availability current for uploaded and
+  generated files before further Search UX polish.
+- Change:
+  - traced Plan 0066 and the current archive/materialization services.
+  - kept this slice out of the concurrently dirty UX files.
+  - changed archive index reads to refresh local file metadata for indexed
+    upload and generated-artifact rows.
+  - changed read-item/read-asset paths to use the refreshed indexed item path.
+  - persisted changed file evidence back into the archive index so Search,
+    archive item detail, asset lookup, and asset routes converge without an
+    explicit backfill.
+  - added regression coverage for stale indexed upload/generated-artifact rows
+    becoming available after their local files appear.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.archiveService.test.ts
+    tests/runtime.archiveMaterializationService.test.ts
+    tests/runtime.searchProjectionService.test.ts --maxWorkers 1`
+  - `git diff --check`
+  - `pnpm run build`
+  - `pnpm exec tsc --noEmit --pretty false` still reports existing unrelated
+    fixture typing drift in HTTP/materialization/search tests.
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - `/status` returned `ok: true` on port `18095`.
+  - live archive backfill rebuilt 1425 installed archive rows, including 148
+    uploads, 319 generated artifacts, and 338 provider conversations.
+  - live Search artifact readback returned run-archive artifact rows with
+    archive-item routes and asset routes for rows whose local files are
+    currently readable.

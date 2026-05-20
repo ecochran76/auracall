@@ -204,7 +204,12 @@ export function createRunArchiveService(deps: RunArchiveServiceDeps = {}): RunAr
   const now = deps.now ?? (() => new Date());
   async function readIndexedItems(): Promise<RunArchiveItem[]> {
     const index = await indexStore.readIndex();
-    if (index) return index.items;
+    if (index) {
+      return refreshIndexedFileMetadata(index.items, {
+        indexStore,
+        updatedAt: now().toISOString(),
+      });
+    }
     return backfillIndexItems({
       runStore,
       batchStore,
@@ -235,7 +240,7 @@ export function createRunArchiveService(deps: RunArchiveServiceDeps = {}): RunAr
       };
     },
     async readItem(id) {
-      const item = await indexStore.readItem(id) ?? (await readIndexedItems()).find((entry) => entry.id === id) ?? null;
+      const item = (await readIndexedItems()).find((entry) => entry.id === id) ?? null;
       if (!item) return null;
       return {
         object: 'run_archive_item_detail',
@@ -244,7 +249,7 @@ export function createRunArchiveService(deps: RunArchiveServiceDeps = {}): RunAr
       };
     },
     async readAsset(id) {
-      const item = await indexStore.readItem(id) ?? (await readIndexedItems()).find((entry) => entry.id === id) ?? null;
+      const item = (await readIndexedItems()).find((entry) => entry.id === id) ?? null;
       if (!item?.localPath) return null;
       const stat = await fs.stat(item.localPath).catch(() => null);
       if (!stat?.isFile()) return null;
@@ -482,6 +487,23 @@ async function collectArchiveItems(deps: {
     ...buildMediaArchiveItems(mediaRecords),
     ...evidenceRecords.map(buildEvidenceArchiveItem),
   ]);
+}
+
+async function refreshIndexedFileMetadata(
+  items: RunArchiveItem[],
+  input: {
+    indexStore: RunArchiveIndexStore;
+    updatedAt: string;
+  },
+): Promise<RunArchiveItem[]> {
+  const refreshed = await enrichFileMetadata(items);
+  const changed = refreshed.filter((item, index) => fileMetadataChanged(items[index], item));
+  if (changed.length > 0) {
+    await input.indexStore.upsertItems(changed, {
+      updatedAt: input.updatedAt,
+    });
+  }
+  return refreshed;
 }
 
 function listBatches(store: ResponseBatchStore): Promise<ResponseBatchRecord[]> {
@@ -981,9 +1003,11 @@ function itemMatchesQuery(item: RunArchiveItem, query: string): boolean {
 
 async function enrichFileMetadata(items: RunArchiveItem[]): Promise<RunArchiveItem[]> {
   return Promise.all(items.map(async (item) => {
-    const checksumSha256 = readRecordString(item.metadata, ['checksumSha256']) ?? await calculateFileSha256(item.localPath);
+    const liveChecksumSha256 = await calculateFileSha256(item.localPath);
+    const checksumSha256 = liveChecksumSha256 ?? readRecordString(item.metadata, ['checksumSha256']);
     const fileAvailable = item.localPath ? await fileExists(item.localPath) : null;
-    const fileSizeBytes = readRecordNumber(item.metadata, ['fileSizeBytes', 'size']) ?? await readFileSize(item.localPath);
+    const liveFileSizeBytes = await readFileSize(item.localPath);
+    const fileSizeBytes = liveFileSizeBytes ?? readRecordNumber(item.metadata, ['fileSizeBytes', 'size']);
     const cacheKey = checksumSha256
       ? `sha256:${checksumSha256}`
       : item.localPath
@@ -1006,6 +1030,17 @@ async function enrichFileMetadata(items: RunArchiveItem[]): Promise<RunArchiveIt
       },
     };
   }));
+}
+
+function fileMetadataChanged(previous: RunArchiveItem | undefined, next: RunArchiveItem): boolean {
+  if (!previous) return true;
+  return previous.cacheKey !== next.cacheKey ||
+    previous.checksumSha256 !== next.checksumSha256 ||
+    previous.fileAvailable !== next.fileAvailable ||
+    previous.metadata.checksumSha256 !== next.metadata.checksumSha256 ||
+    previous.metadata.fileSizeBytes !== next.metadata.fileSizeBytes ||
+    previous.metadata.fileAvailable !== next.metadata.fileAvailable ||
+    previous.links.asset !== next.links.asset;
 }
 
 async function calculateFileSha256(localPath: string | null): Promise<string | null> {

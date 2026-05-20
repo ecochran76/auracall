@@ -16426,3 +16426,12 @@ browser-stage lifecycle observability, not transcript truncation.
   exits after successful inline browser `--wait` completion once the session log
   stream is flushed, because non-critical browser/CDP handles must not turn a
   completed one-shot command into a caller-side timeout.
+
+- 2026-05-20: Run archive reads should refresh local file evidence before
+  exposing upload/generated-artifact availability to Search or asset lookup.
+  Indexed archive rows can become stale when an upload path appears after
+  initial indexing, a generated artifact is materialized, or a cached file is
+  removed outside the archive writer. Archive list/detail/asset-lookup reads now
+  re-stat and re-hash local file-bearing items, then persist changed
+  `fileAvailable`, size, checksum, cache key, and asset-route fields back into
+  the user-scoped archive index without launching provider browser work.

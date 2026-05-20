@@ -40,6 +40,11 @@ Implemented:
   `auracall api archive-backfill`, or MCP `run_archive_backfill`.
 - Upload and generated-artifact items carry stable cache keys and SHA-256
   checksums when AuraCall can read the local file.
+- Archive list/detail/asset-lookup reads refresh file-bearing upload and
+  generated-artifact metadata from local filesystem evidence and persist changed
+  availability, file size, checksum, cache key, and asset route fields back into
+  the archive index. This keeps already-indexed uploaded and generated files
+  current for Search without requiring provider browser work or a full backfill.
 - File-bearing archive items can stream their readable local file through
   `GET /v1/archive/items/{archive_item_id}/asset` without exposing callers to
   runtime filesystem layout.
@@ -94,11 +99,8 @@ Remaining:
 - Fill remaining upload/generated-artifact gaps where provider-specific
   artifact ids, project ids, or bound identity keys are not yet exposed by a
   provider-specific runner/materializer.
-- Surface archive search and retrieval through the operator dashboard without
-  provider browser work.
-- Add operator dashboard archive search and item/evidence navigation.
-- Add operator dashboard polling/control affordances for async materialization
-  jobs.
+- Continue hardening provider-specific artifact materializers for generated
+  assets that still require browser recovery.
 - Promote asset lookup results into a canonical dedupe manifest if callers need
   a persisted duplicate-group table instead of on-demand lookup.
 

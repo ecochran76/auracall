@@ -554,6 +554,95 @@ describe('run archive service', () => {
       ],
     });
   });
+
+  test('refreshes indexed upload and generated artifact file metadata on archive reads', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-run-archive-file-refresh-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const uploadPath = path.join(homeDir, 'late-upload.txt');
+    const generatedPath = path.join(homeDir, 'late-generated.json');
+
+    await writeRunArchiveIndex([
+      createArchiveItemFixture({
+        id: 'upload:resp_file_refresh:step:upload_1',
+        kind: 'upload',
+        responseId: 'resp_file_refresh',
+        artifactId: 'upload_1',
+        fileName: 'late-upload.txt',
+        localPath: uploadPath,
+        fileAvailable: false,
+        links: {},
+        metadata: {
+          fileAvailable: false,
+        },
+      }),
+      createArchiveItemFixture({
+        id: 'generated-artifact:resp_file_refresh:artifact_1',
+        kind: 'generated_artifact',
+        responseId: 'resp_file_refresh',
+        artifactId: 'artifact_1',
+        fileName: 'late-generated.json',
+        localPath: generatedPath,
+        fileAvailable: false,
+        links: {},
+        metadata: {
+          fileAvailable: false,
+        },
+      }),
+    ]);
+
+    await writeFile(uploadPath, 'uploaded bytes', 'utf8');
+    await writeFile(generatedPath, '{"ready":true}', 'utf8');
+
+    const service = createRunArchiveService({
+      now: () => new Date('2026-05-16T20:00:00.000Z'),
+    });
+
+    await expect(service.listItems({ kind: 'upload' })).resolves.toMatchObject({
+      items: [
+        expect.objectContaining({
+          id: 'upload:resp_file_refresh:step:upload_1',
+          fileAvailable: true,
+          cacheKey: expect.stringMatching(/^sha256:/),
+          checksumSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+          links: expect.objectContaining({
+            asset: expect.stringContaining('/asset'),
+          }),
+          metadata: expect.objectContaining({
+            fileAvailable: true,
+            fileSizeBytes: Buffer.byteLength('uploaded bytes'),
+          }),
+        }),
+      ],
+    });
+    await expect(service.readItem('generated-artifact:resp_file_refresh:artifact_1')).resolves.toMatchObject({
+      item: {
+        fileAvailable: true,
+        cacheKey: expect.stringMatching(/^sha256:/),
+        checksumSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+        links: expect.objectContaining({
+          asset: expect.stringContaining('/asset'),
+        }),
+        metadata: expect.objectContaining({
+          fileAvailable: true,
+          fileSizeBytes: Buffer.byteLength('{"ready":true}'),
+        }),
+      },
+    });
+    await expect(readRunArchiveIndex()).resolves.toMatchObject({
+      items: expect.arrayContaining([
+        expect.objectContaining({
+          id: 'upload:resp_file_refresh:step:upload_1',
+          fileAvailable: true,
+          cacheKey: expect.stringMatching(/^sha256:/),
+        }),
+        expect.objectContaining({
+          id: 'generated-artifact:resp_file_refresh:artifact_1',
+          fileAvailable: true,
+          cacheKey: expect.stringMatching(/^sha256:/),
+        }),
+      ]),
+    });
+  });
 });
 
 function createArchiveItemFixture(overrides: Partial<RunArchiveItem>): RunArchiveItem {

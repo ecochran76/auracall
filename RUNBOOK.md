@@ -5899,3 +5899,41 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - rerun company-bot's non-posting AuraCall backup wrapper to verify it
     reports `auracall/ordinary_success/rc=0` instead of materialized recovery.
+
+## Turn 209 | 2026-05-20
+
+- Goal: tighten backend cache freshness for uploaded and generated files before
+  more Search UX work depends on the archive asset panel.
+- Change:
+  - archive reads now refresh indexed file-bearing rows from local filesystem
+    evidence before returning list/detail/asset-lookup data.
+  - refreshed upload and generated-artifact rows persist changed
+    `fileAvailable`, file size, checksum, cache key, and asset-route fields
+    back into the user-scoped archive index.
+  - detail and asset reads now use the same refreshed indexed item path instead
+    of bypassing refresh through direct index lookup.
+  - this remains browser-free: it only checks local paths already recorded in
+    the archive and does not materialize missing provider assets.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.archiveService.test.ts
+    tests/runtime.archiveMaterializationService.test.ts
+    tests/runtime.searchProjectionService.test.ts --maxWorkers 1`
+  - `git diff --check`
+  - `pnpm run build`
+  - `pnpm exec tsc --noEmit --pretty false` still reports existing unrelated
+    test fixture typing drift in HTTP/materialization/search tests.
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - `/status` returned `ok: true` on port `18095`.
+  - `auracall api archive-backfill --port 18095 --json` rebuilt the live
+    archive index to 1425 items: 148 uploads, 319 generated artifacts, and 338
+    provider conversations.
+  - live `/v1/search?kind=artifact&limit=5` returned run-archive artifact rows
+    first; rows with readable local files exposed `fileAvailable: true` and an
+    archive asset route.
+- Next:
+  - add provider-specific materializer improvements only for artifact rows that
+    have provider conversation context but still lack local files after the
+    async recovery job runs.
