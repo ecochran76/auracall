@@ -31039,6 +31039,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/runtime.archiveMaterializationJobService.test.ts tests/cli/apiRunArchiveCommand.test.ts tests/http.responsesServer.test.ts -t "archive materialization" --maxWorkers 1`
 
+## Turn 200 | 2026-05-19
+
+- Goal: harden queued cancellation as a regression contract for the serialized
+  archive materialization runner.
+- Change:
+  - added coverage for cancelling a queued job while a previous materialization
+    is running.
+  - verified the later queued job remains `cancelled` and never invokes the
+    provider materializer when its turn arrives.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveMaterializationJobService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.archiveMaterializationJobService.test.ts tests/cli/apiRunArchiveCommand.test.ts tests/http.responsesServer.test.ts -t "archive materialization" --maxWorkers 1`
+  - `pnpm run build`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+
 ## Turn 199 | 2026-05-19
 
 - Goal: make Search table row selection operable and inspectable from the

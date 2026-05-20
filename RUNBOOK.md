@@ -5776,3 +5776,25 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - hand the cancel/list/status endpoints to the UX session; add cooperative
     cancellation to provider materializers only if running-job abort becomes a
     required operator workflow.
+
+## Turn 200 | 2026-05-19
+
+- Goal: lock down the cancellation behavior for queued jobs that wait behind
+  another materialization in the serialized runner.
+- Change:
+  - added regression coverage proving a cancelled queued job is re-read from
+    persisted state before provider work starts after an earlier running job
+    completes.
+  - kept production semantics unchanged: queued cancellation is honored before
+    provider work; running jobs remain conflict-only until materializers accept
+    cooperative cancellation.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveMaterializationJobService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.archiveMaterializationJobService.test.ts tests/cli/apiRunArchiveCommand.test.ts tests/http.responsesServer.test.ts -t "archive materialization" --maxWorkers 1`
+  - `pnpm run build`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+- Next:
+  - hand the locked cancellation/list/status contract to the UX session.

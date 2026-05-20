@@ -155,6 +155,54 @@ describe('archive materialization job service', () => {
     expect(materializeItem).not.toHaveBeenCalled();
   });
 
+  it('does not start a cancelled job after it waits behind another materialization', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialize-cancel-queued-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    let releaseFirst!: () => void;
+    const materializedIds: string[] = [];
+    const service = createArchiveMaterializationJobService({
+      materializationService: {
+        materializeItem: async (request) => {
+          materializedIds.push(request.archiveItemId);
+          if (request.archiveItemId.endsWith('artifact_1')) {
+            await new Promise<void>((resolve) => {
+              releaseFirst = resolve;
+            });
+          }
+          return {
+            object: 'run_archive_item_materialization' as const,
+            generatedAt: '2026-05-19T12:26:00.000Z',
+            status: 'already_materialized' as const,
+            item: createGeneratedArtifactItem(request.archiveItemId),
+            file: null,
+            message: 'Archive item already has a readable local asset.',
+          };
+        },
+      },
+      generateId: sequenceId(['ramj_queue_1', 'ramj_queue_2']),
+      now: sequenceNow([
+        '2026-05-19T12:25:00.000Z',
+        '2026-05-19T12:25:01.000Z',
+        '2026-05-19T12:25:02.000Z',
+        '2026-05-19T12:25:03.000Z',
+        '2026-05-19T12:25:04.000Z',
+      ]),
+      schedule: () => {},
+    });
+    await service.createJob({ archiveItemId: 'generated-artifact:resp_1:artifact_1' });
+    await service.createJob({ archiveItemId: 'generated-artifact:resp_2:artifact_2' });
+
+    const firstRun = service.runJob('ramj_queue_1');
+    await waitForJobStatus(service, 'ramj_queue_1', 'running');
+    await service.cancelJob('ramj_queue_2');
+    releaseFirst();
+    await firstRun;
+    const secondRun = await service.runJob('ramj_queue_2');
+
+    expect(secondRun.status).toBe('cancelled');
+    expect(materializedIds).toEqual(['generated-artifact:resp_1:artifact_1']);
+  });
+
   it('rejects cancellation after provider work starts', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialize-cancel-running-'));
     setAuracallHomeDirOverrideForTest(homeDir);

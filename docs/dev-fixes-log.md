@@ -16394,3 +16394,8 @@ browser-stage lifecycle observability, not transcript truncation.
   or already terminal jobs return a conflict. CLI parity is
   `auracall api archive-materialization-cancel`, and MCP parity is
   `run_archive_materialization_cancel`.
+
+- 2026-05-19: Queued materialization cancellation must be honored even when the
+  job waits behind another provider recovery in the serialized runner. The
+  regression test now proves a cancelled queued job is re-read from persisted
+  state when its turn arrives and does not invoke the provider materializer.
