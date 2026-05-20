@@ -1041,6 +1041,7 @@ select:focus-visible {
 }
 
 .search-workbench {
+  position: relative;
   display: grid;
   gap: 5px;
   margin-top: 0;
@@ -1131,11 +1132,22 @@ select:focus-visible {
 
 .search-view-menu,
 .search-column-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 6px;
+  z-index: 14;
+  width: min(560px, calc(100% - 12px));
+  max-height: min(520px, calc(100vh - 180px));
+  overflow: auto;
   padding: 6px;
   border: 1px solid #293342;
   border-radius: 8px;
   background: #10161f;
   box-shadow: 0 12px 30px rgb(0 0 0 / 24%);
+}
+
+.search-view-menu {
+  width: min(500px, calc(100% - 12px));
 }
 
 .search-view-save {

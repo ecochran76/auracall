@@ -31314,3 +31314,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `agent-browser` selected a different row and confirmed the inspector
     reopened, then dispatched Escape and confirmed the inspector collapsed with
     no page-level horizontal overflow.
+
+## Turn 208 | 2026-05-20
+
+- Goal: preserve Search table real estate when operators open secondary Search
+  controls.
+- Change:
+  - converted the Search Columns and Views menus from inline panels into
+    anchored popovers so they no longer push the results table down.
+  - made Columns and Views mutually exclusive: opening one closes the other.
+  - added `aria-expanded` and `aria-controls` wiring for both popover trigger
+    buttons.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check -- ux/operator/src/App.jsx
+    ux/operator/src/styles.css` passed.
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK`.
+  - `agent-browser` opened the installed Search dashboard at 1280px, opened
+    Columns, and confirmed the menu rendered as `position: absolute`, the table
+    top stayed fixed at 166px, and there was no horizontal overflow.
+  - `agent-browser` opened Views and confirmed Columns closed, Views opened as
+    `position: absolute`, `aria-expanded` states updated, the table top stayed
+    fixed at 166px, and there was no horizontal overflow.

@@ -2487,11 +2487,33 @@ function ArchiveSearchViewport({
             <ListFilter size={14} aria-hidden="true" />
             <span>Filters</span>
           </button>
-          <button className={isColumnMenuOpen ? "icon-label-button search-toolbar-button active" : "icon-label-button search-toolbar-button"} type="button" onClick={() => setIsColumnMenuOpen((current) => !current)} title="Configure visible columns" aria-label="Configure visible columns">
+          <button
+            className={isColumnMenuOpen ? "icon-label-button search-toolbar-button active" : "icon-label-button search-toolbar-button"}
+            type="button"
+            onClick={() => {
+              setIsColumnMenuOpen((current) => !current);
+              setIsViewsMenuOpen(false);
+            }}
+            title="Configure visible columns"
+            aria-label="Configure visible columns"
+            aria-expanded={isColumnMenuOpen}
+            aria-controls="searchColumnMenu"
+          >
             <Columns3 size={14} aria-hidden="true" />
             <span>Columns{hiddenColumnCount ? ` -${hiddenColumnCount}` : ""}</span>
           </button>
-          <button className={isViewsMenuOpen ? "icon-label-button search-toolbar-button active" : "icon-label-button search-toolbar-button"} type="button" onClick={() => setIsViewsMenuOpen((current) => !current)} title="Save or apply Search views" aria-label="Save or apply Search views">
+          <button
+            className={isViewsMenuOpen ? "icon-label-button search-toolbar-button active" : "icon-label-button search-toolbar-button"}
+            type="button"
+            onClick={() => {
+              setIsViewsMenuOpen((current) => !current);
+              setIsColumnMenuOpen(false);
+            }}
+            title="Save or apply Search views"
+            aria-label="Save or apply Search views"
+            aria-expanded={isViewsMenuOpen}
+            aria-controls="searchViewMenu"
+          >
             <FileText size={14} aria-hidden="true" />
             <span>{activeViewId ? savedViews.find((view) => view.id === activeViewId)?.name ?? "View" : `Views${savedViews.length ? ` ${savedViews.length}` : ""}`}</span>
           </button>
@@ -2503,7 +2525,7 @@ function ArchiveSearchViewport({
         </div>
 
         {isViewsMenuOpen ? (
-          <div className="search-view-menu" aria-label="Saved Search views">
+          <div id="searchViewMenu" className="search-view-menu" aria-label="Saved Search views">
             <div className="search-view-save">
               <input
                 type="text"
@@ -2535,7 +2557,7 @@ function ArchiveSearchViewport({
         ) : null}
 
         {isColumnMenuOpen ? (
-          <div className="search-column-menu" aria-label="Search column controls">
+          <div id="searchColumnMenu" className="search-column-menu" aria-label="Search column controls">
             <div className="search-column-menu-head">
               <strong>Columns</strong>
               <button type="button" className="text-button" onClick={resetColumnPreferences}>Reset</button>
