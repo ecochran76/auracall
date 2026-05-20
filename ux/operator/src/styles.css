@@ -272,6 +272,10 @@ select:focus-visible {
   justify-content: flex-start;
 }
 
+.mobile-inspector-label {
+  display: none;
+}
+
 .pane-content {
   min-width: 0;
   min-height: 0;
@@ -2970,8 +2974,21 @@ select:focus-visible {
   }
 
   .right-pane.has-selection:not(.is-collapsed) .pane-toolbar {
+    justify-content: space-between;
     background: #11151c;
     border-bottom: 1px solid #252d38;
+  }
+
+  .right-pane.has-selection:not(.is-collapsed) .mobile-inspector-label {
+    min-width: 0;
+    display: block;
+    color: #dfe7f2;
+    font-size: 11px;
+    font-weight: 760;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
   }
 
   .right-pane.has-selection:not(.is-collapsed) .inspector-body {

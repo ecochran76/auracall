@@ -3782,10 +3782,23 @@ export default function App() {
   const [selectedArchiveDetail, setSelectedArchiveDetail] = useState(emptyArchiveDetailState);
   const [selectedSearchRow, setSelectedSearchRow] = useState(readSearchRowFromUrl);
   const [selectedSearchDetail, setSelectedSearchDetail] = useState(null);
+  const [dismissedSearchInspectorKey, setDismissedSearchInspectorKey] = useState(null);
   const dragRef = useRef(null);
   const apiStatus = useApiStatus();
   const runStatus = useRunRecoveryStatus();
-  const rightPaneHasSelection = layout.activeNav === "search" && Boolean(selectedSearchRow || selectedArchiveItem);
+  const selectedSearchInspectorKey = layout.activeNav === "search"
+    ? selectedSearchRow?.id
+      ? `row:${selectedSearchRow.id}`
+      : selectedArchiveItem?.id
+        ? `archive:${selectedArchiveItem.id}`
+        : null
+    : null;
+  const rightPaneHasSelection = Boolean(selectedSearchInspectorKey);
+  const rightPaneToggleLabel = rightPaneHasSelection && !layout.rightCollapsed
+    ? "Close selected Search inspector"
+    : layout.rightCollapsed
+      ? "Expand right pane"
+      : "Collapse right pane";
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
@@ -3820,10 +3833,11 @@ export default function App() {
 
   useEffect(() => {
     if (!rightPaneHasSelection || !layout.rightCollapsed || layout.activeNav !== "search") return;
+    if (selectedSearchInspectorKey === dismissedSearchInspectorKey) return;
     const compactViewport = window.matchMedia?.("(max-width: 980px)").matches ?? window.innerWidth <= 980;
     if (!compactViewport) return;
     setLayout((current) => (current.rightCollapsed ? { ...current, rightCollapsed: false } : current));
-  }, [layout.activeNav, layout.rightCollapsed, rightPaneHasSelection]);
+  }, [dismissedSearchInspectorKey, layout.activeNav, layout.rightCollapsed, rightPaneHasSelection, selectedSearchInspectorKey]);
 
   useEffect(() => {
     if (layout.activeNav === "health" || layout.activeNav === "search") return;
@@ -4011,12 +4025,20 @@ export default function App() {
             <GripVertical size={16} />
           </button>
           <div className="pane-toolbar">
+            {rightPaneHasSelection ? <span className="mobile-inspector-label">Selected result</span> : null}
             <button
               className="icon-button"
               type="button"
-              aria-label={layout.rightCollapsed ? "Expand right pane" : "Collapse right pane"}
-              title={layout.rightCollapsed ? "Expand right pane" : "Collapse right pane"}
-              onClick={() => setLayout((current) => ({ ...current, rightCollapsed: !current.rightCollapsed }))}
+              aria-label={rightPaneToggleLabel}
+              title={rightPaneToggleLabel}
+              onClick={() => {
+                if (rightPaneHasSelection && !layout.rightCollapsed) {
+                  setDismissedSearchInspectorKey(selectedSearchInspectorKey);
+                } else {
+                  setDismissedSearchInspectorKey(null);
+                }
+                setLayout((current) => ({ ...current, rightCollapsed: !current.rightCollapsed }));
+              }}
             >
               {layout.rightCollapsed ? <PanelRightOpen size={18} /> : <PanelRightClose size={18} />}
             </button>
