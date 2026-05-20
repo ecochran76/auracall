@@ -1857,6 +1857,7 @@ function ArchiveSearchViewport({
   const [copiedRowId, setCopiedRowId] = useState(null);
   const searchRoute = apiStatus.status?.routes?.search ?? "/v1/search";
   const dragColumnRef = useRef(null);
+  const searchWorkbenchRef = useRef(null);
   const searchScrollRef = useRef(null);
   const loadingMoreRef = useRef(false);
   const allRows = useMemo(() => flattenSearchCatalogRows(catalog), [catalog]);
@@ -1922,6 +1923,13 @@ function ArchiveSearchViewport({
     + filters.providers.size
     + filters.statuses.size;
   const hasActiveFilters = activeFilterCount > 0;
+  const hasOpenSearchPopover = showAdvancedFilters || isColumnMenuOpen || isViewsMenuOpen;
+
+  function closeSearchPopovers() {
+    setShowAdvancedFilters(false);
+    setIsColumnMenuOpen(false);
+    setIsViewsMenuOpen(false);
+  }
 
   useEffect(() => {
     localStorage.setItem(SEARCH_TABLE_STORAGE_KEY, JSON.stringify(tablePrefs));
@@ -1930,6 +1938,25 @@ function ArchiveSearchViewport({
   useEffect(() => {
     localStorage.setItem(SEARCH_VIEWS_STORAGE_KEY, JSON.stringify(savedViews));
   }, [savedViews]);
+
+  useEffect(() => {
+    if (!hasOpenSearchPopover) return undefined;
+    const handlePointerDown = (event) => {
+      if (searchWorkbenchRef.current?.contains(event.target)) return;
+      closeSearchPopovers();
+    };
+    const handleKeyDown = (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      closeSearchPopovers();
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [hasOpenSearchPopover]);
 
   useEffect(() => {
     if (!selectedArchiveItem) {
@@ -2452,7 +2479,7 @@ function ArchiveSearchViewport({
         </div>
       </div>
 
-      <section className="search-workbench" aria-label="Search workbench">
+      <section ref={searchWorkbenchRef} className="search-workbench" aria-label="Search workbench">
         <div className="search-command-bar">
           <Search size={15} aria-hidden="true" />
           <input

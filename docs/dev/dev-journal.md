@@ -31448,3 +31448,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `ramj_10b0d4a33b2e47a0b7c2c16726f740df` then succeeded via
     `existing-archive-asset` and updated the formerly missing archive row to
     `fileAvailable = true`.
+
+## Turn 212 | 2026-05-20
+
+- Goal: make Search secondary popovers dismiss consistently without adding more
+  chrome to the dense command row.
+- Change:
+  - added a Search workbench ref and shared popover-close path.
+  - wired Escape to close Filters, Columns, or Views while a Search popover is
+    open.
+  - wired document pointer-down outside the Search workbench to close the open
+    popover while preserving interactions inside the active popover.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check -- ux/operator/src/App.jsx` passed.
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK` after the restarted listener was ready.
+  - `agent-browser` opened Filters and confirmed Escape closed it, updated
+    `aria-expanded`, and preserved no-horizontal-overflow behavior.
+  - `agent-browser` opened Columns and confirmed pointer-down on the results
+    table closed it, updated `aria-expanded`, and kept the table top fixed at
+    166px.
+  - `agent-browser` opened Views and confirmed pointer-down inside the save
+    input did not close it.
