@@ -1357,15 +1357,39 @@ select:focus-visible {
 
 @media (max-width: 760px) {
   .search-command-bar {
-    grid-template-columns: auto minmax(0, 1fr) repeat(6, auto);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
   }
 
   .search-command-bar input {
-    grid-column: 2 / -1;
+    flex: 1 1 calc(100% - 26px);
+    min-width: 180px;
   }
 
   .command-facet-summary {
-    grid-column: 1 / -1;
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    order: 2;
+  }
+
+  .search-live-toggle {
+    min-width: 28px;
+    width: 28px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .search-live-toggle > span:not(.state-dot) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 }
 

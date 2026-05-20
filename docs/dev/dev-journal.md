@@ -31105,3 +31105,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     summary remains visible, the advanced filter toggle expands the facet row,
     and applying the Chats kind filter updates the summary to `1 ACTIVE` while
     showing the Clear filters control.
+
+## Turn 201 | 2026-05-20
+
+- Goal: harden responsive Search command-row behavior so query, summary, and
+  icon controls do not crowd each other on narrow operator viewports.
+- Change:
+  - switched the mobile Search command row from a fixed grid to wrapped flex.
+  - kept the query input on a usable line with a minimum width.
+  - made the inline filter summary span the mobile row.
+  - reduced the mobile live-refresh control to its status-dot/icon footprint
+    while preserving its accessible label/title behavior.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check` passed.
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK`.
+  - `agent-browser` checked 1440px, 900px, and 560px viewports; desktop stayed
+    grid, tablet wrapped the summary below the query, mobile switched to flex,
+    and all three reported no page-level horizontal overflow.
