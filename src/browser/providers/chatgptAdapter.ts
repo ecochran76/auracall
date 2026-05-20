@@ -7775,6 +7775,7 @@ async function tagChatgptArtifactButtonWithClient(
         document.querySelectorAll('[' + attr + ']').forEach((node) => node.removeAttribute(attr));
         const expectedTitle = normalize(${JSON.stringify(artifact.title)}).toLowerCase();
         const expectedMessageId = normalize(${JSON.stringify(artifact.messageId ?? null)});
+        const expectedUri = normalize(${JSON.stringify(artifact.uri ?? null)}).toLowerCase();
         const expectedTurnId = normalize(${JSON.stringify(turnId)});
         const expectedMessageIndex = ${JSON.stringify(
           typeof artifact.messageIndex === 'number' ? artifact.messageIndex : null,
@@ -7800,16 +7801,29 @@ async function tagChatgptArtifactButtonWithClient(
           .filter((entry) => entry.role === 'assistant');
         const resolveButtons = (root) => {
           if (!spreadsheetCard) {
-            return Array.from(root.section.querySelectorAll(${JSON.stringify(CHATGPT_ASSISTANT_ARTIFACT_BUTTON_SELECTOR)}))
-              .filter((button) => isVisible(button) && !button.closest(${JSON.stringify(CHATGPT_TEXTDOC_MESSAGE_SELECTOR)}))
-              .map((button, index) => ({
-                button,
+            const buttons = Array.from(root.section.querySelectorAll(${JSON.stringify(CHATGPT_ASSISTANT_ARTIFACT_BUTTON_SELECTOR)}))
+              .filter((node) => isVisible(node) && !node.closest(${JSON.stringify(CHATGPT_TEXTDOC_MESSAGE_SELECTOR)}))
+              .map((node, buttonIndex) => ({
+                node,
                 turnId: root.turnId,
                 messageId: root.messageId,
                 messageIndex: root.messageIndex,
-                buttonIndex: index,
-                title: normalize(button.textContent || button.getAttribute('aria-label') || '').toLowerCase(),
+                buttonIndex,
+                title: normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('download') || '').toLowerCase(),
+                href: '',
               }));
+            const anchors = Array.from(root.section.querySelectorAll('a[href]'))
+              .filter((node) => isVisible(node) && !node.closest(${JSON.stringify(CHATGPT_TEXTDOC_MESSAGE_SELECTOR)}))
+              .map((node) => ({
+                node,
+                turnId: root.turnId,
+                messageId: root.messageId,
+                messageIndex: root.messageIndex,
+                buttonIndex: null,
+                title: normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('download') || '').toLowerCase(),
+                href: normalize(node instanceof HTMLAnchorElement ? node.href : node.getAttribute('href') || '').toLowerCase(),
+              }));
+            return [...buttons, ...anchors];
           }
           const cards = Array.from(root.section.querySelectorAll('div.group.my-4'))
             .map((card) => ({
@@ -7829,17 +7843,20 @@ async function tagChatgptArtifactButtonWithClient(
             .filter((button) => isVisible(button))
             .slice(0, 2)
             .map((button, index) => ({
-              button,
+              node: button,
               turnId: root.turnId,
               messageId: root.messageId,
               messageIndex: root.messageIndex,
               buttonIndex: index,
               title: expectedTitle,
+              href: '',
             }));
         };
         const matches = (candidate) => {
-          if (!candidate || !candidate.title) return false;
-          if (expectedTitle && !titleMatches(candidate.title, expectedTitle)) return false;
+          if (!candidate) return false;
+          const titleMatch = Boolean(candidate.title) && (!expectedTitle || titleMatches(candidate.title, expectedTitle));
+          const uriMatch = Boolean(expectedUri && candidate.href && candidate.href === expectedUri);
+          if (!titleMatch && !uriMatch) return false;
           if (expectedTurnId && candidate.turnId !== expectedTurnId) return false;
           if (!expectedTurnId && expectedMessageId && candidate.messageId !== expectedMessageId && candidate.turnId !== expectedMessageId) {
             return false;
@@ -7859,10 +7876,10 @@ async function tagChatgptArtifactButtonWithClient(
           null;
         const candidates = scopedRoot ? resolveButtons(scopedRoot) : roots.flatMap(resolveButtons);
         const chosen = candidates.find((candidate) => matches(candidate)) || null;
-        if (!chosen?.button) {
+        if (!chosen?.node) {
           return { ok: false };
         }
-        chosen.button.setAttribute(attr, 'true');
+        chosen.node.setAttribute(attr, 'true');
         return { ok: true };
       })()`,
       returnByValue: true,
@@ -8137,7 +8154,7 @@ async function materializeChatgptConversationArtifactWithClient(
         }
         const readyButton = await waitForSelector(
           client.Runtime,
-          `button[${CHATGPT_DOWNLOAD_BUTTON_ATTR}="true"]`,
+          `[${CHATGPT_DOWNLOAD_BUTTON_ATTR}="true"]`,
           10_000,
         );
         if (!readyButton) {
@@ -8146,11 +8163,11 @@ async function materializeChatgptConversationArtifactWithClient(
         await armDownloadCapture(client.Runtime, { stateKey: CHATGPT_DOWNLOAD_CAPTURE_STATE_KEY });
         const clickResult = await client.Runtime.evaluate({
           expression: `(() => {
-            const button = document.querySelector(${JSON.stringify(`button[${CHATGPT_DOWNLOAD_BUTTON_ATTR}="true"]`)});
-            if (!(button instanceof HTMLElement)) {
-              return { ok: false, reason: 'Download button missing before click' };
+            const target = document.querySelector(${JSON.stringify(`[${CHATGPT_DOWNLOAD_BUTTON_ATTR}="true"]`)});
+            if (!(target instanceof HTMLElement)) {
+              return { ok: false, reason: 'Download target missing before click' };
             }
-            button.click();
+            target.click();
             return { ok: true };
           })()`,
           returnByValue: true,

@@ -102,15 +102,32 @@ export function createArchiveMaterializationService(
           message: 'Archive item already has a readable local asset.',
         };
       }
+      if (item.kind !== 'generated_artifact') {
+        throw new ArchiveMaterializationError(`Run archive item ${archiveItemId} is ${item.kind}; only generated_artifact materialization is supported.`);
+      }
+      const reusable = await findReusableArchiveAsset(runArchiveService, item);
+      if (reusable) {
+        const materializedAt = now().toISOString();
+        const updatedItem = await materializedArchiveItem(item, reusable, materializedAt);
+        await indexStore.upsertItems([updatedItem], {
+          updatedAt: materializedAt,
+          removeExisting: (candidate) => candidate.id === updatedItem.id,
+        });
+        return {
+          object: 'run_archive_item_materialization',
+          generatedAt: materializedAt,
+          status: 'materialized',
+          item: updatedItem,
+          file: fileToResult(reusable),
+          message: 'Archive item linked to an existing materialized asset with matching provider artifact evidence.',
+        };
+      }
       const provider = normalizeProviderId(item.provider);
       if (!provider) {
         throw new ArchiveMaterializationError(`Run archive item ${archiveItemId} does not have a supported provider.`);
       }
       if (!item.providerConversationId) {
         throw new ArchiveMaterializationError(`Run archive item ${archiveItemId} does not have a provider conversation id.`);
-      }
-      if (item.kind !== 'generated_artifact') {
-        throw new ArchiveMaterializationError(`Run archive item ${archiveItemId} is ${item.kind}; only generated_artifact materialization is supported.`);
       }
 
       const artifact = archiveItemToConversationArtifact(item);
@@ -164,6 +181,71 @@ export function createArchiveMaterializationService(
   };
 }
 
+async function findReusableArchiveAsset(
+  service: RunArchiveService,
+  item: RunArchiveItem,
+): Promise<FileRef | null> {
+  const query = item.uri ?? item.fileName ?? item.artifactId ?? null;
+  if (!query) return null;
+  const archive = await service.listItems({
+    kind: 'generated_artifact',
+    query,
+    limit: 1000,
+  }).catch(() => null);
+  const match = archive?.items.find((candidate) =>
+    candidate.id !== item.id &&
+    candidate.kind === 'generated_artifact' &&
+    candidate.fileAvailable === true &&
+    Boolean(candidate.localPath) &&
+    archiveItemsShareProviderArtifact(item, candidate)
+  );
+  if (!match?.localPath) return null;
+  const provider = normalizeProviderId(match.provider) ?? normalizeProviderId(item.provider);
+  if (!provider) return null;
+  return {
+    id: item.artifactId ?? item.id,
+    name: match.fileName ?? item.fileName ?? item.title ?? match.title ?? item.id,
+    provider,
+    source: 'conversation',
+    localPath: match.localPath,
+    remoteUrl: match.uri ?? item.uri ?? undefined,
+    mimeType: match.mimeType ?? item.mimeType ?? undefined,
+    size: readNumber(match.metadata.fileSizeBytes) ?? undefined,
+    checksumSha256: match.checksumSha256 ?? undefined,
+    metadata: {
+      materialization: 'existing-archive-asset',
+      sourceArchiveItemId: match.id,
+      sourceResponseId: match.responseId,
+      sourceProviderConversationId: match.providerConversationId,
+      sourceCacheKey: match.cacheKey,
+    },
+  };
+}
+
+function archiveItemsShareProviderArtifact(left: RunArchiveItem, right: RunArchiveItem): boolean {
+  const leftUri = normalizeComparableString(left.uri);
+  const rightUri = normalizeComparableString(right.uri);
+  if (leftUri && rightUri && leftUri === rightUri) {
+    return sameNullable(left.provider, right.provider) &&
+      sameNullable(left.providerConversationId, right.providerConversationId);
+  }
+  const leftFile = normalizeComparableString(left.fileName ?? left.title);
+  const rightFile = normalizeComparableString(right.fileName ?? right.title);
+  return Boolean(leftFile && rightFile && leftFile === rightFile) &&
+    sameNullable(left.provider, right.provider) &&
+    sameNullable(left.providerConversationId, right.providerConversationId);
+}
+
+function normalizeComparableString(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function sameNullable(left: string | null, right: string | null): boolean {
+  return Boolean(left && right && left === right);
+}
+
 async function materializeProviderConversationArtifact(input: {
   provider: ProviderId;
   config: ResolvedUserConfig | Record<string, unknown>;
@@ -191,27 +273,57 @@ async function materializeProviderConversationArtifact(input: {
 
 function archiveItemToConversationArtifact(item: RunArchiveItem): ConversationArtifact {
   const metadata = item.metadata ?? {};
+  const parsedDownload = parseDownloadArtifactIdentity(item);
   const providerArtifactId =
     readString(metadata.providerArtifactId) ??
     readString(metadata.fileId) ??
     readString(metadata.remoteId) ??
+    parsedDownload?.uri ??
+    (isSandboxArtifactUri(item.uri) ? item.uri : null) ??
     item.artifactId ??
     item.id;
   const title = item.fileName ?? item.title ?? item.artifactId ?? providerArtifactId;
   return {
     id: providerArtifactId,
     title,
-    kind: normalizeArtifactKind(readString(metadata.providerArtifactKind) ?? readString(metadata.artifactKind), item.uri),
-    uri: item.uri ?? readString(metadata.remoteUrl) ?? undefined,
+    kind: normalizeArtifactKind(
+      readString(metadata.providerArtifactKind) ?? readString(metadata.artifactKind),
+      item.uri ?? parsedDownload?.uri ?? null,
+    ),
+    uri: item.uri ?? parsedDownload?.uri ?? readString(metadata.remoteUrl) ?? undefined,
+    ...(parsedDownload?.messageId ? { messageId: parsedDownload.messageId } : {}),
     metadata: {
       ...metadata,
       providerArtifactId,
+      originalArchiveArtifactId: item.artifactId,
       archiveItemId: item.id,
       responseId: item.responseId,
       batchId: item.batchId,
       fileName: item.fileName,
+      ...(parsedDownload?.messageId ? { messageId: parsedDownload.messageId } : {}),
     },
   };
+}
+
+function parseDownloadArtifactIdentity(item: RunArchiveItem): { messageId: string | null; uri: string } | null {
+  for (const candidate of [item.artifactId, item.id]) {
+    if (typeof candidate !== 'string') continue;
+    const marker = ':download:';
+    const markerIndex = candidate.indexOf(marker);
+    if (markerIndex < 0) continue;
+    const uri = candidate.slice(markerIndex + marker.length).trim();
+    if (!isSandboxArtifactUri(uri)) continue;
+    const prefix = candidate.slice(0, markerIndex).split(':').pop()?.trim() ?? '';
+    return {
+      messageId: prefix.length > 0 ? prefix : null,
+      uri,
+    };
+  }
+  return null;
+}
+
+function isSandboxArtifactUri(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().toLowerCase().startsWith('sandbox:');
 }
 
 async function materializedArchiveItem(

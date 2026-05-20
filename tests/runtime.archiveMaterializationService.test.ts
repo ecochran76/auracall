@@ -63,6 +63,126 @@ describe('archive materialization service', () => {
     expect(indexed?.checksumSha256).toMatch(/^[a-f0-9]{64}$/);
   });
 
+  it('normalizes sparse ChatGPT sandbox archive ids before provider materialization', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialize-sparse-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const item = {
+      ...createGeneratedArtifactItem(),
+      id: 'generated-artifact:resp_1:assist-2:download:sandbox:/mnt/data/first_pass_readout.json',
+      artifactId: 'assist-2:download:sandbox:/mnt/data/first_pass_readout.json',
+      metadata: {
+        artifactType: 'generated',
+        disposition: 'inline',
+      },
+    };
+    const service = createArchiveMaterializationService({
+      config: {},
+      now: () => new Date('2026-05-18T18:03:00.000Z'),
+      runArchiveService: readOnlyArchiveService(item),
+      materializeConversationArtifact: async (input): Promise<FileRef> => {
+        expect(input.artifact).toMatchObject({
+          id: 'sandbox:/mnt/data/first_pass_readout.json',
+          uri: 'sandbox:/mnt/data/first_pass_readout.json',
+          kind: 'download',
+          messageId: 'assist-2',
+          metadata: expect.objectContaining({
+            providerArtifactId: 'sandbox:/mnt/data/first_pass_readout.json',
+            originalArchiveArtifactId: 'assist-2:download:sandbox:/mnt/data/first_pass_readout.json',
+            messageId: 'assist-2',
+          }),
+        });
+        const localPath = path.join(input.destDir, 'first_pass_readout.json');
+        await fs.writeFile(localPath, '{"ok":true}\n', 'utf8');
+        return {
+          id: input.artifact.id,
+          name: 'first_pass_readout.json',
+          provider: 'chatgpt',
+          source: 'conversation',
+          localPath,
+          remoteUrl: input.artifact.uri,
+          mimeType: 'application/json',
+          size: 12,
+          metadata: {
+            materialization: 'fixture-download',
+          },
+        };
+      },
+    });
+
+    const result = await service.materializeItem({ archiveItemId: item.id });
+
+    expect(result.status).toBe('materialized');
+    expect(result.item.metadata).toMatchObject({
+      materialization: expect.objectContaining({
+        status: 'materialized',
+      }),
+    });
+  });
+
+  it('links a duplicate archive item to an existing materialized sibling asset', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialize-reuse-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const localPath = path.join(homeDir, 'first_pass_readout.json');
+    await fs.writeFile(localPath, '{"reuse":true}\n', 'utf8');
+    const item = {
+      ...createGeneratedArtifactItem(),
+      id: 'generated-artifact:resp_1:assist-1:download:sandbox:/mnt/data/first_pass_readout.json',
+      artifactId: 'assist-1:download:sandbox:/mnt/data/first_pass_readout.json',
+      localPath: null,
+      fileAvailable: false,
+      checksumSha256: null,
+      cacheKey: null,
+      metadata: {
+        artifactType: 'generated',
+      },
+    };
+    const sibling = {
+      ...createGeneratedArtifactItem(),
+      id: 'generated-artifact:resp_1:assist-2:download:sandbox:/mnt/data/first_pass_readout.json',
+      artifactId: 'assist-2:download:sandbox:/mnt/data/first_pass_readout.json',
+      localPath,
+      fileAvailable: true,
+      checksumSha256: 'abc123',
+      cacheKey: 'sha256:abc123',
+      metadata: {
+        fileSizeBytes: Buffer.byteLength('{"reuse":true}\n'),
+      },
+    };
+    const indexStore = createRunArchiveIndexStore();
+    const service = createArchiveMaterializationService({
+      config: {},
+      indexStore,
+      now: () => new Date('2026-05-18T18:04:00.000Z'),
+      runArchiveService: archiveServiceWithItems(item, [sibling]),
+      materializeConversationArtifact: async () => {
+        throw new Error('provider should not be called when matching archive asset exists');
+      },
+    });
+
+    const result = await service.materializeItem({ archiveItemId: item.id });
+
+    expect(result.status).toBe('materialized');
+    expect(result.file).toMatchObject({
+      localPath,
+      remoteUrl: 'sandbox:/mnt/data/first_pass_readout.json',
+    });
+    expect(result.item).toMatchObject({
+      localPath,
+      fileAvailable: true,
+      metadata: expect.objectContaining({
+        sourceArchiveItemId: sibling.id,
+        materialization: expect.objectContaining({
+          status: 'materialized',
+          method: 'existing-archive-asset',
+        }),
+      }),
+    });
+    await expect(indexStore.readItem(item.id)).resolves.toMatchObject({
+      localPath,
+      fileAvailable: true,
+    });
+  });
+
   it('returns an already materialized result without invoking the provider', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialized-'));
     setAuracallHomeDirOverrideForTest(homeDir);
@@ -131,10 +251,31 @@ function createGeneratedArtifactItem(): RunArchiveItem {
 }
 
 function readOnlyArchiveService(item: RunArchiveItem): RunArchiveService {
+  return archiveServiceWithItems(item, []);
+}
+
+function archiveServiceWithItems(item: RunArchiveItem, items: RunArchiveItem[]): RunArchiveService {
   return {
-    listItems: async () => {
-      throw new Error('not implemented');
-    },
+    listItems: async () => ({
+      object: 'run_archive',
+      generatedAt: '2026-05-18T18:00:00.000Z',
+      kind: 'generated_artifact',
+      limit: 1000,
+      items,
+      metrics: {
+        total: items.length,
+        byKind: {
+          response: 0,
+          response_batch: 0,
+          team_run: 0,
+          media_generation: 0,
+          upload: 0,
+          generated_artifact: items.length,
+          provider_conversation: 0,
+          evidence: 0,
+        },
+      },
+    }),
     readItem: async (id) => (id === item.id
       ? {
           object: 'run_archive_item_detail',

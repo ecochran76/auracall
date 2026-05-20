@@ -93,6 +93,13 @@ Implemented:
   can be cancelled before provider work starts; running jobs remain
   non-abortable until the provider materializer accepts cooperative
   cancellation.
+- ChatGPT sandbox-download materialization normalizes sparse archive ids of the
+  form `<message_id>:download:sandbox:/...` back into provider artifacts with
+  the sandbox URI and message id before invoking provider recovery. The
+  materializer can also tag visible anchor downloads as well as behavior
+  buttons, and a missing duplicate archive row can link to an already
+  materialized sibling asset with matching provider conversation and artifact
+  evidence without reopening the provider browser.
 
 Remaining:
 
@@ -100,7 +107,7 @@ Remaining:
   artifact ids, project ids, or bound identity keys are not yet exposed by a
   provider-specific runner/materializer.
 - Continue hardening provider-specific artifact materializers for generated
-  assets that still require browser recovery.
+  assets that still require browser recovery and have no reusable sibling asset.
 - Promote asset lookup results into a canonical dedupe manifest if callers need
   a persisted duplicate-group table instead of on-demand lookup.
 

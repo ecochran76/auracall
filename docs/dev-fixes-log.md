@@ -16435,3 +16435,14 @@ browser-stage lifecycle observability, not transcript truncation.
   re-stat and re-hash local file-bearing items, then persist changed
   `fileAvailable`, size, checksum, cache key, and asset-route fields back into
   the user-scoped archive index without launching provider browser work.
+
+- 2026-05-20: ChatGPT archive materialization should normalize sparse sandbox
+  archive ids and reuse duplicate local assets before reopening provider
+  browser work. Some response artifacts only retained
+  `<message_id>:download:sandbox:/...` in `artifactId`; archive materialization
+  now converts that shape back into a provider artifact with sandbox URI and
+  message id, and the ChatGPT materializer can tag matching visible anchor
+  downloads as well as behavior buttons. If a sibling generated-artifact row for
+  the same provider conversation and sandbox URI already has a readable local
+  file, the missing row links to that existing asset and updates its archive
+  metadata without another ChatGPT recovery pass.

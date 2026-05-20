@@ -5937,3 +5937,49 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - add provider-specific materializer improvements only for artifact rows that
     have provider conversation context but still lack local files after the
     async recovery job runs.
+
+## Turn 211 | 2026-05-20
+
+- Goal: improve backend generated-artifact recovery for ChatGPT sandbox
+  downloads that have provider conversation context but no local asset.
+- Change:
+  - archive materialization now parses sparse ChatGPT archive artifact ids of
+    the form `<message_id>:download:sandbox:/...` into provider artifacts with
+    the sandbox URI and message id.
+  - ChatGPT download materialization can tag visible `a[href]` downloads as
+    well as `button.behavior-btn` controls while preserving existing behavior
+    button index matching.
+  - before reopening provider browser work, generated-artifact materialization
+    searches the archive for a readable sibling asset with the same provider
+    conversation and sandbox URI/file evidence; matching missing rows are
+    linked to that local asset and reindexed.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveMaterializationService.test.ts
+    --maxWorkers 1`
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts
+    tests/runtime.archiveMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts
+    tests/runtime.archiveMaterializationService.test.ts
+    tests/runtime.archiveMaterializationJobService.test.ts
+    tests/runtime.archiveService.test.ts --maxWorkers 1`
+  - `git diff --check`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - first live async materialization job
+    `ramj_20f8d133bac6463cb6d81250c65c532e` reached ChatGPT but skipped with
+    no local file, proving normalization alone was not enough.
+  - direct `conversations artifacts fetch` for the same ChatGPT conversation
+    returned `rc=0`, found two sandbox artifacts, and materialized one file via
+    `captured-anchor-fetch`.
+  - after adding duplicate-asset reuse, live job
+    `ramj_10b0d4a33b2e47a0b7c2c16726f740df` succeeded without another
+    provider fetch and linked the missing sibling row to the existing local
+    asset with `method = existing-archive-asset`.
+  - `auracall api archive-item` confirmed the formerly missing row now has
+    `fileAvailable = true`, an asset route, and `sourceArchiveItemId` pointing
+    to the materialized sibling row.
+- Next:
+  - remaining provider-specific work should focus on generated-artifact rows
+    with no matching materialized sibling asset.

@@ -31406,3 +31406,45 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `agent-browser` repeated the Filters check at 560px and confirmed the
     filter menu was absolute, the table top stayed fixed, the facet section
     collapsed to one column, and there was no horizontal overflow.
+
+## Turn 211 | 2026-05-20
+
+- Goal: tighten backend generated-artifact recovery for ChatGPT sandbox
+  downloads surfaced by the archive cache.
+- Change:
+  - inspected the live missing generated-artifact set after archive backfill:
+    21 rows had provider conversation context but no local file.
+  - normalized sparse ChatGPT archive ids such as
+    `<message_id>:download:sandbox:/mnt/data/file.json` back into provider
+    artifacts with sandbox URI and message id.
+  - broadened ChatGPT download materialization to tag visible anchor downloads
+    in addition to behavior buttons, while keeping behavior-button indexes
+    stable.
+  - added a browser-free duplicate asset reuse path: when a matching sibling
+    generated-artifact row already has a readable local file for the same
+    provider conversation and sandbox URI/file evidence, the missing archive row
+    links to that asset and updates its index metadata.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveMaterializationService.test.ts
+    --maxWorkers 1`
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts
+    tests/runtime.archiveMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts
+    tests/runtime.archiveMaterializationService.test.ts
+    tests/runtime.archiveMaterializationJobService.test.ts
+    tests/runtime.archiveService.test.ts --maxWorkers 1`
+  - `git diff --check`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - direct live context read for conversation
+    `6a0bd0b0-bb4c-83ea-8b92-24453c9bf9f7` timed out at the wrapper level but
+    produced JSON showing two ChatGPT sandbox artifacts.
+  - direct live `conversations artifacts fetch` for that conversation returned
+    `rc=0`, `artifactCount = 2`, `materializedCount = 1`, and one
+    `captured-anchor-fetch` local file.
+  - live async materialization job
+    `ramj_10b0d4a33b2e47a0b7c2c16726f740df` then succeeded via
+    `existing-archive-asset` and updated the formerly missing archive row to
+    `fileAvailable = true`.
