@@ -105,6 +105,11 @@ Implemented:
   `localPath`, MIME type, checksum, cache key, file size, and asset route. This
   repairs stale generated-artifact rows whose provider recovery already wrote a
   file but failed to update the user-scoped archive index.
+- Archive reads and explicit materialization jobs can reuse existing provider
+  conversation-attachment cache files when the artifact fetch manifest has a
+  materialized file for the same provider conversation and file evidence. This
+  links stale sparse sandbox archive rows to already-downloaded ChatGPT files
+  without weakening DOM selector scope or reopening browser recovery.
 
 Remaining:
 

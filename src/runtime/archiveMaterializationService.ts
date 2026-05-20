@@ -14,6 +14,7 @@ import {
   type RunArchiveItem,
   type RunArchiveService,
 } from './archiveService.js';
+import { findCachedConversationAttachmentAsset } from './archiveCachedAssetLookup.js';
 
 export interface ArchiveItemMaterializationRequest {
   archiveItemId: string;
@@ -120,6 +121,23 @@ export function createArchiveMaterializationService(
           item: updatedItem,
           file: fileToResult(existingMaterializedAsset),
           message: 'Archive item linked to an existing materialized file in its archive directory.',
+        };
+      }
+      const cachedConversationAsset = await findCachedConversationAttachmentAsset(item);
+      if (cachedConversationAsset) {
+        const materializedAt = now().toISOString();
+        const updatedItem = await materializedArchiveItem(item, cachedConversationAsset, materializedAt);
+        await indexStore.upsertItems([updatedItem], {
+          updatedAt: materializedAt,
+          removeExisting: (candidate) => candidate.id === updatedItem.id,
+        });
+        return {
+          object: 'run_archive_item_materialization',
+          generatedAt: materializedAt,
+          status: 'materialized',
+          item: updatedItem,
+          file: fileToResult(cachedConversationAsset),
+          message: 'Archive item linked to an existing provider conversation attachment cache file.',
         };
       }
       const reusable = await findReusableArchiveAsset(runArchiveService, item);

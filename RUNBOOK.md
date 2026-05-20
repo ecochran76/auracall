@@ -6020,3 +6020,42 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - remaining misses are no longer stale local-directory rows: 70 Gemini
     generated-artifact placeholders lack provider conversation/local file
     evidence, and 57 ChatGPT rows still need real provider/browser recovery.
+
+## Turn 213 | 2026-05-20
+
+- Goal: reuse provider conversation-attachment cache files for stale ChatGPT
+  sandbox archive rows.
+- Change:
+  - added a shared cache lookup that scans
+    `~/.auracall/cache/providers/<provider>/<identity>/conversation-attachments/<conversation-id>/artifact-fetch-manifest.json`.
+  - archive refresh and explicit materialization now link generated-artifact
+    rows to a materialized conversation-attachment file when provider,
+    conversation, project, URI/file evidence, and local file existence match.
+  - kept ChatGPT DOM download targeting strict; this fixes stale
+    user-message/assistant-message duplicate rows by reusing the cached file
+    after a provider fetch has already downloaded it.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveService.test.ts
+    tests/runtime.archiveMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts
+    tests/runtime.archiveMaterializationService.test.ts
+    tests/runtime.archiveMaterializationJobService.test.ts
+    tests/runtime.archiveService.test.ts --maxWorkers 1`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - live `conversations artifacts fetch` for
+    `6a0bc67c-605c-83ea-a021-d9dd5b7a18ba` materialized one cached
+    `first_pass_readout.json`, though the wrapper exited via outer timeout
+    after printing the result.
+  - passive DOM inspection confirmed one visible assistant-turn download
+    button and two stale sparse archive rows for the same file.
+  - a live archive read then linked both stale rows to the cached file with
+    `method = cached-conversation-attachment`.
+  - live generated-artifact missing count dropped from 127 to 74; ChatGPT
+    missing dropped from 57 to 4.
+- Next:
+  - remaining ChatGPT misses are three old `legacy_readout.json` sandbox rows
+    without cached fetch manifests, plus one schema/test image placeholder with
+    no provider conversation.

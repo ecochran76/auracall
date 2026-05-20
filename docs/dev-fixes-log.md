@@ -16455,3 +16455,13 @@ browser-stage lifecycle observability, not transcript truncation.
   Archive list/detail/asset-lookup refresh now discovers that local file,
   persists `localPath`, MIME type, checksum, cache key, file size, and asset
   route, and keeps this repair browser-free.
+
+- 2026-05-20: ChatGPT artifact fetch can materialize a DOM-discovered download
+  into the provider conversation-attachment cache while older sparse sandbox
+  archive rows for the same conversation remain unlinked. Archive refresh and
+  explicit archive materialization now scan
+  `conversation-attachments/<conversation-id>/artifact-fetch-manifest.json`,
+  match materialized entries by provider conversation plus URI/file evidence,
+  and link matching archive rows to the cached local file. This keeps the DOM
+  selector strict while repairing user-message/assistant-message duplicate
+  sandbox rows from already-downloaded files.

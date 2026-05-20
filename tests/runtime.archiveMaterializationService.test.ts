@@ -245,6 +245,105 @@ describe('archive materialization service', () => {
     });
   });
 
+  it('links an archive item to an existing provider conversation attachment cache file', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialize-conversation-cache-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const item = {
+      ...createGeneratedArtifactItem(),
+      id: 'generated-artifact:resp_1:user-message:download:sandbox:/mnt/data/first_pass_readout.json',
+      artifactId: 'user-message:download:sandbox:/mnt/data/first_pass_readout.json',
+      localPath: null,
+      fileAvailable: false,
+      checksumSha256: null,
+      cacheKey: null,
+      metadata: {
+        artifactType: 'generated',
+      },
+    };
+    const localPath = path.join(
+      homeDir,
+      'cache',
+      'providers',
+      'chatgpt',
+      'eric.cochran@soylei.com',
+      'conversation-attachments',
+      item.providerConversationId ?? '',
+      'files',
+      'download-dom-turn-0',
+      'first_pass_readout.json',
+    );
+    await fs.mkdir(path.dirname(localPath), { recursive: true });
+    await fs.writeFile(localPath, '{"cached":true}\n', 'utf8');
+    await fs.writeFile(
+      path.join(
+        homeDir,
+        'cache',
+        'providers',
+        'chatgpt',
+        'eric.cochran@soylei.com',
+        'conversation-attachments',
+        item.providerConversationId ?? '',
+        'artifact-fetch-manifest.json',
+      ),
+      JSON.stringify({
+        provider: 'chatgpt',
+        conversationId: item.providerConversationId,
+        projectId: item.projectId,
+        artifactCount: 3,
+        materializedCount: 1,
+        entries: [
+          {
+            artifactId: 'download-dom:assistant-turn:0',
+            title: 'first_pass_readout.json',
+            kind: 'download',
+            uri: 'chatgpt://download-button/assistant-turn/0',
+            status: 'materialized',
+            fileId: 'download-dom:assistant-turn:0',
+            fileName: 'first_pass_readout.json',
+            localPath,
+            remoteUrl: 'https://chatgpt.com/backend-api/estuary/content?id=file_1',
+            mimeType: 'application/json',
+            size: Buffer.byteLength('{"cached":true}\n'),
+          },
+        ],
+      }),
+      'utf8',
+    );
+    const indexStore = createRunArchiveIndexStore();
+    const service = createArchiveMaterializationService({
+      config: {},
+      indexStore,
+      now: () => new Date('2026-05-18T18:04:45.000Z'),
+      runArchiveService: readOnlyArchiveService(item),
+      materializeConversationArtifact: async () => {
+        throw new Error('provider should not be called when the conversation attachment cache has a matching file');
+      },
+    });
+
+    const result = await service.materializeItem({ archiveItemId: item.id });
+
+    expect(result.status).toBe('materialized');
+    expect(result.file).toMatchObject({
+      id: 'download-dom:assistant-turn:0',
+      name: 'first_pass_readout.json',
+      localPath,
+      remoteUrl: 'https://chatgpt.com/backend-api/estuary/content?id=file_1',
+      mimeType: 'application/json',
+    });
+    expect(result.item).toMatchObject({
+      localPath,
+      fileAvailable: true,
+      metadata: expect.objectContaining({
+        sourceArtifactFetchManifest: true,
+        sourceFileId: 'download-dom:assistant-turn:0',
+        materialization: expect.objectContaining({
+          status: 'materialized',
+          method: 'cached-conversation-attachment',
+        }),
+      }),
+    });
+  });
+
   it('returns an already materialized result without invoking the provider', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialized-'));
     setAuracallHomeDirOverrideForTest(homeDir);

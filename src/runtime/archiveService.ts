@@ -33,6 +33,7 @@ import {
   type RunArchiveEvidenceRecord,
   type RunArchiveEvidenceStore,
 } from './archiveEvidenceStore.js';
+import { findCachedConversationAttachmentAsset } from './archiveCachedAssetLookup.js';
 
 export type RunArchiveItemKind =
   | 'response'
@@ -1005,7 +1006,11 @@ function itemMatchesQuery(item: RunArchiveItem, query: string): boolean {
 
 async function enrichFileMetadata(items: RunArchiveItem[]): Promise<RunArchiveItem[]> {
   return Promise.all(items.map(async (item) => {
-    const discoveredLocalPath = item.localPath ?? await findExistingMaterializedArchiveFile(item);
+    const cachedConversationAsset = item.localPath ? null : await findCachedConversationAttachmentAsset(item);
+    const discoveredLocalPath =
+      item.localPath ??
+      cachedConversationAsset?.localPath ??
+      await findExistingMaterializedArchiveFile(item);
     const liveChecksumSha256 = await calculateFileSha256(discoveredLocalPath);
     const checksumSha256 = liveChecksumSha256 ?? readRecordString(item.metadata, ['checksumSha256']);
     const fileAvailable = discoveredLocalPath ? await fileExists(discoveredLocalPath) : null;
@@ -1016,23 +1021,26 @@ async function enrichFileMetadata(items: RunArchiveItem[]): Promise<RunArchiveIt
       : discoveredLocalPath
         ? `path:${discoveredLocalPath}`
         : null;
-    const fileName = item.fileName ?? (discoveredLocalPath ? path.basename(discoveredLocalPath) : null);
-    const mimeType = item.mimeType ?? (fileName ? inferArchiveAssetMimeType(fileName) : null);
+    const fileName = item.fileName ?? cachedConversationAsset?.name ?? (discoveredLocalPath ? path.basename(discoveredLocalPath) : null);
+    const mimeType = item.mimeType ?? cachedConversationAsset?.mimeType ?? (fileName ? inferArchiveAssetMimeType(fileName) : null);
     return {
       ...item,
       fileName,
       mimeType,
       localPath: discoveredLocalPath,
-      cacheKey,
+      cacheKey: cacheKey ?? item.cacheKey,
       checksumSha256,
       fileAvailable,
+      uri: cachedConversationAsset?.remoteUrl ?? item.uri,
       links: {
         ...item.links,
         ...(fileAvailable === true ? { asset: `${runArchiveItemRoute(item.id)}/asset` } : {}),
       },
       metadata: {
         ...item.metadata,
+        ...(cachedConversationAsset?.metadata ?? {}),
         ...(discoveredLocalPath ? { localPath: discoveredLocalPath, path: discoveredLocalPath } : {}),
+        ...(cachedConversationAsset?.remoteUrl ? { remoteUrl: cachedConversationAsset.remoteUrl } : {}),
         ...(fileName ? { fileName } : {}),
         ...(mimeType ? { mimeType } : {}),
         ...(checksumSha256 ? { checksumSha256 } : {}),
@@ -1049,10 +1057,13 @@ function fileMetadataChanged(previous: RunArchiveItem | undefined, next: RunArch
     previous.checksumSha256 !== next.checksumSha256 ||
     previous.fileAvailable !== next.fileAvailable ||
     previous.localPath !== next.localPath ||
+    previous.uri !== next.uri ||
     previous.fileName !== next.fileName ||
     previous.mimeType !== next.mimeType ||
     previous.metadata.localPath !== next.metadata.localPath ||
     previous.metadata.path !== next.metadata.path ||
+    previous.metadata.remoteUrl !== next.metadata.remoteUrl ||
+    previous.metadata.materialization !== next.metadata.materialization ||
     previous.metadata.fileName !== next.metadata.fileName ||
     previous.metadata.mimeType !== next.metadata.mimeType ||
     previous.metadata.checksumSha256 !== next.metadata.checksumSha256 ||

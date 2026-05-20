@@ -569,6 +569,19 @@ describe('run archive service', () => {
       sanitizeArchiveItemPathSegment(materializedOnlyId),
       'materialized-only.json',
     );
+    const cachedAttachmentId = 'generated-artifact:resp_file_refresh:user-message:download:sandbox:/mnt/data/cached-attachment.json';
+    const cachedAttachmentPath = path.join(
+      homeDir,
+      'cache',
+      'providers',
+      'chatgpt',
+      'eric.cochran@soylei.com',
+      'conversation-attachments',
+      'conv_file_refresh',
+      'files',
+      'download-dom-turn-0',
+      'cached-attachment.json',
+    );
 
     await writeRunArchiveIndex([
       createArchiveItemFixture({
@@ -611,12 +624,61 @@ describe('run archive service', () => {
           artifactType: 'generated',
         },
       }),
+      createArchiveItemFixture({
+        id: cachedAttachmentId,
+        kind: 'generated_artifact',
+        responseId: 'resp_file_refresh',
+        providerConversationId: 'conv_file_refresh',
+        artifactId: 'user-message:download:sandbox:/mnt/data/cached-attachment.json',
+        fileName: 'cached-attachment.json',
+        localPath: null,
+        uri: 'sandbox:/mnt/data/cached-attachment.json',
+        fileAvailable: null,
+        links: {},
+        metadata: {
+          artifactType: 'generated',
+        },
+      }),
     ]);
 
     await writeFile(uploadPath, 'uploaded bytes', 'utf8');
     await writeFile(generatedPath, '{"ready":true}', 'utf8');
     await mkdir(path.dirname(materializedOnlyPath), { recursive: true });
     await writeFile(materializedOnlyPath, '{"materialized":true}', 'utf8');
+    await mkdir(path.dirname(cachedAttachmentPath), { recursive: true });
+    await writeFile(cachedAttachmentPath, '{"cached":true}', 'utf8');
+    await writeFile(
+      path.join(
+        homeDir,
+        'cache',
+        'providers',
+        'chatgpt',
+        'eric.cochran@soylei.com',
+        'conversation-attachments',
+        'conv_file_refresh',
+        'artifact-fetch-manifest.json',
+      ),
+      JSON.stringify({
+        provider: 'chatgpt',
+        conversationId: 'conv_file_refresh',
+        entries: [
+          {
+            artifactId: 'download-dom:assistant-turn:0',
+            title: 'cached-attachment.json',
+            kind: 'download',
+            uri: 'chatgpt://download-button/assistant-turn/0',
+            status: 'materialized',
+            fileId: 'download-dom:assistant-turn:0',
+            fileName: 'cached-attachment.json',
+            localPath: cachedAttachmentPath,
+            remoteUrl: 'https://chatgpt.com/backend-api/estuary/content?id=file_2',
+            mimeType: 'application/json',
+            size: Buffer.byteLength('{"cached":true}'),
+          },
+        ],
+      }),
+      'utf8',
+    );
 
     const service = createRunArchiveService({
       now: () => new Date('2026-05-16T20:00:00.000Z'),
@@ -671,6 +733,28 @@ describe('run archive service', () => {
         }),
       },
     });
+    await expect(service.readItem(cachedAttachmentId)).resolves.toMatchObject({
+      item: {
+        localPath: cachedAttachmentPath,
+        uri: 'https://chatgpt.com/backend-api/estuary/content?id=file_2',
+        fileAvailable: true,
+        mimeType: 'application/json',
+        cacheKey: expect.stringMatching(/^sha256:/),
+        checksumSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+        links: expect.objectContaining({
+          asset: expect.stringContaining('/asset'),
+        }),
+        metadata: expect.objectContaining({
+          materialization: 'cached-conversation-attachment',
+          sourceArtifactFetchManifest: true,
+          localPath: cachedAttachmentPath,
+          path: cachedAttachmentPath,
+          remoteUrl: 'https://chatgpt.com/backend-api/estuary/content?id=file_2',
+          fileAvailable: true,
+          fileSizeBytes: Buffer.byteLength('{"cached":true}'),
+        }),
+      },
+    });
     await expect(readRunArchiveIndex()).resolves.toMatchObject({
       items: expect.arrayContaining([
         expect.objectContaining({
@@ -686,6 +770,12 @@ describe('run archive service', () => {
         expect.objectContaining({
           id: materializedOnlyId,
           localPath: materializedOnlyPath,
+          fileAvailable: true,
+          cacheKey: expect.stringMatching(/^sha256:/),
+        }),
+        expect.objectContaining({
+          id: cachedAttachmentId,
+          localPath: cachedAttachmentPath,
           fileAvailable: true,
           cacheKey: expect.stringMatching(/^sha256:/),
         }),

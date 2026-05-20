@@ -31507,3 +31507,39 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     read refreshed the archive index: missing generated artifacts dropped from
     140 to 127, and rows recoverable from existing item directories dropped
     from 13 to 0.
+
+## Turn 214 | 2026-05-20
+
+- Goal: link stale ChatGPT sandbox archive rows to already-downloaded
+  provider conversation-attachment cache files.
+- Change:
+  - sampled the remaining live ChatGPT misses: 57 rows, with 52 in
+    `wsl-chrome-3` / Transcripts.
+  - ran one bounded live artifact fetch for conversation
+    `6a0bc67c-605c-83ea-a021-d9dd5b7a18ba`; it materialized one
+    `first_pass_readout.json` file into the provider conversation-attachment
+    cache but the CLI wrapper still timed out after printing the result.
+  - passive DOM inspection showed the archive carried both user-message and
+    assistant-message sandbox rows, while the visible download control belongs
+    to the assistant turn. The fix therefore links from the provider
+    conversation-attachment manifest instead of weakening DOM message scoping.
+  - added shared cache lookup for
+    `conversation-attachments/<conversation-id>/artifact-fetch-manifest.json`
+    and wired it into both archive read refresh and explicit archive
+    materialization.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveService.test.ts
+    tests/runtime.archiveMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts
+    tests/runtime.archiveMaterializationService.test.ts
+    tests/runtime.archiveMaterializationJobService.test.ts
+    tests/runtime.archiveService.test.ts --maxWorkers 1`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - live archive read for the representative conversation linked both stale
+    sandbox rows to the cached `first_pass_readout.json` with
+    `cached-conversation-attachment`.
+  - live missing generated artifacts dropped from 127 to 74; ChatGPT missing
+    dropped from 57 to 4.
