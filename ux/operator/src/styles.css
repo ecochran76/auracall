@@ -276,6 +276,10 @@ select:focus-visible {
   display: none;
 }
 
+.mobile-inspector-backdrop {
+  display: none;
+}
+
 .pane-content {
   min-width: 0;
   min-height: 0;
@@ -2965,6 +2969,17 @@ select:focus-visible {
     width: min(430px, calc(100vw - 44px));
     border-left: 1px solid #303a47;
     box-shadow: -20px 0 40px rgb(0 0 0 / 34%);
+  }
+
+  .mobile-inspector-backdrop {
+    position: fixed;
+    inset: 49px 0 0 0;
+    z-index: 19;
+    display: block;
+    padding: 0;
+    cursor: default;
+    background: rgb(4 7 10 / 54%);
+    border: 0;
   }
 
   .right-pane.has-selection:not(.is-collapsed) .pane-content {

@@ -3799,6 +3799,11 @@ export default function App() {
     : layout.rightCollapsed
       ? "Expand right pane"
       : "Collapse right pane";
+  const closeSelectedSearchInspector = () => {
+    if (!rightPaneHasSelection) return;
+    setDismissedSearchInspectorKey(selectedSearchInspectorKey);
+    setLayout((current) => ({ ...current, rightCollapsed: true }));
+  };
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
@@ -3838,6 +3843,19 @@ export default function App() {
     if (!compactViewport) return;
     setLayout((current) => (current.rightCollapsed ? { ...current, rightCollapsed: false } : current));
   }, [dismissedSearchInspectorKey, layout.activeNav, layout.rightCollapsed, rightPaneHasSelection, selectedSearchInspectorKey]);
+
+  useEffect(() => {
+    if (!rightPaneHasSelection || layout.rightCollapsed || layout.activeNav !== "search") return;
+    const compactViewport = window.matchMedia?.("(max-width: 980px)").matches ?? window.innerWidth <= 980;
+    if (!compactViewport) return;
+    const handleKeyDown = (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      closeSelectedSearchInspector();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [layout.activeNav, layout.rightCollapsed, rightPaneHasSelection, selectedSearchInspectorKey]);
 
   useEffect(() => {
     if (layout.activeNav === "health" || layout.activeNav === "search") return;
@@ -4015,6 +4033,15 @@ export default function App() {
           onSelectedSearchDetailChange={setSelectedSearchDetail}
         />
 
+        {rightPaneHasSelection && !layout.rightCollapsed ? (
+          <button
+            className="mobile-inspector-backdrop"
+            type="button"
+            aria-label="Close selected Search inspector"
+            onClick={closeSelectedSearchInspector}
+          />
+        ) : null}
+
         <aside className={[
           "pane",
           "right-pane",
@@ -4033,7 +4060,8 @@ export default function App() {
               title={rightPaneToggleLabel}
               onClick={() => {
                 if (rightPaneHasSelection && !layout.rightCollapsed) {
-                  setDismissedSearchInspectorKey(selectedSearchInspectorKey);
+                  closeSelectedSearchInspector();
+                  return;
                 } else {
                   setDismissedSearchInspectorKey(null);
                 }

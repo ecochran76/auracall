@@ -31285,3 +31285,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `--write-output --wait` shape returned `rc=0`, wrote
     `/tmp/auracall-write-output-lifecycle-smoke-4.md`, and the file contained
     only `AURACALL WRITE OUTPUT LIFECYCLE SMOKE FOUR`.
+
+## Turn 207 | 2026-05-20
+
+- Goal: make the mobile Search selected-result inspector behave like an
+  inspectable overlay instead of a narrow pane without overlay dismissal.
+- Change:
+  - added a mobile-only backdrop behind the selected Search inspector.
+  - wired backdrop click and Escape to the same close path as the toolbar close
+    affordance.
+  - preserved the dismissed-selection key so closing one selected result does
+    not immediately auto-reopen, while selecting a different result still
+    opens the inspector.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check -- ux/operator/src/App.jsx
+    ux/operator/src/styles.css` passed.
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK`.
+  - `agent-browser` at 560px selected a Search row and confirmed the inspector
+    opened as a fixed overlay with a fixed backdrop, no horizontal overflow, and
+    the expected close label.
+  - `agent-browser` clicked the backdrop and confirmed the inspector collapsed
+    and the backdrop was removed.
+  - `agent-browser` selected a different row and confirmed the inspector
+    reopened, then dispatched Escape and confirmed the inspector collapsed with
+    no page-level horizontal overflow.
