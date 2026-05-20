@@ -1388,18 +1388,27 @@ select:focus-visible {
   text-transform: uppercase;
 }
 
-.facet-summary em {
+.facet-summary-chip {
   min-width: 0;
   max-width: 92px;
   padding: 1px 5px;
   overflow: hidden;
   border: 1px solid #314057;
   border-radius: 5px;
+  background: #172337;
   color: #c8d6e8;
+  cursor: pointer;
   font-size: 10px;
-  font-style: normal;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.facet-summary-chip:hover,
+.facet-summary-chip:focus-visible {
+  border-color: #5e789a;
+  background: #20324d;
+  color: #ffffff;
+  outline: 0;
 }
 
 .facet-group {

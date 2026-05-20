@@ -1925,11 +1925,11 @@ function ArchiveSearchViewport({
   const hasActiveFilters = activeFilterCount > 0;
   const hasOpenSearchPopover = showAdvancedFilters || isColumnMenuOpen || isViewsMenuOpen;
   const activeFilterSummaryItems = [
-    filters.kind !== "all" ? { key: "kind", label: SEARCH_KIND_FACETS.find((facet) => facet.id === filters.kind)?.label ?? filters.kind } : null,
-    ...[...filters.providers].slice(0, 2).map((provider) => ({ key: `provider:${provider}`, label: provider })),
-    filters.providers.size > 2 ? { key: "provider-more", label: `+${filters.providers.size - 2} providers` } : null,
-    ...[...filters.statuses].slice(0, 2).map((status) => ({ key: `status:${status}`, label: statusLabel(status) })),
-    filters.statuses.size > 2 ? { key: "status-more", label: `+${filters.statuses.size - 2} statuses` } : null,
+    filters.kind !== "all" ? { key: "kind", label: SEARCH_KIND_FACETS.find((facet) => facet.id === filters.kind)?.label ?? filters.kind, type: "kind", value: filters.kind } : null,
+    ...[...filters.providers].slice(0, 2).map((provider) => ({ key: `provider:${provider}`, label: provider, type: "providers", value: provider })),
+    filters.providers.size > 2 ? { key: "provider-more", label: `+${filters.providers.size - 2} providers`, type: "more" } : null,
+    ...[...filters.statuses].slice(0, 2).map((status) => ({ key: `status:${status}`, label: statusLabel(status), type: "statuses", value: status })),
+    filters.statuses.size > 2 ? { key: "status-more", label: `+${filters.statuses.size - 2} statuses`, type: "more" } : null,
   ].filter(Boolean).slice(0, 5);
 
   function closeSearchPopovers() {
@@ -2184,6 +2184,22 @@ function ArchiveSearchViewport({
       if (next.has(value)) next.delete(value);
       else next.add(value);
       return { ...current, [name]: next };
+    });
+  }
+
+  function removeSummaryFilter(item) {
+    if (item.type === "more") {
+      setShowAdvancedFilters(true);
+      setIsColumnMenuOpen(false);
+      setIsViewsMenuOpen(false);
+      return;
+    }
+    setActiveViewId(null);
+    setFilters((current) => {
+      if (item.type === "kind") return { ...current, kind: "all" };
+      const next = new Set(current[item.type]);
+      next.delete(item.value);
+      return { ...current, [item.type]: next };
     });
   }
 
@@ -2503,7 +2519,16 @@ function ArchiveSearchViewport({
               <>
                 <b>{formatNumber(activeFilterCount)} active</b>
                 {activeFilterSummaryItems.map((item) => (
-                  <em key={item.key}>{item.label}</em>
+                  <button
+                    key={item.key}
+                    className="facet-summary-chip"
+                    type="button"
+                    title={item.type === "more" ? "Show remaining filters" : `Remove ${item.label} filter`}
+                    aria-label={item.type === "more" ? "Show remaining active filters" : `Remove ${item.label} filter`}
+                    onClick={() => removeSummaryFilter(item)}
+                  >
+                    {item.label}
+                  </button>
                 ))}
               </>
             ) : <b>all</b>}

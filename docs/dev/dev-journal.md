@@ -31498,6 +31498,38 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     tests/runtime.archiveMaterializationJobService.test.ts
     tests/runtime.archiveService.test.ts --maxWorkers 1`
   - `pnpm run build`
+
+## Turn 217 | 2026-05-20
+
+- Goal: let operators remove active Search filters directly from the compact
+  command-row summary.
+- Change:
+  - converted real kind/provider/status summary chips from static text into
+    small action buttons.
+  - added targeted removal logic for kind, provider, and status filters.
+  - kept overflow summary chips as a shortcut to reopen advanced filters because
+    they represent multiple hidden filters.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check -- ux/operator/src/App.jsx
+    ux/operator/src/styles.css` passed.
+  - `pnpm run install:user-runtime` initially failed with a transient npm
+    `ENOENT` while creating `node_modules/@google/generative-ai`; a direct retry
+    completed successfully.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK` after the restarted listener was ready.
+  - `agent-browser` selected Artifacts, chatgpt, and delayed filters at 1280px
+    and confirmed the summary chips had remove labels and no horizontal
+    overflow.
+  - `agent-browser` clicked the Artifacts chip and confirmed kind reset to All
+    while provider/status chips remained.
+  - `agent-browser` clicked the chatgpt and delayed chips and confirmed provider
+    and status filters cleared, the summary returned to `ALL`, and no
+    horizontal overflow appeared.
+  - `agent-browser` repeated the active-chip rendering check at 560px and
+    confirmed the chips remained compact with no horizontal overflow.
   - `pnpm run install:user-runtime`
   - `systemctl --user restart auracall-api.service`
   - `systemctl --user is-active auracall-api.service` returned `active`.
