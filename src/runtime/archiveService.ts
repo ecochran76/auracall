@@ -1014,10 +1014,16 @@ async function enrichFileMetadata(items: RunArchiveItem[]): Promise<RunArchiveIt
       await findExistingMaterializedArchiveFile(item);
     const liveChecksumSha256 = await calculateFileSha256(discoveredLocalPath);
     const checksumSha256 = liveChecksumSha256 ?? readRecordString(item.metadata, ['checksumSha256']);
-    const unavailableEvidence = !discoveredLocalPath
-      ? cachedConversationEvidence?.unavailable ?? buildGeneratedArtifactUnavailableEvidence(item)
-      : null;
-    const fileAvailable = discoveredLocalPath ? await fileExists(discoveredLocalPath) : unavailableEvidence ? false : null;
+    const pathExists = discoveredLocalPath ? await fileExists(discoveredLocalPath) : null;
+    const unavailableEvidence: Record<string, unknown> | null =
+      pathExists === false
+        ? buildMissingLocalFileEvidence(item, discoveredLocalPath ?? '')
+        : !discoveredLocalPath
+          ? cachedConversationEvidence?.unavailable
+            ? { ...cachedConversationEvidence.unavailable }
+            : buildGeneratedArtifactUnavailableEvidence(item)
+          : null;
+    const fileAvailable = pathExists ?? (unavailableEvidence ? false : null);
     const liveFileSizeBytes = await readFileSize(discoveredLocalPath);
     const fileSizeBytes = liveFileSizeBytes ?? readRecordNumber(item.metadata, ['fileSizeBytes', 'size']);
     const cacheKey = checksumSha256
@@ -1049,7 +1055,7 @@ async function enrichFileMetadata(items: RunArchiveItem[]): Promise<RunArchiveIt
           materialization: {
             status: 'unavailable',
             source: 'archive-read-refresh',
-            method: unavailableEvidence.sourceArtifactFetchReason ?? 'missing-provider-conversation',
+            method: readUnavailableEvidenceReason(unavailableEvidence),
           },
         } : {}),
         ...(discoveredLocalPath ? { localPath: discoveredLocalPath, path: discoveredLocalPath } : {}),
@@ -1066,11 +1072,28 @@ async function enrichFileMetadata(items: RunArchiveItem[]): Promise<RunArchiveIt
 
 function buildGeneratedArtifactUnavailableEvidence(item: RunArchiveItem): Record<string, unknown> | null {
   if (item.kind !== 'generated_artifact') return null;
-  if (item.providerConversationId) return null;
   if (item.localPath || readRecordString(item.metadata, ['localPath', 'path'])) return null;
+  if (item.mediaGenerationId) {
+    return {
+      unavailableReason: 'media-artifact-missing-local-path',
+    };
+  }
+  if (item.providerConversationId) return null;
   return {
     unavailableReason: 'missing-provider-conversation',
   };
+}
+
+function buildMissingLocalFileEvidence(item: RunArchiveItem, localPath: string): Record<string, unknown> | null {
+  if (item.kind !== 'generated_artifact' && item.kind !== 'upload') return null;
+  return {
+    unavailableReason: item.mediaGenerationId ? 'media-artifact-local-file-missing' : 'local-file-missing',
+    missingLocalPath: localPath,
+  };
+}
+
+function readUnavailableEvidenceReason(evidence: Record<string, unknown>): string {
+  return readRecordString(evidence, ['sourceArtifactFetchReason', 'unavailableReason']) ?? 'unavailable';
 }
 
 function fileMetadataChanged(previous: RunArchiveItem | undefined, next: RunArchiveItem): boolean {

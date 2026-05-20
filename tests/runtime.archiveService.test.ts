@@ -274,6 +274,21 @@ describe('run archive service', () => {
         }),
       ],
     });
+    await expect(service.readItem('generated-artifact:media_archive_1:image_1')).resolves.toMatchObject({
+      item: {
+        localPath: '/tmp/image.png',
+        fileAvailable: false,
+        metadata: expect.objectContaining({
+          unavailableReason: 'media-artifact-local-file-missing',
+          missingLocalPath: '/tmp/image.png',
+          materialization: expect.objectContaining({
+            status: 'unavailable',
+            source: 'archive-read-refresh',
+            method: 'media-artifact-local-file-missing',
+          }),
+        }),
+      },
+    });
 
     await expect(service.readAsset(`upload:resp_archive_1:resp_archive_1:step:1:upload_packet`)).resolves.toMatchObject({
       object: 'run_archive_asset',
@@ -583,6 +598,7 @@ describe('run archive service', () => {
       'cached-attachment.json',
     );
     const skippedAttachmentId = 'generated-artifact:resp_file_refresh:user-message:download:sandbox:/mnt/data/skipped-attachment.json';
+    const noPathMediaArtifactId = 'generated-artifact:media_file_refresh:image_without_path';
 
     await writeRunArchiveIndex([
       createArchiveItemFixture({
@@ -653,6 +669,25 @@ describe('run archive service', () => {
         links: {},
         metadata: {
           artifactType: 'generated',
+        },
+      }),
+      createArchiveItemFixture({
+        id: noPathMediaArtifactId,
+        kind: 'generated_artifact',
+        source: 'media_generation',
+        provider: 'gemini',
+        responseId: null,
+        mediaGenerationId: 'media_file_refresh',
+        providerConversationId: null,
+        artifactId: 'image_without_path',
+        fileName: null,
+        localPath: null,
+        uri: null,
+        fileAvailable: null,
+        links: {},
+        metadata: {
+          mediaType: 'image',
+          mimeType: 'image/png',
         },
       }),
     ]);
@@ -798,6 +833,21 @@ describe('run archive service', () => {
         }),
       },
     });
+    await expect(service.readItem(noPathMediaArtifactId)).resolves.toMatchObject({
+      item: {
+        localPath: null,
+        fileAvailable: false,
+        metadata: expect.objectContaining({
+          unavailableReason: 'media-artifact-missing-local-path',
+          fileAvailable: false,
+          materialization: expect.objectContaining({
+            status: 'unavailable',
+            source: 'archive-read-refresh',
+            method: 'media-artifact-missing-local-path',
+          }),
+        }),
+      },
+    });
     await expect(readRunArchiveIndex()).resolves.toMatchObject({
       items: expect.arrayContaining([
         expect.objectContaining({
@@ -828,6 +878,14 @@ describe('run archive service', () => {
           fileAvailable: false,
           metadata: expect.objectContaining({
             sourceArtifactFetchStatus: 'skipped',
+          }),
+        }),
+        expect.objectContaining({
+          id: noPathMediaArtifactId,
+          localPath: null,
+          fileAvailable: false,
+          metadata: expect.objectContaining({
+            unavailableReason: 'media-artifact-missing-local-path',
           }),
         }),
       ]),

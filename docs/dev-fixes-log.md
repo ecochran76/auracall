@@ -16474,3 +16474,10 @@ browser-stage lifecycle observability, not transcript truncation.
   evidence rather than launching browser work or implying a recoverable local
   asset exists. Generated-artifact rows without a provider conversation id also
   get a `missing-provider-conversation` reason during browser-free refresh.
+
+- 2026-05-20: Unavailable archive artifacts need recoverability-specific
+  reasons. Browser-free archive refresh now separates stale local paths
+  (`local-file-missing` or `media-artifact-local-file-missing`) from
+  media-generation records that never persisted an artifact path
+  (`media-artifact-missing-local-path`), while preserving provider
+  artifact-fetch reasons for skipped ChatGPT conversation downloads.
