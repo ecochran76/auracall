@@ -31543,3 +31543,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `cached-conversation-attachment`.
   - live missing generated artifacts dropped from 127 to 74; ChatGPT missing
     dropped from 57 to 4.
+
+## Turn 215 | 2026-05-20
+
+- Goal: make the Search command-row filter summary useful without reopening the
+  advanced filter popover.
+- Change:
+  - added compact inline summary chips for active kind, provider, and status
+    filters.
+  - capped provider/status summary values to avoid widening the command row.
+  - added ellipsis-safe chip styling inside the existing dense summary control.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check -- ux/operator/src/App.jsx
+    ux/operator/src/styles.css` passed.
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK` after the restarted listener was ready.
+  - `agent-browser` selected Artifacts, chatgpt, and delayed filters at 1280px
+    and confirmed the summary rendered three inline chips, stayed 290px wide,
+    and produced no horizontal overflow.
+  - `agent-browser` repeated the same active-filter summary check at 560px and
+    confirmed the three chips remained compact with no horizontal overflow.

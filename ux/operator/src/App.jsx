@@ -1924,6 +1924,13 @@ function ArchiveSearchViewport({
     + filters.statuses.size;
   const hasActiveFilters = activeFilterCount > 0;
   const hasOpenSearchPopover = showAdvancedFilters || isColumnMenuOpen || isViewsMenuOpen;
+  const activeFilterSummaryItems = [
+    filters.kind !== "all" ? { key: "kind", label: SEARCH_KIND_FACETS.find((facet) => facet.id === filters.kind)?.label ?? filters.kind } : null,
+    ...[...filters.providers].slice(0, 2).map((provider) => ({ key: `provider:${provider}`, label: provider })),
+    filters.providers.size > 2 ? { key: "provider-more", label: `+${filters.providers.size - 2} providers` } : null,
+    ...[...filters.statuses].slice(0, 2).map((status) => ({ key: `status:${status}`, label: statusLabel(status) })),
+    filters.statuses.size > 2 ? { key: "status-more", label: `+${filters.statuses.size - 2} statuses` } : null,
+  ].filter(Boolean).slice(0, 5);
 
   function closeSearchPopovers() {
     setShowAdvancedFilters(false);
@@ -2492,7 +2499,14 @@ function ArchiveSearchViewport({
           <div className={hasActiveFilters ? "facet-summary command-facet-summary active" : "facet-summary command-facet-summary"} aria-label="Search filter summary">
             <strong>{formatNumber(filteredRows.length)}</strong>
             <span>loaded</span>
-            {hasActiveFilters ? <b>{formatNumber(activeFilterCount)} active</b> : <b>all</b>}
+            {hasActiveFilters ? (
+              <>
+                <b>{formatNumber(activeFilterCount)} active</b>
+                {activeFilterSummaryItems.map((item) => (
+                  <em key={item.key}>{item.label}</em>
+                ))}
+              </>
+            ) : <b>all</b>}
           </div>
           <button className={isLive ? "search-live-toggle active" : "search-live-toggle"} type="button" onClick={() => setIsLive((current) => !current)} title={isLive ? "Pause live refresh" : "Resume live refresh"}>
             <span className={`state-dot state-${isLive ? "good" : "warn"}`} />

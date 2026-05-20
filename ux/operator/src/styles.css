@@ -1352,6 +1352,7 @@ select:focus-visible {
 }
 
 .facet-summary {
+  max-width: 100%;
   min-height: 24px;
   display: inline-flex;
   align-items: center;
@@ -1362,6 +1363,7 @@ select:focus-visible {
   background: #10161f;
   color: #95a1b4;
   font-size: 11px;
+  overflow: hidden;
 }
 
 .facet-summary.active {
@@ -1376,6 +1378,7 @@ select:focus-visible {
 }
 
 .facet-summary b {
+  flex: 0 0 auto;
   padding: 1px 5px;
   border-radius: 5px;
   background: #223045;
@@ -1383,6 +1386,20 @@ select:focus-visible {
   font-size: 10px;
   font-weight: 760;
   text-transform: uppercase;
+}
+
+.facet-summary em {
+  min-width: 0;
+  max-width: 92px;
+  padding: 1px 5px;
+  overflow: hidden;
+  border: 1px solid #314057;
+  border-radius: 5px;
+  color: #c8d6e8;
+  font-size: 10px;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .facet-group {
