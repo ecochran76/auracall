@@ -16465,3 +16465,12 @@ browser-stage lifecycle observability, not transcript truncation.
   and link matching archive rows to the cached local file. This keeps the DOM
   selector strict while repairing user-message/assistant-message duplicate
   sandbox rows from already-downloaded files.
+
+- 2026-05-20: Archive refresh should distinguish unavailable generated
+  artifacts from stale unknown cache state. When a matching provider
+  conversation-attachment manifest entry is `skipped`, lacks `localPath`, or
+  points at a missing cached file, archive list/detail/asset-lookup now
+  persists `fileAvailable: false` with explicit unavailable materialization
+  evidence rather than launching browser work or implying a recoverable local
+  asset exists. Generated-artifact rows without a provider conversation id also
+  get a `missing-provider-conversation` reason during browser-free refresh.

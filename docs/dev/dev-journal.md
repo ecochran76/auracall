@@ -31501,6 +31501,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run install:user-runtime`
   - `systemctl --user restart auracall-api.service`
   - `systemctl --user is-active auracall-api.service` returned `active`.
+  - live `auracall api archive --kind generated_artifact --limit 5000 --json`
+    reported 319 generated artifacts: 245 available, 74 unavailable, 0
+    unknown. The three residual ChatGPT `legacy_readout.json` rows now show
+    artifact-fetch `skipped` evidence, and the schema placeholder row shows
+    `missing-provider-conversation`.
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
   - live materialization job `ramj_20c01dc5563044ecbee81c46b0c68e40`
     succeeded with `method = existing-materialized-directory`.
   - a live `auracall api archive --kind generated_artifact --limit 1 --json`
@@ -31567,3 +31575,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     and produced no horizontal overflow.
   - `agent-browser` repeated the same active-filter summary check at 560px and
     confirmed the three chips remained compact with no horizontal overflow.
+
+## Turn 216 | 2026-05-20
+
+- Goal: make residual generated-artifact cache misses explicit when provider
+  artifact fetch evidence says no local file exists.
+- Change:
+  - extended the provider conversation-attachment manifest lookup to return
+    unavailable evidence for matching skipped entries, missing `localPath`
+    entries, or missing cached files.
+  - archive list/detail/asset-lookup refresh now persists those rows as
+    `fileAvailable: false` with `materialization.status = unavailable` instead
+    of leaving them as ambiguous `null` availability.
+  - generated-artifact rows that have neither a local path nor provider
+    conversation id now get a `missing-provider-conversation` unavailable
+    reason during browser-free archive refresh.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveService.test.ts
+    tests/runtime.archiveMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts
+    tests/runtime.archiveMaterializationService.test.ts
+    tests/runtime.archiveMaterializationJobService.test.ts
+    tests/runtime.archiveService.test.ts --maxWorkers 1`
+  - `pnpm run build`

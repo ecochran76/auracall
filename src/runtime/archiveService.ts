@@ -33,7 +33,7 @@ import {
   type RunArchiveEvidenceRecord,
   type RunArchiveEvidenceStore,
 } from './archiveEvidenceStore.js';
-import { findCachedConversationAttachmentAsset } from './archiveCachedAssetLookup.js';
+import { findCachedConversationAttachmentEvidence } from './archiveCachedAssetLookup.js';
 
 export type RunArchiveItemKind =
   | 'response'
@@ -1006,14 +1006,18 @@ function itemMatchesQuery(item: RunArchiveItem, query: string): boolean {
 
 async function enrichFileMetadata(items: RunArchiveItem[]): Promise<RunArchiveItem[]> {
   return Promise.all(items.map(async (item) => {
-    const cachedConversationAsset = item.localPath ? null : await findCachedConversationAttachmentAsset(item);
+    const cachedConversationEvidence = item.localPath ? null : await findCachedConversationAttachmentEvidence(item);
+    const cachedConversationAsset = cachedConversationEvidence?.file ?? null;
     const discoveredLocalPath =
       item.localPath ??
       cachedConversationAsset?.localPath ??
       await findExistingMaterializedArchiveFile(item);
     const liveChecksumSha256 = await calculateFileSha256(discoveredLocalPath);
     const checksumSha256 = liveChecksumSha256 ?? readRecordString(item.metadata, ['checksumSha256']);
-    const fileAvailable = discoveredLocalPath ? await fileExists(discoveredLocalPath) : null;
+    const unavailableEvidence = !discoveredLocalPath
+      ? cachedConversationEvidence?.unavailable ?? buildGeneratedArtifactUnavailableEvidence(item)
+      : null;
+    const fileAvailable = discoveredLocalPath ? await fileExists(discoveredLocalPath) : unavailableEvidence ? false : null;
     const liveFileSizeBytes = await readFileSize(discoveredLocalPath);
     const fileSizeBytes = liveFileSizeBytes ?? readRecordNumber(item.metadata, ['fileSizeBytes', 'size']);
     const cacheKey = checksumSha256
@@ -1039,6 +1043,15 @@ async function enrichFileMetadata(items: RunArchiveItem[]): Promise<RunArchiveIt
       metadata: {
         ...item.metadata,
         ...(cachedConversationAsset?.metadata ?? {}),
+        ...(unavailableEvidence ? {
+          ...unavailableEvidence,
+          fileAvailable: false,
+          materialization: {
+            status: 'unavailable',
+            source: 'archive-read-refresh',
+            method: unavailableEvidence.sourceArtifactFetchReason ?? 'missing-provider-conversation',
+          },
+        } : {}),
         ...(discoveredLocalPath ? { localPath: discoveredLocalPath, path: discoveredLocalPath } : {}),
         ...(cachedConversationAsset?.remoteUrl ? { remoteUrl: cachedConversationAsset.remoteUrl } : {}),
         ...(fileName ? { fileName } : {}),
@@ -1049,6 +1062,15 @@ async function enrichFileMetadata(items: RunArchiveItem[]): Promise<RunArchiveIt
       },
     };
   }));
+}
+
+function buildGeneratedArtifactUnavailableEvidence(item: RunArchiveItem): Record<string, unknown> | null {
+  if (item.kind !== 'generated_artifact') return null;
+  if (item.providerConversationId) return null;
+  if (item.localPath || readRecordString(item.metadata, ['localPath', 'path'])) return null;
+  return {
+    unavailableReason: 'missing-provider-conversation',
+  };
 }
 
 function fileMetadataChanged(previous: RunArchiveItem | undefined, next: RunArchiveItem): boolean {
@@ -1063,7 +1085,10 @@ function fileMetadataChanged(previous: RunArchiveItem | undefined, next: RunArch
     previous.metadata.localPath !== next.metadata.localPath ||
     previous.metadata.path !== next.metadata.path ||
     previous.metadata.remoteUrl !== next.metadata.remoteUrl ||
-    previous.metadata.materialization !== next.metadata.materialization ||
+    JSON.stringify(previous.metadata.materialization ?? null) !== JSON.stringify(next.metadata.materialization ?? null) ||
+    previous.metadata.unavailableReason !== next.metadata.unavailableReason ||
+    previous.metadata.sourceArtifactFetchStatus !== next.metadata.sourceArtifactFetchStatus ||
+    previous.metadata.sourceArtifactFetchReason !== next.metadata.sourceArtifactFetchReason ||
     previous.metadata.fileName !== next.metadata.fileName ||
     previous.metadata.mimeType !== next.metadata.mimeType ||
     previous.metadata.checksumSha256 !== next.metadata.checksumSha256 ||

@@ -582,6 +582,7 @@ describe('run archive service', () => {
       'download-dom-turn-0',
       'cached-attachment.json',
     );
+    const skippedAttachmentId = 'generated-artifact:resp_file_refresh:user-message:download:sandbox:/mnt/data/skipped-attachment.json';
 
     await writeRunArchiveIndex([
       createArchiveItemFixture({
@@ -639,6 +640,21 @@ describe('run archive service', () => {
           artifactType: 'generated',
         },
       }),
+      createArchiveItemFixture({
+        id: skippedAttachmentId,
+        kind: 'generated_artifact',
+        responseId: 'resp_file_refresh',
+        providerConversationId: 'conv_file_refresh',
+        artifactId: 'user-message:download:sandbox:/mnt/data/skipped-attachment.json',
+        fileName: 'skipped-attachment.json',
+        localPath: null,
+        uri: 'sandbox:/mnt/data/skipped-attachment.json',
+        fileAvailable: null,
+        links: {},
+        metadata: {
+          artifactType: 'generated',
+        },
+      }),
     ]);
 
     await writeFile(uploadPath, 'uploaded bytes', 'utf8');
@@ -674,6 +690,13 @@ describe('run archive service', () => {
             remoteUrl: 'https://chatgpt.com/backend-api/estuary/content?id=file_2',
             mimeType: 'application/json',
             size: Buffer.byteLength('{"cached":true}'),
+          },
+          {
+            artifactId: 'user-message:download:sandbox:/mnt/data/skipped-attachment.json',
+            title: 'skipped-attachment.json',
+            kind: 'download',
+            uri: 'sandbox:/mnt/data/skipped-attachment.json',
+            status: 'skipped',
           },
         ],
       }),
@@ -755,6 +778,26 @@ describe('run archive service', () => {
         }),
       },
     });
+    await expect(service.readItem(skippedAttachmentId)).resolves.toMatchObject({
+      item: {
+        localPath: null,
+        fileAvailable: false,
+        links: expect.not.objectContaining({
+          asset: expect.any(String),
+        }),
+        metadata: expect.objectContaining({
+          sourceArtifactFetchManifest: true,
+          sourceArtifactFetchStatus: 'skipped',
+          sourceArtifactFetchReason: 'artifact-fetch-entry-not-materialized',
+          fileAvailable: false,
+          materialization: expect.objectContaining({
+            status: 'unavailable',
+            source: 'archive-read-refresh',
+            method: 'artifact-fetch-entry-not-materialized',
+          }),
+        }),
+      },
+    });
     await expect(readRunArchiveIndex()).resolves.toMatchObject({
       items: expect.arrayContaining([
         expect.objectContaining({
@@ -778,6 +821,14 @@ describe('run archive service', () => {
           localPath: cachedAttachmentPath,
           fileAvailable: true,
           cacheKey: expect.stringMatching(/^sha256:/),
+        }),
+        expect.objectContaining({
+          id: skippedAttachmentId,
+          localPath: null,
+          fileAvailable: false,
+          metadata: expect.objectContaining({
+            sourceArtifactFetchStatus: 'skipped',
+          }),
         }),
       ]),
     });

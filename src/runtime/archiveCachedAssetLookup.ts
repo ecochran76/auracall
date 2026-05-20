@@ -11,10 +11,32 @@ interface ArtifactFetchManifest {
   entries?: unknown;
 }
 
+export interface CachedConversationAttachmentUnavailableEvidence {
+  sourceArtifactFetchManifest: true;
+  sourceArtifactFetchStatus: string;
+  sourceArtifactFetchReason: string;
+  sourceArtifactId: string | null;
+  sourceFileId: string | null;
+  sourceManifestPath: string;
+  sourceManifestConversationId: string | null;
+  sourceManifestProjectId: string | null;
+}
+
+export interface CachedConversationAttachmentEvidence {
+  file: FileRef | null;
+  unavailable: CachedConversationAttachmentUnavailableEvidence | null;
+}
+
 export async function findCachedConversationAttachmentAsset(item: RunArchiveItem): Promise<FileRef | null> {
-  if (item.kind !== 'generated_artifact') return null;
+  return (await findCachedConversationAttachmentEvidence(item)).file;
+}
+
+export async function findCachedConversationAttachmentEvidence(
+  item: RunArchiveItem,
+): Promise<CachedConversationAttachmentEvidence> {
+  if (item.kind !== 'generated_artifact') return emptyEvidence();
   const provider = normalizeProviderId(item.provider);
-  if (!provider || !item.providerConversationId) return null;
+  if (!provider || !item.providerConversationId) return emptyEvidence();
   const cacheRoot = path.join(getAuracallHomeDir(), 'cache', 'providers', provider);
   const identityDirs = await fs.readdir(cacheRoot, { withFileTypes: true }).catch(() => []);
   for (const identityDir of identityDirs) {
@@ -28,44 +50,64 @@ export async function findCachedConversationAttachmentAsset(item: RunArchiveItem
     );
     const manifest = await readArtifactFetchManifest(manifestPath);
     if (!manifest || !manifestMatchesItem(manifest, item, provider)) continue;
-    const match = await findMatchingManifestEntry(manifest, item);
-    if (match) return match;
+    const match = await findMatchingManifestEntry(manifest, manifestPath, item);
+    if (match.file || match.unavailable) return match;
   }
-  return null;
+  return emptyEvidence();
 }
 
 async function findMatchingManifestEntry(
   manifest: ArtifactFetchManifest,
+  manifestPath: string,
   item: RunArchiveItem,
-): Promise<FileRef | null> {
+): Promise<CachedConversationAttachmentEvidence> {
   const entries = Array.isArray(manifest.entries) ? manifest.entries : [];
   for (const entry of entries) {
-    if (!isRecord(entry) || entry.status !== 'materialized') continue;
+    if (!isRecord(entry) || !manifestEntryMatchesItem(entry, item)) continue;
+    const status = readString(entry.status) ?? 'unknown';
     const localPath = readString(entry.localPath);
-    if (!localPath || !await fileExists(localPath)) continue;
-    if (!manifestEntryMatchesItem(entry, item)) continue;
-    const stat = await fs.stat(localPath).catch(() => null);
-    const provider = normalizeProviderId(item.provider);
-    if (!stat?.isFile() || !provider) continue;
-    const fileName = readString(entry.fileName) ?? path.basename(localPath);
-    return {
-      id: readString(entry.fileId) ?? readString(entry.artifactId) ?? item.artifactId ?? item.id,
-      name: fileName,
-      provider,
-      source: 'conversation',
-      localPath,
-      remoteUrl: readString(entry.remoteUrl) ?? item.uri ?? undefined,
-      mimeType: readString(entry.mimeType) ?? item.mimeType ?? inferMimeTypeFromName(fileName) ?? undefined,
-      size: readNumber(entry.size) ?? stat.size,
-      metadata: {
-        materialization: 'cached-conversation-attachment',
+    const unavailable = (reason: string): CachedConversationAttachmentEvidence => ({
+      file: null,
+      unavailable: {
         sourceArtifactFetchManifest: true,
+        sourceArtifactFetchStatus: status,
+        sourceArtifactFetchReason: reason,
         sourceArtifactId: readString(entry.artifactId),
         sourceFileId: readString(entry.fileId),
+        sourceManifestPath: manifestPath,
+        sourceManifestConversationId: readString(manifest.conversationId),
+        sourceManifestProjectId: readString(manifest.projectId),
       },
+    });
+    if (status !== 'materialized') return unavailable('artifact-fetch-entry-not-materialized');
+    if (!localPath) return unavailable('artifact-fetch-entry-missing-local-path');
+    if (!await fileExists(localPath)) return unavailable('artifact-fetch-local-file-missing');
+    const stat = await fs.stat(localPath).catch(() => null);
+    const provider = normalizeProviderId(item.provider);
+    if (!stat?.isFile() || !provider) return unavailable('artifact-fetch-local-file-missing');
+    const fileName = readString(entry.fileName) ?? path.basename(localPath);
+    return {
+      file: {
+        id: readString(entry.fileId) ?? readString(entry.artifactId) ?? item.artifactId ?? item.id,
+        name: fileName,
+        provider,
+        source: 'conversation',
+        localPath,
+        remoteUrl: readString(entry.remoteUrl) ?? item.uri ?? undefined,
+        mimeType: readString(entry.mimeType) ?? item.mimeType ?? inferMimeTypeFromName(fileName) ?? undefined,
+        size: readNumber(entry.size) ?? stat.size,
+        metadata: {
+          materialization: 'cached-conversation-attachment',
+          sourceArtifactFetchManifest: true,
+          sourceArtifactFetchStatus: status,
+          sourceArtifactId: readString(entry.artifactId),
+          sourceFileId: readString(entry.fileId),
+        },
+      },
+      unavailable: null,
     };
   }
-  return null;
+  return emptyEvidence();
 }
 
 function manifestMatchesItem(
@@ -141,4 +183,11 @@ function readNumber(value: unknown): number | null {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function emptyEvidence(): CachedConversationAttachmentEvidence {
+  return {
+    file: null,
+    unavailable: null,
+  };
 }
