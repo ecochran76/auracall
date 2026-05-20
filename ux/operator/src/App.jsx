@@ -17,6 +17,7 @@ import {
   GripVertical,
   HeartPulse,
   KeyRound,
+  ListFilter,
   Menu,
   MessageSquareText,
   PanelLeftClose,
@@ -1758,6 +1759,7 @@ function ArchiveSearchViewport({
   const [isLive, setIsLive] = useState(true);
   const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false);
   const [isViewsMenuOpen, setIsViewsMenuOpen] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [savedViews, setSavedViews] = useState(readSearchViews);
   const [newViewName, setNewViewName] = useState("");
   const [activeViewId, setActiveViewId] = useState(null);
@@ -2369,6 +2371,11 @@ function ArchiveSearchViewport({
             placeholder="Search chats, tenants, projects, ids, and cached metadata"
             onChange={(event) => updateQuery(event.target.value)}
           />
+          <div className={hasActiveFilters ? "facet-summary command-facet-summary active" : "facet-summary command-facet-summary"} aria-label="Search filter summary">
+            <strong>{formatNumber(filteredRows.length)}</strong>
+            <span>loaded</span>
+            {hasActiveFilters ? <b>{formatNumber(activeFilterCount)} active</b> : <b>all</b>}
+          </div>
           <button className={isLive ? "search-live-toggle active" : "search-live-toggle"} type="button" onClick={() => setIsLive((current) => !current)} title={isLive ? "Pause live refresh" : "Resume live refresh"}>
             <span className={`state-dot state-${isLive ? "good" : "warn"}`} />
             <span>{isLive ? "Live" : "Paused"}</span>
@@ -2376,6 +2383,18 @@ function ArchiveSearchViewport({
           <button className="icon-label-button search-toolbar-button" type="button" onClick={() => loadCatalog()} disabled={loading} title="Refresh search projection" aria-label="Refresh search projection">
             <RefreshCcw size={14} aria-hidden="true" />
             <span>{loading ? "Refreshing" : "Refresh"}</span>
+          </button>
+          <button
+            className={showAdvancedFilters ? "icon-label-button search-toolbar-button active" : "icon-label-button search-toolbar-button"}
+            type="button"
+            onClick={() => setShowAdvancedFilters((current) => !current)}
+            title={showAdvancedFilters ? "Hide advanced filters" : "Show advanced filters"}
+            aria-label={showAdvancedFilters ? "Hide advanced search filters" : "Show advanced search filters"}
+            aria-expanded={showAdvancedFilters}
+            aria-controls="searchAdvancedFilters"
+          >
+            <ListFilter size={14} aria-hidden="true" />
+            <span>Filters</span>
           </button>
           <button className={isColumnMenuOpen ? "icon-label-button search-toolbar-button active" : "icon-label-button search-toolbar-button"} type="button" onClick={() => setIsColumnMenuOpen((current) => !current)} title="Configure visible columns" aria-label="Configure visible columns">
             <Columns3 size={14} aria-hidden="true" />
@@ -2463,12 +2482,8 @@ function ArchiveSearchViewport({
           </div>
         ) : null}
 
-        <div className="search-facet-row" aria-label="Search facets">
-          <div className={hasActiveFilters ? "facet-summary active" : "facet-summary"} aria-label="Search filter summary">
-            <strong>{formatNumber(filteredRows.length)}</strong>
-            <span>loaded</span>
-            {hasActiveFilters ? <b>{formatNumber(activeFilterCount)} active</b> : <b>all</b>}
-          </div>
+        {showAdvancedFilters ? (
+        <div id="searchAdvancedFilters" className="search-facet-row" aria-label="Search facets">
           <div className="facet-group" role="tablist" aria-label="Kind">
             {SEARCH_KIND_FACETS.map((facet) => (
               <button
@@ -2514,6 +2529,7 @@ function ArchiveSearchViewport({
             ))}
           </div>
         </div>
+        ) : null}
       </section>
 
       {error ? <div className="health-error">Search catalog load failed: {error}</div> : null}

@@ -31081,3 +31081,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `aria-activedescendant` points at an existing row with `aria-current=true`,
     pressed Enter, and confirmed the URL gained a `row=` handoff parameter and
     the inspector reported `Search row selected`.
+
+## Turn 200 | 2026-05-20
+
+- Goal: reduce Search workbench chrome so the table gets more default vertical
+  space while keeping facets available.
+- Change:
+  - moved the loaded/active filter summary into the main command row.
+  - added an icon-only Advanced filters toggle with `aria-expanded` and
+    `aria-controls`.
+  - collapsed the Kind, Provider, and Status facet strip by default.
+  - kept existing filter behavior, clear-filter behavior, and saved view/column
+    controls unchanged.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check` passed.
+  - `pnpm run install:user-runtime` installed the updated operator bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK`.
+  - `agent-browser` confirmed the facets are collapsed by default, the command
+    summary remains visible, the advanced filter toggle expands the facet row,
+    and applying the Chats kind filter updates the summary to `1 ACTIVE` while
+    showing the Clear filters control.
