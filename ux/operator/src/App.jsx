@@ -3819,6 +3819,13 @@ export default function App() {
   }, [layout.activeNav, selectedArchiveItem?.id, selectedSearchRow?.id]);
 
   useEffect(() => {
+    if (!rightPaneHasSelection || !layout.rightCollapsed || layout.activeNav !== "search") return;
+    const compactViewport = window.matchMedia?.("(max-width: 980px)").matches ?? window.innerWidth <= 980;
+    if (!compactViewport) return;
+    setLayout((current) => (current.rightCollapsed ? { ...current, rightCollapsed: false } : current));
+  }, [layout.activeNav, layout.rightCollapsed, rightPaneHasSelection]);
+
+  useEffect(() => {
     if (layout.activeNav === "health" || layout.activeNav === "search") return;
     replaceUrlParams({
       provider: null,
