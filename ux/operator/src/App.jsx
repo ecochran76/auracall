@@ -2730,8 +2730,12 @@ function ArchiveSearchViewport({
 
       <section className="search-table-shell" aria-label="All tenant search results">
         <div className="search-table-summary">
-          <strong>{formatNumber(filteredRows.length)} rows</strong>
-          <span>{formatNumber(allRows.length)} loaded / {formatNumber(catalog?.metrics?.total ?? allRows.length)} matched / newest first / {formatNumber(visibleRows.length)} DOM rows{catalog?.nextCursor ? " / more available" : ""}</span>
+          <span className="summary-metric primary"><b>{formatNumber(filteredRows.length)}</b><small>filtered</small></span>
+          <span className="summary-metric"><b>{formatNumber(allRows.length)}</b><small>loaded</small></span>
+          <span className="summary-metric"><b>{formatNumber(catalog?.metrics?.total ?? allRows.length)}</b><small>matched</small></span>
+          <span className="summary-metric"><b>{formatNumber(visibleRows.length)}</b><small>rendered</small></span>
+          <span className="summary-metric"><b>{tablePrefs.sort.direction === "desc" ? "newest" : "oldest"}</b><small>sort</small></span>
+          {catalog?.nextCursor ? <span className="summary-metric attention"><b>more</b><small>available</small></span> : null}
         </div>
         <div
           ref={searchScrollRef}

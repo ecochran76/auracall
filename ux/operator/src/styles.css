@@ -1487,8 +1487,8 @@ select:focus-visible {
 .search-table-summary {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 4px;
   min-height: 29px;
   padding: 3px 7px;
   border-bottom: 1px solid #252d38;
@@ -1496,8 +1496,38 @@ select:focus-visible {
   font-size: 12px;
 }
 
-.search-table-summary strong {
+.summary-metric {
+  min-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border: 1px solid #293342;
+  border-radius: 5px;
+  background: #10161f;
+}
+
+.summary-metric b {
   color: #f3f6fa;
+  font-size: 11px;
+  font-weight: 780;
+}
+
+.summary-metric small {
+  color: #8f9bad;
+  font-size: 10px;
+  font-weight: 680;
+  text-transform: uppercase;
+}
+
+.summary-metric.primary {
+  border-color: #37516d;
+  background: #131d2b;
+}
+
+.summary-metric.attention {
+  border-color: #5d5630;
+  background: #241f13;
 }
 
 .search-table-scroll {

@@ -31499,6 +31499,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     tests/runtime.archiveService.test.ts --maxWorkers 1`
   - `pnpm run build`
 
+## Turn 219 | 2026-05-20
+
+- Goal: make the Search table summary read like an operator status strip rather
+  than a long sentence.
+- Change:
+  - replaced the text summary with compact metric chips for filtered, loaded,
+    matched, rendered, sort, and more-available state.
+  - allowed the metric strip to wrap cleanly on narrow screens without
+    horizontal overflow.
+- Verification:
+  - `pnpm run ux:build` passed.
+  - `git diff --check -- ux/operator/src/App.jsx
+    ux/operator/src/styles.css` passed.
+  - `pnpm run install:user-runtime` was blocked by unrelated
+    `src/runtime/archiveService.ts` type errors from the parallel archive lane.
+  - `pnpm tsx scripts/install-user-runtime.ts --skip-build` installed the
+    already rebuilt operator UX bundle.
+  - `systemctl --user restart auracall-api.service` completed and
+    `systemctl --user is-active auracall-api.service` returned `active`.
+  - `curl -fsSI 'http://127.0.0.1:18095/dashboard?nav=search'` returned
+    `HTTP/1.1 200 OK` after the restarted listener was ready.
+  - `agent-browser` opened the installed Search dashboard at 1280px and
+    confirmed the metric strip rendered as chips with no horizontal overflow.
+  - `agent-browser` opened the installed Search dashboard at 560px and
+    confirmed the metric strip wrapped without horizontal overflow.
+  - after the catalog finished loading, `agent-browser` confirmed live metrics:
+    filtered 80, loaded 80, matched 3,945, rendered 33, sort newest, and more
+    available.
+
 ## Turn 217 | 2026-05-20
 
 - Goal: let operators remove active Search filters directly from the compact
