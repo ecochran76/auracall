@@ -797,6 +797,25 @@ export function shouldPreserveBrowserOnErrorForTest(error: unknown, headless: bo
   return shouldPreserveBrowserOnError(error, headless);
 }
 
+function shouldKeepManagedChatgptBrowserOpen(options: {
+  keepBrowser: boolean;
+  preserveBrowserOnError: boolean;
+}): boolean {
+  return options.keepBrowser || options.preserveBrowserOnError;
+}
+
+export function shouldKeepManagedChatgptBrowserOpenForTest(options: {
+  keepBrowser: boolean;
+  preserveBrowserOnError: boolean;
+  browserOperationReleased?: boolean;
+}): boolean {
+  // Dispatcher release is not a browser-retention signal. ChatGPT runs release
+  // the mutating lock after prompt dispatch so passive DOM inspection can keep
+  // probing the running tab, but successful completion should still close the
+  // AuraCall-owned browser unless keep-browser or preserve-on-error requested it.
+  return shouldKeepManagedChatgptBrowserOpen(options);
+}
+
 async function detectManualClearBlockingState(
   Runtime: ChromeClient['Runtime'],
 ): Promise<ReturnType<typeof classifyBrowserToolsBlockingState>> {
@@ -1978,12 +1997,21 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       }
     };
     let conversationHintInFlight: Promise<boolean> | null = null;
-    const updateConversationHint = async (label: string, timeoutMs = 10_000): Promise<boolean> => {
+    let cancelConversationHint = false;
+    const updateConversationHint = async (
+      label: string,
+      timeoutMs = 10_000,
+      options: { cancelable?: boolean } = {},
+    ): Promise<boolean> => {
       if (!chrome?.port) {
         return false;
       }
+      const cancelable = options.cancelable ?? false;
       const start = Date.now();
       while (Date.now() - start < timeoutMs) {
+        if (cancelable && cancelConversationHint) {
+          return false;
+        }
         try {
           const { result } = await Runtime.evaluate({ expression: 'location.href', returnByValue: true });
           if (typeof result?.value === 'string' && result.value.includes('/c/')) {
@@ -2006,7 +2034,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       }
       // Learned: the /c/ URL can update after the answer; emit hints in the background.
       // Run in the background so prompt submission/streaming isn't blocked by slow URL updates.
-      conversationHintInFlight = updateConversationHint(label, timeoutMs)
+      conversationHintInFlight = updateConversationHint(label, timeoutMs, { cancelable: true })
         .catch(() => false)
         .finally(() => {
           conversationHintInFlight = null;
@@ -2426,6 +2454,13 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         },
       ),
     );
+    cancelConversationHint = true;
+    const pendingConversationHint = conversationHintInFlight as unknown as Promise<boolean> | null;
+    if (pendingConversationHint) {
+      await pendingConversationHint.catch(() => false);
+    }
+    conversationHintInFlight = null;
+    cancelConversationHint = false;
     // Ensure we store the final conversation URL even if the UI updated late.
     await updateConversationHint('post-response', 15_000);
     const baselineNormalized = baselineAssistantText ? normalizeForComparison(baselineAssistantText) : '';
@@ -2725,7 +2760,10 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       }
       removeDialogHandler?.();
       removeTerminationHooks?.();
-      const keepBrowserOpen = effectiveKeepBrowser || preserveBrowserOnError || browserOperationReleased;
+      const keepBrowserOpen = shouldKeepManagedChatgptBrowserOpen({
+        keepBrowser: effectiveKeepBrowser,
+        preserveBrowserOnError,
+      });
       if (!keepBrowserOpen) {
         if (!connectionClosedUnexpectedly) {
           try {
@@ -2751,6 +2789,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
           logger(`Cleanup ${runStatus} • ${totalSeconds.toFixed(1)}s total`);
         }
       } else if (!connectionClosedUnexpectedly) {
+        detachKeptChromeProcess(chrome, logger);
         logger(`Chrome left running on port ${chrome.port} with profile ${userDataDir}`);
       }
     } finally {
@@ -4552,6 +4591,15 @@ async function gracefulShutdownChrome(
     }
   }
   await chrome.kill();
+}
+
+function detachKeptChromeProcess(chrome: LaunchedChrome, logger: BrowserLogger): void {
+  try {
+    chrome.process?.unref?.();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger(`Failed to detach kept Chrome process from AuraCall lifecycle: ${message}`);
+  }
 }
 
 function extractConversationIdFromUrl(url: string): string | undefined {

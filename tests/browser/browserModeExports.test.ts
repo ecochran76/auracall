@@ -11,6 +11,7 @@ import {
   releaseBrowserExecutionOperationAfterPreflightFailureForTest,
   sanitizeThinkingTextForTest,
   shouldPreserveBrowserOnErrorForTest,
+  shouldKeepManagedChatgptBrowserOpenForTest,
   shouldTreatChatgptAssistantResponseAsStaleForTest,
   resolveManagedBrowserLaunchContextForTest,
   extractParseableJsonObjectTextForTest,
@@ -63,6 +64,30 @@ describe('browserMode exports', () => {
     expect(shouldPreserveBrowserOnErrorForTest(manualClear, true)).toBe(false);
     expect(shouldPreserveBrowserOnErrorForTest(other, false)).toBe(false);
     expect(shouldPreserveBrowserOnErrorForTest(new Error('nope'), false)).toBe(false);
+  });
+
+  test('does not treat browser-operation lock release as a keep-browser request', () => {
+    expect(
+      shouldKeepManagedChatgptBrowserOpenForTest({
+        keepBrowser: false,
+        preserveBrowserOnError: false,
+        browserOperationReleased: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldKeepManagedChatgptBrowserOpenForTest({
+        keepBrowser: true,
+        preserveBrowserOnError: false,
+        browserOperationReleased: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldKeepManagedChatgptBrowserOpenForTest({
+        keepBrowser: false,
+        preserveBrowserOnError: true,
+        browserOperationReleased: false,
+      }),
+    ).toBe(true);
   });
 
   test('treats the same assistant message id as a stale reused response', () => {

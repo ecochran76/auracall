@@ -16413,3 +16413,16 @@ browser-stage lifecycle observability, not transcript truncation.
   forcing operators into raw JSON. The Run panel now renders a compact lineage
   strip from the existing row/archive metadata: source, response or batch,
   agent/team owner, AuraCall runtime profile/state, and output/step counts.
+
+- 2026-05-20: ChatGPT browser runs that use `--write-output --wait` must exit
+  after the final assistant answer is saved. Releasing the browser-operation
+  dispatcher lock at prompt dispatch is not a keep-browser request; successful
+  cleanup now closes AuraCall-owned Chrome unless `--browser-keep-browser` or a
+  preserve-on-error condition explicitly asks to keep it. The background
+  conversation URL hint poll is also cancelled before the final post-response
+  URL refresh so it cannot keep the CLI event loop alive after materialization.
+  When config explicitly keeps Chrome open, the kept child process is unref'd so
+  browser retention does not hold the CLI open. The root CLI also explicitly
+  exits after successful inline browser `--wait` completion once the session log
+  stream is flushed, because non-critical browser/CDP handles must not turn a
+  completed one-shot command into a caller-side timeout.

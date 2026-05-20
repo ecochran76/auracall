@@ -31234,3 +31234,54 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `is-collapsed` to `has-selection`, rendered as a fixed overlay with visible
     inspector content, preserved `row=` URL state, and had no page-level
     horizontal overflow.
+
+## Turn 206 | 2026-05-20
+
+- Goal: investigate the OpenClaw/company-bot handoff that reported ChatGPT
+  browser `--write-output --wait` materialized output but stayed alive until
+  caller-side SIGTERM recovery.
+- Diagnosis:
+  - the ChatGPT path releases the browser-operation dispatcher lock when the
+    prompt is dispatched so passive DOM inspection can continue without
+    blocking unrelated probes.
+  - cleanup incorrectly treated that released lock as a reason to keep the
+    AuraCall-owned browser open after successful final answer capture.
+  - the background conversation URL hint poll could also keep a timer alive
+    after the answer was saved.
+  - the SoyLei ChatGPT browser profile also has `keepBrowser: true`; keeping
+    Chrome open is valid, but the child process still has to detach from the
+    CLI event loop.
+- Change:
+  - made ChatGPT browser retention depend only on explicit keep-browser or
+    preserve-on-error state, not dispatcher lock release.
+  - made the background conversation hint poll cancelable before the final
+    post-response URL refresh.
+  - unref'd kept AuraCall-launched Chrome processes so explicit browser
+    retention does not block CLI exit.
+  - made the root CLI force-exit after a successful inline browser `--wait`
+    session once the session log stream has flushed, so non-critical
+    browser/CDP handles cannot convert a completed run into caller-side timeout.
+  - added a focused regression test for the retention predicate.
+- Verification:
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts
+    tests/cli/sessionRunner.test.ts` passed.
+  - `git diff --check` passed.
+  - `pnpm exec tsc --noEmit --pretty false` no longer reports touched-file
+    errors; it still reports pre-existing test fixture typing drift in
+    `tests/http.responsesServer.test.ts`,
+    `tests/runtime.archiveMaterializationJobService.test.ts`, and
+    `tests/runtime.searchProjectionService.test.ts`.
+  - First installed-runtime live smoke reproduced the handoff with
+    `rc=124`: answer captured and `/tmp/auracall-write-output-lifecycle-smoke.md`
+    written, but the CLI stayed alive until the outer timeout because
+    `keepBrowser: true` retained the Chrome child process.
+  - Second installed-runtime live smoke also reproduced with `rc=124` after
+    writing `/tmp/auracall-write-output-lifecycle-smoke-2.md`, proving the
+    remaining hold was in the root CLI lifecycle after durable session
+    completion.
+  - A diagnostic third smoke was terminated before answer materialization after
+    it stopped being useful for post-save handle inspection.
+  - Final installed-runtime live smoke passed: the same direct ChatGPT browser
+    `--write-output --wait` shape returned `rc=0`, wrote
+    `/tmp/auracall-write-output-lifecycle-smoke-4.md`, and the file contained
+    only `AURACALL WRITE OUTPUT LIFECYCLE SMOKE FOUR`.

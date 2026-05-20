@@ -5862,3 +5862,40 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - continue the Search roadmap with semantic/vector ranking or
     shared/server-backed view presets.
+
+## Turn 206 | 2026-05-20
+
+- Goal: close the OpenClaw/company-bot handoff for ChatGPT browser
+  `--write-output --wait` lifecycle hangs after output materialization.
+- Change:
+  - ChatGPT browser cleanup no longer treats browser-operation dispatcher lock
+    release as a keep-browser signal.
+  - explicit keep-browser and preserve-on-error still leave the managed browser
+    profile open for operator recovery.
+  - the background conversation URL hint poll is cancelled before the final
+    post-response URL refresh so no long timer remains after answer capture.
+  - kept AuraCall-launched Chrome child processes are detached from the CLI
+    event loop so `keepBrowser: true` does not block process exit.
+  - successful inline browser `--wait` CLI runs now explicitly exit after the
+    session log stream is flushed, preventing non-critical browser/CDP handles
+    from holding completed one-shot commands open.
+- Verification:
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts
+    tests/cli/sessionRunner.test.ts`
+  - `git diff --check`
+  - `pnpm exec tsc --noEmit --pretty false` still reports unrelated existing
+    test fixture typing drift outside this slice, but no touched-file error.
+  - Initial installed-runtime live smoke with `pro-extended-chatgpt-soylei`
+    reproduced the handoff: `rc=124`, answer captured, output file written,
+    then the CLI remained alive under the outer timeout.
+  - Second installed-runtime live smoke reproduced the same post-save timeout
+    with `/tmp/auracall-write-output-lifecycle-smoke-2.md`.
+  - A third diagnostic smoke was terminated before answer materialization after
+    process inspection showed it had not reached the post-save state.
+  - Final installed-runtime live smoke passed: direct ChatGPT browser
+    `--write-output --wait` returned `rc=0`, saved
+    `/tmp/auracall-write-output-lifecycle-smoke-4.md`, and the file contained
+    only `AURACALL WRITE OUTPUT LIFECYCLE SMOKE FOUR`.
+- Next:
+  - rerun company-bot's non-posting AuraCall backup wrapper to verify it
+    reports `auracall/ordinary_success/rc=0` instead of materialized recovery.

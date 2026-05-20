@@ -10258,6 +10258,7 @@ async function runRootCommand(options: CliOptions): Promise<void> {
       true,
       browserDeps,
     );
+    exitAfterCompletedInlineBrowserWait(sessionMode);
     return;
   }
   if (detached) {
@@ -10323,8 +10324,28 @@ async function runInteractiveSession(
   } catch (error) {
     throw error;
   } finally {
-    stream.end();
+    await closeSessionLogStream(stream);
   }
+}
+
+async function closeSessionLogStream(stream: NodeJS.WritableStream): Promise<void> {
+  await new Promise<void>((resolve) => {
+    stream.end(() => resolve());
+  });
+}
+
+function exitAfterCompletedInlineBrowserWait(sessionMode: SessionMode): void {
+  if (sessionMode !== 'browser') {
+    return;
+  }
+  if (process.env.AURACALL_DISABLE_BROWSER_WAIT_FORCE_EXIT === '1') {
+    return;
+  }
+  // Browser/CDP/notifier libraries can leave non-critical handles alive after
+  // the session is durably completed and the log stream is flushed. Inline
+  // browser --wait is a one-shot CLI contract, so exit explicitly instead of
+  // letting those handles turn a successful run into a caller-side timeout.
+  process.exit(process.exitCode ?? 0);
 }
 
 async function launchDetachedSession(sessionId: string): Promise<boolean> {
@@ -10375,7 +10396,7 @@ async function executeSession(sessionId: string) {
   } catch {
     // Errors are already logged to the session log; keep quiet to mirror stored-session behavior.
   } finally {
-    stream.end();
+    await closeSessionLogStream(stream);
   }
 }
 
