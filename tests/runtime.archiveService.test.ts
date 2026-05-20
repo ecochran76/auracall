@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { afterEach, describe, expect, test } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import { createRunArchiveService, type RunArchiveItem } from '../src/runtime/archiveService.js';
@@ -560,6 +560,15 @@ describe('run archive service', () => {
     setAuracallHomeDirOverrideForTest(homeDir);
     const uploadPath = path.join(homeDir, 'late-upload.txt');
     const generatedPath = path.join(homeDir, 'late-generated.json');
+    const materializedOnlyId = 'generated-artifact:resp_file_refresh:artifact_2:download:sandbox:/mnt/data/materialized-only.json';
+    const materializedOnlyPath = path.join(
+      homeDir,
+      'runtime',
+      'archive',
+      'materialized',
+      sanitizeArchiveItemPathSegment(materializedOnlyId),
+      'materialized-only.json',
+    );
 
     await writeRunArchiveIndex([
       createArchiveItemFixture({
@@ -588,10 +597,26 @@ describe('run archive service', () => {
           fileAvailable: false,
         },
       }),
+      createArchiveItemFixture({
+        id: materializedOnlyId,
+        kind: 'generated_artifact',
+        responseId: 'resp_file_refresh',
+        artifactId: 'artifact_2:download:sandbox:/mnt/data/materialized-only.json',
+        fileName: 'materialized-only.json',
+        localPath: null,
+        uri: 'sandbox:/mnt/data/materialized-only.json',
+        fileAvailable: null,
+        links: {},
+        metadata: {
+          artifactType: 'generated',
+        },
+      }),
     ]);
 
     await writeFile(uploadPath, 'uploaded bytes', 'utf8');
     await writeFile(generatedPath, '{"ready":true}', 'utf8');
+    await mkdir(path.dirname(materializedOnlyPath), { recursive: true });
+    await writeFile(materializedOnlyPath, '{"materialized":true}', 'utf8');
 
     const service = createRunArchiveService({
       now: () => new Date('2026-05-16T20:00:00.000Z'),
@@ -628,6 +653,24 @@ describe('run archive service', () => {
         }),
       },
     });
+    await expect(service.readItem(materializedOnlyId)).resolves.toMatchObject({
+      item: {
+        localPath: materializedOnlyPath,
+        fileAvailable: true,
+        mimeType: 'application/json; charset=utf-8',
+        cacheKey: expect.stringMatching(/^sha256:/),
+        checksumSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+        links: expect.objectContaining({
+          asset: expect.stringContaining('/asset'),
+        }),
+        metadata: expect.objectContaining({
+          localPath: materializedOnlyPath,
+          path: materializedOnlyPath,
+          fileAvailable: true,
+          fileSizeBytes: Buffer.byteLength('{"materialized":true}'),
+        }),
+      },
+    });
     await expect(readRunArchiveIndex()).resolves.toMatchObject({
       items: expect.arrayContaining([
         expect.objectContaining({
@@ -637,6 +680,12 @@ describe('run archive service', () => {
         }),
         expect.objectContaining({
           id: 'generated-artifact:resp_file_refresh:artifact_1',
+          fileAvailable: true,
+          cacheKey: expect.stringMatching(/^sha256:/),
+        }),
+        expect.objectContaining({
+          id: materializedOnlyId,
+          localPath: materializedOnlyPath,
           fileAvailable: true,
           cacheKey: expect.stringMatching(/^sha256:/),
         }),
@@ -681,4 +730,8 @@ function createArchiveItemFixture(overrides: Partial<RunArchiveItem>): RunArchiv
     links: {},
     ...overrides,
   };
+}
+
+function sanitizeArchiveItemPathSegment(value: string): string {
+  return value.replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 180) || 'archive-item';
 }

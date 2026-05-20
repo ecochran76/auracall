@@ -16446,3 +16446,12 @@ browser-stage lifecycle observability, not transcript truncation.
   the same provider conversation and sandbox URI already has a readable local
   file, the missing row links to that existing asset and updates its archive
   metadata without another ChatGPT recovery pass.
+
+- 2026-05-20: Archive reads should also repair stale generated-artifact rows
+  when the exact item-specific materialization directory already contains the
+  file. Provider/browser recovery can write
+  `~/.auracall/runtime/archive/materialized/<archive-item-id>/...` and still
+  miss the final index update after a restart or skipped foreground result.
+  Archive list/detail/asset-lookup refresh now discovers that local file,
+  persists `localPath`, MIME type, checksum, cache key, file size, and asset
+  route, and keeps this repair browser-free.

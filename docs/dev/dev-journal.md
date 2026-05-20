@@ -31474,3 +31474,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     166px.
   - `agent-browser` opened Views and confirmed pointer-down inside the save
     input did not close it.
+
+## Turn 213 | 2026-05-20
+
+- Goal: make generated-artifact cache freshness repair stale local
+  materialization files without requiring another provider/browser pass.
+- Change:
+  - quantified the live archive after the prior ChatGPT sandbox fix:
+    319 generated artifacts, 141 missing assets, including 14 ChatGPT rows with
+    files already present under the item-specific archive materialization
+    directory.
+  - added a browser-free archive-materialization fast path that reindexes a
+    generated artifact from its own materialized archive directory before
+    looking for sibling assets or reopening provider recovery.
+  - extended archive read refresh so list/detail/asset-lookup discovers the
+    same item-specific materialized file and persists missing `localPath`, MIME
+    type, checksum, cache key, file size, file availability, and asset route.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveService.test.ts
+    tests/runtime.archiveMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts
+    tests/runtime.archiveMaterializationService.test.ts
+    tests/runtime.archiveMaterializationJobService.test.ts
+    tests/runtime.archiveService.test.ts --maxWorkers 1`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - live materialization job `ramj_20c01dc5563044ecbee81c46b0c68e40`
+    succeeded with `method = existing-materialized-directory`.
+  - a live `auracall api archive --kind generated_artifact --limit 1 --json`
+    read refreshed the archive index: missing generated artifacts dropped from
+    140 to 127, and rows recoverable from existing item directories dropped
+    from 13 to 0.

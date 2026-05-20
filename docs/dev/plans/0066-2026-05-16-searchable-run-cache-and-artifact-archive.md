@@ -100,6 +100,11 @@ Implemented:
   buttons, and a missing duplicate archive row can link to an already
   materialized sibling asset with matching provider conversation and artifact
   evidence without reopening the provider browser.
+- Archive reads now also discover exact item-specific files already present
+  under the archive materialization directory and persist the missing
+  `localPath`, MIME type, checksum, cache key, file size, and asset route. This
+  repairs stale generated-artifact rows whose provider recovery already wrote a
+  file but failed to update the user-scoped archive index.
 
 Remaining:
 

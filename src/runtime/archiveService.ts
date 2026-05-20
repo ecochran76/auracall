@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import { createHash } from 'node:crypto';
 import {
   createExecutionResponseForStoredRecord,
@@ -22,6 +23,7 @@ import type { ExecutionResponseOutputItem, ExecutionRuntimeDiagnosticsSummary } 
 import type { ExecutionRunServiceId, ExecutionRunStep } from './types.js';
 import {
   createRunArchiveIndexStore,
+  getRunArchiveDir,
   type RunArchiveIndexRecord,
   type RunArchiveIndexStore,
 } from './archiveIndexStore.js';
@@ -1003,18 +1005,24 @@ function itemMatchesQuery(item: RunArchiveItem, query: string): boolean {
 
 async function enrichFileMetadata(items: RunArchiveItem[]): Promise<RunArchiveItem[]> {
   return Promise.all(items.map(async (item) => {
-    const liveChecksumSha256 = await calculateFileSha256(item.localPath);
+    const discoveredLocalPath = item.localPath ?? await findExistingMaterializedArchiveFile(item);
+    const liveChecksumSha256 = await calculateFileSha256(discoveredLocalPath);
     const checksumSha256 = liveChecksumSha256 ?? readRecordString(item.metadata, ['checksumSha256']);
-    const fileAvailable = item.localPath ? await fileExists(item.localPath) : null;
-    const liveFileSizeBytes = await readFileSize(item.localPath);
+    const fileAvailable = discoveredLocalPath ? await fileExists(discoveredLocalPath) : null;
+    const liveFileSizeBytes = await readFileSize(discoveredLocalPath);
     const fileSizeBytes = liveFileSizeBytes ?? readRecordNumber(item.metadata, ['fileSizeBytes', 'size']);
     const cacheKey = checksumSha256
       ? `sha256:${checksumSha256}`
-      : item.localPath
-        ? `path:${item.localPath}`
+      : discoveredLocalPath
+        ? `path:${discoveredLocalPath}`
         : null;
+    const fileName = item.fileName ?? (discoveredLocalPath ? path.basename(discoveredLocalPath) : null);
+    const mimeType = item.mimeType ?? (fileName ? inferArchiveAssetMimeType(fileName) : null);
     return {
       ...item,
+      fileName,
+      mimeType,
+      localPath: discoveredLocalPath,
       cacheKey,
       checksumSha256,
       fileAvailable,
@@ -1024,6 +1032,9 @@ async function enrichFileMetadata(items: RunArchiveItem[]): Promise<RunArchiveIt
       },
       metadata: {
         ...item.metadata,
+        ...(discoveredLocalPath ? { localPath: discoveredLocalPath, path: discoveredLocalPath } : {}),
+        ...(fileName ? { fileName } : {}),
+        ...(mimeType ? { mimeType } : {}),
         ...(checksumSha256 ? { checksumSha256 } : {}),
         ...(fileSizeBytes !== null ? { fileSizeBytes } : {}),
         ...(fileAvailable !== null ? { fileAvailable } : {}),
@@ -1037,10 +1048,57 @@ function fileMetadataChanged(previous: RunArchiveItem | undefined, next: RunArch
   return previous.cacheKey !== next.cacheKey ||
     previous.checksumSha256 !== next.checksumSha256 ||
     previous.fileAvailable !== next.fileAvailable ||
+    previous.localPath !== next.localPath ||
+    previous.fileName !== next.fileName ||
+    previous.mimeType !== next.mimeType ||
+    previous.metadata.localPath !== next.metadata.localPath ||
+    previous.metadata.path !== next.metadata.path ||
+    previous.metadata.fileName !== next.metadata.fileName ||
+    previous.metadata.mimeType !== next.metadata.mimeType ||
     previous.metadata.checksumSha256 !== next.metadata.checksumSha256 ||
     previous.metadata.fileSizeBytes !== next.metadata.fileSizeBytes ||
     previous.metadata.fileAvailable !== next.metadata.fileAvailable ||
     previous.links.asset !== next.links.asset;
+}
+
+async function findExistingMaterializedArchiveFile(item: RunArchiveItem): Promise<string | null> {
+  if (item.kind !== 'generated_artifact') return null;
+  const dir = path.join(getRunArchiveDir(), 'materialized', sanitizeArchiveMaterializedPathSegment(item.id));
+  const files = await listRegularArchiveFiles(dir);
+  if (files.length === 0) return null;
+  const expectedFileName = normalizeArchiveComparableString(item.fileName ?? item.title);
+  if (expectedFileName) {
+    const match = files.find((file) => normalizeArchiveComparableString(path.basename(file)) === expectedFileName);
+    if (match) return match;
+  }
+  return files.length === 1 ? files[0] : null;
+}
+
+async function listRegularArchiveFiles(dir: string): Promise<string[]> {
+  const entries = await fs.readdir(dir, { withFileTypes: true }).catch((error) => {
+    if (isMissingFileError(error)) return [];
+    throw error;
+  });
+  const files: string[] = [];
+  for (const entry of entries) {
+    const entryPath = path.join(dir, entry.name);
+    if (entry.isFile()) {
+      files.push(entryPath);
+    } else if (entry.isDirectory()) {
+      files.push(...await listRegularArchiveFiles(entryPath));
+    }
+  }
+  return files.sort();
+}
+
+function sanitizeArchiveMaterializedPathSegment(value: string): string {
+  return value.replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 180) || 'archive-item';
+}
+
+function normalizeArchiveComparableString(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase();
+  return normalized.length > 0 ? normalized : null;
 }
 
 async function calculateFileSha256(localPath: string | null): Promise<string | null> {

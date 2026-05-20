@@ -5983,3 +5983,40 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Next:
   - remaining provider-specific work should focus on generated-artifact rows
     with no matching materialized sibling asset.
+
+## Turn 212 | 2026-05-20
+
+- Goal: repair generated-artifact archive rows when provider recovery already
+  wrote the local file but the archive index stayed stale.
+- Change:
+  - archive materialization now checks the exact item-specific materialized
+    archive directory before sibling reuse or provider/browser recovery.
+  - archive list/detail/asset-lookup refresh now discovers files in that same
+    directory and persists missing `localPath`, MIME type, checksum, cache key,
+    file size, file availability, and asset route back into the user-scoped
+    archive index.
+  - the repair is browser-free and only uses local filesystem evidence under
+    `~/.auracall/runtime/archive/materialized/`.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveService.test.ts
+    tests/runtime.archiveMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts
+    tests/runtime.archiveMaterializationService.test.ts
+    tests/runtime.archiveMaterializationJobService.test.ts
+    tests/runtime.archiveService.test.ts --maxWorkers 1`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - live materialization job `ramj_20c01dc5563044ecbee81c46b0c68e40`
+    succeeded with `method = existing-materialized-directory`, set
+    `fileAvailable = true`, and wrote SHA-256/cache-key metadata without
+    opening provider recovery.
+  - live archive read with
+    `auracall api archive --timeout-ms 30000 --kind generated_artifact --limit 1
+    --json` refreshed the index: missing generated artifacts dropped from 140
+    to 127 and item-directory-recoverable rows dropped from 13 to 0.
+- Next:
+  - remaining misses are no longer stale local-directory rows: 70 Gemini
+    generated-artifact placeholders lack provider conversation/local file
+    evidence, and 57 ChatGPT rows still need real provider/browser recovery.

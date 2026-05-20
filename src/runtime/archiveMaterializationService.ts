@@ -105,6 +105,23 @@ export function createArchiveMaterializationService(
       if (item.kind !== 'generated_artifact') {
         throw new ArchiveMaterializationError(`Run archive item ${archiveItemId} is ${item.kind}; only generated_artifact materialization is supported.`);
       }
+      const existingMaterializedAsset = await findExistingMaterializedItemAsset(item);
+      if (existingMaterializedAsset) {
+        const materializedAt = now().toISOString();
+        const updatedItem = await materializedArchiveItem(item, existingMaterializedAsset, materializedAt);
+        await indexStore.upsertItems([updatedItem], {
+          updatedAt: materializedAt,
+          removeExisting: (candidate) => candidate.id === updatedItem.id,
+        });
+        return {
+          object: 'run_archive_item_materialization',
+          generatedAt: materializedAt,
+          status: 'materialized',
+          item: updatedItem,
+          file: fileToResult(existingMaterializedAsset),
+          message: 'Archive item linked to an existing materialized file in its archive directory.',
+        };
+      }
       const reusable = await findReusableArchiveAsset(runArchiveService, item);
       if (reusable) {
         const materializedAt = now().toISOString();
@@ -179,6 +196,51 @@ export function createArchiveMaterializationService(
       };
     },
   };
+}
+
+async function findExistingMaterializedItemAsset(item: RunArchiveItem): Promise<FileRef | null> {
+  const provider = normalizeProviderId(item.provider);
+  if (!provider) return null;
+  const dir = path.join(getRunArchiveDir(), 'materialized', sanitizePathSegment(item.id));
+  const files = await listRegularFiles(dir);
+  if (files.length === 0) return null;
+  const expectedFileName = normalizeComparableString(item.fileName ?? item.title);
+  const match = expectedFileName
+    ? files.find((file) => normalizeComparableString(path.basename(file)) === expectedFileName)
+    : null;
+  const localPath = match ?? (files.length === 1 ? files[0] : null);
+  if (!localPath) return null;
+  const stat = await fs.stat(localPath).catch(() => null);
+  if (!stat?.isFile()) return null;
+  const name = path.basename(localPath);
+  return {
+    id: item.artifactId ?? item.id,
+    name,
+    provider,
+    source: 'conversation',
+    localPath,
+    remoteUrl: item.uri ?? undefined,
+    mimeType: item.mimeType ?? inferMimeTypeFromName(name) ?? undefined,
+    size: stat.size,
+    metadata: {
+      materialization: 'existing-materialized-directory',
+      sourceArchiveItemId: item.id,
+    },
+  };
+}
+
+async function listRegularFiles(dir: string): Promise<string[]> {
+  const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => []);
+  const files: string[] = [];
+  for (const entry of entries) {
+    const entryPath = path.join(dir, entry.name);
+    if (entry.isFile()) {
+      files.push(entryPath);
+    } else if (entry.isDirectory()) {
+      files.push(...await listRegularFiles(entryPath));
+    }
+  }
+  return files.sort();
 }
 
 async function findReusableArchiveAsset(
@@ -413,6 +475,21 @@ function readString(value: unknown): string | null {
 
 function readNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function inferMimeTypeFromName(name: string): string | null {
+  const normalized = name.trim().toLowerCase();
+  if (normalized.endsWith('.json')) return 'application/json';
+  if (normalized.endsWith('.txt')) return 'text/plain';
+  if (normalized.endsWith('.md')) return 'text/markdown';
+  if (normalized.endsWith('.csv')) return 'text/csv';
+  if (normalized.endsWith('.png')) return 'image/png';
+  if (normalized.endsWith('.jpg') || normalized.endsWith('.jpeg')) return 'image/jpeg';
+  if (normalized.endsWith('.webp')) return 'image/webp';
+  if (normalized.endsWith('.pdf')) return 'application/pdf';
+  if (normalized.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  if (normalized.endsWith('.xlsx')) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  return null;
 }
 
 async function calculateFileSha256(localPath: string | null): Promise<string | null> {

@@ -183,6 +183,68 @@ describe('archive materialization service', () => {
     });
   });
 
+  it('reindexes an existing file from the item materialized archive directory', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialize-existing-dir-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const item = {
+      ...createGeneratedArtifactItem(),
+      id: 'generated-artifact:resp_1:assist-1:download:sandbox:/mnt/data/first_pass_readout.json',
+      artifactId: 'assist-1:download:sandbox:/mnt/data/first_pass_readout.json',
+      localPath: null,
+      fileAvailable: null,
+      checksumSha256: null,
+      cacheKey: null,
+      metadata: {
+        artifactType: 'generated',
+      },
+    };
+    const localPath = path.join(
+      homeDir,
+      'runtime',
+      'archive',
+      'materialized',
+      sanitizeArchiveItemPathSegment(item.id),
+      'first_pass_readout.json',
+    );
+    await fs.mkdir(path.dirname(localPath), { recursive: true });
+    await fs.writeFile(localPath, '{"existing":true}\n', 'utf8');
+    const indexStore = createRunArchiveIndexStore();
+    const service = createArchiveMaterializationService({
+      config: {},
+      indexStore,
+      now: () => new Date('2026-05-18T18:04:30.000Z'),
+      runArchiveService: readOnlyArchiveService(item),
+      materializeConversationArtifact: async () => {
+        throw new Error('provider should not be called when the item materialized directory has a file');
+      },
+    });
+
+    const result = await service.materializeItem({ archiveItemId: item.id });
+
+    expect(result.status).toBe('materialized');
+    expect(result.file).toMatchObject({
+      name: 'first_pass_readout.json',
+      localPath,
+      mimeType: 'application/json',
+    });
+    expect(result.item).toMatchObject({
+      localPath,
+      fileAvailable: true,
+      metadata: expect.objectContaining({
+        sourceArchiveItemId: item.id,
+        materialization: expect.objectContaining({
+          status: 'materialized',
+          method: 'existing-materialized-directory',
+        }),
+      }),
+    });
+    await expect(indexStore.readItem(item.id)).resolves.toMatchObject({
+      localPath,
+      fileAvailable: true,
+      checksumSha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+    });
+  });
+
   it('returns an already materialized result without invoking the provider', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialized-'));
     setAuracallHomeDirOverrideForTest(homeDir);
@@ -248,6 +310,10 @@ function createGeneratedArtifactItem(): RunArchiveItem {
       response: '/v1/responses/resp_1',
     },
   };
+}
+
+function sanitizeArchiveItemPathSegment(value: string): string {
+  return value.replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 180) || 'archive-item';
 }
 
 function readOnlyArchiveService(item: RunArchiveItem): RunArchiveService {
