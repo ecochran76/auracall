@@ -272,6 +272,8 @@ describe('media generation CLI helpers', () => {
         'medgen_cli_media_1',
         '--count',
         '1',
+        '--conversation-url',
+        'https://gemini.google.com/app/gemini-conversation-1',
         '--json',
       ]);
     } finally {
@@ -280,12 +282,16 @@ describe('media generation CLI helpers', () => {
 
     expect(resolveUserConfig).toHaveBeenCalledWith(expect.objectContaining({
       count: 1,
+      conversationUrl: 'https://gemini.google.com/app/gemini-conversation-1',
       json: true,
     }));
     expect(materializeGeneration).toHaveBeenCalledWith('medgen_cli_media_1', {
       count: 1,
       compareFullQuality: true,
       source: 'cli',
+      metadata: {
+        conversationUrl: 'https://gemini.google.com/app/gemini-conversation-1',
+      },
     });
     expect(JSON.parse(logs.join('\n'))).toMatchObject({
       id: 'medgen_cli_media_1',

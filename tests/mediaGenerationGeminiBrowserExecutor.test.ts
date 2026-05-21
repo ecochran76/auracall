@@ -163,6 +163,119 @@ describe('Gemini browser media generation executor', () => {
     ]);
   });
 
+  it('reopens a Gemini conversation URL and materializes visible assets', async () => {
+    const { createGeminiBrowserMediaGenerationMaterializer } = await import('../src/media/geminiBrowserExecutor.js');
+    const artifactDir = '/tmp/auracall-media-artifacts';
+    const filePath = path.join(artifactDir, 'resumed.png');
+    browserClient.readActiveConversationArtifacts.mockResolvedValueOnce([
+      {
+        id: 'artifact-image-1',
+        title: 'Generated image 1',
+        kind: 'image',
+        uri: 'blob:https://gemini.google.com/image-1',
+        metadata: {
+          width: 1024,
+          height: 1024,
+        },
+      },
+    ]);
+    browserClient.materializeConversationArtifact.mockResolvedValueOnce({
+      id: 'artifact-image-1',
+      name: 'resumed.png',
+      provider: 'gemini',
+      source: 'conversation',
+      size: 1234,
+      mimeType: 'image/png',
+      remoteUrl: 'blob:https://gemini.google.com/image-1',
+      localPath: filePath,
+      metadata: {
+        materialization: 'blob-image-fetch',
+      },
+    });
+
+    const materializer = createGeminiBrowserMediaGenerationMaterializer({} as never);
+    const timelineEvents: string[] = [];
+    const result = await materializer({
+      artifactDir,
+      emitTimeline: (event) => {
+        timelineEvents.push(event.event);
+      },
+      options: {
+        count: 1,
+        metadata: {
+          conversationUrl: 'https://gemini.google.com/app/gemini-conversation-1',
+        },
+      },
+      response: {
+        id: 'medgen_resume_test',
+        object: 'media_generation',
+        provider: 'gemini',
+        mediaType: 'image',
+        prompt: 'Generate an image of an asphalt secret agent',
+        status: 'succeeded',
+        createdAt: '2026-04-23T12:00:00.000Z',
+        updatedAt: '2026-04-23T12:00:00.000Z',
+        artifacts: [
+          {
+            id: 'artifact_followup_1',
+            type: 'image',
+            mimeType: 'image/png',
+          },
+        ],
+      },
+    });
+
+    expect(fromConfig).toHaveBeenCalledWith({}, { target: 'gemini' });
+    expect(browserClient.readActiveConversationArtifacts).toHaveBeenCalledWith(
+      'gemini-conversation-1',
+      {
+        configuredUrl: 'https://gemini.google.com/app/gemini-conversation-1',
+        tabUrl: 'https://gemini.google.com/app/gemini-conversation-1',
+        allowNavigation: true,
+        preserveActiveTab: false,
+        mutationSourcePrefix: 'media:gemini-resume-read',
+      },
+    );
+    expect(browserClient.materializeConversationArtifact).toHaveBeenCalledWith(
+      'gemini-conversation-1',
+      expect.objectContaining({ id: 'artifact-image-1' }),
+      artifactDir,
+      {
+        listOptions: {
+          configuredUrl: 'https://gemini.google.com/app/gemini-conversation-1',
+          tabUrl: 'https://gemini.google.com/app/gemini-conversation-1',
+          allowNavigation: true,
+          preserveActiveTab: false,
+          mutationSourcePrefix: 'media:gemini-resume-materialize',
+        },
+      },
+    );
+    expect(result).toMatchObject({
+      artifacts: [
+        {
+          id: 'artifact-image-1',
+          type: 'image',
+          mimeType: 'image/png',
+          fileName: 'resumed.png',
+          path: filePath,
+          uri: `file://${filePath}`,
+        },
+      ],
+      metadata: {
+        materializer: 'gemini-browser-resume',
+        conversationId: 'gemini-conversation-1',
+        tabUrl: 'https://gemini.google.com/app/gemini-conversation-1',
+        discoveredArtifactCount: 1,
+        resumedArtifactCount: 1,
+      },
+    });
+    expect(timelineEvents).toEqual([
+      'artifact_poll',
+      'image_visible',
+      'artifact_materialized',
+    ]);
+  });
+
   it('selects Create video, waits for generated video artifacts, and maps the materialized file', async () => {
     const { createGeminiBrowserMediaGenerationExecutor } = await import('../src/media/geminiBrowserExecutor.js');
     const artifactDir = '/tmp/auracall-media-artifacts';

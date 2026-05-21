@@ -7,6 +7,7 @@ import type {
   MediaGenerationArtifact,
   MediaGenerationExecutor,
   MediaGenerationExecutorInput,
+  MediaGenerationMaterializer,
   MediaGenerationTimelineEmitter,
   MediaGenerationTimelineEvent,
   MediaGenerationType,
@@ -26,6 +27,140 @@ const GEMINI_MUSIC_DEFAULT_DOWNLOAD_VARIANTS = [
 
 export function createGeminiBrowserMediaGenerationExecutor(userConfig: ResolvedUserConfig): MediaGenerationExecutor {
   return async (input) => executeGeminiBrowserMediaGeneration(input, userConfig);
+}
+
+export function createGeminiBrowserMediaGenerationMaterializer(userConfig: ResolvedUserConfig): MediaGenerationMaterializer {
+  return async (input) => {
+    const { response } = input;
+    if (response.provider !== 'gemini') {
+      throw new MediaGenerationExecutionError(
+        'media_provider_not_implemented',
+        'Only Gemini media generations are supported by this materializer.',
+        {
+          provider: response.provider,
+          mediaType: response.mediaType,
+        },
+      );
+    }
+    const metadata = {
+      ...(response.metadata ?? {}),
+      ...(input.options?.metadata ?? {}),
+    };
+    const conversationUrl = normalizeNonEmpty(metadata.conversationUrl)
+      ?? normalizeNonEmpty(metadata.providerConversationUrl)
+      ?? normalizeNonEmpty(metadata.tabUrl)
+      ?? normalizeNonEmpty(metadata.url);
+    const conversationId = normalizeNonEmpty(metadata.conversationId)
+      ?? extractGeminiConversationId(conversationUrl);
+    if (!conversationId) {
+      throw new MediaGenerationExecutionError(
+        'media_materializer_missing_conversation',
+        'Gemini media materialization requires a conversation id or conversation URL.',
+        {
+          provider: response.provider,
+          mediaType: response.mediaType,
+        },
+      );
+    }
+    const tabUrl = conversationUrl ?? resolveGeminiConversationUrl(conversationId);
+    const count = resolveMaterializationCount(input.options?.count, response.mediaType === 'music' ? null : 1);
+    const client = await BrowserAutomationClient.fromConfig(userConfig, { target: 'gemini' });
+    const artifacts = await client.readActiveConversationArtifacts(conversationId, {
+      configuredUrl: tabUrl,
+      tabUrl,
+      allowNavigation: true,
+      preserveActiveTab: false,
+      mutationSourcePrefix: 'media:gemini-resume-read',
+    });
+    const matchingArtifacts = artifacts.filter((artifact) => isMediaArtifact(artifact, response.mediaType));
+    await input.emitTimeline?.({
+      event: 'artifact_poll',
+      details: {
+        materializationSource: 'gemini-browser-resume',
+        conversationId,
+        artifactCount: artifacts.length,
+        imageArtifactCount: artifacts.filter((artifact) => isMediaArtifact(artifact, 'image')).length,
+        musicArtifactCount: artifacts.filter((artifact) => isMediaArtifact(artifact, 'music')).length,
+        videoArtifactCount: artifacts.filter((artifact) => isMediaArtifact(artifact, 'video')).length,
+      },
+    });
+    if (matchingArtifacts.length === 0) {
+      throw new MediaGenerationExecutionError(
+        'media_generation_artifact_materialization_failed',
+        `Gemini conversation ${conversationId} did not expose any generated ${response.mediaType} artifacts to materialize.`,
+        {
+          provider: response.provider,
+          mediaType: response.mediaType,
+          conversationId,
+          artifactCount: artifacts.length,
+        },
+      );
+    }
+    await input.emitTimeline?.({
+      event: mediaVisibleEvent(response.mediaType),
+      details: {
+        generatedArtifactCount: matchingArtifacts.length,
+        ...generatedCountDetails(response.mediaType, matchingArtifacts.length),
+        artifactIds: matchingArtifacts.map((artifact) => artifact.id),
+        resumed: true,
+      },
+    });
+
+    const targets = buildGeminiMaterializationTargets(matchingArtifacts, response.mediaType);
+    const requestedCount = response.mediaType === 'music'
+      ? targets.length
+      : Math.max(1, Math.min(count, targets.length));
+    const materialized: MediaGenerationArtifact[] = [];
+    for (const target of targets.slice(0, requestedCount)) {
+      const file = await client.materializeConversationArtifact(conversationId, target.artifact, input.artifactDir, {
+        listOptions: {
+          configuredUrl: tabUrl,
+          tabUrl,
+          allowNavigation: true,
+          preserveActiveTab: false,
+          mutationSourcePrefix: 'media:gemini-resume-materialize',
+          ...(target.downloadVariantLabel ? { downloadVariantLabel: target.downloadVariantLabel } : {}),
+        },
+      });
+      if (!file) continue;
+      await input.emitTimeline?.({
+        event: 'artifact_materialized',
+        details: {
+          providerArtifactId: target.artifact.id,
+          fileName: file.name || null,
+          path: file.localPath ?? null,
+          mimeType: file.mimeType ?? null,
+          materialization: file.metadata?.materialization ?? null,
+          downloadLabel: file.metadata?.downloadLabel ?? target.downloadVariantLabel ?? null,
+          resumed: true,
+        },
+      });
+      materialized.push(mapGeminiFileToMediaArtifact(file, target.artifact, response.mediaType, materialized.length + 1));
+    }
+    if (materialized.length === 0) {
+      throw new MediaGenerationExecutionError(
+        'media_generation_artifact_materialization_failed',
+        `Gemini conversation ${conversationId} exposed generated ${response.mediaType} artifacts, but none could be materialized.`,
+        {
+          provider: response.provider,
+          mediaType: response.mediaType,
+          conversationId,
+          artifactIds: matchingArtifacts.map((artifact) => artifact.id),
+        },
+      );
+    }
+    return {
+      artifacts: materialized,
+      model: response.model ?? null,
+      metadata: {
+        materializer: 'gemini-browser-resume',
+        conversationId,
+        tabUrl,
+        discoveredArtifactCount: artifacts.length,
+        resumedArtifactCount: materialized.length,
+      },
+    };
+  };
 }
 
 async function executeGeminiBrowserMediaGeneration(
@@ -362,6 +497,13 @@ function resolveArtifactPollIntervalMs(metadata: Record<string, unknown> | null 
     return Math.max(250, Math.min(candidate, 30_000));
   }
   return 5_000;
+}
+
+function resolveMaterializationCount(value: number | null | undefined, fallback: number | null): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.max(1, Math.floor(value));
+  }
+  return Math.max(1, Math.floor(fallback ?? 1));
 }
 
 function isMediaArtifact(artifact: ConversationArtifact, mediaType: 'image' | 'music' | 'video'): boolean {

@@ -16,7 +16,7 @@ describe('archive materialization job service', () => {
   it('persists a queued job and completes it through the materialization service', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialize-job-'));
     setAuracallHomeDirOverrideForTest(homeDir);
-    let scheduled: (() => Promise<void>) | null = null;
+    let scheduled: (() => Promise<void>) | undefined;
     const materializeItem = vi.fn(async (request: { archiveItemId: string }) => ({
       object: 'run_archive_item_materialization' as const,
       generatedAt: '2026-05-19T12:01:00.000Z',
@@ -61,7 +61,10 @@ describe('archive materialization job service', () => {
     expect(duplicate.reused).toBe(true);
     expect(duplicate.job.id).toBe('ramj_test_1');
 
-    await scheduled?.();
+    if (!scheduled) {
+      throw new Error('Expected archive materialization job to be scheduled.');
+    }
+    await scheduled();
 
     const completed = await service.readJob('ramj_test_1');
     expect(completed).toMatchObject({

@@ -6692,22 +6692,24 @@ export function createGeminiAdapter(): Pick<
       if (!normalizedConversationId) {
         throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
       }
-      if (!options?.tabTargetId) {
+      if (!options?.tabTargetId && options?.allowNavigation !== true) {
         throw new Error('Gemini active artifact read requires the submitted tab target id.');
       }
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
         options,
-        options.tabUrl ?? options.configuredUrl ?? GEMINI_APP_URL,
+        options?.allowNavigation === true && options?.preserveActiveTab !== true
+          ? resolveGeminiConversationUrl(normalizedConversationId)
+          : options?.tabUrl ?? options?.configuredUrl ?? GEMINI_APP_URL,
       );
       try {
         await assertGeminiExpectedIdentity(client, options);
-        if (options.tabTargetId && targetId && targetId !== options.tabTargetId) {
+        if (options?.tabTargetId && targetId && targetId !== options.tabTargetId) {
           throw new Error(
             `Gemini active artifact read rebound to target ${targetId} instead of submitted target ${options.tabTargetId}.`,
           );
         }
         const context = await readGeminiConversationContextWithClient(client, normalizedConversationId, {
-          allowNavigation: false,
+          allowNavigation: options?.allowNavigation === true && options?.preserveActiveTab !== true,
         });
         return normalizeGeminiConversationArtifacts(context.artifacts);
       } finally {

@@ -31,6 +31,8 @@ export interface MediaGenerationCliOptions {
 export interface MediaGenerationMaterializeCliOptions {
   id: string;
   count?: number | null;
+  conversationUrl?: string | null;
+  conversationId?: string | null;
 }
 
 export interface MediaGenerationCliDeps {
@@ -114,6 +116,8 @@ export function registerMediaGenerationCliCommand(
     .description('Resume artifact materialization for an existing durable media generation.')
     .argument('<id>', 'Durable media generation id to materialize.')
     .option('--count <count>', 'Maximum visible provider tiles to inspect while resuming.', deps.parseIntOption)
+    .option('--conversation-url <url>', 'Provider conversation URL to reopen when the stored record lacks one.')
+    .option('--conversation-id <id>', 'Provider conversation id to reopen when the stored record lacks one.')
     .option('--json', 'Emit machine-readable JSON output.', false)
     .action(async function (this: Command, id: string) {
       const parentOptions =
@@ -130,6 +134,8 @@ export function registerMediaGenerationCliCommand(
         {
           id,
           count: typeof ownOptions.count === 'number' ? ownOptions.count : null,
+          conversationUrl: typeof ownOptions.conversationUrl === 'string' ? ownOptions.conversationUrl : null,
+          conversationId: typeof ownOptions.conversationId === 'string' ? ownOptions.conversationId : null,
         },
         userConfig,
         {
@@ -194,11 +200,26 @@ export async function materializeMediaGenerationFromCli(
   if (!service.materializeGeneration) {
     throw new Error('Media generation materialization is not available in this runtime.');
   }
+  const metadata = buildMaterializeMetadata(options);
   return service.materializeGeneration(id, {
     count: options.count ?? null,
     compareFullQuality: true,
     source: 'cli',
+    ...(metadata ? { metadata } : {}),
   });
+}
+
+function buildMaterializeMetadata(options: MediaGenerationMaterializeCliOptions): Record<string, unknown> | null {
+  const metadata: Record<string, unknown> = {};
+  const conversationUrl = normalizeOptionalString(options.conversationUrl);
+  const conversationId = normalizeOptionalString(options.conversationId);
+  if (conversationUrl) {
+    metadata.conversationUrl = conversationUrl;
+  }
+  if (conversationId) {
+    metadata.conversationId = conversationId;
+  }
+  return Object.keys(metadata).length > 0 ? metadata : null;
 }
 
 export function formatMediaGenerationCli(response: MediaGenerationResponse): string {

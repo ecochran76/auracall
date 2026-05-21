@@ -16488,3 +16488,12 @@ browser-stage lifecycle observability, not transcript truncation.
   recording `media_generation_artifact_unmaterialized` instead of persisting a
   `succeeded` response with no fetchable asset. Resumed materialization applies
   the same guard with `media_materialization_artifact_unmaterialized`.
+
+- 2026-05-20: Gemini media-generation assets need a backend recovery path when
+  an older record only has a placeholder artifact. `auracall media materialize`
+  now accepts `--conversation-url` or `--conversation-id`, reopens the Gemini
+  conversation through the browser backend, reads generated artifacts with
+  explicit navigation, and materializes matching image/music/video assets into
+  the media-generation artifact cache. The active post-submit Gemini readback
+  path still requires the submitted tab target id and uses no-navigation DOM
+  inspection.

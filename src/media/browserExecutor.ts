@@ -8,7 +8,10 @@ import type {
 } from './types.js';
 import { MediaGenerationExecutionError } from './service.js';
 import { createGeminiApiMediaGenerationExecutor } from './geminiApiExecutor.js';
-import { createGeminiBrowserMediaGenerationExecutor } from './geminiBrowserExecutor.js';
+import {
+  createGeminiBrowserMediaGenerationExecutor,
+  createGeminiBrowserMediaGenerationMaterializer,
+} from './geminiBrowserExecutor.js';
 import {
   createGrokBrowserMediaGenerationExecutor,
   extractGrokMaterializationDiagnostics,
@@ -65,12 +68,37 @@ export function createBrowserMediaGenerationExecutor(userConfig: ResolvedUserCon
 }
 
 export function createBrowserMediaGenerationMaterializer(userConfig: ResolvedUserConfig): MediaGenerationMaterializer {
+  const gemini = createGeminiBrowserMediaGenerationMaterializer(userConfig);
   return async (input) => {
     const { response } = input;
+    if (response.provider === 'gemini') {
+      const count = resolveMaterializationCount(input.options?.count, 1);
+      const executorInput: MediaGenerationExecutorInput = {
+        id: response.id,
+        createdAt: response.createdAt,
+        artifactDir: input.artifactDir,
+        emitTimeline: input.emitTimeline,
+        request: {
+          provider: response.provider,
+          mediaType: response.mediaType,
+          prompt: response.prompt,
+          model: response.model ?? null,
+          transport: 'browser',
+          count,
+          source: input.options?.source ?? null,
+          metadata: {
+            ...(response.metadata ?? {}),
+            ...(input.options?.metadata ?? {}),
+            geminiMaterializationMode: 'resumed',
+          },
+        },
+      };
+      return withQueuedBrowserMediaOperation(userConfig, executorInput, () => gemini(input));
+    }
     if (response.provider !== 'grok' || response.mediaType !== 'image') {
       throw new MediaGenerationExecutionError(
         'media_materializer_not_implemented',
-        `Resumed browser media materialization is currently implemented for Grok image runs only.`,
+        `Resumed browser media materialization is currently implemented for Gemini media and Grok image runs only.`,
         {
           provider: response.provider,
           mediaType: response.mediaType,

@@ -39,6 +39,7 @@ export interface BrowserProviderListOptions {
   includeHistory?: boolean;
   historyLimit?: number;
   historySince?: string;
+  allowNavigation?: boolean;
   preserveActiveTab?: boolean;
   downloadVariantLabel?: string | null;
   discoveryAction?: 'grok-imagine-video-mode' | null;
