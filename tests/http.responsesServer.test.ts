@@ -4602,15 +4602,22 @@ describe('http responses adapter', () => {
           runOnce,
         },
         accountMirrorSchedulerLedger: createMemorySchedulerLedger(),
-        mediaGenerationExecutor: async () => ({
-          artifacts: [
-            {
-              id: 'artifact_followup_1',
-              type: 'image',
-              mimeType: 'image/png',
-            },
-          ],
-        }),
+        mediaGenerationExecutor: async ({ artifactDir }) => {
+          const filePath = path.join(artifactDir, 'followup.png');
+          await fs.writeFile(filePath, Buffer.from('followup image bytes'));
+          return {
+            artifacts: [
+              {
+                id: 'artifact_followup_1',
+                type: 'image',
+                mimeType: 'image/png',
+                fileName: 'followup.png',
+                path: filePath,
+                uri: `file://${filePath}`,
+              },
+            ],
+          };
+        },
       },
     );
 

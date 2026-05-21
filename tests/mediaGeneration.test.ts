@@ -190,15 +190,22 @@ describe('media generation service', () => {
     const service = createMediaGenerationService({
       now: () => new Date('2026-04-29T12:00:00.000Z'),
       generateId: () => 'medgen_async_settled',
-      executor: async () => ({
-        artifacts: [
-          {
-            id: 'artifact_async_1',
-            type: 'image',
-            mimeType: 'image/png',
-          },
-        ],
-      }),
+      executor: async ({ artifactDir }) => {
+        const filePath = path.join(artifactDir, 'async.png');
+        await fs.writeFile(filePath, Buffer.from('async image bytes'));
+        return {
+          artifacts: [
+            {
+              id: 'artifact_async_1',
+              type: 'image',
+              mimeType: 'image/png',
+              fileName: 'async.png',
+              path: filePath,
+              uri: `file://${filePath}`,
+            },
+          ],
+        };
+      },
       onGenerationSettled: settled,
     });
 
@@ -216,28 +223,78 @@ describe('media generation service', () => {
     await waitForExpect(() => {
       expect(settled).toHaveBeenCalledWith(expect.objectContaining({
         id: 'medgen_async_settled',
-        status: 'succeeded',
+      status: 'succeeded',
       }));
     });
   });
 
-  it('accepts ChatGPT browser image requests through the shared schema', async () => {
+  it('fails provider results that report artifacts without a local path or URI', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-media-generation-unmaterialized-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
     const service = createMediaGenerationService({
-      now: () => new Date('2026-04-27T12:00:00.000Z'),
-      generateId: () => 'medgen_chatgpt_schema_1',
-      executor: async ({ request }) => ({
+      now: () => new Date('2026-04-29T12:05:00.000Z'),
+      generateId: () => 'medgen_unmaterialized_1',
+      executor: async () => ({
         artifacts: [
           {
-            id: 'chatgpt_image_1',
+            id: 'artifact_unmaterialized_1',
             type: 'image',
             mimeType: 'image/png',
           },
         ],
-        metadata: {
-          executor: 'chatgpt-browser-test',
-          requestProvider: request.provider,
-        },
       }),
+    });
+
+    const created = await service.createGeneration({
+      provider: 'gemini',
+      mediaType: 'image',
+      prompt: 'Generate an image of an asphalt secret agent',
+      source: 'api',
+    });
+
+    expect(created).toMatchObject({
+      id: 'medgen_unmaterialized_1',
+      status: 'failed',
+      artifacts: [],
+      failure: {
+        code: 'media_generation_artifact_unmaterialized',
+        details: {
+          artifactIds: ['artifact_unmaterialized_1'],
+          artifactCount: 1,
+          missingMaterializedArtifactCount: 1,
+        },
+      },
+    });
+  });
+
+  it('accepts ChatGPT browser image requests through the shared schema', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-media-generation-chatgpt-schema-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const service = createMediaGenerationService({
+      now: () => new Date('2026-04-27T12:00:00.000Z'),
+      generateId: () => 'medgen_chatgpt_schema_1',
+      executor: async ({ artifactDir, request }) => {
+        const filePath = path.join(artifactDir, 'chatgpt-image.png');
+        await fs.writeFile(filePath, Buffer.from('chatgpt image bytes'));
+        return {
+          artifacts: [
+            {
+              id: 'chatgpt_image_1',
+              type: 'image',
+              mimeType: 'image/png',
+              fileName: 'chatgpt-image.png',
+              path: filePath,
+              uri: `file://${filePath}`,
+            },
+          ],
+          metadata: {
+            executor: 'chatgpt-browser-test',
+            requestProvider: request.provider,
+          },
+        };
+      },
     });
 
     const created = await service.createGeneration({
@@ -519,8 +576,10 @@ describe('media generation service', () => {
       generateId: () => 'medgen_capability_1',
       capabilityReporter: createCapabilityReporter('available'),
       runtimeProfile: 'default',
-      executor: async () => {
+      executor: async ({ artifactDir }) => {
         invoked = true;
+        const filePath = path.join(artifactDir, 'capability.png');
+        await fs.writeFile(filePath, Buffer.from('capability image bytes'));
         return {
           model: 'gemini-browser',
           artifacts: [
@@ -528,6 +587,9 @@ describe('media generation service', () => {
               id: 'artifact_capability_1',
               type: 'image',
               mimeType: 'image/png',
+              fileName: 'capability.png',
+              path: filePath,
+              uri: `file://${filePath}`,
             },
           ],
         };

@@ -16481,3 +16481,10 @@ browser-stage lifecycle observability, not transcript truncation.
   media-generation records that never persisted an artifact path
   (`media-artifact-missing-local-path`), while preserving provider
   artifact-fetch reasons for skipped ChatGPT conversation downloads.
+
+- 2026-05-20: Media generation success must not accept placeholder artifact
+  records. The media generation service now rejects provider/executor results
+  that include artifact metadata without either a local `path` or remote `uri`,
+  recording `media_generation_artifact_unmaterialized` instead of persisting a
+  `succeeded` response with no fetchable asset. Resumed materialization applies
+  the same guard with `media_materialization_artifact_unmaterialized`.

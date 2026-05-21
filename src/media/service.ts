@@ -102,6 +102,7 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
         options,
         emitTimeline: persistTimelineEvent,
       });
+      assertMaterializedMediaArtifacts(result.artifacts, 'media_materialization_artifact_unmaterialized');
       const updatedAt = now().toISOString();
       const response = MediaGenerationResponseSchema.parse({
         ...currentResponse,
@@ -239,6 +240,7 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
         workbenchCapability: capability,
         emitTimeline: persistTimelineEvent,
       });
+      assertMaterializedMediaArtifacts(result.artifacts, 'media_generation_artifact_unmaterialized');
       const completedAt = now().toISOString();
       timeline.push({
         event: 'completed',
@@ -337,6 +339,23 @@ function mergeMediaGenerationArtifacts(
     byId.set(artifact.id, artifact);
   }
   return order.map((id) => byId.get(id)).filter((entry): entry is MediaGenerationArtifact => Boolean(entry));
+}
+
+function assertMaterializedMediaArtifacts(
+  artifacts: MediaGenerationArtifact[],
+  code: 'media_generation_artifact_unmaterialized' | 'media_materialization_artifact_unmaterialized',
+): void {
+  const missing = artifacts.filter((artifact) => !normalizeNonEmptyString(artifact.path) && !normalizeNonEmptyString(artifact.uri));
+  if (missing.length === 0) return;
+  throw new MediaGenerationExecutionError(
+    code,
+    'Media generation provider returned artifact metadata without a local path or remote URI.',
+    {
+      artifactIds: missing.map((artifact) => artifact.id),
+      artifactCount: artifacts.length,
+      missingMaterializedArtifactCount: missing.length,
+    },
+  );
 }
 
 export async function defaultMediaGenerationExecutor(): Promise<never> {
@@ -474,4 +493,10 @@ function normalizeTimelineDetails(details: Record<string, unknown> | null | unde
       serialization: 'failed',
     };
   }
+}
+
+function normalizeNonEmptyString(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
