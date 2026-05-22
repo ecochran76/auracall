@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createMediaGenerationFromCli,
   formatMediaGenerationCli,
+  formatMediaGenerationInspectionCli,
+  inspectMediaGenerationFromCli,
   materializeMediaGenerationFromCli,
   registerMediaGenerationCliCommand,
 } from '../src/cli/mediaGenerationCommand.js';
@@ -299,6 +301,66 @@ describe('media generation CLI helpers', () => {
     });
   });
 
+  it('parses the inspect command and reports local artifact cache evidence without provider work', async () => {
+    const readGeneration = vi.fn(async () => mediaResponse({ status: 'succeeded' }));
+    const resolveUserConfig = vi.fn(async () => userConfig);
+    const logs: string[] = [];
+    const originalLog = console.log;
+    console.log = (value?: unknown) => {
+      logs.push(typeof value === 'string' ? value : JSON.stringify(value));
+    };
+    try {
+      const program = new Command();
+      program.exitOverride();
+      program.configureOutput({
+        writeOut: (value) => logs.push(value),
+        writeErr: (value) => logs.push(value),
+      });
+      registerMediaGenerationCliCommand(program, {
+        resolveUserConfig,
+        parseIntOption: (value) => (value == null ? undefined : Number.parseInt(value, 10)),
+        service: {
+          createGeneration: vi.fn(async () => mediaResponse({ status: 'succeeded' })),
+          createGenerationAsync: vi.fn(async () => mediaResponse({ status: 'running' })),
+          materializeGeneration: vi.fn(async () => mediaResponse({ status: 'succeeded' })),
+          readGeneration,
+        },
+      });
+
+      await program.parseAsync([
+        'node',
+        'auracall',
+        'media',
+        'inspect',
+        'medgen_cli_media_1',
+        '--json',
+      ]);
+    } finally {
+      console.log = originalLog;
+    }
+
+    expect(resolveUserConfig).toHaveBeenCalledWith(expect.objectContaining({
+      json: true,
+    }));
+    expect(readGeneration).toHaveBeenCalledWith('medgen_cli_media_1');
+    expect(JSON.parse(logs.join('\n'))).toMatchObject({
+      object: 'media_generation_inspection',
+      id: 'medgen_cli_media_1',
+      summary: {
+        artifactCount: 1,
+        cachedArtifactCount: 0,
+        missingArtifactCount: 1,
+      },
+      artifactCache: [
+        {
+          artifactId: 'artifact_cli_media_1',
+          fileAvailable: false,
+          reason: 'local-file-missing',
+        },
+      ],
+    });
+  });
+
   it('materializes an existing generation through the shared CLI helper', async () => {
     const materializeGeneration = vi.fn(async () => mediaResponse({ status: 'succeeded' }));
 
@@ -321,6 +383,32 @@ describe('media generation CLI helpers', () => {
       compareFullQuality: true,
       source: 'cli',
     });
+  });
+
+  it('inspects an existing generation through the shared CLI helper', async () => {
+    const readGeneration = vi.fn(async () => mediaResponse({ status: 'succeeded' }));
+
+    const inspection = await inspectMediaGenerationFromCli(
+      {
+        id: 'medgen_cli_media_1',
+      },
+      userConfig,
+      {
+        service: {
+          createGeneration: vi.fn(async () => mediaResponse({ status: 'succeeded' })),
+          readGeneration,
+        },
+      },
+    );
+
+    expect(readGeneration).toHaveBeenCalledWith('medgen_cli_media_1');
+    expect(inspection.summary).toEqual({
+      artifactCount: 1,
+      cachedArtifactCount: 0,
+      missingArtifactCount: 1,
+    });
+    expect(formatMediaGenerationInspectionCli(inspection)).toContain('Missing files: 1');
+    expect(formatMediaGenerationInspectionCli(inspection)).toContain('missing (local-file-missing)');
   });
 
   it('formats cached artifacts and failures for terminal readback', () => {

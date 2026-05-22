@@ -16497,3 +16497,10 @@ browser-stage lifecycle observability, not transcript truncation.
   the media-generation artifact cache. The active post-submit Gemini readback
   path still requires the submitted tab target id and uses no-navigation DOM
   inspection.
+
+- 2026-05-21: Operators need a browser-free way to distinguish durable media
+  records from current local artifact cache state. `auracall media inspect
+  <media_generation_id> --json` now reads the persisted media-generation record
+  and stats each local artifact path or `file://` URI, returning cached/missing
+  counts plus per-artifact availability evidence without retrying provider
+  materialization.

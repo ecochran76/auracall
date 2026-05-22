@@ -31659,3 +31659,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     tests/runtime.archiveMaterializationJobService.test.ts
     tests/runtime.archiveService.test.ts --maxWorkers 1`
   - `pnpm run build`
+
+## Turn 221 | 2026-05-21
+
+- Goal: add a browser-free operator readback for durable media-generation cache
+  state after Gemini artifact recovery.
+- Change:
+  - added `auracall media inspect <media_generation_id> --json`.
+  - inspection reads the persisted media-generation record and stats each local
+    artifact path or `file://` URI without provider/browser work.
+  - output includes cached/missing counts plus per-artifact availability,
+    size, mtime, materialization label, and missing reason.
+- Verification:
+  - `pnpm vitest run tests/cli.mediaGenerationCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm exec biome lint src/cli/mediaGenerationCommand.ts
+    tests/cli.mediaGenerationCommand.test.ts`
+  - `git diff --check -- src/cli/mediaGenerationCommand.ts
+    tests/cli.mediaGenerationCommand.test.ts README.md docs/testing.md
+    docs/dev-fixes-log.md docs/dev/dev-journal.md`
+  - `pnpm run install:user-runtime`
+  - `auracall media inspect medgen_cf296426a263400bbd5a2690674052a5 --json`
+    returned one cached Gemini PNG and one legacy placeholder artifact with
+    `missing-local-path`.

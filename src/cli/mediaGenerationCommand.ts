@@ -1,4 +1,6 @@
 import type { Command, OptionValues } from 'commander';
+import fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import type { ResolvedUserConfig } from '../config.js';
 import {
   createBrowserMediaGenerationExecutor,
@@ -35,8 +37,44 @@ export interface MediaGenerationMaterializeCliOptions {
   conversationId?: string | null;
 }
 
+export interface MediaGenerationInspectCliOptions {
+  id: string;
+}
+
+export interface MediaGenerationArtifactCacheInspection {
+  artifactId: string;
+  type: MediaGenerationType;
+  fileName: string | null;
+  path: string | null;
+  uri: string | null;
+  materialization: string | null;
+  fileAvailable: boolean;
+  fileSize: number | null;
+  mtime: string | null;
+  reason: string | null;
+}
+
+export interface MediaGenerationInspection {
+  object: 'media_generation_inspection';
+  id: string;
+  status: MediaGenerationResponse['status'];
+  provider: MediaGenerationProvider;
+  mediaType: MediaGenerationType;
+  updatedAt: string;
+  mediaGeneration: MediaGenerationResponse;
+  artifactCache: MediaGenerationArtifactCacheInspection[];
+  summary: {
+    artifactCount: number;
+    cachedArtifactCount: number;
+    missingArtifactCount: number;
+  };
+}
+
 export interface MediaGenerationCliDeps {
-  service?: Pick<MediaGenerationService, 'createGeneration' | 'createGenerationAsync' | 'materializeGeneration'>;
+  service?: Partial<Pick<
+    MediaGenerationService,
+    'createGeneration' | 'createGenerationAsync' | 'materializeGeneration' | 'readGeneration'
+  >>;
 }
 
 export interface RegisterMediaGenerationCliCommandDeps extends MediaGenerationCliDeps {
@@ -109,6 +147,39 @@ export function registerMediaGenerationCliCommand(
         return;
       }
       console.log(formatMediaGenerationCli(response));
+    });
+
+  mediaCommand
+    .command('inspect')
+    .description('Inspect one durable media generation and its local artifact cache without provider/browser work.')
+    .argument('<id>', 'Durable media generation id to inspect.')
+    .option('--json', 'Emit machine-readable JSON output.', false)
+    .action(async function (this: Command, id: string) {
+      const parentOptions =
+        typeof this.parent?.opts === 'function' ? (this.parent.opts() as OptionValues) : ({} as OptionValues);
+      const ownOptions = typeof this.opts === 'function' ? (this.opts() as OptionValues) : ({} as OptionValues);
+      const rootOptions = program.opts?.() ?? {};
+      const commandOptions = {
+        ...rootOptions,
+        ...parentOptions,
+        ...ownOptions,
+      } as OptionValues;
+      const userConfig = await deps.resolveUserConfig(commandOptions);
+      const inspection = await inspectMediaGenerationFromCli(
+        {
+          id,
+        },
+        userConfig,
+        {
+          service: deps.service,
+        },
+      );
+
+      if (ownOptions.json) {
+        console.log(JSON.stringify(inspection, null, 2));
+        return;
+      }
+      console.log(formatMediaGenerationInspectionCli(inspection));
     });
 
   mediaCommand
@@ -187,6 +258,9 @@ export async function createMediaGenerationFromCli(
   if (!shouldWait && service.createGenerationAsync) {
     return service.createGenerationAsync(request);
   }
+  if (!service.createGeneration) {
+    throw new Error('Media generation creation is not available in this runtime.');
+  }
   return service.createGeneration(request);
 }
 
@@ -209,6 +283,39 @@ export async function materializeMediaGenerationFromCli(
   });
 }
 
+export async function inspectMediaGenerationFromCli(
+  options: MediaGenerationInspectCliOptions,
+  userConfig: ResolvedUserConfig,
+  deps: MediaGenerationCliDeps = {},
+): Promise<MediaGenerationInspection> {
+  const id = normalizeRequiredId(options.id);
+  const service = deps.service ?? createConfiguredMediaGenerationService(userConfig);
+  if (!service.readGeneration) {
+    throw new Error('Media generation inspection is not available in this runtime.');
+  }
+  const response = await service.readGeneration(id);
+  if (!response) {
+    throw new Error(`Media generation ${id} was not found.`);
+  }
+  const artifactCache = await Promise.all(response.artifacts.map(inspectMediaGenerationArtifactCache));
+  const cachedArtifactCount = artifactCache.filter((artifact) => artifact.fileAvailable).length;
+  return {
+    object: 'media_generation_inspection',
+    id: response.id,
+    status: response.status,
+    provider: response.provider,
+    mediaType: response.mediaType,
+    updatedAt: response.updatedAt,
+    mediaGeneration: response,
+    artifactCache,
+    summary: {
+      artifactCount: artifactCache.length,
+      cachedArtifactCount,
+      missingArtifactCount: artifactCache.length - cachedArtifactCount,
+    },
+  };
+}
+
 function buildMaterializeMetadata(options: MediaGenerationMaterializeCliOptions): Record<string, unknown> | null {
   const metadata: Record<string, unknown> = {};
   const conversationUrl = normalizeOptionalString(options.conversationUrl);
@@ -220,6 +327,29 @@ function buildMaterializeMetadata(options: MediaGenerationMaterializeCliOptions)
     metadata.conversationId = conversationId;
   }
   return Object.keys(metadata).length > 0 ? metadata : null;
+}
+
+export function formatMediaGenerationInspectionCli(inspection: MediaGenerationInspection): string {
+  const lines = [
+    `Media generation ${inspection.id} is ${inspection.status}`,
+    `Provider: ${inspection.provider}`,
+    `Type: ${inspection.mediaType}`,
+    `Updated: ${inspection.updatedAt}`,
+    `Artifacts: ${inspection.summary.artifactCount}`,
+    `Cached files: ${inspection.summary.cachedArtifactCount}`,
+    `Missing files: ${inspection.summary.missingArtifactCount}`,
+  ];
+
+  for (const artifact of inspection.artifactCache) {
+    const label = artifact.fileName ?? artifact.artifactId;
+    const state = artifact.fileAvailable ? 'available' : `missing${artifact.reason ? ` (${artifact.reason})` : ''}`;
+    const size = artifact.fileSize === null ? '' : ` ${artifact.fileSize} bytes`;
+    const materialization = artifact.materialization ? ` [${artifact.materialization}]` : '';
+    const location = artifact.path ?? artifact.uri ?? null;
+    lines.push(`- ${artifact.type}: ${label} -> ${state}${size}${materialization}${location ? ` ${location}` : ''}`);
+  }
+
+  return lines.join('\n');
 }
 
 export function formatMediaGenerationCli(response: MediaGenerationResponse): string {
@@ -247,6 +377,88 @@ export function formatMediaGenerationCli(response: MediaGenerationResponse): str
     lines.push(`Poll: auracall run status ${response.id}`);
   }
   return lines.join('\n');
+}
+
+async function inspectMediaGenerationArtifactCache(
+  artifact: MediaGenerationResponse['artifacts'][number],
+): Promise<MediaGenerationArtifactCacheInspection> {
+  const path = resolveArtifactCachePath(artifact.path, artifact.uri);
+  if (!path) {
+    return {
+      artifactId: artifact.id,
+      type: artifact.type,
+      fileName: artifact.fileName ?? null,
+      path: artifact.path ?? null,
+      uri: artifact.uri ?? null,
+      materialization: readMaterializationLabel(artifact.metadata),
+      fileAvailable: false,
+      fileSize: null,
+      mtime: null,
+      reason: 'missing-local-path',
+    };
+  }
+  try {
+    const stat = await fs.stat(path);
+    if (!stat.isFile()) {
+      return {
+        artifactId: artifact.id,
+        type: artifact.type,
+        fileName: artifact.fileName ?? null,
+        path,
+        uri: artifact.uri ?? null,
+        materialization: readMaterializationLabel(artifact.metadata),
+        fileAvailable: false,
+        fileSize: null,
+        mtime: null,
+        reason: 'not-a-file',
+      };
+    }
+    return {
+      artifactId: artifact.id,
+      type: artifact.type,
+      fileName: artifact.fileName ?? null,
+      path,
+      uri: artifact.uri ?? null,
+      materialization: readMaterializationLabel(artifact.metadata),
+      fileAvailable: true,
+      fileSize: stat.size,
+      mtime: stat.mtime.toISOString(),
+      reason: null,
+    };
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      return {
+        artifactId: artifact.id,
+        type: artifact.type,
+        fileName: artifact.fileName ?? null,
+        path,
+        uri: artifact.uri ?? null,
+        materialization: readMaterializationLabel(artifact.metadata),
+        fileAvailable: false,
+        fileSize: null,
+        mtime: null,
+        reason: 'local-file-missing',
+      };
+    }
+    throw error;
+  }
+}
+
+function resolveArtifactCachePath(pathValue: string | null | undefined, uriValue: string | null | undefined): string | null {
+  const directPath = normalizeOptionalString(pathValue);
+  if (directPath) return directPath;
+  const uri = normalizeOptionalString(uriValue);
+  if (!uri?.startsWith('file://')) return null;
+  try {
+    return fileURLToPath(uri);
+  } catch {
+    return null;
+  }
+}
+
+function readMaterializationLabel(metadata: Record<string, unknown> | null | undefined): string | null {
+  const value = metadata?.materialization;
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function parseProvider(value: string): MediaGenerationProvider {

@@ -76,6 +76,7 @@ auracall media generate --provider gemini --type image -p "Generate an image of 
 auracall media generate --provider grok --type image -p "Generate an image of an asphalt secret agent" --count 1 --no-wait
 auracall run status <media_generation_id> --json
 auracall media materialize <media_generation_id> --count 1 --json
+auracall media inspect <media_generation_id> --json
 
 # Save and diff live feature snapshots
 auracall features snapshot --target gemini --json
@@ -222,6 +223,9 @@ Terminology note:
   immediately, then poll it with `auracall run status <id> --json`.
 - Prefer `auracall media generate` for new image/music/video automation because
   it persists the media-generation id, timeline, status, and artifact cache.
+  Use `auracall media inspect <id> --json` to read the durable record and
+  current local cache availability for each artifact without reopening the
+  provider browser or retrying materialization.
   ChatGPT image runs use the browser Create image composer tool and keep
   readback/materialization scoped to the submitted tab target. For Grok image
   runs, `auracall media materialize <id> --count 1 --json`

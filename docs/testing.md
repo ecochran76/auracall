@@ -527,6 +527,9 @@
       `pnpm tsx bin/auracall.ts media generate --provider gemini --type image --transport api -p "Generate an image of an asphalt secret agent" --count 1 --json`
     - for async browser smokes, add `--no-wait` and poll with
       `pnpm tsx bin/auracall.ts run status <media_generation_id> --json`
+    - inspect the durable media record and current local artifact cache without
+      provider/browser work:
+      `pnpm tsx bin/auracall.ts media inspect <media_generation_id> --json`
     - installed-runtime media smoke assertions can avoid raw JSON for common
       terminal readback:
       `auracall run status <media_generation_id> --expect-status succeeded --expect-min-artifacts 1 --expect-media-run-state terminal_image`
