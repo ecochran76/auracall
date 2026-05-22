@@ -1053,7 +1053,7 @@ select:focus-visible {
 
 .search-command-bar {
   display: grid;
-  grid-template-columns: auto minmax(220px, 1fr) auto auto auto auto auto auto auto;
+  grid-template-columns: auto minmax(220px, 1fr) auto auto auto auto auto auto auto auto;
   align-items: center;
   gap: 4px;
 }
@@ -1419,9 +1419,28 @@ select:focus-visible {
   color: #dce6f2;
 }
 
+.search-asset-toggle {
+  border-color: #2f4d45;
+  background: #12231f;
+  color: #93e0c5;
+}
+
+.search-asset-toggle:hover,
+.search-asset-toggle.active {
+  border-color: #4ca98c;
+  background: #17362e;
+  color: #d5fff0;
+}
+
+.search-url-copy.active {
+  border-color: #5e789a;
+  background: #20324d;
+  color: #dcecff;
+}
+
 @media (max-width: 1180px) {
   .search-command-bar {
-    grid-template-columns: auto minmax(220px, 1fr) auto auto auto auto auto;
+    grid-template-columns: auto minmax(220px, 1fr) auto auto auto auto auto auto auto;
   }
 
   .command-facet-summary {
@@ -1528,6 +1547,11 @@ select:focus-visible {
 .summary-metric.attention {
   border-color: #5d5630;
   background: #241f13;
+}
+
+.summary-metric.good {
+  border-color: #315b50;
+  background: #12231f;
 }
 
 .search-table-scroll {
@@ -1825,6 +1849,42 @@ select:focus-visible {
   border-color: #344256;
   background: #18202b;
   color: #f5fffb;
+}
+
+.row-action-button:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.materialize-row-action {
+  color: #d7c682;
+}
+
+.materialize-row-action:hover,
+.materialize-row-action:focus-visible {
+  border-color: #5d5630;
+  background: #241f13;
+  color: #fff2ad;
+}
+
+.materialize-row-queued,
+.materialize-row-running {
+  border-color: #5d5630;
+  background: #241f13;
+  color: #fff2ad;
+}
+
+.materialize-row-succeeded {
+  border-color: #315b50;
+  background: #12231f;
+  color: #9fe8ca;
+}
+
+.materialize-row-failed,
+.materialize-row-cancelled {
+  border-color: #6a3b3b;
+  background: #2a171a;
+  color: #ffb4b4;
 }
 
 .row-action-button:focus-visible {

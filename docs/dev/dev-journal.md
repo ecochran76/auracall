@@ -31499,6 +31499,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     tests/runtime.archiveService.test.ts --maxWorkers 1`
   - `pnpm run build`
 
+## Turn 218 | 2026-05-20
+
+- Goal: split unavailable generated-artifact cache state into recoverability
+  reasons instead of one broad missing-provider bucket.
+- Change:
+  - archive refresh now marks stale local artifact paths as
+    `media-artifact-local-file-missing` or `local-file-missing`.
+  - media-generation artifact records that never had a materialized path now
+    get `media-artifact-missing-local-path` instead of
+    `missing-provider-conversation`.
+  - kept provider artifact-fetch skipped evidence unchanged for ChatGPT
+    conversation rows.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveService.test.ts
+    tests/runtime.archiveMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts
+    tests/runtime.archiveMaterializationService.test.ts
+    tests/runtime.archiveMaterializationJobService.test.ts
+    tests/runtime.archiveService.test.ts --maxWorkers 1`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - live `auracall api archive --kind generated_artifact --limit 5000 --json`
+    reported 74 unavailable rows with no unclassified reasons: 3
+    `artifact-fetch-entry-not-materialized`, 1
+    `media-artifact-local-file-missing`, and 70
+    `media-artifact-missing-local-path`.
+
 ## Turn 219 | 2026-05-20
 
 - Goal: make the Search table summary read like an operator status strip rather
@@ -31527,7 +31556,6 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - after the catalog finished loading, `agent-browser` confirmed live metrics:
     filtered 80, loaded 80, matched 3,945, rendered 33, sort newest, and more
     available.
-
 ## Turn 217 | 2026-05-20
 
 - Goal: let operators remove active Search filters directly from the compact
@@ -31658,6 +31686,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     tests/runtime.archiveMaterializationService.test.ts
     tests/runtime.archiveMaterializationJobService.test.ts
     tests/runtime.archiveService.test.ts --maxWorkers 1`
+  - `pnpm run build`
+
+## Turn 220 | 2026-05-20
+
+- Goal: prevent future media-generation cache placeholders from being recorded as successful generated artifacts.
+- Change:
+  - added a media service contract guard that rejects executor artifacts without a local `path` or remote `uri` before writing terminal success.
+  - applied the same guard to resumed media materialization results.
+  - updated media-generation service, HTTP, MCP, and account-mirror follow-up fixtures to materialize test artifacts with concrete file paths.
+- Verification:
+  - `pnpm vitest run tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "nudges lazy account mirror follow-up after media generation settles" --maxWorkers 1`
   - `pnpm run build`
 
 ## Turn 221 | 2026-05-21
@@ -31924,3 +31964,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     archive/search/MCP asset readback, archive materialization job filters,
     installed MCP `api_status`, installed MCP `api_ops_browser_status`, and
     installed MCP provider-guard clearance.
+
+## Turn 232 | 2026-05-22
+
+- Goal: take ownership of the completed UX lane and package the operator Search
+  cache-state controls with backend validation.
+- Change:
+  - reviewed the uncommitted operator UX slice for URL-backed Search filters,
+    copy-current-search-url, available-assets toggle, row-level materialization
+    actions, and active materialization job polling.
+  - tightened Search URL cleanup so leaving Search clears the
+    `materialization` filter with the other Search-only query state.
+  - recorded the dashboard-facing Search cache-state behavior in the fixes log.
+- Verification:
+  - `pnpm run ux:build`
+  - `pnpm run build`
+  - local API smoke on port `18110` returned `/status` with `ok: true`.
+  - rendered Chromium QA opened
+    `/dashboard?nav=search&kind=artifact&assets=available&materialization=succeeded`,
+    verified Search URL preservation, the cached-assets toggle, the
+    copy-current-search-url action, and no page-level mobile horizontal
+    overflow; screenshots were written to `/tmp/auracall-search-desktop.png`,
+    `/tmp/auracall-search-filter-toggle.png`, and
+    `/tmp/auracall-search-mobile.png`.

@@ -16565,3 +16565,12 @@ browser-stage lifecycle observability, not transcript truncation.
   preflight:lazy-live-follow` now runs `smoke:archive-materialization-jobs`
   after installed archive/search/MCP asset readback and before the installed
   MCP status smokes.
+
+- 2026-05-22: Operator Search cache-state controls need to be sharable and
+  actionable from the dashboard, not only available through API/CLI/MCP query
+  strings. The Search workbench now hydrates and writes URL-backed
+  `kind`, `assets`, `materialization`, provider, and status filters, exposes a
+  copy-current-search-url action, shows available cached asset counts, and
+  lets operators queue or track archive materialization jobs from matching
+  rows. Leaving Search also clears the materialization filter with the other
+  Search-only URL state.

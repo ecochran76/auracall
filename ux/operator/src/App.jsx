@@ -20,6 +20,7 @@ import {
   ListFilter,
   Menu,
   MessageSquareText,
+  PackagePlus,
   PanelLeftClose,
   PanelLeftOpen,
   PanelRightClose,
@@ -67,6 +68,24 @@ const SEARCH_KIND_FACETS = [
   { id: "upload", label: "Uploads" },
   { id: "run", label: "Runs" },
   { id: "evidence", label: "Evidence" },
+];
+
+const SEARCH_ASSET_FACETS = [
+  { id: "all", label: "All" },
+  { id: "available", label: "Available" },
+  { id: "unavailable", label: "Missing" },
+  { id: "pending", label: "Pending" },
+];
+
+const SEARCH_MATERIALIZATION_FACETS = [
+  { id: "all", label: "All" },
+  { id: "active", label: "Active" },
+  { id: "queued", label: "Queued" },
+  { id: "running", label: "Running" },
+  { id: "succeeded", label: "Done" },
+  { id: "failed", label: "Failed" },
+  { id: "cancelled", label: "Cancelled" },
+  { id: "skipped", label: "Skipped" },
 ];
 
 const SEARCH_TABLE_COLUMNS = [
@@ -226,6 +245,35 @@ function readSearchRowFromUrl() {
   return id ? { id } : null;
 }
 
+function readSearchFiltersFromUrl() {
+  const params = readUrlParams();
+  const kinds = new Set(SEARCH_KIND_FACETS.map((facet) => facet.id));
+  const assets = new Set(SEARCH_ASSET_FACETS.map((facet) => facet.id));
+  const materializations = new Set(SEARCH_MATERIALIZATION_FACETS.map((facet) => facet.id));
+  const kind = params.get("kind") ?? "all";
+  const assetAvailability = params.get("assets") ?? params.get("assetAvailability") ?? "all";
+  const materialization = params.get("materialization") ?? "all";
+  return {
+    q: params.get("q") ?? "",
+    kind: kinds.has(kind) ? kind : "all",
+    assets: assets.has(assetAvailability) ? assetAvailability : "all",
+    materialization: materializations.has(materialization) ? materialization : "all",
+    providers: new Set(splitSearchUrlList(params.get("searchProvider"))),
+    statuses: new Set(splitSearchUrlList(params.get("searchStatus"))),
+  };
+}
+
+function splitSearchUrlList(value) {
+  return String(value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function serializeSearchUrlList(values) {
+  return [...(values ?? new Set())].sort().join(",");
+}
+
 function archiveItemRoute(item) {
   if (!item?.id) return null;
   return `/v1/archive/items/b64/${base64UrlEncodeText(item.id)}`;
@@ -268,6 +316,34 @@ function archiveMaterializationStatusTone(status) {
 
 function isActiveArchiveMaterializationJob(job) {
   return job?.status === "queued" || job?.status === "running";
+}
+
+function searchRowMaterializationStatus(row, job = null) {
+  return job?.status ?? row?.metadata?.materializationJob?.status ?? row?.metadata?.materializationStatus ?? null;
+}
+
+function materializationFilterMatches(row, job, filter) {
+  if (!filter || filter === "all") return true;
+  const status = searchRowMaterializationStatus(row, job);
+  if (!status) return false;
+  if (filter === "active") return status === "queued" || status === "running";
+  return status === filter;
+}
+
+function materializationRowTitle(job, queuing = false) {
+  if (queuing) return "Queuing materialization";
+  if (job?.status === "succeeded") return "Materialization complete";
+  if (job?.status === "failed") return "Materialization failed; retry";
+  if (job?.status === "cancelled") return "Materialization cancelled; retry";
+  if (job?.status === "skipped") return "Materialization skipped";
+  if (job?.status) return `Materialization ${statusLabel(job.status)}`;
+  return "Queue artifact materialization";
+}
+
+function materializationRowIcon(job, queuing = false) {
+  if (queuing || job?.status === "queued" || job?.status === "running") return <Activity size={13} aria-hidden="true" />;
+  if (job?.status === "succeeded") return <Check size={13} aria-hidden="true" />;
+  return <PackagePlus size={13} aria-hidden="true" />;
 }
 
 function readStringField(value, fields) {
@@ -481,7 +557,7 @@ function flattenSearchCatalogRows(payload) {
       catalogItemRoute: row.links?.catalogItem ?? null,
       archiveItemRoute: row.links?.archiveItem ?? null,
       assetRoute: row.links?.asset ?? (row.links?.archiveItem && row.metadata?.fileAvailable ? `${row.links.archiveItem}/asset` : null),
-      fileAvailable: Boolean(row.metadata?.fileAvailable),
+      fileAvailable: typeof row.metadata?.fileAvailable === "boolean" ? row.metadata.fileAvailable : null,
       links: row.links ?? {},
       raw: row,
     }));
@@ -529,6 +605,8 @@ function serializeSearchFilters(filters) {
   return {
     q: filters.q ?? "",
     kind: filters.kind ?? "all",
+    assets: filters.assets ?? "all",
+    materialization: filters.materialization ?? "all",
     providers: [...(filters.providers ?? new Set())],
     statuses: [...(filters.statuses ?? new Set())],
   };
@@ -536,9 +614,13 @@ function serializeSearchFilters(filters) {
 
 function hydrateSearchFilters(filters) {
   const kinds = new Set(SEARCH_KIND_FACETS.map((facet) => facet.id));
+  const assets = new Set(SEARCH_ASSET_FACETS.map((facet) => facet.id));
+  const materializations = new Set(SEARCH_MATERIALIZATION_FACETS.map((facet) => facet.id));
   return {
     q: filters?.q ?? "",
     kind: kinds.has(filters?.kind) ? filters.kind : "all",
+    assets: assets.has(filters?.assets) ? filters.assets : "all",
+    materialization: materializations.has(filters?.materialization) ? filters.materialization : "all",
     providers: new Set(Array.isArray(filters?.providers) ? filters.providers : []),
     statuses: new Set(Array.isArray(filters?.statuses) ? filters.statuses : []),
   };
@@ -1834,12 +1916,7 @@ function ArchiveSearchViewport({
   onSelectedSearchRowChange,
   onSelectedSearchDetailChange,
 }) {
-  const [filters, setFilters] = useState({
-    q: "",
-    kind: "all",
-    providers: new Set(),
-    statuses: new Set(),
-  });
+  const [filters, setFilters] = useState(readSearchFiltersFromUrl);
   const [tablePrefs, setTablePrefs] = useState(readSearchTablePreferences);
   const [catalog, setCatalog] = useState(null);
   const [virtualViewport, setVirtualViewport] = useState({ scrollTop: 0, height: 560 });
@@ -1855,6 +1932,9 @@ function ArchiveSearchViewport({
   const [newViewName, setNewViewName] = useState("");
   const [activeViewId, setActiveViewId] = useState(null);
   const [copiedRowId, setCopiedRowId] = useState(null);
+  const [copiedSearchUrl, setCopiedSearchUrl] = useState(false);
+  const [materializingRowId, setMaterializingRowId] = useState(null);
+  const [rowMaterializationJobs, setRowMaterializationJobs] = useState({});
   const searchRoute = apiStatus.status?.routes?.search ?? "/v1/search";
   const dragColumnRef = useRef(null);
   const searchWorkbenchRef = useRef(null);
@@ -1866,23 +1946,39 @@ function ArchiveSearchViewport({
       return {
         providers: (catalog.facets.providers ?? []).map((item) => [item.value, item.count]),
         statuses: (catalog.facets.statuses ?? []).map((item) => [item.value, item.count]),
+        assetAvailability: (catalog.facets.assetAvailability ?? []).map((item) => [item.value, item.count]),
+        materialization: (catalog.facets.materialization ?? []).map((item) => [item.value, item.count]),
       };
     }
     const providers = new Map();
     const statuses = new Map();
+    const assetAvailability = new Map();
+    const materialization = new Map();
     for (const row of allRows) {
       providers.set(row.provider, (providers.get(row.provider) ?? 0) + 1);
       statuses.set(row.status, (statuses.get(row.status) ?? 0) + 1);
+      const availability = row.fileAvailable === true ? "available" : row.fileAvailable === false ? "unavailable" : "pending";
+      assetAvailability.set(availability, (assetAvailability.get(availability) ?? 0) + 1);
+      const materializationStatus = searchRowMaterializationStatus(row);
+      if (materializationStatus) materialization.set(materializationStatus, (materialization.get(materializationStatus) ?? 0) + 1);
     }
     return {
       providers: [...providers.entries()].sort(([left], [right]) => left.localeCompare(right)),
       statuses: [...statuses.entries()].sort(([left], [right]) => left.localeCompare(right)),
+      assetAvailability: [...assetAvailability.entries()].sort(([left], [right]) => left.localeCompare(right)),
+      materialization: [...materialization.entries()].sort(([left], [right]) => left.localeCompare(right)),
     };
   }, [allRows]);
   const filteredRows = useMemo(() => {
     const needle = filters.q.trim().toLowerCase();
     return allRows
       .filter((row) => filters.kind === "all" || row.kind === filters.kind)
+      .filter((row) => {
+        if (filters.assets === "all") return true;
+        const availability = row.fileAvailable === true ? "available" : row.fileAvailable === false ? "unavailable" : "pending";
+        return availability === filters.assets;
+      })
+      .filter((row) => materializationFilterMatches(row, rowMaterializationJobs[row.id], filters.materialization))
       .filter((row) => !filters.providers.size || filters.providers.has(row.provider))
       .filter((row) => !filters.statuses.size || filters.statuses.has(row.status))
       .filter((row) => {
@@ -1901,7 +1997,29 @@ function ArchiveSearchViewport({
         ].join(" ").toLowerCase().includes(needle);
       })
       .sort((left, right) => compareSearchRows(left, right, tablePrefs.sort));
-  }, [allRows, filters, tablePrefs.sort]);
+  }, [allRows, filters, rowMaterializationJobs, tablePrefs.sort]);
+  const loadedAvailableRows = allRows.filter((row) => row.fileAvailable === true).length;
+  const materializationFacetCounts = useMemo(() => {
+    const counts = new Map(SEARCH_MATERIALIZATION_FACETS.map((facet) => [facet.id, 0]));
+    for (const row of allRows) {
+      const job = rowMaterializationJobs[row.id];
+      const status = searchRowMaterializationStatus(row, job);
+      if (!status) continue;
+      counts.set("all", (counts.get("all") ?? 0) + 1);
+      counts.set(status, (counts.get(status) ?? 0) + 1);
+      if (status === "queued" || status === "running") counts.set("active", (counts.get("active") ?? 0) + 1);
+    }
+    return counts;
+  }, [allRows, rowMaterializationJobs]);
+  const activeMaterializationRows = materializationFacetCounts.get("active") ?? 0;
+  const activeRowMaterializationJobIds = useMemo(() =>
+    Object.values(rowMaterializationJobs)
+      .filter(isActiveArchiveMaterializationJob)
+      .map((job) => job.id)
+      .filter(Boolean)
+      .sort()
+      .join(","),
+  [rowMaterializationJobs]);
   const selectedRow = selectedSearchRow?.id ? (allRows.find((row) => row.id === selectedSearchRow.id) ?? selectedSearchRow) : null;
   const virtualWindow = useMemo(() => {
     const visibleCapacity = Math.ceil(virtualViewport.height / SEARCH_ROW_HEIGHT);
@@ -1920,12 +2038,16 @@ function ArchiveSearchViewport({
   const hiddenColumnCount = tablePrefs.hidden?.length ?? 0;
   const activeFilterCount = (filters.q.trim() ? 1 : 0)
     + (filters.kind !== "all" ? 1 : 0)
+    + (filters.assets !== "all" ? 1 : 0)
+    + (filters.materialization !== "all" ? 1 : 0)
     + filters.providers.size
     + filters.statuses.size;
   const hasActiveFilters = activeFilterCount > 0;
   const hasOpenSearchPopover = showAdvancedFilters || isColumnMenuOpen || isViewsMenuOpen;
   const activeFilterSummaryItems = [
     filters.kind !== "all" ? { key: "kind", label: SEARCH_KIND_FACETS.find((facet) => facet.id === filters.kind)?.label ?? filters.kind, type: "kind", value: filters.kind } : null,
+    filters.assets !== "all" ? { key: "assets", label: SEARCH_ASSET_FACETS.find((facet) => facet.id === filters.assets)?.label ?? filters.assets, type: "assets", value: filters.assets } : null,
+    filters.materialization !== "all" ? { key: "materialization", label: SEARCH_MATERIALIZATION_FACETS.find((facet) => facet.id === filters.materialization)?.label ?? filters.materialization, type: "materialization", value: filters.materialization } : null,
     ...[...filters.providers].slice(0, 2).map((provider) => ({ key: `provider:${provider}`, label: provider, type: "providers", value: provider })),
     filters.providers.size > 2 ? { key: "provider-more", label: `+${filters.providers.size - 2} providers`, type: "more" } : null,
     ...[...filters.statuses].slice(0, 2).map((status) => ({ key: `status:${status}`, label: statusLabel(status), type: "statuses", value: status })),
@@ -1964,6 +2086,27 @@ function ArchiveSearchViewport({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [hasOpenSearchPopover]);
+
+  useEffect(() => {
+    replaceUrlParams({
+      nav: "search",
+      q: filters.q.trim() || null,
+      kind: filters.kind === "all" ? null : filters.kind,
+      assets: filters.assets === "all" ? null : filters.assets,
+      materialization: filters.materialization === "all" ? null : filters.materialization,
+      searchProvider: filters.providers.size ? serializeSearchUrlList(filters.providers) : null,
+      searchStatus: filters.statuses.size ? serializeSearchUrlList(filters.statuses) : null,
+    });
+  }, [filters]);
+
+  useEffect(() => {
+    function onPopState() {
+      setFilters(readSearchFiltersFromUrl());
+      setActiveViewId(null);
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   useEffect(() => {
     if (!selectedArchiveItem) {
@@ -2095,6 +2238,16 @@ function ArchiveSearchViewport({
   }, [isLive, filters]);
 
   useEffect(() => {
+    if (!activeRowMaterializationJobIds) return undefined;
+    const timer = window.setInterval(() => {
+      for (const jobId of activeRowMaterializationJobIds.split(",").filter(Boolean)) {
+        void refreshRowMaterializationJob(jobId, { silent: true });
+      }
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, [activeRowMaterializationJobIds]);
+
+  useEffect(() => {
     loadCatalog();
   }, [filters]);
 
@@ -2108,6 +2261,8 @@ function ArchiveSearchViewport({
     const query = filters.q.trim();
     if (query) params.set("q", query);
     if (filters.kind !== "all") params.set("kind", filters.kind);
+    if (filters.assets !== "all") params.set("assetAvailability", filters.assets);
+    if (filters.materialization !== "all") params.set("materialization", filters.materialization);
     if (filters.providers.size === 1) params.set("provider", [...filters.providers][0]);
     if (filters.statuses.size === 1) params.set("status", [...filters.statuses][0]);
     if (cursor) params.set("cursor", cursor);
@@ -2177,6 +2332,28 @@ function ArchiveSearchViewport({
     setActiveViewId(null);
   }
 
+  function updateAssets(assets) {
+    setFilters((current) => ({ ...current, assets }));
+    setActiveViewId(null);
+  }
+
+  function updateMaterialization(materialization) {
+    setFilters((current) => ({ ...current, materialization }));
+    setActiveViewId(null);
+  }
+
+  function toggleAvailableAssetsView() {
+    setActiveViewId(null);
+    setFilters((current) => {
+      const active = current.kind === "artifact" && current.assets === "available";
+      return {
+        ...current,
+        kind: active ? "all" : "artifact",
+        assets: active ? "all" : "available",
+      };
+    });
+  }
+
   function toggleSetFacet(name, value) {
     setActiveViewId(null);
     setFilters((current) => {
@@ -2197,6 +2374,8 @@ function ArchiveSearchViewport({
     setActiveViewId(null);
     setFilters((current) => {
       if (item.type === "kind") return { ...current, kind: "all" };
+      if (item.type === "assets") return { ...current, assets: "all" };
+      if (item.type === "materialization") return { ...current, materialization: "all" };
       const next = new Set(current[item.type]);
       next.delete(item.value);
       return { ...current, [item.type]: next };
@@ -2204,7 +2383,7 @@ function ArchiveSearchViewport({
   }
 
   function clearFacets() {
-    setFilters({ q: "", kind: "all", providers: new Set(), statuses: new Set() });
+    setFilters({ q: "", kind: "all", assets: "all", materialization: "all", providers: new Set(), statuses: new Set() });
     setActiveViewId(null);
   }
 
@@ -2274,6 +2453,8 @@ function ArchiveSearchViewport({
     const parts = [];
     if (filters.q.trim()) parts.push(filters.q.trim());
     if (filters.kind !== "all") parts.push(SEARCH_KIND_FACETS.find((facet) => facet.id === filters.kind)?.label ?? filters.kind);
+    if (filters.assets !== "all") parts.push(SEARCH_ASSET_FACETS.find((facet) => facet.id === filters.assets)?.label ?? filters.assets);
+    if (filters.materialization !== "all") parts.push(SEARCH_MATERIALIZATION_FACETS.find((facet) => facet.id === filters.materialization)?.label ?? filters.materialization);
     if (filters.providers.size) parts.push([...filters.providers].join("+"));
     if (filters.statuses.size) parts.push([...filters.statuses].map(statusLabel).join("+"));
     return parts.join(" / ") || `Search view ${savedViews.length + 1}`;
@@ -2384,6 +2565,11 @@ function ArchiveSearchViewport({
     if (column.id === "project") return row.project;
     if (column.id === "title") return <><b>{compactText(row.title, 150)}</b>{row.summary ? <small>{compactText(row.summary, 100)}</small> : null}</>;
     if (column.id === "actions") {
+      const canDownloadAsset = Boolean(row.assetRoute);
+      const canMaterializeAsset = row.kind === "artifact" && row.archiveItemRoute && row.fileAvailable !== true;
+      const materializationJob = rowMaterializationJobs[row.id] ?? null;
+      const activeMaterializationJob = isActiveArchiveMaterializationJob(materializationJob);
+      const showMaterializeAction = canMaterializeAsset || materializationJob;
       return (
         <>
           <button type="button" className="row-action-button" title="Inspect row" aria-label="Inspect result" onClick={(event) => { event.stopPropagation(); openRow(row); }}>
@@ -2397,10 +2583,22 @@ function ArchiveSearchViewport({
               <ExternalLink size={13} aria-hidden="true" />
             </a>
           ) : null}
-          {row.assetRoute ? (
+          {canDownloadAsset ? (
             <a className="row-action-button" href={row.assetRoute} download title="Download cached asset" aria-label="Download cached asset" onClick={handleSearchRowAction}>
               <Download size={13} aria-hidden="true" />
             </a>
+          ) : null}
+          {showMaterializeAction ? (
+            <button
+              type="button"
+              className={`row-action-button materialize-row-action materialize-row-${materializationJob?.status ?? "idle"}`}
+              title={materializationRowTitle(materializationJob, materializingRowId === row.id)}
+              aria-label={materializationRowTitle(materializationJob, materializingRowId === row.id)}
+              disabled={materializingRowId === row.id || activeMaterializationJob || materializationJob?.status === "succeeded"}
+              onClick={(event) => materializeSearchRow(row, event)}
+            >
+              {materializationRowIcon(materializationJob, materializingRowId === row.id)}
+            </button>
           ) : null}
         </>
       );
@@ -2428,6 +2626,25 @@ function ArchiveSearchViewport({
     return url.toString();
   }
 
+  function currentSearchHandoffUrl() {
+    const url = new URL(window.location.href);
+    url.searchParams.set("nav", "search");
+    url.searchParams.delete("provider");
+    url.searchParams.delete("runtime");
+    url.searchParams.delete("runtimeProfile");
+    return url.toString();
+  }
+
+  async function copyCurrentSearchUrl() {
+    try {
+      await navigator.clipboard.writeText(currentSearchHandoffUrl());
+      setCopiedSearchUrl(true);
+      window.setTimeout(() => setCopiedSearchUrl(false), 1200);
+    } catch {
+      setCopiedSearchUrl(false);
+    }
+  }
+
   async function copySearchRowLink(row, event) {
     event.stopPropagation();
     if (!row?.id) return;
@@ -2437,6 +2654,62 @@ function ArchiveSearchViewport({
       window.setTimeout(() => setCopiedRowId((current) => (current === row.id ? null : current)), 1200);
     } catch {
       setCopiedRowId(null);
+    }
+  }
+
+  async function materializeSearchRow(row, event) {
+    event.stopPropagation();
+    if (!row?.itemId) return;
+    setMaterializingRowId(row.id);
+    try {
+      const response = await fetch(archiveMaterializationCreateRoute(), {
+        method: "POST",
+        cache: "no-store",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ archiveItemId: row.itemId }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      const job = payload?.job ?? null;
+      if (job) {
+        setRowMaterializationJobs((current) => ({ ...current, [row.id]: job }));
+        if (!isActiveArchiveMaterializationJob(job)) {
+          window.setTimeout(() => {
+            void loadCatalog(false);
+          }, 500);
+        }
+      }
+      window.setTimeout(() => {
+        void loadCatalog(false);
+      }, 900);
+    } catch {
+      setMaterializingRowId(null);
+    } finally {
+      setMaterializingRowId((current) => (current === row.id ? null : current));
+    }
+  }
+
+  async function refreshRowMaterializationJob(jobId, options = {}) {
+    const route = archiveMaterializationJobRoute(jobId);
+    if (!route) return;
+    try {
+      const response = await fetch(route, { cache: "no-store" });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      const job = payload?.job ?? payload;
+      if (!job?.id) return;
+      setRowMaterializationJobs((current) => {
+        const next = { ...current };
+        for (const [rowId, currentJob] of Object.entries(current)) {
+          if (currentJob?.id === job.id) next[rowId] = job;
+        }
+        return next;
+      });
+      if (!isActiveArchiveMaterializationJob(job)) {
+        void loadCatalog(false);
+      }
+    } catch {
+      if (!options.silent) setMaterializingRowId(null);
     }
   }
 
@@ -2542,6 +2815,25 @@ function ArchiveSearchViewport({
             <span>{loading ? "Refreshing" : "Refresh"}</span>
           </button>
           <button
+            className={copiedSearchUrl ? "icon-button search-url-copy active" : "icon-button search-url-copy"}
+            type="button"
+            onClick={copyCurrentSearchUrl}
+            title={copiedSearchUrl ? "Search URL copied" : "Copy current Search URL"}
+            aria-label={copiedSearchUrl ? "Search URL copied" : "Copy current Search URL"}
+          >
+            {copiedSearchUrl ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+          </button>
+          <button
+            className={filters.kind === "artifact" && filters.assets === "available" ? "icon-button search-asset-toggle active" : "icon-button search-asset-toggle"}
+            type="button"
+            onClick={toggleAvailableAssetsView}
+            title="Show available cached assets"
+            aria-label="Show available cached assets"
+            aria-pressed={filters.kind === "artifact" && filters.assets === "available"}
+          >
+            <Download size={14} aria-hidden="true" />
+          </button>
+          <button
             className={showAdvancedFilters ? "icon-label-button search-toolbar-button active" : "icon-label-button search-toolbar-button"}
             type="button"
             onClick={() => {
@@ -2616,7 +2908,7 @@ function ArchiveSearchViewport({
                   <button type="button" onClick={() => applySavedView(view)} title={`Apply ${view.name}`}>
                     <span>
                       <strong>{view.name}</strong>
-                      <small>{view.filters.kind === "all" ? "all kinds" : view.filters.kind} / {view.filters.providers.length || "all"} providers / {view.filters.statuses.length || "all"} statuses</small>
+                      <small>{view.filters.kind === "all" ? "all kinds" : view.filters.kind} / {view.filters.assets === "all" ? "all assets" : view.filters.assets} / {view.filters.materialization === "all" ? "all materializations" : view.filters.materialization} / {view.filters.providers.length || "all"} providers / {view.filters.statuses.length || "all"} statuses</small>
                     </span>
                   </button>
                   <button type="button" className="row-action-button" title={`Delete ${view.name}`} aria-label={`Delete ${view.name}`} onClick={(event) => deleteSavedView(view.id, event)}>
@@ -2687,6 +2979,49 @@ function ArchiveSearchViewport({
               </div>
             </div>
             <div className="facet-section">
+              <strong>Assets</strong>
+              <div className="facet-group compact-facets" role="tablist" aria-label="Asset availability">
+                {SEARCH_ASSET_FACETS.map((facet) => {
+                  const count = facet.id === "all"
+                    ? allRows.length
+                    : facets.assetAvailability.find(([value]) => value === facet.id)?.[1] ?? 0;
+                  return (
+                    <button
+                      key={facet.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={filters.assets === facet.id}
+                      className={filters.assets === facet.id ? "filter-chip active" : "filter-chip"}
+                      title={`Filter assets: ${facet.label}`}
+                      onClick={() => updateAssets(facet.id)}
+                    >
+                      <span>{facet.label}</span>
+                      <b>{formatNumber(count)}</b>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="facet-section">
+              <strong>Materialize</strong>
+              <div className="facet-group compact-facets" role="tablist" aria-label="Materialization status">
+                {SEARCH_MATERIALIZATION_FACETS.map((facet) => (
+                  <button
+                    key={facet.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={filters.materialization === facet.id}
+                    className={filters.materialization === facet.id ? "filter-chip active" : "filter-chip"}
+                    title={`Filter materialization: ${facet.label}`}
+                    onClick={() => updateMaterialization(facet.id)}
+                  >
+                    <span>{facet.label}</span>
+                    <b>{formatNumber(materializationFacetCounts.get(facet.id) ?? 0)}</b>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="facet-section">
               <strong>Provider</strong>
               <div className="facet-group" aria-label="Providers">
                 {facets.providers.map(([provider, count]) => (
@@ -2732,9 +3067,11 @@ function ArchiveSearchViewport({
         <div className="search-table-summary">
           <span className="summary-metric primary"><b>{formatNumber(filteredRows.length)}</b><small>filtered</small></span>
           <span className="summary-metric"><b>{formatNumber(allRows.length)}</b><small>loaded</small></span>
+          <span className="summary-metric good"><b>{formatNumber(loadedAvailableRows)}</b><small>assets</small></span>
           <span className="summary-metric"><b>{formatNumber(catalog?.metrics?.total ?? allRows.length)}</b><small>matched</small></span>
           <span className="summary-metric"><b>{formatNumber(visibleRows.length)}</b><small>rendered</small></span>
           <span className="summary-metric"><b>{tablePrefs.sort.direction === "desc" ? "newest" : "oldest"}</b><small>sort</small></span>
+          {activeMaterializationRows ? <span className="summary-metric attention"><b>{formatNumber(activeMaterializationRows)}</b><small>materializing</small></span> : null}
           {catalog?.nextCursor ? <span className="summary-metric attention"><b>more</b><small>available</small></span> : null}
         </div>
         <div
@@ -3972,6 +4309,12 @@ export default function App() {
       runtimeProfile: null,
       archiveItem: null,
       row: null,
+      q: null,
+      kind: null,
+      assets: null,
+      materialization: null,
+      searchProvider: null,
+      searchStatus: null,
     });
   }, [layout.activeNav]);
 
