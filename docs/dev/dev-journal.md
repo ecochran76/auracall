@@ -31814,3 +31814,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run install:user-runtime`
   - `systemctl --user restart auracall-api.service`
   - `systemctl --user is-active auracall-api.service` returned `active`.
+
+## Turn 227 | 2026-05-22
+
+- Goal: add a cheap installed-runtime regression smoke for asset readback
+  parity.
+- Change:
+  - added `scripts/smoke-asset-readback-parity.ts`.
+  - added `pnpm run smoke:asset-readback-parity`.
+  - the smoke verifies one media generation through installed `auracall api
+    archive`, installed `auracall api search`, and installed MCP
+    `search_projection`.
+- Verification:
+  - `pnpm run smoke:asset-readback-parity` returned `ok: true` for
+    `medgen_cf296426a263400bbd5a2690674052a5` with matching archive/search/MCP
+    item id `generated-artifact:medgen_cf296426a263400bbd5a2690674052a5:gemini-artifact:6a131154e90f7362:1:0`.
+  - `pnpm run check`
+  - `git diff --check -- package.json
+    scripts/smoke-asset-readback-parity.ts docs/testing.md
+    docs/dev-fixes-log.md docs/dev/dev-journal.md`
+  - `pnpm run build`

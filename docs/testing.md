@@ -1644,6 +1644,11 @@
 - Cache context list smoke (bounded + bannerless for automation): `pnpm tsx bin/auracall.ts cache context list --provider grok --limit 5 --json-only`
 - Cache context keyword search smoke: `pnpm tsx bin/auracall.ts cache context search "oracle" --provider grok --limit 5`.
 - Cache context semantic search smoke: `OPENAI_API_KEY=... pnpm tsx bin/auracall.ts cache context semantic-search "oracle" --provider grok --limit 5`.
+- Asset readback parity smoke: `pnpm run smoke:asset-readback-parity` checks
+  one known media generation through installed `auracall api archive`,
+  installed `auracall api search`, and installed MCP `search_projection`. Use
+  `-- --media-generation-id <id>` to target a different durable media
+  generation that should have an available generated artifact.
 - Cache-only commands such as `cache export`, `cache context list`, and
   `cache context get` should read provider cache state without resolving or
   launching a live browser target.

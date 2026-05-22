@@ -16534,3 +16534,10 @@ browser-stage lifecycle observability, not transcript truncation.
   `search_projection` MCP tool now wraps the shared search projection service,
   including account-mirror rows, archive rows, cache availability filters,
   materialization filters, facets, and cursor paging without browser work.
+
+- 2026-05-22: Asset readback parity should have a cheap installed-runtime
+  regression check. `pnpm run smoke:asset-readback-parity` now queries one
+  known media generation through installed `auracall api archive`, installed
+  `auracall api search`, and installed MCP `search_projection`, then verifies
+  all three surfaces report the same available generated artifact with an asset
+  route.
