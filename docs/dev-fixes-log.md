@@ -16541,3 +16541,9 @@ browser-stage lifecycle observability, not transcript truncation.
   `auracall api search`, and installed MCP `search_projection`, then verifies
   all three surfaces report the same available generated artifact with an asset
   route.
+
+- 2026-05-22: The compact operator preflight should catch asset-cache readback
+  drift before live dogfood. `pnpm run preflight:lazy-live-follow` now runs the
+  installed-runtime asset readback parity smoke after user-runtime install and
+  before the installed MCP status smokes, so archive/search/MCP cache evidence
+  is part of the same operator release gate.

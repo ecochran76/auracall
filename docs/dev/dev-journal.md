@@ -31834,3 +31834,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     scripts/smoke-asset-readback-parity.ts docs/testing.md
     docs/dev-fixes-log.md docs/dev/dev-journal.md`
   - `pnpm run build`
+
+## Turn 228 | 2026-05-22
+
+- Goal: wire asset-cache readback parity into the compact operator preflight.
+- Change:
+  - `scripts/preflight-lazy-live-follow.ts` now runs
+    `smoke:asset-readback-parity` after the user-runtime install step.
+  - docs describe the installed archive/search/MCP asset readback gate as part
+    of `pnpm run preflight:lazy-live-follow`.
+- Verification:
+  - `pnpm run smoke:asset-readback-parity` returned `ok: true` for
+    `medgen_cf296426a263400bbd5a2690674052a5` with matching archive/search/MCP
+    item id `generated-artifact:medgen_cf296426a263400bbd5a2690674052a5:gemini-artifact:6a131154e90f7362:1:0`.
+  - `pnpm run check`
+  - `git diff --check -- scripts/preflight-lazy-live-follow.ts docs/testing.md
+    docs/dev-fixes-log.md docs/dev/dev-journal.md`
+  - Full `pnpm run preflight:lazy-live-follow` intentionally not run in this
+    slice because it performs `install:user-runtime`, which would package the
+    currently dirty operator UX lane.
