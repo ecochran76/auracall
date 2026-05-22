@@ -16528,3 +16528,9 @@ browser-stage lifecycle observability, not transcript truncation.
   with the same normalized filters as the dashboard, including
   `fileAvailable`, `assetAvailability`, `materialization`, cursor paging, and
   local API-key retry.
+
+- 2026-05-22: MCP callers need the same unified search projection as the
+  dashboard and CLI when archive-only search is too narrow. The
+  `search_projection` MCP tool now wraps the shared search projection service,
+  including account-mirror rows, archive rows, cache availability filters,
+  materialization filters, facets, and cursor paging without browser work.

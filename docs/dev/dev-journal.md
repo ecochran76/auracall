@@ -31790,3 +31790,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     medgen_cf296426a263400bbd5a2690674052a5 --kind artifact
     --asset-availability available --file-available true --limit 5 --json`
     returned one available Gemini generated artifact with an asset link.
+
+## Turn 226 | 2026-05-22
+
+- Goal: add MCP parity for the unified operator search projection.
+- Change:
+  - added `search_projection`, a read-only MCP tool over the shared
+    `SearchProjectionService`.
+  - wired MCP service construction to provide the same account-mirror,
+    archive, and archive-materialization-job inputs used by the HTTP search
+    projection.
+  - documented when to use `search_projection` versus archive-only
+    `run_archive_search`.
+- Verification:
+  - `pnpm vitest run tests/mcp.searchProjection.test.ts
+    tests/runtime.searchProjectionService.test.ts tests/mcp.server.test.ts
+    --maxWorkers 1`
+  - `pnpm run check`
+  - `git diff --check -- src/mcp/tools/searchProjection.ts src/mcp/server.ts
+    tests/mcp.searchProjection.test.ts tests/mcp.server.test.ts docs/mcp.md
+    docs/agent-workflows.md docs/dev-fixes-log.md docs/dev/dev-journal.md`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.

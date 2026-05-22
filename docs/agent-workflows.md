@@ -405,7 +405,8 @@ CLI parity is `auracall api archive --file-available true|false
 parity is `auracall api search --asset-availability available|unavailable|pending
 --materialization queued|running|succeeded|skipped|failed|cancelled|active|terminal`.
 MCP parity is `run_archive_search` with `fileAvailable` and
-`assetAvailability`.
+`assetAvailability` for archive-only reads, or `search_projection` for the full
+operator projection including materialization filters.
 
 Caller-owned validators and post-processors can attach their audit result with
 `POST /v1/archive/evidence`, CLI `auracall api archive-evidence`, or MCP

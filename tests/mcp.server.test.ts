@@ -83,6 +83,12 @@ describe('mcp server service wiring', () => {
       runArchiveService: expect.objectContaining({
         listItems: expect.any(Function),
       }),
+      archiveMaterializationJobService: expect.objectContaining({
+        listJobs: expect.any(Function),
+      }),
+      searchProjectionService: expect.objectContaining({
+        search: expect.any(Function),
+      }),
       mediaGenerationService,
       workbenchCapabilityReporter: workbenchReporter,
       accountMirrorStatusRegistry: expect.objectContaining({

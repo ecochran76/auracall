@@ -20,6 +20,7 @@ import { registerApiOpsBrowserStatusTool } from './tools/apiOpsBrowserStatus.js'
 import { registerRuntimeInspectTool } from './tools/runtimeInspect.js';
 import { registerRuntimeRunsRecentTool } from './tools/runtimeRunsRecent.js';
 import { registerRunArchiveTools } from './tools/runArchive.js';
+import { registerSearchProjectionTool } from './tools/searchProjection.js';
 import { registerConfigEntityTools } from './tools/configEntities.js';
 import { registerProjectEnsureTool } from './tools/projectEnsure.js';
 import { registerTenantPoolTeamEnsureTool } from './tools/tenantPoolTeamEnsure.js';
@@ -77,6 +78,10 @@ import {
   createArchiveMaterializationJobService,
   type ArchiveMaterializationJobService,
 } from '../runtime/archiveMaterializationJobService.js';
+import {
+  createSearchProjectionService,
+  type SearchProjectionService,
+} from '../runtime/searchProjectionService.js';
 
 export interface McpServiceBundle {
   resolvedUserConfig: ResolvedUserConfig;
@@ -90,6 +95,7 @@ export interface McpServiceBundle {
   accountMirrorCompletionService: ReturnType<typeof createAccountMirrorCompletionService>;
   runArchiveService: ReturnType<typeof createRunArchiveService>;
   archiveMaterializationJobService: ArchiveMaterializationJobService;
+  searchProjectionService: SearchProjectionService;
   agentTeamConfigService: AgentTeamConfigService;
   projectEnsureService: ProjectEnsureService;
   tenantPoolTeamEnsureService: TenantPoolTeamEnsureService;
@@ -144,6 +150,9 @@ export async function startMcpServer(): Promise<void> {
   registerRunArchiveTools(server, {
     service: services.runArchiveService,
     materializationJobService: services.archiveMaterializationJobService,
+  });
+  registerSearchProjectionTool(server, {
+    service: services.searchProjectionService,
   });
   registerConfigEntityTools(server, {
     service: services.agentTeamConfigService,
@@ -292,6 +301,11 @@ export async function createMcpServicesFromConfig(
     registry: accountMirrorStatusRegistry,
     persistence: accountMirrorPersistence,
   });
+  const searchProjectionService = createSearchProjectionService({
+    accountMirrorCatalogService,
+    runArchiveService,
+    archiveMaterializationJobService,
+  });
   const accountMirrorCompletionStore = createAccountMirrorCompletionStore({
     config: resolvedUserConfig as Record<string, unknown>,
   });
@@ -320,6 +334,7 @@ export async function createMcpServicesFromConfig(
     responseBatchService,
     runArchiveService,
     archiveMaterializationJobService,
+    searchProjectionService,
     mediaGenerationService,
     workbenchCapabilityReporter,
     accountMirrorStatusRegistry,

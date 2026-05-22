@@ -111,6 +111,20 @@ scoped keys, response batches, attachments, and polling rules, see
 - CLI parity: `auracall run status <id> --json` reads the same durable status
   envelope from local storage.
 
+### `search_projection`
+- Inputs: accepts optional `query`, `kind`, `provider`, `runtimeProfile`,
+  `tenant`, `status`, `fileAvailable`, `assetAvailability`,
+  `materialization`, `limit`, and `cursor`. `assetAvailability` may be
+  `available`, `unavailable`, or `pending`; `materialization` may be
+  `queued`, `running`, `succeeded`, `skipped`, `failed`, `cancelled`,
+  `active`, or `terminal`.
+- Behavior: reads the same unified operator search projection as
+  `GET /v1/search` and `auracall api search`, merging account-mirror catalog
+  rows with run-archive rows without launching provider browsers. Archive rows
+  include local file availability and latest archive materialization job
+  metadata when present.
+- Paging: returns `nextCursor`; pass that value as `cursor` for the next page.
+
 ### `run_archive_search` / `run_archive_item` / `run_archive_backfill` / `run_archive_attach_evidence`
 - Inputs: `run_archive_search` accepts optional `kind`, `provider`,
   `runtimeProfile`, `agent`, `team`, `responseId`, `batchId`, `status`,
@@ -129,8 +143,9 @@ scoped keys, response batches, attachments, and polling rules, see
   `status` and expose derived `runtimeState`, so MCP callers can filter for
   transient states such as `finalizing` without parsing response diagnostics.
   HTTP `/v1/archive` and MCP `run_archive_search` both expose cache-state
-  filters for `fileAvailable` and `assetAvailability`. HTTP `/v1/search`
-  additionally exposes latest archive materialization status filters.
+  filters for `fileAvailable` and `assetAvailability`. Use
+  `search_projection` when a caller needs account-mirror rows, cursor paging,
+  or latest archive materialization status filters.
 - Backfill: `run_archive_backfill` rebuilds that index from existing runtime
   records and is safe for operator repair workflows because it does not touch
   provider pages.
