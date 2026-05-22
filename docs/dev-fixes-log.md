@@ -16584,3 +16584,10 @@ browser-stage lifecycle observability, not transcript truncation.
   no-overflow behavior. The lazy-live-follow preflight runs the same smoke
   after user-runtime install so the packaged dashboard is checked before live
   dogfood.
+
+- 2026-05-22: Search asset counts need to refresh from materialized archive
+  evidence, not only from the materialization job ledger. The archive
+  materialization job smoke now backs `/v1/search` with the same mutable
+  fixture archive rows as the job service and proves the asset availability
+  facet and `assetAvailability=available` rows move from zero to one after a
+  materialization job completes and indexes a local asset.

@@ -1668,7 +1668,8 @@
   `pnpm run smoke:archive-materialization-jobs` seeds fixture queued,
   succeeded, skipped, and failed async materialization jobs in an isolated
   AuraCall home, then verifies HTTP, CLI-helper, and MCP job list/status
-  filters without provider or browser work.
+  filters plus `/v1/search` asset-availability reconciliation before and after
+  a materialization job completes, without provider or browser work.
 - Cache-only commands such as `cache export`, `cache context list`, and
   `cache context get` should read provider cache state without resolving or
   launching a live browser target.

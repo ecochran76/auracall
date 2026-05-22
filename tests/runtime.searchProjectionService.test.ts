@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AccountMirrorCatalogResult, AccountMirrorCatalogService } from '../src/accountMirror/catalogService.js';
-import type { ArchiveMaterializationJobListResult, ArchiveMaterializationJobService } from '../src/runtime/archiveMaterializationJobService.js';
-import type { RunArchiveListResult, RunArchiveService } from '../src/runtime/archiveService.js';
+import type {
+  ArchiveMaterializationJob,
+  ArchiveMaterializationJobListResult,
+  ArchiveMaterializationJobService,
+} from '../src/runtime/archiveMaterializationJobService.js';
+import type { RunArchiveItem, RunArchiveListResult, RunArchiveService } from '../src/runtime/archiveService.js';
 import { createSearchProjectionService } from '../src/runtime/searchProjectionService.js';
 
 const completeMirror = {
@@ -210,6 +214,181 @@ describe('search projection service', () => {
 
     const materializedArtifacts = await service.search({ kind: 'artifact', materialization: 'succeeded', limit: 10 });
     expect(materializedArtifacts.rows.map((row) => row.itemId)).toEqual(['generated_artifact:resp_1:legacy_readout.json']);
+  });
+
+  it('refreshes available asset facets after an archive materialization job completes', async () => {
+    const accountMirrorCatalogService: AccountMirrorCatalogService = {
+      readCatalog: vi.fn(async (): Promise<AccountMirrorCatalogResult> => ({
+        object: 'account_mirror_catalog' as const,
+        generatedAt: '2026-05-22T12:00:00.000Z',
+        kind: 'all' as const,
+        limit: 500,
+        entries: [],
+        metrics: { targets: 0, projects: 0, conversations: 0, artifacts: 0, files: 0, media: 0 },
+      })),
+      readItem: vi.fn(async () => null),
+    };
+    let archiveItem: RunArchiveItem = {
+      id: 'generated_artifact:resp_asset_refresh:artifact_1',
+      object: 'run_archive_item',
+      kind: 'generated_artifact',
+      source: 'runtime',
+      createdAt: '2026-05-22T12:00:00.000Z',
+      updatedAt: '2026-05-22T12:00:00.000Z',
+      title: 'artifact_1.json',
+      status: 'succeeded',
+      runtimeState: 'terminal',
+      provider: 'chatgpt',
+      runtimeProfile: 'wsl-chrome-3',
+      browserProfile: 'wsl-chrome-3',
+      projectId: 'Transcripts',
+      boundIdentityKey: 'ecochran76@gmail.com',
+      agentId: 'agent:pro-extended-chatgpt-soylei',
+      teamId: null,
+      responseId: 'resp_asset_refresh',
+      batchId: 'batch_asset_refresh',
+      batchIndex: 0,
+      mediaGenerationId: null,
+      providerConversationId: 'conv_asset_refresh',
+      providerConversationUrl: 'https://chatgpt.com/c/conv_asset_refresh',
+      artifactId: 'artifact_1',
+      fileName: null,
+      mimeType: null,
+      localPath: null,
+      uri: null,
+      cacheKey: null,
+      checksumSha256: null,
+      fileAvailable: false,
+      metadata: {},
+      links: {},
+    };
+    let jobs: ArchiveMaterializationJob[] = [];
+    const runArchiveService = {
+      listItems: vi.fn(async (request = {}): Promise<RunArchiveListResult> => {
+        const availability = archiveItem.fileAvailable === true ? 'available' : archiveItem.fileAvailable === false ? 'unavailable' : 'pending';
+        const items = [
+          archiveItem,
+        ].filter((item) => !request.kind || request.kind === 'all' || request.kind === item.kind)
+          .filter((item) => typeof request.fileAvailable !== 'boolean' || item.fileAvailable === request.fileAvailable)
+          .filter(() => !request.assetAvailability || request.assetAvailability === availability);
+        return {
+          object: 'run_archive' as const,
+          generatedAt: '2026-05-22T12:00:00.000Z',
+          kind: request.kind ?? 'all',
+          limit: request.limit ?? 500,
+          items,
+          metrics: {
+            total: items.length,
+            byKind: {
+              response: 0,
+              response_batch: 0,
+              team_run: 0,
+              media_generation: 0,
+              upload: 0,
+              generated_artifact: items.length,
+              provider_conversation: 0,
+              evidence: 0,
+            },
+          },
+        };
+      }),
+      readItem: vi.fn(async () => null),
+      readAsset: vi.fn(async () => null),
+      lookupAsset: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+      attachEvidence: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+      upsertResponseItems: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+      upsertBatchItems: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+      upsertMediaGenerationItems: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+      backfillIndex: vi.fn(async () => {
+        throw new Error('not used');
+      }),
+    } satisfies RunArchiveService;
+    const archiveMaterializationJobService = {
+      listJobs: vi.fn(async (): Promise<ArchiveMaterializationJobListResult> => ({
+        object: 'run_archive_materialization_jobs' as const,
+        generatedAt: '2026-05-22T12:00:00.000Z',
+        status: null,
+        archiveItemId: null,
+        limit: 500,
+        jobs,
+        metrics: {
+          total: jobs.length,
+          byStatus: jobs.reduce<Record<string, number>>((counts, job) => ({
+            ...counts,
+            [job.status]: (counts[job.status] ?? 0) + 1,
+          }), {}),
+          active: jobs.filter((job) => job.status === 'queued' || job.status === 'running').length,
+          terminal: jobs.filter((job) => job.status !== 'queued' && job.status !== 'running').length,
+        },
+      })),
+    } as unknown as ArchiveMaterializationJobService;
+
+    const service = createSearchProjectionService({
+      accountMirrorCatalogService,
+      runArchiveService,
+      archiveMaterializationJobService,
+      now: () => new Date('2026-05-22T12:00:00.000Z'),
+    });
+
+    const before = await service.search({ kind: 'artifact', limit: 10 });
+    expect(before.facets.assetAvailability).toEqual([{ value: 'unavailable', count: 1 }]);
+    expect((await service.search({ kind: 'artifact', assetAvailability: 'available', limit: 10 })).rows).toHaveLength(0);
+
+    archiveItem = {
+      ...archiveItem,
+      updatedAt: '2026-05-22T12:01:00.000Z',
+      fileName: 'artifact_1.json',
+      mimeType: 'application/json',
+      localPath: '/tmp/artifact_1.json',
+      cacheKey: 'sha256:artifact_1',
+      checksumSha256: 'artifact_1',
+      fileAvailable: true,
+      metadata: { materialization: { status: 'succeeded' } },
+      links: { asset: '/v1/archive/items/b64/artifact_1/asset' },
+    };
+    jobs = [
+      {
+        object: 'run_archive_materialization_job',
+        id: 'ramj_asset_refresh',
+        archiveItemId: archiveItem.id,
+        status: 'succeeded',
+        createdAt: '2026-05-22T12:00:30.000Z',
+        updatedAt: '2026-05-22T12:01:00.000Z',
+        startedAt: '2026-05-22T12:00:45.000Z',
+        completedAt: '2026-05-22T12:01:00.000Z',
+        attemptCount: 1,
+        result: null,
+        error: null,
+        message: 'Archive item materialized and indexed.',
+      },
+    ];
+
+    const after = await service.search({ kind: 'artifact', limit: 10 });
+    expect(after.facets.assetAvailability).toEqual([{ value: 'available', count: 1 }]);
+    expect(after.facets.materialization).toEqual([{ value: 'succeeded', count: 1 }]);
+
+    const available = await service.search({ kind: 'artifact', assetAvailability: 'available', limit: 10 });
+    expect(available.rows.map((row) => row.itemId)).toEqual(['generated_artifact:resp_asset_refresh:artifact_1']);
+    expect(available.rows[0]).toMatchObject({
+      metadata: {
+        fileAvailable: true,
+        materializationStatus: 'succeeded',
+        materializationJob: {
+          id: 'ramj_asset_refresh',
+          status: 'succeeded',
+        },
+      },
+    });
   });
 
   it('pages rows with opaque cursors', async () => {

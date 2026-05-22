@@ -32011,3 +32011,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     proving the compiled preflight path.
   - `pnpm run preflight:lazy-live-follow` passed end to end, including the new
     operator Search UX smoke immediately after user-runtime install.
+
+## Turn 234 | 2026-05-22
+
+- Goal: prove Search asset counts reconcile after archive materialization
+  completes.
+- Change:
+  - extended `smoke:archive-materialization-jobs` with a mutable fixture
+    archive service backing `/v1/search`.
+  - the smoke now checks Search before and after a successful materialization
+    job and verifies `assetAvailability=available`, the available/unavailable
+    facets, and `materialization=succeeded` rows update from the same archive
+    evidence.
+  - added unit coverage in `tests/runtime.searchProjectionService.test.ts` for
+    the Search projection refresh path.
+  - documented the stronger smoke in testing docs and fixes log.
+- Verification:
+  - `pnpm vitest run tests/runtime.searchProjectionService.test.ts
+    tests/runtime.archiveMaterializationJobService.test.ts --maxWorkers 1`
+  - `pnpm run smoke:archive-materialization-jobs` returned `ok: true` with
+    `search: materialization-asset-reconciliation`.
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run preflight:lazy-live-follow` passed end to end. A first preflight
+    attempt passed the new reconciliation checkpoint but hit a transient
+    existing `smoke:mcp-ops-browser` error; rerunning that smoke passed, and a
+    full preflight rerun passed. The MCP smoke now includes tool error content
+    if that failure recurs.

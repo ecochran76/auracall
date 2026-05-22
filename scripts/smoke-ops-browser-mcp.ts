@@ -193,7 +193,9 @@ async function main(): Promise<void> {
       mcpBin: options.mcpBin,
       port: server.port,
     });
-    if (result.isError) throw new Error('MCP api_ops_browser_status returned an error result.');
+    if (result.isError) {
+      throw new Error(`MCP api_ops_browser_status returned an error result: ${JSON.stringify(result.content)}`);
+    }
     const structuredContent = result.structuredContent as {
       dashboardUrl?: unknown;
       dashboard?: {
