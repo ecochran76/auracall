@@ -16516,3 +16516,9 @@ browser-stage lifecycle observability, not transcript truncation.
   `fileAvailable` and `assetAvailability`; `/v1/search` accepts the same cache
   filters plus latest materialization-job status filters, and promotes file
   availability plus job metadata into search-row metadata for UX consumers.
+
+- 2026-05-22: Archive cache-state filters need CLI and MCP parity so agents can
+  inspect uploaded/generated file availability without hand-building HTTP
+  query strings. `auracall api archive` now forwards `--file-available` and
+  `--asset-availability`, and MCP `run_archive_search` accepts the matching
+  `fileAvailable` and `assetAvailability` inputs.

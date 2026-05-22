@@ -400,6 +400,9 @@ metadata. `GET /v1/archive` accepts `fileAvailable=true|false` and
 same cache filters plus `materialization=queued|running|succeeded|skipped|failed|cancelled|active|terminal`;
 search rows include row metadata for local file availability and the latest
 archive materialization job when one exists.
+CLI parity is `auracall api archive --file-available true|false
+--asset-availability available|unavailable|pending`; MCP parity is
+`run_archive_search` with `fileAvailable` and `assetAvailability`.
 
 Caller-owned validators and post-processors can attach their audit result with
 `POST /v1/archive/evidence`, CLI `auracall api archive-evidence`, or MCP

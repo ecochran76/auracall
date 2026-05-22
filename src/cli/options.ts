@@ -142,6 +142,25 @@ export function parseSearchOption(value: string): boolean {
   throw new InvalidArgumentError('Search mode must be "on" or "off".');
 }
 
+export function parseBooleanOption(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (['on', 'true', '1', 'yes'].includes(normalized)) {
+    return true;
+  }
+  if (['off', 'false', '0', 'no'].includes(normalized)) {
+    return false;
+  }
+  throw new InvalidArgumentError('Value must be true or false.');
+}
+
+export function parseAssetAvailabilityOption(value: string): 'available' | 'unavailable' | 'pending' {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === 'available' || normalized === 'unavailable' || normalized === 'pending') {
+    return normalized;
+  }
+  throw new InvalidArgumentError('Asset availability must be available, unavailable, or pending.');
+}
+
 export function normalizeModelOption(value: string | undefined): string {
   return (value ?? '').trim();
 }

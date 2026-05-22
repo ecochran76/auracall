@@ -114,8 +114,10 @@ scoped keys, response batches, attachments, and polling rules, see
 ### `run_archive_search` / `run_archive_item` / `run_archive_backfill` / `run_archive_attach_evidence`
 - Inputs: `run_archive_search` accepts optional `kind`, `provider`,
   `runtimeProfile`, `agent`, `team`, `responseId`, `batchId`, `status`,
-  `query`, and `limit`. `run_archive_item` accepts one stable archive `id`.
-  `run_archive_backfill` has no inputs. `run_archive_attach_evidence` accepts
+  `fileAvailable`, `assetAvailability`, `query`, and `limit`.
+  `assetAvailability` may be `available`, `unavailable`, or `pending`.
+  `run_archive_item` accepts one stable archive `id`. `run_archive_backfill`
+  has no inputs. `run_archive_attach_evidence` accepts
   caller-owned evidence with required `producer` and `schema`, optional
   `id`, `status`, `title`, `summary`, `responseId`, `batchId`,
   `archiveItemId`, `providerConversationId`, `data`, and `metadata`.
@@ -126,9 +128,9 @@ scoped keys, response batches, attachments, and polling rules, see
   attached evidence records. Runtime-backed archive items preserve raw run
   `status` and expose derived `runtimeState`, so MCP callers can filter for
   transient states such as `finalizing` without parsing response diagnostics.
-  HTTP `/v1/archive` and `/v1/search` additionally expose cache-state filters
-  for `fileAvailable`, `assetAvailability`, and latest archive materialization
-  status; MCP parity for those filters is still intentionally narrower.
+  HTTP `/v1/archive` and MCP `run_archive_search` both expose cache-state
+  filters for `fileAvailable` and `assetAvailability`. HTTP `/v1/search`
+  additionally exposes latest archive materialization status filters.
 - Backfill: `run_archive_backfill` rebuilds that index from existing runtime
   records and is safe for operator repair workflows because it does not touch
   provider pages.

@@ -93,6 +93,8 @@ describe('mcp run archive tools', () => {
       kind: 'upload',
       batchId: 'batch_1',
       projectId: 'project_1',
+      fileAvailable: false,
+      assetAvailability: 'unavailable',
       limit: 5,
     });
 
@@ -100,6 +102,8 @@ describe('mcp run archive tools', () => {
       kind: 'upload',
       batchId: 'batch_1',
       projectId: 'project_1',
+      fileAvailable: false,
+      assetAvailability: 'unavailable',
       limit: 5,
     });
     expect(result).toMatchObject({

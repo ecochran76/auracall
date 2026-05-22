@@ -31729,3 +31729,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `medgen_cf296426a263400bbd5a2690674052a5` returned one available Gemini
     generated artifact with an asset link, and the unavailable search filter
     returned zero rows.
+
+## Turn 224 | 2026-05-22
+
+- Goal: give CLI and MCP archive callers the same cache-state filters as
+  `/v1/archive`.
+- Change:
+  - `auracall api archive` now accepts `--file-available true|false` and
+    `--asset-availability available|unavailable|pending`.
+  - MCP `run_archive_search` accepts `fileAvailable` and
+    `assetAvailability`, forwarding both through the shared archive service.
+  - docs now describe CLI/MCP parity and keep `/v1/search` materialization
+    filtering as the HTTP-only broader search projection.
+- Verification:
+  - `pnpm vitest run tests/cli/apiRunArchiveCommand.test.ts
+    tests/mcp.runArchive.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `git diff --check -- bin/auracall.ts src/cli/options.ts
+    src/cli/apiRunArchiveCommand.ts src/mcp/tools/runArchive.ts
+    tests/cli/apiRunArchiveCommand.test.ts tests/mcp.runArchive.test.ts
+    docs/agent-workflows.md docs/mcp.md docs/dev-fixes-log.md
+    docs/dev/dev-journal.md`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - first live CLI archive query raced the restarted listener and returned
+    `ECONNREFUSED`; retry after the API log showed the listener bound returned
+    one available Gemini generated artifact with an asset link.

@@ -15,6 +15,8 @@ export interface ApiRunArchiveCliOptions {
   responseId?: string | null;
   batchId?: string | null;
   status?: string | null;
+  fileAvailable?: boolean | null;
+  assetAvailability?: string | null;
   query?: string | null;
   limit?: number | null;
 }
@@ -83,6 +85,8 @@ export async function readApiRunArchiveForCli(
   appendOptionalSearchParam(url, 'responseId', options.responseId);
   appendOptionalSearchParam(url, 'batchId', options.batchId);
   appendOptionalSearchParam(url, 'status', options.status);
+  appendOptionalBooleanSearchParam(url, 'fileAvailable', options.fileAvailable);
+  appendOptionalSearchParam(url, 'assetAvailability', options.assetAvailability);
   appendOptionalSearchParam(url, 'q', options.query);
   if (typeof options.limit === 'number' && Number.isFinite(options.limit)) {
     url.searchParams.set('limit', String(Math.max(0, Math.trunc(options.limit))));
@@ -506,6 +510,10 @@ export function formatApiRunArchiveEvidenceCliSummary(payload: unknown): string 
 function appendOptionalSearchParam(url: URL, key: string, value: string | null | undefined): void {
   const normalized = typeof value === 'string' ? value.trim() : '';
   if (normalized) url.searchParams.set(key, normalized);
+}
+
+function appendOptionalBooleanSearchParam(url: URL, key: string, value: boolean | null | undefined): void {
+  if (typeof value === 'boolean') url.searchParams.set(key, String(value));
 }
 
 function normalizeHost(value: string | null | undefined): string {

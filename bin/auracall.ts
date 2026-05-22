@@ -38,6 +38,8 @@ import {
   collectPaths,
   collectModelList,
   parseFloatOption,
+  parseBooleanOption,
+  parseAssetAvailabilityOption,
   parseIntOption,
   parseSearchOption,
   usesDefaultStatusFilters,
@@ -1237,6 +1239,8 @@ apiCommand
   .option('--response-id <id>', 'Filter by response id.')
   .option('--batch-id <id>', 'Filter by response batch id.')
   .option('--status <status>', 'Filter by status.')
+  .option('--file-available <true|false>', 'Filter by local file availability.', parseBooleanOption)
+  .option('--asset-availability <state>', 'Filter cache state: available, unavailable, pending.', parseAssetAvailabilityOption)
   .option('--query <text>', 'Text search across archive metadata.')
   .option('--limit <count>', 'Maximum items to read.', parseIntOption, 50)
   .option('--json', 'Emit machine-readable JSON output.', false)
@@ -1260,6 +1264,8 @@ apiCommand
       responseId: commandOptions.responseId,
       batchId: commandOptions.batchId,
       status: commandOptions.status,
+      fileAvailable: commandOptions.fileAvailable,
+      assetAvailability: commandOptions.assetAvailability,
       query: commandOptions.query,
       limit: commandOptions.limit,
     });

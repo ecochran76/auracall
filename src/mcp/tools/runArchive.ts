@@ -30,6 +30,8 @@ const runArchiveSearchInputShape = {
   responseId: z.string().min(1).optional(),
   batchId: z.string().min(1).optional(),
   status: z.string().min(1).optional(),
+  fileAvailable: z.boolean().optional(),
+  assetAvailability: z.enum(['available', 'unavailable', 'pending']).optional(),
   query: z.string().min(1).optional(),
   limit: z.number().int().nonnegative().optional(),
 } satisfies z.ZodRawShape;

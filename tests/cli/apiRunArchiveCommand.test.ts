@@ -24,7 +24,7 @@ describe('api run archive CLI helpers', () => {
   test('reads archive search with filters from the local API', async () => {
     const fetchImpl = vi.fn(async (url: URL) => {
       expect(url.toString()).toBe(
-        'http://127.0.0.1:18095/v1/archive?kind=upload&provider=chatgpt&runtimeProfile=default&projectId=project_1&batchId=batch_1&q=packet&limit=3',
+        'http://127.0.0.1:18095/v1/archive?kind=upload&provider=chatgpt&runtimeProfile=default&projectId=project_1&batchId=batch_1&fileAvailable=true&assetAvailability=available&q=packet&limit=3',
       );
       return new Response(JSON.stringify({
         object: 'run_archive',
@@ -46,6 +46,8 @@ describe('api run archive CLI helpers', () => {
       runtimeProfile: 'default',
       projectId: 'project_1',
       batchId: 'batch_1',
+      fileAvailable: true,
+      assetAvailability: 'available',
       query: 'packet',
       limit: 3,
     }, fetchImpl as never)).resolves.toMatchObject({
