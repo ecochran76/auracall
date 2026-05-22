@@ -31902,3 +31902,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check -- scripts/smoke-archive-materialization-jobs.ts
     package.json docs/testing.md docs/dev-fixes-log.md
     docs/dev/dev-journal.md`
+
+## Turn 231 | 2026-05-22
+
+- Goal: add async archive materialization job polling coverage to the compact
+  operator preflight.
+- Change:
+  - `scripts/preflight-lazy-live-follow.ts` now runs
+    `smoke:archive-materialization-jobs` after installed asset readback and
+    before installed MCP status smokes.
+  - docs describe the archive materialization job filter smoke as part of the
+    compact lazy-live-follow preflight.
+- Verification:
+  - `pnpm run smoke:archive-materialization-jobs`
+  - `pnpm run smoke:asset-readback-parity`
+  - `pnpm run check`
+  - `git diff --check -- scripts/preflight-lazy-live-follow.ts docs/testing.md
+    docs/dev-fixes-log.md docs/dev/dev-journal.md`

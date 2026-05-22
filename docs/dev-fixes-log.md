@@ -16559,3 +16559,9 @@ browser-stage lifecycle observability, not transcript truncation.
   smoke:archive-materialization-jobs` now seeds fixture queued, succeeded,
   skipped, and failed jobs in an isolated AuraCall home and verifies HTTP,
   CLI-helper, and MCP list/status filters without provider or browser work.
+
+- 2026-05-22: The compact operator preflight should include async archive
+  materialization job polling, not just asset readback. `pnpm run
+  preflight:lazy-live-follow` now runs `smoke:archive-materialization-jobs`
+  after installed archive/search/MCP asset readback and before the installed
+  MCP status smokes.

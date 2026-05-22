@@ -304,9 +304,9 @@
         ops-browser preflight run-detail, operator API-key issue,
         OpenAI-compatible client auth, scoped client handoff workflow,
         setup-plus-batch agent workflow, user runtime install, installed
-        archive/search/MCP asset readback, installed MCP status, API log-tail,
-        ops-browser MCP, and provider-guard MCP smokes in sequence before live
-        dogfood.
+        archive/search/MCP asset readback, archive materialization job filters,
+        installed MCP status, API log-tail, ops-browser MCP, and provider-guard
+        MCP smokes in sequence before live dogfood.
         When started through the API/dashboard,
         `/status.preflight.lazyLiveFollowRun.steps` and `/ops/browser` show
         per-step progress before the run completes.
