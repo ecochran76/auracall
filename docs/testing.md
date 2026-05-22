@@ -297,6 +297,13 @@
         against an isolated fixture home/config and asserts
         `account_mirror_provider_guard_clear` list/call/status behavior
         without provider/browser work
+      - installed-runtime operator Search UX smoke:
+        `pnpm run smoke:operator-search-ux`; it rebuilds the operator bundle,
+        starts a fixture local API server, renders `/dashboard?nav=search`
+        with URL-backed `assets=available` and
+        `materialization=succeeded` filters through Chromium, verifies the
+        cached-assets toggle, copy-current-search-url action, and mobile
+        no-overflow behavior without provider/browser dispatcher work
       - compact lazy-live-follow operator preflight:
         `pnpm run preflight:lazy-live-follow`; it runs the completion-control,
         completion-hydration, live-follow health/diagnostics parity,
@@ -304,9 +311,10 @@
         ops-browser preflight run-detail, operator API-key issue,
         OpenAI-compatible client auth, scoped client handoff workflow,
         setup-plus-batch agent workflow, user runtime install, installed
-        archive/search/MCP asset readback, archive materialization job filters,
-        installed MCP status, API log-tail, ops-browser MCP, and provider-guard
-        MCP smokes in sequence before live dogfood.
+        operator Search UX controls, installed archive/search/MCP asset
+        readback, archive materialization job filters, installed MCP status,
+        API log-tail, ops-browser MCP, and provider-guard MCP smokes in
+        sequence before live dogfood.
         When started through the API/dashboard,
         `/status.preflight.lazyLiveFollowRun.steps` and `/ops/browser` show
         per-step progress before the run completes.
@@ -1650,6 +1658,12 @@
   installed `auracall api search`, and installed MCP `search_projection`. Use
   `-- --media-generation-id <id>` to target a different durable media
   generation that should have an available generated artifact.
+- Operator Search UX smoke: `pnpm run smoke:operator-search-ux` rebuilds the
+  operator bundle, starts a fixture local API server, and uses Chromium to
+  verify the Search dashboard's URL-backed cache-state filters, cached-assets
+  toggle, copy-current-search-url action, and mobile no-overflow behavior
+  without provider work. Set `AURACALL_OPERATOR_UX_SMOKE_CHROME_PATH` if the
+  local Chromium executable is not on one of the default Linux paths.
 - Archive materialization job filter smoke:
   `pnpm run smoke:archive-materialization-jobs` seeds fixture queued,
   succeeded, skipped, and failed async materialization jobs in an isolated

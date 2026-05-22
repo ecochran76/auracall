@@ -31987,3 +31987,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     overflow; screenshots were written to `/tmp/auracall-search-desktop.png`,
     `/tmp/auracall-search-filter-toggle.png`, and
     `/tmp/auracall-search-mobile.png`.
+
+## Turn 233 | 2026-05-22
+
+- Goal: add deterministic preflight coverage for the operator Search
+  cache-state controls.
+- Change:
+  - added `scripts/smoke-operator-search-ux.ts`.
+  - added `pnpm run smoke:operator-search-ux`, which rebuilds the operator UX
+    bundle and renders the Search dashboard through Chromium against a fixture
+    local API server.
+  - wired the compiled smoke into `preflight:lazy-live-follow` immediately
+    after user-runtime install so the packaged dashboard is checked before
+    live dogfood.
+  - documented the new smoke in testing docs and fixes log.
+- Verification:
+  - `pnpm run smoke:operator-search-ux` returned `ok: true` for desktop URL
+    filters, mobile URL filters, cached asset toggle, copy Search URL action,
+    and mobile no-overflow behavior.
+  - `pnpm run check`
+  - `pnpm run build`
+  - `node dist/scripts/smoke-operator-search-ux.js` returned `ok: true`,
+    proving the compiled preflight path.
+  - `pnpm run preflight:lazy-live-follow` passed end to end, including the new
+    operator Search UX smoke immediately after user-runtime install.

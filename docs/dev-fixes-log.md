@@ -16574,3 +16574,13 @@ browser-stage lifecycle observability, not transcript truncation.
   lets operators queue or track archive materialization jobs from matching
   rows. Leaving Search also clears the materialization filter with the other
   Search-only URL state.
+
+- 2026-05-22: The compact operator preflight should catch rendered Search UX
+  drift after backend asset/materialization controls change. `pnpm run
+  smoke:operator-search-ux` now rebuilds the operator bundle, renders
+  `/dashboard?nav=search&assets=available&materialization=succeeded` through
+  Chromium against a fixture local API server, and verifies URL preservation,
+  the cached-assets toggle, copy-current-search-url action, and mobile
+  no-overflow behavior. The lazy-live-follow preflight runs the same smoke
+  after user-runtime install so the packaged dashboard is checked before live
+  dogfood.

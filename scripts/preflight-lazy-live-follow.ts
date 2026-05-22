@@ -24,6 +24,7 @@ const steps: Step[] = [
   createScriptStep('scoped client handoff workflow', 'smoke:scoped-client-handoff', 'smoke-scoped-client-handoff-workflow'),
   createScriptStep('ChE 4470 grading batch workflow', 'smoke:che447-grading-batch', 'smoke-che447-grading-batch'),
   createInstallRuntimeStep(),
+  createScriptStep('installed operator Search UX controls', 'smoke:operator-search-ux', 'smoke-operator-search-ux'),
   createScriptStep('installed archive/search/MCP asset readback', 'smoke:asset-readback-parity', 'smoke-asset-readback-parity'),
   createScriptStep('archive materialization job filters', 'smoke:archive-materialization-jobs', 'smoke-archive-materialization-jobs'),
   createScriptStep('installed MCP api_status and api_log_tail', 'smoke:mcp-api-status', 'smoke-api-status-mcp'),
