@@ -7,7 +7,7 @@ import {
 
 const dashboardHtml = `
 <nav aria-label="AuraCall sections">
-  <a href="/ops/browser" data-route-key="dashboardPath" aria-current="page">Browser Ops</a>
+  <a href="/ops/browser" data-route-key="debugDashboardPath" aria-current="page">Browser Ops</a>
   <a href="/account-mirror" data-route-key="accountMirrorPath">Account Mirror</a>
   <a href="/account-mirror/preview-session" data-route-key="previewSessionPath">Preview Session</a>
   <a id="navConfig" href="/config" data-route-key="configPath">Config</a>
@@ -55,7 +55,7 @@ const dashboardHtml = `
 <div id="mirrorControlResultToast" class="notice control-result-toast">Completion control succeeded Live follow started</div>
 <pre id="mirrorTargets">status.liveFollow.targets</pre>
 <script>
-  const OPERATOR_DASHBOARD_ROUTES = { dashboardPath: '/ops/browser', accountMirrorPath: '/account-mirror', previewSessionPath: '/account-mirror/preview-session', configPath: '/config', agentsPath: '/agents' };
+  const OPERATOR_DASHBOARD_ROUTES = { dashboardPath: '/dashboard', debugDashboardPath: '/ops/browser', accountMirrorPath: '/account-mirror', previewSessionPath: '/account-mirror/preview-session', configPath: '/config', agentsPath: '/agents' };
   function setMirrorControlNotice(message, tone) {}
   function setMirrorControlResultToast(input) { return input.operation.nextAttemptAt; }
   function confirmMirrorCompletionCancel(id, action = 'cancel') { if (action === 'cancel') return window.confirm('Cancel live-follow completion ' + id + '?'); return 'Cancel not sent'; }

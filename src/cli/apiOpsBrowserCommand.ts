@@ -333,7 +333,7 @@ function summarizeDashboardHtml(html: string): ApiOpsBrowserDashboardSummary {
       && html.includes('Agents / Teams')
       && html.includes('Config'),
     hasConfigBackedNavigationRoutes: html.includes('OPERATOR_DASHBOARD_ROUTES')
-      && html.includes('data-route-key="dashboardPath"')
+      && html.includes('data-route-key="debugDashboardPath"')
       && html.includes('data-route-key="accountMirrorPath"')
       && html.includes('data-route-key="previewSessionPath"')
       && html.includes('data-route-key="configPath"')

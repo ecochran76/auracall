@@ -16547,3 +16547,9 @@ browser-stage lifecycle observability, not transcript truncation.
   installed-runtime asset readback parity smoke after user-runtime install and
   before the installed MCP status smokes, so archive/search/MCP cache evidence
   is part of the same operator release gate.
+
+- 2026-05-22: Browser Ops preflight route assertions should follow the current
+  service-discovery route model. The `/ops/browser` debug dashboard nav now
+  uses `debugDashboardPath`, while the React operator dashboard owns
+  `dashboardPath`; `api ops-browser` contract checks now accept that split
+  instead of requiring the Browser Ops nav link to advertise `dashboardPath`.

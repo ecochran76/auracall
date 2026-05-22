@@ -31853,3 +31853,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Full `pnpm run preflight:lazy-live-follow` intentionally not run in this
     slice because it performs `install:user-runtime`, which would package the
     currently dirty operator UX lane.
+
+## Turn 229 | 2026-05-22
+
+- Goal: run the full compact operator preflight without packaging the dirty UX
+  lane, then fix the first backend-owned drift it exposes.
+- Change:
+  - ran the preflight from a clean detached worktree at `4b3f8e65` so
+    `install:user-runtime` used committed backend state rather than uncommitted
+    UX files.
+  - updated the `api ops-browser` dashboard route contract to accept
+    `debugDashboardPath` for the `/ops/browser` debug dashboard nav link.
+  - kept `dashboardPath` as the React operator dashboard route and
+    `debugDashboardPath` as the Browser Ops route.
+- Verification:
+  - clean-worktree `pnpm run preflight:lazy-live-follow` at `4b3f8e65`
+    initially failed at `smoke:ops-browser-control` with stale
+    `dashboardPath` route-key expectations.
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts --maxWorkers 1`
+  - `pnpm run smoke:ops-browser-control`
+  - `pnpm run check`
+  - `git diff --check -- src/cli/apiOpsBrowserCommand.ts
+    tests/cli/apiOpsBrowserCommand.test.ts docs/dev-fixes-log.md
+    docs/dev/dev-journal.md`
+  - patched clean-worktree `pnpm run preflight:lazy-live-follow` passed end to
+    end, including install-user-runtime, installed archive/search/MCP asset
+    readback, installed MCP `api_status`, installed MCP
+    `api_ops_browser_status`, and installed MCP provider-guard clearance.
