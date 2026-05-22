@@ -31919,3 +31919,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run check`
   - `git diff --check -- scripts/preflight-lazy-live-follow.ts docs/testing.md
     docs/dev-fixes-log.md docs/dev/dev-journal.md`
+  - clean-worktree `pnpm run preflight:lazy-live-follow` at `beb498a6`
+    passed end to end after `install:user-runtime`, including installed
+    archive/search/MCP asset readback, archive materialization job filters,
+    installed MCP `api_status`, installed MCP `api_ops_browser_status`, and
+    installed MCP provider-guard clearance.
