@@ -31707,3 +31707,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `auracall media inspect medgen_cf296426a263400bbd5a2690674052a5
     --json` reported `artifactCount: 1`, `cachedArtifactCount: 1`, and
     `missingArtifactCount: 0`.
+
+## Turn 223 | 2026-05-22
+
+- Goal: expose refreshed generated-asset cache state through the archive/search
+  API path used by the operator UX.
+- Change:
+  - `/v1/archive` accepts `fileAvailable` and `assetAvailability` filters.
+  - `/v1/search` accepts matching cache filters plus latest archive
+    materialization status filters.
+  - search rows now carry file availability and latest materialization job
+    metadata for archive-backed rows.
+- Verification:
+  - `pnpm vitest run tests/runtime.searchProjectionService.test.ts
+    tests/http.responsesServer.test.ts --maxWorkers 1`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - live authenticated `/v1/search` and `/v1/archive` checks for
+    `medgen_cf296426a263400bbd5a2690674052a5` returned one available Gemini
+    generated artifact with an asset link, and the unavailable search filter
+    returned zero rows.

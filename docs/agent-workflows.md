@@ -394,6 +394,13 @@ For file-bearing archive items, use the `/asset` route to stream the local
 file. It returns 404 when the archive item is not a file, the local path is
 missing, or the file no longer exists.
 
+HTTP archive/search callers can separate cache states without parsing raw
+metadata. `GET /v1/archive` accepts `fileAvailable=true|false` and
+`assetAvailability=available|unavailable|pending`. `GET /v1/search` accepts the
+same cache filters plus `materialization=queued|running|succeeded|skipped|failed|cancelled|active|terminal`;
+search rows include row metadata for local file availability and the latest
+archive materialization job when one exists.
+
 Caller-owned validators and post-processors can attach their audit result with
 `POST /v1/archive/evidence`, CLI `auracall api archive-evidence`, or MCP
 `run_archive_attach_evidence`. Evidence records require `producer` and

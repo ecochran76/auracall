@@ -55,6 +55,8 @@ export interface RunArchiveListRequest {
   responseId?: string | null;
   batchId?: string | null;
   status?: string | null;
+  fileAvailable?: boolean | null;
+  assetAvailability?: 'available' | 'unavailable' | 'pending' | null;
   query?: string | null;
   limit?: number | null;
 }
@@ -929,6 +931,10 @@ function matchesRequest(item: RunArchiveItem, request: RunArchiveListRequest & {
   if (request.responseId && item.responseId !== request.responseId) return false;
   if (request.batchId && item.batchId !== request.batchId) return false;
   if (request.status && item.status !== request.status && item.runtimeState !== request.status) return false;
+  if (typeof request.fileAvailable === 'boolean' && item.fileAvailable !== request.fileAvailable) return false;
+  if (request.assetAvailability === 'available' && item.fileAvailable !== true) return false;
+  if (request.assetAvailability === 'unavailable' && item.fileAvailable !== false) return false;
+  if (request.assetAvailability === 'pending' && item.fileAvailable !== null) return false;
   if (request.query && !itemMatchesQuery(item, request.query)) return false;
   return true;
 }

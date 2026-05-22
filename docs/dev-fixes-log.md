@@ -16510,3 +16510,9 @@ browser-stage lifecycle observability, not transcript truncation.
   returns a materialized artifact for a media type, the media service now drops
   older same-type artifact records that never had a local path or remote URI,
   while preserving existing real artifacts and unrelated placeholder types.
+
+- 2026-05-22: Operator search and archive API reads need cache-state filters
+  that match the backend's refreshed file evidence. `/v1/archive` now accepts
+  `fileAvailable` and `assetAvailability`; `/v1/search` accepts the same cache
+  filters plus latest materialization-job status filters, and promotes file
+  availability plus job metadata into search-row metadata for UX consumers.

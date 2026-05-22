@@ -28,6 +28,8 @@ import type { AccountMirrorCompletionOperation } from '../src/accountMirror/comp
 import type { AccountMirrorSchedulerPassResult } from '../src/accountMirror/schedulerService.js';
 import type { AccountMirrorSchedulerPassLedger } from '../src/accountMirror/schedulerLedger.js';
 import { resetLiveRuntimeRunServiceStateRegistryForTests } from '../src/runtime/liveServiceStateRegistry.js';
+import type { ArchiveMaterializationJobListRequest } from '../src/runtime/archiveMaterializationJobService.js';
+import type { SearchProjectionResult } from '../src/runtime/searchProjectionService.js';
 import { createExecutionRuntimeControl } from '../src/runtime/control.js';
 import { writeTaskRunSpecStoredRecord } from '../src/teams/store.js';
 import { createTaskRunSpec } from '../src/teams/model.js';
@@ -2616,12 +2618,12 @@ describe('http responses adapter', () => {
       },
     }));
     const readJob = vi.fn(async (id: string) => (id === job.id ? job : null));
-    const listJobs = vi.fn(async (request: { status?: string; archiveItemId?: string; limit?: number }) => ({
+    const listJobs = vi.fn(async (request?: ArchiveMaterializationJobListRequest) => ({
       object: 'run_archive_materialization_jobs' as const,
       generatedAt: '2026-05-19T12:00:01.000Z',
-      status: request.status ?? null,
-      archiveItemId: request.archiveItemId ?? null,
-      limit: request.limit ?? 50,
+      status: request?.status ?? null,
+      archiveItemId: request?.archiveItemId ?? null,
+      limit: request?.limit ?? 50,
       jobs: [job],
       metrics: {
         total: 1,
@@ -2744,7 +2746,7 @@ describe('http responses adapter', () => {
   });
 
   it('reports unified search rows through the API surface', async () => {
-    const search = vi.fn(async () => ({
+    const search = vi.fn(async (): Promise<SearchProjectionResult> => ({
       object: 'search_results' as const,
       generatedAt: '2026-05-18T14:00:00.000Z',
       query: {
@@ -2754,6 +2756,9 @@ describe('http responses adapter', () => {
         tenant: null,
         kind: 'artifact',
         status: null,
+        fileAvailable: null,
+        assetAvailability: null,
+        materialization: null,
         limit: 2,
         cursor: null,
       },
@@ -2772,6 +2777,7 @@ describe('http responses adapter', () => {
           tenant: 'eric.cochran@soylei.com',
           projectId: 'Transcripts',
           status: 'succeeded',
+          runtimeState: null,
           sortTime: '2026-05-18T13:00:00.000Z',
           updatedAt: '2026-05-18T13:00:00.000Z',
           itemId: 'generated_artifact:resp_1:legacy_readout.json',
@@ -2790,6 +2796,8 @@ describe('http responses adapter', () => {
         runtimeProfiles: [{ value: 'wsl-chrome-3', count: 1 }],
         kinds: [{ value: 'artifact', count: 1 }],
         statuses: [{ value: 'succeeded', count: 1 }],
+        assetAvailability: [{ value: 'pending', count: 1 }],
+        materialization: [{ value: 'failed', count: 1 }],
       },
     }));
     const server = await createResponsesHttpServer(
@@ -2801,7 +2809,7 @@ describe('http responses adapter', () => {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:${server.port}/v1/search?q=readout&provider=chatgpt&runtimeProfile=wsl-chrome-3&kind=artifact&limit=2`,
+        `http://127.0.0.1:${server.port}/v1/search?q=readout&provider=chatgpt&runtimeProfile=wsl-chrome-3&kind=artifact&materialization=failed&limit=2`,
       );
       expect(response.status).toBe(200);
       expect(await response.json()).toMatchObject({
@@ -2824,6 +2832,9 @@ describe('http responses adapter', () => {
         tenant: undefined,
         kind: 'artifact',
         status: undefined,
+        fileAvailable: undefined,
+        assetAvailability: undefined,
+        materialization: 'failed',
         limit: 2,
         cursor: undefined,
       });

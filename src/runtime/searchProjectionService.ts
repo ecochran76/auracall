@@ -7,6 +7,11 @@ import type {
   RunArchiveListRequest,
   RunArchiveService,
 } from './archiveService.js';
+import type {
+  ArchiveMaterializationJob,
+  ArchiveMaterializationJobService,
+  ArchiveMaterializationJobStatus,
+} from './archiveMaterializationJobService.js';
 
 export type SearchProjectionSource = 'account_mirror' | 'run_archive';
 
@@ -17,6 +22,9 @@ export interface SearchProjectionRequest {
   tenant?: string | null;
   kind?: string | null;
   status?: string | null;
+  fileAvailable?: boolean | null;
+  assetAvailability?: 'available' | 'unavailable' | 'pending' | null;
+  materialization?: ArchiveMaterializationJobStatus | 'active' | 'terminal' | null;
   limit?: number | null;
   cursor?: string | null;
 }
@@ -63,6 +71,9 @@ export interface SearchProjectionResult {
     tenant: string | null;
     kind: string | null;
     status: string | null;
+    fileAvailable: boolean | null;
+    assetAvailability: 'available' | 'unavailable' | 'pending' | null;
+    materialization: ArchiveMaterializationJobStatus | 'active' | 'terminal' | null;
     limit: number;
     cursor: string | null;
   };
@@ -78,6 +89,8 @@ export interface SearchProjectionResult {
     runtimeProfiles: SearchProjectionFacetValue[];
     kinds: SearchProjectionFacetValue[];
     statuses: SearchProjectionFacetValue[];
+    assetAvailability: SearchProjectionFacetValue[];
+    materialization: SearchProjectionFacetValue[];
   };
 }
 
@@ -92,6 +105,9 @@ interface NormalizedSearchProjectionRequest {
   tenant: string | null;
   kind: string | null;
   status: string | null;
+  fileAvailable: boolean | null;
+  assetAvailability: 'available' | 'unavailable' | 'pending' | null;
+  materialization: ArchiveMaterializationJobStatus | 'active' | 'terminal' | null;
   limit: number;
   cursor: string | null;
 }
@@ -99,13 +115,14 @@ interface NormalizedSearchProjectionRequest {
 export function createSearchProjectionService(input: {
   accountMirrorCatalogService: AccountMirrorCatalogService;
   runArchiveService: RunArchiveService;
+  archiveMaterializationJobService?: ArchiveMaterializationJobService | null;
   now?: () => Date;
 }): SearchProjectionService {
   const now = input.now ?? (() => new Date());
   return {
     async search(request = {}) {
       const normalized = normalizeRequest(request);
-      const [catalog, archive] = await Promise.all([
+      const [catalog, archive, jobs] = await Promise.all([
         input.accountMirrorCatalogService.readCatalog({
           provider: normalizeProvider(normalized.provider),
           runtimeProfileId: normalized.runtimeProfile,
@@ -117,13 +134,17 @@ export function createSearchProjectionService(input: {
           provider: normalized.provider,
           runtimeProfile: normalized.runtimeProfile,
           status: normalized.status,
+          fileAvailable: normalized.fileAvailable,
+          assetAvailability: normalized.assetAvailability,
           query: normalized.query,
           limit: 500,
         }),
+        input.archiveMaterializationJobService?.listJobs({ limit: 500 }) ?? Promise.resolve(null),
       ]);
+      const materializationJobsByArchiveItemId = latestMaterializationJobsByArchiveItemId(jobs?.jobs ?? []);
       const rows = [
         ...catalog.entries.flatMap((entry) => rowsFromCatalogEntry(entry)),
-        ...archive.items.map(rowFromArchiveItem),
+        ...archive.items.map((item) => rowFromArchiveItem(item, materializationJobsByArchiveItemId.get(item.id) ?? null)),
       ]
         .filter((row) => matchesSearchRequest(row, normalized))
         .sort(compareRows);
@@ -140,6 +161,9 @@ export function createSearchProjectionService(input: {
           tenant: normalized.tenant,
           kind: normalized.kind,
           status: normalized.status,
+          fileAvailable: normalized.fileAvailable,
+          assetAvailability: normalized.assetAvailability,
+          materialization: normalized.materialization,
           limit: normalized.limit,
           cursor: normalized.cursor,
         },
@@ -155,6 +179,8 @@ export function createSearchProjectionService(input: {
           runtimeProfiles: facet(rows, (row) => row.runtimeProfileId),
           kinds: facet(rows, (row) => row.kind),
           statuses: facet(rows, (row) => row.status),
+          assetAvailability: facet(rows, assetAvailabilityForRow),
+          materialization: facet(rows, materializationStatusForRow),
         },
       };
     },
@@ -222,9 +248,10 @@ function rowFromCatalogItem(
   };
 }
 
-function rowFromArchiveItem(item: RunArchiveItem): SearchProjectionRow {
+function rowFromArchiveItem(item: RunArchiveItem, materializationJob: ArchiveMaterializationJob | null): SearchProjectionRow {
   const runtimeState = item.runtimeState ?? null;
   const rawStatus = item.status;
+  const materializationStatus = materializationJob?.status ?? materializationStatusFromArchiveItem(item);
   return {
     id: `archive:${item.id}`,
     object: 'search_result_row',
@@ -261,6 +288,22 @@ function rowFromArchiveItem(item: RunArchiveItem): SearchProjectionRow {
       runtimeState,
       localPath: item.localPath,
       fileAvailable: item.fileAvailable,
+      materializationStatus,
+      ...(materializationJob ? {
+        materializationJob: {
+          id: materializationJob.id,
+          archiveItemId: materializationJob.archiveItemId,
+          status: materializationJob.status,
+          createdAt: materializationJob.createdAt,
+          updatedAt: materializationJob.updatedAt,
+          startedAt: materializationJob.startedAt,
+          completedAt: materializationJob.completedAt,
+          attemptCount: materializationJob.attemptCount,
+          message: materializationJob.message,
+          error: materializationJob.error,
+          result: materializationJob.result,
+        },
+      } : {}),
       raw: item.metadata,
     },
   };
@@ -279,6 +322,9 @@ function matchesSearchRequest(row: SearchProjectionRow, request: NormalizedSearc
   if (request.runtimeProfile && row.runtimeProfileId !== request.runtimeProfile) return false;
   if (request.tenant && row.tenant !== request.tenant) return false;
   if (request.status && row.status !== request.status && row.runtimeState !== request.status) return false;
+  if (typeof request.fileAvailable === 'boolean' && fileAvailableForRow(row) !== request.fileAvailable) return false;
+  if (request.assetAvailability && assetAvailabilityForRow(row) !== request.assetAvailability) return false;
+  if (request.materialization && !materializationMatchesRequest(row, request.materialization)) return false;
   if (request.kind && !searchKindMatches(row, request.kind)) return false;
   if (!request.query) return true;
   const needle = request.query.toLowerCase();
@@ -328,9 +374,77 @@ function normalizeRequest(request: SearchProjectionRequest): NormalizedSearchPro
     tenant: normalizeString(request.tenant),
     kind: normalizeString(request.kind),
     status: normalizeString(request.status),
+    fileAvailable: typeof request.fileAvailable === 'boolean' ? request.fileAvailable : null,
+    assetAvailability: normalizeAssetAvailability(request.assetAvailability),
+    materialization: normalizeMaterialization(request.materialization),
     limit: normalizeLimit(request.limit),
     cursor: normalizeString(request.cursor),
   };
+}
+
+function fileAvailableForRow(row: SearchProjectionRow): boolean | null {
+  if (typeof row.metadata.fileAvailable === 'boolean') return row.metadata.fileAvailable;
+  return null;
+}
+
+function assetAvailabilityForRow(row: SearchProjectionRow): 'available' | 'unavailable' | 'pending' {
+  const fileAvailable = fileAvailableForRow(row);
+  if (fileAvailable === true) return 'available';
+  if (fileAvailable === false) return 'unavailable';
+  return 'pending';
+}
+
+function normalizeAssetAvailability(value: unknown): NormalizedSearchProjectionRequest['assetAvailability'] {
+  if (value === 'available' || value === 'unavailable' || value === 'pending') return value;
+  return null;
+}
+
+function materializationStatusForRow(row: SearchProjectionRow): ArchiveMaterializationJobStatus | null {
+  const status = row.metadata.materializationStatus;
+  return isArchiveMaterializationStatus(status) ? status : null;
+}
+
+function materializationMatchesRequest(
+  row: SearchProjectionRow,
+  materialization: NonNullable<NormalizedSearchProjectionRequest['materialization']>,
+): boolean {
+  const status = materializationStatusForRow(row);
+  if (!status) return false;
+  if (materialization === 'active') return status === 'queued' || status === 'running';
+  if (materialization === 'terminal') return status !== 'queued' && status !== 'running';
+  return status === materialization;
+}
+
+function normalizeMaterialization(value: unknown): NormalizedSearchProjectionRequest['materialization'] {
+  if (value === 'active' || value === 'terminal' || isArchiveMaterializationStatus(value)) return value;
+  return null;
+}
+
+function isArchiveMaterializationStatus(value: unknown): value is ArchiveMaterializationJobStatus {
+  return value === 'queued'
+    || value === 'running'
+    || value === 'succeeded'
+    || value === 'skipped'
+    || value === 'failed'
+    || value === 'cancelled';
+}
+
+function materializationStatusFromArchiveItem(item: RunArchiveItem): ArchiveMaterializationJobStatus | null {
+  const status = readNestedString(item.metadata, ['materialization'], ['status']);
+  return isArchiveMaterializationStatus(status) ? status : null;
+}
+
+function latestMaterializationJobsByArchiveItemId(
+  jobs: ArchiveMaterializationJob[],
+): Map<string, ArchiveMaterializationJob> {
+  const byArchiveItemId = new Map<string, ArchiveMaterializationJob>();
+  for (const job of jobs) {
+    const current = byArchiveItemId.get(job.archiveItemId);
+    if (!current || job.updatedAt.localeCompare(current.updatedAt) > 0) {
+      byArchiveItemId.set(job.archiveItemId, job);
+    }
+  }
+  return byArchiveItemId;
 }
 
 function normalizeProvider(value: string | null): 'chatgpt' | 'gemini' | 'grok' | null {
@@ -402,6 +516,15 @@ function readString(item: unknown, fields: string[]): string | null {
     if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   }
   return null;
+}
+
+function readNestedString(item: unknown, path: string[], fields: string[]): string | null {
+  let current = item;
+  for (const segment of path) {
+    if (!current || typeof current !== 'object' || Array.isArray(current)) return null;
+    current = (current as Record<string, unknown>)[segment];
+  }
+  return readString(current, fields);
 }
 
 function readNumber(item: unknown, fields: string[]): number | null {

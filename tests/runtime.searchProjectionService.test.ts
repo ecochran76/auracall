@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { AccountMirrorCatalogService } from '../src/accountMirror/catalogService.js';
-import type { RunArchiveService } from '../src/runtime/archiveService.js';
+import type { AccountMirrorCatalogResult, AccountMirrorCatalogService } from '../src/accountMirror/catalogService.js';
+import type { ArchiveMaterializationJobListResult, ArchiveMaterializationJobService } from '../src/runtime/archiveMaterializationJobService.js';
+import type { RunArchiveListResult, RunArchiveService } from '../src/runtime/archiveService.js';
 import { createSearchProjectionService } from '../src/runtime/searchProjectionService.js';
 
 const completeMirror = {
@@ -18,10 +19,10 @@ const completeMirror = {
 describe('search projection service', () => {
   it('merges account mirror conversations with archive rows and returns facets', async () => {
     const accountMirrorCatalogService: AccountMirrorCatalogService = {
-      readCatalog: vi.fn(async () => ({
-        object: 'account_mirror_catalog',
+      readCatalog: vi.fn(async (): Promise<AccountMirrorCatalogResult> => ({
+        object: 'account_mirror_catalog' as const,
         generatedAt: '2026-05-18T12:00:00.000Z',
-        kind: 'all',
+        kind: 'all' as const,
         limit: 500,
         entries: [
           {
@@ -56,17 +57,17 @@ describe('search projection service', () => {
       readItem: vi.fn(async () => null),
     };
     const runArchiveService = {
-      listItems: vi.fn(async () => ({
-        object: 'run_archive',
+      listItems: vi.fn(async (): Promise<RunArchiveListResult> => ({
+        object: 'run_archive' as const,
         generatedAt: '2026-05-18T12:00:00.000Z',
-        kind: 'all',
+        kind: 'all' as const,
         limit: 500,
         items: [
           {
             id: 'generated_artifact:resp_1:legacy_readout.json',
-            object: 'run_archive_item',
-            kind: 'generated_artifact',
-            source: 'runtime',
+            object: 'run_archive_item' as const,
+            kind: 'generated_artifact' as const,
+            source: 'runtime' as const,
             createdAt: '2026-05-18T15:00:00.000Z',
             updatedAt: '2026-05-18T15:00:00.000Z',
             title: 'legacy_readout.json',
@@ -131,10 +132,42 @@ describe('search projection service', () => {
         throw new Error('not used');
       }),
     } satisfies RunArchiveService;
+    const archiveMaterializationJobService = {
+      listJobs: vi.fn(async (): Promise<ArchiveMaterializationJobListResult> => ({
+        object: 'run_archive_materialization_jobs' as const,
+        generatedAt: '2026-05-18T15:05:00.000Z',
+        status: null,
+        archiveItemId: null,
+        limit: 500,
+        jobs: [
+          {
+            object: 'run_archive_materialization_job' as const,
+            id: 'ramj_search_1',
+            archiveItemId: 'generated_artifact:resp_1:legacy_readout.json',
+            status: 'succeeded' as const,
+            createdAt: '2026-05-18T15:01:00.000Z',
+            updatedAt: '2026-05-18T15:03:00.000Z',
+            startedAt: '2026-05-18T15:02:00.000Z',
+            completedAt: '2026-05-18T15:03:00.000Z',
+            attemptCount: 1,
+            result: null,
+            error: null,
+            message: 'Archive item materialized and indexed.',
+          },
+        ],
+        metrics: {
+          total: 1,
+          byStatus: { succeeded: 1 },
+          active: 0,
+          terminal: 1,
+        },
+      })),
+    } as unknown as ArchiveMaterializationJobService;
 
     const service = createSearchProjectionService({
       accountMirrorCatalogService,
       runArchiveService,
+      archiveMaterializationJobService,
       now: () => new Date('2026-05-18T14:00:00.000Z'),
     });
 
@@ -153,14 +186,38 @@ describe('search projection service', () => {
       { value: 'artifact', count: 1 },
       { value: 'conversation', count: 1 },
     ]);
+    expect(result.facets.materialization).toEqual([{ value: 'succeeded', count: 1 }]);
+
+    const availableArtifacts = await service.search({ kind: 'artifact', assetAvailability: 'available', limit: 10 });
+
+    expect(availableArtifacts.rows).toHaveLength(1);
+    expect(availableArtifacts.rows[0]).toMatchObject({
+      source: 'run_archive',
+      title: 'legacy_readout.json',
+      metadata: {
+        fileAvailable: true,
+        materializationStatus: 'succeeded',
+        materializationJob: {
+          id: 'ramj_search_1',
+          status: 'succeeded',
+        },
+      },
+    });
+    expect(runArchiveService.listItems).toHaveBeenLastCalledWith(expect.objectContaining({
+      kind: 'generated_artifact',
+      assetAvailability: 'available',
+    }));
+
+    const materializedArtifacts = await service.search({ kind: 'artifact', materialization: 'succeeded', limit: 10 });
+    expect(materializedArtifacts.rows.map((row) => row.itemId)).toEqual(['generated_artifact:resp_1:legacy_readout.json']);
   });
 
   it('pages rows with opaque cursors', async () => {
     const accountMirrorCatalogService: AccountMirrorCatalogService = {
-      readCatalog: vi.fn(async () => ({
-        object: 'account_mirror_catalog',
+      readCatalog: vi.fn(async (): Promise<AccountMirrorCatalogResult> => ({
+        object: 'account_mirror_catalog' as const,
         generatedAt: '2026-05-18T12:00:00.000Z',
-        kind: 'all',
+        kind: 'all' as const,
         limit: 500,
         entries: [],
         metrics: { targets: 0, projects: 0, conversations: 0, artifacts: 0, files: 0, media: 0 },
@@ -168,10 +225,10 @@ describe('search projection service', () => {
       readItem: vi.fn(async () => null),
     };
     const runArchiveService = {
-      listItems: vi.fn(async () => ({
-        object: 'run_archive',
+      listItems: vi.fn(async (): Promise<RunArchiveListResult> => ({
+        object: 'run_archive' as const,
         generatedAt: '2026-05-18T12:00:00.000Z',
-        kind: 'all',
+        kind: 'all' as const,
         limit: 500,
         items: ['1', '2'].map((id) => ({
           id: `response:resp_${id}`,
@@ -260,10 +317,10 @@ describe('search projection service', () => {
 
   it('uses transient runtime state as archive row display status', async () => {
     const accountMirrorCatalogService: AccountMirrorCatalogService = {
-      readCatalog: vi.fn(async () => ({
-        object: 'account_mirror_catalog',
+      readCatalog: vi.fn(async (): Promise<AccountMirrorCatalogResult> => ({
+        object: 'account_mirror_catalog' as const,
         generatedAt: '2026-05-18T12:00:00.000Z',
-        kind: 'all',
+        kind: 'all' as const,
         limit: 500,
         entries: [],
         metrics: { targets: 0, projects: 0, conversations: 0, artifacts: 0, files: 0, media: 0 },
@@ -271,10 +328,10 @@ describe('search projection service', () => {
       readItem: vi.fn(async () => null),
     };
     const runArchiveService = {
-      listItems: vi.fn(async () => ({
-        object: 'run_archive',
+      listItems: vi.fn(async (): Promise<RunArchiveListResult> => ({
+        object: 'run_archive' as const,
         generatedAt: '2026-05-18T12:00:00.000Z',
-        kind: 'all',
+        kind: 'all' as const,
         limit: 500,
         items: [
           {

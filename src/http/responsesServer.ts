@@ -945,11 +945,7 @@ export async function createResponsesHttpServer(
     now,
   });
   let archiveMaterializationJobService = deps.archiveMaterializationJobService;
-  const searchProjectionService = deps.searchProjectionService ?? createSearchProjectionService({
-    accountMirrorCatalogService,
-    runArchiveService,
-    now,
-  });
+  let searchProjectionService: SearchProjectionService;
   const accountMirrorSchedulerService = deps.accountMirrorSchedulerService ?? createAccountMirrorSchedulerPassService({
     registry: accountMirrorStatusRegistry,
     refreshService: accountMirrorRefreshService,
@@ -1118,6 +1114,12 @@ export async function createResponsesHttpServer(
     },
   });
   await archiveMaterializationJobService.recoverInterruptedJobs();
+  searchProjectionService = deps.searchProjectionService ?? createSearchProjectionService({
+    accountMirrorCatalogService,
+    runArchiveService,
+    archiveMaterializationJobService,
+    now,
+  });
   const reserveForegroundAuraCallDrain = () => {
     foregroundAuraCallDrainReservations += 1;
     accountMirrorFollowUpAfterNextDrain = true;
@@ -3684,9 +3686,9 @@ function createHttpStatusResponse(input: {
       mediaGenerationsCreate: '/v1/media-generations',
       mediaGenerationsGetTemplate: '/v1/media-generations/{media_generation_id}',
       mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
-      runArchive: '/v1/archive[?kind=response|response_batch|team_run|media_generation|upload|generated_artifact|provider_conversation|evidence][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&projectId={provider_project_id}][&agent={agent_id}][&team={team_id}][&responseId={response_id}][&batchId={batch_id}][&status={status}][&q={query}][&limit=50]',
+      runArchive: '/v1/archive[?kind=response|response_batch|team_run|media_generation|upload|generated_artifact|provider_conversation|evidence][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&projectId={provider_project_id}][&agent={agent_id}][&team={team_id}][&responseId={response_id}][&batchId={batch_id}][&status={status}][&fileAvailable=true|false][&assetAvailability=available|unavailable|pending][&q={query}][&limit=50]',
       runArchiveAssetLookup: '/v1/archive/assets/lookup?checksumSha256={sha256}|cacheKey={cache_key}|providerArtifactId={provider_artifact_id}|artifactId={artifact_id}[&limit=50]',
-      search: '/v1/search[?q={query}][&kind=conversation|artifact|upload|run|evidence][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&tenant={bound_identity_key}][&status={status}][&limit=80][&cursor={cursor}]',
+      search: '/v1/search[?q={query}][&kind=conversation|artifact|upload|run|evidence][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&tenant={bound_identity_key}][&status={status}][&fileAvailable=true|false][&assetAvailability=available|unavailable|pending][&materialization=queued|running|succeeded|skipped|failed|cancelled|active|terminal][&limit=80][&cursor={cursor}]',
       runArchiveBackfill: '/v1/archive/backfill',
       runArchiveEvidenceCreate: '/v1/archive/evidence',
       runArchiveItemTemplate: '/v1/archive/items/{archive_item_id}',
@@ -5801,6 +5803,8 @@ function parseRunArchiveQuery(searchParams: URLSearchParams): ParsedRunArchiveQu
     'responseId',
     'batchId',
     'status',
+    'fileAvailable',
+    'assetAvailability',
     'q',
     'limit',
   ]) {
@@ -5828,6 +5832,8 @@ function parseRunArchiveQuery(searchParams: URLSearchParams): ParsedRunArchiveQu
     responseId: z.string().trim().min(1).optional(),
     batchId: z.string().trim().min(1).optional(),
     status: z.string().trim().min(1).optional(),
+    fileAvailable: z.preprocess(parseOptionalBoolean, z.boolean().optional()),
+    assetAvailability: z.enum(['available', 'unavailable', 'pending']).optional(),
     q: z.string().trim().min(1).optional(),
     limit: z.coerce.number().int().nonnegative().optional(),
   }).parse(raw);
@@ -5841,6 +5847,8 @@ function parseRunArchiveQuery(searchParams: URLSearchParams): ParsedRunArchiveQu
     responseId: parsed.responseId,
     batchId: parsed.batchId,
     status: parsed.status,
+    fileAvailable: parsed.fileAvailable,
+    assetAvailability: parsed.assetAvailability,
     query: parsed.q,
     limit: parsed.limit,
   };
@@ -5848,7 +5856,7 @@ function parseRunArchiveQuery(searchParams: URLSearchParams): ParsedRunArchiveQu
 
 function parseSearchProjectionQuery(searchParams: URLSearchParams): SearchProjectionRequest {
   const raw: Record<string, unknown> = {};
-  for (const key of ['q', 'provider', 'runtimeProfile', 'tenant', 'kind', 'status', 'limit', 'cursor']) {
+  for (const key of ['q', 'provider', 'runtimeProfile', 'tenant', 'kind', 'status', 'fileAvailable', 'assetAvailability', 'materialization', 'limit', 'cursor']) {
     if (searchParams.has(key)) {
       raw[key] = searchParams.get(key);
     }
@@ -5860,6 +5868,9 @@ function parseSearchProjectionQuery(searchParams: URLSearchParams): SearchProjec
     tenant: z.string().trim().min(1).optional(),
     kind: z.string().trim().min(1).optional(),
     status: z.string().trim().min(1).optional(),
+    fileAvailable: z.preprocess(parseOptionalBoolean, z.boolean().optional()),
+    assetAvailability: z.enum(['available', 'unavailable', 'pending']).optional(),
+    materialization: z.enum(['active', 'terminal', 'queued', 'running', 'succeeded', 'skipped', 'failed', 'cancelled']).optional(),
     limit: z.coerce.number().int().positive().max(500).optional(),
     cursor: z.string().trim().min(1).optional(),
   }).parse(raw);
@@ -5870,9 +5881,20 @@ function parseSearchProjectionQuery(searchParams: URLSearchParams): SearchProjec
     tenant: parsed.tenant,
     kind: parsed.kind,
     status: parsed.status,
+    fileAvailable: parsed.fileAvailable,
+    assetAvailability: parsed.assetAvailability,
+    materialization: parsed.materialization,
     limit: parsed.limit,
     cursor: parsed.cursor,
   };
+}
+
+function parseOptionalBoolean(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  const normalized = value.trim().toLowerCase();
+  if (['true', '1', 'yes'].includes(normalized)) return true;
+  if (['false', '0', 'no'].includes(normalized)) return false;
+  return value;
 }
 
 function parseRunArchiveAssetLookupQuery(searchParams: URLSearchParams) {

@@ -126,6 +126,9 @@ scoped keys, response batches, attachments, and polling rules, see
   attached evidence records. Runtime-backed archive items preserve raw run
   `status` and expose derived `runtimeState`, so MCP callers can filter for
   transient states such as `finalizing` without parsing response diagnostics.
+  HTTP `/v1/archive` and `/v1/search` additionally expose cache-state filters
+  for `fileAvailable`, `assetAvailability`, and latest archive materialization
+  status; MCP parity for those filters is still intentionally narrower.
 - Backfill: `run_archive_backfill` rebuilds that index from existing runtime
   records and is safe for operator repair workflows because it does not touch
   provider pages.
