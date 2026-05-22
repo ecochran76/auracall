@@ -326,7 +326,15 @@ function mergeMediaGenerationArtifacts(
 ): MediaGenerationArtifact[] {
   const order: string[] = [];
   const byId = new Map<string, MediaGenerationArtifact>();
+  const incomingMaterializedTypes = new Set(
+    incoming
+      .filter(hasMaterializedMediaArtifactLocation)
+      .map((artifact) => artifact.type),
+  );
   for (const artifact of existing) {
+    if (!hasMaterializedMediaArtifactLocation(artifact) && incomingMaterializedTypes.has(artifact.type)) {
+      continue;
+    }
     if (!byId.has(artifact.id)) {
       order.push(artifact.id);
     }
@@ -339,6 +347,10 @@ function mergeMediaGenerationArtifacts(
     byId.set(artifact.id, artifact);
   }
   return order.map((id) => byId.get(id)).filter((entry): entry is MediaGenerationArtifact => Boolean(entry));
+}
+
+function hasMaterializedMediaArtifactLocation(artifact: MediaGenerationArtifact): boolean {
+  return Boolean(normalizeNonEmptyString(artifact.path) || normalizeNonEmptyString(artifact.uri));
 }
 
 function assertMaterializedMediaArtifacts(

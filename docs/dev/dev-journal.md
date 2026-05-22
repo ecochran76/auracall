@@ -31682,3 +31682,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `auracall media inspect medgen_cf296426a263400bbd5a2690674052a5 --json`
     returned one cached Gemini PNG and one legacy placeholder artifact with
     `missing-local-path`.
+
+## Turn 222 | 2026-05-22
+
+- Goal: stop legacy media placeholder artifacts from polluting cache summaries
+  after successful resumed materialization.
+- Change:
+  - media artifact merge now drops old same-type artifacts that have neither a
+    local `path` nor remote `uri` when the incoming materializer result has a
+    real artifact for that type.
+  - existing real artifacts and unrelated placeholder media types are preserved.
+- Verification:
+  - `pnpm vitest run tests/mediaGeneration.test.ts
+    tests/cli.mediaGenerationCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm exec biome lint src/media/service.ts tests/mediaGeneration.test.ts`
+  - `git diff --check -- src/media/service.ts tests/mediaGeneration.test.ts
+    docs/dev-fixes-log.md docs/dev/dev-journal.md`
+  - `pnpm run install:user-runtime`
+  - `auracall --profile auracall-gemini-pro media materialize
+    medgen_cf296426a263400bbd5a2690674052a5 --conversation-url
+    https://gemini.google.com/app/6a131154e90f7362 --count 1 --json`
+    returned one materialized Gemini image artifact.
+  - `auracall media inspect medgen_cf296426a263400bbd5a2690674052a5
+    --json` reported `artifactCount: 1`, `cachedArtifactCount: 1`, and
+    `missingArtifactCount: 0`.

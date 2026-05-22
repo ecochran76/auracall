@@ -16504,3 +16504,9 @@ browser-stage lifecycle observability, not transcript truncation.
   and stats each local artifact path or `file://` URI, returning cached/missing
   counts plus per-artifact availability evidence without retrying provider
   materialization.
+
+- 2026-05-22: Resumed media materialization should clean up legacy placeholder
+  artifacts once real generated media has been recovered. When a materializer
+  returns a materialized artifact for a media type, the media service now drops
+  older same-type artifact records that never had a local path or remote URI,
+  while preserving existing real artifacts and unrelated placeholder types.

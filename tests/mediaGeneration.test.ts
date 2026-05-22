@@ -511,6 +511,96 @@ describe('media generation service', () => {
     await expect(service.readGeneration('medgen_resume_1')).resolves.toEqual(materialized);
   });
 
+  it('drops legacy same-type placeholder artifacts after resumed materialization', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-media-generation-placeholder-prune-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const store = createMediaGenerationRecordStore();
+    await store.writeResponse({
+      id: 'medgen_placeholder_prune_1',
+      object: 'media_generation',
+      status: 'succeeded',
+      provider: 'gemini',
+      mediaType: 'image',
+      prompt: 'Generate an image of an asphalt secret agent',
+      createdAt: '2026-05-19T21:39:23.620Z',
+      updatedAt: '2026-05-19T21:39:23.626Z',
+      completedAt: '2026-05-19T21:39:23.626Z',
+      artifacts: [
+        {
+          id: 'legacy_placeholder_image',
+          type: 'image',
+          mimeType: 'image/png',
+        },
+        {
+          id: 'existing_real_image',
+          type: 'image',
+          fileName: 'existing.png',
+          path: path.join(homeDir, 'existing.png'),
+          mimeType: 'image/png',
+        },
+        {
+          id: 'legacy_placeholder_video',
+          type: 'video',
+          mimeType: 'video/mp4',
+        },
+      ],
+      timeline: [
+        {
+          event: 'completed',
+          at: '2026-05-19T21:39:23.626Z',
+          details: {
+            status: 'succeeded',
+            artifactCount: 1,
+          },
+        },
+      ],
+      metadata: {
+        source: 'api',
+      },
+      failure: null,
+    });
+    const service = createMediaGenerationService({
+      now: () => new Date('2026-05-22T03:04:57.023Z'),
+      store,
+      materializer: async ({ artifactDir }) => {
+        const filePath = path.join(artifactDir, 'generated.png');
+        await fs.writeFile(filePath, Buffer.from('generated image bytes'));
+        return {
+          artifacts: [
+            {
+              id: 'materialized_image',
+              type: 'image',
+              fileName: 'generated.png',
+              path: filePath,
+              uri: `file://${filePath}`,
+              mimeType: 'image/png',
+            },
+          ],
+        };
+      },
+    });
+
+    const materialized = await service.materializeGeneration?.('medgen_placeholder_prune_1', {
+      count: 1,
+      source: 'cli',
+    });
+
+    expect(materialized?.artifacts.map((artifact) => artifact.id)).toEqual([
+      'existing_real_image',
+      'legacy_placeholder_video',
+      'materialized_image',
+    ]);
+    expect(materialized?.artifacts.find((artifact) => artifact.id === 'legacy_placeholder_image')).toBeUndefined();
+    await expect(service.readGeneration('medgen_placeholder_prune_1')).resolves.toMatchObject({
+      artifacts: [
+        { id: 'existing_real_image' },
+        { id: 'legacy_placeholder_video' },
+        { id: 'materialized_image' },
+      ],
+    });
+  });
+
   it('accepts Gemini music generation requests in the shared contract', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-media-generation-music-'));
     cleanup.push(homeDir);
