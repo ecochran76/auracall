@@ -252,6 +252,7 @@ function rowFromArchiveItem(item: RunArchiveItem, materializationJob: ArchiveMat
   const runtimeState = item.runtimeState ?? null;
   const rawStatus = item.status;
   const materializationStatus = materializationJob?.status ?? materializationStatusFromArchiveItem(item);
+  const assetFreshness = assetFreshnessFromArchiveItem(item, materializationJob, materializationStatus);
   return {
     id: `archive:${item.id}`,
     object: 'search_result_row',
@@ -289,6 +290,7 @@ function rowFromArchiveItem(item: RunArchiveItem, materializationJob: ArchiveMat
       localPath: item.localPath,
       fileAvailable: item.fileAvailable,
       materializationStatus,
+      assetFreshness,
       ...(materializationJob ? {
         materializationJob: {
           id: materializationJob.id,
@@ -306,6 +308,25 @@ function rowFromArchiveItem(item: RunArchiveItem, materializationJob: ArchiveMat
       } : {}),
       raw: item.metadata,
     },
+  };
+}
+
+function assetFreshnessFromArchiveItem(
+  item: RunArchiveItem,
+  materializationJob: ArchiveMaterializationJob | null,
+  materializationStatus: ArchiveMaterializationJobStatus | null,
+): Record<string, unknown> {
+  const availability = item.fileAvailable === true ? 'available' : item.fileAvailable === false ? 'unavailable' : 'pending';
+  const materializedAt = materializationJob?.completedAt
+    ?? (materializationStatus === 'succeeded' && item.fileAvailable === true ? item.updatedAt ?? item.createdAt : null);
+  return {
+    availability,
+    fileAvailable: item.fileAvailable,
+    status: materializationStatus,
+    source: materializationJob ? 'materialization_job' : 'archive_item',
+    materializationJobId: materializationJob?.id ?? null,
+    materializedAt,
+    evidenceUpdatedAt: materializationJob?.updatedAt ?? item.updatedAt ?? item.createdAt ?? null,
   };
 }
 

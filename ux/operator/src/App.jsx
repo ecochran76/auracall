@@ -322,6 +322,18 @@ function searchRowMaterializationStatus(row, job = null) {
   return job?.status ?? row?.metadata?.materializationJob?.status ?? row?.metadata?.materializationStatus ?? null;
 }
 
+function searchRowAssetFreshness(row) {
+  const freshness = row?.metadata?.assetFreshness ?? row?.raw?.metadata?.assetFreshness ?? null;
+  const materializedAt = freshness?.materializedAt;
+  const jobId = freshness?.materializationJobId;
+  if (freshness?.availability === "available" && materializedAt) {
+    return jobId ? `fresh ${formatDateTime(materializedAt)} via ${compactText(jobId, 18)}` : `cached ${formatDateTime(materializedAt)}`;
+  }
+  if (freshness?.availability === "available") return "cached asset";
+  if (freshness?.availability === "unavailable" && freshness?.evidenceUpdatedAt) return `missing ${formatDateTime(freshness.evidenceUpdatedAt)}`;
+  return null;
+}
+
 function materializationFilterMatches(row, job, filter) {
   if (!filter || filter === "all") return true;
   const status = searchRowMaterializationStatus(row, job);
@@ -558,6 +570,7 @@ function flattenSearchCatalogRows(payload) {
       archiveItemRoute: row.links?.archiveItem ?? null,
       assetRoute: row.links?.asset ?? (row.links?.archiveItem && row.metadata?.fileAvailable ? `${row.links.archiveItem}/asset` : null),
       fileAvailable: typeof row.metadata?.fileAvailable === "boolean" ? row.metadata.fileAvailable : null,
+      metadata: row.metadata ?? {},
       links: row.links ?? {},
       raw: row,
     }));
@@ -1619,7 +1632,10 @@ function searchRowCellTitle(row, column) {
   if (column.id === "actions") return "Inspect, copy handoff link, open provider link, or download cached asset";
   if (column.id === "kind") return row.kind;
   if (column.id === "status") return statusLabel(row.status);
-  if (column.id === "files") return `${formatNumber(row.fileCount)} files / ${formatNumber(row.artifactCount)} artifacts`;
+  if (column.id === "files") {
+    const freshness = searchRowAssetFreshness(row);
+    return `${formatNumber(row.fileCount)} files / ${formatNumber(row.artifactCount)} artifacts${freshness ? `; ${freshness}` : ""}`;
+  }
   if (column.id === "ids") return row.itemId;
   if (column.id === "updatedAt") return formatDateTime(row.updatedAt);
   return "";
@@ -1649,11 +1665,13 @@ function SearchInspectorSummary({ row, archiveItem }) {
   const title = String(source.title ?? source.fileName ?? source.id ?? "Selected result");
   const subtitle = row?.summary ?? archiveItem?.uri ?? archiveItem?.localPath ?? row?.itemId ?? archiveItem?.id;
   const fileSummary = `${formatNumber(row?.fileCount ?? 0)} files / ${formatNumber(row?.artifactCount ?? 0)} artifacts`;
+  const assetFreshness = searchRowAssetFreshness(row);
   const facts = [
     ["Response", metadata.responseId ?? archiveItem?.responseId ?? "none"],
     ["Batch", metadata.batchId ?? archiveItem?.batchId ?? "none"],
     ["Agent", metadata.agentId ?? archiveItem?.agentId ?? "none"],
     ["Asset", archiveItemAssetRoute(archiveItem) || row?.assetRoute ? "cached" : archiveItem?.fileAvailable === false ? "missing" : "not materialized"],
+    ["Asset Freshness", assetFreshness ?? "not materialized"],
   ];
   const meta = [
     [source.provider ? <ProviderIcon provider={source.provider} /> : "none", "Provider"],
@@ -2547,6 +2565,7 @@ function ArchiveSearchViewport({
   function cellClassName(column, index, baseClassName = "") {
     if (column.id === "tenant") return columnClassName(column, index, "two-line-cell");
     if (column.id === "title") return columnClassName(column, index, "title-cell");
+    if (column.id === "files") return columnClassName(column, index, "two-line-cell");
     if (column.id === "ids") return columnClassName(column, index, "mono-cell");
     if (column.id === "actions") return columnClassName(column, index, "search-row-actions");
     return columnClassName(column, index, baseClassName);
@@ -2605,7 +2624,15 @@ function ArchiveSearchViewport({
     }
     if (column.id === "kind") return <span className="status-pill status-neutral">{row.kind}</span>;
     if (column.id === "status") return <span className={`status-pill status-${statusTone(row.status)}`}>{statusLabel(row.status)}</span>;
-    if (column.id === "files") return `${formatNumber(row.fileCount)} files / ${formatNumber(row.artifactCount)} art`;
+    if (column.id === "files") {
+      const freshness = searchRowAssetFreshness(row);
+      return (
+        <>
+          <b>{formatNumber(row.fileCount)} files / {formatNumber(row.artifactCount)} art</b>
+          {freshness ? <small>{freshness}</small> : null}
+        </>
+      );
+    }
     if (column.id === "ids") return row.itemId;
     if (column.id === "updatedAt") return formatDateTime(row.updatedAt);
     return "";

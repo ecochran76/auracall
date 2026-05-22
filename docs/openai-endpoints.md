@@ -300,6 +300,9 @@ Current limits:
     in row metadata as `rawStatus`
   - row links can include archive item, catalog item, provider, asset, or other
     source-specific routes
+  - archive-backed rows include compact `metadata.assetFreshness` with
+    availability, materialization status, evidence timestamp, materialized
+    timestamp, and materialization job id when present
   - CLI parity: `auracall api search --query <text> --kind artifact
     --asset-availability available --materialization succeeded --json`
 - `GET /v1/archive` is the searchable archive surface for

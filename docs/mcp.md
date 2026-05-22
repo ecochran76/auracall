@@ -122,7 +122,10 @@ scoped keys, response batches, attachments, and polling rules, see
   `GET /v1/search` and `auracall api search`, merging account-mirror catalog
   rows with run-archive rows without launching provider browsers. Archive rows
   include local file availability and latest archive materialization job
-  metadata when present.
+  metadata when present. Archive rows also include compact
+  `metadata.assetFreshness` so callers can distinguish newly materialized
+  available assets from older archive evidence without reading the full job
+  payload.
 - Paging: returns `nextCursor`; pass that value as `cursor` for the next page.
 
 ### `run_archive_search` / `run_archive_item` / `run_archive_backfill` / `run_archive_attach_evidence`

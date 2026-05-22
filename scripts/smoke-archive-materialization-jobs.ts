@@ -299,6 +299,12 @@ async function assertSearchAssetReconciliationAfter(port: number): Promise<void>
     `http://127.0.0.1:${port}/v1/search?kind=artifact&assetAvailability=available&limit=10`,
   );
   assertSearchRows(available, [itemIds.succeeded], 'Search after materialization available rows');
+  assertSearchAssetFreshness(available, itemIds.succeeded, {
+    availability: 'available',
+    materializationJobId: 'ramj_smoke_succeeded',
+    materializedAt: '2026-05-22T12:00:07.000Z',
+    source: 'materialization_job',
+  });
 
   const succeeded = await fetchJson<SearchResultsPayload>(
     `http://127.0.0.1:${port}/v1/search?kind=artifact&materialization=succeeded&limit=10`,
@@ -397,6 +403,12 @@ interface SearchResultsPayload {
     metadata?: {
       fileAvailable?: boolean;
       materializationStatus?: string | null;
+      assetFreshness?: {
+        availability?: string;
+        materializationJobId?: string | null;
+        materializedAt?: string | null;
+        source?: string;
+      };
     };
   }>;
   facets?: {
@@ -422,6 +434,28 @@ function assertSearchFacet(
   const actual = payload.facets?.[facetName]?.find((facet) => facet.value === value)?.count ?? 0;
   if (actual !== expectedCount) {
     throw new Error(`${label}: expected ${value}=${expectedCount}, got ${actual}.`);
+  }
+}
+
+function assertSearchAssetFreshness(
+  payload: SearchResultsPayload,
+  itemId: string,
+  expected: {
+    availability: string;
+    materializationJobId: string;
+    materializedAt: string;
+    source: string;
+  },
+): void {
+  const row = payload.rows.find((candidate) => candidate.itemId === itemId);
+  const actual = row?.metadata?.assetFreshness;
+  if (
+    actual?.availability !== expected.availability
+    || actual.materializationJobId !== expected.materializationJobId
+    || actual.materializedAt !== expected.materializedAt
+    || actual.source !== expected.source
+  ) {
+    throw new Error(`Search asset freshness: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}.`);
   }
 }
 

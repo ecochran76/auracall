@@ -16591,3 +16591,10 @@ browser-stage lifecycle observability, not transcript truncation.
   fixture archive rows as the job service and proves the asset availability
   facet and `assetAvailability=available` rows move from zero to one after a
   materialization job completes and indexes a local asset.
+
+- 2026-05-22: Operators need a compact freshness signal for cached Search
+  assets without opening raw archive rows or full materialization job payloads.
+  `/v1/search` archive rows now expose `metadata.assetFreshness` with
+  availability, materialization status, materialized timestamp, evidence
+  timestamp, and materialization job id when present. The Search workbench uses
+  that summary in the Files column and result inspector.

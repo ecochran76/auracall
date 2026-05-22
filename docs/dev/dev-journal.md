@@ -32038,3 +32038,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     existing `smoke:mcp-ops-browser` error; rerunning that smoke passed, and a
     full preflight rerun passed. The MCP smoke now includes tool error content
     if that failure recurs.
+
+## Turn 235 | 2026-05-22
+
+- Goal: expose compact Search asset freshness evidence for materialized assets.
+- Change:
+  - `/v1/search` archive rows now include `metadata.assetFreshness` with
+    availability, file availability, materialization status, evidence updated
+    time, materialized time, freshness source, and latest materialization job
+    id when present.
+  - the operator Search workbench hydrates row metadata, shows the compact
+    freshness summary in the Files column, and repeats it in the result
+    inspector facts.
+  - API and MCP docs now mention the compact freshness field.
+- Verification:
+  - `pnpm vitest run tests/runtime.searchProjectionService.test.ts --maxWorkers 1`
+  - `pnpm run smoke:archive-materialization-jobs`
+  - `pnpm run ux:build`
+  - `pnpm run check`
+  - `pnpm run smoke:operator-search-ux`
+  - `pnpm run build`
+  - `pnpm run preflight:lazy-live-follow`

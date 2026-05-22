@@ -201,6 +201,13 @@ describe('search projection service', () => {
       metadata: {
         fileAvailable: true,
         materializationStatus: 'succeeded',
+        assetFreshness: {
+          availability: 'available',
+          materializationJobId: 'ramj_search_1',
+          materializedAt: '2026-05-18T15:03:00.000Z',
+          evidenceUpdatedAt: '2026-05-18T15:03:00.000Z',
+          source: 'materialization_job',
+        },
         materializationJob: {
           id: 'ramj_search_1',
           status: 'succeeded',
@@ -383,6 +390,13 @@ describe('search projection service', () => {
       metadata: {
         fileAvailable: true,
         materializationStatus: 'succeeded',
+        assetFreshness: {
+          availability: 'available',
+          materializationJobId: 'ramj_asset_refresh',
+          materializedAt: '2026-05-22T12:01:00.000Z',
+          evidenceUpdatedAt: '2026-05-22T12:01:00.000Z',
+          source: 'materialization_job',
+        },
         materializationJob: {
           id: 'ramj_asset_refresh',
           status: 'succeeded',
