@@ -1650,6 +1650,11 @@
   installed `auracall api search`, and installed MCP `search_projection`. Use
   `-- --media-generation-id <id>` to target a different durable media
   generation that should have an available generated artifact.
+- Archive materialization job filter smoke:
+  `pnpm run smoke:archive-materialization-jobs` seeds fixture queued,
+  succeeded, skipped, and failed async materialization jobs in an isolated
+  AuraCall home, then verifies HTTP, CLI-helper, and MCP job list/status
+  filters without provider or browser work.
 - Cache-only commands such as `cache export`, `cache context list`, and
   `cache context get` should read provider cache state without resolving or
   launching a live browser target.

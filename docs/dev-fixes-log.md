@@ -16553,3 +16553,9 @@ browser-stage lifecycle observability, not transcript truncation.
   uses `debugDashboardPath`, while the React operator dashboard owns
   `dashboardPath`; `api ops-browser` contract checks now accept that split
   instead of requiring the Browser Ops nav link to advertise `dashboardPath`.
+
+- 2026-05-22: Async archive materialization job polling needs a deterministic
+  smoke outside the operator dashboard. `pnpm run
+  smoke:archive-materialization-jobs` now seeds fixture queued, succeeded,
+  skipped, and failed jobs in an isolated AuraCall home and verifies HTTP,
+  CLI-helper, and MCP list/status filters without provider or browser work.

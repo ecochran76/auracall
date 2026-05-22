@@ -31880,3 +31880,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     end, including install-user-runtime, installed archive/search/MCP asset
     readback, installed MCP `api_status`, installed MCP
     `api_ops_browser_status`, and installed MCP provider-guard clearance.
+
+## Turn 230 | 2026-05-22
+
+- Goal: add deterministic smoke coverage for async archive materialization job
+  list/status filters.
+- Change:
+  - added `scripts/smoke-archive-materialization-jobs.ts`.
+  - added `pnpm run smoke:archive-materialization-jobs`.
+  - the smoke seeds queued, succeeded, skipped, and failed fixture jobs in an
+    isolated AuraCall home, then verifies HTTP, CLI-helper, and MCP filtering
+    without provider or browser work.
+- Verification:
+  - `pnpm run smoke:archive-materialization-jobs` returned `ok: true` with
+    HTTP, CLI, and MCP checks for fixture jobs `ramj_smoke_queued`,
+    `ramj_smoke_succeeded`, `ramj_smoke_skipped`, and `ramj_smoke_failed`.
+  - `pnpm vitest run tests/runtime.archiveMaterializationJobService.test.ts
+    tests/cli/apiRunArchiveCommand.test.ts tests/mcp.runArchive.test.ts
+    --maxWorkers 1`
+  - `pnpm run check`
+  - `git diff --check -- scripts/smoke-archive-materialization-jobs.ts
+    package.json docs/testing.md docs/dev-fixes-log.md
+    docs/dev/dev-journal.md`

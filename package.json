@@ -39,6 +39,7 @@
     "smoke:ops-browser-preflight-run-detail": "tsx scripts/smoke-ops-browser-preflight-run-detail.ts",
     "smoke:mcp-provider-guard": "tsx scripts/smoke-account-mirror-provider-guard-mcp.ts",
     "smoke:asset-readback-parity": "tsx scripts/smoke-asset-readback-parity.ts",
+    "smoke:archive-materialization-jobs": "tsx scripts/smoke-archive-materialization-jobs.ts",
     "smoke:api-key-issue": "tsx scripts/smoke-api-key-issue.ts",
     "smoke:api-key-openai-client": "tsx scripts/smoke-api-key-openai-client.ts",
     "smoke:scoped-client-env": "tsx scripts/smoke-scoped-client-env.ts",
