@@ -31757,3 +31757,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - first live CLI archive query raced the restarted listener and returned
     `ECONNREFUSED`; retry after the API log showed the listener bound returned
     one available Gemini generated artifact with an asset link.
+
+## Turn 225 | 2026-05-22
+
+- Goal: add terminal-side access to the unified `/v1/search` projection,
+  including materialization filters.
+- Change:
+  - added `auracall api search` with query, provider, runtime profile, tenant,
+    kind, status, cache availability, materialization, limit, and cursor
+    options.
+  - extracted local API auth retry into a shared CLI helper used by archive and
+    search commands.
+  - documented `/v1/search` CLI parity and the expanded filter contract.
+- Verification:
+  - `pnpm vitest run tests/cli/apiSearchCommand.test.ts
+    tests/cli/apiRunArchiveCommand.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/cli/apiSearchCommand.test.ts
+    tests/cli/apiRunArchiveCommand.test.ts tests/http.responsesServer.test.ts
+    --testNamePattern "reports unified search rows through the API surface|api search CLI helpers|api run archive CLI helpers"
+    --maxWorkers 1`
+  - `pnpm run check`
+  - `git diff --check -- bin/auracall.ts src/cli/apiSearchCommand.ts
+    src/cli/localApiClient.ts src/cli/apiRunArchiveCommand.ts
+    tests/cli/apiSearchCommand.test.ts tests/cli/apiRunArchiveCommand.test.ts
+    docs/openai-endpoints.md docs/agent-workflows.md docs/dev-fixes-log.md
+    docs/dev/dev-journal.md`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `systemctl --user is-active auracall-api.service` returned `active`.
+  - live installed `auracall api search --query
+    medgen_cf296426a263400bbd5a2690674052a5 --kind artifact
+    --asset-availability available --file-available true --limit 5 --json`
+    returned one available Gemini generated artifact with an asset link.

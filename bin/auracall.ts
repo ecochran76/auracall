@@ -130,6 +130,10 @@ import {
   readApiLogTailForCli,
 } from '../src/cli/apiLogTailCommand.js';
 import {
+  formatApiSearchProjectionCliSummary,
+  readApiSearchProjectionForCli,
+} from '../src/cli/apiSearchCommand.js';
+import {
   attachApiRunArchiveEvidenceForCli,
   backfillApiRunArchiveForCli,
   cancelApiRunArchiveMaterializationJobForCli,
@@ -1222,6 +1226,54 @@ apiCommand
       return;
     }
     console.log(formatApiLogTailCliSummary(summary));
+  });
+
+apiCommand
+  .command('search')
+  .description('Read the unified operator search projection from the local API.')
+  .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--query <text>', 'Text search across normalized search rows.')
+  .option('--provider <provider>', 'Filter by provider.')
+  .option('--runtime-profile <profile>', 'Filter by runtime profile.')
+  .option('--tenant <tenant>', 'Filter by bound tenant identity.')
+  .option('--kind <kind>', 'Filter kind: conversation, artifact, upload, run, evidence.')
+  .option('--status <status>', 'Filter by status.')
+  .option('--file-available <true|false>', 'Filter by local file availability.', parseBooleanOption)
+  .option('--asset-availability <state>', 'Filter cache state: available, unavailable, pending.', parseAssetAvailabilityOption)
+  .option('--materialization <status>', 'Filter materialization: queued, running, succeeded, skipped, failed, cancelled, active, terminal.')
+  .option('--limit <count>', 'Maximum rows to read.', parseIntOption, 80)
+  .option('--cursor <cursor>', 'Opaque cursor from a previous /v1/search page.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const result = await readApiSearchProjectionForCli({
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+      query: commandOptions.query,
+      provider: commandOptions.provider,
+      runtimeProfile: commandOptions.runtimeProfile,
+      tenant: commandOptions.tenant,
+      kind: commandOptions.kind,
+      status: commandOptions.status,
+      fileAvailable: commandOptions.fileAvailable,
+      assetAvailability: commandOptions.assetAvailability,
+      materialization: commandOptions.materialization,
+      limit: commandOptions.limit,
+      cursor: commandOptions.cursor,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiSearchProjectionCliSummary(result));
   });
 
 apiCommand

@@ -16522,3 +16522,9 @@ browser-stage lifecycle observability, not transcript truncation.
   query strings. `auracall api archive` now forwards `--file-available` and
   `--asset-availability`, and MCP `run_archive_search` accepts the matching
   `fileAvailable` and `assetAvailability` inputs.
+
+- 2026-05-22: The operator search projection also needs terminal-side parity
+  for materialization filters. `auracall api search` now reads `/v1/search`
+  with the same normalized filters as the dashboard, including
+  `fileAvailable`, `assetAvailability`, `materialization`, cursor paging, and
+  local API-key retry.

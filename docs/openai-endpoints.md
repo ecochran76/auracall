@@ -292,13 +292,16 @@ Current limits:
   - returns `object = "search_results"` with normalized `rows`, `facets`,
     `metrics`, and `nextCursor`
   - supports filters for `q`, `kind`, `provider`, `runtimeProfile`, `tenant`,
-    `status`, `limit`, and `cursor`
+    `status`, `fileAvailable`, `assetAvailability`, `materialization`, `limit`,
+    and `cursor`
   - archive-backed run rows include `runtimeState`; non-terminal states such as
     `finalizing`, `recovering`, or `stranded` are promoted into the row
     `status` display field while the raw runtime-run status remains available
     in row metadata as `rawStatus`
   - row links can include archive item, catalog item, provider, asset, or other
     source-specific routes
+  - CLI parity: `auracall api search --query <text> --kind artifact
+    --asset-availability available --materialization succeeded --json`
 - `GET /v1/archive` is the searchable archive surface for
   AuraCall-created work:
   - reads the user-scoped archive index under the AuraCall runtime tree and
@@ -308,7 +311,8 @@ Current limits:
     response batches, team runs, media generations, uploaded input artifacts,
     generated artifacts, and provider conversation references
   - supports filters for `kind`, `provider`, `runtimeProfile`, `agent`, `team`,
-    `responseId`, `batchId`, `status`, `q`, and `limit`
+    `responseId`, `batchId`, `status`, `fileAvailable`, `assetAvailability`,
+    `q`, and `limit`
   - runtime archive items preserve the raw run `status` and expose derived
     `runtimeState`; the `status` filter matches either value so operators can
     query transient states such as `finalizing` without waiting for terminal
