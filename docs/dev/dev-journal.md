@@ -32179,3 +32179,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `systemctl --user restart auracall-api.service`
   - `auracall api archive-backfill --timeout-ms 120000 --json`
   - `auracall api search --kind artifact --limit 1 --json`
+
+## Turn 241 | 2026-05-22
+
+- Goal: audit the backend gap between mirrored provider history and actual
+  downloadable artifact recovery.
+- Change:
+  - confirmed account mirror catalog and item routes are cache-only read
+    surfaces and do not launch provider download work.
+  - confirmed provider/`LLMService` primitives already exist for known
+    historical conversations: conversation context, artifact materialization,
+    single artifact materialization, file materialization, account file listing,
+    and conversation file listing.
+  - confirmed the current durable run-archive materialization lane is
+    archive-item based and cannot yet accept an account-mirror catalog item or
+    provider conversation id as the primary recovery target.
+  - opened
+    `docs/dev/plans/0069-2026-05-22-history-backed-artifact-materialization.md`
+    and wired it into `ROADMAP.md`.
+- Audit result:
+  - the missing backend tool is a queued history-backed materialization lane
+    that treats account-mirror history as a provider evidence index, reopens the
+    historical chat through managed browser/provider controls, downloads
+    fetchable artifacts/files, and writes them into the existing
+    identity-scoped cache/archive.
+  - live installed-runtime search still reports 71 unavailable generated
+    artifacts: 68 Gemini rows, 3 ChatGPT rows, and no existing bulk
+    history-to-download reconciliation job.
+- Verification:
+  - source audit of account mirror catalog/refresh, ChatGPT/Gemini/Grok
+    provider adapters, `LLMService`, archive materialization, HTTP routes, CLI
+    help, and MCP tools.
+  - `auracall api search --port 18095 --kind artifact --asset-availability unavailable --limit 20 --json`

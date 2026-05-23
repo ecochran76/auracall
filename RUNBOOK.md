@@ -6059,3 +6059,24 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - remaining ChatGPT misses are three old `legacy_readout.json` sandbox rows
     without cached fetch manifests, plus one schema/test image placeholder with
     no provider conversation.
+
+## Turn 214 | 2026-05-22
+
+- Active plan:
+  `docs/dev/plans/0069-2026-05-22-history-backed-artifact-materialization.md`
+- Goal: audit the backend tool gap for using mirrored provider history to
+  recover downloadable artifacts instead of only reading historical text.
+- Result:
+  - confirmed account mirror is currently a cache-only history/catalog surface.
+  - confirmed provider/`LLMService` materialization primitives exist for known
+    historical conversations.
+  - confirmed the missing backend surface is a durable history-backed
+    materialization job lane that accepts account-mirror catalog items or
+    provider conversation ids and writes downloaded assets into the existing
+    identity-scoped cache/archive.
+  - wired the new plan into `ROADMAP.md` and recorded the detailed current
+    audit in `docs/dev/dev-journal.md` Turn 241.
+- Verification target:
+  - `auracall api search --port 18095 --kind artifact --asset-availability unavailable --limit 20 --json`
+  - source audit of account mirror, provider adapters, `LLMService`, archive
+    materialization, HTTP, CLI, and MCP surfaces.

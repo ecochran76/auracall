@@ -16638,3 +16638,11 @@ browser-stage lifecycle observability, not transcript truncation.
   Older media records may have no local path and no persisted provider
   conversation evidence; those should remain explicit unavailable artifacts
   instead of being treated as ordinary pending cache refresh work.
+
+- 2026-05-22: Provider account history is artifact discovery evidence, not a
+  substitute for asset recovery. If mirrored history shows downloadable
+  provider files/artifacts/media, AuraCall needs an explicit queued
+  history-backed materialization lane that reopens the historical conversation
+  through managed browser/provider controls, downloads the assets, and writes
+  them into the same identity-scoped cache/archive used by Search and archive
+  asset routes.

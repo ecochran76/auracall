@@ -224,6 +224,19 @@ Current State:
     arithmetic, transcript semantics, literature moderation, and similar
     workflow checks belong to caller agents/workflows that can attach their
     validation evidence to archived AuraCall outputs
+- history-backed artifact materialization is now scoped in
+  [docs/dev/plans/0069-2026-05-22-history-backed-artifact-materialization.md](docs/dev/plans/0069-2026-05-22-history-backed-artifact-materialization.md):
+  - account mirror history should be used as a discovery index for provider
+    conversations, files, artifacts, and media, not as a text-only substitute
+    for downloadable provider assets
+  - the next backend lane is an explicit queued materialization path that
+    accepts account-mirror catalog items or provider conversation ids, reopens
+    the historical provider chat through the managed browser, downloads
+    provider artifacts/files through provider controls, and writes the resulting
+    files into the existing identity-scoped cache/archive
+  - account-mirror catalog reads remain cache-only; browser work happens only
+    through explicit materialization jobs routed through the dispatcher and
+    provider politeness controls
 - React operator UX redesign is now scoped in
   [docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md](docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md):
   - the current `/ops/browser` dashboard is a debug/proof-of-concept surface,
