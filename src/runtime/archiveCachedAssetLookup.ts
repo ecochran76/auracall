@@ -62,6 +62,7 @@ async function findMatchingManifestEntry(
   item: RunArchiveItem,
 ): Promise<CachedConversationAttachmentEvidence> {
   const entries = Array.isArray(manifest.entries) ? manifest.entries : [];
+  let unavailableMatch: CachedConversationAttachmentEvidence | null = null;
   for (const entry of entries) {
     if (!isRecord(entry) || !manifestEntryMatchesItem(entry, item)) continue;
     const status = readString(entry.status) ?? 'unknown';
@@ -79,12 +80,24 @@ async function findMatchingManifestEntry(
         sourceManifestProjectId: readString(manifest.projectId),
       },
     });
-    if (status !== 'materialized') return unavailable('artifact-fetch-entry-not-materialized');
-    if (!localPath) return unavailable('artifact-fetch-entry-missing-local-path');
-    if (!await fileExists(localPath)) return unavailable('artifact-fetch-local-file-missing');
+    if (status !== 'materialized') {
+      unavailableMatch ??= unavailable('artifact-fetch-entry-not-materialized');
+      continue;
+    }
+    if (!localPath) {
+      unavailableMatch ??= unavailable('artifact-fetch-entry-missing-local-path');
+      continue;
+    }
+    if (!await fileExists(localPath)) {
+      unavailableMatch ??= unavailable('artifact-fetch-local-file-missing');
+      continue;
+    }
     const stat = await fs.stat(localPath).catch(() => null);
     const provider = normalizeProviderId(item.provider);
-    if (!stat?.isFile() || !provider) return unavailable('artifact-fetch-local-file-missing');
+    if (!stat?.isFile() || !provider) {
+      unavailableMatch ??= unavailable('artifact-fetch-local-file-missing');
+      continue;
+    }
     const fileName = readString(entry.fileName) ?? path.basename(localPath);
     return {
       file: {
@@ -107,6 +120,7 @@ async function findMatchingManifestEntry(
       unavailable: null,
     };
   }
+  if (unavailableMatch) return unavailableMatch;
   return emptyEvidence();
 }
 

@@ -16626,3 +16626,15 @@ browser-stage lifecycle observability, not transcript truncation.
   the top bar. The mobile workbench now displays only the active viewport unless
   an overlay pane is opened, and Search uses a compact mobile table column set
   so title content is visible instead of being covered by sticky action cells.
+
+- 2026-05-22: Provider attachment manifests can contain multiple aliases for
+  one generated file. Archive cache lookup must prefer a materialized matching
+  entry over earlier skipped sandbox aliases; otherwise backfill can report a
+  file unavailable even when the provider conversation attachment cache already
+  contains it.
+
+- 2026-05-22: Media-generation archive projection should recover provider
+  conversation ids and URLs from timeline events as well as top-level metadata.
+  Older media records may have no local path and no persisted provider
+  conversation evidence; those should remain explicit unavailable artifacts
+  instead of being treated as ordinary pending cache refresh work.

@@ -357,6 +357,71 @@ describe('run archive service', () => {
     });
   });
 
+  test('projects media-generation conversation identity from timeline events', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-run-archive-media-timeline-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const createdAt = '2026-05-16T15:00:00.000Z';
+    const updatedAt = '2026-05-16T15:05:00.000Z';
+
+    await writeMediaGenerationResponse({
+      id: 'media_timeline_1',
+      object: 'media_generation',
+      status: 'succeeded',
+      provider: 'gemini',
+      mediaType: 'image',
+      prompt: 'Generate asphalt secret agent',
+      createdAt,
+      updatedAt,
+      completedAt: updatedAt,
+      artifacts: [
+        {
+          id: 'image_1',
+          type: 'image',
+          mimeType: 'image/png',
+        },
+      ],
+      timeline: [
+        {
+          event: 'prompt_submitted',
+          at: createdAt,
+          details: {
+            conversationId: 'gemini_timeline_conv_1',
+            url: 'https://gemini.google.com/app/gemini_timeline_conv_1',
+          },
+        },
+      ],
+      metadata: {},
+    });
+
+    const service = createRunArchiveService({
+      now: () => new Date('2026-05-16T15:10:00.000Z'),
+    });
+
+    await expect(service.readItem('media-generation:media_timeline_1')).resolves.toMatchObject({
+      item: {
+        providerConversationId: 'gemini_timeline_conv_1',
+        providerConversationUrl: 'https://gemini.google.com/app/gemini_timeline_conv_1',
+        metadata: expect.objectContaining({
+          providerConversationId: 'gemini_timeline_conv_1',
+          providerConversationUrl: 'https://gemini.google.com/app/gemini_timeline_conv_1',
+        }),
+      },
+    });
+    await expect(service.readItem('generated-artifact:media_timeline_1:image_1')).resolves.toMatchObject({
+      item: {
+        providerConversationId: 'gemini_timeline_conv_1',
+        providerConversationUrl: 'https://gemini.google.com/app/gemini_timeline_conv_1',
+      },
+    });
+    await expect(service.readItem('provider-conversation:media_timeline_1:gemini:gemini_timeline_conv_1')).resolves.toMatchObject({
+      item: {
+        links: expect.objectContaining({
+          conversation: 'https://gemini.google.com/app/gemini_timeline_conv_1',
+        }),
+      },
+    });
+  });
+
   test('write-through service paths refresh the archive index without explicit backfill', async () => {
     const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-run-archive-write-through-'));
     setAuracallHomeDirOverrideForTest(homeDir);

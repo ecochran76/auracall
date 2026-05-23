@@ -671,8 +671,7 @@ function buildMediaArchiveItems(records: MediaGenerationStoredRecord[]): RunArch
   const items: RunArchiveItem[] = [];
   for (const record of records) {
     const response = record.response;
-    const conversationId = readRecordString(response.metadata, ['conversationId', 'conversation_id']);
-    const conversationUrl = readRecordString(response.metadata, ['tabUrl', 'conversationUrl', 'url']);
+    const conversation = resolveMediaGenerationConversation(response);
     const base: RunArchiveItem = {
       id: `media-generation:${response.id}`,
       object: 'run_archive_item',
@@ -694,8 +693,8 @@ function buildMediaArchiveItems(records: MediaGenerationStoredRecord[]): RunArch
       batchId: null,
       batchIndex: null,
       mediaGenerationId: response.id,
-      providerConversationId: conversationId,
-      providerConversationUrl: conversationUrl,
+      providerConversationId: conversation.id,
+      providerConversationUrl: conversation.url,
       artifactId: null,
       fileName: null,
       mimeType: null,
@@ -708,6 +707,8 @@ function buildMediaArchiveItems(records: MediaGenerationStoredRecord[]): RunArch
         mediaType: response.mediaType,
         artifactCount: response.artifacts.length,
         model: response.model ?? null,
+        ...(conversation.id ? { providerConversationId: conversation.id } : {}),
+        ...(conversation.url ? { providerConversationUrl: conversation.url } : {}),
       },
       links: {
         mediaGeneration: `/v1/media-generations/${encodeURIComponent(response.id)}`,
@@ -734,16 +735,42 @@ function buildMediaArchiveItems(records: MediaGenerationStoredRecord[]): RunArch
         },
       });
     }
-    if (conversationId) {
+    if (conversation.id) {
       items.push({
         ...base,
-        id: `provider-conversation:${response.id}:${response.provider}:${conversationId}`,
+        id: `provider-conversation:${response.id}:${response.provider}:${conversation.id}`,
         kind: 'provider_conversation',
-        title: conversationId,
+        title: conversation.id,
+        links: {
+          ...base.links,
+          ...(conversation.url ? { conversation: conversation.url } : {}),
+        },
       });
     }
   }
   return items;
+}
+
+function resolveMediaGenerationConversation(
+  response: MediaGenerationStoredRecord['response'],
+): { id: string | null; url: string | null } {
+  const metadataUrl = readRecordString(response.metadata, ['tabUrl', 'conversationUrl', 'providerConversationUrl', 'url']);
+  const metadataId = readRecordString(response.metadata, ['conversationId', 'conversation_id', 'providerConversationId']);
+  const timeline = Array.isArray(response.timeline) ? response.timeline : [];
+  let timelineUrl: string | null = null;
+  let timelineId: string | null = null;
+  for (const event of timeline) {
+    if (!isRecord(event)) continue;
+    const details = event.details;
+    timelineUrl = readRecordString(details, ['tabUrl', 'conversationUrl', 'providerConversationUrl', 'url']) ?? timelineUrl;
+    timelineId = readRecordString(details, ['conversationId', 'conversation_id', 'providerConversationId']) ?? timelineId;
+  }
+  const url = metadataUrl ?? timelineUrl;
+  const id = metadataId ?? timelineId ?? extractConversationIdFromProviderUrl(url);
+  return {
+    id,
+    url: url ?? resolveProviderConversationUrl(response.provider, id),
+  };
 }
 
 function createBaseRunItem(
@@ -1255,6 +1282,35 @@ function buildCatalogItemPath(input: {
 
 function normalizeProvider(value: unknown): Exclude<ExecutionRunServiceId, null> | null {
   if (value === 'chatgpt' || value === 'gemini' || value === 'grok') return value;
+  return null;
+}
+
+function extractConversationIdFromProviderUrl(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    const segments = parsed.pathname.split('/').map((segment) => segment.trim()).filter(Boolean);
+    if (parsed.hostname === 'gemini.google.com') {
+      const appIndex = segments.indexOf('app');
+      return appIndex >= 0 ? segments[appIndex + 1] ?? null : null;
+    }
+    if (parsed.hostname === 'chatgpt.com') {
+      const conversationIndex = segments.indexOf('c');
+      return conversationIndex >= 0 ? segments[conversationIndex + 1] ?? null : null;
+    }
+    if (parsed.hostname === 'grok.com') {
+      return segments.find((segment) => segment.length > 0) ?? null;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function resolveProviderConversationUrl(provider: string, conversationId: string | null): string | null {
+  if (!conversationId) return null;
+  if (provider === 'gemini') return `https://gemini.google.com/app/${encodeURIComponent(conversationId)}`;
+  if (provider === 'chatgpt') return `https://chatgpt.com/c/${encodeURIComponent(conversationId)}`;
   return null;
 }
 

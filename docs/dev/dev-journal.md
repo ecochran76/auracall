@@ -32146,3 +32146,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - direct rebuilt-dashboard mobile screenshot probe:
     `mainTop=44`, `workbenchRows=816px`, `scrollWidth=390`,
     `clientWidth=390`
+
+## Turn 240 | 2026-05-22
+
+- Goal: fully backfill fetchable uploaded/generated artifact cache state and
+  diagnose remaining unavailable assets.
+- Change:
+  - fixed provider conversation attachment cache lookup so a skipped sandbox
+    alias no longer hides a later materialized DOM-download entry for the same
+    file in the same manifest.
+  - media-generation archive projection now recovers provider conversation
+    ids/URLs from prompt timeline events, not only top-level metadata.
+  - installed the fixed user runtime, restarted `auracall-api.service`, and
+    refreshed the archive index.
+- Backfill result:
+  - archive index refreshed to `itemCount=1488` at
+    `2026-05-23T01:34:54.590Z`.
+  - response-backed unavailable generated artifacts dropped from 56 before the
+    fix to 2 legacy ChatGPT files after requeueing under the fixed runtime.
+  - concrete unavailable generated artifacts are now 71 total: 2 response-backed
+    legacy ChatGPT downloads and 69 media-generation artifacts.
+  - the 69 media-generation artifacts are missing local paths; only 1 carries
+    timeline conversation evidence, and the rest do not have enough persisted
+    provider evidence for deterministic refetch.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.archiveService.test.ts tests/runtime.archiveMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run smoke:archive-materialization-jobs`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `auracall api archive-backfill --timeout-ms 120000 --json`
+  - `auracall api search --kind artifact --limit 1 --json`
