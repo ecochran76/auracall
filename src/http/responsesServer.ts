@@ -1662,8 +1662,11 @@ export async function createResponsesHttpServer(
         const endForegroundWork = beginForegroundAuraCallWork();
         try {
           const itemId = parseRunArchiveItemMaterializeId(url.pathname);
+          const body = await readRequestBody(req);
+          const payload = parseRunArchiveItemMaterializeBody(JSON.parse(body || '{}'));
           const result: ArchiveItemMaterializationResult = await archiveMaterializationService.materializeItem({
             archiveItemId: itemId,
+            force: payload.force,
           });
           sendJson(res, result.status === 'materialized' || result.status === 'already_materialized' ? 200 : 202, result);
           return;
@@ -5938,12 +5941,20 @@ function parseRunArchiveMaterializationCreateBody(value: unknown) {
   const parsed = z.object({
     archiveItemId: z.string().trim().min(1).optional(),
     archive_item_id: z.string().trim().min(1).optional(),
+    force: z.boolean().optional(),
   }).parse(value);
   const archiveItemId = parsed.archiveItemId ?? parsed.archive_item_id;
   if (!archiveItemId) {
     throw new ArchiveMaterializationError('Archive item id is required.');
   }
-  return { archiveItemId };
+  return { archiveItemId, force: parsed.force ?? false };
+}
+
+function parseRunArchiveItemMaterializeBody(value: unknown) {
+  const parsed = z.object({
+    force: z.boolean().optional(),
+  }).parse(value);
+  return { force: parsed.force ?? false };
 }
 
 function parseRunArchiveMaterializationJobListQuery(searchParams: URLSearchParams) {

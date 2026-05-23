@@ -2514,7 +2514,7 @@ describe('http responses adapter', () => {
   });
 
   it('materializes a run archive item through the API surface', async () => {
-    const materializeItem = vi.fn(async (request: { archiveItemId: string }) => ({
+    const materializeItem = vi.fn(async (request: { archiveItemId: string; force?: boolean | null }) => ({
       object: 'run_archive_item_materialization' as const,
       generatedAt: '2026-05-18T18:15:00.000Z',
       status: 'materialized' as const,
@@ -2587,7 +2587,7 @@ describe('http responses adapter', () => {
           },
         },
       });
-      expect(materializeItem).toHaveBeenCalledWith({ archiveItemId });
+      expect(materializeItem).toHaveBeenCalledWith({ archiveItemId, force: false });
     } finally {
       await server.close();
     }
@@ -2608,13 +2608,14 @@ describe('http responses adapter', () => {
       error: null,
       message: 'Archive materialization job queued.',
     };
-    const createJob = vi.fn(async (request: { archiveItemId: string }) => ({
+    const createJob = vi.fn(async (request: { archiveItemId: string; force?: boolean | null }) => ({
       object: 'run_archive_materialization_job_create_result' as const,
       generatedAt: '2026-05-19T12:00:00.000Z',
       reused: false,
       job: {
         ...job,
         archiveItemId: request.archiveItemId,
+        force: request.force === true,
       },
     }));
     const readJob = vi.fn(async (id: string) => (id === job.id ? job : null));
@@ -2663,7 +2664,7 @@ describe('http responses adapter', () => {
         headers: {
           'content-type': 'application/json',
         },
-        body: JSON.stringify({ archiveItemId: 'generated-artifact:resp_1:artifact_1' }),
+        body: JSON.stringify({ archiveItemId: 'generated-artifact:resp_1:artifact_1', force: true }),
       });
       expect(createResponse.status).toBe(202);
       expect(await createResponse.json()).toMatchObject({
@@ -2690,7 +2691,7 @@ describe('http responses adapter', () => {
           active: 1,
         },
       });
-      expect(createJob).toHaveBeenCalledWith({ archiveItemId: 'generated-artifact:resp_1:artifact_1' });
+      expect(createJob).toHaveBeenCalledWith({ archiveItemId: 'generated-artifact:resp_1:artifact_1', force: true });
       expect(listJobs).toHaveBeenCalledWith({
         status: 'active',
         archiveItemId: 'generated-artifact:resp_1:artifact_1',

@@ -342,9 +342,10 @@ function materializationFilterMatches(row, job, filter) {
   return status === filter;
 }
 
-function materializationRowTitle(job, queuing = false) {
+function materializationRowTitle(job, queuing = false, row = null) {
   if (queuing) return "Queuing materialization";
-  if (job?.status === "succeeded") return "Materialization complete";
+  if (!isActiveArchiveMaterializationJob(job) && row?.fileAvailable === true) return "Refresh cached asset";
+  if (job?.status === "succeeded") return "Materialization complete; refresh";
   if (job?.status === "failed") return "Materialization failed; retry";
   if (job?.status === "cancelled") return "Materialization cancelled; retry";
   if (job?.status === "skipped") return "Materialization skipped";
@@ -352,9 +353,10 @@ function materializationRowTitle(job, queuing = false) {
   return "Queue artifact materialization";
 }
 
-function materializationRowIcon(job, queuing = false) {
+function materializationRowIcon(job, queuing = false, row = null) {
   if (queuing || job?.status === "queued" || job?.status === "running") return <Activity size={13} aria-hidden="true" />;
-  if (job?.status === "succeeded") return <Check size={13} aria-hidden="true" />;
+  if (!isActiveArchiveMaterializationJob(job) && row?.fileAvailable === true) return <RefreshCcw size={13} aria-hidden="true" />;
+  if (job?.status === "succeeded") return <RefreshCcw size={13} aria-hidden="true" />;
   return <PackagePlus size={13} aria-hidden="true" />;
 }
 
@@ -2585,7 +2587,7 @@ function ArchiveSearchViewport({
     if (column.id === "title") return <><b>{compactText(row.title, 150)}</b>{row.summary ? <small>{compactText(row.summary, 100)}</small> : null}</>;
     if (column.id === "actions") {
       const canDownloadAsset = Boolean(row.assetRoute);
-      const canMaterializeAsset = row.kind === "artifact" && row.archiveItemRoute && row.fileAvailable !== true;
+      const canMaterializeAsset = row.kind === "artifact" && row.archiveItemRoute;
       const materializationJob = rowMaterializationJobs[row.id] ?? null;
       const activeMaterializationJob = isActiveArchiveMaterializationJob(materializationJob);
       const showMaterializeAction = canMaterializeAsset || materializationJob;
@@ -2611,12 +2613,12 @@ function ArchiveSearchViewport({
             <button
               type="button"
               className={`row-action-button materialize-row-action materialize-row-${materializationJob?.status ?? "idle"}`}
-              title={materializationRowTitle(materializationJob, materializingRowId === row.id)}
-              aria-label={materializationRowTitle(materializationJob, materializingRowId === row.id)}
-              disabled={materializingRowId === row.id || activeMaterializationJob || materializationJob?.status === "succeeded"}
+              title={materializationRowTitle(materializationJob, materializingRowId === row.id, row)}
+              aria-label={materializationRowTitle(materializationJob, materializingRowId === row.id, row)}
+              disabled={materializingRowId === row.id || activeMaterializationJob}
               onClick={(event) => materializeSearchRow(row, event)}
             >
-              {materializationRowIcon(materializationJob, materializingRowId === row.id)}
+              {materializationRowIcon(materializationJob, materializingRowId === row.id, row)}
             </button>
           ) : null}
         </>
@@ -2693,7 +2695,7 @@ function ArchiveSearchViewport({
         method: "POST",
         cache: "no-store",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ archiveItemId: row.itemId }),
+        body: JSON.stringify({ archiveItemId: row.itemId, force: row.fileAvailable === true }),
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);

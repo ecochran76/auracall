@@ -1363,6 +1363,7 @@ apiCommand
   .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
   .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
   .option('--timeout-ms <ms>', 'HTTP write timeout in milliseconds.', parseIntOption, 60000)
+  .option('--force', 'Refresh from the provider even when the archive item already has a readable local asset.', false)
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (id: string, commandOptions) => {
     const parentOptions = program.opts?.() ?? {};
@@ -1376,6 +1377,7 @@ apiCommand
       host: commandOptions.host ?? apiConfig.host,
       port: commandOptions.port ?? apiConfig.port,
       timeoutMs: commandOptions.timeoutMs,
+      force: commandOptions.force,
     });
     if (commandOptions.json) {
       console.log(JSON.stringify(result, null, 2));
@@ -1391,6 +1393,7 @@ apiCommand
   .option('--host <address>', 'Local API host to query (default 127.0.0.1).', '127.0.0.1')
   .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
   .option('--timeout-ms <ms>', 'HTTP write timeout in milliseconds.', parseIntOption, 10000)
+  .option('--force', 'Refresh from the provider even when the archive item already has a readable local asset.', false)
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (id: string, commandOptions) => {
     const parentOptions = program.opts?.() ?? {};
@@ -1404,6 +1407,7 @@ apiCommand
       host: commandOptions.host ?? apiConfig.host,
       port: commandOptions.port ?? apiConfig.port,
       timeoutMs: commandOptions.timeoutMs,
+      force: commandOptions.force,
     });
     if (commandOptions.json) {
       console.log(JSON.stringify(result, null, 2));

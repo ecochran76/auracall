@@ -32059,3 +32059,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run smoke:operator-search-ux`
   - `pnpm run build`
   - `pnpm run preflight:lazy-live-follow`
+
+## Turn 236 | 2026-05-22
+
+- Goal: make stale cached generated artifacts requeueable through the same
+  durable archive materialization lane as missing artifacts.
+- Change:
+  - archive item materialization accepts `force: true` to bypass local cached
+    file, materialized-directory, conversation-cache, and sibling-archive reuse
+    before calling the provider artifact materializer.
+  - durable archive materialization jobs persist and pass `force` into the
+    materializer; active jobs for the same archive item still de-duplicate.
+  - HTTP, CLI, MCP, and operator Search row actions expose the force refresh
+    path; Search sends force automatically for generated-artifact rows that
+    already have a cached file.
+- Verification:
+  - `pnpm vitest run tests/runtime.archiveMaterializationService.test.ts tests/runtime.archiveMaterializationJobService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiRunArchiveCommand.test.ts tests/runtime.searchProjectionService.test.ts --maxWorkers 1 --testNamePattern "archive materialization|materializes a run archive item|search projection"`
+  - `pnpm run check`
+  - `pnpm run smoke:archive-materialization-jobs`
+  - `pnpm run smoke:operator-search-ux`
+  - `pnpm run build`
+  - `pnpm run preflight:lazy-live-follow`

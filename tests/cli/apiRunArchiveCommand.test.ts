@@ -253,6 +253,8 @@ describe('api run archive CLI helpers', () => {
         'http://127.0.0.1:18095/v1/archive/items/generated-artifact%3Aresp_1%3Aartifact_1/materialize',
       );
       expect(init?.method).toBe('POST');
+      expect(init?.headers).toEqual({ 'content-type': 'application/json' });
+      expect(JSON.parse(String(init?.body))).toMatchObject({ force: true });
       return new Response(JSON.stringify({
         object: 'run_archive_item_materialization',
         generatedAt: '2026-05-18T18:30:00.000Z',
@@ -276,6 +278,7 @@ describe('api run archive CLI helpers', () => {
     const result = await materializeApiRunArchiveItemForCli({
       port: 18095,
       id: 'generated-artifact:resp_1:artifact_1',
+      force: true,
     }, fetchImpl as never);
 
     expect(formatApiRunArchiveItemMaterializeCliSummary(result)).toContain(
@@ -294,6 +297,7 @@ describe('api run archive CLI helpers', () => {
         expect(init?.headers).toEqual({ 'content-type': 'application/json' });
         expect(JSON.parse(String(init?.body))).toMatchObject({
           archiveItemId: 'generated-artifact:resp_1:artifact_1',
+          force: true,
         });
         return new Response(JSON.stringify({
           object: 'run_archive_materialization_job_create_result',
@@ -341,6 +345,7 @@ describe('api run archive CLI helpers', () => {
     const created = await createApiRunArchiveMaterializationJobForCli({
       port: 18095,
       id: 'generated-artifact:resp_1:artifact_1',
+      force: true,
     }, fetchImpl as never);
     expect(formatApiRunArchiveMaterializationJobCliSummary(created)).toContain(
       'Run archive materialization job: ramj_test_1',

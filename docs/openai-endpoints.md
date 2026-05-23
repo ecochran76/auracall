@@ -331,12 +331,17 @@ Current limits:
   - `POST /v1/archive/items/{archive_item_id}/materialize` asks the provider
     materializer to recover a missing generated artifact through the normal
     provider runtime path, then writes the local file facts back into the
-    archive index. This foreground compatibility route makes live-follow yield
-    while it runs; CLI parity is `auracall api archive-materialize --port
-    <port> <archive_id>`.
+    archive index. Body `{"force":true}` refreshes from the provider even when
+    the item already has a readable cached file, so stale generated artifacts
+    can be re-fetched. This foreground compatibility route makes live-follow
+    yield while it runs; CLI parity is `auracall api archive-materialize
+    --force --port <port> <archive_id>`.
   - `POST /v1/archive/materializations` queues the same provider-backed
     recovery as a persisted job and returns
     `object = "run_archive_materialization_job_create_result"` with a job id.
+    Body `{"archiveItemId":"...","force":true}` queues a provider refresh for
+    an already-cached generated artifact; active jobs for the same archive item
+    still de-duplicate while queued or running.
     The job store is user-scoped under the run archive tree, de-duplicates
     active jobs for the same archive item, records provider/auth failures as
     terminal job errors, and marks interrupted active jobs failed on API/MCP
@@ -348,7 +353,7 @@ Current limits:
     `{"action":"cancel"}`; running jobs return HTTP 409 because the provider
     materializer is not yet abortable once browser work has started.
     CLI parity is
-    `auracall api archive-materialization-create --port <port> <archive_id>`
+    `auracall api archive-materialization-create --force --port <port> <archive_id>`
     plus `auracall api archive-materialization-status --port <port> <job_id>`
     and `auracall api archive-materialization-jobs --port <port> --status
     active`, plus `auracall api archive-materialization-cancel --port <port>

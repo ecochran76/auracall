@@ -75,7 +75,42 @@ describe('archive materialization job service', () => {
         status: 'materialized',
       },
     });
-    expect(materializeItem).toHaveBeenCalledWith({ archiveItemId: 'generated-artifact:resp_1:artifact_1' });
+    expect(materializeItem).toHaveBeenCalledWith({ archiveItemId: 'generated-artifact:resp_1:artifact_1', force: false });
+  });
+
+  it('passes force refresh requests through durable materialization jobs', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialize-job-force-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    let scheduled: (() => Promise<void>) | undefined;
+    const materializeItem = vi.fn(async (request: { archiveItemId: string; force?: boolean | null }) => ({
+      object: 'run_archive_item_materialization' as const,
+      generatedAt: '2026-05-19T12:41:00.000Z',
+      status: 'materialized' as const,
+      item: createGeneratedArtifactItem(request.archiveItemId),
+      file: null,
+      message: 'Archive item materialized and indexed.',
+    }));
+    const service = createArchiveMaterializationJobService({
+      materializationService: { materializeItem },
+      generateId: () => 'ramj_force_1',
+      now: sequenceNow([
+        '2026-05-19T12:40:00.000Z',
+        '2026-05-19T12:40:01.000Z',
+        '2026-05-19T12:40:02.000Z',
+      ]),
+      schedule: (work) => {
+        scheduled = work;
+      },
+    });
+
+    const created = await service.createJob({ archiveItemId: 'generated-artifact:resp_1:artifact_1', force: true });
+
+    expect(created.job.force).toBe(true);
+    if (!scheduled) {
+      throw new Error('Expected archive materialization job to be scheduled.');
+    }
+    await scheduled();
+    expect(materializeItem).toHaveBeenCalledWith({ archiveItemId: 'generated-artifact:resp_1:artifact_1', force: true });
   });
 
   it('lists persisted jobs with status and archive item filters', async () => {

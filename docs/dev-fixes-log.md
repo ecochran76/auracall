@@ -16598,3 +16598,10 @@ browser-stage lifecycle observability, not transcript truncation.
   availability, materialization status, materialized timestamp, evidence
   timestamp, and materialization job id when present. The Search workbench uses
   that summary in the Files column and result inspector.
+
+- 2026-05-22: Stale generated artifacts need the same durable materialization
+  lane as missing generated artifacts. Archive item materialization and durable
+  materialization jobs now accept `force: true`, which bypasses readable local
+  asset/reuse short-circuits and refreshes through the provider materializer.
+  Search row actions send `force` when the row already has a cached file, while
+  active same-item jobs still de-duplicate.

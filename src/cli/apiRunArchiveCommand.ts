@@ -26,9 +26,13 @@ export interface ApiRunArchiveItemCliOptions {
   id: string;
 }
 
-export interface ApiRunArchiveItemMaterializeCliOptions extends ApiRunArchiveItemCliOptions {}
+export interface ApiRunArchiveItemMaterializeCliOptions extends ApiRunArchiveItemCliOptions {
+  force?: boolean | null;
+}
 
-export interface ApiRunArchiveMaterializationJobCliOptions extends ApiRunArchiveItemCliOptions {}
+export interface ApiRunArchiveMaterializationJobCliOptions extends ApiRunArchiveItemCliOptions {
+  force?: boolean | null;
+}
 
 export interface ApiRunArchiveMaterializationJobStatusCliOptions {
   host?: string | null;
@@ -140,6 +144,10 @@ export async function materializeApiRunArchiveItemForCli(
   try {
     const response = await fetchWithLocalApiAuth(new URL(`http://${host}:${port}/v1/archive/items/${encodeURIComponent(id)}/materialize`), {
       method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ force: options.force === true }),
       signal: controller.signal,
     }, fetchImpl);
     if (!response.ok) {
@@ -167,7 +175,7 @@ export async function createApiRunArchiveMaterializationJobForCli(
       headers: {
         'content-type': 'application/json',
       },
-      body: JSON.stringify({ archiveItemId: id }),
+      body: JSON.stringify({ archiveItemId: id, force: options.force === true }),
       signal: controller.signal,
     }, fetchImpl);
     if (!response.ok) {

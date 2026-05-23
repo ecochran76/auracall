@@ -18,6 +18,7 @@ import { findCachedConversationAttachmentAsset } from './archiveCachedAssetLooku
 
 export interface ArchiveItemMaterializationRequest {
   archiveItemId: string;
+  force?: boolean | null;
 }
 
 export interface ArchiveItemMaterializationResult {
@@ -81,12 +82,13 @@ export function createArchiveMaterializationService(
       if (!archiveItemId) {
         throw new ArchiveMaterializationError('Archive item id is required.');
       }
+      const force = request.force === true;
       const detail = await runArchiveService.readItem(archiveItemId);
       if (!detail) {
         throw new ArchiveMaterializationError(`Run archive item ${archiveItemId} was not found.`, 404);
       }
       const item = detail.item;
-      if (item.fileAvailable === true && item.localPath) {
+      if (!force && item.fileAvailable === true && item.localPath) {
         return {
           object: 'run_archive_item_materialization',
           generatedAt: now().toISOString(),
@@ -106,7 +108,7 @@ export function createArchiveMaterializationService(
       if (item.kind !== 'generated_artifact') {
         throw new ArchiveMaterializationError(`Run archive item ${archiveItemId} is ${item.kind}; only generated_artifact materialization is supported.`);
       }
-      const existingMaterializedAsset = await findExistingMaterializedItemAsset(item);
+      const existingMaterializedAsset = force ? null : await findExistingMaterializedItemAsset(item);
       if (existingMaterializedAsset) {
         const materializedAt = now().toISOString();
         const updatedItem = await materializedArchiveItem(item, existingMaterializedAsset, materializedAt);
@@ -123,7 +125,7 @@ export function createArchiveMaterializationService(
           message: 'Archive item linked to an existing materialized file in its archive directory.',
         };
       }
-      const cachedConversationAsset = await findCachedConversationAttachmentAsset(item);
+      const cachedConversationAsset = force ? null : await findCachedConversationAttachmentAsset(item);
       if (cachedConversationAsset) {
         const materializedAt = now().toISOString();
         const updatedItem = await materializedArchiveItem(item, cachedConversationAsset, materializedAt);
@@ -140,7 +142,7 @@ export function createArchiveMaterializationService(
           message: 'Archive item linked to an existing provider conversation attachment cache file.',
         };
       }
-      const reusable = await findReusableArchiveAsset(runArchiveService, item);
+      const reusable = force ? null : await findReusableArchiveAsset(runArchiveService, item);
       if (reusable) {
         const materializedAt = now().toISOString();
         const updatedItem = await materializedArchiveItem(item, reusable, materializedAt);

@@ -42,6 +42,7 @@ const runArchiveItemInputShape = {
 
 const runArchiveMaterializationCreateInputShape = {
   archiveItemId: z.string().min(1),
+  force: z.boolean().optional(),
 } satisfies z.ZodRawShape;
 
 const runArchiveMaterializationJobInputShape = {
@@ -201,6 +202,7 @@ const archiveMaterializationJobShape = z.object({
   object: z.literal('run_archive_materialization_job'),
   id: z.string(),
   archiveItemId: z.string(),
+  force: z.boolean().optional(),
   status: z.enum(['queued', 'running', 'succeeded', 'skipped', 'failed', 'cancelled']),
   createdAt: z.string(),
   updatedAt: z.string(),

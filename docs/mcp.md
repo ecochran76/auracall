@@ -146,9 +146,12 @@ scoped keys, response batches, attachments, and polling rules, see
   `status` and expose derived `runtimeState`, so MCP callers can filter for
   transient states such as `finalizing` without parsing response diagnostics.
   HTTP `/v1/archive` and MCP `run_archive_search` both expose cache-state
-  filters for `fileAvailable` and `assetAvailability`. Use
-  `search_projection` when a caller needs account-mirror rows, cursor paging,
-  or latest archive materialization status filters.
+  filters for `fileAvailable` and `assetAvailability`. MCP
+  `run_archive_materialization_create` queues provider-backed asset recovery
+  for one generated artifact and accepts `force = true` when a caller needs to
+  refresh a stale but locally readable cached asset. Use `search_projection`
+  when a caller needs account-mirror rows, cursor paging, or latest archive
+  materialization status filters.
 - Backfill: `run_archive_backfill` rebuilds that index from existing runtime
   records and is safe for operator repair workflows because it does not touch
   provider pages.

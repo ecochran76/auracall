@@ -20,6 +20,7 @@ export interface ArchiveMaterializationJob {
   object: 'run_archive_materialization_job';
   id: string;
   archiveItemId: string;
+  force?: boolean;
   status: ArchiveMaterializationJobStatus;
   createdAt: string;
   updatedAt: string;
@@ -64,7 +65,7 @@ export interface ArchiveMaterializationJobListResult {
 }
 
 export interface ArchiveMaterializationJobService {
-  createJob(request: { archiveItemId: string }): Promise<ArchiveMaterializationJobCreateResult>;
+  createJob(request: { archiveItemId: string; force?: boolean | null }): Promise<ArchiveMaterializationJobCreateResult>;
   listJobs(request?: ArchiveMaterializationJobListRequest): Promise<ArchiveMaterializationJobListResult>;
   readJob(id: string): Promise<ArchiveMaterializationJob | null>;
   cancelJob(id: string): Promise<ArchiveMaterializationJob>;
@@ -115,6 +116,7 @@ export function createArchiveMaterializationJobService(
   const service: ArchiveMaterializationJobService = {
     async createJob(request) {
       const archiveItemId = request.archiveItemId.trim();
+      const force = request.force === true;
       if (!archiveItemId) {
         throw new ArchiveMaterializationError('Archive item id is required.');
       }
@@ -132,6 +134,7 @@ export function createArchiveMaterializationJobService(
         object: 'run_archive_materialization_job',
         id: generateId(),
         archiveItemId,
+        force,
         status: 'queued',
         createdAt: generatedAt,
         updatedAt: generatedAt,
@@ -236,6 +239,7 @@ export function createArchiveMaterializationJobService(
       try {
         const result = await withForegroundWork(() => deps.materializationService.materializeItem({
           archiveItemId: running.archiveItemId,
+          force: running.force === true,
         }));
         const completedAt = now().toISOString();
         const completed: ArchiveMaterializationJob = {
@@ -375,7 +379,7 @@ async function readJobStoreFile(filePath: string): Promise<ArchiveMaterializatio
     if (!Array.isArray(parsed)) {
       return [];
     }
-    return parsed.filter(isArchiveMaterializationJob);
+    return parsed.filter(isArchiveMaterializationJob).map(normalizeArchiveMaterializationJob);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       return [];
@@ -398,6 +402,13 @@ function isArchiveMaterializationJob(value: unknown): value is ArchiveMaterializ
     && typeof record.id === 'string'
     && typeof record.archiveItemId === 'string'
     && typeof record.status === 'string';
+}
+
+function normalizeArchiveMaterializationJob(job: ArchiveMaterializationJob): ArchiveMaterializationJob {
+  return {
+    ...job,
+    force: job.force === true,
+  };
 }
 
 function materializationJobError(error: unknown): ArchiveMaterializationJob['error'] {

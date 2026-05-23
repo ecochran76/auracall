@@ -368,6 +368,52 @@ describe('archive materialization service', () => {
     expect(result.status).toBe('already_materialized');
     expect(result.file?.localPath).toBe(localPath);
   });
+
+  it('force-refreshes a readable local artifact through the provider materializer', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-archive-materialize-force-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const stalePath = path.join(homeDir, 'stale.json');
+    await fs.writeFile(stalePath, '{"stale":true}\n', 'utf8');
+    const item = {
+      ...createGeneratedArtifactItem(),
+      fileAvailable: true,
+      localPath: stalePath,
+      cacheKey: 'sha256:stale',
+      checksumSha256: 'stale',
+    };
+    const service = createArchiveMaterializationService({
+      config: {},
+      now: () => new Date('2026-05-18T18:06:00.000Z'),
+      runArchiveService: readOnlyArchiveService(item),
+      materializeConversationArtifact: async (input): Promise<FileRef> => {
+        const localPath = path.join(input.destDir, 'fresh.json');
+        await fs.writeFile(localPath, '{"fresh":true}\n', 'utf8');
+        return {
+          id: input.artifact.id,
+          name: 'fresh.json',
+          provider: 'chatgpt',
+          source: 'conversation',
+          localPath,
+          remoteUrl: input.artifact.uri,
+          mimeType: 'application/json',
+          size: 15,
+          metadata: {
+            materialization: 'fixture-force-download',
+          },
+        };
+      },
+    });
+
+    const result = await service.materializeItem({ archiveItemId: item.id, force: true });
+
+    expect(result.status).toBe('materialized');
+    expect(result.item.localPath).toContain('fresh.json');
+    expect(result.item.localPath).not.toBe(stalePath);
+    expect(result.item.metadata.materialization).toMatchObject({
+      status: 'materialized',
+      method: 'fixture-force-download',
+    });
+  });
 });
 
 function createGeneratedArtifactItem(): RunArchiveItem {
