@@ -131,6 +131,24 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
+function statusReadout(input) {
+  const hasPayload = Boolean(input.payload);
+  const tone = input.error ? "error" : hasPayload ? "ok" : input.loading ? "waiting" : "error";
+  const label = input.error
+    ? input.errorLabel
+    : hasPayload
+      ? input.loadedLabel
+      : input.loading
+        ? "Loading"
+        : input.unavailableLabel;
+  const detail = input.updatedAt
+    ? `Updated ${formatDateTime(input.updatedAt)}`
+    : hasPayload
+      ? "Loaded from latest available payload"
+      : "Waiting for first poll";
+  return { tone, label, detail };
+}
+
 function readLayout() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}");
@@ -1264,6 +1282,15 @@ function HealthViewport({ apiStatus, selectedLiveFollowAccount, onSelectedLiveFo
   const discovery = status?.serviceDiscovery ?? {};
   const process = status?.process ?? {};
   const binding = status?.binding ?? {};
+  const readout = statusReadout({
+    payload: status,
+    loading,
+    error,
+    updatedAt,
+    loadedLabel: status?.ok ? "API reachable" : "API status loaded",
+    errorLabel: "API unavailable",
+    unavailableLabel: "API unavailable",
+  });
 
   useEffect(() => {
     if (!selectedLiveFollowKey) return;
@@ -1286,9 +1313,9 @@ function HealthViewport({ apiStatus, selectedLiveFollowAccount, onSelectedLiveFo
           <h1>Health</h1>
         </div>
         <div className="status-readout">
-          <span className={`state-dot state-${statusTone(status?.ok ? "ok" : "error")}`} />
-          <strong>{status?.ok ? "API reachable" : loading ? "Loading" : "API unavailable"}</strong>
-          <small>{updatedAt ? `Updated ${formatDateTime(updatedAt)}` : "Waiting for first poll"}</small>
+          <span className={`state-dot state-${statusTone(readout.tone)}`} />
+          <strong>{readout.label}</strong>
+          <small>{readout.detail}</small>
         </div>
       </div>
 
@@ -1475,6 +1502,15 @@ function RunsViewport({ runStatus }) {
   const topology = status?.runnerTopology ?? {};
   const topologyMetrics = topology.metrics ?? {};
   const localClaimMetrics = localClaim.metrics ?? {};
+  const readout = statusReadout({
+    payload: status,
+    loading,
+    error,
+    updatedAt,
+    loadedLabel: "Run status loaded",
+    errorLabel: "Run status unavailable",
+    unavailableLabel: "Run status unavailable",
+  });
 
   return (
     <main className="viewport" tabIndex="-1">
@@ -1484,9 +1520,9 @@ function RunsViewport({ runStatus }) {
           <h1>Runs</h1>
         </div>
         <div className="status-readout">
-          <span className={`state-dot state-${statusTone(error ? "error" : "ok")}`} />
-          <strong>{error ? "Run status unavailable" : loading ? "Loading" : "Run status loaded"}</strong>
-          <small>{updatedAt ? `Updated ${formatDateTime(updatedAt)}` : "Waiting for first poll"}</small>
+          <span className={`state-dot state-${statusTone(readout.tone)}`} />
+          <strong>{readout.label}</strong>
+          <small>{readout.detail}</small>
         </div>
       </div>
 
@@ -4256,6 +4292,7 @@ export default function App() {
   const [selectedSearchRow, setSelectedSearchRow] = useState(readSearchRowFromUrl);
   const [selectedSearchDetail, setSelectedSearchDetail] = useState(null);
   const [dismissedSearchInspectorKey, setDismissedSearchInspectorKey] = useState(null);
+  const [mobileLeftOpen, setMobileLeftOpen] = useState(false);
   const dragRef = useRef(null);
   const apiStatus = useApiStatus();
   const runStatus = useRunRecoveryStatus();
@@ -4409,13 +4446,20 @@ export default function App() {
 
   function setActiveNav(activeNav) {
     setLayout((current) => ({ ...current, activeNav }));
+    setMobileLeftOpen(false);
   }
 
   return (
     <div className="app-shell">
       <header className="topbar">
         <div className="brand">
-          <button className="icon-button mobile-menu" type="button" aria-label="Open navigation">
+          <button
+            className="icon-button mobile-menu"
+            type="button"
+            aria-label={mobileLeftOpen ? "Close navigation" : "Open navigation"}
+            aria-expanded={mobileLeftOpen}
+            onClick={() => setMobileLeftOpen((open) => !open)}
+          >
             <Menu size={18} />
           </button>
           <span>AuraCall</span>
@@ -4478,7 +4522,21 @@ export default function App() {
           "--right-width": `${layout.rightWidth}px`,
         }}
       >
-        <aside className={layout.leftCollapsed ? "pane left-pane is-collapsed" : "pane left-pane"}>
+        {mobileLeftOpen ? (
+          <button
+            className="mobile-pane-backdrop"
+            type="button"
+            aria-label="Close context pane"
+            onClick={() => setMobileLeftOpen(false)}
+          />
+        ) : null}
+
+        <aside className={[
+          "pane",
+          "left-pane",
+          layout.leftCollapsed ? "is-collapsed" : "",
+          mobileLeftOpen ? "mobile-open" : "",
+        ].filter(Boolean).join(" ")}>
           <div className="pane-toolbar">
             <button
               className="icon-button"

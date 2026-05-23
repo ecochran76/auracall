@@ -32081,3 +32081,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run smoke:operator-search-ux`
   - `pnpm run build`
   - `pnpm run preflight:lazy-live-follow`
+
+## Turn 237 | 2026-05-22
+
+- Goal: tighten the operator dashboard UX findings from the frontend design
+  review.
+- Change:
+  - Health and Runs status readouts now prefer real loaded payload evidence
+    over transient hook loading state, avoiding stale "Loading / Waiting for
+    first poll" banners when page data is already visible.
+  - mobile workbench layout no longer reserves 44px rails for collapsed context
+    and inspector panes; the main viewport gets full width, context opens from
+    the menu as an overlay, and selected Search inspectors still open as an
+    overlay.
+- Verification:
+  - `pnpm run check`
+  - `pnpm run ux:build`
+  - `pnpm run smoke:operator-search-ux`
+  - direct mobile visual probe against a temporary local API server:
+    `scrollWidth=390`, `clientWidth=390`, `viewportWidth=390`,
+    `leftWidth=0`, `rightWidth=0`
+  - direct settled mobile context-drawer probe:
+    `leftWidth=320`, `scrollWidth=390`, `clientWidth=390`,
+    `aria-expanded=true`
+  - direct mobile context-drawer probe with persisted `leftCollapsed=true`:
+    `leftWidth=320`, `contentOpacity=1`, `contentPointerEvents=auto`

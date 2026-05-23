@@ -16605,3 +16605,10 @@ browser-stage lifecycle observability, not transcript truncation.
   asset/reuse short-circuits and refreshes through the provider materializer.
   Search row actions send `force` when the row already has a cached file, while
   active same-item jobs still de-duplicate.
+
+- 2026-05-22: The operator dashboard should not show a stale Loading banner
+  after real status data is already rendered, and mobile should not reserve
+  width for collapsed side panes. Health/Runs readouts now prioritize loaded
+  payload evidence over hook loading state, while the mobile workbench gives
+  the main viewport the full width and opens context/inspector panes as
+  overlays only when invoked.
