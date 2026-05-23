@@ -51,6 +51,37 @@ async function main(): Promise<void> {
     if (mobileOverflow) {
       throw new Error('mobile Search dashboard has page-level horizontal overflow.');
     }
+    const mobileViewportTop = await page.evaluate(() =>
+      document.querySelector('.search-viewport')?.getBoundingClientRect().top ?? 999
+    );
+    if (mobileViewportTop > 90) {
+      throw new Error(`mobile Search viewport starts too low: ${mobileViewportTop}.`);
+    }
+    const mobileTable = await page.evaluate(() => {
+      const headers = [...document.querySelectorAll('.search-table-head .search-th')] as HTMLElement[];
+      const titleHeader = headers.find((element) => element.textContent?.toLowerCase().includes('title'));
+      const tenantHeader = headers.find((element) => element.textContent?.toLowerCase().includes('tenant'));
+      const actionHeader = headers.find((element) => element.textContent?.toLowerCase().includes('actions'));
+      const titleRect = titleHeader?.getBoundingClientRect();
+      const clientWidth = document.documentElement.clientWidth;
+      const visibleTitleWidth = titleRect
+        ? Math.max(0, Math.min(titleRect.right, clientWidth) - Math.max(titleRect.left, 0))
+        : 0;
+      return {
+        visibleTitleWidth,
+        hasTenantHeader: Boolean(tenantHeader),
+        actionPosition: actionHeader ? getComputedStyle(actionHeader).position : null,
+      };
+    });
+    if (mobileTable.visibleTitleWidth < 120) {
+      throw new Error(`mobile Search table title column is too compressed: ${JSON.stringify(mobileTable)}.`);
+    }
+    if (mobileTable.hasTenantHeader) {
+      throw new Error(`mobile Search table should use the compact column set: ${JSON.stringify(mobileTable)}.`);
+    }
+    if (mobileTable.actionPosition === 'sticky') {
+      throw new Error(`mobile Search table actions should not overlay content: ${JSON.stringify(mobileTable)}.`);
+    }
 
     await page.click('button.search-asset-toggle');
     await page.waitForFunction(() => !location.href.includes('assets=available'), { timeout: 5_000 });
@@ -77,6 +108,9 @@ async function main(): Promise<void> {
         cachedAssetToggle: 'ok',
         copySearchUrlAction: 'ok',
         shippedContextBadges: 'ok',
+        mobilePaneLayout: 'ok',
+        mobileTitleColumn: 'ok',
+        mobileActionsOverlay: 'ok',
         mobileHorizontalOverflow: false,
       },
     }, null, 2));

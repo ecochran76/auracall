@@ -44,6 +44,12 @@ const SEARCH_REFRESH_MS = 45000;
 const SEARCH_PAGE_SIZE = 80;
 const SEARCH_ROW_HEIGHT = 34;
 const SEARCH_OVERSCAN_ROWS = 8;
+const COMPACT_SEARCH_COLUMN_WIDTHS = {
+  sortTime: 138,
+  provider: 82,
+  title: 260,
+  actions: 82,
+};
 
 const NAV_ITEMS = [
   { id: "chats", label: "Chats", icon: MessageSquareText },
@@ -1991,6 +1997,7 @@ function ArchiveSearchViewport({
   const [copiedSearchUrl, setCopiedSearchUrl] = useState(false);
   const [materializingRowId, setMaterializingRowId] = useState(null);
   const [rowMaterializationJobs, setRowMaterializationJobs] = useState({});
+  const [isCompactSearchTable, setIsCompactSearchTable] = useState(() => window.matchMedia("(max-width: 620px)").matches);
   const searchRoute = apiStatus.status?.routes?.search ?? "/v1/search";
   const dragColumnRef = useRef(null);
   const searchWorkbenchRef = useRef(null);
@@ -2090,7 +2097,12 @@ function ArchiveSearchViewport({
   }, [filteredRows, virtualViewport]);
   const visibleRows = virtualWindow.rows;
   const selectedArchiveLike = selectedArchiveItem?.id && !selectedRow;
-  const visibleColumns = orderedSearchColumns(tablePrefs);
+  const visibleColumns = useMemo(() => {
+    const columns = orderedSearchColumns(tablePrefs);
+    if (!isCompactSearchTable) return columns;
+    const compactColumnIds = new Set(["sortTime", "provider", "title", "actions"]);
+    return columns.filter((column) => compactColumnIds.has(column.id));
+  }, [isCompactSearchTable, tablePrefs]);
   const hiddenColumnCount = tablePrefs.hidden?.length ?? 0;
   const activeFilterCount = (filters.q.trim() ? 1 : 0)
     + (filters.kind !== "all" ? 1 : 0)
@@ -2123,6 +2135,16 @@ function ArchiveSearchViewport({
   useEffect(() => {
     localStorage.setItem(SEARCH_VIEWS_STORAGE_KEY, JSON.stringify(savedViews));
   }, [savedViews]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 620px)");
+    function updateCompactSearchTable() {
+      setIsCompactSearchTable(media.matches);
+    }
+    updateCompactSearchTable();
+    media.addEventListener("change", updateCompactSearchTable);
+    return () => media.removeEventListener("change", updateCompactSearchTable);
+  }, []);
 
   useEffect(() => {
     if (!hasOpenSearchPopover) return undefined;
@@ -2572,10 +2594,13 @@ function ArchiveSearchViewport({
   }, []);
 
   function gridTemplateColumns() {
-    return visibleColumns.map((column) => `${tablePrefs.widths[column.id] ?? column.width}px`).join(" ");
+    return visibleColumns
+      .map((column) => `${isCompactSearchTable ? (COMPACT_SEARCH_COLUMN_WIDTHS[column.id] ?? column.width) : (tablePrefs.widths[column.id] ?? column.width)}px`)
+      .join(" ");
   }
 
   function columnWidth(columnId) {
+    if (isCompactSearchTable && COMPACT_SEARCH_COLUMN_WIDTHS[columnId]) return COMPACT_SEARCH_COLUMN_WIDTHS[columnId];
     return tablePrefs.widths[columnId] ?? SEARCH_TABLE_COLUMNS.find((column) => column.id === columnId)?.width ?? 0;
   }
 

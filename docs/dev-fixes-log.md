@@ -16619,3 +16619,10 @@ browser-stage lifecycle observability, not transcript truncation.
   `tracked`, or similar concrete states while keeping the existing status color
   system. The Search UX smoke now fails if the shipped Search context regresses
   to planned/draft labels.
+
+- 2026-05-22: The mobile operator workbench must remove inactive side panes
+  from grid layout, not just collapse their width. Hidden panes were still
+  creating implicit rows on narrow screens, pushing Search content far below
+  the top bar. The mobile workbench now displays only the active viewport unless
+  an overlay pane is opened, and Search uses a compact mobile table column set
+  so title content is visible instead of being covered by sticky action cells.

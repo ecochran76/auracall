@@ -32123,3 +32123,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run check`
   - `pnpm run smoke:operator-search-ux`
   - `git diff --check`
+
+## Turn 239 | 2026-05-22
+
+- Goal: run a live browser audit of the operator dashboard after the context
+  label cleanup and fix the highest-value visual regression.
+- Change:
+  - real-browser desktop/mobile pass found no planned/draft context copy and
+    no page-level overflow, but mobile Search still had hidden side panes
+    occupying implicit grid rows.
+  - inactive mobile side panes are now removed from layout until their overlay
+    state is active, so the Search viewport starts directly below the top bar.
+  - mobile Search uses a compact table column set (`Time`, `Provider`, `Title`,
+    `Actions`) and disables sticky action cells on narrow screens so row titles
+    stay visible.
+  - the Search UX smoke now asserts mobile pane layout, compact title width,
+    and non-overlaid actions.
+- Verification:
+  - `pnpm run check`
+  - `pnpm run smoke:operator-search-ux`
+  - `git diff --check`
+  - direct rebuilt-dashboard mobile screenshot probe:
+    `mainTop=44`, `workbenchRows=816px`, `scrollWidth=390`,
+    `clientWidth=390`

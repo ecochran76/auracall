@@ -3119,8 +3119,15 @@ select:focus-visible {
   .left-pane,
   .right-pane {
     width: 0;
+    height: 0;
     border: 0;
     overflow: hidden;
+  }
+
+  .left-pane:not(.mobile-open),
+  .right-pane:not(.has-selection),
+  .right-pane.is-collapsed {
+    display: none;
   }
 
   .pane-content,
@@ -3211,6 +3218,12 @@ select:focus-visible {
   .right-pane.has-selection:not(.is-collapsed) .search-kind-facts,
   .right-pane.has-selection:not(.is-collapsed) .asset-facts {
     grid-template-columns: 1fr;
+  }
+
+  .search-th.is-sticky-action,
+  .search-row > .is-sticky-action {
+    position: static;
+    box-shadow: none;
   }
 
   .capability-grid,
