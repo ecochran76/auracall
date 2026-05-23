@@ -1027,7 +1027,7 @@ function SectionList({ title, items }) {
               <strong>{item.title}</strong>
               <small>{item.route ? <RouteChip value={item.route} label={item.meta} /> : item.meta}</small>
             </span>
-            <span className={`status-pill status-${item.status}`}>{item.status}</span>
+            <span className={`status-pill status-${item.status}`}>{item.statusLabel ?? item.status}</span>
           </article>
         ))}
       </div>
@@ -3625,7 +3625,8 @@ function LeftPane({ activeNav, apiStatus, runStatus }) {
           {
             title: "Assets",
             meta: "Detail and asset links use protected archive routes",
-            status: "planned",
+            status: "good",
+            statusLabel: "live",
           },
         ]}
       />
@@ -3634,24 +3635,24 @@ function LeftPane({ activeNav, apiStatus, runStatus }) {
 
   const datasets = {
     chats: [
-      { title: "Recent conversations", meta: "Provider cache and project-bound runs", status: "draft" },
-      { title: "Artifacts", meta: "Generated files and upload references", status: "planned" },
-      { title: "Conversation filters", meta: "Provider, tenant, project, model", status: "planned" },
+      { title: "Recent conversations", meta: "Provider cache and project-bound runs", status: "good", statusLabel: "live" },
+      { title: "Artifacts", meta: "Generated files and upload references", status: "good", statusLabel: "live" },
+      { title: "Conversation filters", meta: "Provider, tenant, project, model", status: "good", statusLabel: "ready" },
     ],
     search: [
-      { title: "All indexed content", meta: "Archive, mirrors, artifacts, evidence", status: "planned" },
-      { title: "Saved filters", meta: "Operator-owned search presets", status: "draft" },
-      { title: "Dedupe keys", meta: "UUID, checksum, provider ids", status: "planned" },
+      { title: "All indexed content", meta: "Archive, mirrors, artifacts, evidence", status: "good", statusLabel: "live" },
+      { title: "Saved filters", meta: "Operator-owned search presets", status: "neutral", statusLabel: "local" },
+      { title: "Dedupe keys", meta: "UUID, checksum, provider ids", status: "good", statusLabel: "tracked" },
     ],
     runs: [
-      { title: "Active work", meta: "Responses, batches, live follow", status: "planned" },
-      { title: "Queues", meta: "Priority, cooldowns, dispatcher locks", status: "planned" },
-      { title: "Algorithms", meta: "Course grading, transcript enrichment", status: "draft" },
+      { title: "Active work", meta: "Responses, batches, live follow", status: "good", statusLabel: "live" },
+      { title: "Queues", meta: "Priority, cooldowns, dispatcher locks", status: "good", statusLabel: "guarded" },
+      { title: "Algorithms", meta: "Course grading, transcript enrichment", status: "neutral", statusLabel: "scoped" },
     ],
     health: [
-      { title: "Service surfaces", meta: "API, MCP, scheduler, archive", status: "planned" },
-      { title: "Browser profiles", meta: "Identity, auth, DOM drift, locks", status: "planned" },
-      { title: "Provider guards", meta: "Bot gates, rate limits, status probes", status: "planned" },
+      { title: "Service surfaces", meta: "API, MCP, scheduler, archive", status: "good", statusLabel: "live" },
+      { title: "Browser profiles", meta: "Identity, auth, DOM drift, locks", status: "good", statusLabel: "managed" },
+      { title: "Provider guards", meta: "Bot gates, rate limits, status probes", status: "good", statusLabel: "guarded" },
     ],
   };
   return <SectionList title="Context" items={datasets[activeNav]} />;

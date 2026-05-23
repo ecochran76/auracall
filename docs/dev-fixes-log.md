@@ -16612,3 +16612,10 @@ browser-stage lifecycle observability, not transcript truncation.
   payload evidence over hook loading state, while the mobile workbench gives
   the main viewport the full width and opens context/inspector panes as
   overlays only when invoked.
+
+- 2026-05-22: Operator context cards should not describe shipped dashboard
+  surfaces as `planned` or `draft`. The left-pane context now separates badge
+  tone from badge text so implemented surfaces can render as `live`, `ready`,
+  `tracked`, or similar concrete states while keeping the existing status color
+  system. The Search UX smoke now fails if the shipped Search context regresses
+  to planned/draft labels.

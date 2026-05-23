@@ -76,6 +76,7 @@ async function main(): Promise<void> {
         mobileUrlFilters: 'ok',
         cachedAssetToggle: 'ok',
         copySearchUrlAction: 'ok',
+        shippedContextBadges: 'ok',
         mobileHorizontalOverflow: false,
       },
     }, null, 2));
@@ -117,6 +118,9 @@ async function assertSearchState(
   }
   if (!state.hasCopySearchUrl) {
     throw new Error(`${input.label}: copy-current-search-url action was not rendered.`);
+  }
+  if (/\b(?:planned|draft)\b/iu.test(state.bodyText)) {
+    throw new Error(`${input.label}: shipped Search context still renders planned/draft labels.`);
   }
 }
 

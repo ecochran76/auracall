@@ -32106,3 +32106,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `aria-expanded=true`
   - direct mobile context-drawer probe with persisted `leftCollapsed=true`:
     `leftWidth=320`, `contentOpacity=1`, `contentPointerEvents=auto`
+
+## Turn 238 | 2026-05-22
+
+- Goal: remove stale planned/draft labels from implemented operator context
+  cards.
+- Change:
+  - Section list badges can now render a display label separately from their
+    color tone.
+  - Left-pane context cards for Search, Chats, Runs, and Health now use shipped
+    state labels such as `live`, `ready`, `tracked`, `managed`, and `guarded`
+    instead of `planned` or `draft`.
+  - the operator Search UX smoke now asserts shipped Search context does not
+    regress to planned/draft copy.
+- Verification:
+  - `pnpm run check`
+  - `pnpm run smoke:operator-search-ux`
+  - `git diff --check`
