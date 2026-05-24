@@ -20,6 +20,7 @@ import { registerApiOpsBrowserStatusTool } from './tools/apiOpsBrowserStatus.js'
 import { registerRuntimeInspectTool } from './tools/runtimeInspect.js';
 import { registerRuntimeRunsRecentTool } from './tools/runtimeRunsRecent.js';
 import { registerRunArchiveTools } from './tools/runArchive.js';
+import { registerHistoryMaterializationTools } from './tools/historyMaterialization.js';
 import { registerSearchProjectionTool } from './tools/searchProjection.js';
 import { registerConfigEntityTools } from './tools/configEntities.js';
 import { registerProjectEnsureTool } from './tools/projectEnsure.js';
@@ -45,7 +46,10 @@ import {
 import { resolveResponseBatchDispatchPool } from '../runtime/responseBatchDispatchPool.js';
 import { createConfiguredStoredStepExecutor } from '../runtime/configuredExecutor.js';
 import { resolveHostLocalActionExecutionPolicy } from '../config/model.js';
-import { createBrowserMediaGenerationExecutor } from '../media/browserExecutor.js';
+import {
+  createBrowserMediaGenerationExecutor,
+  createBrowserMediaGenerationMaterializer,
+} from '../media/browserExecutor.js';
 import { createWorkbenchCapabilityService } from '../workbench/service.js';
 import { createBrowserWorkbenchCapabilityDiscovery } from '../workbench/browserDiscovery.js';
 import { createBrowserWorkbenchCapabilityDiagnostics } from '../workbench/browserDiagnostics.js';
@@ -79,6 +83,10 @@ import {
   type ArchiveMaterializationJobService,
 } from '../runtime/archiveMaterializationJobService.js';
 import {
+  createHistoryMaterializationService,
+  type HistoryMaterializationService,
+} from '../runtime/historyMaterializationService.js';
+import {
   createSearchProjectionService,
   type SearchProjectionService,
 } from '../runtime/searchProjectionService.js';
@@ -95,6 +103,7 @@ export interface McpServiceBundle {
   accountMirrorCompletionService: ReturnType<typeof createAccountMirrorCompletionService>;
   runArchiveService: ReturnType<typeof createRunArchiveService>;
   archiveMaterializationJobService: ArchiveMaterializationJobService;
+  historyMaterializationService: HistoryMaterializationService;
   searchProjectionService: SearchProjectionService;
   agentTeamConfigService: AgentTeamConfigService;
   projectEnsureService: ProjectEnsureService;
@@ -107,6 +116,7 @@ export interface CreateMcpServicesDeps {
   createExecutionResponsesService?: typeof createExecutionResponsesService;
   createResponseBatchService?: typeof createResponseBatchService;
   createBrowserMediaGenerationExecutor?: typeof createBrowserMediaGenerationExecutor;
+  createBrowserMediaGenerationMaterializer?: typeof createBrowserMediaGenerationMaterializer;
   createWorkbenchCapabilityService?: typeof createWorkbenchCapabilityService;
   createBrowserWorkbenchCapabilityDiscovery?: typeof createBrowserWorkbenchCapabilityDiscovery;
   createBrowserWorkbenchCapabilityDiagnostics?: typeof createBrowserWorkbenchCapabilityDiagnostics;
@@ -150,6 +160,9 @@ export async function startMcpServer(): Promise<void> {
   registerRunArchiveTools(server, {
     service: services.runArchiveService,
     materializationJobService: services.archiveMaterializationJobService,
+  });
+  registerHistoryMaterializationTools(server, {
+    service: services.historyMaterializationService,
   });
   registerSearchProjectionTool(server, {
     service: services.searchProjectionService,
@@ -231,6 +244,8 @@ export async function createMcpServicesFromConfig(
   const createProjectEnsure = deps.createProjectEnsureService ?? createProjectEnsureService;
   const createMediaExecutor =
     deps.createBrowserMediaGenerationExecutor ?? createBrowserMediaGenerationExecutor;
+  const createMediaMaterializer =
+    deps.createBrowserMediaGenerationMaterializer ?? createBrowserMediaGenerationMaterializer;
   const agentRegistryStore = createAgentRegistryStore();
   const agentTeamConfigService = createAgentTeamConfigService({
     activeConfig: resolvedUserConfig as Record<string, unknown>,
@@ -253,6 +268,7 @@ export async function createMcpServicesFromConfig(
   const control = createExecutionRuntimeControl();
   const mediaGenerationService = createMediaService({
     executor: createMediaExecutor(resolvedUserConfig),
+    materializer: createMediaMaterializer(resolvedUserConfig),
     capabilityReporter: workbenchCapabilityReporter,
     runtimeProfile:
       typeof resolvedUserConfig.auracallProfile === 'string'
@@ -301,6 +317,12 @@ export async function createMcpServicesFromConfig(
     registry: accountMirrorStatusRegistry,
     persistence: accountMirrorPersistence,
   });
+  const historyMaterializationService = createHistoryMaterializationService({
+    config: resolvedUserConfig as Record<string, unknown>,
+    catalogService: accountMirrorCatalogService,
+    runArchiveService,
+  });
+  await historyMaterializationService.recoverInterruptedJobs();
   const searchProjectionService = createSearchProjectionService({
     accountMirrorCatalogService,
     runArchiveService,
@@ -315,6 +337,7 @@ export async function createMcpServicesFromConfig(
     store: accountMirrorCompletionStore,
     initialOperations: await accountMirrorCompletionStore.listOperations({ activeOnly: false, limit: null }),
     resumeActiveOperations: true,
+    historyMaterializationService,
   });
   const projectEnsureService = createProjectEnsure({
     config: resolvedUserConfig as Record<string, unknown>,
@@ -341,6 +364,7 @@ export async function createMcpServicesFromConfig(
     accountMirrorRefreshService,
     accountMirrorCatalogService,
     accountMirrorCompletionService,
+    historyMaterializationService,
     agentTeamConfigService,
     projectEnsureService,
     tenantPoolTeamEnsureService,

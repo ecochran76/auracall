@@ -3,7 +3,13 @@ import type { Dirent } from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { getAuracallHomeDir } from '../auracallHome.js';
-import type { AccountMirrorCompletionOperation } from './completionService.js';
+import type {
+  AccountMirrorCompletionMaterializationAssetKind,
+  AccountMirrorCompletionMaterializationCursor,
+  AccountMirrorCompletionMaterializationPolicy,
+  AccountMirrorCompletionOperation,
+  AccountMirrorCompletionSweepMode,
+} from './completionService.js';
 
 const COMPLETIONS_DIRNAME = 'completions';
 
@@ -127,6 +133,7 @@ function parseOperation(value: unknown): AccountMirrorCompletionOperation {
     provider: readProvider(value.provider),
     runtimeProfileId: readRequiredString(value.runtimeProfileId, 'runtimeProfileId'),
     mode: value.mode === 'bounded' ? 'bounded' : 'live_follow',
+    sweepMode: readSweepMode(value.sweepMode),
     phase: value.phase === 'steady_follow' ? 'steady_follow' : 'backfill_history',
     status: readStatus(value.status),
     startedAt: normalizeIsoString(value.startedAt) ?? new Date(0).toISOString(),
@@ -135,6 +142,12 @@ function parseOperation(value: unknown): AccountMirrorCompletionOperation {
     maxPasses: readMaxPasses(value.maxPasses),
     passCount: Math.max(0, Math.floor(readNumber(value.passCount) ?? 0)),
     lastRefresh: isRecord(value.lastRefresh) ? value.lastRefresh as unknown as AccountMirrorCompletionOperation['lastRefresh'] : null,
+    materializationPolicy: readMaterializationPolicy(value.materializationPolicy, readSweepMode(value.sweepMode)),
+    materializationAssetKinds: readMaterializationAssetKinds(value.materializationAssetKinds),
+    materializationMaxItems: readMaterializationMaxItems(value.materializationMaxItems),
+    materializationRefreshSnapshot: readBoolean(value.materializationRefreshSnapshot) ?? (readSweepMode(value.sweepMode) === 'full_sweep'),
+    materializationForce: readBoolean(value.materializationForce) ?? false,
+    materializationCursor: parseMaterializationCursor(value.materializationCursor),
     mirrorCompleteness: isRecord(value.mirrorCompleteness) ? value.mirrorCompleteness as AccountMirrorCompletionOperation['mirrorCompleteness'] : null,
     error: parseError(value.error),
     lifecycleEvents: parseLifecycleEvents(value.lifecycleEvents),
@@ -167,6 +180,62 @@ function parseError(value: unknown): AccountMirrorCompletionOperation['error'] {
   return {
     message: String(value.message ?? ''),
     code: typeof value.code === 'string' && value.code.length > 0 ? value.code : null,
+  };
+}
+
+function readSweepMode(value: unknown): AccountMirrorCompletionSweepMode {
+  return value === 'full_sweep' ? 'full_sweep' : 'steady_follow';
+}
+
+function readMaterializationPolicy(
+  value: unknown,
+  sweepMode: AccountMirrorCompletionSweepMode,
+): AccountMirrorCompletionMaterializationPolicy {
+  if (value === 'metadata_only' || value === 'recent_missing_assets' || value === 'full_missing_assets') {
+    return value;
+  }
+  return sweepMode === 'full_sweep' ? 'full_missing_assets' : 'metadata_only';
+}
+
+function readMaterializationAssetKinds(value: unknown): AccountMirrorCompletionMaterializationAssetKind[] {
+  if (!Array.isArray(value)) return ['all'];
+  const normalized = value.filter((entry): entry is AccountMirrorCompletionMaterializationAssetKind =>
+    entry === 'artifacts' ||
+    entry === 'files' ||
+    entry === 'media' ||
+    entry === 'all'
+  );
+  if (normalized.includes('all')) return ['all'];
+  return normalized.length > 0 ? Array.from(new Set(normalized)) : ['all'];
+}
+
+function readMaterializationMaxItems(value: unknown): number | null {
+  const parsed = readNumber(value);
+  if (parsed === null) return null;
+  return Math.max(1, Math.min(500, Math.floor(parsed)));
+}
+
+function parseMaterializationCursor(value: unknown): AccountMirrorCompletionMaterializationCursor | null {
+  if (!isRecord(value) || !isRecord(value.request)) return null;
+  const jobId = typeof value.jobId === 'string' ? value.jobId.trim() : '';
+  if (!jobId) return null;
+  return {
+    jobId,
+    jobStatus: typeof value.jobStatus === 'string' && value.jobStatus.trim() ? value.jobStatus.trim() : 'unknown',
+    reused: readBoolean(value.reused) ?? false,
+    requestedAt: normalizeIsoString(value.requestedAt) ?? new Date(0).toISOString(),
+    passCount: Math.max(0, Math.floor(readNumber(value.passCount) ?? 0)),
+    request: {
+      provider: readProvider(value.request.provider),
+      runtimeProfile: typeof value.request.runtimeProfile === 'string' && value.request.runtimeProfile.trim()
+        ? value.request.runtimeProfile.trim()
+        : 'default',
+      reconcile: true,
+      refreshSnapshot: readBoolean(value.request.refreshSnapshot) ?? false,
+      assetKinds: readMaterializationAssetKinds(value.request.assetKinds),
+      maxItems: readMaterializationMaxItems(value.request.maxItems),
+      force: readBoolean(value.request.force) ?? false,
+    },
   };
 }
 
@@ -229,6 +298,13 @@ function normalizeRevision(value: unknown): number {
 
 function readNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function readBoolean(value: unknown): boolean | null {
+  if (typeof value === 'boolean') return value;
+  if (value === 'true' || value === '1') return true;
+  if (value === 'false' || value === '0') return false;
+  return null;
 }
 
 function normalizeLimit(value: number | null | undefined): number | null {

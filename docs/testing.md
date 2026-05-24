@@ -194,6 +194,37 @@
         and MCP `account_mirror_provider_guard_clear`
       - omitted `--max-passes` means unbounded live follow; `--max-passes`
         is only a debug/test cap
+      - full-sweep backfill is explicit with
+        `auracall api mirror-complete --sweep-mode full_sweep --materialization-policy full_missing_assets`;
+        optional asset-kind, max-item, snapshot-refresh, and force flags flow
+        to the same API fields, and completion status records the latest
+        history-materialization handoff in `materializationCursor`
+      - full-sweep completions pass an extended collector timeout to tolerate
+        conservative provider pacing during project/history/detail reads;
+        Gemini steady-follow completions also use a wider provider-specific
+        envelope, and Gemini full-sweep completions use the widest default
+        envelope because project/Gem history hydration can exceed the generic
+        full-sweep window
+      - configured `liveFollow` blocks may also set `sweepMode`,
+        `materializationPolicy`, `materializationAssetKinds`,
+        `materializationMaxItems`, `materializationRefreshSnapshot`, and
+        `materializationForce`; absent fields keep the existing metadata-only
+        steady-follow default
+      - refresh failures persist target status state; startup/status hydration
+        must preserve failure-backoff across API and proof-server restarts
+      - Gemini explicit-refresh proof retries use practical defaults:
+        2 minutes plus at most 1 minute jitter; refresh failure backoff
+        escalates from 2 minutes to a 10 minute cap, while provider guard hard
+        stops still require manual clearance
+      - steady-follow refreshes reset attachment/detail inventory to the
+        current top of the provider rail/project conversation list; full-sweep
+        refreshes are the mode that resume the persisted deep attachment cursor
+      - Gemini account-mirror discovery reads both the left rail and
+        Gem/project conversation histories; project histories reserve bounded
+        row budget, distribute it across Gems/projects before deepening one
+        history, hydrate bounded history when requested, cap project-history
+        reads per refresh with a full-sweep continuation cursor, and tolerate
+        individual Gem route failures with drift evidence
       - `accountMirrorScheduler.lastPass.selectedTarget.mirrorCompleteness`
       - `accountMirrorScheduler.lastPass.backpressure.reason = none|routine-delayed|blocked-by-browser-work|yielded-to-queued-work|provider-guard`
       - `accountMirrorScheduler.lastPass.metrics.inProgressEligibleTargets`
@@ -234,6 +265,12 @@
         `pnpm run smoke:completion-hydration`; it seeds a paused live-follow
         completion into a temp cache, restarts the API over the same cache,
         and verifies `/status`, CLI status, and MCP `api_status`
+      - targeted full-sweep policy coverage:
+        `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/liveFollowReconciler.test.ts tests/cli/apiMirrorCompletionCommand.test.ts tests/mcp.accountMirrorCompletion.test.ts tests/http.responsesServer.test.ts --maxWorkers 1 --testNamePattern "full-sweep|account mirror completion|live-follow"`
+      - targeted steady-follow cursor coverage:
+        `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts --maxWorkers 1 --testNamePattern "sweep|steady-follow|attachment cursor"`
+      - targeted Gemini project-history discovery coverage:
+        `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts --maxWorkers 1 --testNamePattern "project conversations|project histories|route failures|walks bounded project histories"`
       - local deterministic smoke for setup-plus-batch agent workflows:
         `pnpm run smoke:che447-grading-batch`; despite the course-specific
         fixture name, this verifies the general operator project ensure,
@@ -302,8 +339,9 @@
         starts a fixture local API server, renders `/dashboard?nav=search`
         with URL-backed `assets=available` and
         `materialization=succeeded` filters through Chromium, verifies the
-        cached-assets toggle, copy-current-search-url action, and mobile
-        no-overflow behavior without provider/browser dispatcher work
+        cached-assets toggle, copy-current-search-url action, conversation-row
+        reconciliation POST payload, and mobile no-overflow behavior without
+        provider/browser dispatcher work
       - compact lazy-live-follow operator preflight:
         `pnpm run preflight:lazy-live-follow`; it runs the completion-control,
         completion-hydration, live-follow health/diagnostics parity,
@@ -352,6 +390,16 @@
         manifest rows by provider plus bound identity; it must not acquire the
         browser dispatcher, launch browsers, submit prompts, scrape provider
         pages, or load conversation ids
+      - cached conversation rows expose `conversationFreshness`; tests should
+        treat that object as cache projection only and should not expect catalog
+        or search reads to validate routeability online
+      - bulk reconciliation tests should prove freshness-aware candidate
+        selection: fresh/complete rows are skipped unless forced, while stale,
+        partial, or missing-assets rows can be selected for `refreshSnapshot`
+        even when stale cached asset counts are zero
+      - account-mirror snapshot writes also persist index freshness metadata on
+        each cached conversation row: observed time, source surface, recency
+        rank, and index-row fingerprint
     - explicit mirror refresh route:
       - `POST /v1/account-mirrors/refresh`
       - body: `{"provider":"chatgpt","runtimeProfile":"default","explicitRefresh":true}`
@@ -387,6 +435,16 @@
       - operation records persist under the account-mirror cache and are
         hydrated on API/MCP startup; active records resume, and a persisted
         `nextAttemptAt` must be honored before the next refresh request
+      - `auracall api serve --background-drain-interval-ms 0 --account-mirror-scheduler-interval-ms 0 --no-account-mirror-completions-on-start`
+        keeps persisted operation records readable, disables automatic
+        completion resume and configured live-follow reconciliation at startup,
+        and prevents the proof server from inheriting background drain or
+        scheduler cadence; use all three controls for isolated
+        provider/materialization proofs where only explicit commands should
+        touch a browser
+      - shutdown only parks account-mirror completion loops launched by the
+        current server process; a startup-isolated readback server must not
+        rewrite unrelated persisted completion records when it exits
       - `/status.accountMirrorCompletions` reports
         `object = account_mirror_completion_summary`, aggregate metrics, and
         active/recent operation arrays for operator readback
@@ -1670,6 +1728,29 @@
   AuraCall home, then verifies HTTP, CLI-helper, and MCP job list/status
   filters plus `/v1/search` asset-availability reconciliation before and after
   a materialization job completes, without provider or browser work.
+- History-backed materialization unit coverage is deterministic and browser-free:
+  `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/runtime.historyMaterializationService.test.ts tests/runtime.historyArchiveItems.test.ts tests/runtime.searchProjectionService.test.ts tests/cli/apiHistoryMaterializationCommand.test.ts tests/mcp.historyMaterialization.test.ts tests/http.responsesServer.test.ts tests/mcp.server.test.ts --maxWorkers 1 --testNamePattern "history materialization|account history materialization|history-backed|history-materialized|mcp server service wiring|ChatGPT account mirror metadata collector"`.
+  These tests cover direct conversation and catalog-item job creation,
+  artifact/file catalog rows with nested conversation metadata, bounded
+  reconciliation, freshness-aware bulk reconciliation candidate selection,
+  explicit `refreshSnapshot` provider-context phases, selected
+  `conversationIds` batches that can refresh stale cached rows, terminal
+  snapshot skips before artifact materialization, ChatGPT
+  library-plus-conversation detail inventory,
+  Gemini conversation-artifact media manifest mapping, Gemini unavailable
+  media-generation reconciliation by timestamp-backed cached conversation
+  title, direct provider-conversation media recovery without a matching catalog
+  conversation, selected conversation-id request ordering before catalog order
+  for terminal route misses, targeted archive-item media matching for media-generation
+  artifacts without provider conversation ids, duplicate-title ambiguity skips
+  before provider browser work, duplicate-title media-recovery evidence counts in skip
+  reasons, Grok unsupported history-media skips before active-surface
+  materialization, cached conversation row evidence updates, direct
+  provider-conversation row upserts, provider human-verification
+  `provider_guard_required` job failures, account-mirror archive upsert/readback, Search
+  materialization facets for history-backed archive rows, HTTP
+  queue/poll/cancel routes, CLI helpers, MCP
+  handlers, and MCP service wiring without launching provider browsers.
 - Cache-only commands such as `cache export`, `cache context list`, and
   `cache context get` should read provider cache state without resolving or
   launching a live browser target.
@@ -2441,12 +2522,19 @@
 - MCP media/workbench service wiring:
   - `pnpm vitest run tests/mcp.server.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/mcp.workbenchCapabilities.test.ts --maxWorkers 1`
   - proves MCP media generation, media status, generic run status, and
-    workbench capability tools share the configured browser-backed service
-    bundle instead of default no-executor services
+    direct media materialization plus workbench capability tools share the
+    configured browser-backed service bundle instead of default no-executor
+    services
   - persistence-safe polling coverage now seeds response and media records,
     creates fresh service instances, and verifies MCP `run_status` plus
     `media_generation_status` read the stored ids without provider/browser
     re-invocation
+- HTTP/MCP media materialization contract:
+  - `pnpm vitest run tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts --maxWorkers 1`
+  - proves `POST /v1/media-generations/<id>/materialize` and MCP
+    `media_generation_materialize` call the configured materializer for an
+    existing media generation, preserve caller metadata, and write back
+    materialized artifact paths without creating a second media-generation job.
 - MCP team-run parity:
   - `pnpm vitest run tests/mcp/teamRun.test.ts tests/mcp.schema.test.ts --maxWorkers 1`
   - proves the `team_run` tool registration, bounded input/output schemas, and

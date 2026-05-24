@@ -15,6 +15,12 @@ export interface AccountMirrorCompletionStartRequest {
   provider?: AccountMirrorProvider | null;
   runtimeProfileId?: string | null;
   maxPasses?: number | null;
+  sweepMode?: AccountMirrorCompletionSweepMode | null;
+  materializationPolicy?: AccountMirrorCompletionMaterializationPolicy | null;
+  materializationAssetKinds?: AccountMirrorCompletionMaterializationAssetKind[] | null;
+  materializationMaxItems?: number | null;
+  materializationRefreshSnapshot?: boolean | null;
+  materializationForce?: boolean | null;
 }
 
 export interface AccountMirrorCompletionListRequest {
@@ -45,12 +51,37 @@ export interface AccountMirrorCompletionLifecycleEvent {
   message: string;
 }
 
+export type AccountMirrorCompletionSweepMode = 'steady_follow' | 'full_sweep';
+export type AccountMirrorCompletionMaterializationPolicy =
+  | 'metadata_only'
+  | 'recent_missing_assets'
+  | 'full_missing_assets';
+export type AccountMirrorCompletionMaterializationAssetKind = 'artifacts' | 'files' | 'media' | 'all';
+
+export interface AccountMirrorCompletionMaterializationCursor {
+  jobId: string;
+  jobStatus: string;
+  reused: boolean;
+  requestedAt: string;
+  passCount: number;
+  request: {
+    provider: AccountMirrorProvider;
+    runtimeProfile: string;
+    reconcile: true;
+    refreshSnapshot: boolean;
+    assetKinds: AccountMirrorCompletionMaterializationAssetKind[];
+    maxItems: number | null;
+    force: boolean;
+  };
+}
+
 export interface AccountMirrorCompletionOperation {
   object: 'account_mirror_completion';
   id: string;
   provider: AccountMirrorProvider;
   runtimeProfileId: string;
   mode: 'live_follow' | 'bounded';
+  sweepMode?: AccountMirrorCompletionSweepMode;
   phase: 'backfill_history' | 'steady_follow';
   status: 'queued' | 'running' | 'idle_waiting' | 'paused' | 'completed' | 'blocked' | 'failed' | 'cancelled';
   startedAt: string;
@@ -59,6 +90,12 @@ export interface AccountMirrorCompletionOperation {
   maxPasses: number | null;
   passCount: number;
   lastRefresh: AccountMirrorRefreshResult | null;
+  materializationPolicy?: AccountMirrorCompletionMaterializationPolicy;
+  materializationAssetKinds?: AccountMirrorCompletionMaterializationAssetKind[];
+  materializationMaxItems?: number | null;
+  materializationRefreshSnapshot?: boolean;
+  materializationForce?: boolean;
+  materializationCursor?: AccountMirrorCompletionMaterializationCursor | null;
   mirrorCompleteness: AccountMirrorStatusEntry['mirrorCompleteness'] | null;
   error: {
     message: string;
@@ -75,6 +112,27 @@ export interface AccountMirrorCompletionService {
   prepareForShutdown?(): AccountMirrorCompletionOperation[];
 }
 
+interface AccountMirrorHistoryMaterializationJobCreateResult {
+  generatedAt?: string;
+  reused?: boolean;
+  job: {
+    id: string;
+    status: string;
+  };
+}
+
+interface AccountMirrorHistoryMaterializationService {
+  createJob(request: {
+    provider: AccountMirrorProvider;
+    runtimeProfile: string;
+    reconcile: true;
+    refreshSnapshot: boolean;
+    assetKinds: AccountMirrorCompletionMaterializationAssetKind[];
+    maxItems: number | null;
+    force: boolean;
+  }): Promise<AccountMirrorHistoryMaterializationJobCreateResult>;
+}
+
 export function createAccountMirrorCompletionService(input: {
   registry: AccountMirrorStatusRegistry;
   refreshService: AccountMirrorRefreshService;
@@ -84,6 +142,7 @@ export function createAccountMirrorCompletionService(input: {
   now?: () => Date;
   generateId?: () => string;
   sleep?: (ms: number) => Promise<void>;
+  historyMaterializationService?: AccountMirrorHistoryMaterializationService | null;
   onPersistError?: (error: unknown, operation: AccountMirrorCompletionOperation) => void;
 }): AccountMirrorCompletionService {
   const now = input.now ?? (() => new Date());
@@ -179,11 +238,14 @@ export function createAccountMirrorCompletionService(input: {
         let refresh: AccountMirrorRefreshResult;
         try {
           if (!shouldContinue(id)) return;
+          const collectorTimeoutMs = resolveCompletionCollectorTimeoutMs(operation);
           refresh = await input.refreshService.requestRefresh({
             provider: operation.provider,
             runtimeProfileId: operation.runtimeProfileId,
+            sweepMode: operation.sweepMode ?? 'steady_follow',
             explicitRefresh: true,
             queueTimeoutMs: 0,
+            ...(collectorTimeoutMs ? { collectorTimeoutMs } : {}),
           });
         } catch (error) {
           const eligibleAt = readEligibleAt(error);
@@ -204,7 +266,7 @@ export function createAccountMirrorCompletionService(input: {
         }
         const nextPassCount = pass + 1;
         pass = nextPassCount;
-        update(id, {
+        const refreshed = update(id, {
           passCount: nextPassCount,
           lastRefresh: refresh,
           mirrorCompleteness: refresh.mirrorCompleteness,
@@ -212,6 +274,9 @@ export function createAccountMirrorCompletionService(input: {
           nextAttemptAt: null,
           error: null,
         });
+        if (refreshed && shouldQueueMaterialization(refreshed)) {
+          await queueCompletionMaterialization(refreshed);
+        }
         if (!shouldContinue(id)) return;
         if (refresh.mirrorCompleteness.state === 'complete') {
           if (operation.maxPasses !== null) {
@@ -269,12 +334,14 @@ export function createAccountMirrorCompletionService(input: {
   const service: AccountMirrorCompletionService = {
     start(request = {}) {
       const id = generateId();
+      const sweepMode = normalizeSweepMode(request.sweepMode);
       const operation: AccountMirrorCompletionOperation = {
         object: 'account_mirror_completion',
         id,
         provider: request.provider ?? 'chatgpt',
         runtimeProfileId: normalizeRuntimeProfile(request.runtimeProfileId),
         mode: request.maxPasses == null ? 'live_follow' : 'bounded',
+        sweepMode,
         phase: 'backfill_history',
         status: 'queued',
         startedAt: now().toISOString(),
@@ -283,6 +350,12 @@ export function createAccountMirrorCompletionService(input: {
         maxPasses: normalizeMaxPasses(request.maxPasses),
         passCount: 0,
         lastRefresh: null,
+        materializationPolicy: normalizeMaterializationPolicy(request.materializationPolicy, sweepMode),
+        materializationAssetKinds: normalizeMaterializationAssetKinds(request.materializationAssetKinds),
+        materializationMaxItems: normalizeMaterializationMaxItems(request.materializationMaxItems),
+        materializationRefreshSnapshot: normalizeMaterializationRefreshSnapshot(request.materializationRefreshSnapshot, sweepMode),
+        materializationForce: normalizeMaterializationForce(request.materializationForce),
+        materializationCursor: null,
         mirrorCompleteness: null,
         error: null,
         lifecycleEvents: [],
@@ -367,7 +440,9 @@ export function createAccountMirrorCompletionService(input: {
     },
     prepareForShutdown() {
       const parked: AccountMirrorCompletionOperation[] = [];
-      for (const operation of operations.values()) {
+      for (const id of Array.from(activeRuns)) {
+        const operation = operations.get(id);
+        if (!operation) continue;
         if (!isRunnableOperation(operation)) continue;
         const next = update(operation.id, {
           status: 'queued',
@@ -410,6 +485,40 @@ export function createAccountMirrorCompletionService(input: {
       }),
     });
   }
+
+  async function queueCompletionMaterialization(operation: AccountMirrorCompletionOperation): Promise<void> {
+    if (!input.historyMaterializationService) {
+      throw new Error('Account mirror full-sweep materialization is not configured.');
+    }
+    const request = {
+      provider: operation.provider,
+      runtimeProfile: operation.runtimeProfileId,
+      reconcile: true,
+      refreshSnapshot: operation.materializationRefreshSnapshot === true,
+      assetKinds: operation.materializationAssetKinds ?? ['all'],
+      maxItems: operation.materializationMaxItems ?? null,
+      force: operation.materializationForce === true,
+    } satisfies AccountMirrorCompletionMaterializationCursor['request'];
+    const result = await input.historyMaterializationService.createJob(request);
+    update(operation.id, {
+      materializationCursor: {
+        jobId: result.job.id,
+        jobStatus: result.job.status,
+        reused: result.reused === true,
+        requestedAt: result.generatedAt ?? now().toISOString(),
+        passCount: operation.passCount,
+        request,
+      },
+    });
+  }
+}
+
+function shouldQueueMaterialization(operation: AccountMirrorCompletionOperation): boolean {
+  if (operation.lastRefresh?.status !== 'completed') return false;
+  if (operation.materializationPolicy === 'metadata_only') return false;
+  if (!operation.materializationPolicy && operation.sweepMode !== 'full_sweep') return false;
+  if (operation.materializationCursor?.passCount === operation.passCount) return false;
+  return true;
 }
 
 function normalizeLifecycleEvents(operation: AccountMirrorCompletionOperation): AccountMirrorCompletionOperation {
@@ -455,6 +564,54 @@ function normalizeRuntimeProfile(value: string | null | undefined): string {
   return trimmed.length > 0 ? trimmed : 'default';
 }
 
+function normalizeSweepMode(value: AccountMirrorCompletionSweepMode | null | undefined): AccountMirrorCompletionSweepMode {
+  return value === 'full_sweep' ? 'full_sweep' : 'steady_follow';
+}
+
+function normalizeMaterializationPolicy(
+  value: AccountMirrorCompletionMaterializationPolicy | null | undefined,
+  sweepMode: AccountMirrorCompletionSweepMode,
+): AccountMirrorCompletionMaterializationPolicy {
+  if (
+    value === 'metadata_only' ||
+    value === 'recent_missing_assets' ||
+    value === 'full_missing_assets'
+  ) {
+    return value;
+  }
+  return sweepMode === 'full_sweep' ? 'full_missing_assets' : 'metadata_only';
+}
+
+function normalizeMaterializationAssetKinds(
+  value: AccountMirrorCompletionMaterializationAssetKind[] | null | undefined,
+): AccountMirrorCompletionMaterializationAssetKind[] {
+  if (!Array.isArray(value) || value.length === 0) return ['all'];
+  const normalized = value.filter((entry) =>
+    entry === 'artifacts' ||
+    entry === 'files' ||
+    entry === 'media' ||
+    entry === 'all'
+  );
+  if (normalized.includes('all')) return ['all'];
+  return normalized.length > 0 ? Array.from(new Set(normalized)) : ['all'];
+}
+
+function normalizeMaterializationMaxItems(value: number | null | undefined): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  return Math.max(1, Math.min(500, Math.floor(value)));
+}
+
+function normalizeMaterializationRefreshSnapshot(
+  value: boolean | null | undefined,
+  sweepMode: AccountMirrorCompletionSweepMode,
+): boolean {
+  return value ?? (sweepMode === 'full_sweep');
+}
+
+function normalizeMaterializationForce(value: boolean | null | undefined): boolean {
+  return value === true;
+}
+
 function normalizeMaxPasses(value: number | null | undefined): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
   return Math.max(1, Math.min(500, Math.floor(value)));
@@ -497,6 +654,14 @@ function readEligibleAt(error: unknown): string | null {
 
 function resolveDelayMs(eligibleAt: string, now: Date): number {
   return Math.max(0, Date.parse(eligibleAt) - now.getTime());
+}
+
+function resolveCompletionCollectorTimeoutMs(operation: AccountMirrorCompletionOperation): number | undefined {
+  if (operation.provider === 'gemini') {
+    return operation.sweepMode === 'full_sweep' ? 900_000 : 300_000;
+  }
+  if (operation.sweepMode === 'full_sweep') return 300_000;
+  return undefined;
 }
 
 function sleep(ms: number): Promise<void> {

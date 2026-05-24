@@ -5,6 +5,12 @@ export interface ApiMirrorCompletionCliOptions {
   provider?: string | null;
   runtimeProfile?: string | null;
   maxPasses?: number | null;
+  sweepMode?: string | null;
+  materializationPolicy?: string | null;
+  materializationAssetKinds?: string[] | null;
+  materializationMaxItems?: number | null;
+  materializationRefreshSnapshot?: boolean | null;
+  materializationForce?: boolean | null;
 }
 
 export interface ApiMirrorCompletionStatusCliOptions {
@@ -50,6 +56,12 @@ export async function startApiMirrorCompletionForCli(
         provider: normalizeOptionalString(options.provider),
         runtimeProfile: normalizeOptionalString(options.runtimeProfile),
         maxPasses: normalizeOptionalNumber(options.maxPasses),
+        sweepMode: normalizeOptionalString(options.sweepMode),
+        materializationPolicy: normalizeOptionalString(options.materializationPolicy),
+        materializationAssetKinds: normalizeStringList(options.materializationAssetKinds),
+        materializationMaxItems: normalizeOptionalNumber(options.materializationMaxItems),
+        materializationRefreshSnapshot: options.materializationRefreshSnapshot === true ? true : undefined,
+        materializationForce: options.materializationForce === true ? true : undefined,
       }),
       signal: controller.signal,
     });
@@ -150,6 +162,7 @@ export function formatApiMirrorCompletionCliSummary(operation: unknown): string 
     `Account mirror completion: ${readString(record.id) ?? 'unknown'}`,
     `Status: ${readString(record.status) ?? 'unknown'}`,
     `Mode: ${readString(record.mode) ?? 'unknown'}`,
+    `Sweep: ${readString(record.sweepMode) ?? 'steady_follow'}`,
     `Phase: ${readString(record.phase) ?? 'unknown'}`,
     `Target: ${readString(record.provider) ?? 'unknown'}/${readString(record.runtimeProfileId) ?? 'unknown'}`,
     `Passes: ${readNumber(record.passCount) ?? 0}/${readNumber(record.maxPasses) ?? 'unbounded'}`,
@@ -161,6 +174,14 @@ export function formatApiMirrorCompletionCliSummary(operation: unknown): string 
   const nextAttemptAt = readString(record.nextAttemptAt);
   if (nextAttemptAt) {
     lines.push(`Next attempt: ${nextAttemptAt}`);
+  }
+  const materializationPolicy = readString(record.materializationPolicy);
+  if (materializationPolicy) {
+    lines.push(`Materialization policy: ${materializationPolicy}`);
+  }
+  const materializationCursor = isRecord(record.materializationCursor) ? record.materializationCursor : null;
+  if (materializationCursor) {
+    lines.push(`Materialization job: ${readString(materializationCursor.jobId) ?? 'unknown'} status=${readString(materializationCursor.jobStatus) ?? 'unknown'}`);
   }
   const error = isRecord(record.error) ? record.error : null;
   if (error) {
@@ -185,6 +206,7 @@ export function formatApiMirrorCompletionListCliSummary(payload: unknown): strin
     const id = readString(operation.id) ?? 'unknown';
     const status = readString(operation.status) ?? 'unknown';
     const mode = readString(operation.mode) ?? 'unknown';
+    const sweepMode = readString(operation.sweepMode) ?? 'steady_follow';
     const phase = readString(operation.phase) ?? 'unknown';
     const provider = readString(operation.provider) ?? 'unknown';
     const runtimeProfileId = readString(operation.runtimeProfileId) ?? 'unknown';
@@ -193,7 +215,7 @@ export function formatApiMirrorCompletionListCliSummary(payload: unknown): strin
     const nextAttemptAt = readString(operation.nextAttemptAt);
     const lifecycleEvent = latestLifecycleEvent(operation.lifecycleEvents);
     const lifecycle = lifecycleEvent ? ` lifecycle=${readString(lifecycleEvent.type) ?? 'unknown'}` : '';
-    lines.push(`- ${id}: ${status} ${mode}/${phase} ${provider}/${runtimeProfileId} passes=${passCount}/${maxPasses}${nextAttemptAt ? ` next=${nextAttemptAt}` : ''}${lifecycle}`);
+    lines.push(`- ${id}: ${status} ${mode}/${sweepMode}/${phase} ${provider}/${runtimeProfileId} passes=${passCount}/${maxPasses}${nextAttemptAt ? ` next=${nextAttemptAt}` : ''}${lifecycle}`);
   }
   return lines.join('\n');
 }
@@ -238,6 +260,15 @@ function appendOptionalSearchParam(url: URL, name: string, value: string | null 
 function normalizeOptionalNumber(value: number | null | undefined): number | undefined {
   if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
   return Math.trunc(value);
+}
+
+function normalizeStringList(value: string[] | null | undefined): string[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const normalized = value
+    .flatMap((entry) => String(entry).split(','))
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  return normalized.length > 0 ? Array.from(new Set(normalized)) : undefined;
 }
 
 function normalizeId(value: string): string {

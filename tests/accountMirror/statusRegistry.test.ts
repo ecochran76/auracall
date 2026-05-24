@@ -104,6 +104,12 @@ describe('account mirror status registry', () => {
             reason: 'liveFollow.enabled is true',
             mode: 'metadata-first',
             priority: 'background',
+            sweepMode: null,
+            materializationPolicy: null,
+            materializationAssetKinds: null,
+            materializationMaxItems: null,
+            materializationRefreshSnapshot: null,
+            materializationForce: null,
           },
         }),
         expect.objectContaining({
@@ -133,6 +139,46 @@ describe('account mirror status registry', () => {
         }),
       ]),
     );
+  });
+
+  test('projects configured live-follow sweep and materialization policy', () => {
+    const status = createAccountMirrorStatusSummary({
+      config: {
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            services: {
+              gemini: {
+                identity: {
+                  email: 'operator@example.com',
+                },
+                liveFollow: {
+                  enabled: true,
+                  sweepMode: 'full_sweep',
+                  materializationPolicy: 'full_missing_assets',
+                  materializationAssetKinds: ['media', 'artifacts'],
+                  materializationMaxItems: 25,
+                  materializationRefreshSnapshot: true,
+                  materializationForce: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      now: new Date('2026-05-23T12:00:00.000Z'),
+    });
+
+    expect(status.entries[0]?.liveFollow).toMatchObject({
+      configured: true,
+      enabled: true,
+      sweepMode: 'full_sweep',
+      materializationPolicy: 'full_missing_assets',
+      materializationAssetKinds: ['media', 'artifacts'],
+      materializationMaxItems: 25,
+      materializationRefreshSnapshot: true,
+      materializationForce: true,
+    });
   });
 
   test('blocks a live-follow target when a provider guard needs manual clearance', () => {
@@ -330,6 +376,12 @@ describe('account mirror status registry', () => {
             scannedProjects: 2,
             scannedConversations: 1,
           },
+          projectConversations: {
+            nextProjectIndex: 4,
+            readLimit: 4,
+            scannedProjects: 4,
+            yielded: false,
+          },
           truncated: {
             projects: false,
             conversations: false,
@@ -363,6 +415,14 @@ describe('account mirror status registry', () => {
         artifacts: 1,
         files: 0,
         media: 0,
+      },
+      metadataEvidence: {
+        projectConversations: {
+          nextProjectIndex: 4,
+          readLimit: 4,
+          scannedProjects: 4,
+          yielded: false,
+        },
       },
       mirrorCompleteness: {
         state: 'in_progress',

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import { createMediaGenerationService } from '../src/media/service.js';
 import {
+  createMediaGenerationMaterializeToolHandler,
   createMediaGenerationStatusToolHandler,
   createMediaGenerationToolHandler,
 } from '../src/mcp/tools/mediaGeneration.js';
@@ -176,6 +177,73 @@ describe('mcp media_generation tool', () => {
         metadata: {
           source: 'mcp',
         },
+      },
+    });
+  });
+
+  it('materializes an existing media generation through MCP', async () => {
+    let materializeOptions: unknown = null;
+    const handler = createMediaGenerationMaterializeToolHandler({
+      createGeneration: async () => {
+        throw new Error('not used');
+      },
+      readGeneration: async () => null,
+      materializeGeneration: async (id, options) => {
+        materializeOptions = options;
+        return {
+          id,
+          object: 'media_generation',
+          status: 'succeeded',
+          provider: 'gemini',
+          mediaType: 'image',
+          prompt: 'Generate an image of an asphalt secret agent',
+          createdAt: '2026-04-23T03:44:32.561Z',
+          updatedAt: '2026-04-23T03:45:22.951Z',
+          completedAt: '2026-04-23T03:45:22.951Z',
+          artifacts: [
+            {
+              id: 'artifact_materialized_1',
+              type: 'image',
+              mimeType: 'image/png',
+              fileName: 'Generated image 1.png',
+              path: '/tmp/Generated image 1.png',
+            },
+          ],
+          metadata: {
+            resumedMaterializedAt: '2026-04-23T03:45:22.951Z',
+          },
+        };
+      },
+    });
+
+    const result = await handler({
+      id: 'medgen_mcp_materialize_1',
+      count: 1,
+      metadata: {
+        reason: 'history-follow-up',
+      },
+    });
+
+    expect(materializeOptions).toMatchObject({
+      count: 1,
+      compareFullQuality: true,
+      source: 'mcp',
+      metadata: {
+        reason: 'history-follow-up',
+      },
+    });
+    expect(result).toMatchObject({
+      isError: false,
+      structuredContent: {
+        id: 'medgen_mcp_materialize_1',
+        object: 'media_generation',
+        status: 'succeeded',
+        artifacts: [
+          {
+            id: 'artifact_materialized_1',
+            path: '/tmp/Generated image 1.png',
+          },
+        ],
       },
     });
   });

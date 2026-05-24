@@ -29,6 +29,7 @@ export interface Conversation {
   projectId?: string;
   url?: string;
   updatedAt?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface FileRef {

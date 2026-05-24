@@ -41,6 +41,8 @@ const operation: AccountMirrorCompletionOperation = {
   error: null,
 };
 
+const STATUS_TIMEOUT_MS = 30_000;
+
 interface CompletionStatusProjection {
   accountMirrorCompletions?: {
     metrics?: {
@@ -80,7 +82,7 @@ async function assertHydratedStatus(port: number, label: string): Promise<void> 
   assertEqual(status.liveFollow?.severity, 'paused', `${label} HTTP live-follow severity`);
   assertEqual(status.liveFollow?.pausedCompletions, 1, `${label} HTTP live-follow paused`);
 
-  const cliStatus = await readApiStatusForCli({ port });
+  const cliStatus = await readApiStatusForCli({ port, timeoutMs: STATUS_TIMEOUT_MS });
   assertEqual(cliStatus.completions.metrics.total, 1, `${label} CLI total`);
   assertEqual(cliStatus.completions.metrics.active, 1, `${label} CLI active`);
   assertEqual(cliStatus.completions.metrics.paused, 1, `${label} CLI paused`);
@@ -89,6 +91,7 @@ async function assertHydratedStatus(port: number, label: string): Promise<void> 
 
   const mcpStatus = await createApiStatusToolHandler()({
     port,
+    timeoutMs: STATUS_TIMEOUT_MS,
     expectedCompletionActive: 1,
     expectedCompletionPaused: 1,
     expectedLiveFollowSeverity: 'paused',

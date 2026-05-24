@@ -151,7 +151,9 @@ const dashboardHtml = `
   function sortMirrorCatalogRows() {}
   function compareMirrorCatalogRows() {}
   function compareCatalogPreviewRank() {}
-  function renderCatalogRowActions() { return '<span class="catalog-row-actions"><a>Open Preview</a><button class="link-button" data-catalog-preview-url="/asset">Copy URL</button></span>'; }
+  function renderCatalogRowActions() { return '<span class="catalog-row-actions"><a>Open Preview</a><button class="link-button" onclick="reconcileMirrorCatalogRow(0)">Reconcile</button><button class="link-button" data-catalog-preview-url="/asset">Copy URL</button></span>'; }
+  function canReconcileMirrorCatalogRow(row) { return row && row.kind === 'conversations'; }
+  async function reconcileMirrorCatalogRow(index) { return postJson('/v1/account-mirrors/materializations', { catalogKind: 'conversations', refreshSnapshot: true, assetKinds: ['all'] }); }
   function resolveCatalogRowPreviewUrl() {}
   function buildMirrorCatalogItemAssetPath() {}
   async function copyCatalogPreviewUrl() { await navigator.clipboard.writeText('url'); }
@@ -549,6 +551,7 @@ describe('api ops browser CLI helpers', () => {
       hasCatalogMaterializationBadges: true,
       hasCatalogMaterializationControls: true,
       hasCatalogRowPreviewActions: true,
+      hasCatalogRowReconciliationActions: true,
       hasCatalogBatchPreviewUrlDrawer: true,
       hasCatalogBatchPreviewSessionReview: true,
       hasCatalogBatchPreviewUrlOpen: true,
@@ -583,7 +586,7 @@ describe('api ops browser CLI helpers', () => {
       'Dashboard service control: nav=ok operations=ok apiService=ok apiLogTail=ok recentEvents=ok recentEventActions=ok recentEventFilters=ok recentSchedulerDetail=ok recentEventPersistence=ok preflight=ok preflightRun=ok preflightHistory=ok preflightSteps=ok preflightLog=ok browserProcesses=ok browserProcessPath=/v1/browser/processes backgroundDrain=ok scheduler=ok schedulerWhy=ok schedulerForeground=ok schedulerWaitTable=ok schedulerWaitActions=ok schedulerCompletionDetail=ok schedulerDiagnostics=ok runOnce=ok',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
-      'Dashboard cache browse: catalog=ok page=ok previewSession=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok transcriptFilter=ok transcriptDownload=ok transcriptSearch=ok related=ok assetInspector=ok assetPreview=ok localAsset=ok materialization=ok materializationControls=ok rowPreviewActions=ok batchPreviewDrawer=ok batchPreviewReview=ok batchPreviewOpen=ok batchDetailCopy=ok batchPreviewCopy=ok batchPreviewDownload=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
+      'Dashboard cache browse: catalog=ok page=ok previewSession=ok search=ok savedFilters=ok table=ok detail=ok chat=ok transcript=ok transcriptFilter=ok transcriptDownload=ok transcriptSearch=ok related=ok assetInspector=ok assetPreview=ok localAsset=ok materialization=ok materializationControls=ok rowPreviewActions=ok rowReconcile=ok batchPreviewDrawer=ok batchPreviewReview=ok batchPreviewOpen=ok batchDetailCopy=ok batchPreviewCopy=ok batchPreviewDownload=ok path=/v1/account-mirrors/catalog itemPath=/v1/account-mirrors/catalog/items/{id}',
     );
     expect(formatApiOpsBrowserStatusCliSummary(summary)).toContain(
       'Dashboard completion control: path=/status payload=accountMirrorCompletion attention=ok activeTable=ok inspect=ok resultToast=ok inputInspect=ok input=ok rowActions=ok stateAware=ok confirmCancel=ok feedback=ok pause=ok resume=ok cancel=ok',

@@ -4,9 +4,7 @@ import {
   createRunArchiveService,
   type RunArchiveService,
 } from '../../runtime/archiveService.js';
-import {
-  type ArchiveMaterializationJobService,
-} from '../../runtime/archiveMaterializationJobService.js';
+import type { ArchiveMaterializationJobService } from '../../runtime/archiveMaterializationJobService.js';
 
 const runArchiveKindShape = z.enum([
   'all',
@@ -96,7 +94,7 @@ const archiveItemShape = z.object({
     'provider_conversation',
     'evidence',
   ]),
-  source: z.enum(['runtime', 'response_batch', 'media_generation', 'evidence']),
+  source: z.enum(['runtime', 'response_batch', 'media_generation', 'evidence', 'account_mirror']),
   createdAt: z.string(),
   updatedAt: z.string(),
   title: z.string().nullable(),

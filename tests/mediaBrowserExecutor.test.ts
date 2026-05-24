@@ -285,7 +285,7 @@ describe('browser media generation executor queueing', () => {
       },
     });
 
-    expect(key).toBe('devtools:127.0.0.1:38261');
+    expect(key).toBe('devtools:127.0.0.1:38261::target:tab-1');
   });
 
   it('keys resumed Grok image materialization through the same managed browser service queue', async () => {

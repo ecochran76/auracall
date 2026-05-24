@@ -1,3 +1,57 @@
+- 2026-05-24: Repeated `serveResponsesHttp` tests can accumulate shutdown
+  latency when stop signals leave their paired listener behind or HTTP
+  keep-alive sockets stay idle during close. The server now removes both
+  SIGINT/SIGTERM handlers after the first stop signal and closes idle
+  connections during `close()`. Auth tests should use a cheap protected route
+  when validating authorization semantics, leaving model-catalog reads to the
+  model discovery tests.
+
+- 2026-05-24: Selected conversation-id reconciliation must honor operator
+  request order before catalog order. A selected batch with a missing Gemini id
+  followed by a cached routeable id and `maxItems = 1` should validate the
+  missing id first, record terminal bare-`/app` evidence without consuming the
+  target budget, and still continue to the routeable selected id. Live proof
+  `hmj_77fc426644154a2f936926f3bc6d34c8` recorded
+  `7f0070deadbeef42` as terminal unavailable and still materialized
+  `10b7e2a15e2dd77c`.
+
+- 2026-05-24: Gemini rail enumeration should normalize configured direct
+  conversation URLs to the app rail surface. Even if a browser profile or
+  caller carries `https://gemini.google.com/app/<conversationId>`,
+  `listConversations()` now targets the reusable `/app` rail surface before
+  opening and scrolling the rail, instead of retargeting the tab to one
+  conversation just to browse history.
+
+- 2026-05-24: Bulk account-mirror reconciliation should not spend bounded
+  materialization target budget on conversations whose cache evidence already
+  says `fresh` plus `assetCompleteness: complete`. Automatic `reconcile=true`
+  jobs now use conversation freshness evidence: stale, partial, or
+  missing-assets rows can be selected for `refreshSnapshot` reconciliation even
+  when their stale row counts are zero, while fresh/complete and terminal rows
+  are skipped unless forced.
+
+- 2026-05-24: Conversation freshness should honor local materialization
+  evidence that is recorded on the cached row. A Gemini steady-follow proof
+  materialized a newly added artifact from existing conversation
+  `1ab8bb794846c491`, but the catalog still reported `missing_assets` because
+  freshness derivation counted the provider manifest as remote-only and ignored
+  row-level `assetCompleteness: complete`; the derivation now treats that
+  materialization evidence as authoritative for local asset counts.
+
+- 2026-05-24: Gemini conversation asset reads should delegate opening the
+  conversation to the shared rail-first context reader. The lower-level
+  conversation-file download and artifact materialization helpers no longer
+  issue their own eager direct `/app/<conversationId>` navigation before
+  context refresh; they click the rail row first and keep direct routing as the
+  shared fallback/validation path.
+
+- 2026-05-23: Gemini account-mirror rail reads should not start by refreshing
+  or directly navigating the browser to every conversation id. Historical
+  context, conversation-file download, and artifact materialization reads now
+  connect through the Gemini app/rail surface, click the discovered rail row
+  in-page, and reserve direct `/app/<conversationId>` navigation for fallback
+  routeability or explicit validation.
+
 - 2026-05-17: Browser-backed response runs must bind one dispatched prompt to
   one Chrome tab and keep the execution lease tied to browser evidence. ChatGPT
   dispatch now opens a dedicated target per prompt, releases the profile-wide
@@ -16646,3 +16700,454 @@ browser-stage lifecycle observability, not transcript truncation.
   through managed browser/provider controls, downloads the assets, and writes
   them into the same identity-scoped cache/archive used by Search and archive
   asset routes.
+
+- 2026-05-22: Account-mirror catalog reads must stay cache-only even after
+  history-backed recovery exists. Recovery now belongs to explicit durable
+  `history_materialization_job` requests under
+  `/v1/account-mirrors/materializations`, with CLI/MCP parity and archive upsert
+  for successful local files.
+
+- 2026-05-22: ChatGPT account-library discovery must not starve conversation
+  detail inventory. The ChatGPT account mirror now keeps a bounded detail pass
+  moving even when library files are present, and history-backed catalog-item
+  materialization resolves conversation evidence from nested artifact/file
+  metadata.
+
+- 2026-05-22: History-backed materialized files must show up in Search as
+  materialized assets, not only as archive rows with a readable local path.
+  Search now maps `account_mirror` archive rows whose metadata says
+  `materialization.status = materialized` to `materialization=succeeded` and
+  carries `historyMaterializationJobId` into `metadata.assetFreshness`.
+
+- 2026-05-22: Legacy ChatGPT sandbox artifact rows can be recovered from
+  history when the original archive materialization job only recorded a skipped
+  sandbox alias. The history-backed lane can reopen the provider conversation,
+  capture the live download button/fetch URL, persist the file under the
+  conversation-attachment cache, and upsert a new `account_mirror` archive row
+  that Search treats as the materialized replacement evidence.
+
+- 2026-05-23: Older Gemini media-generation rows may have no provider
+  conversation id on the archive item even though account-mirror history has
+  the matching chat title. History reconciliation now treats unavailable
+  media-generation artifacts as recoverable targets for `assetKinds: ["media"]`,
+  matches them to cached Gemini conversations by direct provider conversation
+  id or exact prompt/title, and resumes the media-generation materializer with
+  that provider conversation URL. Gemini human-verification/CAPTCHA guards
+  remain hard job failures, not skipped manifest entries.
+
+- 2026-05-23: Legacy Gemini media-generation archive rows can also have
+  `runtimeProfile = null` even when the operator queues reconciliation for a
+  concrete AuraCall runtime profile. Media reconciliation should not exclude
+  those legacy rows on input filtering; include profile-null rows and only skip
+  rows that carry conflicting concrete runtime-profile evidence.
+
+- 2026-05-23: Gemini media reconciliation must not treat prompt/title equality
+  as sufficient evidence when account history contains duplicate generated-media
+  prompts. The matcher now requires direct provider conversation evidence,
+  unique exact title, cached-media evidence, or nearest timestamp-backed exact
+  title; otherwise it records an ambiguity skip before opening a provider tab.
+  Media reconciliation also reads a wider bounded catalog window so duplicates
+  just outside a tiny `maxItems` window are visible.
+
+- 2026-05-23: Ambiguous Gemini media-history skips should say which
+  media-recovery evidence is missing, not only that duplicate titles exist. The
+  skip reason now reports cached media, usable timestamp, and cached
+  artifact/file counts so an operator can tell whether a mirror refresh or
+  direct provider conversation id is the next safe unblocker.
+
+- 2026-05-23: `archiveItemId` history materialization must not give up on
+  media-generation generated artifacts just because the archive row lacks a
+  direct provider conversation id. The archive-item lane now routes
+  media-generation artifacts through the same Gemini media-history matcher used
+  by bounded reconciliation, then records either materialization evidence or
+  the same exact skip reason before ordinary conversation fallback.
+
+- 2026-05-23: Direct provider conversation evidence on legacy media-generation
+  archive rows should be enough for history media recovery even when account
+  mirror has not cached the same conversation row. Media reconciliation now
+  only rejects conflicting concrete bound-identity evidence; null legacy
+  runtime, browser, identity, and project fields inherit explicit request
+  selectors before dispatching the provider media materializer.
+
+- 2026-05-23: Direct media-generation materialization needs the same
+  operator-facing surfaces as media creation/status. `POST
+  /v1/media-generations/{media_generation_id}/materialize` and MCP
+  `media_generation_materialize` now resume the configured provider
+  materializer for an existing media-generation record, preserve caller
+  metadata, and return the updated durable `media_generation` response instead
+  of forcing callers to create a second provider job.
+
+- 2026-05-23: Grok's active Imagine/files resumed image materializer must not
+  be reused as history-backed conversation recovery. It can inspect the active
+  provider surface, not a matched historical conversation, so history media
+  reconciliation records an explicit unsupported skip for Grok media-generation
+  rows before matching or provider browser work.
+
+- 2026-05-23: Scheduler-disabled `api serve` is not the same as
+  startup-isolated account-mirror work. Startup hydration and configured
+  live-follow reconciliation can launch completion loops even when
+  `--account-mirror-scheduler-interval-ms 0` disables cadence. Use
+  `--background-drain-interval-ms 0 --account-mirror-scheduler-interval-ms 0 --no-account-mirror-completions-on-start`
+  for one-provider or materialization proof servers; persisted completion
+  records stay readable, automatic resume and live-follow reconcile are skipped
+  until an operator starts a completion explicitly, and the proof server cannot
+  inherit configured drain or scheduler cadence. The CLI should treat omitted
+  `--no-account-mirror-completions-on-start` as explicitly enabled
+  resume/reconcile behavior so the default remains durable across parser
+  changes. Shutdown must also park only account-mirror completion loops owned
+  by the current server process; a startup-isolated proof server may read
+  persisted `idle_waiting` records, but it must not rewrite those unrelated
+  records when it exits.
+
+- 2026-05-23: Gemini account-mirror media recovery can starve if bounded detail
+  inventory spends the whole pass on Gemini project-file reads before opening
+  conversation contexts. For Gemini, prioritize conversation detail reads in
+  the attachment inventory pass; project files can still be read with remaining
+  budget, but duplicate-title media recovery needs conversation-context media
+  evidence first.
+
+- 2026-05-23: Conversation-first Gemini detail inventory still needs ordinary
+  cursor guarantees across bounded passes. Regression coverage should prove the
+  collector resumes Gemini conversation contexts first, then falls through to
+  project files only after the conversation cursor is exhausted.
+
+- 2026-05-23: Gemini media-history duplicate-title recovery should only open a
+  provider conversation when the disambiguating evidence is unique. A single
+  cached media manifest entry for one duplicate title is sufficient evidence to
+  select that conversation; zero or multiple cached-media matches must remain an
+  explicit ambiguity skip.
+
+- 2026-05-23: The duplicate-title cached-media rule needs both positive and
+  negative coverage. Exactly one cached media manifest row may select the
+  conversation; multiple cached media rows for the same prompt still mean the
+  provider target is ambiguous and must skip before browser work.
+
+- 2026-05-23: Timestamp-backed Gemini media-history matching has the same
+  uniqueness requirement as cached-media matching. If two duplicate-title
+  conversations tie for nearest observed timestamp, the matcher must record an
+  ambiguity skip and avoid provider browser work instead of picking by catalog
+  order.
+
+- 2026-05-23: History materialization cancellation needs shared-service proof,
+  not just HTTP/CLI/MCP wrapper mocks. A queued cancellation must remain
+  terminal even if the scheduled queue callback later fires, and cancellation
+  after provider work starts must fail with the documented pre-provider-work
+  boundary.
+
+- 2026-05-23: History materialization startup recovery should not leave active
+  job records stranded after an API process restart. Recovery should mark
+  interrupted queued/running jobs failed with explicit interruption evidence
+  while leaving already terminal jobs unchanged.
+
+- 2026-05-23: History materialization active-job dedupe must include every
+  selector that can change provider routing. Requests for the same conversation
+  but different browser profiles or explicit provider conversation URLs should
+  queue distinct jobs; only identical selector requests should reuse an active
+  job.
+
+- 2026-05-23: Account-history materialization HTTP routes need direct
+  transport-level proof for the shared service error contract. Missing job reads
+  and cancel requests should stay `404 not_found_error`, and cancel attempts
+  after provider work starts or finishes should stay `409 conflict_error`
+  instead of flattening into generic API failures.
+
+- 2026-05-23: Account-history materialization MCP cancellation should preserve
+  service control errors as tool errors. A missing, running, or already
+  terminal job cancellation should return MCP `isError` text with the shared
+  queued-only boundary instead of surfacing an unstructured handler exception.
+
+- 2026-05-23: Gemini conversation-image recovery needs the same provider
+  routeability proof as media resume. A cached context can prove that a
+  conversation id has an artifact, but direct history materialization still
+  fails if the selected managed browser profile redirects to
+  `https://gemini.google.com/app` and reports `conversationId = null`. The
+  proven fetch path for one image conversation is the Gemini media-resume
+  materializer, which records the conversation id, provider artifact id, local
+  file, and archive/search SHA-256 association after `artifact_materialized`.
+
+- 2026-05-23: Gemini left-rail conversation hrefs are the reliable source for
+  routeable history materialization targets. If a managed browser profile shows
+  `Sign in` or lacks rail conversation hrefs, it is not a valid artifact-fetch
+  source even if account-mirror cache rows exist. With the signed-in
+  `auracall-gemini-pro` runtime profile, rail-derived ids
+  `3543f8378a674997` and `10b7e2a15e2dd77c` stayed on their exact routes and
+  exposed generated-image blobs; direct history materialization for
+  `10b7e2a15e2dd77c` succeeded and wrote a `history-media` archive item with
+  the conversation id, provider artifact id, local file, and SHA-256.
+
+- 2026-05-23: On Gemini, use the live left rail for conversation-id discovery
+  and direct navigation for routeability validation. Do not generalize Gemini
+  `/app` fallback into "direct navigation is untenable." Direct navigation to a
+  recently rail-verified, tenant-present conversation id (`3543f8378a674997`)
+  stayed on the exact `/app/<id>` route and exposed the generated image plus
+  download controls. A bare `/app` fallback is good evidence that the specific
+  cached conversation id is deleted/non-existent in the tenant, unavailable to
+  the active identity, or being opened under the wrong managed browser profile.
+
+- 2026-05-23: Gemini bare `/app` fallback now has a stable history
+  materialization reason. When a Gemini content-not-found provider error
+  includes `activeState.pathname = "/app"` with no active conversation id,
+  history materialization records
+  `conversation-not-found-or-unavailable` instead of preserving only the raw
+  provider error. Content-not-found errors that remain on `/app/<id>` keep the
+  raw message so transient DOM/content failures are not confused with
+  deleted/non-existent tenant conversations.
+
+- 2026-05-23: Gemini history reconciliation should not let deleted cached
+  conversation ids spend the whole bounded materialization batch. A
+  `conversation-not-found-or-unavailable` result is now terminal evidence for
+  that provider conversation id and does not consume the reconciliation target
+  budget, so the same pass can continue to the next routeable cached/rail
+  conversation. Media-only reconciliation also checks cached conversation
+  media/artifact rows directly before falling through to media-generation
+  archive recovery.
+
+- 2026-05-23: Gemini media-only history reconciliation can now reach cached
+  conversation artifact manifests, but live downloads still depend on Gemini
+  identity preflight. A bounded `auracall-gemini-pro` proof selected cached
+  artifact manifests for `10b7e2a15e2dd77c` and `1ab8bb794846c491`, then both
+  failed with `gemini_identity_not_detected` even though a doctor probe saw the
+  Gemini app, Google auth cookies, and no guard page. The next fix belongs in
+  Gemini identity detection/diagnostics rather than more routeability or
+  reconciliation retries.
+
+- 2026-05-23: Gemini identity preflight can false-negative when the provider
+  tab is routeable but the Google Account aria label has not hydrated yet.
+  Retry the hydrated `Google Account: ...` label briefly before returning
+  `gemini_identity_not_detected`. Live `auracall-gemini-pro` proof then passed
+  identity-smoke and materialized two cached conversation artifacts into
+  `history-media` archive rows with available asset routes:
+  `10b7e2a15e2dd77c` SHA-256
+  `20e65429bd7887c7aaf6e437ce1c22e525e941f90f41d7ffdff0d78ef2a32e06`, and
+  `1ab8bb794846c491` SHA-256
+  `19aaee41a191b45efb0549acf18202162be340a32f1dee0bd24aa2a16086e771`.
+
+- 2026-05-23: Existing account-mirror conversation rows are mutable cache
+  snapshots, not permanent truth. Live follow needs two refresh modes: a full
+  sweep for partially hydrated histories and steady recency walking of
+  project/left-rail indexes because provider-modified conversations move to
+  the top. Operator reconciliation should be explicit and per conversation or
+  selected batch: refresh the current online conversation snapshot, update
+  manifests, then materialize missing artifacts through the same history
+  materialization/cache/archive path. Search and account-mirror catalog reads
+  must stay cache-only.
+
+- 2026-05-23: Account-mirror conversation freshness should be projected from
+  cached evidence before adding live reconciliation controls. Catalog and
+  search rows can classify `fresh`, `stale`, `partial`, `missing_assets`,
+  `terminal_unavailable`, `guarded`, or `unknown` from cached index/detail
+  timestamps, routeability reasons, provider guard state, fingerprints, and
+  local-asset evidence. This projection is diagnostic and must not make
+  `/v1/search` or account-mirror catalog reads acquire browser work.
+
+- 2026-05-23: Explicit conversation reconciliation should be a history
+  materialization job phase, not a second backend. `refreshSnapshot` first reads
+  the current provider conversation context and persists
+  `result.phases.snapshotRefresh` / `result.snapshotRefreshes`; only then does
+  the existing artifact/file/media materialization phase run. Terminal snapshot
+  evidence such as Gemini bare `/app` route fallback must skip materialization
+  for that target while preserving queued-only cancellation before provider
+  work starts.
+
+- 2026-05-23: Full-sweep live follow should hand off asset recovery to durable
+  history materialization rather than fetching bytes inline in the completion
+  loop. Account-mirror completions now carry sweep/materialization policy and
+  persist a `materializationCursor` with the queued job id, pass count, request,
+  and status after successful refresh passes. Metadata-only steady follow must
+  avoid even an empty async materialization await, because yielding while a
+  paused run is still active can swallow an immediate operator resume.
+
+- 2026-05-23: Operator row reconciliation must be explicit and use the same
+  durable history-materialization lane as API/CLI/MCP requests. React Search
+  conversation rows and cache-only Account Mirror catalog conversation rows now
+  post `catalogKind = conversations`, `assetKinds = all`, and
+  `refreshSnapshot = true` to `/v1/account-mirrors/materializations`; opening
+  Search or catalog rows remains cache-only and does not acquire provider
+  browser work.
+
+- 2026-05-23: Steady follow and full sweep must not share the same attachment
+  cursor semantics. Steady-follow refreshes now pass `sweepMode =
+  steady_follow` into account-mirror collection and ignore the prior deep
+  attachment cursor so the current top of the provider rail/project list is
+  rechecked every cadence. Full-sweep refreshes pass `sweepMode = full_sweep`
+  and remain the only mode that resumes the persisted deep cursor.
+- 2026-05-23: Full-sweep completion needs a wider collector envelope than
+  ordinary refreshes. Gemini's conservative browser pacing can exceed the
+  generic 120s collector cap before project, history, and detail reads finish,
+  so full-sweep completion refreshes now pass an explicit 300s timeout while
+  steady-follow keeps the ordinary request shape. Do not bypass the normal
+  explicit-refresh cooldown for proof retries; cancel bounded retries that
+  reach `idle_waiting` if the isolated server is only being used for evidence.
+
+- 2026-05-23: Gemini account-mirror discovery must include Gem/project
+  conversation histories, not just the global left rail. Project-history reads
+  now reserve bounded conversation-row budget and tolerate individual Gemini
+  project route failures with DOM drift evidence so one flaky Gem does not
+  abort the whole live-follow sweep.
+- 2026-05-23: Bounded Gemini project-history discovery must fan out before it
+  deepens one Gem. A reserved project-history row budget still starves later
+  Gems if the first project consumes the whole limit, so account-mirror
+  collection now distributes remaining project-history rows across remaining
+  Gems/projects and carries aggregate truncation evidence into
+  mirror-completeness status without aborting the scan of later projects.
+
+- 2026-05-23: Account-mirror conversation freshness should not depend only on
+  target-level snapshot timestamps. Snapshot writes now persist per-row index
+  observation metadata on cached conversations: observed time, source surface
+  (`left-rail` or `project-conversations`), recency rank, and a stable index
+  fingerprint. Catalog/search freshness remains cache-only but now has row
+  evidence for steady-follow stale detection and operator reconciliation.
+
+- 2026-05-23: Conversation cache merges must preserve the newest index evidence
+  when global and project-scoped caches contain the same conversation id. A stale
+  project-conversation cache row should not overwrite a fresher snapshot row's
+  `indexObservedAt`, source/rank, or fingerprint during catalog/search
+  projection.
+
+- 2026-05-23: Gemini project/Gem conversation reads must honor
+  `includeHistory`, not only the global left rail. The Gemini adapter now runs
+  bounded history hydration for project/Gem conversation surfaces too, and the
+  hydrator falls back to the document body when the `all-conversations`
+  container is absent.
+
+- 2026-05-23: Persisted account-mirror shutdown-parking tests must wait for
+  the `parked_for_shutdown` lifecycle evidence, not just `status = queued`.
+  Newly started operations are already queued in the store, so a status-only
+  wait can read before the asynchronous parked event persistence completes.
+
+- 2026-05-23: Gemini full-sweep account-mirror completions need a wider
+  collector envelope than the generic full-sweep default once project/Gem
+  history hydration is enabled. A bounded `auracall-gemini-pro` proof reached
+  the managed Gemini app with no visible provider guard but timed out before
+  writing `lastRefresh` or `materializationCursor`, so Gemini full sweeps now
+  pass a 900s collector timeout while other providers keep the 300s full-sweep
+  timeout.
+
+- 2026-05-23: Gemini project/Gem history reads must be bounded by page-read
+  count as well as row count. Fanning a small row reserve across every Gem can
+  still exceed the collector envelope under six-interactions-per-minute pacing,
+  so project-history discovery now persists a `projectConversations` cursor and
+  honors a `maxProjectReads` cap; full sweeps resume the cursor, while
+  steady-follow refreshes keep starting from the current top.
+
+- 2026-05-23: History-materialized archive evidence should prove the asset hash
+  is associated with the same provider conversation and bound identity, not
+  merely that a local file exists. Keep regression coverage asserting
+  `boundIdentityKey`, `providerConversationId`, `cacheKey`, and
+  `checksumSha256` together on account-mirror archive rows.
+
+- 2026-05-23: Steady-follow recency depends on provider-observed conversation
+  order surviving cache merge. When an existing conversation moves back to the
+  top of a rail/project index, refresh merge must write newly observed
+  conversations in provider order and only append older unobserved cached rows;
+  otherwise stale insertion order can hide the moved conversation from
+  rank-based freshness/materialization decisions.
+
+- 2026-05-23: Operator reconciliation evidence must update the cached
+  conversation row, not only the durable job result. `refreshSnapshot`
+  successes should write detail/manifest timestamps, routeability state, and
+  observed counts; materialization should write manifest/materialized evidence;
+  terminal routeability failures such as Gemini bare `/app` should write the
+  routeability state/reason so later cache-only catalog/search reads can show
+  the stale or terminal state without opening the provider.
+
+- 2026-05-23: Direct provider-conversation reconciliation needs a row target
+  even when the id was not already in the mirror list. When an operator supplies
+  a provider conversation id plus bound identity and the provider returns
+  routeability/detail evidence, upsert a minimal account-mirror conversation row
+  before writing freshness evidence; otherwise the transcript cache and job
+  result can be current while catalog/search still have no row to show.
+
+- 2026-05-23: Provider human-verification hard stops should be first-class
+  materialization failures. If Gemini or another provider surfaces
+  `google.com/sorry`, CAPTCHA, reCAPTCHA, or visible human verification during
+  conversation reconciliation, classify the durable job as
+  `provider_guard_required` with HTTP 409 semantics so operators know to clear
+  the managed browser profile before retrying.
+
+- 2026-05-23: Fixture-backed completion hydration smokes should use an
+  explicit status timeout instead of the CLI's short default. On a loaded
+  workstation, the local `/status` projection can exceed five seconds even when
+  no provider/browser work is happening; the smoke should keep proving
+  persisted completion hydration and `providerWork=none`, not host scheduling
+  luck.
+
+- 2026-05-23: Gemini full-sweep backfill proof should record both the
+  completion handoff and the materialized archive evidence. The post-backoff
+  `auracall-gemini-pro` full sweep
+  `acctmirror_completion_d6ee42c8-898f-424b-9a31-7387603db294` completed
+  without provider guard, queued
+  `hmj_96c6d998be8948be8c8910076a374890`, and materialized two cached
+  conversation image artifacts. Archive readback must preserve provider
+  conversation id, bound identity, `fileAvailable=true`, and checksum/cache
+  keys so operators can associate each artifact hash with its Gemini
+  conversation.
+
+- 2026-05-23: Gemini steady-follow completions need a wider collector envelope
+  than the generic refresh default too. A bounded `auracall-gemini-pro`
+  steady-follow proof waited through explicit-refresh cooldown, reached the
+  managed Gemini app with no visible provider guard, then timed out before
+  writing a refresh pass. Gemini steady follow now passes a 300s collector
+  timeout while non-Gemini steady follow keeps the ordinary refresh request
+  shape.
+
+- 2026-05-23: Account-mirror refresh failures must persist target status, not
+  only the failed completion record. A stopped proof server can lose in-memory
+  `lastFailureAtMs` and `consecutiveFailureCount`; durable status hydration now
+  restores failure-backoff after API/proof-server restart so a timed-out Gemini
+  proof cannot be retried immediately by accident.
+
+- 2026-05-23: Gemini failure backoff should protect the provider without
+  making proof loops wait hours after non-guard collector failures. Gemini
+  explicit account-mirror refreshes now wait 10 minutes plus at most 5 minutes
+  jitter, and refresh failure backoff escalates from 5 minutes to a 30 minute
+  cap. Keep provider guard hard stops separate: `google.com/sorry`, CAPTCHA,
+  reCAPTCHA, and visible human verification still require manual clearance.
+
+- 2026-05-23: The practical Gemini backoff must still be proven by a real
+  bounded steady-follow pass. Completion
+  `acctmirror_completion_e779a4e1-e6d7-4912-b4bb-445e30a7c028` completed one
+  `auracall-gemini-pro` steady-follow pass with no provider guard and queued
+  `hmj_873fd5d4ad154e94ae9517923d7de0dc`, which materialized two image
+  artifacts from provider conversations `10b7e2a15e2dd77c` and
+  `1ab8bb794846c491`.
+
+- 2026-05-23: Browsing Gemini root rail history should not force a browser
+  refresh. A loaded `/app/<conversationId>` tab is a valid root rail surface,
+  so Gemini conversation-list reads now reuse it, open the rail in place, and
+  scroll for history hydration before scraping conversation links. Keep direct
+  conversation validation and project/Gem route reads stricter; this reuse rule
+  is for the root app rail.
+
+- 2026-05-23: Gemini root-rail reuse must be enforced below the adapter too.
+  BrowserService configured-target matching now treats `/app/<conversationId>`
+  as compatible with configured Gemini root `/app`, so diagnostic and
+  browser-provider attach paths select the same already-loaded Gemini tab.
+
+- 2026-05-23: Scheduler diagnostics are the right mutation-proof surface for
+  account-mirror live follow. Workbench capability diagnostics may perform
+  provider discovery and mutate Gemini by opening the root composer; scheduler
+  diagnostics now includes recent in-process browser mutation records for the
+  selected provider/runtime profile without attaching to CDP.
+
+- 2026-05-23: Same-route Gemini conversation-surface navigation is still a
+  refresh for operator purposes. If the current Gemini tab already matches the
+  requested root `/app`, `/app/<conversationId>`, or exact Gem/project
+  conversation route, skip `Page.navigate(...)` and let the caller open/scroll
+  the rail in place. The clean proof
+  `acctmirror_completion_04ce6c2d-f9ba-4e40-b83b-8d341714ef81` had zero
+  `provider:gemini:navigate-conversation-surface` records and zero reloads;
+  remaining mutation sources were Gem view/edit project detail probes.
+
+- 2026-05-23: Gemini explicit-refresh test loops should wait minutes, not
+  minutes plus another long jitter window. Gemini routine cadence and hard-stop
+  cooldowns stay conservative, but explicit refresh now waits 2 minutes plus
+  at most 1 minute jitter and refresh failures back off from 2 minutes to a 10
+  minute cap.
+
+- 2026-05-23: History reconciliation must not depend only on stale
+  conversation-row count fields. Account-mirror catalog/search rows now count
+  artifacts/files/media from provider-conversation-bound manifests, and
+  reconciliation target selection uses those manifest bindings so a
+  steady-follow refresh can materialize newly discovered assets even before a
+  cached transcript row has fresh count metadata.

@@ -31,6 +31,7 @@ import type {
   AccountMirrorStatusEntry,
   AccountMirrorStatusRegistry,
   AccountMirrorStatusSummary,
+  AccountMirrorStatusState,
 } from './statusRegistry.js';
 import { createAccountMirrorStatusRegistry } from './statusRegistry.js';
 import {
@@ -47,6 +48,7 @@ import {
 export interface AccountMirrorRefreshRequest {
   provider?: AccountMirrorProvider | null;
   runtimeProfileId?: string | null;
+  sweepMode?: 'steady_follow' | 'full_sweep' | null;
   explicitRefresh?: boolean;
   queueTimeoutMs?: number;
   queuePollMs?: number;
@@ -202,13 +204,33 @@ export function createAccountMirrorRefreshService(input: {
 
       if (!acquired.acquired) {
         const completedAt = now();
+        const failureCount = resolveNextConsecutiveFailureCount(target);
         registry.mergeState({ provider, runtimeProfileId }, {
           queued: false,
           running: false,
           lastFailureAtMs: completedAt.getTime(),
-          consecutiveFailureCount: 1,
+          consecutiveFailureCount: failureCount,
           lastDispatcherKey: acquired.key,
           lastDispatcherBlockedBy: summarizeBrowserOperation(acquired.blockedBy),
+        });
+        await persistRefreshState(persistence, {
+          provider,
+          runtimeProfileId,
+          browserProfileId: target.browserProfileId,
+          boundIdentityKey: target.expectedIdentityKey,
+          updatedAt: completedAt,
+          state: {
+            detectedIdentityKey: target.detectedIdentityKey,
+            lastAttemptAtMs: queuedAt.getTime(),
+            lastFailureAtMs: completedAt.getTime(),
+            lastCompletedAtMs: completedAt.getTime(),
+            consecutiveFailureCount: failureCount,
+            lastRefreshRequestId: requestId,
+            lastDispatcherKey: acquired.key,
+            lastDispatcherBlockedBy: summarizeBrowserOperation(acquired.blockedBy),
+            metadataCounts: target.metadataCounts,
+            metadataEvidence: target.metadataEvidence,
+          },
         });
         throw new AccountMirrorRefreshError(
           503,
@@ -242,6 +264,7 @@ export function createAccountMirrorRefreshService(input: {
             provider,
             runtimeProfileId,
             expectedIdentityKey: target.expectedIdentityKey ?? '',
+            sweepMode: normalizeSweepMode(request.sweepMode),
             limits: {
               maxPageReadsPerCycle: target.limits.maxPageReadsPerCycle,
               maxConversationRowsPerCycle: target.limits.maxConversationRowsPerCycle,
@@ -297,6 +320,28 @@ export function createAccountMirrorRefreshService(input: {
           metadataEvidence: collectionWithPriorManifests.evidence,
           manifests: collectionWithPriorManifests.manifests,
         });
+        await persistRefreshState(persistence, {
+          provider,
+          runtimeProfileId,
+          browserProfileId: target.browserProfileId,
+          boundIdentityKey: target.expectedIdentityKey ?? collectionWithPriorManifests.detectedIdentityKey ?? '',
+          updatedAt: completedAt,
+          state: {
+            detectedIdentityKey: collectionWithPriorManifests.detectedIdentityKey,
+            lastAttemptAtMs: queuedAt.getTime(),
+            lastSuccessAtMs: completedAt.getTime(),
+            lastCompletedAtMs: completedAt.getTime(),
+            lastRefreshRequestId: requestId,
+            lastStartedAtMs: startedAt.getTime(),
+            lastDispatcherKey: acquired.operation.key,
+            lastDispatcherOperationId: acquired.operation.id,
+            consecutiveFailureCount: 0,
+            providerGuard: null,
+            providerHardStopAtMs: null,
+            metadataCounts: collectionWithPriorManifests.metadataCounts,
+            metadataEvidence: collectionWithPriorManifests.evidence,
+          },
+        });
         const mirrorStatus = registry.readStatus({ provider, runtimeProfileId, explicitRefresh: true });
         return {
           object: 'account_mirror_refresh',
@@ -333,6 +378,7 @@ export function createAccountMirrorRefreshService(input: {
         const completedAt = now();
         const isIdentityMismatch = error instanceof AccountMirrorIdentityMismatchError;
         const providerGuard = isIdentityMismatch ? null : extractProviderGuard(error, completedAt.getTime());
+        const failureCount = resolveNextConsecutiveFailureCount(target);
         if (!isIdentityMismatch && !providerGuard) {
           await recordAccountMirrorRefreshDomDriftObservation({
             provider,
@@ -349,9 +395,31 @@ export function createAccountMirrorRefreshService(input: {
           detectedIdentityKey: isIdentityMismatch ? error.detectedIdentityKey : undefined,
           lastFailureAtMs: completedAt.getTime(),
           lastCompletedAtMs: completedAt.getTime(),
-          consecutiveFailureCount: 1,
+          consecutiveFailureCount: failureCount,
           providerHardStopAtMs: providerGuard ? completedAt.getTime() : undefined,
           providerGuard: providerGuard ?? undefined,
+        });
+        await persistRefreshState(persistence, {
+          provider,
+          runtimeProfileId,
+          browserProfileId: target.browserProfileId,
+          boundIdentityKey: target.expectedIdentityKey,
+          updatedAt: completedAt,
+          state: {
+            detectedIdentityKey: isIdentityMismatch ? error.detectedIdentityKey : target.detectedIdentityKey,
+            lastAttemptAtMs: queuedAt.getTime(),
+            lastFailureAtMs: completedAt.getTime(),
+            lastCompletedAtMs: completedAt.getTime(),
+            lastRefreshRequestId: requestId,
+            lastStartedAtMs: startedAt.getTime(),
+            lastDispatcherKey: acquired.operation.key,
+            lastDispatcherOperationId: acquired.operation.id,
+            consecutiveFailureCount: failureCount,
+            providerHardStopAtMs: providerGuard ? completedAt.getTime() : undefined,
+            providerGuard: providerGuard ?? undefined,
+            metadataCounts: target.metadataCounts,
+            metadataEvidence: target.metadataEvidence,
+          },
         });
         if (isIdentityMismatch) {
           throw new AccountMirrorRefreshError(
@@ -416,6 +484,31 @@ async function recordAccountMirrorRefreshDomDriftObservation(input: {
     // Drift observations are diagnostic only; refresh failure semantics should
     // remain governed by the original collector error.
   }
+}
+
+async function persistRefreshState(
+  persistence: AccountMirrorPersistence,
+  input: {
+    provider: AccountMirrorProvider;
+    runtimeProfileId: string;
+    browserProfileId: string | null;
+    boundIdentityKey: string | null;
+    updatedAt: Date;
+    state: AccountMirrorStatusState;
+  },
+): Promise<void> {
+  await persistence.writeState?.({
+    provider: input.provider,
+    runtimeProfileId: input.runtimeProfileId,
+    browserProfileId: input.browserProfileId,
+    boundIdentityKey: input.boundIdentityKey,
+    updatedAt: input.updatedAt.toISOString(),
+    state: input.state,
+  });
+}
+
+function resolveNextConsecutiveFailureCount(target: AccountMirrorStatusEntry): number {
+  return Math.max(1, Math.floor(target.consecutiveFailureCount ?? 0) + 1);
 }
 
 function classifyRefreshFailureFallback(error: unknown): string {
@@ -600,7 +693,10 @@ async function mergeCollectionWithPersistedCatalog(input: {
   }
   const manifests = {
     projects: mergeById(existing.projects, input.collection.manifests.projects),
-    conversations: mergeById(existing.conversations, input.collection.manifests.conversations),
+    conversations: mergeConversationsByObservedOrder(
+      existing.conversations,
+      input.collection.manifests.conversations,
+    ),
     artifacts: mergeArtifacts(existing.artifacts, input.collection.manifests.artifacts),
     files: mergeFiles(existing.files, input.collection.manifests.files),
     media: mergeById(existing.media, input.collection.manifests.media),
@@ -627,6 +723,22 @@ function mergeById<T extends { id: string }>(existing: readonly T[], incoming: r
     if (item?.id) merged.set(item.id, { ...(merged.get(item.id) ?? {}), ...item });
   }
   return [...merged.values()];
+}
+
+function mergeConversationsByObservedOrder<T extends { id: string }>(
+  existing: readonly T[],
+  incoming: readonly T[],
+): T[] {
+  const existingById = new Map(existing.filter((item) => item?.id).map((item) => [item.id, item]));
+  const incomingIds = new Set<string>();
+  const observed = incoming
+    .filter((item) => item?.id)
+    .map((item) => {
+      incomingIds.add(item.id);
+      return { ...(existingById.get(item.id) ?? {}), ...item };
+    });
+  const retained = existing.filter((item) => item?.id && !incomingIds.has(item.id));
+  return [...observed, ...retained];
 }
 
 function mergeArtifacts(
@@ -838,6 +950,10 @@ function summarizeBrowserOperation(operation: BrowserOperationRecord): Record<st
     rawDevTools: operation.rawDevTools ?? null,
     devTools: operation.devTools ?? null,
   };
+}
+
+function normalizeSweepMode(value: AccountMirrorRefreshRequest['sweepMode']): 'steady_follow' | 'full_sweep' {
+  return value === 'full_sweep' ? 'full_sweep' : 'steady_follow';
 }
 
 function normalizePositiveInteger(value: number | null | undefined, fallback: number): number {

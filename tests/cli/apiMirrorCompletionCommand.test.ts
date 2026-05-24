@@ -17,6 +17,78 @@ afterEach(async () => {
 });
 
 describe('api mirror completion CLI', () => {
+  test('passes full-sweep materialization options when starting mirror completion', async () => {
+    let seenBody: Record<string, unknown> | null = null;
+    const server = http.createServer((req, res) => {
+      const chunks: Buffer[] = [];
+      req.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+      req.on('end', () => {
+        seenBody = JSON.parse(Buffer.concat(chunks).toString('utf8')) as Record<string, unknown>;
+        res.writeHead(202, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({
+          object: 'account_mirror_completion',
+          id: 'acctmirror_cli_full_sweep',
+          status: 'queued',
+        }));
+      });
+    });
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
+    const address = server.address();
+    if (!address || typeof address === 'string') {
+      throw new Error('expected TCP server address');
+    }
+
+    const env = {
+      ...process.env,
+      // biome-ignore lint/style/useNamingConvention: environment variable name
+      ORACLE_NO_BANNER: '1',
+      // biome-ignore lint/style/useNamingConvention: environment variable name
+      AURACALL_DISABLE_KEYTAR: '1',
+    };
+
+    const result = await execFileAsync(
+      process.execPath,
+      [
+        TSX_BIN,
+        CLI_ENTRY,
+        'api',
+        'mirror-complete',
+        '--port',
+        String(address.port),
+        '--provider',
+        'gemini',
+        '--runtime-profile',
+        'auracall-gemini-pro',
+        '--max-passes',
+        '1',
+        '--sweep-mode',
+        'full_sweep',
+        '--materialization-policy',
+        'full_missing_assets',
+        '--materialization-asset-kind',
+        'media',
+        '--materialization-max-items',
+        '2',
+        '--materialization-refresh-snapshot',
+        '--json',
+      ],
+      { env },
+    );
+
+    expect(JSON.parse(result.stdout)).toMatchObject({ id: 'acctmirror_cli_full_sweep' });
+    expect(seenBody).toMatchObject({
+      provider: 'gemini',
+      runtimeProfile: 'auracall-gemini-pro',
+      maxPasses: 1,
+      sweepMode: 'full_sweep',
+      materializationPolicy: 'full_missing_assets',
+      materializationAssetKinds: ['media'],
+      materializationMaxItems: 2,
+      materializationRefreshSnapshot: true,
+    });
+  }, CLI_TIMEOUT);
+
   test('scopes --status value form to mirror-completions instead of root status alias', async () => {
     const seenUrls: string[] = [];
     const server = http.createServer((req, res) => {

@@ -3,6 +3,11 @@ import {
   getRuntimeProfileBrowserProfileId,
 } from '../config/model.js';
 import type {
+  AccountMirrorCompletionMaterializationAssetKind,
+  AccountMirrorCompletionMaterializationPolicy,
+  AccountMirrorCompletionSweepMode,
+} from './completionService.js';
+import type {
   AccountMirrorPolitenessDecision,
   AccountMirrorProviderPolitenessPolicy,
   AccountMirrorProviderGuardKind,
@@ -60,6 +65,12 @@ export type AccountMirrorMetadataEvidence = {
       kind: string | null;
       operationClass: string | null;
     } | null;
+  } | null;
+  projectConversations?: {
+    nextProjectIndex: number;
+    readLimit: number;
+    scannedProjects: number;
+    yielded?: boolean;
   } | null;
   truncated: {
     projects: boolean;
@@ -134,6 +145,12 @@ export type AccountMirrorLiveFollowDesiredState = {
   reason: string;
   mode: string | null;
   priority: string | null;
+  sweepMode: AccountMirrorCompletionSweepMode | null;
+  materializationPolicy: AccountMirrorCompletionMaterializationPolicy | null;
+  materializationAssetKinds: AccountMirrorCompletionMaterializationAssetKind[] | null;
+  materializationMaxItems: number | null;
+  materializationRefreshSnapshot: boolean | null;
+  materializationForce: boolean | null;
 };
 
 export type AccountMirrorStatusSummary = {
@@ -415,14 +432,29 @@ function readLiveFollowDesiredState(
   const enabled = liveFollow?.enabled;
   const mode = liveFollow ? readString(liveFollow.mode) : null;
   const priority = liveFollow ? readString(liveFollow.priority) : null;
+  const sweepMode = liveFollow ? readSweepMode(liveFollow.sweepMode) : null;
+  const materializationPolicy = liveFollow ? readMaterializationPolicy(liveFollow.materializationPolicy) : null;
+  const materializationAssetKinds = liveFollow ? readMaterializationAssetKinds(liveFollow.materializationAssetKinds) : null;
+  const materializationMaxItems = liveFollow ? readPositiveInteger(liveFollow.materializationMaxItems) : null;
+  const materializationRefreshSnapshot = liveFollow ? readBoolean(liveFollow.materializationRefreshSnapshot) : null;
+  const materializationForce = liveFollow ? readBoolean(liveFollow.materializationForce) : null;
+  const common = {
+    mode,
+    priority,
+    sweepMode,
+    materializationPolicy,
+    materializationAssetKinds,
+    materializationMaxItems,
+    materializationRefreshSnapshot,
+    materializationForce,
+  };
   if (enabled === false) {
     return {
       configured: true,
       enabled: false,
       state: 'disabled',
       reason: 'liveFollow.enabled is false',
-      mode,
-      priority,
+      ...common,
     };
   }
   if (enabled !== true) {
@@ -431,8 +463,7 @@ function readLiveFollowDesiredState(
       enabled: false,
       state: 'unconfigured',
       reason: 'liveFollow.enabled is not configured',
-      mode,
-      priority,
+      ...common,
     };
   }
   return {
@@ -440,9 +471,42 @@ function readLiveFollowDesiredState(
     enabled: true,
     state: 'enabled',
     reason: 'liveFollow.enabled is true',
-    mode,
-    priority,
+    ...common,
   };
+}
+
+function readSweepMode(value: unknown): AccountMirrorCompletionSweepMode | null {
+  return value === 'full_sweep' || value === 'steady_follow' ? value : null;
+}
+
+function readMaterializationPolicy(value: unknown): AccountMirrorCompletionMaterializationPolicy | null {
+  if (
+    value === 'metadata_only' ||
+    value === 'recent_missing_assets' ||
+    value === 'full_missing_assets'
+  ) return value;
+  return null;
+}
+
+function readMaterializationAssetKinds(value: unknown): AccountMirrorCompletionMaterializationAssetKind[] | null {
+  if (!Array.isArray(value)) return null;
+  const normalized = value.filter((entry): entry is AccountMirrorCompletionMaterializationAssetKind =>
+    entry === 'artifacts' ||
+    entry === 'files' ||
+    entry === 'media' ||
+    entry === 'all'
+  );
+  if (normalized.length === 0) return null;
+  if (normalized.includes('all')) return ['all'];
+  return Array.from(new Set(normalized));
+}
+
+function readPositiveInteger(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : null;
+}
+
+function readBoolean(value: unknown): boolean | null {
+  return typeof value === 'boolean' ? value : null;
 }
 
 function readLiveFollowPolitenessPolicy(
@@ -506,6 +570,7 @@ function normalizeMetadataEvidence(
     projectSampleIds: normalizeStringArray(value.projectSampleIds),
     conversationSampleIds: normalizeStringArray(value.conversationSampleIds),
     attachmentInventory: normalizeAttachmentInventoryEvidence(value.attachmentInventory),
+    projectConversations: normalizeProjectConversationEvidence(value.projectConversations),
     truncated: {
       projects: value.truncated?.projects === true,
       conversations: value.truncated?.conversations === true,
@@ -580,6 +645,18 @@ function deriveMirrorCompleteness(
       total: remainingTotal,
     },
     signals,
+  };
+}
+
+function normalizeProjectConversationEvidence(
+  value: AccountMirrorMetadataEvidence['projectConversations'] | null | undefined,
+): AccountMirrorMetadataEvidence['projectConversations'] | null {
+  if (!value || !isRecord(value)) return null;
+  return {
+    nextProjectIndex: normalizeCount(value.nextProjectIndex),
+    readLimit: normalizeCount(value.readLimit),
+    scannedProjects: normalizeCount(value.scannedProjects),
+    yielded: value.yielded === true,
   };
 }
 

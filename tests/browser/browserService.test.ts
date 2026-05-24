@@ -199,6 +199,41 @@ describe('BrowserService resolveServiceTarget', () => {
     });
   });
 
+  test('matches Gemini conversation tabs for the configured root app surface', async () => {
+    instanceScannerMocks.scanRegisteredInstance.mockResolvedValueOnce({
+      instance: {
+        pid: 9999,
+        port: 9222,
+        host: '127.0.0.1',
+        profilePath: '/tmp/profile',
+        profileName: 'Default',
+        type: 'chrome',
+        launchedAt: new Date().toISOString(),
+        lastSeenAt: new Date().toISOString(),
+      },
+      tabs: [
+        {
+          targetId: 'gemini-conversation',
+          url: 'https://gemini.google.com/app/1ab8bb794846c491',
+          title: 'Gemini conversation',
+          type: 'page',
+        },
+        { targetId: 'other', url: 'https://example.com', title: 'Other', type: 'page' },
+      ],
+    });
+    const service = BrowserService.fromConfig(baseConfig);
+    const target = await service.resolveServiceTarget({
+      serviceId: 'gemini',
+      configuredUrl: 'https://gemini.google.com/app',
+      ensurePort: true,
+    });
+    expect(target.tab?.targetId).toBe('gemini-conversation');
+    expect(target.tabSelection?.candidates[0]).toMatchObject({
+      selected: true,
+      reasons: ['match-url'],
+    });
+  });
+
   test('matches Grok tabs by domain', async () => {
     instanceScannerMocks.scanRegisteredInstance.mockResolvedValueOnce({
       instance: {

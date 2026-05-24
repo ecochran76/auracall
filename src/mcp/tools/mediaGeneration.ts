@@ -70,6 +70,13 @@ const mediaGenerationStatusInputShape = {
   diagnostics: z.enum(['browser-state']).optional(),
 } satisfies z.ZodRawShape;
 
+const mediaGenerationMaterializeInputShape = {
+  id: z.string().min(1),
+  count: z.number().int().min(1).max(8).nullable().optional(),
+  compareFullQuality: z.boolean().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+} satisfies z.ZodRawShape;
+
 const mediaGenerationStatusArtifactShape = z.object({
   id: z.string(),
   type: z.enum(['image', 'music', 'video']),
@@ -149,6 +156,17 @@ export function registerMediaGenerationTool(
     },
     createMediaGenerationStatusToolHandler(service),
   );
+  server.registerTool(
+    'media_generation_materialize',
+    {
+      title: 'Materialize Aura-Call media generation',
+      description:
+        'Resume provider-backed materialization for one existing Aura-Call media generation and return the updated durable media_generation record.',
+      inputSchema: mediaGenerationMaterializeInputShape,
+      outputSchema: mediaGenerationOutputShape,
+    },
+    createMediaGenerationMaterializeToolHandler(service),
+  );
 }
 
 export function createMediaGenerationToolHandler(service: MediaGenerationService) {
@@ -199,6 +217,31 @@ export function createMediaGenerationStatusToolHandler(service: MediaGenerationS
       isError: summary.status === 'failed',
       content: textContent(line),
       structuredContent: summary as typeof summary & Record<string, unknown>,
+    };
+  };
+}
+
+export function createMediaGenerationMaterializeToolHandler(service: MediaGenerationService) {
+  return async (input: unknown) => {
+    const textContent = (text: string) => [{ type: 'text' as const, text }];
+    const payload = z.object(mediaGenerationMaterializeInputShape).parse(input);
+    if (!service.materializeGeneration) {
+      throw new Error('Media generation materialization is not available in this runtime.');
+    }
+    const result = await service.materializeGeneration(payload.id, {
+      count: payload.count ?? null,
+      compareFullQuality: payload.compareFullQuality ?? true,
+      source: 'mcp',
+      metadata: payload.metadata ?? null,
+    });
+    const line =
+      result.status === 'succeeded'
+        ? `Media generation ${result.id} materialized with ${result.artifacts.length} artifact(s).`
+        : `Media generation ${result.id} ${result.status}: ${result.failure?.message ?? 'no failure details'}`;
+    return {
+      isError: result.status === 'failed',
+      content: textContent(line),
+      structuredContent: result as MediaGenerationResponse & Record<string, unknown>,
     };
   };
 }

@@ -31,6 +31,10 @@ const diagnosticsPayload = {
     status: 'running',
     phase: 'backfill_history',
   },
+  browserMutations: {
+    total: 2,
+    items: [],
+  },
 };
 
 afterEach(async () => {
@@ -74,6 +78,7 @@ describe('api scheduler-diagnostics CLI helpers', () => {
     expect(output).toContain('Target: chatgpt/default');
     expect(output).toContain('Wait: active');
     expect(output).toContain('Completion: acctmirror_diagnostics_1 running backfill_history');
+    expect(output).toContain('Browser mutations: 2');
   });
 });
 

@@ -224,19 +224,57 @@ Current State:
     arithmetic, transcript semantics, literature moderation, and similar
     workflow checks belong to caller agents/workflows that can attach their
     validation evidence to archived AuraCall outputs
-- history-backed artifact materialization is now scoped in
+- history-backed artifact materialization is closed in
   [docs/dev/plans/0069-2026-05-22-history-backed-artifact-materialization.md](docs/dev/plans/0069-2026-05-22-history-backed-artifact-materialization.md):
-  - account mirror history should be used as a discovery index for provider
-    conversations, files, artifacts, and media, not as a text-only substitute
-    for downloadable provider assets
-  - the next backend lane is an explicit queued materialization path that
-    accepts account-mirror catalog items or provider conversation ids, reopens
-    the historical provider chat through the managed browser, downloads
-    provider artifacts/files through provider controls, and writes the resulting
-    files into the existing identity-scoped cache/archive
+  - the lane now has explicit queued materialization jobs for provider
+    conversations, account-mirror catalog items, archive items, and bounded
+    reconciliation, with HTTP/CLI/MCP parity
   - account-mirror catalog reads remain cache-only; browser work happens only
-    through explicit materialization jobs routed through the dispatcher and
-    provider politeness controls
+    through explicit materialization or completion jobs routed through the
+    dispatcher and provider politeness controls
+  - ChatGPT historical artifacts were recovered live, Gemini media rows now
+    record live duplicate-title/no-unique-evidence skips after a bounded mirror
+    refresh, and Grok historical media recovery records an explicit unsupported
+    skip before browser work
+- conversation refresh and artifact reconciliation is closed in
+  [docs/dev/plans/0070-2026-05-23-conversation-refresh-and-artifact-reconciliation.md](docs/dev/plans/0070-2026-05-23-conversation-refresh-and-artifact-reconciliation.md):
+  - the lane owns existing cached conversations becoming stale after operators
+    add content through provider or AuraCall surfaces
+  - full live-follow sweeps are the backfill path for partially hydrated
+    histories, while steady follow walks recency-ordered project/left-rail
+    indexes and uses changed detail/manifest freshness evidence when a provider
+    does not move a modified conversation to rank 0
+  - explicit operator reconciliation should refresh one cached conversation
+    against the provider and then materialize missing artifacts through the
+    existing history-materialization/cache/archive paths
+  - freshness projection, the explicit `refreshSnapshot` history
+    materialization job phase, and backend full-sweep completion
+    policy/materialization cursor are implemented; Search and Account Mirror
+    conversation rows now expose explicit reconciliation controls backed by the
+    same durable job surface; steady-follow refreshes now restart detail
+    inventory from the current rail/project top while full sweep resumes the
+    deep cursor; full-sweep completion uses an extended collector timeout after
+    the first Gemini proof hit the old cap; Gemini sweep discovery now includes
+    bounded Gem/project conversation histories as well as the left rail, and
+    fans project-history budget across Gems before deepening one; explicit
+    reconciliation writes per-row detail/manifest/materialization evidence and
+    can upsert a minimal direct-provider-id row when the mirror list did not
+    already contain that conversation; provider hard stops now report explicit
+    `provider_guard_required` materialization failures instead of generic
+    internal errors; Gemini full-sweep dogfood materialized two cached
+    conversation image artifacts with archive checksum evidence; the first live
+    Gemini steady-follow dogfood exposed the generic collector timeout, so
+    Gemini steady-follow completions now use a 300s envelope; refresh failures
+    now persist target backoff state across API/proof-server restarts; Gemini
+    explicit refresh and failure backoff defaults are shortened enough for
+    practical bounded proof retries; a bounded Gemini steady-follow proof now
+    completes and hands off materialization; the modified-conversation proof
+    now relies on changed detail/manifest evidence rather than rank-only
+    movement; a final same-profile selected-batch proof records Gemini bare
+    `/app` terminal routeability evidence without consuming the bounded target
+    budget, then still materializes the next routeable selected conversation
+  - search and account-mirror catalog reads remain cache-only; browser work only
+    starts from live-follow completion jobs or explicit reconciliation jobs
 - React operator UX redesign is now scoped in
   [docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md](docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md):
   - the current `/ops/browser` dashboard is a debug/proof-of-concept surface,

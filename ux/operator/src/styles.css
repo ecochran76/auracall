@@ -1891,6 +1891,37 @@ select:focus-visible {
   color: #ffb4b4;
 }
 
+.reconcile-row-action {
+  color: #7cc9e8;
+}
+
+.reconcile-row-action:hover,
+.reconcile-row-action:focus-visible {
+  border-color: #2f5364;
+  background: #102029;
+  color: #bfeeff;
+}
+
+.reconcile-row-queued,
+.reconcile-row-running {
+  border-color: #2f5364;
+  background: #102029;
+  color: #bfeeff;
+}
+
+.reconcile-row-succeeded {
+  border-color: #315b50;
+  background: #12231f;
+  color: #9fe8ca;
+}
+
+.reconcile-row-failed,
+.reconcile-row-cancelled {
+  border-color: #6a3b3b;
+  background: #2a171a;
+  color: #ffb4b4;
+}
+
 .row-action-button:focus-visible {
   outline: 1px solid #5bc29f;
   outline-offset: 1px;

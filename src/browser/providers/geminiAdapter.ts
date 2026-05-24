@@ -911,6 +911,18 @@ export function resolveGeminiConfiguredUrl(
   return isGeminiUrl(trimmed) ? trimmed : fallback;
 }
 
+export function resolveGeminiConversationRailTargetUrl(
+  options?: Pick<BrowserProviderListOptions, 'configuredUrl'> | null,
+  projectId?: string | null,
+): string {
+  const normalizedProjectId = normalizeGeminiProjectId(projectId);
+  if (normalizedProjectId) {
+    return resolveGeminiProjectUrl(normalizedProjectId);
+  }
+  const configuredUrl = resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL);
+  return extractGeminiConversationIdFromUrl(configuredUrl) ? GEMINI_APP_URL : configuredUrl;
+}
+
 export function geminiUrlMatchesPreference(
   candidateUrl: string | null | undefined,
   preferredUrl: string | null | undefined,
@@ -929,6 +941,12 @@ export function geminiUrlMatchesPreference(
     const normalizePath = (value: string) => value.replace(/\/+$/, '') || '/';
     const candidatePath = normalizePath(candidateParsed.pathname);
     const preferredPath = normalizePath(preferredParsed.pathname);
+    if (
+      preferredPath === '/app' &&
+      (candidatePath === '/app' || /^\/app\/[^/]+$/i.test(candidatePath))
+    ) {
+      return candidateParsed.search === preferredParsed.search;
+    }
     if (candidatePath !== preferredPath) {
       return false;
     }
@@ -964,6 +982,33 @@ export function canReuseGeminiResolvedTabTarget(
     return true;
   }
   return geminiUrlMatchesPreference(tab, preferred);
+}
+
+export function canReuseGeminiConversationSurfaceForTarget(
+  currentUrl: string | null | undefined,
+  targetUrl: string | null | undefined,
+): boolean {
+  const current = String(currentUrl ?? '').trim();
+  const target = String(targetUrl ?? '').trim();
+  if (!current || !target) return false;
+  try {
+    const currentParsed = new URL(current);
+    const targetParsed = new URL(target);
+    if (currentParsed.hostname !== targetParsed.hostname) return false;
+    const normalizePath = (value: string) => value.replace(/\/+$/, '') || '/';
+    const currentPath = normalizePath(currentParsed.pathname);
+    const targetPath = normalizePath(targetParsed.pathname);
+    if (targetPath === '/app') {
+      return currentParsed.search === targetParsed.search &&
+        (currentPath === '/app' || /^\/app\/[^/]+$/i.test(currentPath));
+    }
+    if (/^\/app\/[^/]+$/i.test(targetPath)) {
+      return currentPath === targetPath && currentParsed.search === targetParsed.search;
+    }
+    return currentPath === targetPath && currentParsed.search === targetParsed.search;
+  } catch {
+    return false;
+  }
 }
 
 function resolveGeminiTargetId(target: { id?: string; targetId?: string } | null | undefined): string | undefined {
@@ -1105,7 +1150,14 @@ function summarizeGeminiDeleteTrace(trace: GeminiDeleteTrace, edgeCount: number 
   ]);
 }
 
-function extractGeminiIdentityFromLabel(label: string | null | undefined): ProviderUserIdentity | null {
+const GEMINI_USER_IDENTITY_LABEL_EXPRESSION = `(() => {
+  const labels = Array.from(document.querySelectorAll('[aria-label]'))
+    .map((node) => String(node.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim())
+    .filter(Boolean);
+  return labels.find((label) => /^Google Account:/i.test(label)) ?? null;
+})()`;
+
+export function extractGeminiIdentityFromLabel(label: string | null | undefined): ProviderUserIdentity | null {
   const normalized = normalizeWhitespace(label ?? '');
   if (!normalized) return null;
   const match = normalized.match(/^Google Account:\s*(.+?)\s*\(([^)]+@[^)]+)\)$/i);
@@ -1184,15 +1236,18 @@ async function scrapeGeminiProjects(client: ChromeClient): Promise<Project[]> {
 
 async function readGeminiUserIdentity(client: ChromeClient): Promise<ProviderUserIdentity | null> {
   const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
-      const labels = Array.from(document.querySelectorAll('a[aria-label],button[aria-label]'))
-        .map((node) => String(node.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim())
-        .filter(Boolean);
-      return labels.find((label) => /^Google Account:/i.test(label)) ?? null;
-    })()`,
+    expression: GEMINI_USER_IDENTITY_LABEL_EXPRESSION,
     returnByValue: true,
   });
-  return extractGeminiIdentityFromLabel(typeof result?.value === 'string' ? result.value : null);
+  const immediate = extractGeminiIdentityFromLabel(typeof result?.value === 'string' ? result.value : null);
+  if (immediate) return immediate;
+
+  const waited = await waitForPredicate(client.Runtime, GEMINI_USER_IDENTITY_LABEL_EXPRESSION, {
+    timeoutMs: 5_000,
+    pollMs: 250,
+    description: 'Gemini Google Account identity label',
+  });
+  return extractGeminiIdentityFromLabel(typeof waited.value === 'string' ? waited.value : null);
 }
 
 async function assertGeminiExpectedIdentity(
@@ -1555,6 +1610,12 @@ export function normalizeGeminiConversationHistoryLimit(value: number | null | u
   return Math.max(1, Math.min(500, Math.floor(value)));
 }
 
+export function shouldHydrateGeminiConversationHistory(
+  options: Pick<BrowserProviderListOptions, 'includeHistory'> | null | undefined,
+): boolean {
+  return options?.includeHistory === true;
+}
+
 async function hydrateGeminiConversationHistory(
   client: ChromeClient,
   historyLimit: number,
@@ -1571,7 +1632,7 @@ async function hydrateGeminiConversationHistory(
     }
     const { result } = await client.Runtime.evaluate({
       expression: `(() => {
-        const list = document.querySelector('[data-test-id="all-conversations"]');
+        const list = document.querySelector('[data-test-id="all-conversations"]') || document.body;
         if (!list) return { ok: false, count: 0, scrollable: false };
         const count = new Set(Array.from(list.querySelectorAll('a[href*="/app/"]')).map((node) => node.href || node.getAttribute('href') || '')).size;
         const scrollRoot = (() => {
@@ -1662,6 +1723,9 @@ async function navigateToGeminiConversationSurface(
   client: Pick<ChromeClient, 'Page' | 'Runtime'>,
   url: string,
 ): Promise<void> {
+  if (await isCurrentGeminiConversationSurfaceReusable(client, url)) {
+    return;
+  }
   const routeExpression = geminiConversationRouteExpression(url);
   const readyExpression = geminiConversationSurfaceReadyExpression();
   const settled = await navigateAndSettle(client, {
@@ -1708,6 +1772,41 @@ async function navigateToGeminiConversationSurface(
     throw new Error(
       `Gemini conversation surface did not become ready: ${settled.reason ?? settled.phase} state=${JSON.stringify(state)}`,
     );
+  }
+}
+
+async function readGeminiLocationHref(
+  Runtime: ChromeClient['Runtime'],
+): Promise<string | null> {
+  const { result } = await Runtime.evaluate({
+    expression: 'location.href',
+    returnByValue: true,
+  });
+  return typeof result?.value === 'string' ? result.value : null;
+}
+
+async function isCurrentGeminiConversationSurfaceReusable(
+  client: Pick<ChromeClient, 'Runtime'>,
+  url: string,
+): Promise<boolean> {
+  const currentHref = await readGeminiLocationHref(client.Runtime).catch(() => null);
+  if (!canReuseGeminiConversationSurfaceForTarget(currentHref, url)) {
+    return false;
+  }
+  const targetConversationId = extractGeminiConversationIdFromUrl(url);
+  if (targetConversationId) {
+    await isGeminiConversationSurfaceAlreadyReady(client, targetConversationId).catch(() => false);
+  }
+  return true;
+}
+
+function extractGeminiConversationIdFromUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const match = parsed.pathname.match(/^\/app\/([^/?#]+)$/i);
+    return match?.[1] ?? null;
+  } catch {
+    return null;
   }
 }
 
@@ -1927,6 +2026,69 @@ async function waitForGeminiConversationListEntry(
         options?.description ?? `Gemini conversation list entry ready for ${conversationId}`,
     },
   );
+}
+
+async function openGeminiConversationFromRail(
+  client: Pick<ChromeClient, 'Runtime'>,
+  conversationId: string,
+): Promise<boolean> {
+  await ensureGeminiMainMenuOpen(client).catch(() => undefined);
+  const ready = await waitForGeminiConversationListEntry(client.Runtime, conversationId, {
+    timeoutMs: 12_000,
+    description: `Gemini rail conversation entry ready for ${conversationId}`,
+  });
+  if (!ready.ok) {
+    return false;
+  }
+  const clicked = await client.Runtime.evaluate({
+    expression: `(() => {
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const anchor = Array.from(document.querySelectorAll('a[href*="/app/"]'))
+        .find((node) =>
+          node instanceof HTMLAnchorElement &&
+          visible(node) &&
+          node.href.includes('/app/' + ${JSON.stringify(conversationId)}),
+        );
+      if (!(anchor instanceof HTMLAnchorElement)) return { clicked: false };
+      anchor.scrollIntoView({ block: 'center', inline: 'center' });
+      for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+        anchor.dispatchEvent(new MouseEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          composed: true,
+          button: 0,
+          buttons: 1,
+          view: window,
+        }));
+      }
+      return { clicked: true, href: anchor.href || anchor.getAttribute('href') || '' };
+    })()`,
+    returnByValue: true,
+  });
+  if ((clicked.result?.value as { clicked?: boolean } | undefined)?.clicked !== true) {
+    return false;
+  }
+  const routeReady = await waitForPredicate(
+    client.Runtime,
+    `(() => location.pathname === ${JSON.stringify(`/app/${conversationId}`)})()`,
+    {
+      timeoutMs: 12_000,
+      description: `Gemini rail conversation route ready for ${conversationId}`,
+    },
+  );
+  if (!routeReady.ok) {
+    const state = await collectGeminiConversationSurfaceState(client.Runtime, 'rail-open-route-failed');
+    const blockingReason = classifyGeminiBlockingState(state);
+    if (blockingReason) {
+      throw new Error(`${blockingReason} state=${JSON.stringify(state)}`);
+    }
+    return false;
+  }
+  return true;
 }
 
 async function validateGeminiConversationUrlWithClient(
@@ -3690,13 +3852,9 @@ async function downloadGeminiConversationFileWithClient(
   destPath: string,
   options: { allowNavigation?: boolean } = {},
 ): Promise<void> {
-  if (!(await isGeminiConversationSurfaceAlreadyReady(client, conversationId))) {
-    if (options.allowNavigation === false) {
-      throw new Error(`Gemini active conversation content not found for ${conversationId}; refusing to navigate the active tab.`);
-    }
-    await navigateToGeminiConversationSurface(client, resolveGeminiConversationUrl(conversationId));
-  }
-  const refreshed = await readGeminiConversationContextWithClient(client, conversationId);
+  const refreshed = await readGeminiConversationContextWithClient(client, conversationId, {
+    allowNavigation: options.allowNavigation,
+  });
   const file = (Array.isArray(refreshed.files) ? refreshed.files : []).find((candidate) => candidate.id === fileId);
   if (!file) {
     throw new Error(`Gemini conversation file ${fileId} was not found on ${conversationId}.`);
@@ -3795,13 +3953,9 @@ async function materializeGeminiConversationArtifactWithClient(
   destDir: string,
   options: { allowNavigation?: boolean; downloadVariantLabel?: string | null } = {},
 ): Promise<FileRef | null> {
-  if (!(await isGeminiConversationSurfaceAlreadyReady(client, conversationId))) {
-    if (options.allowNavigation === false) {
-      throw new Error(`Gemini active conversation content not found for ${conversationId}; refusing to navigate during active media materialization.`);
-    }
-    await navigateToGeminiConversationSurface(client, resolveGeminiConversationUrl(conversationId));
-  }
-  const refreshed = await readGeminiConversationContextWithClient(client, conversationId);
+  const refreshed = await readGeminiConversationContextWithClient(client, conversationId, {
+    allowNavigation: options.allowNavigation,
+  });
   const resolvedArtifact = normalizeGeminiConversationArtifacts(refreshed.artifacts).find((candidate) => candidate.id === artifact.id) ?? artifact;
 
   if (resolvedArtifact.kind === 'document') {
@@ -4115,7 +4269,10 @@ async function readGeminiConversationContextWithClient(
         );
       }
     } else {
-      await navigateToGeminiConversationSurface(client, resolveGeminiConversationUrl(conversationId));
+      const openedFromRail = await openGeminiConversationFromRail(client, conversationId);
+      if (!openedFromRail) {
+        await navigateToGeminiConversationSurface(client, resolveGeminiConversationUrl(conversationId));
+      }
     }
   }
   const ready = await waitForPredicate(
@@ -6480,18 +6637,18 @@ export function createGeminiAdapter(): Pick<
     },
     async listConversations(projectId?: string, options?: BrowserProviderListOptions): Promise<Conversation[]> {
       const normalizedProjectId = normalizeGeminiProjectId(projectId);
-      const targetUrl = normalizedProjectId
-        ? resolveGeminiProjectUrl(normalizedProjectId)
-        : resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL);
+      const targetUrl = resolveGeminiConversationRailTargetUrl(options, normalizedProjectId);
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, targetUrl);
       try {
         await assertGeminiExpectedIdentity(client, options);
         await navigateToGeminiConversationSurface(client, targetUrl);
-        if (!normalizedProjectId && options?.includeHistory) {
+        await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
+        await ensureGeminiMainMenuOpen(client).catch(() => undefined);
+        if (shouldHydrateGeminiConversationHistory(options)) {
           await hydrateGeminiConversationHistory(
             client,
-            normalizeGeminiConversationHistoryLimit(options.historyLimit),
-            options.abortSignal,
+            normalizeGeminiConversationHistoryLimit(options?.historyLimit),
+            options?.abortSignal,
           );
         }
         return await scrapeGeminiConversations(client, normalizedProjectId ?? undefined);
@@ -6668,9 +6825,7 @@ export function createGeminiAdapter(): Pick<
       }
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
         options,
-        options?.preserveActiveTab
-          ? resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL)
-          : resolveGeminiConversationUrl(normalizedConversationId),
+        resolveGeminiConversationRailTargetUrl(options, _projectId),
       );
       try {
         await assertGeminiExpectedIdentity(client, options);
@@ -6732,9 +6887,7 @@ export function createGeminiAdapter(): Pick<
       }
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
         options,
-        options?.preserveActiveTab
-          ? resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL)
-          : resolveGeminiConversationUrl(normalizedConversationId),
+        resolveGeminiConversationRailTargetUrl(options, _projectId),
       );
       try {
         await assertGeminiExpectedIdentity(client, options);
@@ -6772,9 +6925,7 @@ export function createGeminiAdapter(): Pick<
       }
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
         options,
-        options?.preserveActiveTab
-          ? resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL)
-          : resolveGeminiConversationUrl(normalizedConversationId),
+        resolveGeminiConversationRailTargetUrl(options),
       );
       try {
         await assertGeminiExpectedIdentity(client, options);

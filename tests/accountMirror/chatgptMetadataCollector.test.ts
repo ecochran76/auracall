@@ -3,13 +3,20 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import {
+  allocateConversationReadBudgets,
   mapChatgptLibraryFilesToArtifacts,
+  mapGeminiConversationArtifactsToMediaManifest,
   mapGrokAccountFilesToMediaManifest,
   readBoundedAttachmentInventory,
   readBoundedChatgptDetailInventory,
+  readBoundedConversations,
+  readBoundedProjectConversations,
   readBoundedChatgptLibraryInventory,
+  readBoundedGeminiDetailInventory,
   readBoundedProjects,
   readBoundedGrokAccountFileInventory,
+  selectAttachmentInventoryCursorForSweep,
+  selectProjectConversationCursorForSweep,
   shouldReadProjectConversationsForAccountMirror,
 } from '../../src/accountMirror/chatgptMetadataCollector.js';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
@@ -30,10 +37,60 @@ describe('ChatGPT account mirror metadata collector', () => {
     return homeDir;
   }
 
-  test('only fans out project conversations for ChatGPT account mirrors', () => {
+  test('fans out project conversations for provider project-history surfaces', () => {
     expect(shouldReadProjectConversationsForAccountMirror('chatgpt')).toBe(true);
-    expect(shouldReadProjectConversationsForAccountMirror('gemini')).toBe(false);
+    expect(shouldReadProjectConversationsForAccountMirror('gemini')).toBe(true);
     expect(shouldReadProjectConversationsForAccountMirror('grok')).toBe(false);
+  });
+
+  test('reserves bounded conversation budget for project histories', () => {
+    expect(allocateConversationReadBudgets('gemini', 80, 12)).toEqual({
+      rootRows: 68,
+      projectRows: 12,
+    });
+    expect(allocateConversationReadBudgets('chatgpt', 250, 6)).toEqual({
+      rootRows: 244,
+      projectRows: 6,
+    });
+    expect(allocateConversationReadBudgets('grok', 160, 6)).toEqual({
+      rootRows: 160,
+      projectRows: 0,
+    });
+  });
+
+  test('uses prior attachment cursor only for full-sweep collection', () => {
+    const previousEvidence = {
+      identitySource: 'profile-menu',
+      projectSampleIds: [],
+      conversationSampleIds: ['conv_recent'],
+      truncated: {
+        projects: false,
+        conversations: false,
+        artifacts: true,
+      },
+      attachmentInventory: {
+        nextProjectIndex: 4,
+        nextConversationIndex: 9,
+        detailReadLimit: 2,
+        scannedProjects: 1,
+        scannedConversations: 2,
+        yielded: false,
+        yieldCause: null,
+      },
+      projectConversations: {
+        nextProjectIndex: 3,
+        readLimit: 4,
+        scannedProjects: 4,
+        yielded: false,
+      },
+    };
+
+    expect(selectAttachmentInventoryCursorForSweep('steady_follow', previousEvidence)).toBeNull();
+    expect(selectAttachmentInventoryCursorForSweep(undefined, previousEvidence)).toBeNull();
+    expect(selectAttachmentInventoryCursorForSweep('full_sweep', previousEvidence)).toBe(previousEvidence.attachmentInventory);
+    expect(selectProjectConversationCursorForSweep('steady_follow', previousEvidence)).toBeNull();
+    expect(selectProjectConversationCursorForSweep(undefined, previousEvidence)).toBeNull();
+    expect(selectProjectConversationCursorForSweep('full_sweep', previousEvidence)).toBe(previousEvidence.projectConversations);
   });
 
   test('can tolerate transient provider project route failures for Gemini live follow', async () => {
@@ -49,6 +106,122 @@ describe('ChatGPT account mirror metadata collector', () => {
     });
     await expect(readBoundedProjects(client, 6)).rejects.toThrow('Gemini Gem manager route did not settle');
   });
+
+  test('can tolerate transient Gemini project conversation route failures', async () => {
+    const client = {
+      listConversations: vi.fn(async () => {
+        throw new Error('Gemini Gem conversation route did not settle');
+      }),
+    } as unknown as Parameters<typeof readBoundedConversations>[0];
+
+    await expect(
+      readBoundedConversations(client, 'gem_1', 6, { tolerateReadFailure: true }),
+    ).resolves.toEqual({
+      items: [],
+      truncated: false,
+    });
+    await expect(readBoundedConversations(client, 'gem_1', 6)).rejects.toThrow(
+      'Gemini Gem conversation route did not settle',
+    );
+  });
+
+  test('walks bounded project histories across projects before deepening one project', async () => {
+    const projects = [
+      { id: 'gem_1', name: 'Gem 1', provider: 'gemini' as const },
+      { id: 'gem_2', name: 'Gem 2', provider: 'gemini' as const },
+      { id: 'gem_3', name: 'Gem 3', provider: 'gemini' as const },
+    ];
+    const client = {
+      listConversations: vi.fn(async (projectId: string | undefined, options?: { historyLimit?: number }) => {
+        const limit = options?.historyLimit ?? 0;
+        return Array.from({ length: limit + (projectId === 'gem_1' ? 1 : 0) }, (_, index) => ({
+          id: `${projectId}_conversation_${index + 1}`,
+          title: `${projectId} conversation ${index + 1}`,
+          provider: 'gemini' as const,
+          projectId,
+        }));
+      }),
+    } as unknown as Parameters<typeof readBoundedProjectConversations>[0];
+
+    const result = await readBoundedProjectConversations(client, projects, 4);
+
+    expect(client.listConversations).toHaveBeenNthCalledWith(1, 'gem_1', {
+      historyLimit: 2,
+      includeHistory: true,
+    });
+    expect(client.listConversations).toHaveBeenNthCalledWith(2, 'gem_2', {
+      historyLimit: 1,
+      includeHistory: true,
+    });
+    expect(client.listConversations).toHaveBeenNthCalledWith(3, 'gem_3', {
+      historyLimit: 1,
+      includeHistory: true,
+    });
+    expect(result.items.map((item) => item.id)).toEqual([
+      'gem_1_conversation_1',
+      'gem_1_conversation_2',
+      'gem_2_conversation_1',
+      'gem_3_conversation_1',
+    ]);
+    expect(result.truncated).toBe(true);
+  });
+
+  test('resumes bounded project histories from the prior full-sweep cursor', async () => {
+    const projects = [
+      { id: 'gem_1', name: 'Gem 1', provider: 'gemini' as const },
+      { id: 'gem_2', name: 'Gem 2', provider: 'gemini' as const },
+      { id: 'gem_3', name: 'Gem 3', provider: 'gemini' as const },
+      { id: 'gem_4', name: 'Gem 4', provider: 'gemini' as const },
+    ];
+    const client = {
+      listConversations: vi.fn(async (projectId: string | undefined, options?: { historyLimit?: number }) => {
+        const limit = options?.historyLimit ?? 0;
+        return Array.from({ length: limit }, (_, index) => ({
+          id: `${projectId}_conversation_${index + 1}`,
+          title: `${projectId} conversation ${index + 1}`,
+          provider: 'gemini' as const,
+          projectId,
+        }));
+      }),
+    } as unknown as Parameters<typeof readBoundedProjectConversations>[0];
+
+    const first = await readBoundedProjectConversations(client, projects, 8, {
+      maxProjectReads: 2,
+    });
+
+    expect(client.listConversations).toHaveBeenNthCalledWith(1, 'gem_1', {
+      historyLimit: 2,
+      includeHistory: true,
+    });
+    expect(client.listConversations).toHaveBeenNthCalledWith(2, 'gem_2', {
+      historyLimit: 2,
+      includeHistory: true,
+    });
+    expect(first.cursor).toMatchObject({
+      nextProjectIndex: 2,
+      readLimit: 2,
+      scannedProjects: 2,
+      yielded: false,
+    });
+    expect(first.truncated).toBe(true);
+
+    const second = await readBoundedProjectConversations(client, projects, 8, {
+      cursor: first.cursor,
+      maxProjectReads: 2,
+    });
+
+    expect(client.listConversations).toHaveBeenNthCalledWith(3, 'gem_3', {
+      historyLimit: 4,
+      includeHistory: true,
+    });
+    expect(client.listConversations).toHaveBeenNthCalledWith(4, 'gem_4', {
+      historyLimit: 4,
+      includeHistory: true,
+    });
+    expect(second.cursor.nextProjectIndex).toBe(0);
+    expect(second.truncated).toBe(false);
+  });
+
 
   test('reads ChatGPT library files as account files and artifacts', async () => {
     const client = {
@@ -92,7 +265,7 @@ describe('ChatGPT account mirror metadata collector', () => {
     });
   });
 
-  test('uses ChatGPT library inventory instead of slower conversation attachment inventory when available', async () => {
+  test('combines ChatGPT library inventory with bounded conversation detail inventory', async () => {
     const client = {
       listAccountFiles: vi.fn(async () => [
         {
@@ -131,12 +304,84 @@ describe('ChatGPT account mirror metadata collector', () => {
       2,
     );
 
-    expect(inventory.files.map((file) => file.id)).toEqual(['223e4567-e89b-12d3-a456-426614174111']);
+    expect(inventory.files.map((file) => file.id)).toEqual([
+      '223e4567-e89b-12d3-a456-426614174111',
+      'conversation-file-conv_1',
+    ]);
     expect(inventory.artifacts.map((artifact) => artifact.id)).toEqual([
       'chatgpt-library:223e4567-e89b-12d3-a456-426614174111',
     ]);
     expect(inventory.truncated).toBe(false);
-    expect(client.listConversationFiles).not.toHaveBeenCalled();
+    expect(client.listConversationFiles).toHaveBeenCalledWith('conv_1', { projectId: undefined });
+    expect(client.getConversationContext).toHaveBeenCalledWith('conv_1', {
+      projectId: undefined,
+      refresh: true,
+    });
+    expect(inventory.cursor).toMatchObject({
+      nextConversationIndex: 0,
+      scannedConversations: 1,
+    });
+  });
+
+  test('reserves one ChatGPT conversation detail row when library inventory fills the row budget', async () => {
+    const client = {
+      listAccountFiles: vi.fn(async () => [
+        {
+          id: 'library-file-1',
+          name: 'Library one.pdf',
+          provider: 'chatgpt' as const,
+          source: 'account' as const,
+          metadata: {
+            source: 'chatgpt-library',
+            artifactKind: 'download',
+          },
+        },
+        {
+          id: 'library-file-2',
+          name: 'Library two.pdf',
+          provider: 'chatgpt' as const,
+          source: 'account' as const,
+          metadata: {
+            source: 'chatgpt-library',
+            artifactKind: 'download',
+          },
+        },
+      ]),
+      listProjectFiles: vi.fn(async () => []),
+      listConversationFiles: vi.fn(async (conversationId: string) => [
+        {
+          id: `conversation-file-${conversationId}`,
+          name: 'Generated export.csv',
+          provider: 'chatgpt' as const,
+          source: 'conversation' as const,
+        },
+      ]),
+      getConversationContext: vi.fn(async () => ({
+        provider: 'chatgpt' as const,
+        conversationId: 'conv_1',
+        messages: [],
+        artifacts: [],
+      })),
+    };
+
+    const inventory = await readBoundedChatgptDetailInventory(
+      client,
+      [],
+      [{ id: 'conv_1', title: 'Conversation 1', provider: 'chatgpt' }],
+      2,
+      2,
+    );
+
+    expect(inventory.files.map((file) => file.id)).toEqual([
+      'library-file-1',
+      'library-file-2',
+      'conversation-file-conv_1',
+    ]);
+    expect(client.listConversationFiles).toHaveBeenCalledWith('conv_1', { projectId: undefined });
+    expect(inventory.cursor).toMatchObject({
+      nextConversationIndex: 0,
+      scannedConversations: 1,
+    });
   });
 
   test('maps only ChatGPT library files into account artifacts', () => {
@@ -498,6 +743,223 @@ describe('ChatGPT account mirror metadata collector', () => {
         },
       ],
     });
+  });
+
+  test('builds Gemini conversation detail inventory with media manifests', async () => {
+    const client = {
+      listProjectFiles: vi.fn(async () => []),
+      listConversationFiles: vi.fn(async () => []),
+      getConversationContext: vi.fn(async (conversationId: string) => ({
+        provider: 'gemini' as const,
+        conversationId,
+        messages: [],
+        artifacts: [
+          {
+            id: 'gemini-image-artifact',
+            title: 'Asphalt secret agent',
+            kind: 'image' as const,
+            uri: 'https://gemini.google.com/app/gemini_conv_1#image',
+            metadata: {
+              conversationId,
+              projectId: 'gemini_project_1',
+              mediaType: 'image',
+              fileName: 'asphalt-agent.png',
+            },
+          },
+          {
+            id: 'gemini-video-artifact',
+            title: 'Harbor short',
+            kind: 'generated' as const,
+            metadata: {
+              conversationId,
+              mediaType: 'video',
+              fileName: 'harbor.mp4',
+            },
+          },
+          {
+            id: 'gemini-notes',
+            title: 'Notes',
+            kind: 'document' as const,
+          },
+        ],
+      })),
+    };
+
+    const inventory = await readBoundedGeminiDetailInventory(
+      client,
+      [],
+      [{ id: 'gemini_conv_1', title: 'Generate media', provider: 'gemini', projectId: 'gemini_project_1' }],
+      4,
+      { maxDetailReads: 2 },
+    );
+
+    expect(client.getConversationContext).toHaveBeenCalledWith('gemini_conv_1', {
+      projectId: 'gemini_project_1',
+      refresh: true,
+    });
+    expect(inventory.artifacts.map((artifact) => artifact.id)).toEqual([
+      'gemini-image-artifact',
+      'gemini-video-artifact',
+      'gemini-notes',
+    ]);
+    expect(inventory.media).toMatchObject([
+      {
+        id: 'gemini-conversation-artifact:gemini_conv_1:gemini-image-artifact',
+        title: 'Asphalt secret agent',
+        mediaType: 'image',
+        conversationId: 'gemini_conv_1',
+        projectId: 'gemini_project_1',
+        provider: 'gemini',
+      },
+      {
+        id: 'gemini-conversation-artifact:gemini_conv_1:gemini-video-artifact',
+        title: 'Harbor short',
+        mediaType: 'video',
+        conversationId: 'gemini_conv_1',
+        provider: 'gemini',
+      },
+    ]);
+    expect(mapGeminiConversationArtifactsToMediaManifest(inventory.artifacts)).toHaveLength(2);
+  });
+
+  test('prioritizes Gemini conversation detail reads before project files', async () => {
+    const client = {
+      listProjectFiles: vi.fn(async () => []),
+      listConversationFiles: vi.fn(async () => []),
+      getConversationContext: vi.fn(async (conversationId: string) => ({
+        provider: 'gemini' as const,
+        conversationId,
+        messages: [],
+        artifacts: [
+          {
+            id: 'gemini-image-artifact',
+            title: 'Generated image 1',
+            kind: 'image' as const,
+            uri: 'https://gemini.google.com/app/gemini_conv_1#image',
+            metadata: {
+              mediaType: 'image',
+            },
+          },
+        ],
+      })),
+    };
+
+    const inventory = await readBoundedGeminiDetailInventory(
+      client,
+      [
+        { id: 'gemini_project_1', name: 'Project 1', provider: 'gemini' },
+        { id: 'gemini_project_2', name: 'Project 2', provider: 'gemini' },
+      ],
+      [{ id: 'gemini_conv_1', title: 'Generate media', provider: 'gemini' }],
+      2,
+      { maxDetailReads: 1 },
+    );
+
+    expect(client.listProjectFiles).not.toHaveBeenCalled();
+    expect(client.getConversationContext).toHaveBeenCalledWith('gemini_conv_1', {
+      projectId: undefined,
+      refresh: true,
+    });
+    expect(inventory.media).toMatchObject([
+      {
+        id: 'gemini-conversation-artifact:gemini_conv_1:gemini-image-artifact',
+        mediaType: 'image',
+        conversationId: 'gemini_conv_1',
+      },
+    ]);
+    expect(inventory.truncated).toBe(true);
+  });
+
+  test('resumes Gemini conversation-first detail reads before project files across passes', async () => {
+    const projects = [
+      { id: 'gemini_project_1', name: 'Project 1', provider: 'gemini' as const },
+      { id: 'gemini_project_2', name: 'Project 2', provider: 'gemini' as const },
+    ];
+    const conversations = [
+      { id: 'gemini_conv_1', title: 'Generate media 1', provider: 'gemini' as const },
+      { id: 'gemini_conv_2', title: 'Generate media 2', provider: 'gemini' as const },
+    ];
+    const client = {
+      listProjectFiles: vi.fn(async (projectId: string) => [
+        {
+          id: `project-file-${projectId}`,
+          name: 'Project source.pdf',
+          provider: 'gemini' as const,
+          source: 'project' as const,
+        },
+      ]),
+      listConversationFiles: vi.fn(async () => []),
+      getConversationContext: vi.fn(async (conversationId: string) => ({
+        provider: 'gemini' as const,
+        conversationId,
+        messages: [],
+        artifacts: [
+          {
+            id: `artifact-${conversationId}`,
+            title: `Generated media ${conversationId}`,
+            kind: 'image' as const,
+            metadata: {
+              mediaType: 'image',
+            },
+          },
+        ],
+      })),
+    };
+
+    const first = await readBoundedGeminiDetailInventory(client, projects, conversations, 20, {
+      maxDetailReads: 1,
+    });
+    const second = await readBoundedGeminiDetailInventory(client, projects, conversations, 20, {
+      maxDetailReads: 1,
+      cursor: first.cursor,
+    });
+    const third = await readBoundedGeminiDetailInventory(client, projects, conversations, 20, {
+      maxDetailReads: 1,
+      cursor: second.cursor,
+    });
+    const fourth = await readBoundedGeminiDetailInventory(client, projects, conversations, 20, {
+      maxDetailReads: 1,
+      cursor: third.cursor,
+    });
+
+    expect(first.cursor).toMatchObject({
+      nextProjectIndex: 0,
+      nextConversationIndex: 1,
+      scannedProjects: 0,
+      scannedConversations: 1,
+    });
+    expect(second.cursor).toMatchObject({
+      nextProjectIndex: 0,
+      nextConversationIndex: 2,
+      scannedProjects: 0,
+      scannedConversations: 1,
+    });
+    expect(third.cursor).toMatchObject({
+      nextProjectIndex: 1,
+      nextConversationIndex: 2,
+      scannedProjects: 1,
+      scannedConversations: 0,
+    });
+    expect(fourth.cursor).toMatchObject({
+      nextProjectIndex: 0,
+      nextConversationIndex: 0,
+      scannedProjects: 1,
+      scannedConversations: 0,
+    });
+    expect(client.getConversationContext).toHaveBeenNthCalledWith(1, 'gemini_conv_1', {
+      projectId: undefined,
+      refresh: true,
+    });
+    expect(client.getConversationContext).toHaveBeenNthCalledWith(2, 'gemini_conv_2', {
+      projectId: undefined,
+      refresh: true,
+    });
+    expect(client.listProjectFiles).toHaveBeenNthCalledWith(1, 'gemini_project_1');
+    expect(client.listProjectFiles).toHaveBeenNthCalledWith(2, 'gemini_project_2');
+    expect(first.media.map((entry) => entry.conversationId)).toEqual(['gemini_conv_1']);
+    expect(second.media.map((entry) => entry.conversationId)).toEqual(['gemini_conv_2']);
+    expect(third.files.map((file) => file.id)).toEqual(['project-file-gemini_project_1']);
+    expect(fourth.truncated).toBe(false);
   });
 
   test('tolerates Grok account-files drift without failing metadata collection', async () => {

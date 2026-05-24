@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   createExecutionResponseForStoredRecord,
 } from './responsesService.js';
@@ -34,6 +34,7 @@ import {
   type RunArchiveEvidenceStore,
 } from './archiveEvidenceStore.js';
 import { findCachedConversationAttachmentEvidence } from './archiveCachedAssetLookup.js';
+import type { FileRef } from '../browser/providers/domain.js';
 
 export type RunArchiveItemKind =
   | 'response'
@@ -73,7 +74,7 @@ export interface RunArchiveItem {
   id: string;
   object: 'run_archive_item';
   kind: RunArchiveItemKind;
-  source: 'runtime' | 'response_batch' | 'media_generation' | 'evidence';
+  source: 'runtime' | 'response_batch' | 'media_generation' | 'evidence' | 'account_mirror';
   createdAt: string;
   updatedAt: string;
   title: string | null;
@@ -162,6 +163,40 @@ export interface RunArchiveBackfillResult {
   };
 }
 
+export interface RunArchiveHistoryMaterializationAsset {
+  kind: 'artifact' | 'file' | 'media';
+  file: FileRef;
+  artifactId?: string | null;
+  title?: string | null;
+  manifestPath?: string | null;
+  materializationMethod?: string | null;
+}
+
+export interface RunArchiveHistoryMaterializationUpsertInput {
+  provider: string;
+  runtimeProfile: string | null;
+  browserProfile: string | null;
+  projectId: string | null;
+  boundIdentityKey: string | null;
+  providerConversationId: string;
+  providerConversationUrl: string | null;
+  materializationJobId?: string | null;
+  assets: RunArchiveHistoryMaterializationAsset[];
+}
+
+export interface RunArchiveHistoryMaterializationUpsertResult {
+  object: 'run_archive_history_materialization_upsert';
+  generatedAt: string;
+  index: {
+    updatedAt: string;
+    itemCount: number;
+  };
+  metrics: {
+    byKind: Record<RunArchiveItemKind, number>;
+  };
+  items: RunArchiveItem[];
+}
+
 export interface RunArchiveEvidenceResult {
   object: 'run_archive_evidence_result';
   generatedAt: string;
@@ -178,6 +213,7 @@ export interface RunArchiveService {
   upsertResponseItems(responseId: string): Promise<RunArchiveBackfillResult>;
   upsertBatchItems(batchId: string): Promise<RunArchiveBackfillResult>;
   upsertMediaGenerationItems(mediaGenerationId: string): Promise<RunArchiveBackfillResult>;
+  upsertHistoryMaterializationItems?(input: RunArchiveHistoryMaterializationUpsertInput): Promise<RunArchiveHistoryMaterializationUpsertResult>;
   backfillIndex(): Promise<RunArchiveBackfillResult>;
 }
 
@@ -185,9 +221,15 @@ export interface RunArchiveServiceDeps {
   runStore?: ExecutionRunRecordStore;
   batchStore?: ResponseBatchStore;
   mediaStore?: MediaGenerationRecordStore;
+  historyItemStore?: RunArchiveHistoryItemStore;
   indexStore?: RunArchiveIndexStore;
   evidenceStore?: RunArchiveEvidenceStore;
   now?: () => Date;
+}
+
+export interface RunArchiveHistoryItemStore {
+  listItems(): Promise<RunArchiveItem[]>;
+  upsertItems(items: RunArchiveItem[]): Promise<void>;
 }
 
 const DEFAULT_LIMIT = 50;
@@ -204,6 +246,7 @@ export function createRunArchiveService(deps: RunArchiveServiceDeps = {}): RunAr
   const runStore = deps.runStore ?? createExecutionRunRecordStore();
   const batchStore = deps.batchStore ?? createResponseBatchStore();
   const mediaStore = deps.mediaStore ?? createMediaGenerationRecordStore();
+  const historyItemStore = deps.historyItemStore ?? createRunArchiveHistoryItemStore();
   const indexStore = deps.indexStore ?? createRunArchiveIndexStore();
   const evidenceStore = deps.evidenceStore ?? createRunArchiveEvidenceStore();
   const now = deps.now ?? (() => new Date());
@@ -219,6 +262,7 @@ export function createRunArchiveService(deps: RunArchiveServiceDeps = {}): RunAr
       runStore,
       batchStore,
       mediaStore,
+      historyItemStore,
       evidenceStore,
       indexStore,
       updatedAt: now().toISOString(),
@@ -306,6 +350,7 @@ export function createRunArchiveService(deps: RunArchiveServiceDeps = {}): RunAr
         runStore,
         batchStore,
         mediaStore,
+        historyItemStore,
         evidenceStore,
         indexStore,
         updatedAt: timestamp,
@@ -328,6 +373,7 @@ export function createRunArchiveService(deps: RunArchiveServiceDeps = {}): RunAr
         runStore,
         batchStore,
         mediaStore,
+        historyItemStore,
         evidenceStore,
         indexStore,
         updatedAt: timestamp,
@@ -344,6 +390,7 @@ export function createRunArchiveService(deps: RunArchiveServiceDeps = {}): RunAr
         runStore,
         batchStore,
         mediaStore,
+        historyItemStore,
         evidenceStore,
         indexStore,
         updatedAt: timestamp,
@@ -360,6 +407,7 @@ export function createRunArchiveService(deps: RunArchiveServiceDeps = {}): RunAr
         runStore,
         batchStore,
         mediaStore,
+        historyItemStore,
         evidenceStore,
         indexStore,
         updatedAt: timestamp,
@@ -368,11 +416,39 @@ export function createRunArchiveService(deps: RunArchiveServiceDeps = {}): RunAr
       });
       return toBackfillResult(index, timestamp);
     },
+    async upsertHistoryMaterializationItems(input) {
+      const timestamp = now().toISOString();
+      const items = await enrichFileMetadata(buildHistoryMaterializationArchiveItems(input, timestamp));
+      await historyItemStore.upsertItems(items);
+      const index = await upsertArchiveItems({
+        runStore,
+        batchStore,
+        mediaStore,
+        historyItemStore,
+        evidenceStore,
+        indexStore,
+        updatedAt: timestamp,
+        items,
+        removeExisting: (item) =>
+          item.source === 'account_mirror' &&
+          item.provider === input.provider &&
+          item.runtimeProfile === input.runtimeProfile &&
+          item.boundIdentityKey === input.boundIdentityKey &&
+          item.providerConversationId === input.providerConversationId &&
+          items.some((candidate) => candidate.id === item.id),
+      });
+      return {
+        ...toBackfillResult(index, timestamp),
+        object: 'run_archive_history_materialization_upsert',
+        items,
+      };
+    },
     async backfillIndex() {
       const index = await backfillIndexItems({
         runStore,
         batchStore,
         mediaStore,
+        historyItemStore,
         evidenceStore,
         indexStore,
         updatedAt: now().toISOString(),
@@ -418,6 +494,7 @@ async function backfillIndexItems(input: {
   runStore: ExecutionRunRecordStore;
   batchStore: ResponseBatchStore;
   mediaStore: MediaGenerationRecordStore;
+  historyItemStore: RunArchiveHistoryItemStore;
   evidenceStore: RunArchiveEvidenceStore;
   indexStore: RunArchiveIndexStore;
   updatedAt: string;
@@ -430,6 +507,7 @@ async function ensureArchiveIndex(input: {
   runStore: ExecutionRunRecordStore;
   batchStore: ResponseBatchStore;
   mediaStore: MediaGenerationRecordStore;
+  historyItemStore: RunArchiveHistoryItemStore;
   evidenceStore: RunArchiveEvidenceStore;
   indexStore: RunArchiveIndexStore;
   updatedAt: string;
@@ -442,6 +520,7 @@ async function upsertArchiveItems(input: {
   runStore: ExecutionRunRecordStore;
   batchStore: ResponseBatchStore;
   mediaStore: MediaGenerationRecordStore;
+  historyItemStore: RunArchiveHistoryItemStore;
   evidenceStore: RunArchiveEvidenceStore;
   indexStore: RunArchiveIndexStore;
   updatedAt: string;
@@ -473,9 +552,10 @@ async function collectArchiveItems(deps: {
   runStore: ExecutionRunRecordStore;
   batchStore: ResponseBatchStore;
   mediaStore: MediaGenerationRecordStore;
+  historyItemStore?: RunArchiveHistoryItemStore;
   evidenceStore?: RunArchiveEvidenceStore;
 }): Promise<RunArchiveItem[]> {
-  const [runRecords, batchRecords, mediaRecords, evidenceRecords] = await Promise.all([
+  const [runRecords, batchRecords, mediaRecords, historyItems, evidenceRecords] = await Promise.all([
     deps.runStore.listBundles().then((bundles) => bundles.map((bundle) => ({
       runId: bundle.run.id,
       revision: 0,
@@ -484,12 +564,14 @@ async function collectArchiveItems(deps: {
     } satisfies ExecutionRunStoredRecord))),
     listBatches(deps.batchStore),
     deps.mediaStore.listRecords({ limit: null }),
+    (deps.historyItemStore ?? createRunArchiveHistoryItemStore()).listItems(),
     (deps.evidenceStore ?? createRunArchiveEvidenceStore()).listEvidence(),
   ]);
   return enrichFileMetadata([
     ...(await buildRunArchiveItems(runRecords)),
     ...buildBatchArchiveItems(batchRecords),
     ...buildMediaArchiveItems(mediaRecords),
+    ...historyItems,
     ...evidenceRecords.map(buildEvidenceArchiveItem),
   ]);
 }
@@ -515,6 +597,59 @@ function listBatches(store: ResponseBatchStore): Promise<ResponseBatchRecord[]> 
   return store.listBatches
     ? store.listBatches({ limit: null })
     : createResponseBatchStore().listBatches?.({ limit: null }) ?? Promise.resolve([]);
+}
+
+export function createRunArchiveHistoryItemStore(
+  filePath = path.join(getRunArchiveDir(), 'history-items', 'index.json'),
+): RunArchiveHistoryItemStore {
+  return {
+    async listItems() {
+      return readHistoryItemStoreFile(filePath);
+    },
+    async upsertItems(items) {
+      const current = await readHistoryItemStoreFile(filePath);
+      const incomingIds = new Set(items.map((item) => item.id));
+      const nextItems = [
+        ...current.filter((item) => !incomingIds.has(item.id)),
+        ...items,
+      ].sort((left, right) => right.createdAt.localeCompare(left.createdAt) || left.id.localeCompare(right.id));
+      await writeHistoryItemStoreFile(filePath, nextItems);
+    },
+  };
+}
+
+async function readHistoryItemStoreFile(filePath: string): Promise<RunArchiveItem[]> {
+  try {
+    const raw = await fs.readFile(filePath, 'utf8');
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? parsed.filter(isStoredRunArchiveItem) : [];
+  } catch (error) {
+    if (isMissingFileError(error)) return [];
+    throw error;
+  }
+}
+
+async function writeHistoryItemStoreFile(filePath: string, items: RunArchiveItem[]): Promise<void> {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  const tmpPath = `${filePath}.${process.pid}.${Date.now()}.${randomUUID()}.tmp`;
+  await fs.writeFile(tmpPath, `${JSON.stringify(items, null, 2)}\n`, 'utf8');
+  await fs.rename(tmpPath, filePath);
+}
+
+function isStoredRunArchiveItem(value: unknown): value is RunArchiveItem {
+  if (!isRecord(value)) return false;
+  return value.object === 'run_archive_item' && typeof value.id === 'string' && isRunArchiveItemKind(value.kind);
+}
+
+function isRunArchiveItemKind(value: unknown): value is RunArchiveItemKind {
+  return value === 'response' ||
+    value === 'response_batch' ||
+    value === 'team_run' ||
+    value === 'media_generation' ||
+    value === 'upload' ||
+    value === 'generated_artifact' ||
+    value === 'provider_conversation' ||
+    value === 'evidence';
 }
 
 async function buildRunArchiveItems(records: ExecutionRunStoredRecord[]): Promise<RunArchiveItem[]> {
@@ -749,6 +884,112 @@ function buildMediaArchiveItems(records: MediaGenerationStoredRecord[]): RunArch
     }
   }
   return items;
+}
+
+function buildHistoryMaterializationArchiveItems(
+  input: RunArchiveHistoryMaterializationUpsertInput,
+  timestamp: string,
+): RunArchiveItem[] {
+  const items: RunArchiveItem[] = [];
+  const seen = new Set<string>();
+  for (const [index, asset] of input.assets.entries()) {
+    const file = asset.file;
+    const archiveKind: RunArchiveItemKind = asset.kind === 'file' ? 'upload' : 'generated_artifact';
+    const itemId = buildHistoryMaterializationArchiveItemId(input, asset, index);
+    if (seen.has(itemId)) continue;
+    seen.add(itemId);
+    const fileName = file.name || asset.title || file.id || null;
+    const mimeType = file.mimeType ?? (fileName ? inferArchiveAssetMimeType(fileName) : null);
+    const materializationMethod =
+      asset.materializationMethod ??
+      readRecordString(file.metadata, ['materialization', 'materializationSource']) ??
+      null;
+    items.push({
+      id: itemId,
+      object: 'run_archive_item',
+      kind: archiveKind,
+      source: 'account_mirror',
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      title: asset.title ?? file.name ?? file.id,
+      status: 'materialized',
+      runtimeState: null,
+      provider: input.provider,
+      runtimeProfile: input.runtimeProfile,
+      browserProfile: input.browserProfile,
+      projectId: input.projectId,
+      boundIdentityKey: input.boundIdentityKey,
+      agentId: null,
+      teamId: null,
+      responseId: null,
+      batchId: null,
+      batchIndex: null,
+      mediaGenerationId: null,
+      providerConversationId: input.providerConversationId,
+      providerConversationUrl: input.providerConversationUrl,
+      artifactId: asset.artifactId ?? file.id,
+      fileName,
+      mimeType,
+      localPath: file.localPath ?? null,
+      uri: file.remoteUrl ?? null,
+      cacheKey: file.checksumSha256 ? `sha256:${file.checksumSha256}` : null,
+      checksumSha256: file.checksumSha256 ?? null,
+      fileAvailable: file.localPath ? null : false,
+      metadata: {
+        ...(file.metadata ?? {}),
+        providerFileId: file.id,
+        providerFileSource: file.source,
+        historyAssetKind: asset.kind,
+        historyMaterializationJobId: input.materializationJobId ?? null,
+        manifestPath: asset.manifestPath ?? null,
+        materialization: {
+          status: file.localPath ? 'materialized' : 'unavailable',
+          source: 'history-materialization',
+          method: materializationMethod,
+        },
+      },
+      links: {
+        catalogItem: buildHistoryCatalogItemPath(input),
+        ...(input.providerConversationUrl ? { conversation: input.providerConversationUrl } : {}),
+      },
+    });
+  }
+  return items;
+}
+
+function buildHistoryMaterializationArchiveItemId(
+  input: RunArchiveHistoryMaterializationUpsertInput,
+  asset: RunArchiveHistoryMaterializationAsset,
+  index: number,
+): string {
+  const prefix = asset.kind === 'file' ? 'history-file' : asset.kind === 'media' ? 'history-media' : 'history-generated-artifact';
+  const identity = input.boundIdentityKey ?? input.runtimeProfile ?? input.browserProfile ?? 'unknown-identity';
+  const file = asset.file;
+  return [
+    prefix,
+    input.provider,
+    sanitizeHistoryArchiveIdSegment(identity),
+    sanitizeHistoryArchiveIdSegment(input.providerConversationId),
+    sanitizeHistoryArchiveIdSegment(asset.artifactId ?? file.id ?? file.name ?? `asset-${index + 1}`),
+  ].join(':');
+}
+
+function sanitizeHistoryArchiveIdSegment(value: string): string {
+  const normalized = value.trim().replace(/[^a-zA-Z0-9._=-]+/g, '_').slice(0, 140);
+  return normalized || 'unknown';
+}
+
+function buildHistoryCatalogItemPath(input: {
+  provider: string;
+  providerConversationId: string;
+  runtimeProfile: string | null;
+}): string {
+  const params = new URLSearchParams({
+    provider: input.provider,
+    kind: 'conversations',
+  });
+  if (input.runtimeProfile) params.set('runtimeProfile', input.runtimeProfile);
+  return `/v1/account-mirrors/catalog/items/${encodeURIComponent(input.providerConversationId)}?${params.toString()}`;
 }
 
 function resolveMediaGenerationConversation(

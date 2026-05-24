@@ -103,6 +103,14 @@ import {
   type ArchiveMaterializationJobService,
 } from '../runtime/archiveMaterializationJobService.js';
 import {
+  createHistoryMaterializationService,
+  HistoryMaterializationError,
+  HistoryMaterializationJobControlError,
+  type HistoryMaterializationJobCreateResult,
+  type HistoryMaterializationJobListResult,
+  type HistoryMaterializationService,
+} from '../runtime/historyMaterializationService.js';
+import {
   createSearchProjectionService,
   type SearchProjectionRequest,
   type SearchProjectionResult,
@@ -149,6 +157,7 @@ import {
   probeGeminiBrowserServiceState,
   probeGrokBrowserServiceState,
 } from '../browser/liveServiceState.js';
+import { BrowserService } from '../browser/service/browserService.js';
 import {
   acceptDomDriftObservation,
   listDomDriftObservations,
@@ -160,9 +169,13 @@ import {
 } from '../browser/liveDiagnostics.js';
 import {
   createMediaGenerationService,
+  MediaGenerationExecutionError,
   type MediaGenerationServiceDeps,
 } from '../media/service.js';
-import { createBrowserMediaGenerationExecutor } from '../media/browserExecutor.js';
+import {
+  createBrowserMediaGenerationExecutor,
+  createBrowserMediaGenerationMaterializer,
+} from '../media/browserExecutor.js';
 import { probeMediaGenerationBrowserDiagnostics } from '../media/browserDiagnostics.js';
 import type { MediaGenerationRequest } from '../media/types.js';
 import { summarizeMediaGenerationStatus } from '../media/statusSummary.js';
@@ -272,6 +285,8 @@ export interface ResponsesHttpServerOptions {
   backgroundDrainIntervalMs?: number;
   accountMirrorSchedulerIntervalMs?: number;
   accountMirrorSchedulerDryRun?: boolean;
+  resumeAccountMirrorCompletionsOnStart?: boolean;
+  reconcileAccountMirrorLiveFollowOnStart?: boolean;
 }
 
 export interface ResponsesHttpServerDeps {
@@ -282,6 +297,7 @@ export interface ResponsesHttpServerDeps {
   generateResponseId?: () => string;
   executeStoredRunStep?: ExecutionResponsesServiceDeps['executeStoredRunStep'];
   mediaGenerationExecutor?: MediaGenerationServiceDeps['executor'];
+  mediaGenerationMaterializer?: MediaGenerationServiceDeps['materializer'];
   workbenchCapabilityCatalog?: WorkbenchCapabilityServiceDeps['catalog'];
   discoverWorkbenchCapabilities?: WorkbenchCapabilityServiceDeps['discoverCapabilities'];
   diagnoseWorkbenchCapabilities?: WorkbenchCapabilityServiceDeps['diagnoseCapabilities'];
@@ -294,6 +310,7 @@ export interface ResponsesHttpServerDeps {
   runArchiveService?: RunArchiveService;
   archiveMaterializationService?: ArchiveMaterializationService;
   archiveMaterializationJobService?: ArchiveMaterializationJobService;
+  historyMaterializationService?: HistoryMaterializationService;
   searchProjectionService?: SearchProjectionService;
   executionHost?: ExecutionServiceHost;
   localActionExecutionPolicy?: ExecutionServiceHostDeps['localActionExecutionPolicy'];
@@ -681,6 +698,7 @@ interface HttpStatusResponse {
     responseBatchesGetTemplate: string;
     mediaGenerationsCreate: string;
     mediaGenerationsGetTemplate: string;
+    mediaGenerationsMaterializeTemplate: string;
     mediaGenerationsStatusTemplate: string;
     runArchive: string;
     runArchiveAssetLookup: string;
@@ -693,6 +711,9 @@ interface HttpStatusResponse {
     runArchiveMaterializationsCreate: string;
     runArchiveMaterializationsList: string;
     runArchiveMaterializationTemplate: string;
+    historyMaterializationsCreate: string;
+    historyMaterializationsList: string;
+    historyMaterializationTemplate: string;
     runStatusTemplate: string;
     apiLogTail: string;
     preflightRunTemplate: string;
@@ -861,6 +882,8 @@ export async function createResponsesHttpServer(
   const backgroundDrainIntervalMs = Math.max(0, options.backgroundDrainIntervalMs ?? 0);
   const accountMirrorSchedulerIntervalMs = Math.max(0, options.accountMirrorSchedulerIntervalMs ?? 0);
   const accountMirrorSchedulerDryRun = options.accountMirrorSchedulerDryRun ?? true;
+  const resumeAccountMirrorCompletionsOnStart = options.resumeAccountMirrorCompletionsOnStart ?? true;
+  const reconcileAccountMirrorLiveFollowOnStart = options.reconcileAccountMirrorLiveFollowOnStart ?? true;
   const configuredRuntimeConfig = deps.config;
   const tenantExecutionLimitsStatusCache = new Map<string, {
     value: TenantExecutionLimitStatusSummary;
@@ -945,6 +968,7 @@ export async function createResponsesHttpServer(
     now,
   });
   let archiveMaterializationJobService = deps.archiveMaterializationJobService;
+  let historyMaterializationService = deps.historyMaterializationService;
   let searchProjectionService: SearchProjectionService;
   const accountMirrorSchedulerService = deps.accountMirrorSchedulerService ?? createAccountMirrorSchedulerPassService({
     registry: accountMirrorStatusRegistry,
@@ -974,8 +998,16 @@ export async function createResponsesHttpServer(
     refreshService: accountMirrorRefreshService,
     store: accountMirrorCompletionStore,
     initialOperations: initialAccountMirrorCompletions,
-    resumeActiveOperations: true,
+    resumeActiveOperations: resumeAccountMirrorCompletionsOnStart,
     now,
+    historyMaterializationService: {
+      async createJob(request) {
+        if (!historyMaterializationService) {
+          throw new Error('History materialization service is not initialized.');
+        }
+        return historyMaterializationService.createJob(request);
+      },
+    },
     onPersistError: (error, operation) => {
       logger(`Account mirror completion ${operation.id} persist failed: ${error instanceof Error ? error.message : String(error)}`);
     },
@@ -990,7 +1022,9 @@ export async function createResponsesHttpServer(
       logger(`Account mirror live-follow reconcile failed: ${error instanceof Error ? error.message : String(error)}`);
     });
   };
-  await reconcileAccountMirrorLiveFollow();
+  if (reconcileAccountMirrorLiveFollowOnStart) {
+    await reconcileAccountMirrorLiveFollow();
+  }
   const workbenchCapabilityService = createWorkbenchCapabilityService({
     now,
     catalog: deps.workbenchCapabilityCatalog,
@@ -1004,6 +1038,9 @@ export async function createResponsesHttpServer(
     executor:
       deps.mediaGenerationExecutor ??
       (resolvedUserConfig ? createBrowserMediaGenerationExecutor(resolvedUserConfig) : undefined),
+    materializer:
+      deps.mediaGenerationMaterializer ??
+      (resolvedUserConfig ? createBrowserMediaGenerationMaterializer(resolvedUserConfig) : undefined),
     capabilityReporter: workbenchCapabilityService,
     runtimeProfile:
       typeof resolvedUserConfig?.auracallProfile === 'string'
@@ -1114,6 +1151,21 @@ export async function createResponsesHttpServer(
     },
   });
   await archiveMaterializationJobService.recoverInterruptedJobs();
+  historyMaterializationService = historyMaterializationService ?? createHistoryMaterializationService({
+    config: resolvedUserConfig ?? {},
+    catalogService: accountMirrorCatalogService,
+    runArchiveService,
+    now,
+    withForegroundWork: async (work) => {
+      const endForegroundWork = beginForegroundAuraCallWork();
+      try {
+        return await work();
+      } finally {
+        endForegroundWork();
+      }
+    },
+  });
+  await historyMaterializationService.recoverInterruptedJobs();
   searchProjectionService = deps.searchProjectionService ?? createSearchProjectionService({
     accountMirrorCatalogService,
     runArchiveService,
@@ -1617,6 +1669,75 @@ export async function createResponsesHttpServer(
         return;
       }
 
+      if (req.method === 'POST' && url.pathname === '/v1/account-mirrors/materializations') {
+        try {
+          const body = await readRequestBody(req);
+          const payload = parseHistoryMaterializationCreateBody(JSON.parse(body || '{}'));
+          const result: HistoryMaterializationJobCreateResult = await historyMaterializationService.createJob(payload);
+          sendJson(res, 202, result);
+          return;
+        } catch (error) {
+          if (error instanceof HistoryMaterializationError) {
+            sendJson(res, error.statusCode, {
+              error: {
+                message: error.message,
+                type: error.statusCode === 404 ? 'not_found_error' : 'invalid_request_error',
+              },
+            } satisfies HttpErrorPayload);
+            return;
+          }
+          throw error;
+        }
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/account-mirrors/materializations') {
+        const query = parseHistoryMaterializationJobListQuery(url.searchParams);
+        const result: HistoryMaterializationJobListResult = await historyMaterializationService.listJobs(query);
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (req.method === 'GET' && isHistoryMaterializationJobRoute(url.pathname)) {
+        const jobId = parseHistoryMaterializationJobId(url.pathname);
+        const result = await historyMaterializationService.readJob(jobId);
+        if (!result) {
+          sendJson(res, 404, {
+            error: {
+              message: `History materialization job ${jobId} was not found.`,
+              type: 'not_found_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        sendJson(res, 200, result);
+        return;
+      }
+
+      if (req.method === 'POST' && isHistoryMaterializationJobRoute(url.pathname)) {
+        try {
+          const jobId = parseHistoryMaterializationJobId(url.pathname);
+          const body = await readRequestBody(req);
+          const payload = parseHistoryMaterializationJobControlBody(JSON.parse(body || '{}'));
+          if (payload.action !== 'cancel') {
+            throw new HistoryMaterializationJobControlError(`Unsupported history materialization job action ${payload.action}.`);
+          }
+          const result = await historyMaterializationService.cancelJob(jobId);
+          sendJson(res, 200, result);
+          return;
+        } catch (error) {
+          if (error instanceof HistoryMaterializationJobControlError) {
+            sendJson(res, error.statusCode, {
+              error: {
+                message: error.message,
+                type: error.type,
+              },
+            } satisfies HttpErrorPayload);
+            return;
+          }
+          throw error;
+        }
+      }
+
       if (req.method === 'GET' && isRunArchiveMaterializationJobRoute(url.pathname)) {
         const jobId = parseRunArchiveMaterializationJobId(url.pathname);
         const result = await archiveMaterializationJobService.readJob(jobId);
@@ -1752,6 +1873,27 @@ export async function createResponsesHttpServer(
           status: accountMirrorStatusRegistry.readStatus(),
           completions: createAccountMirrorCompletionStatusSummary(accountMirrorCompletionService, now),
           readCompletion: (id) => accountMirrorCompletionService.read(id),
+          readBrowserMutations: (provider, runtimeProfileId) => {
+            if (provider !== 'chatgpt' && provider !== 'gemini' && provider !== 'grok') {
+              return null;
+            }
+            const browserConfig = resolvedUserConfig;
+            if (!browserConfig) {
+              return null;
+            }
+            if (
+              runtimeProfileId &&
+              browserConfig.auracallProfile &&
+              runtimeProfileId !== browserConfig.auracallProfile
+            ) {
+              return null;
+            }
+            const items = BrowserService.fromConfig(browserConfig, provider).listRecentBrowserMutations(50);
+            return {
+              total: items.length,
+              items,
+            };
+          },
           now,
         });
         if (!result.ok) {
@@ -1880,6 +2022,12 @@ export async function createResponsesHttpServer(
           provider: payload.provider,
           runtimeProfileId: payload.runtimeProfile,
           maxPasses: payload.maxPasses,
+          sweepMode: payload.sweepMode ?? payload.sweep_mode,
+          materializationPolicy: payload.materializationPolicy ?? payload.materialization_policy,
+          materializationAssetKinds: payload.materializationAssetKinds ?? payload.materialization_asset_kinds,
+          materializationMaxItems: payload.materializationMaxItems ?? payload.materialization_max_items,
+          materializationRefreshSnapshot: payload.materializationRefreshSnapshot ?? payload.materialization_refresh_snapshot,
+          materializationForce: payload.materializationForce ?? payload.materialization_force,
         });
         sendJson(res, 202, result satisfies HttpAccountMirrorCompletionResponse);
         return;
@@ -2780,6 +2928,45 @@ export async function createResponsesHttpServer(
         }
       }
 
+      const mediaGenerationMaterializeId = matchMediaGenerationMaterializeRoute(url.pathname);
+      if (req.method === 'POST' && mediaGenerationMaterializeId) {
+        const endForegroundWork = beginForegroundAuraCallWork();
+        try {
+          const body = await readRequestBody(req);
+          const payload = parseMediaGenerationMaterializeBody(JSON.parse(body || '{}'));
+          if (!mediaGenerationService.materializeGeneration) {
+            sendJson(res, 501, {
+              error: {
+                message: 'Media generation materialization is not configured for this runtime.',
+                type: 'not_implemented_error',
+              },
+            } satisfies HttpErrorPayload);
+            return;
+          }
+          const response = await mediaGenerationService.materializeGeneration(mediaGenerationMaterializeId, {
+            count: payload.count ?? null,
+            compareFullQuality: payload.compareFullQuality ?? true,
+            source: 'api',
+            metadata: payload.metadata ?? null,
+          });
+          sendJson(res, response.status === 'failed' ? 502 : 200, response);
+          return;
+        } catch (error) {
+          if (error instanceof MediaGenerationExecutionError) {
+            sendJson(res, mediaGenerationExecutionErrorStatus(error), {
+              error: {
+                message: error.message,
+                type: error.code,
+              },
+            } satisfies HttpErrorPayload);
+            return;
+          }
+          throw error;
+        } finally {
+          endForegroundWork();
+        }
+      }
+
       const runStatusId = matchRunStatusRoute(url.pathname);
       if (req.method === 'GET' && runStatusId) {
         const runStatusQuery = parseRunStatusQuery(url.searchParams);
@@ -3107,6 +3294,7 @@ export async function createResponsesHttpServer(
       }
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));
+        server.closeIdleConnections();
       });
     },
   };
@@ -3200,7 +3388,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   }
   logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
-    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, GET /v1/search, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET/POST /v1/archive/materializations, GET/POST /v1/archive/materializations/{job_id}, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, POST /v1/archive/items/{archive_item_id}/materialize, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
+    'Endpoints: GET /status, GET /v1/api/logs/tail, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, POST /v1/projects/ensure, POST /v1/tenant-pool-teams/ensure, POST /v1/agent-setup-packages, POST /v1/agent-setup-handoffs, GET /v1/runtime-runs/recent, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/chat/completions, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}, POST /v1/media-generations/{media_generation_id}/materialize, GET /v1/search, GET /v1/archive, POST /v1/archive/backfill, POST /v1/archive/evidence, GET/POST /v1/archive/materializations, GET/POST /v1/archive/materializations/{job_id}, GET /v1/archive/items/{archive_item_id}, GET /v1/archive/items/{archive_item_id}/asset, POST /v1/archive/items/{archive_item_id}/materialize, GET /v1/account-mirrors/status, GET /v1/account-mirrors/catalog, GET/POST /v1/account-mirrors/materializations, GET/POST /v1/account-mirrors/materializations/{job_id}, GET /v1/account-mirrors/scheduler/history, POST /v1/account-mirrors/preview-sessions, GET /v1/account-mirrors/preview-sessions, GET/PATCH/DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}, POST /v1/account-mirrors/refresh, POST /v1/account-mirrors/completions, GET /v1/account-mirrors/completions, GET/POST /v1/account-mirrors/completions/{completion_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   if (serverOptions.dashboardUrl) {
@@ -3212,7 +3400,15 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   logger('Leave this terminal running; press Ctrl+C to stop auracall api serve.');
 
   await new Promise<void>((resolve, reject) => {
+    let closing = false;
+    const cleanupSignalHandlers = () => {
+      process.off('SIGINT', handleSignal);
+      process.off('SIGTERM', handleSignal);
+    };
     const handleSignal = () => {
+      if (closing) return;
+      closing = true;
+      cleanupSignalHandlers();
       void server
         .close()
         .then(resolve)
@@ -3688,6 +3884,7 @@ function createHttpStatusResponse(input: {
       responseBatchesGetTemplate: '/v1/response-batches/{batch_id}',
       mediaGenerationsCreate: '/v1/media-generations',
       mediaGenerationsGetTemplate: '/v1/media-generations/{media_generation_id}',
+      mediaGenerationsMaterializeTemplate: 'POST /v1/media-generations/{media_generation_id}/materialize',
       mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
       runArchive: '/v1/archive[?kind=response|response_batch|team_run|media_generation|upload|generated_artifact|provider_conversation|evidence][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&projectId={provider_project_id}][&agent={agent_id}][&team={team_id}][&responseId={response_id}][&batchId={batch_id}][&status={status}][&fileAvailable=true|false][&assetAvailability=available|unavailable|pending][&q={query}][&limit=50]',
       runArchiveAssetLookup: '/v1/archive/assets/lookup?checksumSha256={sha256}|cacheKey={cache_key}|providerArtifactId={provider_artifact_id}|artifactId={artifact_id}[&limit=50]',
@@ -3700,6 +3897,9 @@ function createHttpStatusResponse(input: {
       runArchiveMaterializationsCreate: '/v1/archive/materializations',
       runArchiveMaterializationsList: '/v1/archive/materializations[?status=queued|running|succeeded|skipped|failed|cancelled|active|terminal][&archiveItemId={archive_item_id}][&limit=50]',
       runArchiveMaterializationTemplate: '/v1/archive/materializations/{job_id}',
+      historyMaterializationsCreate: '/v1/account-mirrors/materializations',
+      historyMaterializationsList: '/v1/account-mirrors/materializations[?status=queued|running|succeeded|skipped|failed|cancelled|active|terminal][&provider={chatgpt|gemini|grok}][&runtimeProfile={runtime_profile}][&sourceType=conversation|catalog_item|archive_item|reconciliation][&limit=50]',
+      historyMaterializationTemplate: '/v1/account-mirrors/materializations/{job_id}',
       runStatusTemplate: '/v1/runs/{run_id}/status[?diagnostics=browser-state]',
       apiLogTail: '/v1/api/logs/tail[?maxBytes=32768]',
       preflightRunTemplate: '/v1/preflight/lazy-live-follow/runs/{run_id}',
@@ -4057,6 +4257,10 @@ interface AccountMirrorSchedulerDiagnosticsBundle {
     activeCompletionId: string | null;
   };
   completion: ReturnType<typeof compactAccountMirrorSchedulerCompletion> | null;
+  browserMutations: {
+    total: number;
+    items: unknown[];
+  } | null;
   latestSchedulerEvent: ReturnType<typeof latestAccountMirrorSchedulerDiagnosticsEvent>;
 }
 
@@ -4074,6 +4278,10 @@ function createAccountMirrorSchedulerDiagnosticsBundle(input: {
   status: AccountMirrorStatusSummary;
   completions: AccountMirrorCompletionStatusSummary;
   readCompletion: (id: string) => AccountMirrorCompletionOperation | null;
+  readBrowserMutations?: (provider: string | null, runtimeProfileId: string | null) => {
+    total: number;
+    items: unknown[];
+  } | null;
   now: () => Date;
 }): AccountMirrorSchedulerDiagnosticsResult {
   const scheduler = {
@@ -4142,6 +4350,7 @@ function createAccountMirrorSchedulerDiagnosticsBundle(input: {
         activeCompletionId: completion?.id ?? account?.activeCompletionId ?? input.query.completionId ?? null,
       },
       completion: completion ? compactAccountMirrorSchedulerCompletion(completion) : null,
+      browserMutations: input.readBrowserMutations?.(selectedProvider, selectedRuntimeProfileId) ?? null,
       latestSchedulerEvent: latestAccountMirrorSchedulerDiagnosticsEvent(scheduler),
     },
   };
@@ -4152,11 +4361,18 @@ function findLiveFollowDiagnosticsTarget(
   query: { provider: string | null; runtimeProfileId: string | null; completionId: string | null },
 ): LiveFollowTargetAccountSummary | null {
   const accounts = liveFollow.targets?.accounts ?? [];
-  return accounts.find((account) =>
+  const matched = accounts.find((account) =>
     (!query.provider || account.provider === query.provider)
     && (!query.runtimeProfileId || account.runtimeProfileId === query.runtimeProfileId)
     && (!query.completionId || account.activeCompletionId === query.completionId)
-  ) ?? accounts.find((account) => account.desiredState === 'enabled') ?? null;
+  );
+  if (matched) {
+    return matched;
+  }
+  if (query.provider || query.runtimeProfileId || query.completionId) {
+    return null;
+  }
+  return accounts.find((account) => account.desiredState === 'enabled') ?? null;
 }
 
 function classifyAccountMirrorSchedulerDiagnosticsWait(account: LiveFollowTargetAccountSummary): { kind: string; label: string } {
@@ -5317,6 +5533,18 @@ const ACCOUNT_MIRROR_COMPLETION_REQUEST_SCHEMA = z.object({
   provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
   runtimeProfile: z.string().trim().min(1).optional(),
   maxPasses: z.number().int().positive().max(500).optional(),
+  sweepMode: z.enum(['steady_follow', 'full_sweep']).optional(),
+  sweep_mode: z.enum(['steady_follow', 'full_sweep']).optional(),
+  materializationPolicy: z.enum(['metadata_only', 'recent_missing_assets', 'full_missing_assets']).optional(),
+  materialization_policy: z.enum(['metadata_only', 'recent_missing_assets', 'full_missing_assets']).optional(),
+  materializationAssetKinds: z.array(z.enum(['artifacts', 'files', 'media', 'all'])).optional(),
+  materialization_asset_kinds: z.array(z.enum(['artifacts', 'files', 'media', 'all'])).optional(),
+  materializationMaxItems: z.number().int().positive().max(500).optional(),
+  materialization_max_items: z.number().int().positive().max(500).optional(),
+  materializationRefreshSnapshot: z.boolean().optional(),
+  materialization_refresh_snapshot: z.boolean().optional(),
+  materializationForce: z.boolean().optional(),
+  materialization_force: z.boolean().optional(),
 });
 
 const ACCOUNT_MIRROR_COMPLETION_CONTROL_REQUEST_SCHEMA = z.object({
@@ -5977,6 +6205,80 @@ function parseRunArchiveMaterializationJobControlBody(value: unknown) {
   }).parse(value);
 }
 
+function parseHistoryMaterializationCreateBody(value: unknown) {
+  const parsed = z.object({
+    provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
+    runtimeProfile: z.string().trim().min(1).optional(),
+    runtime_profile: z.string().trim().min(1).optional(),
+    browserProfile: z.string().trim().min(1).optional(),
+    browser_profile: z.string().trim().min(1).optional(),
+    boundIdentityKey: z.string().trim().min(1).optional(),
+    bound_identity_key: z.string().trim().min(1).optional(),
+    conversationId: z.string().trim().min(1).optional(),
+    conversation_id: z.string().trim().min(1).optional(),
+    conversationIds: z.array(z.string().trim().min(1)).optional(),
+    conversation_ids: z.array(z.string().trim().min(1)).optional(),
+    providerConversationUrl: z.string().trim().min(1).optional(),
+    provider_conversation_url: z.string().trim().min(1).optional(),
+    projectId: z.string().trim().min(1).optional(),
+    project_id: z.string().trim().min(1).optional(),
+    catalogItemId: z.string().trim().min(1).optional(),
+    catalog_item_id: z.string().trim().min(1).optional(),
+    catalogKind: z.enum(['all', 'projects', 'conversations', 'artifacts', 'files', 'media']).optional(),
+    catalog_kind: z.enum(['all', 'projects', 'conversations', 'artifacts', 'files', 'media']).optional(),
+    archiveItemId: z.string().trim().min(1).optional(),
+    archive_item_id: z.string().trim().min(1).optional(),
+    reconcile: z.boolean().optional(),
+    refreshSnapshot: z.boolean().optional(),
+    refresh_snapshot: z.boolean().optional(),
+    reconcileSnapshot: z.boolean().optional(),
+    reconcile_snapshot: z.boolean().optional(),
+    assetKinds: z.array(z.enum(['artifacts', 'files', 'media', 'all'])).optional(),
+    asset_kinds: z.array(z.enum(['artifacts', 'files', 'media', 'all'])).optional(),
+    maxItems: z.number().int().nonnegative().max(500).optional(),
+    max_items: z.number().int().nonnegative().max(500).optional(),
+    force: z.boolean().optional(),
+  }).parse(value);
+  return {
+    provider: parsed.provider,
+    runtimeProfile: parsed.runtimeProfile ?? parsed.runtime_profile,
+    browserProfile: parsed.browserProfile ?? parsed.browser_profile,
+    boundIdentityKey: parsed.boundIdentityKey ?? parsed.bound_identity_key,
+    conversationId: parsed.conversationId ?? parsed.conversation_id,
+    conversationIds: parsed.conversationIds ?? parsed.conversation_ids,
+    providerConversationUrl: parsed.providerConversationUrl ?? parsed.provider_conversation_url,
+    projectId: parsed.projectId ?? parsed.project_id,
+    catalogItemId: parsed.catalogItemId ?? parsed.catalog_item_id,
+    catalogKind: parsed.catalogKind ?? parsed.catalog_kind,
+    archiveItemId: parsed.archiveItemId ?? parsed.archive_item_id,
+    reconcile: parsed.reconcile ?? false,
+    refreshSnapshot: parsed.refreshSnapshot ?? parsed.refresh_snapshot ?? parsed.reconcileSnapshot ?? parsed.reconcile_snapshot ?? false,
+    assetKinds: parsed.assetKinds ?? parsed.asset_kinds,
+    maxItems: parsed.maxItems ?? parsed.max_items,
+    force: parsed.force ?? false,
+  };
+}
+
+function parseHistoryMaterializationJobListQuery(searchParams: URLSearchParams) {
+  const raw: Record<string, unknown> = {};
+  for (const key of ['status', 'provider', 'runtimeProfile', 'sourceType', 'limit']) {
+    if (searchParams.has(key)) raw[key] = searchParams.get(key);
+  }
+  return z.object({
+    status: z.enum(['queued', 'running', 'succeeded', 'skipped', 'failed', 'cancelled', 'active', 'terminal']).optional(),
+    provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
+    runtimeProfile: z.string().trim().min(1).optional(),
+    sourceType: z.enum(['conversation', 'catalog_item', 'archive_item', 'reconciliation']).optional(),
+    limit: z.coerce.number().int().min(0).max(500).optional(),
+  }).parse(raw);
+}
+
+function parseHistoryMaterializationJobControlBody(value: unknown) {
+  return z.object({
+    action: z.enum(['cancel']),
+  }).parse(value);
+}
+
 function parseDomDriftObservationQuery(searchParams: URLSearchParams): ParsedDomDriftObservationQuery {
   const raw: Record<string, unknown> = {};
   if (searchParams.has('service')) {
@@ -6027,11 +6329,24 @@ function isRunArchiveMaterializationJobRoute(pathname: string): boolean {
   return pathname.startsWith('/v1/archive/materializations/');
 }
 
+function isHistoryMaterializationJobRoute(pathname: string): boolean {
+  return pathname.startsWith('/v1/account-mirrors/materializations/');
+}
+
 function parseRunArchiveMaterializationJobId(pathname: string): string {
   const prefix = '/v1/archive/materializations/';
   const jobId = decodeURIComponent(pathname.startsWith(prefix) ? pathname.slice(prefix.length) : '').trim();
   if (!jobId) {
     throw new Error('Archive materialization job id is required.');
+  }
+  return jobId;
+}
+
+function parseHistoryMaterializationJobId(pathname: string): string {
+  const prefix = '/v1/account-mirrors/materializations/';
+  const jobId = decodeURIComponent(pathname.startsWith(prefix) ? pathname.slice(prefix.length) : '').trim();
+  if (!jobId) {
+    throw new Error('History materialization job id is required.');
   }
   return jobId;
 }
@@ -6177,6 +6492,27 @@ function resolveMediaGenerationWait(
     if (normalized === 'true' || normalized === '1') return true;
   }
   return true;
+}
+
+function parseMediaGenerationMaterializeBody(value: unknown) {
+  const parsed = z.object({
+    count: z.number().int().min(1).max(8).optional(),
+    compareFullQuality: z.boolean().optional(),
+    compare_full_quality: z.boolean().optional(),
+    metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  }).parse(value);
+  return {
+    count: parsed.count,
+    compareFullQuality: parsed.compareFullQuality ?? parsed.compare_full_quality,
+    metadata: parsed.metadata,
+  };
+}
+
+function mediaGenerationExecutionErrorStatus(error: MediaGenerationExecutionError): number {
+  if (error.code === 'media_generation_not_found') return 404;
+  if (error.code === 'media_materializer_not_implemented') return 501;
+  if (error.code === 'browser_operation_busy') return 409;
+  return 502;
 }
 
 async function readRunStatusBrowserDiagnostics(input: {
@@ -6450,6 +6786,11 @@ function matchConfigApiKeyRoute(pathname: string): string | null {
 function matchMediaGenerationRoute(pathname: string): string | null {
   const match = /^\/v1\/media-generations\/([^/]+)$/.exec(pathname);
   return match?.[1] ?? null;
+}
+
+function matchMediaGenerationMaterializeRoute(pathname: string): string | null {
+  const match = /^\/v1\/media-generations\/([^/]+)\/materialize$/.exec(pathname);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
 }
 
 function matchMediaGenerationStatusRoute(pathname: string): string | null {
@@ -10630,11 +10971,22 @@ function createOperatorBrowserDashboardHtml(input: {
       const actions = [
         '<a href="' + escapeHtml(itemPath) + '" data-catalog-row-index="' + escapeHtml(String(row.rowIndex)) + '" data-catalog-item-path="' + escapeHtml(itemPath) + '" onclick="event.preventDefault(); event.stopPropagation(); showMirrorCatalogDetailByIndex(this.dataset.catalogRowIndex)">Details</a>',
       ];
+      if (canReconcileMirrorCatalogRow(row)) {
+        actions.push('<button type="button" class="link-button" data-catalog-row-index="' + escapeHtml(String(row.rowIndex)) + '" onclick="event.stopPropagation(); reconcileMirrorCatalogRow(this.dataset.catalogRowIndex)">Reconcile</button>');
+      }
       if (previewUrl) {
         actions.push('<a href="' + escapeHtml(previewUrl) + '" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Open Preview</a>');
         actions.push('<button type="button" class="link-button" data-catalog-preview-url="' + escapeHtml(previewUrl) + '" onclick="copyCatalogPreviewUrl(this); event.stopPropagation();">Copy URL</button>');
       }
       return '<span class="catalog-row-actions">' + actions.join(' ') + '</span>';
+    }
+
+    function canReconcileMirrorCatalogRow(row) {
+      return row
+        && row.kind === 'conversations'
+        && row.provider
+        && row.runtimeProfileId
+        && row.itemId;
     }
 
     function resolveCatalogRowPreviewUrl(row) {
@@ -10664,6 +11016,32 @@ function createOperatorBrowserDashboardHtml(input: {
       window.setTimeout(() => {
         button.textContent = 'Copy URL';
       }, 1800);
+    }
+
+    async function reconcileMirrorCatalogRow(index) {
+      const parsed = Number(index);
+      const row = mirrorCatalogRows.find((candidate) => candidate.rowIndex === parsed);
+      if (!canReconcileMirrorCatalogRow(row)) {
+        setMirrorCatalogBatchNotice('Select a cached conversation row to reconcile.', 'warn');
+        return;
+      }
+      setMirrorCatalogBatchNotice('Queuing conversation reconciliation for ' + row.itemId + '...', 'warn');
+      try {
+        const result = await postJson('/v1/account-mirrors/materializations', {
+          provider: row.provider,
+          runtimeProfile: row.runtimeProfileId,
+          catalogItemId: row.itemId,
+          catalogKind: 'conversations',
+          assetKinds: ['all'],
+          refreshSnapshot: true,
+          force: false,
+        });
+        const job = result && result.job ? result.job : result;
+        const suffix = job && job.id ? ' (' + job.id + ')' : '';
+        setMirrorCatalogBatchNotice('Queued conversation reconciliation' + suffix + '.', 'ok');
+      } catch (error) {
+        setMirrorCatalogBatchNotice('Conversation reconciliation failed: ' + String(error.message || error), 'bad');
+      }
     }
 
     function renderCatalogTranscriptBadge(row) {

@@ -180,7 +180,7 @@ describe('account mirror catalog service', () => {
       expect(catalog.entries[0]?.manifests.files).toEqual([
         { id: 'file_1', name: 'Upload.pdf', provider: 'chatgpt', source: 'conversation' },
       ]);
-      expect(catalog.entries[0]?.manifests.conversations).toEqual([
+      expect(catalog.entries[0]?.manifests.conversations).toMatchObject([
         {
           id: 'conv_1',
           title: 'Conversation 1',
@@ -191,8 +191,35 @@ describe('account mirror catalog service', () => {
           cachedFileCount: 0,
           cachedSourceCount: 0,
           cachedArtifactCount: 1,
+          freshnessState: 'fresh',
+          routeabilityState: 'unknown',
+          conversationFreshness: {
+            object: 'account_mirror_conversation_freshness',
+            state: 'fresh',
+            indexObservedAt: '2026-04-29T12:00:10.000Z',
+            indexSource: 'project-conversations',
+            indexRank: 0,
+            conversationFingerprint: expect.stringMatching(/^sha256:[a-f0-9]{32}$/),
+            detailCompleteness: 'complete',
+          },
         },
-        { id: 'conv_2', title: 'Conversation 2', provider: 'chatgpt', projectId: 'project_2' },
+        {
+          id: 'conv_2',
+          title: 'Conversation 2',
+          provider: 'chatgpt',
+          projectId: 'project_2',
+          freshnessState: 'partial',
+          routeabilityState: 'unknown',
+          conversationFreshness: {
+            object: 'account_mirror_conversation_freshness',
+            state: 'partial',
+            indexObservedAt: '2026-04-29T12:00:10.000Z',
+            indexSource: 'project-conversations',
+            indexRank: 1,
+            conversationFingerprint: expect.stringMatching(/^sha256:[a-f0-9]{32}$/),
+            detailCompleteness: 'partial',
+          },
+        },
       ]);
 
       const projectsOnly = await service.readCatalog({
@@ -273,6 +300,113 @@ describe('account mirror catalog service', () => {
         kind: 'files',
         itemId: 'missing_file',
       })).resolves.toBeNull();
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('projects per-conversation asset counts from account-mirror manifests', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-mirror-catalog-manifest-counts-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const persistence = createAccountMirrorPersistence({
+      config,
+      cacheStore: createCacheStore('dual'),
+    });
+    try {
+      await persistence.writeSnapshot({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        boundIdentityKey: 'ecochran76@gmail.com',
+        detectedIdentityKey: 'ecochran76@gmail.com',
+        detectedAccountLevel: 'Business',
+        requestId: 'acctmirror_manifest_counts',
+        startedAt: '2026-05-23T20:00:00.000Z',
+        completedAt: '2026-05-23T20:00:10.000Z',
+        dispatcherKey: 'managed-profile:/tmp/default/chatgpt::service:chatgpt',
+        dispatcherOperationId: 'op_manifest_counts',
+        metadataCounts: {
+          projects: 0,
+          conversations: 1,
+          artifacts: 1,
+          files: 1,
+          media: 1,
+        },
+        metadataEvidence: {
+          identitySource: 'profile-menu',
+          projectSampleIds: [],
+          conversationSampleIds: ['conv_manifest_counts'],
+          truncated: {
+            projects: false,
+            conversations: false,
+            artifacts: false,
+          },
+        },
+        manifests: {
+          projects: [],
+          conversations: [
+            { id: 'conv_manifest_counts', title: 'Manifest-backed assets', provider: 'chatgpt' },
+          ],
+          artifacts: [
+            {
+              id: 'artifact_manifest_counts',
+              title: 'Generated image',
+              kind: 'image',
+              uri: 'https://provider.example/image.png',
+              metadata: {
+                conversationId: 'conv_manifest_counts',
+              },
+            },
+          ],
+          files: [
+            {
+              id: 'file_manifest_counts',
+              name: 'Source.pdf',
+              provider: 'chatgpt',
+              source: 'conversation',
+              metadata: {
+                conversationId: 'conv_manifest_counts',
+              },
+            },
+          ],
+          media: [
+            {
+              id: 'media_manifest_counts',
+              title: 'Generated image',
+              mediaType: 'image',
+              provider: 'chatgpt',
+              conversationId: 'conv_manifest_counts',
+            },
+          ],
+        },
+      });
+      const service = createAccountMirrorCatalogService({
+        config,
+        persistence,
+        now: () => new Date('2026-05-23T20:10:00.000Z'),
+      });
+
+      const catalog = await service.readCatalog({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        kind: 'conversations',
+      });
+
+      expect(catalog.entries[0]?.manifests.conversations).toMatchObject([
+        {
+          id: 'conv_manifest_counts',
+          cachedArtifactCount: 1,
+          cachedFileCount: 1,
+          cachedMediaCount: 1,
+          freshnessState: 'missing_assets',
+          conversationFreshness: {
+            assetCounts: {
+              known: 3,
+              missingLocal: 1,
+            },
+          },
+        },
+      ]);
     } finally {
       await rm(homeDir, { recursive: true, force: true });
     }

@@ -1,6 +1,7 @@
 import type {
   AccountMirrorCompletionOperation,
   AccountMirrorCompletionService,
+  AccountMirrorCompletionStartRequest,
 } from './completionService.js';
 import type {
   AccountMirrorStatusEntry,
@@ -68,6 +69,7 @@ export async function reconcileConfiguredAccountMirrorLiveFollow(input: {
       provider: entry.provider,
       runtimeProfileId: entry.runtimeProfileId,
       maxPasses: null,
+      ...buildLiveFollowCompletionPolicy(entry),
     }));
   }
 
@@ -83,4 +85,33 @@ export async function reconcileConfiguredAccountMirrorLiveFollow(input: {
       skipped: skipped.length,
     },
   };
+}
+
+function buildLiveFollowCompletionPolicy(
+  entry: AccountMirrorStatusEntry,
+): Pick<
+  AccountMirrorCompletionStartRequest,
+  | 'sweepMode'
+  | 'materializationPolicy'
+  | 'materializationAssetKinds'
+  | 'materializationMaxItems'
+  | 'materializationRefreshSnapshot'
+  | 'materializationForce'
+> {
+  const request: Pick<
+    AccountMirrorCompletionStartRequest,
+    | 'sweepMode'
+    | 'materializationPolicy'
+    | 'materializationAssetKinds'
+    | 'materializationMaxItems'
+    | 'materializationRefreshSnapshot'
+    | 'materializationForce'
+  > = {};
+  if (entry.liveFollow.sweepMode) request.sweepMode = entry.liveFollow.sweepMode;
+  if (entry.liveFollow.materializationPolicy) request.materializationPolicy = entry.liveFollow.materializationPolicy;
+  if (entry.liveFollow.materializationAssetKinds) request.materializationAssetKinds = entry.liveFollow.materializationAssetKinds;
+  if (entry.liveFollow.materializationMaxItems !== null) request.materializationMaxItems = entry.liveFollow.materializationMaxItems;
+  if (entry.liveFollow.materializationRefreshSnapshot !== null) request.materializationRefreshSnapshot = entry.liveFollow.materializationRefreshSnapshot;
+  if (entry.liveFollow.materializationForce !== null) request.materializationForce = entry.liveFollow.materializationForce;
+  return request;
 }

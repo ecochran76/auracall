@@ -4,6 +4,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { afterEach, describe, expect, test } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 import { createAccountMirrorPersistence } from '../../src/accountMirror/cachePersistence.js';
+import { createAccountMirrorStatusRegistry } from '../../src/accountMirror/statusRegistry.js';
 import type { ProviderCacheContext } from '../../src/browser/providers/cache.js';
 import { createCacheStore } from '../../src/browser/llmService/cache/store.js';
 
@@ -107,6 +108,25 @@ describe('account mirror cache persistence', () => {
       identityKey: 'ecochran76@gmail.com',
     };
     try {
+      await cacheStore.writeConversations({
+        ...context,
+        listOptions: {
+          projectId: 'project_1',
+        },
+      }, [
+        {
+          id: 'conv_1',
+          title: 'Mirror conversation',
+          provider: 'chatgpt',
+          projectId: 'project_1',
+          metadata: {
+            indexObservedAt: '2026-04-28T12:00:10.000Z',
+            indexSource: 'project-conversations',
+            indexRank: 9,
+            conversationFingerprint: 'sha256:stale',
+          },
+        },
+      ]);
       await persistence.writeSnapshot(baseRecord);
 
       const sameProfileState = await persistence.readState({
@@ -152,7 +172,19 @@ describe('account mirror cache persistence', () => {
         items: [{ id: 'project_1', name: 'Default Project', provider: 'chatgpt' }],
       });
       await expect(cacheStore.readConversations(context)).resolves.toMatchObject({
-        items: [{ id: 'conv_1', title: 'Mirror conversation', provider: 'chatgpt' }],
+        items: [
+          {
+            id: 'conv_1',
+            title: 'Mirror conversation',
+            provider: 'chatgpt',
+            metadata: {
+              indexObservedAt: '2026-04-29T12:00:10.000Z',
+              indexSource: 'project-conversations',
+              indexRank: 0,
+              conversationFingerprint: expect.stringMatching(/^sha256:[a-f0-9]{32}$/),
+            },
+          },
+        ],
       });
       await expect(cacheStore.readAccountMirrorArtifacts(context)).resolves.toMatchObject({
         items: [{ id: 'artifact_1', title: 'Generated report', kind: 'document' }],
@@ -162,6 +194,241 @@ describe('account mirror cache persistence', () => {
       });
       await expect(cacheStore.readAccountMirrorMedia(context)).resolves.toMatchObject({
         items: [{ id: 'media_1', title: 'Generated image', mediaType: 'image' }],
+      });
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('persists account-mirror target failure state across registry refreshes', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-mirror-status-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const cacheStore = createCacheStore('dual');
+    const persistence = createAccountMirrorPersistence({
+      config: {
+        browser: {
+          cache: {
+            store: 'dual',
+          },
+        },
+      },
+      cacheStore,
+    });
+    try {
+      await persistence.writeSnapshot(baseRecord);
+      await persistence.writeState?.({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        boundIdentityKey: 'ecochran76@gmail.com',
+        updatedAt: '2026-04-29T12:05:00.000Z',
+        state: {
+          detectedIdentityKey: 'ecochran76@gmail.com',
+          lastAttemptAtMs: Date.parse('2026-04-29T12:04:00.000Z'),
+          lastFailureAtMs: Date.parse('2026-04-29T12:05:00.000Z'),
+          lastCompletedAtMs: Date.parse('2026-04-29T12:05:00.000Z'),
+          consecutiveFailureCount: 2,
+          lastRefreshRequestId: 'acctmirror_failed',
+          lastDispatcherKey: 'managed-profile:/tmp/default/chatgpt::service:chatgpt',
+        },
+      });
+
+      await expect(persistence.readState({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        boundIdentityKey: 'ecochran76@gmail.com',
+      })).resolves.toMatchObject({
+        detectedIdentityKey: 'ecochran76@gmail.com',
+        lastSuccessAtMs: Date.parse('2026-04-29T12:00:10.000Z'),
+        lastFailureAtMs: Date.parse('2026-04-29T12:05:00.000Z'),
+        lastCompletedAtMs: Date.parse('2026-04-29T12:05:00.000Z'),
+        consecutiveFailureCount: 2,
+        lastRefreshRequestId: 'acctmirror_failed',
+        metadataCounts: {
+          projects: 2,
+          conversations: 5,
+        },
+      });
+
+      await persistence.writeSnapshot({
+        ...baseRecord,
+        requestId: 'acctmirror_success_2',
+        startedAt: '2026-04-29T12:10:00.000Z',
+        completedAt: '2026-04-29T12:10:10.000Z',
+      });
+
+      const recovered = await persistence.readState({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        boundIdentityKey: 'ecochran76@gmail.com',
+      });
+      expect(recovered).toMatchObject({
+        lastSuccessAtMs: Date.parse('2026-04-29T12:10:10.000Z'),
+        lastCompletedAtMs: Date.parse('2026-04-29T12:10:10.000Z'),
+        lastRefreshRequestId: 'acctmirror_success_2',
+      });
+      expect(recovered?.consecutiveFailureCount).toBeUndefined();
+      expect(recovered?.lastFailureAtMs).toBeUndefined();
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('hydrates persisted failure state into provider politeness backoff', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-mirror-backoff-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const config = {
+      runtimeProfiles: {
+        'auracall-gemini-pro': {
+          browserProfile: 'default',
+          defaultService: 'gemini',
+          services: {
+            gemini: {
+              identity: {
+                email: 'ecochran76@gmail.com',
+              },
+            },
+          },
+        },
+      },
+    };
+    const persistence = createAccountMirrorPersistence({
+      config,
+      cacheStore: createCacheStore('dual'),
+    });
+    try {
+      await persistence.writeState?.({
+        provider: 'gemini',
+        runtimeProfileId: 'auracall-gemini-pro',
+        browserProfileId: 'default',
+        boundIdentityKey: 'ecochran76@gmail.com',
+        updatedAt: '2026-05-23T22:25:49.738Z',
+        state: {
+          detectedIdentityKey: 'ecochran76@gmail.com',
+          lastAttemptAtMs: Date.parse('2026-05-23T22:23:50.107Z'),
+          lastFailureAtMs: Date.parse('2026-05-23T22:25:49.738Z'),
+          lastCompletedAtMs: Date.parse('2026-05-23T22:25:49.738Z'),
+          consecutiveFailureCount: 1,
+          lastRefreshRequestId: 'acctmirror_timeout',
+        },
+      });
+      const registry = createAccountMirrorStatusRegistry({
+        config,
+        readPersistentState: persistence.readState,
+        now: () => new Date('2026-05-23T22:27:45.000Z'),
+      });
+
+      await registry.refreshPersistentState?.();
+
+      expect(registry.readStatus({
+        provider: 'gemini',
+        runtimeProfileId: 'auracall-gemini-pro',
+        explicitRefresh: true,
+      }).entries[0]).toMatchObject({
+        status: 'delayed',
+        reason: 'failure-backoff',
+        eligibleAt: '2026-05-23T22:27:49.738Z',
+        lastFailureAt: '2026-05-23T22:25:49.738Z',
+        consecutiveFailureCount: 1,
+      });
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('updates cached conversation rows with reconciliation freshness evidence', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-mirror-cache-evidence-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const cacheStore = createCacheStore('dual');
+    const persistence = createAccountMirrorPersistence({
+      config: {
+        browser: {
+          cache: {
+            store: 'dual',
+          },
+        },
+      },
+      cacheStore,
+    });
+    const updateConversationEvidence = persistence.updateConversationEvidence;
+    expect(updateConversationEvidence).toBeDefined();
+    const context: ProviderCacheContext = {
+      provider: 'chatgpt',
+      userConfig: {} as ProviderCacheContext['userConfig'],
+      listOptions: {},
+      identityKey: 'ecochran76@gmail.com',
+    };
+    try {
+      await persistence.writeSnapshot(baseRecord);
+
+      const updated = await updateConversationEvidence?.({
+        provider: 'chatgpt',
+        boundIdentityKey: 'ecochran76@gmail.com',
+        conversationId: 'conv_1',
+        evidence: {
+          detailObservedAt: '2026-05-23T16:00:00.000Z',
+          manifestObservedAt: '2026-05-23T16:00:01.000Z',
+          routeabilityObservedAt: '2026-05-23T16:00:00.000Z',
+          routeabilityState: 'routeable',
+          messageCount: 4,
+          artifactCount: 1,
+        },
+      });
+      const missingWithoutUpsert = await updateConversationEvidence?.({
+        provider: 'chatgpt',
+        boundIdentityKey: 'ecochran76@gmail.com',
+        conversationId: 'missing_conv',
+        evidence: {
+          routeabilityState: 'not_found_or_unavailable',
+          routeabilityObservedAt: '2026-05-23T16:05:00.000Z',
+        },
+      });
+      const insertedTerminal = await updateConversationEvidence?.({
+        provider: 'chatgpt',
+        boundIdentityKey: 'ecochran76@gmail.com',
+        conversationId: 'missing_conv',
+        evidence: {
+          routeabilityState: 'not_found_or_unavailable',
+          routeabilityReason: 'conversation-not-found-or-unavailable: direct provider route failed',
+          routeabilityObservedAt: '2026-05-23T16:05:00.000Z',
+        },
+        upsert: {
+          title: 'missing_conv',
+          url: 'https://chatgpt.com/c/missing_conv',
+        },
+      });
+
+      expect(updated).toBe(true);
+      expect(missingWithoutUpsert).toBe(false);
+      expect(insertedTerminal).toBe(true);
+      await expect(cacheStore.readConversations(context)).resolves.toMatchObject({
+        items: [
+          {
+            id: 'conv_1',
+            metadata: {
+              indexObservedAt: '2026-04-29T12:00:10.000Z',
+              detailObservedAt: '2026-05-23T16:00:00.000Z',
+              manifestObservedAt: '2026-05-23T16:00:01.000Z',
+              routeabilityObservedAt: '2026-05-23T16:00:00.000Z',
+              routeabilityState: 'routeable',
+              messageCount: 4,
+              artifactCount: 1,
+            },
+          },
+          {
+            id: 'missing_conv',
+            title: 'missing_conv',
+            provider: 'chatgpt',
+            url: 'https://chatgpt.com/c/missing_conv',
+            metadata: {
+              routeabilityObservedAt: '2026-05-23T16:05:00.000Z',
+              routeabilityState: 'not_found_or_unavailable',
+              routeabilityReason: 'conversation-not-found-or-unavailable: direct provider route failed',
+            },
+          },
+        ],
       });
     } finally {
       await rm(homeDir, { recursive: true, force: true });

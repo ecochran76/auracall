@@ -161,6 +161,11 @@ function stableStringify(value: unknown): string {
   return JSON.stringify(value);
 }
 
+function limitItems<T>(items: T[], maxItems: number | null | undefined): T[] {
+  if (typeof maxItems !== 'number' || !Number.isFinite(maxItems)) return items;
+  return items.slice(0, Math.max(0, Math.trunc(maxItems)));
+}
+
 function normalizeProjectInstructionsForPrefix(value: string): string {
   return value.replace(/\r\n/g, '\n').trim();
 }
@@ -879,7 +884,7 @@ export abstract class LlmService {
 
   async materializeConversationArtifacts(
     conversationId: string,
-    options?: { projectId?: string; listOptions?: BrowserProviderListOptions; refresh?: boolean },
+    options?: { projectId?: string; listOptions?: BrowserProviderListOptions; refresh?: boolean; maxItems?: number | null },
   ): Promise<{ artifacts: ConversationArtifact[]; files: FileRef[]; manifestPath: string | null }> {
     if (!this.provider.materializeConversationArtifact) {
       throw new Error(`Conversation artifact fetch is not supported for ${this.providerId}.`);
@@ -893,7 +898,7 @@ export abstract class LlmService {
       refresh: options?.refresh ?? true,
       listOptions,
     });
-    const artifacts = Array.isArray(context.artifacts) ? context.artifacts : [];
+    const artifacts = limitItems(Array.isArray(context.artifacts) ? context.artifacts : [], options?.maxItems);
     if (artifacts.length === 0) {
       return { artifacts: [], files: [], manifestPath: null };
     }
@@ -1031,7 +1036,7 @@ export abstract class LlmService {
 
   async materializeConversationFiles(
     conversationId: string,
-    options?: { projectId?: string; listOptions?: BrowserProviderListOptions; refresh?: boolean },
+    options?: { projectId?: string; listOptions?: BrowserProviderListOptions; refresh?: boolean; maxItems?: number | null },
   ): Promise<{ conversationFiles: FileRef[]; files: FileRef[]; manifestPath: string | null }> {
     if (!this.provider.downloadConversationFile) {
       throw new Error(`Conversation file fetch is not supported for ${this.providerId}.`);
@@ -1040,10 +1045,10 @@ export abstract class LlmService {
       await this.buildListOptions(options?.listOptions, { ensurePort: true }),
       options?.projectId,
     );
-    const conversationFiles = await this.listConversationFiles(conversationId, {
+    const conversationFiles = limitItems(await this.listConversationFiles(conversationId, {
       projectId: options?.projectId,
       listOptions,
-    });
+    }), options?.maxItems);
     if (conversationFiles.length === 0) {
       return { conversationFiles: [], files: [], manifestPath: null };
     }

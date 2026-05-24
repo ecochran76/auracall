@@ -128,6 +128,60 @@ describe('account mirror live-follow reconciler', () => {
     expect(start).not.toHaveBeenCalled();
   });
 
+  test('starts configured full-sweep live follow with materialization policy', async () => {
+    const registry = createAccountMirrorStatusRegistry({
+      config: {
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            services: {
+              gemini: {
+                identity: { email: 'operator@example.com' },
+                liveFollow: {
+                  enabled: true,
+                  sweepMode: 'full_sweep',
+                  materializationPolicy: 'full_missing_assets',
+                  materializationAssetKinds: ['media'],
+                  materializationMaxItems: 10,
+                  materializationRefreshSnapshot: true,
+                  materializationForce: false,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    const start = vi.fn((request) => ({
+      ...baseOperation,
+      id: 'completion_full_sweep',
+      provider: request.provider ?? 'chatgpt',
+      runtimeProfileId: request.runtimeProfileId ?? 'default',
+    }));
+
+    await reconcileConfiguredAccountMirrorLiveFollow({
+      registry,
+      completionService: {
+        start,
+        list: vi.fn(() => []),
+        read: vi.fn(),
+        control: vi.fn(),
+      },
+    });
+
+    expect(start).toHaveBeenCalledWith({
+      provider: 'gemini',
+      runtimeProfileId: 'default',
+      maxPasses: null,
+      sweepMode: 'full_sweep',
+      materializationPolicy: 'full_missing_assets',
+      materializationAssetKinds: ['media'],
+      materializationMaxItems: 10,
+      materializationRefreshSnapshot: true,
+      materializationForce: false,
+    });
+  });
+
   test('does not start enabled live follow when the account status is blocked', async () => {
     const registry = createAccountMirrorStatusRegistry({
       config: {

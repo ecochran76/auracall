@@ -11,6 +11,12 @@ const accountMirrorCompletionStartInputShape = {
   provider: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
   runtimeProfile: z.string().min(1).optional(),
   maxPasses: z.number().int().positive().max(500).optional(),
+  sweepMode: z.enum(['steady_follow', 'full_sweep']).optional(),
+  materializationPolicy: z.enum(['metadata_only', 'recent_missing_assets', 'full_missing_assets']).optional(),
+  materializationAssetKinds: z.array(z.enum(['artifacts', 'files', 'media', 'all'])).optional(),
+  materializationMaxItems: z.number().int().positive().max(500).optional(),
+  materializationRefreshSnapshot: z.boolean().optional(),
+  materializationForce: z.boolean().optional(),
 } satisfies z.ZodRawShape;
 
 const accountMirrorCompletionStatusInputShape = {
@@ -36,6 +42,7 @@ const accountMirrorCompletionOutputShape = {
   provider: z.enum(['chatgpt', 'gemini', 'grok']),
   runtimeProfileId: z.string(),
   mode: z.enum(['live_follow', 'bounded']),
+  sweepMode: z.enum(['steady_follow', 'full_sweep']).optional(),
   phase: z.enum(['backfill_history', 'steady_follow']),
   status: z.enum(['queued', 'running', 'idle_waiting', 'paused', 'completed', 'blocked', 'failed', 'cancelled']),
   startedAt: z.string(),
@@ -44,6 +51,12 @@ const accountMirrorCompletionOutputShape = {
   maxPasses: z.number().nullable(),
   passCount: z.number(),
   lastRefresh: z.unknown().nullable(),
+  materializationPolicy: z.enum(['metadata_only', 'recent_missing_assets', 'full_missing_assets']).optional(),
+  materializationAssetKinds: z.array(z.enum(['artifacts', 'files', 'media', 'all'])).optional(),
+  materializationMaxItems: z.number().nullable().optional(),
+  materializationRefreshSnapshot: z.boolean().optional(),
+  materializationForce: z.boolean().optional(),
+  materializationCursor: z.unknown().nullable().optional(),
   mirrorCompleteness: z.unknown().nullable(),
   error: z.object({
     message: z.string(),
@@ -101,6 +114,12 @@ export function registerAccountMirrorCompletionTools(
         provider: payload.provider,
         runtimeProfileId: payload.runtimeProfile,
         maxPasses: payload.maxPasses,
+        sweepMode: payload.sweepMode,
+        materializationPolicy: payload.materializationPolicy,
+        materializationAssetKinds: payload.materializationAssetKinds,
+        materializationMaxItems: payload.materializationMaxItems,
+        materializationRefreshSnapshot: payload.materializationRefreshSnapshot,
+        materializationForce: payload.materializationForce,
       });
       return {
         isError: false,

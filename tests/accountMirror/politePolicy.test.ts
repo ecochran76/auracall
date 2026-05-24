@@ -102,7 +102,7 @@ describe('account mirror polite policy', () => {
       posture: 'delay',
       reason: 'failure-backoff',
     });
-    expect(decision.limits.failureCooldownMs).toBe(4 * 60 * 60_000);
+    expect(decision.limits.failureCooldownMs).toBe(4 * 60_000);
   });
 
   test('applies long hard-stop cooldowns for bot-sensitive provider pages', () => {
@@ -150,7 +150,10 @@ describe('account mirror polite policy', () => {
     });
 
     expect(policy.minIntervalMs).toBe(18 * 60 * 60_000);
-    expect(policy.explicitRefreshMinIntervalMs).toBe(45 * 60_000);
+    expect(policy.explicitRefreshMinIntervalMs).toBe(2 * 60_000);
+    expect(policy.jitterMaxMs).toBe(60_000);
+    expect(policy.failureBaseCooldownMs).toBe(2 * 60_000);
+    expect(policy.failureMaxCooldownMs).toBe(10 * 60_000);
     expect(decision.limits.maxBrowserInteractionsPerMinute).toBe(6);
     expect(decision.limits.maxPageReadsPerCycle).toBe(4);
     expect(decision.limits.maxConversationRowsPerCycle).toBe(80);

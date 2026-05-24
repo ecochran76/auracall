@@ -1,3 +1,24 @@
+## Turn 202 | 2026-05-24
+
+- Continued implementation plans:
+  `docs/dev/plans/0069-2026-05-22-history-backed-artifact-materialization.md`
+  and
+  `docs/dev/plans/0070-2026-05-23-conversation-refresh-and-artifact-reconciliation.md`
+- Goal: tidy the Plan 0069/0070 reconciliation worktree, preserve rail-first
+  Gemini browsing semantics, and stabilize the commit validation gate.
+- Change:
+  - confirmed the cached-catalog and materialization slices keep Gemini rail
+    traversal on the already-loaded app surface, with direct `/app/<id>` use
+    limited to routeability/deleted-conversation evidence.
+  - tightened `api serve` shutdown by removing paired signal listeners after
+    stop and closing idle HTTP connections during server close.
+  - narrowed API-auth route tests to a lightweight protected endpoint and gave
+    known slow HTTP server-lifecycle fixtures explicit test budgets.
+- Validation:
+  - `pnpm run plans:audit -- --keep 70`, `git diff --check`, conflict-marker
+    scan, `pnpm run build`, `pnpm run lint`, focused HTTP server tests, and
+    the Plan 0070 materialization/freshness slice.
+
 ## Turn 201 | 2026-05-18
 
 - Continued implementation plan:
@@ -32211,3 +32232,1716 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     provider adapters, `LLMService`, archive materialization, HTTP routes, CLI
     help, and MCP tools.
   - `auracall api search --port 18095 --kind artifact --asset-availability unavailable --limit 20 --json`
+
+## Turn 242 | 2026-05-22
+
+- Goal: land the first backend lane for Plan 0069 history-backed artifact
+  materialization.
+- Change:
+  - added a durable `history_materialization_job` service that accepts provider
+    conversation ids, account-mirror catalog items, archive items, or bounded
+    reconciliation requests.
+  - wired HTTP `POST/GET /v1/account-mirrors/materializations`, CLI
+    `auracall api history-materialization-*`, and MCP
+    `history_materialization_*` surfaces.
+  - added `account_mirror` archive upsert/readback so successful recovered
+    history assets can appear in archive/search asset availability.
+  - kept account-mirror catalog reads cache-only; provider recovery remains an
+    explicit queued materialization operation.
+- Progress:
+  - Plan 0069 slices 1 and 2 now have deterministic backend coverage for direct
+    conversation and catalog-item jobs.
+  - ChatGPT detail reconciliation, Gemini media matching, and Grok provider
+    support/unsupported evidence remain open plan work.
+- Verification:
+  - `pnpm run check`
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts tests/runtime.historyArchiveItems.test.ts tests/cli/apiHistoryMaterializationCommand.test.ts tests/mcp.historyMaterialization.test.ts tests/http.responsesServer.test.ts tests/mcp.server.test.ts --maxWorkers 1 --testNamePattern "history materialization|account history materialization|history-backed|mcp server service wiring"`
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/runtime.archiveService.test.ts tests/mcp.runArchive.test.ts tests/mcp.server.test.ts --maxWorkers 1 --testNamePattern "history materialization|account history materialization|development-only posture|run archive|mcp server service wiring"`
+
+## Turn 243 | 2026-05-22
+
+- Goal: move Plan 0069's ChatGPT history reconciliation slice past the first
+  backend job surface.
+- Change:
+  - ChatGPT account-mirror detail inventory now combines account-library files
+    with bounded project/conversation detail reads instead of returning as soon
+    as library rows exist.
+  - history materialization catalog-item resolution now reads nested
+    conversation/project URL evidence from artifact/file metadata, so artifact
+    and file catalog rows can queue recovery, not only conversation rows.
+  - Search projection now maps history-materialized `account_mirror` archive
+    rows to `materialization=succeeded` and carries the history job id in
+    `metadata.assetFreshness`.
+  - the API startup banner now advertises
+    `GET/POST /v1/account-mirrors/materializations`.
+  - added deterministic reconciliation coverage for materializable cached
+    conversation rows and skipped non-asset rows.
+- Live proof:
+  - worktree API server on `127.0.0.1:18169` queued
+    `hmj_da867a6da526428ca74c310e21a121bd` for ChatGPT conversation
+    `6a072f1f-7fb0-83ea-9596-3d2736020627`.
+  - the job succeeded with `materialized=1`, `skipped=2`, wrote
+    `legacy_readout.json` under the existing ChatGPT conversation-attachment
+    cache, and upserted an `account_mirror` archive row with
+    `fileAvailable=true`.
+  - archive readback returned source `account_mirror`, the provider
+    conversation URL, the asset route, checksum
+    `1554902debc6d64f8bacaba03ab0afc4122125b189387e302485ff87633ffb45`, and
+    materialization method `captured-anchor-fetch`.
+  - queued `hmj_887400dde3764636bf350a38e284223b` for the second legacy
+    ChatGPT conversation `6a072a9c-9b1c-83ea-823d-b11a2da12fa1`; it also
+    succeeded with `materialized=1`, `skipped=2`, wrote
+    `legacy_readout.json`, and upserted an `account_mirror` archive row with
+    checksum
+    `22a31237870b166b0867e17f556e18aa4fb02189a50bf0df67bcbb216e027482`.
+  - Search now reports both recovered ChatGPT history rows under
+    `assetAvailability=available&materialization=succeeded`; the only remaining
+    unavailable ChatGPT artifact is the older synthetic `chatgpt_image_1` row
+    without provider conversation evidence.
+- Remaining:
+  - Gemini media/history matching is the next Plan 0069 provider lane.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.searchProjectionService.test.ts --maxWorkers 1 --testNamePattern "history-materialized|asset facets|merges account mirror"`
+  - live `POST /v1/account-mirrors/materializations`, job polling, archive item
+    readback, asset `GET`, and archive list readback on port `18169`
+  - live `/v1/search?kind=artifact&provider=chatgpt&assetAvailability=available&materialization=succeeded&limit=100`
+    showed both history-backed `legacy_readout.json` rows with
+    `metadata.assetFreshness.source = history_materialization`
+
+## Turn 244 | 2026-05-23
+
+- Goal: move Plan 0069's Gemini media/history reconciliation slice from audit
+  to deterministic backend support.
+- Change:
+  - Gemini account-mirror conversation artifacts now have explicit unit coverage
+    for media manifest mapping.
+  - history reconciliation can now process `assetKinds: ["media"]` by scanning
+    unavailable media-generation archive artifacts, reading the base media
+    generation prompt, matching to cached Gemini conversations by provider
+    conversation id, unique exact title, cached-media evidence, or nearest
+    timestamp-backed exact title, and resuming media materialization with the
+    matched conversation URL.
+  - legacy Gemini media-generation archive rows with null `runtimeProfile` are
+    now eligible for runtime-profile-scoped reconciliation unless the archive
+    row itself carries conflicting concrete runtime-profile evidence.
+  - media reconciliation now uses a wider bounded catalog window and skips
+    duplicate Gemini prompt/title matches that lack stronger media or timestamp
+    evidence.
+  - media-generation archive rows are refreshed after successful resumed
+    materialization, and history manifest entries link back to the refreshed
+    archive item and asset route.
+  - Gemini human-verification/CAPTCHA guard errors remain hard job failures.
+- Progress:
+  - deterministic Gemini media reconciliation is covered.
+  - live worktree API proof queued
+    `hmj_112234c5318d4ed6afc5de762f9c0842`; it matched Gemini media generation
+    `medgen_d3c65525c86e4200916e9f4272b6af99` to cached conversation
+    `6a131154e90f7362` by exact title, then recorded the provider failure
+    `Gemini conversation content not found for 6a131154e90f7362` after Gemini
+    landed on `/app` without conversation content.
+  - no repeated Gemini navigation was attempted after that provider-state
+    failure; `available&materialization=succeeded` stayed at 0 and unavailable
+    Gemini artifact rows stayed at 68.
+  - after tightening ambiguity handling, live worktree API proof queued
+    `hmj_3c45bab418154baa8f8c5ea049c3e733`; it skipped before provider work
+    because five cached Gemini conversations share the exact title for
+    `medgen_d3c65525c86e4200916e9f4272b6af99`.
+  - Grok follow-through remains open.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/runtime.historyMaterializationService.test.ts tests/runtime.historyArchiveItems.test.ts tests/runtime.searchProjectionService.test.ts tests/cli/apiHistoryMaterializationCommand.test.ts tests/mcp.historyMaterialization.test.ts tests/http.responsesServer.test.ts tests/mcp.server.test.ts --maxWorkers 1 --testNamePattern "history materialization|account history materialization|history-backed|history-materialized|mcp server service wiring|ChatGPT account mirror metadata collector|Gemini"`
+  - `pnpm run check`
+  - `pnpm run lint` (exit 0 with the existing 200-warning baseline)
+  - `git diff --check`
+
+## Turn 245 | 2026-05-23
+
+- Goal: complete Plan 0069's Grok history/media follow-through with either
+  provider support or explicit unsupported evidence.
+- Change:
+  - Grok media reconciliation now records an explicit unsupported skip before
+    matching or provider browser work. The current Grok materializer is valid
+    for explicit active Imagine/files retries, but it is not
+    conversation-scoped historical recovery.
+  - ambiguity messages now name the candidate provider instead of hard-coding
+    Gemini.
+  - README, endpoint docs, MCP docs, testing docs, this journal, and the plan
+    now document the Grok boundary.
+- Progress:
+  - installed-runtime search proof shows no current unavailable Grok generated
+    artifacts (`provider=grok`, `kind=artifact`,
+    `assetAvailability=unavailable`, `total=0`).
+  - deterministic coverage proves a future Grok unavailable media-generation
+    row skips before `materializeMediaGeneration` or archive upsert can run.
+  - read-only Gemini cache audit confirmed there is no hidden disambiguating
+    evidence for the current duplicate-title blocker: the five exact-title
+    rows have no cached timestamp/media/artifact count fields, and the Gemini
+    account-mirror media/artifact manifests are empty.
+  - Plan 0069 remains open only for the Gemini duplicate-title rows that need
+    account-mirror media/timestamp evidence or a direct provider conversation
+    id before retrying provider materialization.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/runtime.historyMaterializationService.test.ts tests/runtime.historyArchiveItems.test.ts tests/runtime.searchProjectionService.test.ts tests/cli/apiHistoryMaterializationCommand.test.ts tests/mcp.historyMaterialization.test.ts tests/http.responsesServer.test.ts tests/mcp.server.test.ts --maxWorkers 1 --testNamePattern "history materialization|account history materialization|history-backed|history-materialized|mcp server service wiring|ChatGPT account mirror metadata collector|Gemini|Grok"`
+  - `pnpm run check`
+  - `pnpm run lint` (exit 0 with the existing 200-warning baseline)
+  - `git diff --check`
+  - `pnpm tsx bin/auracall.ts api search --kind artifact --provider grok --asset-availability unavailable --limit 20 --json`
+  - `jq '.items | map(select(.title=="Generate an image of an asphalt secret agent") | {id,title,url,createdAt,updatedAt,lastActivityAt,cachedMediaCount,cachedArtifactCount})' ~/.auracall/cache/providers/gemini/ecochran76@gmail.com/conversations.json`
+  - `jq '{mediaItems: (.items | length), fetchedAt, identityKey}' ~/.auracall/cache/providers/gemini/ecochran76@gmail.com/account-mirror/media.json`
+  - `jq '{artifactItems: (.items | length), fetchedAt, identityKey}' ~/.auracall/cache/providers/gemini/ecochran76@gmail.com/account-mirror/artifacts.json`
+
+## Turn 246 | 2026-05-23
+
+- Goal: make the remaining Gemini duplicate-title blocker self-explanatory
+  without unsafe repeated provider navigation.
+- Change:
+  - ambiguous media-history title matches now report media-recovery evidence
+    counts for cached media, usable timestamps, and cached artifacts/files in
+    the job skip reason.
+  - README, endpoint docs, MCP docs, testing notes, the plan, and the fixes log
+    now describe that media-recovery evidence contract.
+- Progress:
+  - deterministic coverage now asserts the no-evidence Gemini duplicate-title
+    skip reports `0 with cached media`, `0 with usable timestamps`, and
+    `0 with cached artifacts/files`.
+  - a bounded Gemini `mirror-complete` start on local API was not allowed to
+    touch the browser because the provider is still inside its minimum refresh
+    interval until `2026-05-23T05:21:59.172Z`; the queued bounded completion
+    `acctmirror_completion_a15d4a34-2696-4139-8bc3-f3432a9a8b34` was cancelled
+    immediately so it will not run later.
+  - cache-only reconciliation job `hmj_1c2a052d27b04fc382b0c65104997f80`
+    skipped before provider work and exposed the enhanced media-recovery reason:
+    `0 with cached media`, `0 with usable timestamps`, and
+    `1 with cached artifacts/files`.
+  - unavailable Gemini generated-artifact search remains at `total=68`.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/runtime.historyMaterializationService.test.ts tests/runtime.historyArchiveItems.test.ts tests/runtime.searchProjectionService.test.ts tests/cli/apiHistoryMaterializationCommand.test.ts tests/mcp.historyMaterialization.test.ts tests/http.responsesServer.test.ts tests/mcp.server.test.ts --maxWorkers 1 --testNamePattern "history materialization|account history materialization|history-backed|history-materialized|mcp server service wiring|ChatGPT account mirror metadata collector|Gemini|Grok"`
+  - `pnpm run check`
+  - `pnpm run lint` (exit 0 with the existing 200-warning baseline)
+  - `git diff --check`
+  - `pnpm tsx bin/auracall.ts api mirror-complete --host 127.0.0.1 --port 18169 --provider gemini --runtime-profile default --max-passes 1 --json`
+  - `pnpm tsx bin/auracall.ts api mirror-completion-control --host 127.0.0.1 --port 18169 acctmirror_completion_a15d4a34-2696-4139-8bc3-f3432a9a8b34 cancel --json`
+  - `pnpm tsx bin/auracall.ts api history-materialization-create --host 127.0.0.1 --port 18169 --provider gemini --runtime-profile default --reconcile --asset-kind media --max-items 2 --force --json`
+  - `pnpm tsx bin/auracall.ts api history-materialization-status --host 127.0.0.1 --port 18169 hmj_1c2a052d27b04fc382b0c65104997f80 --json`
+  - `pnpm tsx bin/auracall.ts api search --host 127.0.0.1 --port 18169 --kind artifact --provider gemini --asset-availability unavailable --limit 5 --json`
+
+## Turn 247 | 2026-05-23
+
+- Goal: close an archive-item input gap in Plan 0069 while waiting for the
+  Gemini mirror refresh interval.
+- Change:
+  - `archiveItemId` history materialization now recognizes media-generation
+    generated artifacts and routes them through the same media-history matcher
+    used by bounded reconciliation before ordinary conversation fallback.
+  - direct provider conversation ids on media-generation candidates no longer
+    require the conversation to also be present in the account-mirror catalog.
+  - media reconciliation now treats null legacy bound-identity evidence the
+    same way as null runtime-profile evidence: it inherits the request selector
+    and only skips rows with a conflicting concrete value.
+  - direct media-generation materialization now has local API and MCP parity:
+    `POST /v1/media-generations/{media_generation_id}/materialize` and
+    `media_generation_materialize` resume the configured media materializer for
+    an existing media-generation record.
+  - README, endpoint docs, MCP docs, testing notes, the plan, and the fixes log
+    now document targeted archive-item media matching and direct media
+    materialization parity.
+- Progress:
+  - deterministic coverage proves a generated-artifact archive item with a
+    media-generation id but no direct provider conversation id can match cached
+    Gemini account history, dispatch the media materializer, refresh archive
+    items, and return the materialized asset route.
+  - deterministic coverage now also proves a direct provider-conversation id on
+    a legacy media-generation archive row can dispatch materialization even
+    when account-mirror catalog has no matching conversation row, while
+    preserving explicit runtime profile, browser profile, and bound identity
+    selectors.
+  - HTTP/MCP media-generation tests prove direct materialization preserves
+    caller metadata and writes back a materialized artifact path without
+    creating another media-generation job.
+  - bounded Gemini live refresh remains ineligible until
+    `2026-05-23T05:21:59.172Z`; latest local check was
+    `2026-05-23T00:03:01-05:00`.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/runtime.historyMaterializationService.test.ts tests/runtime.historyArchiveItems.test.ts tests/runtime.searchProjectionService.test.ts tests/cli/apiHistoryMaterializationCommand.test.ts tests/mcp.historyMaterialization.test.ts tests/http.responsesServer.test.ts tests/mcp.server.test.ts --maxWorkers 1 --testNamePattern "history materialization|account history materialization|history-backed|history-materialized|mcp server service wiring|ChatGPT account mirror metadata collector|Gemini|Grok"`
+  - `pnpm run check`
+  - `pnpm run lint` (exit 0 with the existing 200-warning baseline)
+  - `git diff --check`
+
+## Turn 248 | 2026-05-23
+
+- Goal: continue Plan 0069 after the Gemini mirror minimum-interval window and
+  close any non-live media-reconciliation gaps found in the audit.
+- Change:
+  - media-generation reconciliation candidates now inherit explicit request
+    runtime profile, browser profile, bound identity, and project selectors
+    when legacy archive rows carry null evidence.
+  - null legacy bound-identity evidence no longer excludes a media-generation
+    archive row from a bound-identity-scoped request; only conflicting concrete
+    bound identity evidence is rejected.
+  - README, endpoint docs, MCP docs, testing notes, the plan, and the fixes log
+    now document direct provider-conversation media recovery without a catalog
+    row and legacy selector inheritance.
+- Progress:
+  - deterministic coverage now proves a Gemini generated-artifact row with a
+    direct provider conversation id dispatches media materialization even when
+    the account-mirror catalog has no matching conversation row.
+  - read-only installed-runtime archive summary found 68 unavailable Gemini
+    generated-artifact rows; only one row has direct provider conversation
+    evidence, and it is an old async test fixture pointing at
+    `async-conversation`.
+  - bounded Gemini completion
+    `acctmirror_completion_7f78c0b0-cf46-4a64-bb86-3d2431e3f57a` was queued
+    after the prior minimum interval using a scheduler-disabled local API
+    server, but parked as `idle_waiting` with `passCount = 0` and
+    `nextAttemptAt = 2026-05-23T07:22:24.538Z`; it was cancelled immediately so
+    it will not run later.
+  - cache reconciliation job `hmj_abcbe5b6ec7a45a49464624739a93f57` skipped the
+    first two Gemini media rows before provider work with duplicate-title
+    evidence: `0 with cached media`, `0 with usable timestamps`, and
+    `1 with cached artifacts/files`.
+  - final Gemini search counts remained `unavailable = 68` and
+    `available&materialization=succeeded = 0`.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/runtime.historyMaterializationService.test.ts tests/runtime.historyArchiveItems.test.ts tests/runtime.searchProjectionService.test.ts tests/cli/apiHistoryMaterializationCommand.test.ts tests/mcp.historyMaterialization.test.ts tests/http.responsesServer.test.ts tests/mcp.server.test.ts --maxWorkers 1 --testNamePattern "history materialization|account history materialization|history-backed|history-materialized|mcp server service wiring|ChatGPT account mirror metadata collector|Gemini|Grok"`
+  - `pnpm vitest run tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run lint` (exit 0 with the existing 200-warning baseline)
+  - `git diff --check`
+  - `pnpm tsx bin/auracall.ts api mirror-complete --host 127.0.0.1 --port 18169 --provider gemini --runtime-profile default --max-passes 1 --json`
+  - `pnpm tsx bin/auracall.ts api mirror-completion-control --host 127.0.0.1 --port 18169 acctmirror_completion_7f78c0b0-cf46-4a64-bb86-3d2431e3f57a cancel --json`
+  - `pnpm tsx bin/auracall.ts api history-materialization-create --host 127.0.0.1 --port 18169 --provider gemini --runtime-profile default --reconcile --asset-kind media --max-items 2 --force --json`
+  - `pnpm tsx bin/auracall.ts api history-materialization-status --host 127.0.0.1 --port 18169 hmj_abcbe5b6ec7a45a49464624739a93f57 --json`
+
+## Turn 249 | 2026-05-23
+
+- Goal: keep Plan 0069 Gemini proof runs isolated from unrelated
+  account-mirror live-follow startup loops.
+- Change:
+  - `api serve` now accepts `--no-account-mirror-completions-on-start`.
+  - the server option disables both persisted account-mirror completion resume
+    and configured live-follow reconciliation at startup while preserving
+    persisted completion readback.
+  - CLI wiring now treats omitted `--no-account-mirror-completions-on-start`
+    as explicit resume/reconcile enabled, so the default cannot drift if
+    Commander parser defaults change.
+  - README, endpoint docs, testing notes, the plan, and the fixes log now call
+    out the distinction between scheduler cadence and startup completion loops.
+- Progress:
+  - the audit confirmed `--account-mirror-scheduler-interval-ms 0` only
+    disables cadence; startup hydration and live-follow reconciliation could
+    still launch completion loops before a bounded one-provider proof.
+  - read-only cache audit still shows five exact-title Gemini conversations
+    with no timestamp, cached-media, or cached-artifact disambiguators; Gemini
+    account-mirror media and artifact manifests remain empty.
+  - one existing Gemini/default live-follow completion remains persisted as
+    `idle_waiting` until `2026-05-23T07:06:47.172Z`; the new startup isolation
+    flag is therefore required for future proof servers that should not resume
+    unrelated live-follow state.
+  - repaired this journal's Plan 0069 turn order so Turns 245-249 are
+    monotonic and the startup-isolation note follows the selector-inheritance
+    proof note.
+  - completion-service shutdown now parks only completion loops launched by the
+    current service process, not every runnable record hydrated for readback.
+  - real CLI smoke on `127.0.0.1:18170` with
+    `--no-account-mirror-completions-on-start`, scheduler cadence disabled,
+    background drain disabled, and startup run recovery disabled read the
+    existing Gemini/default `idle_waiting` completion without changing it on
+    shutdown.
+  - future Gemini proof servers should use
+    `--no-account-mirror-completions-on-start`,
+    `--account-mirror-scheduler-interval-ms 0`, and
+    `--background-drain-interval-ms 0` together.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/http.responsesServer.test.ts -t "startup|account mirror completions on startup" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run check`
+  - `pnpm tsx bin/auracall.ts api serve --help`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/http.responsesServer.test.ts -t "can start without launching account mirror completions on startup|startup resume is disabled" --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "forwards all-source startup recovery filter to serveResponsesHttp" --maxWorkers 1`
+    - reran after the broader `startup` filter timed out once in this
+      pre-existing startup-recovery case
+  - `jq '.items | map(select(.title=="Generate an image of an asphalt secret agent") | {id,title,url,createdAt,updatedAt,lastActivityAt,cachedMediaCount,cachedArtifactCount,artifactCount:(.artifacts|length? // null), mediaCount:(.media|length? // null)})' ~/.auracall/cache/providers/gemini/ecochran76@gmail.com/conversations.json`
+  - `jq '{mediaItems: (.items | length), fetchedAt, identityKey, sample: (.items[:3] // [])}' ~/.auracall/cache/providers/gemini/ecochran76@gmail.com/account-mirror/media.json`
+  - `jq '{artifactItems: (.items | length), fetchedAt, identityKey, sample: (.items[:3] // [])}' ~/.auracall/cache/providers/gemini/ecochran76@gmail.com/account-mirror/artifacts.json`
+  - `jq -s 'map(.operation) | {total:length, byStatus:(group_by(.status)|map({status:.[0].status,count:length})), activeGeminiDefault:(map(select(.provider=="gemini" and .runtimeProfileId=="default" and ((.status=="queued") or (.status=="running") or (.status=="idle_waiting") or (.status=="paused")))) | sort_by(.startedAt) | reverse | .[:10] | map({id,status,startedAt,nextAttemptAt,passCount,maxPasses,mode,lifecycle:(.lifecycleEvents // [] | map(.type))}))}' ~/.auracall/cache/account-mirror/completions/*.json`
+  - `pnpm run check`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/http.responsesServer.test.ts -t "can start without launching account mirror completions on startup|startup resume is disabled" --maxWorkers 1`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/http.responsesServer.test.ts -t "shutdown|start without launching account mirror completions|startup resume is disabled" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm tsx bin/auracall.ts api serve --host 127.0.0.1 --port 18170 --no-recover-runs-on-start --background-drain-interval-ms 0 --account-mirror-scheduler-interval-ms 0 --no-account-mirror-completions-on-start`
+  - `node -e "fetch('http://127.0.0.1:18170/status')..."`
+  - `jq '.operation | {id,status,nextAttemptAt,passCount,lifecycle:(.lifecycleEvents // [] | map(.type))}' ~/.auracall/cache/account-mirror/completions/acctmirror_completion_d0498144-6c17-45cf-adc8-6c7588e84cf7.json`
+  - `pnpm run lint` (exit 0 with the existing 200-warning baseline)
+  - `git diff --check`
+
+## Turn 250 | 2026-05-23
+
+- Goal: move Plan 0069 Gemini media recovery forward before the live retry
+  window opens.
+- Change:
+  - Gemini account-mirror detail inventory now prioritizes bounded
+    conversation-context reads before project-file reads.
+  - the shared attachment inventory helper keeps the existing project-first
+    default for current callers, with an explicit conversation-first option for
+    Gemini.
+  - Plan 0069 and the fixes log now record the project-read starvation lesson.
+- Progress:
+  - current time was still before the safe Gemini retry window, so no Gemini
+    provider pages were touched.
+  - local cache audit found 12 cached Gemini projects. With the existing small
+    detail-read budget, those project surfaces could consume a pass before any
+    duplicate-title conversation context was inspected.
+  - conversation-first Gemini detail reads make the next bounded mirror
+    completion more likely to collect the cached-media evidence that the
+    history matcher requires before provider materialization.
+  - a stale cached context for Gemini conversation `1ab8bb794846c491` contains
+    an image artifact, but its `fetchedAt` is `2026-04-23T02:52:53.485Z`,
+    before the current target media generation at
+    `2026-05-17T22:09:45.957Z`; it remains diagnostic evidence, not a safe
+    match signal.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts -t "Gemini conversation detail|prioritizes Gemini" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run lint` (exit 0 with the existing 200-warning baseline)
+  - `git diff --check`
+
+## Turn 251 | 2026-05-23
+
+- Goal: harden the local Gemini detail-inventory path while the live provider
+  retry window remains closed.
+- Change:
+  - added regression coverage for multi-pass Gemini conversation-first cursor
+    progression in account-mirror detail inventory.
+  - Plan 0069 and the fixes log now record the cursor-continuation lesson.
+- Progress:
+  - current time was `2026-05-23T01:08:22-05:00`, still before the safe Gemini
+    retry window, so no Gemini provider pages or browser sessions were touched.
+  - audit confirmed the conversation-first implementation preserves project and
+    conversation cursor indexes across bounded passes: Gemini conversations are
+    exhausted first, then project files resume with the remaining project cursor.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts -t "Gemini conversation|prioritizes Gemini|resumes Gemini" --maxWorkers 1`
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run check`
+  - `pnpm run lint` (exit 0 with the existing 200-warning baseline)
+  - `git diff --check`
+
+## Turn 252 | 2026-05-23
+
+- Goal: harden the Gemini duplicate-title media recovery path before the live
+  retry window opens.
+- Change:
+  - added regression coverage proving duplicate Gemini prompt/title matches can
+    be disambiguated by exactly one cached media manifest row.
+  - Plan 0069 and the fixes log now record the cached-media evidence contract.
+- Progress:
+  - current time was `2026-05-23T01:14:51-05:00`, still before the safe Gemini
+    retry window, so no Gemini provider pages or browser sessions were touched.
+  - the new proof simulates the expected post-refresh state: two cached Gemini
+    conversations share the media prompt, but only one has a cached media
+    manifest row. The history matcher routes the materializer to that
+    conversation with `matchBasis = exact-title-cached-media`.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts -t "cached Gemini media evidence" --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run check`
+  - `pnpm run lint` (exit 0 with the existing 200-warning baseline)
+  - `git diff --check`
+
+## Turn 253 | 2026-05-23
+
+- Goal: pin the unsafe side of Gemini cached-media duplicate-title matching
+  before the live retry window opens.
+- Change:
+  - added regression coverage proving duplicate Gemini prompt/title matches with
+    multiple cached media manifest rows still skip before provider work.
+  - Plan 0069 and the fixes log now record both sides of the cached-media
+    evidence contract.
+- Progress:
+  - current time was `2026-05-23T01:18:54-05:00`, still before the safe Gemini
+    retry window, so no Gemini provider pages or browser sessions were touched.
+  - the new proof simulates two duplicate-title Gemini conversations where both
+    have cached media manifest rows. The history matcher reports the ambiguity
+    with `2 with cached media` and does not call the provider materializer.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts -t "multiple cached media" --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run check`
+  - `pnpm run lint` (exit 0 with the existing 200-warning baseline)
+  - `git diff --check`
+
+## Turn 254 | 2026-05-23
+
+- Goal: pin the timestamp-backed duplicate-title safety rule before live Gemini
+  proof resumes.
+- Change:
+  - added regression coverage proving duplicate Gemini prompt/title matches with
+    equal nearest timestamp evidence still skip before provider work.
+  - Plan 0069 and the fixes log now record that timestamp-backed matching
+    requires a unique closest conversation.
+- Progress:
+  - current time was `2026-05-23T01:27:43-05:00`, still before the safe Gemini
+    retry window, so no Gemini provider pages or browser sessions were touched.
+  - the new proof simulates two duplicate-title Gemini conversations with
+    timestamps one second on either side of the media-generation timestamp. The
+    history matcher reports the ambiguity with `2 with usable timestamps` and
+    does not call the provider materializer.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts -t "nearest timestamp evidence ties" --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run check`
+  - `pnpm run lint` (exit 0 with the existing 200-warning baseline)
+  - `git diff --check`
+
+## Turn 255 | 2026-05-23
+
+- Goal: harden the history materialization job-control contract while the live
+  Gemini retry window remains closed.
+- Change:
+  - added service-level regression coverage for queued history-materialization
+    cancellation and running-job cancellation rejection.
+  - Plan 0069 and the fixes log now record that cancellation semantics must be
+    proved in the shared runtime service, not only in HTTP/CLI/MCP wrapper
+    tests.
+- Progress:
+  - current time was `2026-05-23T01:31:59-05:00`, still before the safe Gemini
+    retry window, so no Gemini provider pages or browser sessions were touched.
+  - the new proof cancels a queued job, lets its scheduled queue callback run,
+    reruns it directly, and verifies the provider materializer is never called.
+    A second proof starts provider work and verifies cancellation fails with
+    the documented pre-provider-work boundary.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts -t "cancels queued|rejects cancellation" --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run check`
+  - `pnpm run lint` (exit 0 with the existing 200-warning baseline)
+  - `git diff --check`
+
+## Turn 256 | 2026-05-23
+
+- Goal: harden history materialization durable-status recovery while the live
+  Gemini retry window remains closed.
+- Change:
+  - added service-level regression coverage for startup recovery of interrupted
+    active history-materialization jobs.
+  - Plan 0069 and the fixes log now record that interrupted queued/running jobs
+    must become explicit failed terminal jobs instead of staying active after
+    an API process restart.
+- Progress:
+  - current time was `2026-05-23T01:36:35-05:00`, still before the safe Gemini
+    retry window, so no Gemini provider pages or browser sessions were touched.
+  - the new proof seeds queued, running, succeeded, and cancelled job records,
+    calls `recoverInterruptedJobs()`, and verifies only the queued/running
+    records move to failed with the interruption error while terminal records
+    remain unchanged.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts -t "interrupted active jobs" --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run check`
+  - `pnpm run lint` (exit 0 with the existing 200-warning baseline)
+  - `git diff --check`
+
+## Turn 257 | 2026-05-23
+
+- Goal: tighten history materialization active-job dedupe around selector
+  authority while the live Gemini retry window remains closed.
+- Change:
+  - fixed the history materialization source key to include `browserProfile`
+    and explicit `providerConversationUrl`.
+  - added regression coverage proving identical selector requests reuse an
+    active job, while different browser-profile or provider-URL selectors queue
+    distinct jobs.
+  - Plan 0069 and the fixes log now record the selector-scoped dedupe rule.
+- Progress:
+  - current time was `2026-05-23T01:42:59-05:00`, still before the safe Gemini
+    retry window, so no Gemini provider pages or browser sessions were touched.
+  - the new proof protects browser-profile-specific recovery routes from
+    inheriting a queued job created for another managed browser profile or
+    project-specific provider URL.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts -t "different browser profiles" --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run check`
+  - `pnpm run lint` (exit 0 with the existing 200-warning baseline)
+  - `git diff --check`
+
+## Turn 258 | 2026-05-23
+
+- Goal: harden account-history materialization transport error mapping while
+  the live Gemini retry window remains closed.
+- Change:
+  - added HTTP regression coverage for account-history materialization read and
+    cancel failures.
+  - Plan 0069 and the fixes log now record that the API must preserve the
+    shared service contract for missing jobs and non-queued cancellation.
+- Progress:
+  - current time was `2026-05-23T01:49:43-05:00`, still before the safe Gemini
+    retry window, so no Gemini provider pages or browser sessions were touched.
+  - the new proof covers missing job reads, missing job cancellation, and
+    non-queued cancellation returning the expected HTTP status and error type.
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "account history materialization" --maxWorkers 1`
+  - isolated auth/posture rerun:
+    `pnpm vitest run tests/http.responsesServer.test.ts -t "requires configured API keys|loads local API keys|development-only posture" --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run check`
+  - `pnpm run lint` (exit 0 with the existing 200-warning baseline)
+  - `git diff --check`
+- Validation note:
+  - full-file `tests/http.responsesServer.test.ts` was attempted twice. The
+    history materialization tests passed in both runs, but the later auth
+    section hit the suite's existing 10s per-test timeout and cascaded into
+    auth-required `401` failures for following dashboard/API tests. The auth
+    subset passes when rerun in isolation.
+
+## Turn 259 | 2026-05-23
+
+- Goal: harden account-history materialization MCP cancellation while the live
+  Gemini retry window remains closed.
+- Change:
+  - MCP `history_materialization_cancel` now catches shared
+    `HistoryMaterializationJobControlError` failures and returns a tool
+    `isError` response with the queued-only boundary message.
+  - Plan 0069 and the fixes log now record that MCP cancellation should not
+    expose missing/running/terminal-job control failures as unstructured handler
+    exceptions.
+- Progress:
+  - current time was `2026-05-23T01:59:10-05:00`, still before the safe Gemini
+    retry window, so no Gemini provider pages or browser sessions were touched.
+  - the new proof covers running-job cancellation through the MCP tool handler.
+- Verification:
+  - `pnpm vitest run tests/mcp.historyMaterialization.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run check`
+  - `pnpm run lint` (exit 0 with the existing 200-warning baseline)
+  - `git diff --check`
+
+## Turn 260 | 2026-05-23
+
+- Goal: stage the startup-isolated API surface for the next bounded Gemini proof
+  without touching the provider before the retry window.
+- Progress:
+  - started a worktree API server on `127.0.0.1:18171` with
+    `--no-recover-runs-on-start`, `--background-drain-interval-ms 0`,
+    `--account-mirror-scheduler-interval-ms 0`, and
+    `--no-account-mirror-completions-on-start`.
+  - verified `/status` reports loopback unauthenticated development posture on
+    the isolated server.
+  - verified read-only search baselines:
+    - Gemini unavailable generated artifacts: `total = 68`.
+    - Gemini available artifacts with `materialization=succeeded`: `total = 0`.
+  - no Gemini provider pages or browser sessions were touched because current
+    time was still before the safe retry window.
+- Verification:
+  - `curl -s http://127.0.0.1:18171/status`
+  - `pnpm tsx bin/auracall.ts api search --host 127.0.0.1 --port 18171 --provider gemini --kind artifact --asset-availability unavailable --limit 5 --json`
+  - `pnpm tsx bin/auracall.ts api search --host 127.0.0.1 --port 18171 --provider gemini --kind artifact --asset-availability available --materialization succeeded --limit 5 --json`
+
+## Turn 261 | 2026-05-23
+
+- Goal: run the bounded live Gemini proof after the provider retry window and
+  close Plan 0069 if acceptance criteria are met.
+- Progress:
+  - waited until `2026-05-23T02:22:43-05:00`, after the safe retry floor, before
+    starting Gemini provider work.
+  - queued bounded Gemini mirror completion
+    `acctmirror_completion_1458d838-cfb1-46b6-b32a-195b29e2d262` on the
+    startup-isolated API server.
+  - the completion finished with `passCount = 1`, refresh
+    `acctmirror_9a01e8fb-faf6-4cc4-ab9a-85cd7e31e6c6`, provider guard
+    `clear`, detected identity `ecochran76@gmail.com`, and metadata counts
+    `projects = 12`, `conversations = 68`, `media = 0`.
+  - queued post-refresh media reconciliation job
+    `hmj_e4e23eab843e4aba87ca9e3c78540238` with `assetKinds = ["media"]` and
+    `maxItems = 2`.
+  - the job skipped both Gemini media rows before provider materialization
+    because five cached Gemini conversations share the exact title and no
+    unique cached media or usable timestamp evidence exists.
+  - final search counts remained explicit: Gemini unavailable generated
+    artifacts `total = 68`, Gemini available artifacts with
+    `materialization=succeeded` `total = 0`.
+- Change:
+  - closed Plan 0069 and updated `ROADMAP.md` / `RUNBOOK.md` to reflect the
+    completed bounded lane.
+  - stopped the startup-isolated API server after the live proof; port `18171`
+    no longer serves `/status`.
+- Verification:
+  - `pnpm tsx bin/auracall.ts api mirror-complete --host 127.0.0.1 --port 18171 --provider gemini --runtime-profile default --max-passes 1 --json --timeout-ms 10000`
+  - `pnpm tsx bin/auracall.ts api mirror-completion-status acctmirror_completion_1458d838-cfb1-46b6-b32a-195b29e2d262 --host 127.0.0.1 --port 18171 --json --timeout-ms 10000`
+  - `pnpm tsx bin/auracall.ts api history-materialization-create --host 127.0.0.1 --port 18171 --provider gemini --runtime-profile default --reconcile --asset-kind media --max-items 2 --force --json --timeout-ms 10000`
+  - `pnpm tsx bin/auracall.ts api history-materialization-status hmj_e4e23eab843e4aba87ca9e3c78540238 --host 127.0.0.1 --port 18171 --json --timeout-ms 10000`
+  - `pnpm tsx bin/auracall.ts api search --host 127.0.0.1 --port 18171 --provider gemini --kind artifact --asset-availability unavailable --limit 1 --json`
+  - `pnpm tsx bin/auracall.ts api search --host 127.0.0.1 --port 18171 --provider gemini --kind artifact --asset-availability available --materialization succeeded --limit 1 --json`
+  - `pnpm run plans:audit -- --keep 69`
+  - `curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:18171/status`
+    returned `000` after server shutdown.
+
+## Turn 262 | 2026-05-23
+
+- Goal: prove one concrete Gemini image conversation can be fetched and cached
+  by conversation id instead of duplicate title matching.
+- Progress:
+  - direct history materialization job
+    `hmj_849fe0dbd12d4dc492de02cb13591edb` targeted Gemini conversation
+    `1ab8bb794846c491` with `assetKinds = ["media"]`, but skipped because the
+    default Gemini managed browser profile redirected to
+    `https://gemini.google.com/app` and reported `conversationId = null`.
+  - live browser diagnostics for the default Gemini managed browser profile
+    showed no provider guard or CAPTCHA, but only the `/app` root tab was
+    selected.
+  - switched to the previously proven Gemini media-resume path and fetched one
+    image from conversation `6a131154e90f7362`.
+  - `medgen_cf296426a263400bbd5a2690674052a5` updated at
+    `2026-05-23T12:09:47.439Z`; its latest timeline records
+    `artifact_poll`, `image_visible`, and `artifact_materialized` for
+    `gemini-artifact:6a131154e90f7362:1:0`.
+  - the artifact file is
+    `/home/ecochran76/.auracall/runtime/media-generations/medgen_cf296426a263400bbd5a2690674052a5/artifacts/Generated image 1.png`,
+    size `436535`, SHA-256
+    `2edcb3b00d18844a665e73ca7fe09f1ffdbc31553750f359d3fb72c5f4675477`.
+  - archive/search readback now exposes the association:
+    conversation `6a131154e90f7362`, artifact
+    `gemini-artifact:6a131154e90f7362:1:0`, cache key
+    `sha256:2edcb3b00d18844a665e73ca7fe09f1ffdbc31553750f359d3fb72c5f4675477`,
+    `fileAvailable = true`.
+- Verification:
+  - `pnpm tsx bin/auracall.ts api history-materialization-create --host 127.0.0.1 --port 18172 --provider gemini --runtime-profile default --conversation-id 1ab8bb794846c491 --provider-conversation-url https://gemini.google.com/app/1ab8bb794846c491 --asset-kind media --max-items 1 --force --json --timeout-ms 10000`
+  - `pnpm tsx scripts/browser-tools.ts --auracall-profile default --browser-target gemini doctor --json`
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro media materialize medgen_cf296426a263400bbd5a2690674052a5 --conversation-url https://gemini.google.com/app/6a131154e90f7362 --count 1 --json`
+  - `sha256sum '/home/ecochran76/.auracall/runtime/media-generations/medgen_cf296426a263400bbd5a2690674052a5/artifacts/Generated image 1.png'`
+  - `pnpm tsx bin/auracall.ts api search --host 127.0.0.1 --port 18172 --provider gemini --kind artifact --query 6a131154e90f7362 --asset-availability available --limit 5 --json`
+  - `curl -s 'http://127.0.0.1:18172/v1/archive/items/b64/Z2VuZXJhdGVkLWFydGlmYWN0Om1lZGdlbl9jZjI5NjQyNmEyNjM0MDBiYmQ1YTI2OTA2NzQwNTJhNTpnZW1pbmktYXJ0aWZhY3Q6NmExMzExNTRlOTBmNzM2MjoxOjA'`
+  - `curl -s -o /tmp/auracall-gemini-6a131154e90f7362-asset.png -w '%{http_code} %{size_download}\n' 'http://127.0.0.1:18172/v1/archive/items/b64/Z2VuZXJhdGVkLWFydGlmYWN0Om1lZGdlbl9jZjI5NjQyNmEyNjM0MDBiYmQ1YTI2OTA2NzQwNTJhNTpnZW1pbmktYXJ0aWZhY3Q6NmExMzExNTRlOTBmNzM2MjoxOjA/asset'`
+    returned `200 436535`.
+  - `sha256sum /tmp/auracall-gemini-6a131154e90f7362-asset.png`
+  - `git diff --check`
+
+## Turn 263 | 2026-05-23
+
+- Goal: inspect Gemini's live left rail for routeable conversation ids, try a
+  few, and fetch an artifact without relying on duplicate-title matching.
+- Progress:
+  - confirmed the default Gemini managed browser profile is not a valid rail
+    source for this proof: it shows a visible `Sign in` link and no
+    conversation hrefs.
+  - used the `auracall-gemini-pro` Gemini managed browser profile, which is
+    signed in as `ecochran76@gmail.com`.
+  - opened the Gemini sidebar and found 67 rail conversation rows with concrete
+    `/app/<id>` hrefs.
+  - tried four rail-derived conversations:
+    - `73c521dafd89c4d2`: stayed on the exact route, no guard/root redirect,
+      but only exposed an uploaded-image preview in the visible DOM.
+    - `514daf6556ba1dd5`: stayed on the exact route, no guard/root redirect,
+      but no visible generated-image artifact was detected after the wait.
+    - `3543f8378a674997`: stayed on the exact route, no guard/root redirect,
+      and exposed a visible generated-image blob.
+    - `10b7e2a15e2dd77c`: stayed on the exact route, no guard/root redirect,
+      and exposed a visible generated-image blob.
+  - queued direct history materialization job
+    `hmj_be03cf2d8d114276993e75f45be9d2da` for
+    `10b7e2a15e2dd77c` using runtime profile `auracall-gemini-pro`.
+  - the job succeeded and downloaded
+    `gemini-artifact:10b7e2a15e2dd77c:1:0` to
+    `/home/ecochran76/.auracall/cache/providers/gemini/ecochran76@gmail.com/conversation-attachments/10b7e2a15e2dd77c/files/gemini-artifact-10b7e2a15e2dd77c-1-0/Generated image 1.png`.
+  - the archive/search row is now an account-mirror generated artifact:
+    `history-media:gemini:auracall-gemini-pro:10b7e2a15e2dd77c:gemini-artifact_10b7e2a15e2dd77c_1_0`,
+    status `materialized`, `fileAvailable = true`, materialization job
+    `hmj_be03cf2d8d114276993e75f45be9d2da`.
+  - verified the local file and API asset route both have size `452525` and
+    SHA-256
+    `ca24885c9616bd1bbcda44d3a99d0f99d91e824031ca2557537b41a20fa81ca2`.
+  - post-materialization browser diagnostics still reported
+    `https://gemini.google.com/app/10b7e2a15e2dd77c`, `blockingState = null`;
+    no `google.com/sorry`, CAPTCHA, root `/app` fallback, or wrong-conversation
+    route was observed during the successful fetch.
+- Verification:
+  - `pnpm tsx scripts/browser-tools.ts --auracall-profile default --browser-target gemini doctor --json`
+  - `pnpm tsx scripts/browser-tools.ts --auracall-profile auracall-gemini-pro --browser-target gemini doctor --json`
+  - browser-tools DOM probes/clicks for rail conversations
+    `73c521dafd89c4d2`, `514daf6556ba1dd5`, `3543f8378a674997`, and
+    `10b7e2a15e2dd77c`
+  - `pnpm tsx bin/auracall.ts api history-materialization-create --host 127.0.0.1 --port 18173 --provider gemini --runtime-profile auracall-gemini-pro --conversation-id 10b7e2a15e2dd77c --provider-conversation-url https://gemini.google.com/app/10b7e2a15e2dd77c --asset-kind media --max-items 1 --force --json --timeout-ms 10000`
+  - `pnpm tsx bin/auracall.ts api history-materialization-status --host 127.0.0.1 --port 18173 hmj_be03cf2d8d114276993e75f45be9d2da --json --timeout-ms 10000`
+  - `sha256sum '/home/ecochran76/.auracall/cache/providers/gemini/ecochran76@gmail.com/conversation-attachments/10b7e2a15e2dd77c/files/gemini-artifact-10b7e2a15e2dd77c-1-0/Generated image 1.png'`
+  - `curl -s -o /tmp/auracall-gemini-10b-history-asset.png -w '%{http_code} %{size_download}\n' 'http://127.0.0.1:18173/v1/archive/items/b64/aGlzdG9yeS1tZWRpYTpnZW1pbmk6YXVyYWNhbGwtZ2VtaW5pLXBybzoxMGI3ZTJhMTVlMmRkNzdjOmdlbWluaS1hcnRpZmFjdF8xMGI3ZTJhMTVlMmRkNzdjXzFfMA/asset'`
+    returned `200 452525`.
+  - `sha256sum /tmp/auracall-gemini-10b-history-asset.png`
+  - `pnpm tsx bin/auracall.ts api search --host 127.0.0.1 --port 18173 --provider gemini --runtime-profile auracall-gemini-pro --kind artifact --query 10b7e2a15e2dd77c --asset-availability available --limit 5 --json --timeout-ms 10000`
+
+## Turn 264 | 2026-05-23
+
+- Goal: distinguish Gemini direct-navigation viability from deleted or missing
+  tenant conversation ids.
+- Progress:
+  - confirmed the current `auracall-gemini-pro` Gemini tab was
+    `https://gemini.google.com/app/10b7e2a15e2dd77c`.
+  - picked `3543f8378a674997`, which had been successfully visited from the
+    left rail in Turn 263 and was not currently loaded.
+  - directly navigated the current tab to
+    `https://gemini.google.com/app/3543f8378a674997` using `browser-tools nav`,
+    not a rail click.
+  - after a settle wait, the page remained on
+    `https://gemini.google.com/app/3543f8378a674997` with title
+    `Generate an image of an asphalt secret agent - Google Gemini`.
+  - no `/app` root fallback, wrong-conversation route, `google.com/sorry`,
+    CAPTCHA, reCAPTCHA, or verification guard was observed.
+  - the page exposed one visible generated-image blob and visible generated
+    image actions including `Copy image` and `Download full size image`.
+- Lesson:
+  - for Gemini, the live left rail is a valid conversation-id discovery surface.
+    Direct navigation is the validation surface: if a cached conversation id
+    redirects to bare `/app`, treat that as routeability evidence that the
+    conversation is deleted, non-existent, unavailable to the active identity,
+    or being opened under the wrong managed browser profile.
+- Verification:
+  - `pnpm tsx scripts/browser-tools.ts --auracall-profile auracall-gemini-pro --browser-target gemini doctor --json`
+  - `pnpm tsx scripts/browser-tools.ts --auracall-profile auracall-gemini-pro --browser-target gemini nav 'https://gemini.google.com/app/3543f8378a674997'`
+  - post-navigation browser-tools DOM probe reported
+    `redirectedToRoot = false`, `wrongConversation = false`, `guard = false`,
+    `imageCount = 1`, and download-image controls present.
+
+## Turn 265 | 2026-05-23
+
+- Goal: implement the Gemini `/app` fallback classification so history
+  materialization can distinguish deleted/unavailable ids from generic direct
+  navigation failure.
+- Change:
+  - added `formatHistoryMaterializationFailureReason(...)` in
+    `historyMaterializationService`.
+  - Gemini provider errors that include `activeState` at bare `/app` with no
+    active conversation id now produce a stable
+    `conversation-not-found-or-unavailable` reason.
+  - the classifier is used for direct artifact/file unsupported entries and
+    failed media-generation reconciliation entries.
+  - non-root Gemini content failures keep their raw provider error, so slow DOM
+    hydration or content-read failures are not mislabeled as deleted
+    conversations.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/runtime/historyMaterializationService.ts tests/runtime.historyMaterializationService.test.ts`
+  - `git diff --check -- src/runtime/historyMaterializationService.ts tests/runtime.historyMaterializationService.test.ts docs/dev/dev-journal.md docs/dev-fixes-log.md`
+
+## Turn 266 | 2026-05-23
+
+- Goal: keep Gemini history reconciliation moving past cached conversation ids
+  that route to bare `/app`.
+- Change:
+  - reconciliation now treats `conversation-not-found-or-unavailable` results
+    as terminal per-conversation evidence that does not spend the bounded target
+    budget.
+  - `assetKinds = ["media"]` reconciliation now considers cached conversation
+    media/artifact rows directly before falling through to media-generation
+    archive recovery.
+  - regression coverage proves a deleted Gemini id is recorded in the manifest
+    while the same `maxItems = 1` batch still reaches the next routeable
+    conversation.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm exec biome lint src/runtime/historyMaterializationService.ts tests/runtime.historyMaterializationService.test.ts`
+  - `pnpm exec tsc --noEmit --pretty false`
+
+## Turn 267 | 2026-05-23
+
+- Goal: run one bounded live proof that media-only Gemini reconciliation reaches
+  cached conversation artifacts instead of only media-generation archive rows.
+- Progress:
+  - started an isolated API server on `127.0.0.1:18174` with active
+    AuraCall runtime profile `auracall-gemini-pro`, mirror schedulers disabled,
+    and no startup completion drain.
+  - read-only status/catalog checks showed Gemini cache rows under
+    `auracall-gemini-pro` / `ecochran76@gmail.com` with conversation counts but
+    zero cached media/artifact availability.
+  - an initial account-mirror refresh used the wrong request key and targeted
+    `gemini/default`; treat that as operator payload error, not product
+    evidence.
+  - the corrected explicit refresh for `auracall-gemini-pro` failed preflight
+    with `gemini_identity_not_detected`: expected `ecochran76@gmail.com`, found
+    `unknown account`.
+  - one Gemini doctor probe still saw the app loaded at
+    `https://gemini.google.com/app`, title `Google Gemini`, Google auth
+    cookies, visible app controls, and no blocking state.
+  - queued history materialization job
+    `hmj_3ba2bee8ef5d4484a125bbd8926378b0` with
+    `--provider gemini --runtime-profile auracall-gemini-pro --reconcile
+    --asset-kind media --max-items 2 --force`.
+  - the job selected cached conversation artifact manifests for
+    `10b7e2a15e2dd77c` and `1ab8bb794846c491`, proving the media-only
+    reconciliation path now reaches cached Gemini conversation artifact rows.
+  - both entries failed before download with the same
+    `gemini_identity_not_detected` preflight reason, so no new artifact bytes
+    were materialized in this proof.
+  - no `google.com/sorry`, CAPTCHA, reCAPTCHA, or human-verification page was
+    observed in the bounded probes.
+- Verification:
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api serve --host 127.0.0.1 --port 18174 --no-recover-runs-on-start --background-drain-interval-ms 0 --account-mirror-scheduler-interval-ms 0 --no-account-mirror-completions-on-start`
+  - `curl -s http://127.0.0.1:18174/status`
+  - `curl -s 'http://127.0.0.1:18174/v1/account-mirrors/catalog?provider=gemini&runtimeProfile=auracall-gemini-pro&kind=all&limit=8'`
+  - `pnpm tsx scripts/browser-tools.ts --auracall-profile auracall-gemini-pro --browser-target gemini doctor --json`
+  - `pnpm tsx bin/auracall.ts api history-materialization-create --host 127.0.0.1 --port 18174 --provider gemini --runtime-profile auracall-gemini-pro --reconcile --asset-kind media --max-items 2 --force --json --timeout-ms 10000`
+  - `pnpm tsx bin/auracall.ts api history-materialization-status --host 127.0.0.1 --port 18174 hmj_3ba2bee8ef5d4484a125bbd8926378b0 --json --timeout-ms 10000`
+
+## Turn 268 | 2026-05-23
+
+- Goal: remove the Gemini identity-preflight false negative and rerun the same
+  bounded media reconciliation proof.
+- Change:
+  - widened Gemini account-label lookup to all aria-label nodes and added a
+    short retry for the hydrated `Google Account: ...` label before reporting
+    `gemini_identity_not_detected`.
+  - added focused coverage for Gemini Google Account label parsing.
+- Live proof:
+  - a serialized `profile identity-smoke` for `auracall-gemini-pro` passed with
+    expected `ecochran76@gmail.com` and actual `ecochran76@gmail.com` from
+    `google-account-label`.
+  - reran the same bounded history materialization request as job
+    `hmj_d70f0138c4e240a0838721832cac192d`.
+  - the job succeeded with `History reconciliation materialized 2 assets from 2
+    conversations.`
+  - materialized archive/cache entries:
+    - `10b7e2a15e2dd77c` ->
+      `history-media:gemini:ecochran76_gmail.com:10b7e2a15e2dd77c:gemini-artifact_10b7e2a15e2dd77c_1_0`,
+      SHA-256
+      `20e65429bd7887c7aaf6e437ce1c22e525e941f90f41d7ffdff0d78ef2a32e06`,
+      size `470888`.
+    - `1ab8bb794846c491` ->
+      `history-media:gemini:ecochran76_gmail.com:1ab8bb794846c491:gemini-artifact_1ab8bb794846c491_1_0`,
+      SHA-256
+      `19aaee41a191b45efb0549acf18202162be340a32f1dee0bd24aa2a16086e771`,
+      size `502603`.
+  - both HTTP asset routes returned `200` with byte counts matching the cached
+    files, and search returned the two new Gemini `artifact` rows with
+    `assetAvailability = available`.
+  - no `google.com/sorry`, CAPTCHA, reCAPTCHA, or human-verification page was
+    observed.
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec biome lint src/browser/providers/geminiAdapter.ts tests/browser/geminiAdapter.test.ts`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro profile identity-smoke --target gemini --include-negative --json`
+  - `pnpm tsx bin/auracall.ts api history-materialization-create --host 127.0.0.1 --port 18174 --provider gemini --runtime-profile auracall-gemini-pro --reconcile --asset-kind media --max-items 2 --force --json --timeout-ms 10000`
+  - `pnpm tsx bin/auracall.ts api history-materialization-status --host 127.0.0.1 --port 18174 hmj_d70f0138c4e240a0838721832cac192d --json --timeout-ms 10000`
+  - `sha256sum` on both cached PNGs and both `/v1/archive/items/.../asset`
+    downloads.
+
+## Turn 269 | 2026-05-23
+
+- Goal: plan the next live-follow slice for keeping existing cached
+  conversations fresh after operators continue them through provider and
+  AuraCall surfaces.
+- Change:
+  - opened
+    `docs/dev/plans/0070-2026-05-23-conversation-refresh-and-artifact-reconciliation.md`.
+  - wired Plan 0070 from `ROADMAP.md` and `RUNBOOK.md`.
+  - defined two reconciliation triggers:
+    - full live-follow sweeps for partially hydrated histories and catch-up
+      backfill.
+    - explicit operator reconciliation for one conversation row, catalog item,
+      provider conversation id, or small selected batch.
+  - defined freshness evidence for index observation, detail refresh, manifest
+    refresh, local materialization, routeability, fingerprints, and terminal
+    unavailable provider evidence.
+  - kept Search and account-mirror catalog reads cache-only; provider browser
+    work remains limited to live-follow completion jobs or explicit
+    reconciliation/materialization jobs.
+- Verification:
+  - `pnpm run plans:audit -- --keep 70`
+  - `git diff --check`
+
+## Turn 270 | 2026-05-23
+
+- Goal: implement Plan 0070 slice 1 so cached conversation rows expose
+  freshness evidence without adding browser work to cache reads.
+- Change:
+  - added cache-only `conversationFreshness` derivation for account-mirror
+    conversation rows.
+  - catalog hydration now attaches freshness state, routeability state,
+    index/detail/manifest timestamps, completeness, fingerprint, and
+    missing-local asset counts while preserving catalog reads as cache-only.
+  - unified search copies conversation freshness into account-mirror row
+    metadata so operators can find stale, partial, missing-asset, guarded, or
+    terminal-unavailable rows from the existing projection.
+  - updated README, MCP docs, and testing notes to document the read-only
+    freshness projection boundary.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/conversationFreshness.test.ts tests/accountMirror/catalogService.test.ts tests/runtime.searchProjectionService.test.ts --maxWorkers 1`
+  - `pnpm exec biome lint src/accountMirror/conversationFreshness.ts src/accountMirror/catalogService.ts src/accountMirror/cachePersistence.ts src/runtime/searchProjectionService.ts tests/accountMirror/conversationFreshness.test.ts tests/accountMirror/catalogService.test.ts tests/runtime.searchProjectionService.test.ts`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run plans:audit -- --keep 70`
+  - `git diff --check`
+
+## Turn 271 | 2026-05-23
+
+- Goal: implement Plan 0070 slice 2 so explicit operator reconciliation can
+  refresh a current online conversation snapshot before artifact
+  materialization.
+- Change:
+  - extended history materialization create requests with `refreshSnapshot` and
+    selected `conversationIds`.
+  - added a durable `snapshotRefresh` phase to job results, including
+    per-conversation `snapshotRefreshes` for reconciliation batches.
+  - direct provider conversation, catalog item, archive item, bounded
+    reconciliation, and selected-batch targets now flow through the same
+    snapshot-refresh wrapper before existing artifact/file/media
+    materialization when requested.
+  - terminal Gemini bare `/app` snapshot evidence records
+    `not_found_or_unavailable` and skips artifact materialization for that
+    target instead of retrying a known non-routeable conversation id.
+  - wired HTTP, CLI, and MCP create surfaces for the new request fields.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/cli/apiHistoryMaterializationCommand.test.ts tests/mcp.historyMaterialization.test.ts tests/http.responsesServer.test.ts --maxWorkers 1 --testNamePattern "history materialization|account history materialization"`
+  - `pnpm exec tsc --noEmit --pretty false`
+
+## Turn 272 | 2026-05-23
+
+- Goal: implement the backend full-sweep live-follow policy path for Plan 0070
+  without changing cache-only read routes.
+- Change:
+  - account-mirror completion start requests now accept `sweepMode`,
+    `materializationPolicy`, `materializationAssetKinds`,
+    `materializationMaxItems`, `materializationRefreshSnapshot`, and
+    `materializationForce`.
+  - `sweepMode: full_sweep` defaults to snapshot refresh plus
+    `full_missing_assets`; successful refresh passes queue a durable
+    history-materialization job and persist the latest request/job handoff as
+    `materializationCursor`.
+  - HTTP, CLI, and MCP completion start surfaces expose the same fields.
+  - per-service `liveFollow` config can carry the same policy into startup
+    reconciliation, while omitted fields preserve metadata-only steady follow.
+  - fixed the metadata-only resume race introduced by the materialization hook
+    so legacy live-follow pause/resume still relaunches promptly.
+  - Gemini full-sweep live proof, steady recency follow, and row-level
+    operator reconciliation remain open Plan 0070 work.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/liveFollowReconciler.test.ts tests/accountMirror/statusRegistry.test.ts tests/schema/resolver.test.ts tests/cli/apiMirrorCompletionCommand.test.ts tests/mcp.accountMirrorCompletion.test.ts tests/http.responsesServer.test.ts --maxWorkers 1 --testNamePattern "full-sweep|live-follow|live follow|account mirror completion|completions|preserve live-follow|derives identity"`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/accountMirror/completionService.ts src/accountMirror/completionStore.ts src/accountMirror/liveFollowReconciler.ts src/accountMirror/statusRegistry.ts src/schema/types.ts src/cli/apiMirrorCompletionCommand.ts src/mcp/tools/accountMirrorCompletion.ts src/mcp/server.ts src/http/responsesServer.ts bin/auracall.ts tests/accountMirror/completionService.test.ts tests/accountMirror/liveFollowReconciler.test.ts tests/accountMirror/statusRegistry.test.ts tests/schema/resolver.test.ts tests/cli/apiMirrorCompletionCommand.test.ts tests/mcp.accountMirrorCompletion.test.ts`
+
+## Turn 273 | 2026-05-23
+
+- Goal: implement Plan 0070 operator row affordances so stale cached
+  conversations can be reconciled immediately without making cache-only reads
+  launch provider browser work.
+- Change:
+  - React Search conversation rows now expose a compact reconcile icon action
+    that queues `/v1/account-mirrors/materializations` with the row provider,
+    runtime profile, catalog item id, `catalogKind = conversations`,
+    `assetKinds = all`, and `refreshSnapshot = true`.
+  - Search tracks the returned durable history-materialization job per row and
+    polls active queued/running jobs for status feedback.
+  - the cache-only `/account-mirror` catalog page now renders a `Reconcile`
+    action on conversation rows and posts the same history-materialization
+    request, while row open/detail reads stay cache-only.
+  - the API ops dashboard static contract now checks for the Account Mirror
+    reconciliation row action.
+  - the operator Search browser smoke now intercepts fixture `/v1/search`
+    rows, clicks a conversation row reconciliation action, and verifies the
+    POST payload without provider/browser dispatcher work.
+- Verification:
+  - `pnpm vitest run tests/cli/apiOpsBrowserCommand.test.ts tests/http.responsesServer.test.ts --maxWorkers 1 --testNamePattern "dashboard control wiring|read-only account mirror dashboard page"`
+  - `pnpm run ux:build`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run smoke:operator-search-ux`
+
+## Turn 274 | 2026-05-23
+
+- Goal: implement the steady-follow cursor semantics required by Plan 0070
+  while preserving full-sweep backfill resume.
+- Change:
+  - account-mirror completion refreshes now pass `sweepMode` into
+    `requestRefresh`.
+  - account-mirror refresh passes the normalized sweep mode into the metadata
+    collector.
+  - metadata collection ignores previous `attachmentInventory` cursor evidence
+    for `steady_follow`, so routine cadence starts detail inventory from the
+    current rail/project conversation top.
+  - metadata collection keeps using previous `attachmentInventory` cursor
+    evidence for `full_sweep`, preserving resumable deep backfill.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts --maxWorkers 1 --testNamePattern "sweep|steady-follow|full-sweep|attachment cursor|persisted attachment cursor|starts nonblocking"`
+  - `pnpm exec biome lint src/accountMirror/completionService.ts src/accountMirror/refreshService.ts src/accountMirror/chatgptMetadataCollector.ts tests/accountMirror/completionService.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts`
+
+## Turn 275 | 2026-05-23
+
+- Goal: remove the first live Gemini full-sweep proof blocker found in Plan
+  0070 dogfood.
+- Change:
+  - the bounded `auracall-gemini-pro` full-sweep attempt
+    `acctmirror_completion_0b850c45-d14c-4a71-b5ae-941c5a47db47` failed before
+    writing a refresh pass or materialization cursor because the generic
+    account-mirror collector timeout fired.
+  - full-sweep account-mirror completions now pass `collectorTimeoutMs =
+    300000` into `requestRefresh`.
+  - steady-follow completions do not pass the extended timeout and keep the
+    prior refresh request shape.
+  - post-fix retry
+    `acctmirror_completion_026c4262-3300-49a5-8521-1d715ff34d0a` reached
+    `idle_waiting` on explicit-refresh cooldown until
+    `2026-05-23T17:07:50.624Z`; it was cancelled before provider work so the
+    isolated server would not fire later unexpectedly.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts --maxWorkers 1 --testNamePattern "full-sweep|steady-follow"`
+  - `pnpm exec biome lint src/accountMirror/completionService.ts tests/accountMirror/completionService.test.ts`
+  - `pnpm run check`
+
+## Turn 276 | 2026-05-23
+
+- Goal: close the deterministic Gemini project-history discovery gap in Plan
+  0070 while the live full-sweep retry is cooldown-gated.
+- Change:
+  - Gemini account-mirror collection now fans out project conversation reads,
+    matching the plan's left-rail plus project-history discovery model.
+  - conversation-row budget allocation now reserves a bounded project-history
+    share so a large left rail cannot starve project histories.
+  - individual Gemini project conversation route failures are tolerated and
+    recorded as DOM drift evidence instead of aborting the full account sweep.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts --maxWorkers 1 --testNamePattern "project conversations|project histories|route failures|attachment cursor"`
+  - `pnpm exec biome lint src/accountMirror/chatgptMetadataCollector.ts tests/accountMirror/chatgptMetadataCollector.test.ts`
+
+## Turn 277 | 2026-05-23
+
+- Goal: make the Gemini project-history discovery budget fair across
+  Gems/projects before the next live full-sweep proof.
+- Change:
+  - added `readBoundedProjectConversations(...)` so account-mirror collection
+    distributes the reserved project-history row budget across remaining
+    projects instead of handing the full budget to the first Gem.
+  - project-level truncation now survives as aggregate evidence while the pass
+    continues to later project histories, and that evidence now flows into
+    mirror-completeness status.
+  - added focused unit coverage for the cross-project budget distribution.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts --maxWorkers 1 --testNamePattern "project conversations|project histories|route failures|walks bounded project histories"`
+
+## Turn 278 | 2026-05-23
+
+- Goal: persist row-level index freshness evidence for Plan 0070 steady-follow
+  and operator reconciliation.
+- Change:
+  - account-mirror snapshot writes now annotate each cached conversation row
+    with `metadata.indexObservedAt`, `metadata.indexSource`,
+    `metadata.indexRank`, and `metadata.conversationFingerprint`.
+  - source is conservative and cache-local: rows with a `projectId` are marked
+    `project-conversations`; other rows are marked `left-rail`.
+  - catalog/search freshness remains cache-only but no longer depends only on
+    target-level snapshot timestamps for the index evidence fields.
+  - conversation cache merge now preserves the newest index metadata when
+    global and project-scoped cache rows have the same conversation id.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/cachePersistence.test.ts tests/accountMirror/catalogService.test.ts tests/accountMirror/conversationFreshness.test.ts --maxWorkers 1`
+  - `pnpm exec biome lint src/accountMirror/cachePersistence.ts src/browser/providers/domain.ts tests/accountMirror/cachePersistence.test.ts tests/accountMirror/catalogService.test.ts`
+  - `pnpm run check`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/liveFollowReconciler.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts tests/accountMirror/catalogService.test.ts tests/accountMirror/conversationFreshness.test.ts tests/schema/resolver.test.ts tests/cli/apiMirrorCompletionCommand.test.ts tests/mcp.accountMirrorCompletion.test.ts tests/http.responsesServer.test.ts --maxWorkers 1 --testNamePattern "sweep|steady-follow|full-sweep|attachment cursor|persisted attachment cursor|starts nonblocking|project conversations|project histories|route failures|walks bounded project histories|live-follow|live follow|account mirror completion|completions|preserve live-follow|derives identity|read-only account mirror dashboard page|cached mirror manifests|canonical mirror data|conversation freshness"`
+  - `pnpm run plans:audit -- --keep 70`
+  - `git diff --check`
+
+## Turn 279 | 2026-05-23
+
+- Goal: make Gemini project/Gem history reads honor the same account-mirror
+  `includeHistory` request as the global left rail.
+- Change:
+  - Gemini `listConversations(projectId, { includeHistory: true })` now runs
+    bounded history hydration instead of only hydrating root `/app` history.
+  - the hydration helper falls back to `document.body` when the
+    `all-conversations` container is absent, so project/Gem pages can still
+    scroll and expose additional `/app/<conversationId>` links.
+  - added focused adapter coverage for the history-hydration gate.
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec biome lint src/browser/providers/geminiAdapter.ts tests/browser/geminiAdapter.test.ts`
+  - `pnpm run check`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/liveFollowReconciler.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts tests/accountMirror/catalogService.test.ts tests/accountMirror/conversationFreshness.test.ts tests/schema/resolver.test.ts tests/cli/apiMirrorCompletionCommand.test.ts tests/mcp.accountMirrorCompletion.test.ts tests/http.responsesServer.test.ts tests/browser/geminiAdapter.test.ts --maxWorkers 1 --testNamePattern "sweep|steady-follow|full-sweep|attachment cursor|persisted attachment cursor|starts nonblocking|project conversations|project histories|route failures|walks bounded project histories|live-follow|live follow|account mirror completion|completions|preserve live-follow|derives identity|read-only account mirror dashboard page|cached mirror manifests|canonical mirror data|conversation freshness|Gemini browser adapter|hydrates conversation history"`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts --maxWorkers 1 --testNamePattern "persists parked shutdown operations for restart resume|full-sweep|steady-follow"`
+  - `pnpm exec biome lint tests/accountMirror/completionService.test.ts`
+  - `pnpm run plans:audit -- --keep 70`
+  - `git diff --check`
+
+## Turn 280 | 2026-05-23
+
+- Goal: remove the live Gemini full-sweep timeout found after project/Gem
+  history hydration was enabled.
+- Change:
+  - live proof
+    `acctmirror_completion_3e96e801-29e3-4360-8028-f2b8961c196e` was started
+    on an isolated repo-local API server at `127.0.0.1:18083` after the
+    explicit-refresh cooldown opened.
+  - the operation failed at `2026-05-23T17:13:05.626Z` with
+    `Account mirror metadata collector timed out for gemini/auracall-gemini-pro`
+    and no `lastRefresh` or `materializationCursor`.
+  - `browser-tools tabs|doctor --port 45011 --url-contains gemini` showed the
+    managed Gemini page ready at `https://gemini.google.com/app` with no
+    `google.com/sorry`, CAPTCHA, or reCAPTCHA blocking state.
+  - Gemini full-sweep completions now pass a 900s collector timeout; other
+    full-sweep completions keep the 300s timeout.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts --maxWorkers 1 --testNamePattern "full-sweep|Gemini full-sweep|steady-follow"`
+  - `pnpm exec biome lint src/accountMirror/completionService.ts tests/accountMirror/completionService.test.ts`
+  - `pnpm run check`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/liveFollowReconciler.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts tests/accountMirror/catalogService.test.ts tests/accountMirror/conversationFreshness.test.ts tests/schema/resolver.test.ts tests/cli/apiMirrorCompletionCommand.test.ts tests/mcp.accountMirrorCompletion.test.ts tests/http.responsesServer.test.ts tests/browser/geminiAdapter.test.ts --maxWorkers 1 --testNamePattern "sweep|steady-follow|full-sweep|attachment cursor|persisted attachment cursor|starts nonblocking|project conversations|project histories|route failures|walks bounded project histories|live-follow|live follow|account mirror completion|completions|preserve live-follow|derives identity|read-only account mirror dashboard page|cached mirror manifests|canonical mirror data|conversation freshness|Gemini browser adapter|hydrates conversation history|Gemini full-sweep"`
+  - `pnpm run plans:audit -- --keep 70`
+  - `git diff --check`
+  - pending in this slice: the next live retry after
+    `2026-05-23T19:13:05.623Z`.
+
+## Turn 281 | 2026-05-23
+
+- Goal: make Gemini full-sweep project-history discovery bounded and resumable
+  before the next live retry.
+- Change:
+  - added `metadataEvidence.projectConversations` as a project/Gem history
+    cursor with next project index, read limit, scanned count, and yielded flag.
+  - full-sweep collection resumes the project-history cursor from prior
+    evidence; steady-follow collection ignores prior project-history cursors so
+    it still starts at the current top of the provider index.
+  - `readBoundedProjectConversations(...)` now honors `maxProjectReads`, cursor,
+    abort, and yield checks, so a Gemini pass does not try every Gem/project
+    history in one refresh.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/statusRegistry.test.ts --maxWorkers 1 --testNamePattern "project conversations|project histories|prior full-sweep cursor|uses prior attachment cursor|metadata evidence"`
+  - `pnpm exec biome lint src/accountMirror/chatgptMetadataCollector.ts src/accountMirror/statusRegistry.ts tests/accountMirror/chatgptMetadataCollector.test.ts`
+  - `pnpm run check`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/liveFollowReconciler.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts tests/accountMirror/catalogService.test.ts tests/accountMirror/conversationFreshness.test.ts tests/schema/resolver.test.ts tests/cli/apiMirrorCompletionCommand.test.ts tests/mcp.accountMirrorCompletion.test.ts tests/http.responsesServer.test.ts tests/browser/geminiAdapter.test.ts --maxWorkers 1 --testNamePattern "sweep|steady-follow|full-sweep|attachment cursor|persisted attachment cursor|starts nonblocking|project conversations|project histories|prior full-sweep cursor|metadata state|route failures|walks bounded project histories|live-follow|live follow|account mirror completion|completions|preserve live-follow|derives identity|read-only account mirror dashboard page|cached mirror manifests|canonical mirror data|conversation freshness|Gemini browser adapter|hydrates conversation history|Gemini full-sweep"`
+  - `pnpm run plans:audit -- --keep 70`
+  - `git diff --check`
+  - pending in this slice: the live retry after
+    `2026-05-23T19:13:05.623Z`.
+
+## Turn 282 | 2026-05-23
+
+- Goal: audit Plan 0070 deterministic acceptance evidence while the live
+  Gemini full-sweep retry is failure-backoff gated.
+- Change:
+  - confirmed the current blocker is the earlier Gemini metadata-collector
+    timeout, not a visible `google.com/sorry`, CAPTCHA, or reCAPTCHA guard.
+  - tightened archive-item regression coverage so history-materialized account
+    mirror assets prove the same row carries bound identity, provider
+    conversation id, cache key, and SHA-256 checksum evidence.
+  - corrected Plan 0070's implementation-slice timeout line to match the
+    current contract: Gemini full sweeps use 900s, other providers keep 300s.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyArchiveItems.test.ts --maxWorkers 1`
+  - `pnpm exec biome lint tests/runtime.historyArchiveItems.test.ts docs/dev/plans/0070-2026-05-23-conversation-refresh-and-artifact-reconciliation.md docs/dev/dev-journal.md docs/dev-fixes-log.md`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/liveFollowReconciler.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts tests/accountMirror/catalogService.test.ts tests/accountMirror/conversationFreshness.test.ts tests/schema/resolver.test.ts tests/cli/apiMirrorCompletionCommand.test.ts tests/mcp.accountMirrorCompletion.test.ts tests/http.responsesServer.test.ts tests/browser/geminiAdapter.test.ts tests/runtime.historyArchiveItems.test.ts --maxWorkers 1 --testNamePattern "sweep|steady-follow|full-sweep|attachment cursor|persisted attachment cursor|starts nonblocking|project conversations|project histories|prior full-sweep cursor|metadata state|route failures|walks bounded project histories|live-follow|live follow|account mirror completion|completions|preserve live-follow|derives identity|read-only account mirror dashboard page|cached mirror manifests|canonical mirror data|conversation freshness|Gemini browser adapter|hydrates conversation history|Gemini full-sweep|history materialization archive items"`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 70`
+  - `git diff --check`
+  - pending in this slice: the live retry after
+    `2026-05-23T19:13:05.623Z`.
+
+## Turn 283 | 2026-05-23
+
+- Goal: close the deterministic steady-follow ordering gap before the next
+  Gemini full-sweep retry.
+- Change:
+  - refresh-service catalog merge now preserves the provider-observed order of
+    newly collected conversation rows and appends older unobserved cached rows.
+  - this keeps a previously cached conversation that moves to the top of a
+    provider rail/project index top-ranked in the account-mirror cache after
+    steady-follow refresh.
+  - added a regression test proving the moved row is written before older
+    retained cached rows.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/refreshService.test.ts --maxWorkers 1 --testNamePattern "conversation order|persisted attachment cursor|steady-follow|runs an explicit"`
+  - `pnpm exec biome lint src/accountMirror/refreshService.ts tests/accountMirror/refreshService.test.ts README.md docs/dev/plans/0070-2026-05-23-conversation-refresh-and-artifact-reconciliation.md docs/dev/dev-journal.md docs/dev-fixes-log.md`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/liveFollowReconciler.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts tests/accountMirror/catalogService.test.ts tests/accountMirror/conversationFreshness.test.ts tests/schema/resolver.test.ts tests/cli/apiMirrorCompletionCommand.test.ts tests/mcp.accountMirrorCompletion.test.ts tests/http.responsesServer.test.ts tests/browser/geminiAdapter.test.ts tests/runtime.historyArchiveItems.test.ts --maxWorkers 1 --testNamePattern "sweep|steady-follow|full-sweep|attachment cursor|persisted attachment cursor|conversation order|starts nonblocking|project conversations|project histories|prior full-sweep cursor|metadata state|route failures|walks bounded project histories|live-follow|live follow|account mirror completion|completions|preserve live-follow|derives identity|read-only account mirror dashboard page|cached mirror manifests|canonical mirror data|conversation freshness|Gemini browser adapter|hydrates conversation history|Gemini full-sweep|history materialization archive items"`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 70`
+  - `git diff --check`
+  - pending in this slice: the live retry after
+    `2026-05-23T19:13:05.623Z`.
+
+## Turn 284 | 2026-05-23
+
+- Goal: close the explicit operator reconciliation row-evidence gap before the
+  next Gemini full-sweep retry.
+- Change:
+  - account-mirror cache persistence now has a narrow
+    `updateConversationEvidence` method that merges reconciliation evidence into
+    the cached conversation row metadata without turning catalog/search reads
+    into live provider work.
+  - direct provider conversation id reconciliation now upserts a minimal
+    account-mirror row under the bound identity when provider routeability or
+    detail evidence exists but the conversation was not already in the mirror
+    list.
+  - `refreshSnapshot` reconciliation records refreshed detail/manifest
+    timestamps, routeability state, and observed message/file/source/artifact
+    counts on the cached conversation row.
+  - materialization records manifest/materialized evidence, and terminal
+    snapshot failures such as Gemini bare `/app` routeability misses record
+    per-row routeability state/reason before skipping that target's asset phase.
+  - provider human-verification hard stops during history materialization now
+    fail the durable job as `provider_guard_required` with HTTP 409 semantics
+    instead of falling through as a generic internal error.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/cachePersistence.test.ts tests/runtime.historyMaterializationService.test.ts --maxWorkers 1 --testNamePattern "updates cached conversation rows|refreshes a provider conversation snapshot|terminal snapshot refresh evidence|selected conversation id batches|Gemini route misses"`
+  - `pnpm vitest run tests/accountMirror/cachePersistence.test.ts tests/runtime.historyMaterializationService.test.ts --maxWorkers 1 --testNamePattern "updates cached conversation rows|upserts direct provider conversation evidence|refreshes a provider conversation snapshot|terminal snapshot refresh evidence"`
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts tests/mcp.historyMaterialization.test.ts --maxWorkers 1 --testNamePattern "provider human-verification|history materialization"`
+  - `pnpm exec biome lint src/accountMirror/cachePersistence.ts src/runtime/historyMaterializationService.ts tests/accountMirror/cachePersistence.test.ts tests/runtime.historyMaterializationService.test.ts README.md docs/dev/plans/0070-2026-05-23-conversation-refresh-and-artifact-reconciliation.md docs/dev/dev-journal.md docs/dev-fixes-log.md`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/liveFollowReconciler.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts tests/accountMirror/catalogService.test.ts tests/accountMirror/conversationFreshness.test.ts tests/schema/resolver.test.ts tests/cli/apiMirrorCompletionCommand.test.ts tests/mcp.accountMirrorCompletion.test.ts tests/http.responsesServer.test.ts tests/browser/geminiAdapter.test.ts tests/runtime.historyArchiveItems.test.ts tests/runtime.historyMaterializationService.test.ts --maxWorkers 1 --testNamePattern "sweep|steady-follow|full-sweep|attachment cursor|persisted attachment cursor|conversation order|starts nonblocking|project conversations|project histories|prior full-sweep cursor|metadata state|route failures|walks bounded project histories|live-follow|live follow|account mirror completion|completions|preserve live-follow|derives identity|read-only account mirror dashboard page|cached mirror manifests|canonical mirror data|conversation freshness|Gemini browser adapter|hydrates conversation history|Gemini full-sweep|history materialization archive items|updates cached conversation rows|upserts direct provider conversation evidence|refreshes a provider conversation snapshot|terminal snapshot refresh evidence|selected conversation id batches|Gemini route misses"`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 70`
+  - `git diff --check`
+  - pending in this slice: the live retry after
+    `2026-05-23T19:13:05.623Z`.
+
+## Turn 285 | 2026-05-23
+
+- Goal: align the Plan 0070 governance and API/MCP docs with the current
+  reconciliation evidence and provider-guard behavior while the live Gemini
+  retry remains backoff-gated.
+- Change:
+  - `ROADMAP.md` now records that explicit reconciliation writes per-row
+    evidence, can upsert direct provider-id rows, and reports provider hard
+    stops as explicit guard failures.
+  - `RUNBOOK.md` Turn 133 now captures the row-evidence/upsert and
+    `provider_guard_required` work as the current Plan 0070 state before the
+    next live retry.
+  - `docs/openai-endpoints.md`, `docs/mcp.md`, and `docs/testing.md` now
+    describe cached-row evidence updates, direct provider-id row upserts, and
+    provider human-verification `provider_guard_required` failures.
+  - the history-materialization provider-guard classifier now recognizes
+    hyphenated `human-verification`, `unusual traffic`, and `anti-bot`
+    wording in addition to `google.com/sorry`, CAPTCHA, and reCAPTCHA text.
+  - the fixture-backed completion hydration smoke now uses an explicit 30s
+    status timeout for its CLI/MCP assertions; the first run hit the default 5s
+    abort under host load, and the patched smoke passed while still proving
+    `providerWork=none`.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts tests/mcp.historyMaterialization.test.ts --maxWorkers 1 --testNamePattern "provider human-verification|history materialization"`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/chatgptMetadataCollector.test.ts tests/accountMirror/liveFollowReconciler.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/cachePersistence.test.ts tests/accountMirror/catalogService.test.ts tests/accountMirror/conversationFreshness.test.ts tests/schema/resolver.test.ts tests/cli/apiMirrorCompletionCommand.test.ts tests/mcp.accountMirrorCompletion.test.ts tests/http.responsesServer.test.ts tests/browser/geminiAdapter.test.ts tests/runtime.historyArchiveItems.test.ts tests/runtime.historyMaterializationService.test.ts tests/mcp.historyMaterialization.test.ts --maxWorkers 1 --testNamePattern "sweep|steady-follow|full-sweep|attachment cursor|persisted attachment cursor|conversation order|starts nonblocking|project conversations|project histories|prior full-sweep cursor|metadata state|route failures|walks bounded project histories|live-follow|live follow|account mirror completion|completions|preserve live-follow|derives identity|read-only account mirror dashboard page|cached mirror manifests|canonical mirror data|conversation freshness|Gemini browser adapter|hydrates conversation history|Gemini full-sweep|history materialization archive items|updates cached conversation rows|upserts direct provider conversation evidence|refreshes a provider conversation snapshot|terminal snapshot refresh evidence|selected conversation id batches|Gemini route misses|provider human-verification|history materialization"`
+  - `pnpm run smoke:operator-search-ux`
+  - `pnpm exec biome lint scripts/smoke-account-mirror-completion-hydration.ts`
+  - `pnpm run smoke:completion-control`
+  - `pnpm run smoke:completion-hydration`
+  - `pnpm run smoke:live-follow-health`
+  - `pnpm run smoke:mcp-provider-guard`
+  - `pnpm run lint` (exit 0 with existing 200-warning baseline)
+  - `pnpm run build`
+  - `git diff --check`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 70`
+  - pending in this slice: the live retry after
+    `2026-05-23T19:13:20Z`.
+
+## Turn 286 | 2026-05-23
+
+- Goal: keep the next Plan 0070 Gemini proof server fully isolated while the
+  explicit-refresh cooldown remains closed.
+- Change:
+  - rechecked current repo status and Plan 0070; the remaining acceptance gap
+    is still the bounded live Gemini full-sweep proof for partially hydrated
+    histories.
+  - clarified `api serve --help`, README, OpenAI endpoint docs, testing docs,
+    and this fixes log so isolated provider/materialization proof servers use
+    all three controls:
+    `--background-drain-interval-ms 0 --account-mirror-scheduler-interval-ms 0 --no-account-mirror-completions-on-start`.
+  - current UTC check at turn start was `2026-05-23T18:31:43Z`, still before
+    the Gemini retry gate at `2026-05-23T19:13:20Z`.
+  - after the gate opened, started a repo-local API proof server on
+    `127.0.0.1:18083` from the worktree with background drain, account-mirror
+    scheduler cadence, startup completion resume, and configured live-follow
+    reconciliation disabled.
+  - ran exactly one bounded Gemini full-sweep completion:
+    `acctmirror_completion_d6ee42c8-898f-424b-9a31-7387603db294`.
+  - completion refresh succeeded with no provider guard, detected
+    `ecochran76@gmail.com`, persisted materialization cursor
+    `hmj_96c6d998be8948be8c8910076a374890`, and left mirror completeness
+    `in_progress` with 76 detail surfaces remaining.
+  - history materialization succeeded and materialized two Gemini conversation
+    image artifacts from `10b7e2a15e2dd77c` and `1ab8bb794846c491`.
+  - archive readback and local `sha256sum` verified bound identity
+    `ecochran76@gmail.com`, provider conversation ids, `fileAvailable=true`,
+    and checksums
+    `bbe2354aaceff8181f4964064b33dabfa4b91a01a18d111361ae6fb112d6387c`
+    and
+    `238987c388e126345879f09cba98eb6271d3a9d25570ddb9ff0c340f20e44537`.
+  - stopped the repo-local proof server after evidence collection; only the
+    installed `127.0.0.1:18095` service remained listening.
+- Verification:
+  - `pnpm tsx bin/auracall.ts api serve --help`
+  - `git diff --check`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 70`
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api mirror-complete --port 18083 --provider gemini --runtime-profile auracall-gemini-pro --max-passes 1 --sweep-mode full_sweep --materialization-policy full_missing_assets --materialization-asset-kind all --materialization-max-items 2 --json`
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api mirror-completion-status acctmirror_completion_d6ee42c8-898f-424b-9a31-7387603db294 --port 18083 --json`
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api history-materialization-status hmj_96c6d998be8948be8c8910076a374890 --port 18083 --json`
+  - `sha256sum` on both materialized Gemini PNG files
+  - `curl -sS 'http://127.0.0.1:18083/v1/archive?provider=gemini&limit=10'`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/runtime.historyMaterializationService.test.ts --maxWorkers 1 --testNamePattern "full-sweep|history materialization|provider human-verification"`
+  - post-doc-update `pnpm run check`
+  - post-doc-update `pnpm run plans:audit -- --keep 70`
+  - post-doc-update `git diff --check`
+  - note: targeted `pnpm exec biome lint` on the changed doc/CLI paths did not
+    process files because the current Biome config ignores those paths.
+
+## Turn 287 | 2026-05-23
+
+- Goal: try the Plan 0070 Gemini steady-follow path after the full-sweep proof
+  and fix the first live failure without bypassing provider cooldowns.
+- Change:
+  - started an isolated proof server on `127.0.0.1:18083` with background
+    drain, account-mirror scheduler cadence, startup completion resume, and
+    configured live-follow reconciliation disabled.
+  - ran one bounded `gemini/auracall-gemini-pro` steady-follow completion:
+    `acctmirror_completion_c27fd23b-08a8-4c79-889d-1542f9398a3c`.
+  - the operation respected explicit-refresh cooldown until
+    `2026-05-23T22:23:50.107Z`, then failed at
+    `2026-05-23T22:25:49.738Z` with `Account mirror metadata collector timed
+    out for gemini/auracall-gemini-pro` before `lastRefresh` or
+    `materializationCursor` was written.
+  - bounded `browser-tools doctor` inspection found the managed Gemini page at
+    `https://gemini.google.com/app`, ready and visible, with no blocking state;
+    a simultaneous tab listing only failed on the browser operation lock held
+    by the diagnostic probe.
+  - Gemini steady-follow completions now pass a 300s collector timeout; Gemini
+    full sweeps keep 900s and non-Gemini steady follow keeps the generic
+    refresh request shape.
+  - stopped the repo-local proof server after evidence collection; only the
+    installed `127.0.0.1:18095` service remained listening.
+- Verification:
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api mirror-complete --port 18083 --provider gemini --runtime-profile auracall-gemini-pro --max-passes 1 --sweep-mode steady_follow --materialization-policy recent_missing_assets --materialization-asset-kind all --materialization-max-items 2 --json`
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api mirror-completion-status acctmirror_completion_c27fd23b-08a8-4c79-889d-1542f9398a3c --port 18083 --json`
+  - `pnpm tsx scripts/browser-tools.ts doctor --port 45011 --url-contains gemini --json`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts --maxWorkers 1 --testNamePattern "Gemini|steady-follow|full-sweep"`
+  - pending in this slice: rerun the live steady-follow proof after the
+    failure-backoff gate opens.
+
+## Turn 288 | 2026-05-23
+
+- Goal: preserve Plan 0070 provider politeness across proof-server restarts
+  after the Gemini steady-follow timeout exposed a restart gap.
+- Change:
+  - confirmed the persisted failed completion
+    `acctmirror_completion_c27fd23b-08a8-4c79-889d-1542f9398a3c` recorded the
+    timeout, while the stopped proof server's in-memory `failure-backoff` target
+    state did not hydrate into the installed service status projection.
+  - added account-mirror target status sidecar persistence for refresh success
+    and refresh failure, with an atomic write so a local proof-server exit
+    cannot leave a partial status file.
+  - refresh failures now persist `lastFailureAtMs`, `lastCompletedAtMs`,
+    dispatcher evidence, and incremented `consecutiveFailureCount`; refresh
+    success persists cleared failure state.
+  - status hydration now merges recent target failure state with the last
+    successful snapshot and ignores older failure state once a newer successful
+    snapshot exists.
+  - fixture coverage originally proved a persisted Gemini failure hydrated into
+    the old two-hour Gemini `failure-backoff`; Turn 289 later tuned Gemini's
+    default retry timing and updated the fixture.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/cachePersistence.test.ts tests/accountMirror/refreshService.test.ts --maxWorkers 1 --testNamePattern "failure state|politeness backoff|metadata collector|stores canonical|provider guard"`
+  - pending in this slice: broad typecheck/static gates and the live
+    steady-follow retry after the manual backoff point.
+
+## Turn 289 | 2026-05-23
+
+- Goal: make the Plan 0070 Gemini retry window practical after the durable
+  failure-backoff fix exposed a two-hour first retry delay.
+- Change:
+  - Gemini account-mirror routine cadence remains 18 hours and hard-stop
+    provider guard cooldown remains 24 hours.
+  - Gemini explicit-refresh politeness now uses a 10 minute minimum interval
+    with at most 5 minutes of jitter, so operator proof retries are bounded on
+    a minutes scale rather than a 45-135 minute window.
+  - Gemini refresh failure backoff now escalates through 5, 10, 20, and 30
+    minute delays instead of starting at 2 hours and capping at 24 hours.
+  - the persisted steady-follow timeout fixture now hydrates to
+    `eligibleAt = 2026-05-23T22:30:49.738Z`, which means the previously blocked
+    live proof window has elapsed under the tuned policy.
+  - live completion `acctmirror_completion_e779a4e1-e6d7-4912-b4bb-445e30a7c028`
+    ran one bounded `gemini/auracall-gemini-pro` steady-follow pass, detected
+    `ecochran76@gmail.com`, completed at `2026-05-23T23:57:28.914Z`, and
+    reported no provider guard.
+  - the refresh found 12 projects and 68 conversations, left mirror
+    completeness `in_progress` with 76 detail surfaces remaining, and queued
+    materialization job `hmj_873fd5d4ad154e94ae9517923d7de0dc`.
+  - the materialization job succeeded at `2026-05-23T23:59:00.112Z` and
+    materialized two Gemini image artifacts from conversations
+    `10b7e2a15e2dd77c` and `1ab8bb794846c491`, with checksums
+    `5df1e3626b11b5016e38710e711152e663e10333c591eb4b4db383b3540704c0` and
+    `80fcaeb067bcafd5d083a05a30beba58350e30869a6557fcbf84106e8037836b`.
+  - stopped the isolated proof server after evidence collection; only the
+    installed `127.0.0.1:18095` service remained listening.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/politePolicy.test.ts tests/accountMirror/cachePersistence.test.ts --maxWorkers 1 --testNamePattern "failure-backoff|polite policy|slower Gemini defaults|politeness backoff"`
+  - `pnpm vitest run tests/accountMirror/politePolicy.test.ts tests/accountMirror/cachePersistence.test.ts tests/accountMirror/statusRegistry.test.ts --maxWorkers 1 --testNamePattern "failure-backoff|polite policy|slower Gemini defaults|politeness backoff|configured live-follow|identity-gated|provider guard cooldown"`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 70`
+  - `git diff --check`
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api mirror-complete --port 18083 --provider gemini --runtime-profile auracall-gemini-pro --max-passes 1 --sweep-mode steady_follow --materialization-policy recent_missing_assets --materialization-asset-kind all --materialization-max-items 2 --json`
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api mirror-completion-status acctmirror_completion_e779a4e1-e6d7-4912-b4bb-445e30a7c028 --port 18083 --json`
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api history-materialization-status hmj_873fd5d4ad154e94ae9517923d7de0dc --port 18083 --json`
+
+## Turn 290 | 2026-05-23
+
+- Goal: keep Gemini rail/history collection from refreshing or re-navigating
+  the browser when the current tab is already a usable app rail surface.
+- Change:
+  - `geminiUrlMatchesPreference()` now treats `/app/<conversationId>` as a
+    compatible target when a caller asks for root `/app`, so target selection
+    can reuse an already loaded conversation tab for root rail reads.
+  - `navigateToGeminiConversationSurface()` now checks the current tab first
+    and returns without `Page.navigate(...)` when the target is root `/app` and
+    the current `/app` or `/app/<id>` surface is already ready.
+  - `listConversations()` now opens the Gemini main rail in place before
+    history hydration/scraping, then scrolls the rail; no browser refresh is
+    needed to browse root rail conversations.
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc --noEmit --pretty false`
+
+## Turn 291 | 2026-05-23
+
+- Goal: finish the no-refresh Gemini rail proof and shorten explicit test
+  cooldowns enough for practical Plan 0070 iteration.
+- Change:
+  - Gemini explicit-refresh politeness now waits 2 minutes plus at most 1
+    minute jitter; failure backoff now starts at 2 minutes and caps at 10
+    minutes. Routine 18 hour cadence and provider hard-stop/manual-clear
+    behavior remain unchanged.
+  - BrowserService configured target matching now treats `/app/<conversationId>`
+    as compatible with configured Gemini root `/app`, so diagnostics and
+    browser-provider target reuse agree.
+  - Account-mirror scheduler diagnostics now includes read-only recent browser
+    mutation records for the selected provider/runtime profile, avoiding
+    workbench capability discovery when the operator only needs mutation proof.
+  - Gemini conversation-surface reuse now returns before `Page.navigate(...)`
+    for same-route root/app/project conversation surfaces; this removed the
+    same-URL `navigate-conversation-surface` records seen in the first clean
+    audit.
+- Live proof:
+  - isolated proof server on `127.0.0.1:18083`, then bounded completion
+    `acctmirror_completion_04ce6c2d-f9ba-4e40-b83b-8d341714ef81`.
+  - completion waited less than a minute through the shortened explicit
+    cooldown, completed one steady-follow pass with no provider guard, detected
+    `ecochran76@gmail.com`, refreshed `projects=12` and `conversations=68`,
+    and left mirror completeness `in_progress` with 76 detail surfaces
+    remaining.
+  - read-only scheduler diagnostics for that completion reported
+    `browserMutations.total=32`, mutation sources limited to
+    `provider:gemini:connect-tab`, `provider:gemini:navigate-gems-view-page`,
+    and `provider:gemini:navigate-edit-page`, with zero
+    `provider:gemini:navigate-conversation-surface` records and zero reloads.
+    The remaining slow browser activity is Gem edit/project detail probing, not
+    rail conversation browsing.
+  - stopped the proof server; only installed `127.0.0.1:18095` remained
+    listening.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/politePolicy.test.ts tests/accountMirror/cachePersistence.test.ts tests/browser/browserService.test.ts tests/browser/geminiAdapter.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/apiSchedulerDiagnosticsCommand.test.ts tests/mcp.accountMirrorSchedulerDiagnostics.test.ts --maxWorkers 1 --testNamePattern "scheduler diagnostics"`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm exec biome lint src/accountMirror/politePolicy.ts tests/accountMirror/politePolicy.test.ts tests/accountMirror/cachePersistence.test.ts src/browser/service/browserService.ts tests/browser/browserService.test.ts src/browser/providers/geminiAdapter.ts tests/browser/geminiAdapter.test.ts src/http/responsesServer.ts src/cli/apiSchedulerDiagnosticsCommand.ts tests/cli/apiSchedulerDiagnosticsCommand.test.ts`
+
+## Turn 292 | 2026-05-23
+
+- Goal: close a Plan 0070 backend gap where refreshed manifest assets could be
+  known for a conversation but skipped by automatic reconciliation because the
+  cached conversation row count fields were stale.
+- Change:
+  - account-mirror catalog/search conversation rows now project
+    `cachedArtifactCount`, `cachedFileCount`, and `cachedMediaCount` from
+    artifact/file/media manifests that are bound to the provider conversation
+    id, even when no cached transcript context is present.
+  - history reconciliation target selection now uses the same manifest-bound
+    asset evidence in addition to row count fields, so a steady-follow refresh
+    can hand off newly discovered Gemini artifacts for materialization.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/catalogService.test.ts tests/runtime.historyMaterializationService.test.ts --maxWorkers 1 --testNamePattern "projects per-conversation asset counts|selects reconciliation targets from manifest asset evidence|runs bounded reconciliation from materializable account mirror conversation rows|runs selected conversation id batches"`
+  - `pnpm vitest run tests/accountMirror/catalogService.test.ts tests/runtime.historyMaterializationService.test.ts --maxWorkers 1 --testTimeout 20000`
+  - `pnpm exec biome lint src/accountMirror/catalogService.ts src/runtime/historyMaterializationService.ts tests/accountMirror/catalogService.test.ts tests/runtime.historyMaterializationService.test.ts`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 70`
+  - `git diff --check`
+
+## Turn 297 | 2026-05-24
+
+- Goal: close the remaining Plan 0070 terminal-routeability proof without
+  weakening the no-refresh rail-browsing semantics.
+- Change:
+  - selected `conversationIds` reconciliation now processes ids in operator
+    request order before falling back to catalog order.
+  - selected ids still reuse cached catalog metadata when available, but
+    unmatched ids are validated through the direct provider target path before
+    later selected ids can consume `maxItems`.
+  - added regression coverage proving a terminal Gemini route miss does not
+    hide behind a cached routeable selected id when `maxItems=1`.
+- Live proof:
+  - isolated current-checkout API server on `127.0.0.1:18083`.
+  - `hmj_77fc426644154a2f936926f3bc6d34c8` ran under
+    `auracall-gemini-pro` with selected ids
+    `7f0070deadbeef42,10b7e2a15e2dd77c`, `boundIdentityKey =
+    ecochran76@gmail.com`, `refreshSnapshot = true`, `assetKinds = media`,
+    and `maxItems = 1`.
+  - Gemini routed the synthetic missing id to bare `/app`; the job recorded
+    `routeabilityState = not_found_or_unavailable` and the catalog now reports
+    `conversationFreshness.state = terminal_unavailable` for
+    `7f0070deadbeef42`.
+  - the same job still refreshed routeable conversation `10b7e2a15e2dd77c`
+    and materialized `gemini-artifact:10b7e2a15e2dd77c:1:0` with checksum
+    `5df1e3626b11b5016e38710e711152e663e10333c591eb4b4db383b3540704c0`.
+  - Plan 0070 is closed after the prior full-sweep materialization proof and
+    this terminal route-miss proof.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1 --testNamePattern "selected conversation id order|selected conversation id batches|terminal Gemini route misses"`
+  - `pnpm exec biome lint src/runtime/historyMaterializationService.ts tests/runtime.historyMaterializationService.test.ts`
+  - live job create/status and catalog/search/scheduler-diagnostics readbacks
+    on `127.0.0.1:18083`
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/cli/apiHistoryMaterializationCommand.test.ts tests/mcp.historyMaterialization.test.ts tests/http.responsesServer.test.ts --maxWorkers 1 --testNamePattern "history materialization|account mirror materializations|materialization"`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/refreshService.test.ts tests/accountMirror/catalogService.test.ts tests/accountMirror/conversationFreshness.test.ts tests/runtime.searchProjectionService.test.ts --maxWorkers 1 --testNamePattern "full-sweep|steady-follow|materialization cursor|recent_missing_assets|conversation freshness|projects per-conversation asset counts|materialization completeness|remote-only assets|reads cached mirror manifests"`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 70`
+  - `git diff --check`
+
+## Turn 296 | 2026-05-24
+
+- Goal: make Gemini rail enumeration obey the no-refresh/no-direct-retarget
+  rule even when the configured URL is a direct conversation route.
+- Change:
+  - `listConversations()` now resolves its browser target through
+    `resolveGeminiConversationRailTargetUrl(...)`.
+  - configured `/app/<conversationId>` URLs are normalized to the reusable
+    `/app` rail surface before rail open/scroll/hydration work.
+  - direct conversation navigation remains only for explicit routeability
+    validation or shared fallback after a rail row cannot be opened.
+- Audit:
+  - the persisted full-sweep job `hmj_96c6d998be8948be8c8910076a374890`
+    records two materialized Gemini artifacts with checksums under
+    `auracall-gemini-pro`.
+  - no persisted `auracall-gemini-pro` full-sweep job currently records a
+    terminal Gemini route miss, so Plan 0070 should stay open for that live
+    proof instead of being marked closed from deterministic coverage alone.
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec biome lint src/browser/providers/geminiAdapter.ts tests/browser/geminiAdapter.test.ts README.md RUNBOOK.md docs/dev/dev-journal.md docs/dev-fixes-log.md docs/dev/plans/0070-2026-05-23-conversation-refresh-and-artifact-reconciliation.md`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run plans:audit -- --keep 70`
+  - `git diff --check`
+  - `pnpm run check`
+
+## Turn 295 | 2026-05-24
+
+- Goal: tighten Plan 0070 steady-follow reconciliation after live Gemini proof
+  showed direct continuation does not necessarily move a conversation to rail
+  rank 0.
+- Change:
+  - automatic bulk reconciliation now uses cached `conversationFreshness`
+    evidence when choosing bounded targets.
+  - rows marked fresh with complete local assets are skipped unless forced.
+  - stale, partial, or missing-assets rows can be selected for
+    `refreshSnapshot` reconciliation even when stale row asset counts are zero.
+  - terminal/unavailable or guarded row evidence is skipped by automatic bulk
+    reconciliation unless forced by an operator request.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1 --testNamePattern "freshness evidence|manifest asset evidence|terminal Gemini route misses"`
+  - `pnpm exec biome lint src/runtime/historyMaterializationService.ts tests/runtime.historyMaterializationService.test.ts`
+
+## Turn 294 | 2026-05-24
+
+- Goal: tighten the Plan 0070 Gemini no-refresh rail path after auditing the
+  lower-level asset helpers.
+- Change:
+  - removed the eager direct `/app/<conversationId>` navigation from
+    `downloadGeminiConversationFileWithClient()` and
+    `materializeGeminiConversationArtifactWithClient()`.
+  - both helpers now delegate conversation opening to
+    `readGeminiConversationContextWithClient()`, which clicks the rail row
+    in-page first and keeps direct navigation only as the shared fallback.
+- Live proof:
+  - controlled operator mutation appended image-generation prompt marker
+    `AC-PLAN0070-STEADY-1779587303869` to existing Gemini conversation
+    `1ab8bb794846c491`, which had cached rail rank 14 before the proof.
+  - steady-follow completion
+    `acctmirror_completion_d8e9306a-2a71-46df-ae47-d09e84b29e13` completed
+    with identity `ecochran76@gmail.com`, queued materialization job
+    `hmj_d8ead771d10e4a08a462c928ab13e29f`, and left no provider guard.
+  - materialization refreshed `1ab8bb794846c491` with `messageCount=2`,
+    `artifactCount=1`, and materialized
+    `gemini-artifact:1ab8bb794846c491:2:0` as a PNG with checksum
+    `b54ac02a55be8790328ec1d17f89bb5bd2b83470f81447a36a6faec4f60a8501`.
+  - `/v1/archive` and `/v1/search` expose the new artifact asset route.
+  - the proof did not satisfy the exact recency-rank assumption: refreshed
+    catalog evidence still showed `1ab8bb794846c491` at `indexRank=14`.
+    Treat this as evidence that Gemini directly continued conversations do not
+    necessarily move to rail rank 0 without a separate provider-side refresh.
+  - fixed the freshness projection bug exposed by that proof:
+    row-level `assetCompleteness: complete` / `materializedAt` now overrides
+    remote-only manifest evidence when deriving local asset counts.
+  - post-patch catalog readback for `1ab8bb794846c491` reports
+    `state=fresh`, `assetCompleteness=complete`, and
+    `assetCounts={known:1, local:1, missingLocal:0}`.
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/accountMirror/conversationFreshness.test.ts tests/accountMirror/catalogService.test.ts --maxWorkers 1 --testNamePattern "materialization completeness|remote-only assets|projects per-conversation asset counts"`
+  - `pnpm exec biome lint src/browser/providers/geminiAdapter.ts tests/browser/geminiAdapter.test.ts`
+  - `pnpm exec biome lint src/accountMirror/conversationFreshness.ts tests/accountMirror/conversationFreshness.test.ts`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 70`
+  - `git diff --check`
+  - `pnpm tsx --input-type=module -e ...` submitted the controlled Gemini
+    existing-conversation prompt after two earlier one-off runner attempts
+    failed before provider work.
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api mirror-complete --port 18083 --provider gemini --runtime-profile auracall-gemini-pro --max-passes 1 --sweep-mode steady_follow --materialization-policy recent_missing_assets --materialization-asset-kind all --materialization-max-items 4 --materialization-refresh-snapshot --json`
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api mirror-completion-status acctmirror_completion_d8e9306a-2a71-46df-ae47-d09e84b29e13 --port 18083 --json`
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api history-materialization-status hmj_d8ead771d10e4a08a462c928ab13e29f --port 18083 --json`
+  - cache item/search/archive curl readbacks for `1ab8bb794846c491`,
+    including post-patch freshness state `fresh`.
+
+## Turn 293 | 2026-05-23
+
+- Goal: apply the no-refresh Gemini rail rule to context and artifact
+  materialization reads, not only rail enumeration.
+- Change:
+  - `resolveGeminiConversationRailTargetUrl()` strips direct Gemini
+    `/app/<conversationId>` routes from rail-backed context/download/
+    materialization connect targets, using the app or Gem/project surface
+    instead.
+  - `readGeminiConversationContextWithClient()` now opens a requested
+    non-active Gemini conversation by clicking its left-rail row in-page before
+    falling back to direct provider navigation.
+  - focused tests cover the direct-route stripping helper so account-mirror
+    reconciliation does not start by retargeting Chrome to the conversation URL.
+- Live proof:
+  - isolated proof server on `127.0.0.1:18083`.
+  - job `hmj_e98eeb402d764ec9b4ed90ce5bc5d06b` refreshed and materialized one
+    image from already-loaded conversation `10b7e2a15e2dd77c`.
+  - job `hmj_1959cca2de1c40c8b55b2776fb23f906` refreshed and materialized one
+    image from non-active rail conversation `1ab8bb794846c491`.
+  - scheduler diagnostics after both jobs reported `browserMutations.total=2`,
+    sources limited to `provider:gemini:connect-tab`, `reloads=0`, and
+    `navigations=0`.
+  - stopped the proof server; installed `127.0.0.1:18095` remained separate.
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec biome lint src/browser/providers/geminiAdapter.ts tests/browser/geminiAdapter.test.ts`
+  - `pnpm exec tsc --noEmit --pretty false`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 70`
+  - `git diff --check`
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api history-materialization-create --port 18083 --provider gemini --runtime-profile auracall-gemini-pro --conversation-id 10b7e2a15e2dd77c --provider-conversation-url https://gemini.google.com/app/10b7e2a15e2dd77c --asset-kind media --max-items 1 --refresh-snapshot --force --timeout-ms 20000 --json`
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api history-materialization-status hmj_e98eeb402d764ec9b4ed90ce5bc5d06b --port 18083 --json`
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api history-materialization-create --port 18083 --provider gemini --runtime-profile auracall-gemini-pro --conversation-id 1ab8bb794846c491 --provider-conversation-url https://gemini.google.com/app/1ab8bb794846c491 --asset-kind media --max-items 1 --refresh-snapshot --force --timeout-ms 20000 --json`
+  - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api history-materialization-status hmj_1959cca2de1c40c8b55b2776fb23f906 --port 18083 --json`
+  - `curl -sS --max-time 20 'http://127.0.0.1:18083/v1/account-mirrors/scheduler/diagnostics?provider=gemini&runtimeProfile=auracall-gemini-pro'`

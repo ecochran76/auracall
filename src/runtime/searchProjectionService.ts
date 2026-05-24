@@ -2,6 +2,10 @@ import type {
   AccountMirrorCatalogEntry,
   AccountMirrorCatalogService,
 } from '../accountMirror/catalogService.js';
+import {
+  readAccountMirrorConversationFreshness,
+  type AccountMirrorConversationFreshness,
+} from '../accountMirror/conversationFreshness.js';
 import type {
   RunArchiveItem,
   RunArchiveListRequest,
@@ -207,6 +211,9 @@ function rowFromCatalogItem(
   const provider = readString(item, ['provider']) ?? entry.provider;
   const runtimeProfileId = entry.runtimeProfileId;
   const sortTime = readItemTime(item, provider, itemId);
+  const conversationFreshness = sourceKind === 'conversations'
+    ? readAccountMirrorConversationFreshness(item)
+    : null;
   const params = new URLSearchParams({
     provider,
     runtimeProfile: runtimeProfileId,
@@ -243,8 +250,20 @@ function rowFromCatalogItem(
     metadata: {
       mirrorReason: entry.reason,
       mirrorCompleteness: entry.mirrorCompleteness,
+      ...catalogFreshnessMetadata(conversationFreshness),
       raw: item,
     },
+  };
+}
+
+function catalogFreshnessMetadata(
+  conversationFreshness: AccountMirrorConversationFreshness | null,
+): Record<string, unknown> {
+  if (!conversationFreshness) return {};
+  return {
+    conversationFreshness,
+    freshnessState: conversationFreshness.state,
+    routeabilityState: conversationFreshness.routeabilityState,
   };
 }
 
@@ -317,14 +336,15 @@ function assetFreshnessFromArchiveItem(
   materializationStatus: ArchiveMaterializationJobStatus | null,
 ): Record<string, unknown> {
   const availability = item.fileAvailable === true ? 'available' : item.fileAvailable === false ? 'unavailable' : 'pending';
+  const historyMaterializationJobId = historyMaterializationJobIdFromArchiveItem(item);
   const materializedAt = materializationJob?.completedAt
     ?? (materializationStatus === 'succeeded' && item.fileAvailable === true ? item.updatedAt ?? item.createdAt : null);
   return {
     availability,
     fileAvailable: item.fileAvailable,
     status: materializationStatus,
-    source: materializationJob ? 'materialization_job' : 'archive_item',
-    materializationJobId: materializationJob?.id ?? null,
+    source: materializationJob ? 'materialization_job' : historyMaterializationJobId ? 'history_materialization' : 'archive_item',
+    materializationJobId: materializationJob?.id ?? historyMaterializationJobId ?? null,
     materializedAt,
     evidenceUpdatedAt: materializationJob?.updatedAt ?? item.updatedAt ?? item.createdAt ?? null,
   };
@@ -452,7 +472,12 @@ function isArchiveMaterializationStatus(value: unknown): value is ArchiveMateria
 
 function materializationStatusFromArchiveItem(item: RunArchiveItem): ArchiveMaterializationJobStatus | null {
   const status = readNestedString(item.metadata, ['materialization'], ['status']);
+  if (status === 'materialized') return 'succeeded';
   return isArchiveMaterializationStatus(status) ? status : null;
+}
+
+function historyMaterializationJobIdFromArchiveItem(item: RunArchiveItem): string | null {
+  return readString(item.metadata, ['historyMaterializationJobId']);
 }
 
 function latestMaterializationJobsByArchiveItemId(

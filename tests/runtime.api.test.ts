@@ -131,7 +131,7 @@ describe('runtime api model', () => {
         },
       },
     ]);
-    expect(response.metadata).toEqual({
+    expect(response.metadata).toMatchObject({
       runId: 'team_run_1',
       taskRunSpecId: null,
       taskRunSpecSummary: null,

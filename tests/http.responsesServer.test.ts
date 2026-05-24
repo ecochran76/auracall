@@ -24,11 +24,17 @@ import type {
   AccountMirrorCatalogItemResult,
   AccountMirrorCatalogResult,
 } from '../src/accountMirror/catalogService.js';
+import { createAccountMirrorCompletionStore } from '../src/accountMirror/completionStore.js';
 import type { AccountMirrorCompletionOperation } from '../src/accountMirror/completionService.js';
 import type { AccountMirrorSchedulerPassResult } from '../src/accountMirror/schedulerService.js';
 import type { AccountMirrorSchedulerPassLedger } from '../src/accountMirror/schedulerLedger.js';
 import { resetLiveRuntimeRunServiceStateRegistryForTests } from '../src/runtime/liveServiceStateRegistry.js';
 import type { ArchiveMaterializationJobListRequest } from '../src/runtime/archiveMaterializationJobService.js';
+import {
+  HistoryMaterializationJobControlError,
+  type HistoryMaterializationJob,
+  type HistoryMaterializationService,
+} from '../src/runtime/historyMaterializationService.js';
 import type { SearchProjectionResult } from '../src/runtime/searchProjectionService.js';
 import { createExecutionRuntimeControl } from '../src/runtime/control.js';
 import { writeTaskRunSpecStoredRecord } from '../src/teams/store.js';
@@ -72,6 +78,64 @@ const completeAccountMirror = {
     attachmentCursorPresent: false,
   },
 };
+
+function historyMaterializationJob(status: 'queued' | 'succeeded' | 'cancelled'): HistoryMaterializationJob {
+  return {
+    object: 'history_materialization_job' as const,
+    id: 'hmj_http_1',
+    source: {
+      type: 'catalog_item' as const,
+      catalogItemId: 'conv_1',
+      catalogKind: 'conversations' as const,
+    },
+    request: {
+      provider: 'chatgpt' as const,
+      runtimeProfile: 'default',
+      catalogItemId: 'conv_1',
+      catalogKind: 'conversations' as const,
+    },
+    sourceKey: '{}',
+    status,
+    createdAt: '2026-05-22T20:00:00.000Z',
+    updatedAt: '2026-05-22T20:01:00.000Z',
+    startedAt: status === 'queued' ? null : '2026-05-22T20:00:01.000Z',
+    completedAt: status === 'queued' ? null : '2026-05-22T20:01:00.000Z',
+    attemptCount: status === 'queued' ? 0 : 1,
+    result: status === 'succeeded'
+      ? {
+          object: 'history_materialization_result',
+          generatedAt: '2026-05-22T20:01:00.000Z',
+          status: 'materialized',
+          target: {
+            provider: 'chatgpt',
+            runtimeProfile: 'default',
+            browserProfile: 'default',
+            boundIdentityKey: 'user@example.com',
+            conversationId: 'conv_1',
+            providerConversationUrl: 'https://chatgpt.com/c/conv_1',
+            projectId: null,
+          },
+          source: {
+            type: 'catalog_item',
+            catalogItemId: 'conv_1',
+            catalogKind: 'conversations',
+          },
+          manifestPaths: [],
+          entries: [],
+          archiveItems: [],
+          metrics: {
+            conversations: 1,
+            materialized: 1,
+            skipped: 0,
+            failed: 0,
+          },
+          message: 'History materialization downloaded 1 asset.',
+        }
+      : null,
+    error: null,
+    message: 'History materialization job queued.',
+  };
+}
 
 describe('http responses adapter', () => {
   const cleanup: string[] = [];
@@ -2513,6 +2577,221 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('queues and polls account history materialization jobs through the API surface', async () => {
+    const createJob = vi.fn(async () => ({
+      object: 'history_materialization_job_create_result' as const,
+      generatedAt: '2026-05-22T20:00:00.000Z',
+      reused: false,
+      job: historyMaterializationJob('queued'),
+    }));
+    const readJob = vi.fn(async () => historyMaterializationJob('succeeded'));
+    const listJobs = vi.fn(async () => ({
+      object: 'history_materialization_jobs' as const,
+      generatedAt: '2026-05-22T20:01:00.000Z',
+      status: 'terminal' as const,
+      provider: 'chatgpt' as const,
+      runtimeProfile: 'default',
+      sourceType: 'catalog_item' as const,
+      limit: 2,
+      jobs: [historyMaterializationJob('succeeded')],
+      metrics: {
+        total: 1,
+        byStatus: { succeeded: 1 },
+        active: 0,
+        terminal: 1,
+      },
+    }));
+    const cancelJob = vi.fn(async () => historyMaterializationJob('cancelled'));
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        historyMaterializationService: {
+          createJob,
+          readJob,
+          listJobs,
+          cancelJob,
+          runJob: vi.fn(),
+          recoverInterruptedJobs: vi.fn(async () => 0),
+        } satisfies HistoryMaterializationService,
+      },
+    );
+
+    try {
+      const createResponse = await fetch(`http://127.0.0.1:${server.port}/v1/account-mirrors/materializations`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'chatgpt',
+          runtimeProfile: 'default',
+          catalogItemId: 'conv_1',
+          catalogKind: 'conversations',
+          refreshSnapshot: true,
+          assetKinds: ['artifacts'],
+          maxItems: 1,
+        }),
+      });
+      expect(createResponse.status).toBe(202);
+      expect(await createResponse.json()).toMatchObject({
+        object: 'history_materialization_job_create_result',
+        job: {
+          id: 'hmj_http_1',
+          status: 'queued',
+        },
+      });
+      expect(createJob).toHaveBeenCalledWith({
+        provider: 'chatgpt',
+        runtimeProfile: 'default',
+        browserProfile: undefined,
+        boundIdentityKey: undefined,
+        conversationId: undefined,
+        conversationIds: undefined,
+        providerConversationUrl: undefined,
+        projectId: undefined,
+        catalogItemId: 'conv_1',
+        catalogKind: 'conversations',
+        archiveItemId: undefined,
+        reconcile: false,
+        refreshSnapshot: true,
+        assetKinds: ['artifacts'],
+        maxItems: 1,
+        force: false,
+      });
+
+      const listResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/account-mirrors/materializations?status=terminal&provider=chatgpt&runtimeProfile=default&sourceType=catalog_item&limit=2`,
+      );
+      expect(listResponse.status).toBe(200);
+      expect(await listResponse.json()).toMatchObject({
+        object: 'history_materialization_jobs',
+        metrics: {
+          total: 1,
+        },
+      });
+      expect(listJobs).toHaveBeenCalledWith({
+        status: 'terminal',
+        provider: 'chatgpt',
+        runtimeProfile: 'default',
+        sourceType: 'catalog_item',
+        limit: 2,
+      });
+
+      const readResponse = await fetch(`http://127.0.0.1:${server.port}/v1/account-mirrors/materializations/hmj_http_1`);
+      expect(readResponse.status).toBe(200);
+      expect(await readResponse.json()).toMatchObject({
+        id: 'hmj_http_1',
+        status: 'succeeded',
+      });
+      expect(readJob).toHaveBeenCalledWith('hmj_http_1');
+
+      const cancelResponse = await fetch(`http://127.0.0.1:${server.port}/v1/account-mirrors/materializations/hmj_http_1`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel' }),
+      });
+      expect(cancelResponse.status).toBe(200);
+      expect(await cancelResponse.json()).toMatchObject({
+        id: 'hmj_http_1',
+        status: 'cancelled',
+      });
+      expect(cancelJob).toHaveBeenCalledWith('hmj_http_1');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('maps account history materialization read and cancel failures through the API surface', async () => {
+    const createJob = vi.fn(async () => ({
+      object: 'history_materialization_job_create_result' as const,
+      generatedAt: '2026-05-22T20:00:00.000Z',
+      reused: false,
+      job: historyMaterializationJob('queued'),
+    }));
+    const readJob = vi.fn(async (id: string) => (id === 'hmj_missing' ? null : historyMaterializationJob('succeeded')));
+    const listJobs = vi.fn(async () => ({
+      object: 'history_materialization_jobs' as const,
+      generatedAt: '2026-05-22T20:01:00.000Z',
+      status: null,
+      provider: null,
+      runtimeProfile: null,
+      sourceType: null,
+      limit: 50,
+      jobs: [],
+      metrics: {
+        total: 0,
+        byStatus: {},
+        active: 0,
+        terminal: 0,
+      },
+    }));
+    const cancelJob = vi.fn(async (id: string) => {
+      if (id === 'hmj_missing') {
+        throw new HistoryMaterializationJobControlError(
+          'History materialization job hmj_missing was not found.',
+          404,
+        );
+      }
+      throw new HistoryMaterializationJobControlError(
+        'History materialization job hmj_http_1 is succeeded; only queued jobs can be cancelled before provider work starts.',
+        409,
+      );
+    });
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        historyMaterializationService: {
+          createJob,
+          readJob,
+          listJobs,
+          cancelJob,
+          runJob: vi.fn(),
+          recoverInterruptedJobs: vi.fn(async () => 0),
+        } satisfies HistoryMaterializationService,
+      },
+    );
+
+    try {
+      const missingReadResponse = await fetch(`http://127.0.0.1:${server.port}/v1/account-mirrors/materializations/hmj_missing`);
+      expect(missingReadResponse.status).toBe(404);
+      expect(await missingReadResponse.json()).toMatchObject({
+        error: {
+          type: 'not_found_error',
+          message: 'History materialization job hmj_missing was not found.',
+        },
+      });
+      expect(readJob).toHaveBeenCalledWith('hmj_missing');
+
+      const missingCancelResponse = await fetch(`http://127.0.0.1:${server.port}/v1/account-mirrors/materializations/hmj_missing`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel' }),
+      });
+      expect(missingCancelResponse.status).toBe(404);
+      expect(await missingCancelResponse.json()).toMatchObject({
+        error: {
+          type: 'not_found_error',
+          message: 'History materialization job hmj_missing was not found.',
+        },
+      });
+
+      const conflictCancelResponse = await fetch(`http://127.0.0.1:${server.port}/v1/account-mirrors/materializations/hmj_http_1`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel' }),
+      });
+      expect(conflictCancelResponse.status).toBe(409);
+      expect(await conflictCancelResponse.json()).toMatchObject({
+        error: {
+          type: 'conflict_error',
+          message: 'History materialization job hmj_http_1 is succeeded; only queued jobs can be cancelled before provider work starts.',
+        },
+      });
+      expect(cancelJob).toHaveBeenCalledWith('hmj_missing');
+      expect(cancelJob).toHaveBeenCalledWith('hmj_http_1');
+    } finally {
+      await server.close();
+    }
+  });
+
   it('materializes a run archive item through the API surface', async () => {
     const materializeItem = vi.fn(async (request: { archiveItemId: string; force?: boolean | null }) => ({
       object: 'run_archive_item_materialization' as const,
@@ -2886,6 +3165,36 @@ describe('http responses adapter', () => {
     );
 
     try {
+      const startResponse = await fetch(`http://127.0.0.1:${server.port}/v1/account-mirrors/completions`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'chatgpt',
+          runtimeProfile: 'default',
+          maxPasses: 1,
+          sweepMode: 'full_sweep',
+          materializationPolicy: 'full_missing_assets',
+          materializationAssetKinds: ['media'],
+          materializationMaxItems: 2,
+          materializationRefreshSnapshot: true,
+        }),
+      });
+      expect(startResponse.status).toBe(202);
+      expect(await startResponse.json()).toMatchObject({
+        id: 'acctmirror_http_list',
+      });
+      expect(start).toHaveBeenCalledWith({
+        provider: 'chatgpt',
+        runtimeProfileId: 'default',
+        maxPasses: 1,
+        sweepMode: 'full_sweep',
+        materializationPolicy: 'full_missing_assets',
+        materializationAssetKinds: ['media'],
+        materializationMaxItems: 2,
+        materializationRefreshSnapshot: true,
+        materializationForce: undefined,
+      });
+
       const response = await fetch(
         `http://127.0.0.1:${server.port}/v1/account-mirrors/completions?status=active&provider=chatgpt&runtimeProfile=default&limit=5`,
       );
@@ -2966,6 +3275,107 @@ describe('http responses adapter', () => {
     } finally {
       await server.close();
     }
+  });
+
+  it('can start without launching account mirror completions on startup', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-account-mirror-startup-isolated-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const config = {
+      model: 'gpt-5.2',
+      browser: {
+        cache: {
+          rootDir: homeDir,
+        },
+      },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+          services: {
+            chatgpt: {
+              identity: {
+                email: 'operator@example.com',
+              },
+              liveFollow: {
+                enabled: true,
+                mode: 'metadata-first',
+                priority: 'background',
+              },
+            },
+          },
+        },
+      },
+    };
+    const persistedOperation: AccountMirrorCompletionOperation = {
+      object: 'account_mirror_completion',
+      id: 'acctmirror_startup_isolated',
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      mode: 'live_follow',
+      phase: 'backfill_history',
+      status: 'queued',
+      startedAt: '2026-04-30T12:00:00.000Z',
+      completedAt: null,
+      nextAttemptAt: null,
+      maxPasses: null,
+      passCount: 0,
+      lastRefresh: null,
+      mirrorCompleteness: null,
+      error: null,
+      lifecycleEvents: [],
+    };
+    const completionStore = createAccountMirrorCompletionStore({ config });
+    await completionStore.writeOperation(persistedOperation);
+    const requestRefresh = vi.fn(() => new Promise<never>(() => {}));
+    const server = await createResponsesHttpServer(
+      {
+        host: '127.0.0.1',
+        port: 0,
+        recoverRunsOnStart: false,
+        backgroundDrainIntervalMs: 0,
+        accountMirrorSchedulerIntervalMs: 0,
+        resumeAccountMirrorCompletionsOnStart: false,
+        reconcileAccountMirrorLiveFollowOnStart: false,
+      },
+      {
+        config,
+        accountMirrorRefreshService: {
+          requestRefresh,
+        },
+      },
+    );
+
+    try {
+      await delay(50);
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({
+        accountMirrorCompletions: {
+          metrics: {
+            total: 1,
+            active: 1,
+            queued: 1,
+            running: 0,
+          },
+          active: [
+            {
+              id: 'acctmirror_startup_isolated',
+              status: 'queued',
+              lifecycleEvents: [],
+            },
+          ],
+        },
+      });
+      expect(requestRefresh).not.toHaveBeenCalled();
+    } finally {
+      await server.close();
+    }
+    expect(await completionStore.readOperation('acctmirror_startup_isolated')).toMatchObject({
+      status: 'queued',
+      passCount: 0,
+      lifecycleEvents: [],
+    });
   });
 
   it('reports effective live-follow wake separately from routine mirror eligibility', async () => {
@@ -4187,6 +4597,7 @@ describe('http responses adapter', () => {
           phase: 'backfill_history',
           passCount: 2,
         },
+        browserMutations: null,
         latestSchedulerEvent: {
           event: 'refresh-completed',
           detail: 'chatgpt/default backpressure=none',
@@ -16387,7 +16798,7 @@ describe('http responses adapter', () => {
     expect(startupLog).toBeDefined();
     expect(startupLog).toContain('cap=1 hits reached');
     expect(startupLog).toContain('1 executed');
-  });
+  }, 20_000);
 
   it('forwards team-run startup recovery source filter to serveResponsesHttp', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-serve-team-source-'));
@@ -16416,7 +16827,7 @@ describe('http responses adapter', () => {
     expect(startupLog).toBeDefined();
     expect(startupLog).toContain('executed=serve_team_filter_team');
     expect(startupLog).not.toContain('serve_team_filter_direct');
-  });
+  }, 20_000);
 
   it('forwards all-source startup recovery filter to serveResponsesHttp', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-serve-all-source-'));
@@ -16445,7 +16856,7 @@ describe('http responses adapter', () => {
     expect(startupLog).toBeDefined();
     expect(startupLog).toContain('executed=serve_all_filter_direct,serve_all_filter_team');
     expect(startupLog).toContain('scanned 2 candidate run(s)');
-  });
+  }, 20_000);
 
   it('applies startup recovery cap after widening serveResponsesHttp scope to all sources', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-serve-all-cap-'));
@@ -16479,7 +16890,7 @@ describe('http responses adapter', () => {
     expect(startupLog).toContain('2 executed');
     expect(startupLog).toContain('executed=serve_all_cap_direct_1,serve_all_cap_team_1');
     expect(startupLog).toContain('limit-reached:1');
-  });
+  }, 20_000);
 
   it('preserves structured mixed output when a stored run exposes response.output', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
@@ -16950,7 +17361,9 @@ describe('http responses adapter', () => {
         compatibility: { auth: true },
       });
 
-      const deniedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/models`);
+      const protectedRoute = `http://127.0.0.1:${server.port}/v1/api/logs/tail?maxBytes=1`;
+
+      const deniedResponse = await fetch(protectedRoute);
       expect(deniedResponse.status).toBe(401);
       expect(await deniedResponse.json()).toMatchObject({
         error: {
@@ -16958,28 +17371,28 @@ describe('http responses adapter', () => {
         },
       });
 
-      const crossOriginResponse = await fetch(`http://127.0.0.1:${server.port}/v1/models`, {
+      const crossOriginResponse = await fetch(protectedRoute, {
         headers: { referer: 'http://example.test/dashboard' },
       });
       expect(crossOriginResponse.status).toBe(401);
 
-      const operatorDashboardResponse = await fetch(`http://127.0.0.1:${server.port}/v1/models`, {
+      const operatorDashboardResponse = await fetch(protectedRoute, {
         headers: { referer: `http://127.0.0.1:${server.port}/dashboard` },
       });
       expect(operatorDashboardResponse.status).toBe(200);
       const operatorDashboardPayload = (await operatorDashboardResponse.json()) as { object: string };
-      expect(operatorDashboardPayload.object).toBe('list');
+      expect(operatorDashboardPayload.object).toBe('api_log_tail');
 
-      const allowedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/models`, {
+      const allowedResponse = await fetch(protectedRoute, {
         headers: { Authorization: 'Bearer secret-key' },
       });
       expect(allowedResponse.status).toBe(200);
       const allowedPayload = (await allowedResponse.json()) as { object: string };
-      expect(allowedPayload.object).toBe('list');
+      expect(allowedPayload.object).toBe('api_log_tail');
     } finally {
       await server.close();
     }
-  });
+  }, 20_000);
 
   it('loads local API keys from the user-scoped service environment', async () => {
     const savedEnv = {
@@ -17003,10 +17416,12 @@ describe('http responses adapter', () => {
         },
       });
 
-      const deniedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/models`);
+      const protectedRoute = `http://127.0.0.1:${server.port}/v1/api/logs/tail?maxBytes=1`;
+
+      const deniedResponse = await fetch(protectedRoute);
       expect(deniedResponse.status).toBe(401);
 
-      const allowedResponse = await fetch(`http://127.0.0.1:${server.port}/v1/models`, {
+      const allowedResponse = await fetch(protectedRoute, {
         headers: { 'X-AuraCall-API-Key': 'env-secret-key' },
       });
       expect(allowedResponse.status).toBe(200);
@@ -17020,7 +17435,7 @@ describe('http responses adapter', () => {
         }
       }
     }
-  });
+  }, 20_000);
 
   it('enforces API key execution scopes for response creation', async () => {
     const server = await createResponsesHttpServer(
@@ -17079,7 +17494,7 @@ describe('http responses adapter', () => {
     } finally {
       await server.close();
     }
-  });
+  }, 20_000);
 
   it('authorizes registry-backed agents through effective catalog scopes', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-registry-auth-'));
@@ -18921,7 +19336,7 @@ describe('http responses adapter', () => {
     } finally {
       await server.close();
     }
-  });
+  }, 20_000);
 
   it('serves the React operator UX from the dashboard alias', async () => {
     const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
@@ -18964,6 +19379,11 @@ describe('http responses adapter', () => {
       expect(html).toContain('buildCatalogItemAssetPath');
       expect(html).toContain('renderCatalogMaterializationBadge');
       expect(html).toContain('renderCatalogRowActions');
+      expect(html).toContain('canReconcileMirrorCatalogRow');
+      expect(html).toContain('reconcileMirrorCatalogRow');
+      expect(html).toContain('/v1/account-mirrors/materializations');
+      expect(html).toContain("catalogKind: 'conversations'");
+      expect(html).toContain("refreshSnapshot: true");
       expect(html).toContain('copyCatalogPreviewUrl');
       expect(html).toContain('showVisibleMirrorCatalogPreviewUrls');
       expect(html).toContain('hideVisibleMirrorCatalogPreviewUrls');

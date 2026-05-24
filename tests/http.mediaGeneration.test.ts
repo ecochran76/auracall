@@ -20,6 +20,7 @@ describe('http media generation adapter', () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-media-generation-'));
     cleanup.push(homeDir);
     setAuracallHomeDirOverrideForTest(homeDir);
+    let materializeOptions: unknown = null;
     const server = await createResponsesHttpServer(
       { host: '127.0.0.1', port: 0 },
       {
@@ -44,6 +45,29 @@ describe('http media generation adapter', () => {
                 },
               },
             ],
+          };
+        },
+        mediaGenerationMaterializer: async ({ artifactDir, options }) => {
+          materializeOptions = options;
+          const filePath = path.join(artifactDir, 'asphalt-agent-full.png');
+          await fs.writeFile(filePath, Buffer.from('full quality image bytes'));
+          return {
+            artifacts: [
+              {
+                id: 'artifact_http_1',
+                type: 'image',
+                mimeType: 'image/png',
+                fileName: 'asphalt-agent-full.png',
+                path: filePath,
+                uri: `file://${filePath}`,
+                metadata: {
+                  materialization: 'http-materialize-test',
+                },
+              },
+            ],
+            metadata: {
+              materializedVia: 'http-test',
+            },
           };
         },
       },
@@ -191,6 +215,49 @@ describe('http media generation adapter', () => {
         browserDiagnostics: {
           probeStatus: 'unavailable',
           reason: `media generation ${created.id} is not actively running`,
+        },
+      });
+
+      const materializeResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/media-generations/${created.id}/materialize`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            count: 1,
+            metadata: {
+              reason: 'api-test',
+            },
+          }),
+        },
+      );
+      expect(materializeResponse.status).toBe(200);
+      const materialized = (await materializeResponse.json()) as Record<string, unknown>;
+      expect(materializeOptions).toMatchObject({
+        count: 1,
+        compareFullQuality: true,
+        source: 'api',
+        metadata: {
+          reason: 'api-test',
+        },
+      });
+      expect(materialized).toMatchObject({
+        id: created.id,
+        object: 'media_generation',
+        status: 'succeeded',
+        artifacts: [
+          {
+            id: 'artifact_http_1',
+            fileName: 'asphalt-agent-full.png',
+            path: expect.stringContaining('asphalt-agent-full.png'),
+            metadata: {
+              materialization: 'http-materialize-test',
+            },
+          },
+        ],
+        metadata: {
+          materializedVia: 'http-test',
+          resumedArtifactCount: 1,
         },
       });
     } finally {
@@ -529,11 +596,15 @@ describe('http media generation adapter', () => {
         string,
         {
           mediaGenerationsCreate?: string;
+          mediaGenerationsMaterializeTemplate?: string;
           mediaGenerationsStatusTemplate?: string;
           runStatusTemplate?: string;
         }
       >;
       expect(status.routes.mediaGenerationsCreate).toBe('/v1/media-generations');
+      expect(status.routes.mediaGenerationsMaterializeTemplate).toBe(
+        'POST /v1/media-generations/{media_generation_id}/materialize',
+      );
       expect(status.routes.mediaGenerationsStatusTemplate).toBe(
         '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
       );

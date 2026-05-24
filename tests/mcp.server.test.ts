@@ -8,6 +8,7 @@ describe('mcp server service wiring', () => {
       auracallProfile: 'default',
     } as ResolvedUserConfig;
     const executor = vi.fn();
+    const materializer = vi.fn();
     const discoverCapabilities = vi.fn();
     const diagnoseCapabilities = vi.fn();
     const workbenchReporter = {
@@ -30,6 +31,7 @@ describe('mcp server service wiring', () => {
       ensureProject: vi.fn(),
     };
     const createBrowserMediaGenerationExecutor = vi.fn(() => executor);
+    const createBrowserMediaGenerationMaterializer = vi.fn(() => materializer);
     const createBrowserWorkbenchCapabilityDiscovery = vi.fn(() => discoverCapabilities);
     const createBrowserWorkbenchCapabilityDiagnostics = vi.fn(() => diagnoseCapabilities);
     const createWorkbenchCapabilityService = vi.fn(() => workbenchReporter);
@@ -40,6 +42,7 @@ describe('mcp server service wiring', () => {
 
     const services = await createMcpServicesFromConfig(config, {
       createBrowserMediaGenerationExecutor,
+      createBrowserMediaGenerationMaterializer,
       createBrowserWorkbenchCapabilityDiscovery,
       createBrowserWorkbenchCapabilityDiagnostics,
       createWorkbenchCapabilityService,
@@ -56,8 +59,10 @@ describe('mcp server service wiring', () => {
       diagnoseCapabilities,
     });
     expect(createBrowserMediaGenerationExecutor).toHaveBeenCalledWith(config);
+    expect(createBrowserMediaGenerationMaterializer).toHaveBeenCalledWith(config);
     expect(createMediaGenerationService).toHaveBeenCalledWith({
       executor,
+      materializer,
       capabilityReporter: workbenchReporter,
       runtimeProfile: 'default',
     });
@@ -84,6 +89,9 @@ describe('mcp server service wiring', () => {
         listItems: expect.any(Function),
       }),
       archiveMaterializationJobService: expect.objectContaining({
+        listJobs: expect.any(Function),
+      }),
+      historyMaterializationService: expect.objectContaining({
         listJobs: expect.any(Function),
       }),
       searchProjectionService: expect.objectContaining({

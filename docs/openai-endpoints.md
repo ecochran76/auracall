@@ -56,6 +56,10 @@ Current endpoints:
 - `GET /v1/responses/{response_id}`
 - `POST /v1/response-batches`
 - `GET /v1/response-batches/{batch_id}`
+- `POST /v1/media-generations`
+- `GET /v1/media-generations/{media_generation_id}`
+- `POST /v1/media-generations/{media_generation_id}/materialize`
+- `GET /v1/media-generations/{media_generation_id}/status`
 - `GET /v1/search`
 - `GET /v1/archive`
 - `POST /v1/archive/backfill`
@@ -67,6 +71,10 @@ Current endpoints:
 - `GET /v1/archive/items/{archive_item_id}`
 - `GET /v1/archive/items/{archive_item_id}/asset`
 - `POST /v1/archive/items/{archive_item_id}/materialize`
+- `POST /v1/account-mirrors/materializations`
+- `GET /v1/account-mirrors/materializations`
+- `GET /v1/account-mirrors/materializations/{job_id}`
+- `POST /v1/account-mirrors/materializations/{job_id}`
 
 Workflow-oriented guidance lives in `docs/agent-workflows.md`. Treat this file
 as the endpoint contract and that file as the agent/app integration playbook.
@@ -383,6 +391,119 @@ Current limits:
     evidence. When the local service challenges these archive CLI calls with
     HTTP 401, the CLI retries with the user-scoped key from
     `AURACALL_API_KEY` or `~/.auracall/api.env`.
+- `POST /v1/media-generations` creates one media-generation record through the
+  shared media contract; `GET /v1/media-generations/{media_generation_id}` and
+  `GET /v1/media-generations/{media_generation_id}/status` read the durable
+  record and compact status without launching provider work.
+- `POST /v1/media-generations/{media_generation_id}/materialize` resumes the
+  configured provider media materializer for one existing media generation and
+  returns the updated `object = "media_generation"` record. Optional body fields
+  are `count`, `compareFullQuality`/`compare_full_quality`, and `metadata`.
+  This is the direct API parity surface for `auracall media materialize` and is
+  separate from history-backed account-mirror recovery.
+- For isolated recovery proofs, run the local API with
+  `--background-drain-interval-ms 0 --account-mirror-scheduler-interval-ms 0 --no-account-mirror-completions-on-start`.
+  The completion flag keeps account-mirror completion records readable through
+  `/status` and completion routes, but prevents startup completion resume and
+  configured live-follow reconciliation; the interval flags prevent inherited
+  background drain or scheduler cadence. Server shutdown parks only completion
+  loops owned by the current server process, so unrelated hydrated records are
+  not rewritten on exit. Explicit media/history materialization and
+  `mirror-complete` calls remain operator-initiated.
+- `POST /v1/account-mirrors/completions` starts the durable live-follow
+  completion loop. It accepts `provider`, `runtimeProfile`, debug-only
+  `maxPasses`, `sweepMode`, `materializationPolicy`,
+  `materializationAssetKinds`, `materializationMaxItems`,
+  `materializationRefreshSnapshot`, and `materializationForce` in camelCase or
+  snake_case. `sweepMode: "full_sweep"` defaults to snapshot refresh plus
+  `full_missing_assets`; each successful refresh pass queues an account-mirror
+  history materialization job and records the latest handoff in
+  `materializationCursor`. `GET /v1/account-mirrors/completions`,
+  `GET /v1/account-mirrors/completions/{completion_id}`, and
+  `POST /v1/account-mirrors/completions/{completion_id}` remain the list,
+  status, and pause/resume/cancel surfaces. Full-sweep completion refreshes
+  use an extended collector timeout for conservative provider pacing; Gemini
+  steady-follow completions also use a wider provider-specific timeout.
+  Refresh failures persist target status state so failure-backoff survives API
+  restarts and isolated proof-server shutdowns. Gemini explicit refresh
+  politeness defaults are intentionally practical for operator proof loops:
+  2 minutes plus at most 1 minute jitter, with refresh failure backoff capped
+  at 10 minutes. Provider guard hard stops still require manual clearance.
+  Steady-follow completion refreshes recheck the current top of the provider
+  rail/project conversation list; full-sweep completion refreshes resume the
+  persisted deep attachment cursor. Gemini refreshes include both left-rail and
+  Gem/project conversation history discovery, with bounded project-history row
+  budget distributed across Gems/projects before deepening one history and
+  tolerated per-Gem route failures.
+- `POST /v1/account-mirrors/materializations` is the explicit
+  history-backed materialization lane:
+  - accepts a provider conversation target (`provider`, optional
+    `runtimeProfile`, `browserProfile`, `boundIdentityKey`, `conversationId`,
+    `providerConversationUrl`, and `projectId`), an account-mirror
+    `catalogItemId`, an `archiveItemId`, a selected `conversationIds` batch, or
+    `reconcile: true`
+  - accepts `assetKinds` (`artifacts`, `files`, `media`, or `all`),
+    `maxItems`, `force`, and `refreshSnapshot`
+  - returns `object = "history_materialization_job_create_result"` with a
+    durable `history_materialization_job`
+  - account-mirror catalog and catalog-item reads remain cache-only; this route
+    is the opt-in browser/provider recovery operation
+  - React Search conversation rows and Account Mirror catalog conversation rows
+    post this route with `catalogKind: "conversations"`,
+    `assetKinds: ["all"]`, and `refreshSnapshot: true` for explicit
+    row-level reconciliation
+  - automatic bulk `reconcile: true` jobs use cache freshness evidence before
+    spending bounded target budget: fresh/complete rows are skipped unless
+    forced, stale/partial/missing rows can be selected for `refreshSnapshot`
+    reconciliation even when cached asset counts are zero, and terminal/guarded
+    rows are not retried unless forced
+  - `refreshSnapshot: true` first reads the current provider conversation
+    context, persists `result.phases.snapshotRefresh` and
+    `result.snapshotRefreshes`, then runs the existing materialization phase;
+    refreshed detail/manifest timestamps, routeability, observed counts, and
+    materialized-asset timestamps are written back to the cached conversation
+    row when a row is available; direct provider conversation id reconciliation
+    can upsert a minimal cached row under the bound identity when routeability
+    or detail evidence exists but the mirror list did not already contain it;
+    terminal snapshot evidence such as Gemini direct navigation falling back to
+    bare `/app` skips materialization for that target
+  - provider hard stops such as `google.com/sorry`, CAPTCHA, reCAPTCHA, and
+    visible human-verification pages fail the durable job with
+    `error.type = "provider_guard_required"` and HTTP 409 semantics; clear the
+    managed browser profile before retrying
+  - the job uses mirrored account history as the discovery index, reopens the
+    provider conversation through the managed browser/provider path, calls the
+    existing conversation artifact/file materializers, stores manifests in the
+    conversation attachment cache, and upserts successful files as
+    `account_mirror` run-archive rows
+  - reconciliation with `assetKinds: ["media"]` scans unavailable
+    media-generation archive artifacts and can resume Gemini media
+    materialization when cached account history has a matching provider
+    conversation by id, unambiguous exact prompt/title, cached-media evidence,
+    or nearest timestamp-backed exact prompt/title; an explicit `archiveItemId`
+    for a media-generation generated artifact uses the same media-history
+    matching path before ordinary conversation materialization. Direct provider
+    conversation evidence on the archive row does not require a matching
+    account-mirror catalog conversation; legacy media rows with null
+    runtime/identity evidence inherit the explicit request selectors unless
+    the row carries a conflicting concrete value. Duplicate
+    title-only Gemini matches are skipped with explicit media-recovery evidence
+    counts for cached media, timestamps, and cached artifacts/files. Grok media
+    reconciliation is skipped with an explicit unsupported reason because
+    Grok's resumed image materializer can only inspect the active Imagine/files
+    surface, not a matched historical conversation
+  - poll one job with
+    `GET /v1/account-mirrors/materializations/{job_id}` or list jobs with
+    `GET /v1/account-mirrors/materializations?status=active|terminal|queued|running|succeeded|skipped|failed|cancelled&provider=<provider>&runtimeProfile=<runtime_profile>&sourceType=conversation|catalog_item|archive_item|reconciliation&limit=50`
+  - cancel a queued job with
+    `POST /v1/account-mirrors/materializations/{job_id}` and body
+    `{"action":"cancel"}`; running jobs are not cooperatively abortable yet
+  - CLI parity is `auracall api history-materialization-create`,
+    `history-materialization-status`, `history-materialization-jobs`, and
+    `history-materialization-cancel`
+  - MCP parity is `history_materialization_create`,
+    `history_materialization_job`, `history_materialization_jobs`, and
+    `history_materialization_cancel`
 - API-key authorization can be configured in `~/.auracall/config.json` or
   through the installed service dotenv file at `~/.auracall/api.env`. The
   service recognizes `AURACALL_API_KEY` as a bearer key and optional

@@ -619,7 +619,12 @@ describe('team runtime bridge', () => {
           output: {
             summary: `completed ${step.id}`,
             artifacts: [],
-            structuredData: {},
+            structuredData: {
+              bridgeHandoffSummary: {
+                stepId: step.id,
+                ok: true,
+              },
+            },
             notes: [],
           },
         };

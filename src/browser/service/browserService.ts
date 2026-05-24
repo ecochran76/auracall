@@ -214,7 +214,7 @@ export class BrowserService extends BrowserServiceCore {
       }
     }
     const configuredMatcher =
-      options.serviceId === 'chatgpt' ? null : createConfiguredUrlMatcher(options.configuredUrl);
+      options.serviceId === 'chatgpt' ? null : createConfiguredUrlMatcher(options.serviceId, options.configuredUrl);
     const serviceMatcher = (url: string) => matchesServiceUrl(options.serviceId, url);
     const matchUrl = configuredMatcher ?? serviceMatcher;
     const tabSelection = scan?.tabs ? explainTabResolution(scan.tabs, { matchUrl }) : undefined;
@@ -291,6 +291,7 @@ function matchesManagedProfile(
 }
 
 function createConfiguredUrlMatcher(
+  serviceId: ServiceTargetMatchOptions['serviceId'],
   configuredUrl: string | null | undefined,
 ): ((url: string) => boolean) | null {
   if (!configuredUrl) {
@@ -305,6 +306,12 @@ function createConfiguredUrlMatcher(
         const candidate = new URL(url);
         if (candidate.host !== configured.host) {
           return false;
+        }
+        if (serviceId === 'gemini' && isGeminiConversationRouteCompatible(configuredPath, candidate.pathname)) {
+          if (!configured.search) {
+            return true;
+          }
+          return normalizeConfiguredSearch(candidate.searchParams) === configuredSearch;
         }
         if (configuredPath === '/') {
           return true;
@@ -323,6 +330,14 @@ function createConfiguredUrlMatcher(
   } catch {
     return (url: string) => url.includes(configuredUrl);
   }
+}
+
+function isGeminiConversationRouteCompatible(configuredPath: string, candidatePathname: string): boolean {
+  if (configuredPath !== '/app') {
+    return false;
+  }
+  const candidatePath = normalizeConfiguredPath(candidatePathname);
+  return candidatePath === '/app' || /^\/app\/[^/]+$/i.test(candidatePath);
 }
 
 function normalizeConfiguredPath(pathname: string): string {

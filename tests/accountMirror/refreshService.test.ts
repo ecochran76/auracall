@@ -58,6 +58,7 @@ const config = {
 function createNoopPersistence(): AccountMirrorPersistence {
   return {
     writeSnapshot: vi.fn(async () => {}),
+    writeState: vi.fn(async () => {}),
     readCatalog: vi.fn(async () => null),
     readState: vi.fn(async () => null),
     readConversationContext: vi.fn(async () => null),
@@ -180,6 +181,7 @@ describe('account mirror refresh service', () => {
       provider: 'chatgpt',
       runtimeProfileId: 'default',
       expectedIdentityKey: 'ecochran76@gmail.com',
+      sweepMode: 'steady_follow',
       shouldYield: expect.any(Function),
       limits: {
         maxPageReadsPerCycle: 12,
@@ -310,6 +312,7 @@ describe('account mirror refresh service', () => {
         yielded: false,
         yieldCause: null,
       },
+      projectConversations: null,
       truncated: {
         projects: false,
         conversations: false,
@@ -383,6 +386,7 @@ describe('account mirror refresh service', () => {
     });
 
     expect(metadataCollector.collect).toHaveBeenCalledWith(expect.objectContaining({
+      sweepMode: 'steady_follow',
       previousEvidence,
     }));
     expect(result.metadataCounts.files).toBe(2);
@@ -401,6 +405,115 @@ describe('account mirror refresh service', () => {
         files: [
           { id: 'file_1', name: 'First upload.pdf', provider: 'chatgpt', source: 'project' },
           { id: 'file_2', name: 'Second upload.pdf', provider: 'chatgpt', source: 'conversation' },
+        ],
+      }),
+    }));
+  });
+
+  test('preserves newly observed conversation order when merging existing cached rows', async () => {
+    const metadataCollector = {
+      collect: vi.fn(async () => ({
+        detectedIdentityKey: 'ecochran76@gmail.com',
+        detectedAccountLevel: 'Business',
+        metadataCounts: {
+          projects: 0,
+          conversations: 1,
+          artifacts: 0,
+          files: 0,
+          media: 0,
+        },
+        manifests: {
+          projects: [],
+          conversations: [
+            {
+              id: 'conv_moved_top',
+              title: 'Moved to top after operator edit',
+              provider: 'chatgpt' as const,
+              updatedAt: '2026-05-23T17:45:00.000Z',
+            },
+          ],
+          artifacts: [],
+          files: [],
+          media: [],
+        },
+        evidence: {
+          identitySource: 'profile-menu',
+          projectSampleIds: [],
+          conversationSampleIds: ['conv_moved_top'],
+          truncated: {
+            projects: false,
+            conversations: false,
+            artifacts: false,
+          },
+        },
+      })),
+    };
+    const persistence: AccountMirrorPersistence = {
+      writeSnapshot: vi.fn(async () => {}),
+      readCatalog: vi.fn(async () => ({
+        projects: [],
+        conversations: [
+          { id: 'conv_old_top', title: 'Previously top', provider: 'chatgpt' as const },
+          {
+            id: 'conv_moved_top',
+            title: 'Older cached title',
+            provider: 'chatgpt' as const,
+            updatedAt: '2026-05-20T12:00:00.000Z',
+          },
+          { id: 'conv_old_bottom', title: 'Previously bottom', provider: 'chatgpt' as const },
+        ],
+        artifacts: [],
+        files: [],
+        media: [],
+      })),
+      readState: vi.fn(async () => ({
+        detectedIdentityKey: 'ecochran76@gmail.com',
+        metadataCounts: {
+          projects: 0,
+          conversations: 3,
+          artifacts: 0,
+          files: 0,
+          media: 0,
+        },
+        metadataEvidence: null,
+      })),
+      readConversationContext: vi.fn(async () => null),
+    };
+    const registry = createAccountMirrorStatusRegistry({
+      config,
+      now: () => new Date('2026-05-23T17:45:00.000Z'),
+      readPersistentState: persistence.readState,
+    });
+    const service = createAccountMirrorRefreshService({
+      config,
+      registry,
+      dispatcher: createBrowserOperationDispatcher({
+        now: () => new Date('2026-05-23T17:45:00.000Z'),
+      }),
+      metadataCollector,
+      persistence,
+      now: () => new Date('2026-05-23T17:45:00.000Z'),
+      generateRequestId: () => 'acctmirror_conversation_order',
+    });
+
+    await service.requestRefresh({
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      sweepMode: 'steady_follow',
+      explicitRefresh: true,
+    });
+
+    expect(persistence.writeSnapshot).toHaveBeenCalledWith(expect.objectContaining({
+      manifests: expect.objectContaining({
+        conversations: [
+          {
+            id: 'conv_moved_top',
+            title: 'Moved to top after operator edit',
+            provider: 'chatgpt',
+            updatedAt: '2026-05-23T17:45:00.000Z',
+          },
+          { id: 'conv_old_top', title: 'Previously top', provider: 'chatgpt' },
+          { id: 'conv_old_bottom', title: 'Previously bottom', provider: 'chatgpt' },
         ],
       }),
     }));
@@ -639,6 +752,7 @@ describe('account mirror refresh service', () => {
       config,
       now: () => new Date('2026-05-02T20:05:00.000Z'),
     });
+    const persistence = createNoopPersistence();
     const service = createAccountMirrorRefreshService({
       config,
       registry,
@@ -649,7 +763,7 @@ describe('account mirror refresh service', () => {
           return new Promise<AccountMirrorMetadataCollectorResult>(() => {});
         }),
       },
-      persistence: createNoopPersistence(),
+      persistence,
       now: () => new Date('2026-05-02T20:05:00.000Z'),
     });
 
@@ -662,6 +776,19 @@ describe('account mirror refresh service', () => {
       }),
     ).rejects.toThrow('Account mirror metadata collector timed out for chatgpt/default.');
     expect((collectAbortSignal as AbortSignal | null)?.aborted).toBe(true);
+    expect(persistence.writeState).toHaveBeenCalledWith(expect.objectContaining({
+      provider: 'chatgpt',
+      runtimeProfileId: 'default',
+      browserProfileId: 'default',
+      boundIdentityKey: 'ecochran76@gmail.com',
+      updatedAt: '2026-05-02T20:05:00.000Z',
+      state: expect.objectContaining({
+        lastAttemptAtMs: Date.parse('2026-05-02T20:05:00.000Z'),
+        lastFailureAtMs: Date.parse('2026-05-02T20:05:00.000Z'),
+        consecutiveFailureCount: 1,
+        lastRefreshRequestId: expect.any(String),
+      }),
+    }));
 
     const entry = registry.readStatus({
       provider: 'chatgpt',

@@ -8,6 +8,7 @@ import {
   type AccountMirrorStatusEntry,
   type AccountMirrorStatusRegistry,
 } from './statusRegistry.js';
+import { deriveAccountMirrorConversationFreshness } from './conversationFreshness.js';
 
 export type AccountMirrorCatalogKind =
   | 'all'
@@ -118,20 +119,18 @@ export function createAccountMirrorCatalogService(input: {
           boundIdentityKey: target.expectedIdentityKey,
           limit,
         });
+        const rawCatalog = catalog ?? {
+          projects: [],
+          conversations: [],
+          artifacts: [],
+          files: [],
+          media: [],
+        };
         const manifests = await hydrateCatalogManifestsWithConversationSummaries(
           persistence,
-          target.provider,
-          target.expectedIdentityKey,
-          filterCatalogKind(
-            catalog ?? {
-              projects: [],
-              conversations: [],
-              artifacts: [],
-              files: [],
-              media: [],
-            },
-            kind,
-          ),
+          target,
+          filterCatalogKind(rawCatalog, kind),
+          rawCatalog,
         );
         entries.push({
           provider: target.provider,
@@ -213,31 +212,78 @@ export function createAccountMirrorCatalogService(input: {
 
 async function hydrateCatalogManifestsWithConversationSummaries(
   persistence: AccountMirrorPersistence,
-  provider: AccountMirrorProvider,
-  boundIdentityKey: string | null,
+  target: AccountMirrorStatusEntry,
   manifests: AccountMirrorCatalogEntry['manifests'],
+  rawManifests: AccountMirrorCatalogEntry['manifests'],
 ): Promise<AccountMirrorCatalogEntry['manifests']> {
   if (!manifests.conversations.length) return manifests;
   return {
     ...manifests,
     conversations: await Promise.all(
-      manifests.conversations.map(async (item) => {
+      manifests.conversations.map(async (item, index) => {
         const conversationId = readCatalogItemId(item);
         if (!conversationId || conversationId === 'unknown') return item;
-        const context = await persistence.readConversationContext({
-          provider,
-          boundIdentityKey,
+        const contextEntry = await readConversationContextEntry(persistence, {
+          provider: target.provider,
+          boundIdentityKey: target.expectedIdentityKey,
           conversationId,
         });
-        if (!context) return item;
         const base = isRecord(item) ? item : {};
+        const context = contextEntry?.context ?? null;
+        const detail = context
+          ? {
+              exists: true,
+              observedAt: contextEntry?.fetchedAt ?? null,
+              messageCount: context.messages.length,
+              fileCount: context.files?.length ?? 0,
+              artifactCount: context.artifacts?.length ?? 0,
+              sourceCount: context.sources?.length ?? 0,
+            }
+          : {
+              exists: false,
+              observedAt: null,
+              messageCount: null,
+              fileCount: null,
+              artifactCount: null,
+              sourceCount: null,
+            };
+        const conversationFreshness = deriveAccountMirrorConversationFreshness({
+          conversationId,
+          item: base,
+          indexRank: index,
+          target: {
+            lastCompletedAt: target.lastCompletedAt,
+            lastSuccessAt: target.lastSuccessAt,
+            reason: target.reason,
+            providerGuard: target.providerGuard,
+            mirrorCompleteness: target.mirrorCompleteness,
+          },
+          detail,
+          assets: collectConversationAssets(conversationId, rawManifests, context),
+        });
+        const manifestCounts = countConversationManifestAssets(conversationId, rawManifests);
+        if (!context) {
+          return {
+            ...base,
+            cachedFileCount: manifestCounts.files,
+            cachedArtifactCount: manifestCounts.artifacts,
+            cachedMediaCount: manifestCounts.media,
+            conversationFreshness,
+            freshnessState: conversationFreshness.state,
+            routeabilityState: conversationFreshness.routeabilityState,
+          };
+        }
         return {
           ...base,
           hasCachedTranscript: context.messages.length > 0,
           messageCount: context.messages.length,
-          cachedFileCount: context.files?.length ?? 0,
+          cachedFileCount: Math.max(context.files?.length ?? 0, manifestCounts.files),
           cachedSourceCount: context.sources?.length ?? 0,
-          cachedArtifactCount: context.artifacts?.length ?? 0,
+          cachedArtifactCount: Math.max(context.artifacts?.length ?? 0, manifestCounts.artifacts),
+          cachedMediaCount: manifestCounts.media,
+          conversationFreshness,
+          freshnessState: conversationFreshness.state,
+          routeabilityState: conversationFreshness.routeabilityState,
         };
       }),
     ),
@@ -264,6 +310,63 @@ async function hydrateConversationCatalogItem(
     sources: context.sources ?? [],
     artifacts: context.artifacts ?? [],
   };
+}
+
+async function readConversationContextEntry(
+  persistence: AccountMirrorPersistence,
+  input: {
+    provider: AccountMirrorProvider;
+    boundIdentityKey: string | null;
+    conversationId: string;
+  },
+): Promise<{
+  context: NonNullable<Awaited<ReturnType<AccountMirrorPersistence['readConversationContext']>>>;
+  fetchedAt: string | null;
+  stale: boolean;
+} | null> {
+  if (persistence.readConversationContextEntry) {
+    return persistence.readConversationContextEntry(input);
+  }
+  const context = await persistence.readConversationContext(input);
+  return context ? { context, fetchedAt: null, stale: false } : null;
+}
+
+function collectConversationAssets(
+  conversationId: string,
+  manifests: AccountMirrorCatalogEntry['manifests'],
+  context: Awaited<ReturnType<AccountMirrorPersistence['readConversationContext']>> | null,
+): unknown[] {
+  return [
+    ...(context?.artifacts ?? []),
+    ...(context?.files ?? []),
+    ...manifests.artifacts.filter((item) => itemBelongsToConversation(item, conversationId)),
+    ...manifests.files.filter((item) => itemBelongsToConversation(item, conversationId)),
+    ...manifests.media.filter((item) => itemBelongsToConversation(item, conversationId)),
+  ];
+}
+
+function countConversationManifestAssets(
+  conversationId: string,
+  manifests: AccountMirrorCatalogEntry['manifests'],
+): { artifacts: number; files: number; media: number } {
+  return {
+    artifacts: manifests.artifacts.filter((item) => itemBelongsToConversation(item, conversationId)).length,
+    files: manifests.files.filter((item) => itemBelongsToConversation(item, conversationId)).length,
+    media: manifests.media.filter((item) => itemBelongsToConversation(item, conversationId)).length,
+  };
+}
+
+function itemBelongsToConversation(item: unknown, conversationId: string): boolean {
+  return readCatalogStringField(item, ['conversationId']) === conversationId ||
+    readCatalogStringField(readCatalogRecordField(item, 'metadata'), ['conversationId']) === conversationId;
+}
+
+function readCatalogRecordField(item: unknown, field: string): Record<string, unknown> | null {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
+  const value = (item as Record<string, unknown>)[field];
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
 }
 
 function isRecord(item: unknown): item is Record<string, unknown> {

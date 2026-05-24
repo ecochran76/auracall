@@ -273,6 +273,12 @@ describe('Config Resolver', () => {
                   enabled: true,
                   mode: 'metadata-first',
                   priority: 'background',
+                  sweepMode: 'full_sweep',
+                  materializationPolicy: 'full_missing_assets',
+                  materializationAssetKinds: ['media', 'artifacts'],
+                  materializationMaxItems: 25,
+                  materializationRefreshSnapshot: true,
+                  materializationForce: true,
                 },
               },
               gemini: {
@@ -305,6 +311,12 @@ describe('Config Resolver', () => {
       enabled: true,
       mode: 'metadata-first',
       priority: 'background',
+      sweepMode: 'full_sweep',
+      materializationPolicy: 'full_missing_assets',
+      materializationAssetKinds: ['media', 'artifacts'],
+      materializationMaxItems: 25,
+      materializationRefreshSnapshot: true,
+      materializationForce: true,
     });
     expect(result.profiles?.default?.services?.gemini?.liveFollow).toEqual({
       enabled: true,

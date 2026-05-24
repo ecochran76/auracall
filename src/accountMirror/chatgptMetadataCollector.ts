@@ -27,6 +27,7 @@ export interface AccountMirrorMetadataCollectorInput {
   provider: AccountMirrorProvider;
   runtimeProfileId: string;
   expectedIdentityKey: string;
+  sweepMode?: 'steady_follow' | 'full_sweep';
   previousEvidence?: AccountMirrorMetadataEvidence | null;
   shouldYield?: () => Promise<boolean> | boolean;
   abortSignal?: AbortSignal;
@@ -53,6 +54,13 @@ export interface AttachmentInventoryCursor {
   } | null;
 }
 
+export interface ProjectConversationHistoryCursor {
+  nextProjectIndex: number;
+  readLimit: number;
+  scannedProjects: number;
+  yielded?: boolean;
+}
+
 export interface AccountMirrorMetadataCollectorResult {
   detectedIdentityKey: string | null;
   detectedAccountLevel: string | null;
@@ -73,6 +81,7 @@ export interface AccountMirrorMetadataCollectorResult {
       conversations: boolean;
       artifacts: boolean;
     };
+    projectConversations?: ProjectConversationHistoryCursor | null;
     attachmentInventory?: AttachmentInventoryCursor | null;
   };
 }
@@ -148,28 +157,48 @@ export function createChatgptAccountMirrorMetadataCollector(
       });
       throwIfCollectionAborted(input.abortSignal);
       const conversationBudget = Math.max(0, Math.floor(input.limits.maxConversationRowsPerCycle));
-      const rootConversations = await readBoundedConversations(client, null, conversationBudget, {
+      const conversationBudgets = allocateConversationReadBudgets(
+        input.provider,
+        conversationBudget,
+        projects.items.length,
+      );
+      const rootConversations = await readBoundedConversations(client, null, conversationBudgets.rootRows, {
         listOptions,
         pacer,
+        observation: createAccountMirrorObservationContext(input, client),
       });
-      let remainingConversationBudget = Math.max(0, conversationBudget - rootConversations.items.length);
+      const remainingConversationBudget = Math.max(
+        0,
+        conversationBudgets.projectRows + Math.max(0, conversationBudgets.rootRows - rootConversations.items.length),
+      );
       const projectConversations: Conversation[] = [];
+      let projectConversationsTruncated = false;
+      let projectConversationCursor: ProjectConversationHistoryCursor | null = null;
       if (shouldReadProjectConversationsForAccountMirror(input.provider)) {
-        for (const project of projects.items) {
-          throwIfCollectionAborted(input.abortSignal);
-          if (remainingConversationBudget <= 0) break;
-          const result = await readBoundedConversations(client, project.id, remainingConversationBudget, {
-            listOptions,
-            pacer,
-            observation: createAccountMirrorObservationContext(input, client),
-          });
-          projectConversations.push(...result.items);
-          remainingConversationBudget -= result.items.length;
-          if (result.truncated) break;
-        }
+        const previousProjectConversationCursor = selectProjectConversationCursorForSweep(
+          input.sweepMode,
+          input.previousEvidence ?? null,
+        );
+        const result = await readBoundedProjectConversations(client, projects.items, remainingConversationBudget, {
+          listOptions,
+          pacer,
+          observation: createAccountMirrorObservationContext(input, client),
+          tolerateReadFailure: input.provider === 'gemini',
+          abortSignal: input.abortSignal,
+          cursor: previousProjectConversationCursor,
+          maxProjectReads: input.limits.maxPageReadsPerCycle,
+          shouldYield: input.shouldYield,
+        });
+        projectConversations.push(...result.items);
+        projectConversationsTruncated = result.truncated;
+        projectConversationCursor = result.cursor;
       }
       throwIfCollectionAborted(input.abortSignal);
-      const conversations = [...rootConversations.items, ...projectConversations];
+      const conversations = mergeConversationsById([...rootConversations.items, ...projectConversations]);
+      const attachmentCursor = selectAttachmentInventoryCursorForSweep(
+        input.sweepMode,
+        input.previousEvidence ?? null,
+      );
       const inventory = input.provider === 'chatgpt'
         ? await readBoundedChatgptDetailInventory(
             client,
@@ -178,13 +207,28 @@ export function createChatgptAccountMirrorMetadataCollector(
             input.limits.maxArtifactRowsPerCycle,
             {
               maxDetailReads: input.limits.maxPageReadsPerCycle,
-              cursor: input.previousEvidence?.attachmentInventory ?? null,
+              cursor: attachmentCursor,
               shouldYield: input.shouldYield,
               listOptions,
               pacer,
               observation: createAccountMirrorObservationContext(input, client),
             },
           )
+        : input.provider === 'gemini'
+          ? await readBoundedGeminiDetailInventory(
+              client,
+              projects.items,
+              conversations,
+              input.limits.maxArtifactRowsPerCycle,
+              {
+                maxDetailReads: input.limits.maxPageReadsPerCycle,
+                cursor: attachmentCursor,
+                shouldYield: input.shouldYield,
+                listOptions,
+                pacer,
+                observation: createAccountMirrorObservationContext(input, client),
+              },
+            )
         : input.provider === 'grok'
           ? await readBoundedGrokAccountFileInventory(client, input.limits.maxArtifactRowsPerCycle, {
               listOptions,
@@ -223,10 +267,13 @@ export function createChatgptAccountMirrorMetadataCollector(
             projects: projects.truncated,
             conversations:
               rootConversations.truncated ||
-              projectConversations.length >= conversationBudget ||
-              remainingConversationBudget <= 0,
+              projectConversationsTruncated ||
+              (projects.items.length > 0 &&
+                shouldReadProjectConversationsForAccountMirror(input.provider) &&
+                remainingConversationBudget <= 0),
             artifacts: inventory.truncated,
           },
+          projectConversations: projectConversationCursor,
           attachmentInventory: inventory.cursor,
         },
       };
@@ -234,8 +281,45 @@ export function createChatgptAccountMirrorMetadataCollector(
   };
 }
 
+export function selectAttachmentInventoryCursorForSweep(
+  sweepMode: AccountMirrorMetadataCollectorInput['sweepMode'],
+  previousEvidence: AccountMirrorMetadataEvidence | null | undefined,
+): AttachmentInventoryCursor | null {
+  if (sweepMode !== 'full_sweep') return null;
+  return previousEvidence?.attachmentInventory ?? null;
+}
+
+export function selectProjectConversationCursorForSweep(
+  sweepMode: AccountMirrorMetadataCollectorInput['sweepMode'],
+  previousEvidence: AccountMirrorMetadataEvidence | null | undefined,
+): ProjectConversationHistoryCursor | null {
+  if (sweepMode !== 'full_sweep') return null;
+  return previousEvidence?.projectConversations ?? null;
+}
+
 export function shouldReadProjectConversationsForAccountMirror(provider: AccountMirrorProvider): boolean {
-  return provider === 'chatgpt';
+  return provider === 'chatgpt' || provider === 'gemini';
+}
+
+export function allocateConversationReadBudgets(
+  provider: AccountMirrorProvider,
+  maxRows: number,
+  projectCount: number,
+): { rootRows: number; projectRows: number } {
+  const rowBudget = Math.max(0, Math.floor(maxRows));
+  if (rowBudget <= 0) return { rootRows: 0, projectRows: 0 };
+  if (!shouldReadProjectConversationsForAccountMirror(provider) || projectCount <= 0 || rowBudget <= 1) {
+    return { rootRows: rowBudget, projectRows: 0 };
+  }
+  const projectReserve = Math.min(
+    Math.max(0, Math.floor(projectCount)),
+    Math.max(1, Math.floor(rowBudget / 4)),
+  );
+  const rootRows = Math.max(1, rowBudget - projectReserve);
+  return {
+    rootRows,
+    projectRows: Math.max(0, rowBudget - rootRows),
+  };
 }
 
 function createAccountMirrorObservationContext(
@@ -375,7 +459,7 @@ export async function readBoundedProjects(
   };
 }
 
-async function readBoundedConversations(
+export async function readBoundedConversations(
   client: BrowserAutomationClient,
   projectId: string | null,
   maxRows: number,
@@ -383,6 +467,7 @@ async function readBoundedConversations(
     listOptions?: Parameters<BrowserAutomationClient['listConversations']>[1];
     pacer?: BrowserInteractionPacer;
     observation?: AccountMirrorDomDriftObservationContext;
+    tolerateReadFailure?: boolean;
   } = {},
 ): Promise<{ items: Conversation[]; truncated: boolean }> {
   const limit = Math.max(0, Math.floor(maxRows));
@@ -401,19 +486,112 @@ async function readBoundedConversations(
     await recordAccountMirrorDomDriftObservation(options.observation, {
       surface: projectId ? 'account-mirror-project-conversations' : 'account-mirror-conversations',
       action: 'list-conversations',
-      fallbackKind: 'read-failure',
+      fallbackKind: options.tolerateReadFailure ? 'read-failure-tolerated' : 'read-failure',
       error,
       metadata: {
         projectId,
         historyLimit: limit,
       },
     });
+    if (options.tolerateReadFailure) {
+      return { items: [], truncated: false };
+    }
     throw error;
   }
   return {
     items: conversations.slice(0, limit),
     truncated: conversations.length > limit,
   };
+}
+
+export async function readBoundedProjectConversations(
+  client: BrowserAutomationClient,
+  projects: readonly Project[],
+  maxRows: number,
+  options: {
+    listOptions?: Parameters<BrowserAutomationClient['listConversations']>[1];
+    pacer?: BrowserInteractionPacer;
+    observation?: AccountMirrorDomDriftObservationContext;
+    tolerateReadFailure?: boolean;
+    abortSignal?: AbortSignal;
+    cursor?: ProjectConversationHistoryCursor | null;
+    maxProjectReads?: number | null;
+    shouldYield?: () => Promise<boolean> | boolean;
+  } = {},
+): Promise<{ items: Conversation[]; truncated: boolean; cursor: ProjectConversationHistoryCursor }> {
+  const rowBudget = Math.max(0, Math.floor(maxRows));
+  const readLimit = normalizeProjectConversationReadLimit(options.maxProjectReads, projects.length);
+  if (rowBudget <= 0) {
+    return {
+      items: [],
+      truncated: projects.length > 0,
+      cursor: createProjectConversationCursor(options.cursor, {
+        projectsLength: projects.length,
+        readLimit,
+        scannedProjects: 0,
+      }),
+    };
+  }
+  const conversations: Conversation[] = [];
+  let remainingRows = rowBudget;
+  let truncated = false;
+  let projectIndex = normalizeCursorIndex(options.cursor?.nextProjectIndex, projects.length);
+  let scannedProjects = 0;
+  let yielded = false;
+  for (; projectIndex < projects.length; projectIndex += 1) {
+    throwIfCollectionAborted(options.abortSignal);
+    if (scannedProjects >= readLimit) {
+      truncated = true;
+      break;
+    }
+    if (remainingRows <= 0) {
+      truncated = true;
+      break;
+    }
+    if (await options.shouldYield?.()) {
+      truncated = true;
+      yielded = true;
+      break;
+    }
+    const remainingProjects = projects.length - projectIndex;
+    const perProjectRows = Math.max(1, Math.ceil(remainingRows / remainingProjects));
+    const result = await readBoundedConversations(client, projects[projectIndex].id, perProjectRows, {
+      listOptions: options.listOptions,
+      pacer: options.pacer,
+      observation: options.observation,
+      tolerateReadFailure: options.tolerateReadFailure,
+    });
+    scannedProjects += 1;
+    conversations.push(...result.items);
+    remainingRows -= result.items.length;
+    truncated = truncated || result.truncated;
+  }
+  if (projectIndex < projects.length) {
+    truncated = true;
+  }
+  return {
+    items: conversations,
+    truncated,
+    cursor: createProjectConversationCursor(options.cursor, {
+      projectsLength: projects.length,
+      readLimit,
+      scannedProjects,
+      nextProjectIndex: projectIndex >= projects.length ? 0 : projectIndex,
+      yielded,
+    }),
+  };
+}
+
+function mergeConversationsById(conversations: readonly Conversation[]): Conversation[] {
+  const merged = new Map<string, Conversation>();
+  for (const conversation of conversations) {
+    if (!conversation.id) continue;
+    merged.set(conversation.id, {
+      ...(merged.get(conversation.id) ?? {}),
+      ...conversation,
+    });
+  }
+  return [...merged.values()];
 }
 
 export async function readBoundedAttachmentInventory(
@@ -428,6 +606,7 @@ export async function readBoundedAttachmentInventory(
     listOptions?: Parameters<BrowserAutomationClient['listProjectFiles']>[1];
     pacer?: BrowserInteractionPacer;
     observation?: AccountMirrorDomDriftObservationContext;
+    prioritizeConversations?: boolean;
   } = 6,
 ): Promise<{
   artifacts: ConversationArtifact[];
@@ -445,6 +624,7 @@ export async function readBoundedAttachmentInventory(
   const listOptions = typeof options === 'number' ? undefined : options.listOptions;
   const pacer = typeof options === 'number' ? undefined : options.pacer;
   const observation = typeof options === 'number' ? undefined : options.observation;
+  const prioritizeConversations = typeof options === 'number' ? false : options.prioritizeConversations === true;
   const detailReadLimit = Math.max(1, Math.min(6, Math.floor(maxDetailReads)));
   if (limit <= 0) {
     return {
@@ -472,66 +652,78 @@ export async function readBoundedAttachmentInventory(
   let scannedProjects = 0;
   let scannedConversations = 0;
 
-  for (; projectIndex < projects.length; projectIndex += 1) {
-    if (remaining <= 0 || remainingDetailReads <= 0) {
-      truncated = true;
-      break;
-    }
-    if (await shouldYield?.()) {
-      truncated = true;
-      yielded = true;
-      break;
-    }
-    const project = projects[projectIndex];
-    if (!project) break;
-    remainingDetailReads -= 1;
-    scannedProjects += 1;
-    await pacer?.beforeInteraction();
-    const projectFiles = await safeReadProjectFiles(client, project.id, listOptions, observation);
-    for (const file of projectFiles) {
-      if (remaining <= 0) {
+  const scanProjects = async () => {
+    for (; projectIndex < projects.length; projectIndex += 1) {
+      if (remaining <= 0 || remainingDetailReads <= 0) {
         truncated = true;
         break;
       }
-      addFile(files, file, { projectId: project.id, source: 'project' });
-      remaining -= 1;
+      if (await shouldYield?.()) {
+        truncated = true;
+        yielded = true;
+        break;
+      }
+      const project = projects[projectIndex];
+      if (!project) break;
+      remainingDetailReads -= 1;
+      scannedProjects += 1;
+      await pacer?.beforeInteraction();
+      const projectFiles = await safeReadProjectFiles(client, project.id, listOptions, observation);
+      for (const file of projectFiles) {
+        if (remaining <= 0) {
+          truncated = true;
+          break;
+        }
+        addFile(files, file, { projectId: project.id, source: 'project' });
+        remaining -= 1;
+      }
     }
-  }
+  };
 
-  for (; !yielded && conversationIndex < conversations.length; conversationIndex += 1) {
-    if (remaining <= 0 || remainingDetailReads <= 0) {
-      truncated = true;
-      break;
-    }
-    if (await shouldYield?.()) {
-      truncated = true;
-      yielded = true;
-      break;
-    }
-    const conversation = conversations[conversationIndex];
-    if (!conversation) break;
-    remainingDetailReads -= 1;
-    scannedConversations += 1;
-    await pacer?.beforeInteraction();
-    const conversationFiles = await safeReadConversationFiles(client, conversation, observation);
-    await pacer?.beforeInteraction();
-    const context = await safeReadConversationContext(client, conversation, observation);
-    for (const file of conversationFiles) {
-      if (remaining <= 0) {
+  const scanConversations = async () => {
+    for (; !yielded && conversationIndex < conversations.length; conversationIndex += 1) {
+      if (remaining <= 0 || remainingDetailReads <= 0) {
         truncated = true;
         break;
       }
-      addFile(files, file, { conversationId: conversation.id, projectId: conversation.projectId, source: 'conversation' });
-      remaining -= 1;
-    }
-    for (const artifact of context?.artifacts ?? []) {
-      if (remaining <= 0) {
+      if (await shouldYield?.()) {
         truncated = true;
+        yielded = true;
         break;
       }
-      addArtifact(artifacts, artifact, conversation);
-      remaining -= 1;
+      const conversation = conversations[conversationIndex];
+      if (!conversation) break;
+      remainingDetailReads -= 1;
+      scannedConversations += 1;
+      await pacer?.beforeInteraction();
+      const conversationFiles = await safeReadConversationFiles(client, conversation, observation);
+      await pacer?.beforeInteraction();
+      const context = await safeReadConversationContext(client, conversation, observation);
+      for (const file of conversationFiles) {
+        if (remaining <= 0) {
+          truncated = true;
+          break;
+        }
+        addFile(files, file, { conversationId: conversation.id, projectId: conversation.projectId, source: 'conversation' });
+        remaining -= 1;
+      }
+      for (const artifact of context?.artifacts ?? []) {
+        if (remaining <= 0) {
+          truncated = true;
+          break;
+        }
+        addArtifact(artifacts, artifact, conversation);
+        remaining -= 1;
+      }
     }
+  };
+
+  if (prioritizeConversations) {
+    await scanConversations();
+    if (!yielded) await scanProjects();
+  } else {
+    await scanProjects();
+    if (!yielded) await scanConversations();
   }
 
   if (projectIndex < projects.length || conversationIndex < conversations.length) {
@@ -585,30 +777,15 @@ export async function readBoundedChatgptDetailInventory(
   const listOptions = typeof options === 'number' ? undefined : options.listOptions;
   const pacer = typeof options === 'number' ? undefined : options.pacer;
   const observation = typeof options === 'number' ? undefined : options.observation;
+  const hasAttachmentSurfaces = projects.length > 0 || conversations.length > 0;
   const library = await readBoundedChatgptLibraryInventory(client, limit, {
     listOptions,
     pacer,
     observation,
   });
-  if (library.files.length > 0 || library.artifacts.length > 0) {
-    return {
-      artifacts: library.artifacts,
-      files: library.files,
-      media: [],
-      truncated: library.truncated,
-      cursor: createAttachmentInventoryCursor(
-        typeof options === 'number' ? null : options.cursor ?? null,
-        {
-          projectsLength: projects.length,
-          conversationsLength: conversations.length,
-          detailReadLimit: normalizeDetailReadLimit(options),
-          scannedProjects: 0,
-          scannedConversations: 0,
-        },
-      ),
-    };
-  }
-  const remainingRows = Math.max(0, limit - library.files.length);
+  const remainingRows = hasAttachmentSurfaces && limit > 0
+    ? Math.max(1, limit - library.files.length)
+    : Math.max(0, limit - library.files.length);
   const attachmentInventory = await readBoundedAttachmentInventory(
     client,
     projects,
@@ -623,17 +800,6 @@ export async function readBoundedChatgptDetailInventory(
     truncated: library.truncated || attachmentInventory.truncated,
     cursor: attachmentInventory.cursor,
   };
-}
-
-function normalizeDetailReadLimit(
-  options: number | {
-    maxDetailReads?: number;
-  },
-): number {
-  const maxDetailReads = typeof options === 'number'
-    ? options
-    : options.maxDetailReads ?? 6;
-  return Math.max(1, Math.min(6, Math.floor(maxDetailReads)));
 }
 
 export async function readBoundedChatgptLibraryInventory(
@@ -667,6 +833,42 @@ export async function readBoundedChatgptLibraryInventory(
     artifacts: mapChatgptLibraryFilesToArtifacts(boundedFiles),
     files: boundedFiles,
     truncated: files.length > limit,
+  };
+}
+
+export async function readBoundedGeminiDetailInventory(
+  client: Pick<BrowserAutomationClient, 'listProjectFiles' | 'listConversationFiles' | 'getConversationContext'>,
+  projects: readonly Project[],
+  conversations: readonly Conversation[],
+  maxRows: number,
+  options: {
+    maxDetailReads?: number;
+    cursor?: AttachmentInventoryCursor | null;
+    shouldYield?: () => Promise<boolean> | boolean;
+    listOptions?: Parameters<BrowserAutomationClient['listProjectFiles']>[1];
+    pacer?: BrowserInteractionPacer;
+    observation?: AccountMirrorDomDriftObservationContext;
+  } = {},
+): Promise<{
+  artifacts: ConversationArtifact[];
+  files: FileRef[];
+  media: AccountMirrorMediaManifestEntry[];
+  truncated: boolean;
+  cursor: AttachmentInventoryCursor;
+}> {
+  const inventory = await readBoundedAttachmentInventory(
+    client,
+    projects,
+    conversations,
+    maxRows,
+    {
+      ...options,
+      prioritizeConversations: true,
+    },
+  );
+  return {
+    ...inventory,
+    media: mapGeminiConversationArtifactsToMediaManifest(inventory.artifacts),
   };
 }
 
@@ -740,6 +942,30 @@ function normalizeCursorIndex(value: number | null | undefined, length: number):
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return 0;
   const index = Math.floor(value);
   return length > 0 ? Math.min(index, length) : 0;
+}
+
+function normalizeProjectConversationReadLimit(value: number | null | undefined, projectsLength: number): number {
+  if (projectsLength <= 0) return 0;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return projectsLength;
+  return Math.max(1, Math.min(projectsLength, Math.floor(value)));
+}
+
+function createProjectConversationCursor(
+  previous: ProjectConversationHistoryCursor | null | undefined,
+  input: {
+    projectsLength: number;
+    readLimit: number;
+    scannedProjects: number;
+    nextProjectIndex?: number;
+    yielded?: boolean;
+  },
+): ProjectConversationHistoryCursor {
+  return {
+    nextProjectIndex: normalizeCursorIndex(input.nextProjectIndex ?? previous?.nextProjectIndex, input.projectsLength),
+    readLimit: input.readLimit,
+    scannedProjects: input.scannedProjects,
+    yielded: input.yielded === true,
+  };
 }
 
 async function safeReadProjectFiles(
@@ -1092,6 +1318,84 @@ export function mapGrokAccountFilesToMediaManifest(
     });
   }
   return media;
+}
+
+export function mapGeminiConversationArtifactsToMediaManifest(
+  artifacts: readonly ConversationArtifact[],
+): AccountMirrorMediaManifestEntry[] {
+  const media: AccountMirrorMediaManifestEntry[] = [];
+  for (const artifact of artifacts) {
+    const mediaType = inferMediaTypeFromGeminiArtifact(artifact);
+    if (!mediaType) continue;
+    const metadata = isRecord(artifact.metadata) ? artifact.metadata : {};
+    const conversationId = readMetadataString(metadata, 'conversationId');
+    const projectId = readMetadataString(metadata, 'projectId');
+    media.push({
+      id: `gemini-conversation-artifact:${conversationId ?? 'unknown'}:${artifact.id}`,
+      title: artifact.title || readMetadataString(metadata, 'fileName') || artifact.id || null,
+      mediaType,
+      uri: artifact.uri,
+      conversationId: conversationId ?? undefined,
+      projectId: projectId ?? undefined,
+      provider: 'gemini',
+      metadata: {
+        source: 'gemini-conversation-artifacts',
+        artifactId: artifact.id,
+        artifactKind: artifact.kind ?? null,
+        messageIndex: artifact.messageIndex ?? null,
+        uri: artifact.uri ?? null,
+        ...metadata,
+      },
+    });
+  }
+  return media;
+}
+
+function inferMediaTypeFromGeminiArtifact(
+  artifact: ConversationArtifact,
+): AccountMirrorMediaManifestEntry['mediaType'] | null {
+  const metadata = isRecord(artifact.metadata) ? artifact.metadata : {};
+  const explicit = normalizeMediaManifestType(readMetadataString(metadata, 'mediaType'));
+  if (explicit) return explicit;
+  if (artifact.kind === 'image') return 'image';
+  const haystack = [
+    artifact.kind,
+    artifact.title,
+    artifact.uri,
+    readMetadataString(metadata, 'fileName'),
+    readMetadataString(metadata, 'downloadLabel'),
+    readMetadataString(metadata, 'downloadVariant'),
+    readMetadataString(metadata, 'mimeType'),
+  ]
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .join(' ')
+    .toLowerCase();
+  if (!haystack) return null;
+  if (/\bimage\//.test(haystack) || /\.(avif|gif|jpe?g|png|webp)(?:[?#\s]|$)/.test(haystack)) {
+    return 'image';
+  }
+  if (/\bvideo\//.test(haystack) || /\.(m4v|mov|mp4|webm)(?:[?#\s]|$)/.test(haystack)) {
+    return 'video';
+  }
+  if (/\bmusic\b|\bmp3\b|\btrack\b|\bsong\b|with album art/.test(haystack)) {
+    return 'music';
+  }
+  if (/\baudio\//.test(haystack) || /\.(aac|flac|m4a|mp3|ogg|wav)(?:[?#\s]|$)/.test(haystack)) {
+    return 'audio';
+  }
+  return null;
+}
+
+function normalizeMediaManifestType(value: string | null): AccountMirrorMediaManifestEntry['mediaType'] | null {
+  if (value === 'image' || value === 'video' || value === 'music' || value === 'audio' || value === 'unknown') {
+    return value;
+  }
+  return null;
+}
+
+function readMetadataString(metadata: Record<string, unknown>, key: string): string | null {
+  const value = metadata[key];
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
 function inferMediaTypeFromFile(

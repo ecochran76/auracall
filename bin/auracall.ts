@@ -170,6 +170,14 @@ import {
   startApiMirrorCompletionForCli,
 } from '../src/cli/apiMirrorCompletionCommand.js';
 import {
+  cancelApiHistoryMaterializationJobForCli,
+  createApiHistoryMaterializationJobForCli,
+  formatApiHistoryMaterializationJobCliSummary,
+  formatApiHistoryMaterializationJobsCliSummary,
+  listApiHistoryMaterializationJobsForCli,
+  readApiHistoryMaterializationJobForCli,
+} from '../src/cli/apiHistoryMaterializationCommand.js';
+import {
   clearApiMirrorProviderGuardForCli,
   formatApiMirrorProviderGuardClearCliSummary,
 } from '../src/cli/apiMirrorProviderGuardCommand.js';
@@ -1057,9 +1065,14 @@ apiCommand
     '--account-mirror-scheduler-execute',
     'Let lazy account mirror scheduler passes execute eligible refreshes. Default is dry-run.',
   )
+  .option(
+    '--no-account-mirror-completions-on-start',
+    'Do not resume persisted account-mirror completions or reconcile configured live-follow targets at API startup; set scheduler/drain intervals to 0 separately for isolated proof servers.',
+  )
   .action(async (commandOptions) => {
     const { serveResponsesHttp } = await import('../src/http/responsesServer.js');
     const parentOptions = program.opts?.() ?? {};
+    const accountMirrorCompletionsOnStart = commandOptions.accountMirrorCompletionsOnStart !== false;
     await serveResponsesHttp({
       host: commandOptions.host,
       port: commandOptions.port,
@@ -1073,6 +1086,8 @@ apiCommand
       accountMirrorSchedulerDryRun: commandOptions.accountMirrorSchedulerExecute === undefined
         ? undefined
         : !commandOptions.accountMirrorSchedulerExecute,
+      resumeAccountMirrorCompletionsOnStart: accountMirrorCompletionsOnStart,
+      reconcileAccountMirrorLiveFollowOnStart: accountMirrorCompletionsOnStart,
     });
   });
 
@@ -1597,6 +1612,156 @@ apiCommand
   });
 
 apiCommand
+  .command('history-materialization-create')
+  .description('Queue a durable account-history-backed materialization job.')
+  .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP write timeout in milliseconds.', parseIntOption, 10000)
+  .option('--provider <provider>', 'Provider for direct conversation or filtered reconciliation.')
+  .option('--runtime-profile <profile>', 'AuraCall runtime profile for provider work.')
+  .option('--browser-profile <profile>', 'Browser profile metadata to preserve on archive rows.')
+  .option('--bound-identity-key <key>', 'Bound provider identity key to preserve/filter.')
+  .option('--conversation-id <id>', 'Materialize one provider conversation id.')
+  .option('--conversation-ids <ids>', 'Selected provider conversation ids for a small reconciliation batch. Repeatable or comma-separated.', collectTrimmedString, [])
+  .option('--provider-conversation-url <url>', 'Provider conversation URL for reopening historical context.')
+  .option('--project-id <id>', 'Provider project id for scoped conversations.')
+  .option('--catalog-item-id <id>', 'Materialize from an account-mirror catalog item id.')
+  .option('--catalog-kind <kind>', 'Catalog kind for item lookup: conversations, artifacts, files, media, projects, or all.')
+  .option('--archive-item-id <id>', 'Resolve provider conversation evidence from a run archive item.')
+  .option('--reconcile', 'Run a bounded reconciliation pass over cached account-mirror conversation rows.', false)
+  .option('--refresh-snapshot', 'Refresh the provider conversation snapshot before materializing artifacts.', false)
+  .option('--asset-kind <kind>', 'Asset kind to fetch: artifacts, files, media, or all. Repeatable or comma-separated.', collectTrimmedString, [])
+  .option('--max-items <count>', 'Maximum assets or reconciliation conversations to process.', parseIntOption)
+  .option('--force', 'Refresh through the provider even when related local evidence already exists.', false)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const result = await createApiHistoryMaterializationJobForCli({
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+      provider: commandOptions.provider,
+      runtimeProfile: commandOptions.runtimeProfile,
+      browserProfile: commandOptions.browserProfile,
+      boundIdentityKey: commandOptions.boundIdentityKey,
+      conversationId: commandOptions.conversationId,
+      conversationIds: commandOptions.conversationIds,
+      providerConversationUrl: commandOptions.providerConversationUrl,
+      projectId: commandOptions.projectId,
+      catalogItemId: commandOptions.catalogItemId,
+      catalogKind: commandOptions.catalogKind,
+      archiveItemId: commandOptions.archiveItemId,
+      reconcile: commandOptions.reconcile,
+      refreshSnapshot: commandOptions.refreshSnapshot,
+      assetKinds: commandOptions.assetKind,
+      maxItems: commandOptions.maxItems,
+      force: commandOptions.force,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiHistoryMaterializationJobCliSummary(result));
+  });
+
+apiCommand
+  .command('history-materialization-status')
+  .description('Read a durable account-history-backed materialization job.')
+  .argument('<id>', 'History materialization job id.')
+  .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const result = await readApiHistoryMaterializationJobForCli({
+      id,
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiHistoryMaterializationJobCliSummary(result));
+  });
+
+apiCommand
+  .command('history-materialization-cancel')
+  .description('Cancel a queued account-history-backed materialization job before provider work starts.')
+  .argument('<id>', 'History materialization job id.')
+  .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP write timeout in milliseconds.', parseIntOption, 5000)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const result = await cancelApiHistoryMaterializationJobForCli({
+      id,
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiHistoryMaterializationJobCliSummary(result));
+  });
+
+apiCommand
+  .command('history-materialization-jobs')
+  .description('List durable account-history-backed materialization jobs.')
+  .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
+  .option('--port <number>', 'Local API port to query (defaults to api.port from config).', parseIntOption)
+  .option('--timeout-ms <ms>', 'HTTP read timeout in milliseconds.', parseIntOption, 5000)
+  .option('--status <status>', 'Filter by queued, running, succeeded, skipped, failed, active, or terminal.')
+  .option('--provider <provider>', 'Filter by provider.')
+  .option('--runtime-profile <profile>', 'Filter by runtime profile.')
+  .option('--source-type <type>', 'Filter by conversation, catalog_item, archive_item, or reconciliation.')
+  .option('--limit <count>', 'Maximum jobs to read.', parseIntOption, 50)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const parentOptions = program.opts?.() ?? {};
+    const apiConfig = readCliApiConfig(await resolveConfig(
+      { ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    ));
+    const result = await listApiHistoryMaterializationJobsForCli({
+      host: commandOptions.host ?? apiConfig.host,
+      port: commandOptions.port ?? apiConfig.port,
+      timeoutMs: commandOptions.timeoutMs,
+      status: commandOptions.status,
+      provider: commandOptions.provider,
+      runtimeProfile: commandOptions.runtimeProfile,
+      sourceType: commandOptions.sourceType,
+      limit: commandOptions.limit,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(result, null, 2));
+      return;
+    }
+    console.log(formatApiHistoryMaterializationJobsCliSummary(result));
+  });
+
+apiCommand
   .command('mirror-complete')
   .description('Start a nonblocking account mirror completion operation on the local API.')
   .option('--host <address>', 'Local API host to query (defaults to api.host from config).')
@@ -1605,6 +1770,12 @@ apiCommand
   .option('--provider <provider>', 'Provider to complete (default chatgpt).')
   .option('--runtime-profile <profile>', 'Runtime profile to complete (default default).')
   .option('--max-passes <count>', 'Debug cap for refresh passes; omitted means unbounded live follow.', parseIntOption)
+  .option('--sweep-mode <mode>', 'Live-follow sweep mode: steady_follow or full_sweep.')
+  .option('--materialization-policy <policy>', 'Sweep artifact policy: metadata_only, recent_missing_assets, or full_missing_assets.')
+  .option('--materialization-asset-kind <kind>', 'Sweep materialization asset kind: artifacts, files, media, or all. Repeatable or comma-separated.', collectTrimmedString, [])
+  .option('--materialization-max-items <count>', 'Maximum conversations/assets to pass to each sweep materialization job.', parseIntOption)
+  .option('--materialization-refresh-snapshot', 'Refresh provider conversation snapshots before sweep materialization.')
+  .option('--materialization-force', 'Force sweep materialization even when related local evidence exists.')
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
     const parentOptions = program.opts?.() ?? {};
@@ -1620,6 +1791,12 @@ apiCommand
       provider: commandOptions.provider,
       runtimeProfile: commandOptions.runtimeProfile,
       maxPasses: commandOptions.maxPasses,
+      sweepMode: commandOptions.sweepMode,
+      materializationPolicy: commandOptions.materializationPolicy,
+      materializationAssetKinds: commandOptions.materializationAssetKind,
+      materializationMaxItems: commandOptions.materializationMaxItems,
+      materializationRefreshSnapshot: commandOptions.materializationRefreshSnapshot,
+      materializationForce: commandOptions.materializationForce,
     });
     if (commandOptions.json) {
       console.log(JSON.stringify(operation, null, 2));

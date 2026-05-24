@@ -48,6 +48,7 @@ export function formatApiSchedulerDiagnosticsCliSummary(summary: ApiSchedulerDia
   const target = isRecord(diagnostics.target) ? diagnostics.target : {};
   const wait = isRecord(diagnostics.wait) ? diagnostics.wait : {};
   const completion = isRecord(diagnostics.completion) ? diagnostics.completion : null;
+  const browserMutations = isRecord(diagnostics.browserMutations) ? diagnostics.browserMutations : null;
   const lines = [
     `AuraCall account mirror scheduler diagnostics (${summary.host}:${summary.port})`,
     `Target: ${readString(target.provider) ?? 'unknown'}/${readString(target.runtimeProfileId) ?? 'unknown'}`,
@@ -60,6 +61,9 @@ export function formatApiSchedulerDiagnosticsCliSummary(summary: ApiSchedulerDia
     );
   } else {
     lines.push('Completion: none');
+  }
+  if (browserMutations) {
+    lines.push(`Browser mutations: ${readNumber(browserMutations.total) ?? 'unknown'}`);
   }
   return lines.join('\n');
 }
@@ -97,6 +101,10 @@ function normalizeOptionalString(value: string | null | undefined): string | und
 
 function readString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function readNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

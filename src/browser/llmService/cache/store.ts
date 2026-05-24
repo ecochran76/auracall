@@ -159,48 +159,95 @@ function choosePreferredConversation(
   if (existing.provider === 'grok' || candidate.provider === 'grok') {
     const preferred = choosePreferredGrokConversation(existing, candidate);
     const fallback = preferred === existing ? candidate : existing;
-    return {
+    return withMergedConversationMetadata({
       ...fallback,
       ...preferred,
       projectId: preferred.projectId ?? fallback.projectId,
       url: preferred.url ?? fallback.url,
       updatedAt: preferred.updatedAt ?? fallback.updatedAt,
-    };
+    }, preferred, fallback);
   }
   const existingQuality = genericConversationTitleQuality(existing.title, existing.id);
   const candidateQuality = genericConversationTitleQuality(candidate.title, candidate.id);
   if (candidateQuality !== existingQuality) {
     const preferred = candidateQuality > existingQuality ? candidate : existing;
     const fallback = preferred === existing ? candidate : existing;
-    return {
+    return withMergedConversationMetadata({
       ...fallback,
       ...preferred,
       projectId: preferred.projectId ?? fallback.projectId,
       url: preferred.url ?? fallback.url,
       updatedAt: preferred.updatedAt ?? fallback.updatedAt,
-    };
+    }, preferred, fallback);
   }
   const existingTimestamp = existing.updatedAt ? Date.parse(existing.updatedAt) : Number.NEGATIVE_INFINITY;
   const candidateTimestamp = candidate.updatedAt ? Date.parse(candidate.updatedAt) : Number.NEGATIVE_INFINITY;
   if (candidateTimestamp !== existingTimestamp) {
     const preferred = candidateTimestamp > existingTimestamp ? candidate : existing;
     const fallback = preferred === existing ? candidate : existing;
-    return {
+    return withMergedConversationMetadata({
       ...fallback,
       ...preferred,
       projectId: preferred.projectId ?? fallback.projectId,
       url: preferred.url ?? fallback.url,
       updatedAt: preferred.updatedAt ?? fallback.updatedAt,
-    };
+    }, preferred, fallback);
   }
-  return {
+  return withMergedConversationMetadata({
     ...existing,
     ...candidate,
     title: existing.title || candidate.title,
     projectId: existing.projectId ?? candidate.projectId,
     url: existing.url ?? candidate.url,
     updatedAt: existing.updatedAt ?? candidate.updatedAt,
+  }, candidate, existing);
+}
+
+function withMergedConversationMetadata(
+  result: Conversation,
+  preferred: Conversation,
+  fallback: Conversation,
+): Conversation {
+  const preferredMetadata = isMetadataRecord(preferred.metadata) ? preferred.metadata : {};
+  const fallbackMetadata = isMetadataRecord(fallback.metadata) ? fallback.metadata : {};
+  const merged = {
+    ...fallbackMetadata,
+    ...preferredMetadata,
   };
+  const newestIndexMetadata = newestConversationIndexMetadata(preferredMetadata, fallbackMetadata);
+  for (const field of ['indexObservedAt', 'indexSource', 'indexRank', 'conversationFingerprint'] as const) {
+    if (newestIndexMetadata[field] !== undefined) {
+      merged[field] = newestIndexMetadata[field];
+    }
+  }
+  return Object.keys(merged).length > 0
+    ? {
+        ...result,
+        metadata: merged,
+      }
+    : result;
+}
+
+function newestConversationIndexMetadata(
+  left: Record<string, unknown>,
+  right: Record<string, unknown>,
+): Record<string, unknown> {
+  const leftObservedAt = readMetadataString(left, 'indexObservedAt');
+  const rightObservedAt = readMetadataString(right, 'indexObservedAt');
+  if (!leftObservedAt) return right;
+  if (!rightObservedAt) return left;
+  return Date.parse(leftObservedAt) >= Date.parse(rightObservedAt) ? left : right;
+}
+
+function isMetadataRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function readMetadataString(value: Record<string, unknown>, field: string): string | null {
+  const candidate = value[field];
+  if (typeof candidate === 'string' && candidate.trim()) return candidate.trim();
+  if (typeof candidate === 'number' && Number.isFinite(candidate)) return String(candidate);
+  return null;
 }
 
 function mergeConversationLists(lists: Conversation[][]): Conversation[] {

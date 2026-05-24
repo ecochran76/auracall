@@ -48,7 +48,7 @@ const COMPACT_SEARCH_COLUMN_WIDTHS = {
   sortTime: 138,
   provider: 82,
   title: 260,
-  actions: 82,
+  actions: 104,
 };
 
 const NAV_ITEMS = [
@@ -100,7 +100,7 @@ const SEARCH_TABLE_COLUMNS = [
   { id: "tenant", label: "Tenant", width: 190, minWidth: 148, sortable: true, pinned: true },
   { id: "project", label: "Project", width: 160, minWidth: 120, sortable: true },
   { id: "title", label: "Title", width: 480, minWidth: 240, sortable: true },
-  { id: "actions", label: "Actions", width: 82, minWidth: 72, sortable: false },
+  { id: "actions", label: "Actions", width: 108, minWidth: 96, sortable: false },
   { id: "kind", label: "Kind", width: 104, minWidth: 88, sortable: true },
   { id: "status", label: "Status", width: 112, minWidth: 92, sortable: true },
   { id: "files", label: "Files", width: 96, minWidth: 80, sortable: true },
@@ -331,6 +331,15 @@ function archiveMaterializationJobRoute(job) {
   return id ? `${archiveMaterializationCreateRoute()}/${encodeURIComponent(id)}` : null;
 }
 
+function historyMaterializationCreateRoute() {
+  return "/v1/account-mirrors/materializations";
+}
+
+function historyMaterializationJobRoute(job) {
+  const id = typeof job === "string" ? job : job?.id;
+  return id ? `${historyMaterializationCreateRoute()}/${encodeURIComponent(id)}` : null;
+}
+
 function archiveMaterializationStatusTone(status) {
   if (status === "succeeded") return "ok";
   if (status === "failed" || status === "cancelled") return "bad";
@@ -339,6 +348,10 @@ function archiveMaterializationStatusTone(status) {
 }
 
 function isActiveArchiveMaterializationJob(job) {
+  return job?.status === "queued" || job?.status === "running";
+}
+
+function isActiveHistoryMaterializationJob(job) {
   return job?.status === "queued" || job?.status === "running";
 }
 
@@ -382,6 +395,30 @@ function materializationRowIcon(job, queuing = false, row = null) {
   if (!isActiveArchiveMaterializationJob(job) && row?.fileAvailable === true) return <RefreshCcw size={13} aria-hidden="true" />;
   if (job?.status === "succeeded") return <RefreshCcw size={13} aria-hidden="true" />;
   return <PackagePlus size={13} aria-hidden="true" />;
+}
+
+function canReconcileSearchRow(row) {
+  return row?.kind === "conversation"
+    && Boolean(row.itemId)
+    && Boolean(row.provider)
+    && row.provider !== "unknown"
+    && Boolean(row.runtimeProfileId)
+    && row.runtimeProfileId !== "unknown";
+}
+
+function reconciliationRowTitle(job, queuing = false) {
+  if (queuing) return "Queuing conversation reconciliation";
+  if (job?.status === "succeeded") return "Conversation reconciliation complete; refresh";
+  if (job?.status === "failed") return "Conversation reconciliation failed; retry";
+  if (job?.status === "cancelled") return "Conversation reconciliation cancelled; retry";
+  if (job?.status === "skipped") return "Conversation reconciliation skipped";
+  if (job?.status) return `Conversation reconciliation ${statusLabel(job.status)}`;
+  return "Reconcile conversation";
+}
+
+function reconciliationRowIcon(job, queuing = false) {
+  if (queuing || job?.status === "queued" || job?.status === "running") return <Activity size={13} aria-hidden="true" />;
+  return <RefreshCcw size={13} aria-hidden="true" />;
 }
 
 function readStringField(value, fields) {
@@ -1997,6 +2034,8 @@ function ArchiveSearchViewport({
   const [copiedSearchUrl, setCopiedSearchUrl] = useState(false);
   const [materializingRowId, setMaterializingRowId] = useState(null);
   const [rowMaterializationJobs, setRowMaterializationJobs] = useState({});
+  const [reconcilingRowId, setReconcilingRowId] = useState(null);
+  const [rowReconciliationJobs, setRowReconciliationJobs] = useState({});
   const [isCompactSearchTable, setIsCompactSearchTable] = useState(() => window.matchMedia("(max-width: 620px)").matches);
   const searchRoute = apiStatus.status?.routes?.search ?? "/v1/search";
   const dragColumnRef = useRef(null);
@@ -2083,6 +2122,14 @@ function ArchiveSearchViewport({
       .sort()
       .join(","),
   [rowMaterializationJobs]);
+  const activeRowReconciliationJobIds = useMemo(() =>
+    Object.values(rowReconciliationJobs)
+      .filter(isActiveHistoryMaterializationJob)
+      .map((job) => job.id)
+      .filter(Boolean)
+      .sort()
+      .join(","),
+  [rowReconciliationJobs]);
   const selectedRow = selectedSearchRow?.id ? (allRows.find((row) => row.id === selectedSearchRow.id) ?? selectedSearchRow) : null;
   const virtualWindow = useMemo(() => {
     const visibleCapacity = Math.ceil(virtualViewport.height / SEARCH_ROW_HEIGHT);
@@ -2324,6 +2371,16 @@ function ArchiveSearchViewport({
     }, 4000);
     return () => window.clearInterval(timer);
   }, [activeRowMaterializationJobIds]);
+
+  useEffect(() => {
+    if (!activeRowReconciliationJobIds) return undefined;
+    const timer = window.setInterval(() => {
+      for (const jobId of activeRowReconciliationJobIds.split(",").filter(Boolean)) {
+        void refreshRowReconciliationJob(jobId, { silent: true });
+      }
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, [activeRowReconciliationJobIds]);
 
   useEffect(() => {
     loadCatalog();
@@ -2650,8 +2707,11 @@ function ArchiveSearchViewport({
       const canDownloadAsset = Boolean(row.assetRoute);
       const canMaterializeAsset = row.kind === "artifact" && row.archiveItemRoute;
       const materializationJob = rowMaterializationJobs[row.id] ?? null;
+      const reconciliationJob = rowReconciliationJobs[row.id] ?? null;
       const activeMaterializationJob = isActiveArchiveMaterializationJob(materializationJob);
+      const activeReconciliationJob = isActiveHistoryMaterializationJob(reconciliationJob);
       const showMaterializeAction = canMaterializeAsset || materializationJob;
+      const showReconciliationAction = canReconcileSearchRow(row) || reconciliationJob;
       return (
         <>
           <button type="button" className="row-action-button" title="Inspect row" aria-label="Inspect result" onClick={(event) => { event.stopPropagation(); openRow(row); }}>
@@ -2680,6 +2740,18 @@ function ArchiveSearchViewport({
               onClick={(event) => materializeSearchRow(row, event)}
             >
               {materializationRowIcon(materializationJob, materializingRowId === row.id, row)}
+            </button>
+          ) : null}
+          {showReconciliationAction ? (
+            <button
+              type="button"
+              className={`row-action-button reconcile-row-action reconcile-row-${reconciliationJob?.status ?? "idle"}`}
+              title={reconciliationRowTitle(reconciliationJob, reconcilingRowId === row.id)}
+              aria-label={reconciliationRowTitle(reconciliationJob, reconcilingRowId === row.id)}
+              disabled={reconcilingRowId === row.id || activeReconciliationJob}
+              onClick={(event) => reconcileSearchRow(row, event)}
+            >
+              {reconciliationRowIcon(reconciliationJob, reconcilingRowId === row.id)}
             </button>
           ) : null}
         </>
@@ -2779,6 +2851,46 @@ function ArchiveSearchViewport({
     }
   }
 
+  async function reconcileSearchRow(row, event) {
+    event.stopPropagation();
+    if (!canReconcileSearchRow(row)) return;
+    setReconcilingRowId(row.id);
+    try {
+      const response = await fetch(historyMaterializationCreateRoute(), {
+        method: "POST",
+        cache: "no-store",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          provider: row.provider,
+          runtimeProfile: row.runtimeProfileId,
+          catalogItemId: row.itemId,
+          catalogKind: "conversations",
+          assetKinds: ["all"],
+          refreshSnapshot: true,
+          force: false,
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      const job = payload?.job ?? null;
+      if (job) {
+        setRowReconciliationJobs((current) => ({ ...current, [row.id]: job }));
+        if (!isActiveHistoryMaterializationJob(job)) {
+          window.setTimeout(() => {
+            void loadCatalog(false);
+          }, 500);
+        }
+      }
+      window.setTimeout(() => {
+        void loadCatalog(false);
+      }, 900);
+    } catch {
+      setReconcilingRowId(null);
+    } finally {
+      setReconcilingRowId((current) => (current === row.id ? null : current));
+    }
+  }
+
   async function refreshRowMaterializationJob(jobId, options = {}) {
     const route = archiveMaterializationJobRoute(jobId);
     if (!route) return;
@@ -2800,6 +2912,30 @@ function ArchiveSearchViewport({
       }
     } catch {
       if (!options.silent) setMaterializingRowId(null);
+    }
+  }
+
+  async function refreshRowReconciliationJob(jobId, options = {}) {
+    const route = historyMaterializationJobRoute(jobId);
+    if (!route) return;
+    try {
+      const response = await fetch(route, { cache: "no-store" });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error?.message ?? `HTTP ${response.status}`);
+      const job = payload?.job ?? payload;
+      if (!job?.id) return;
+      setRowReconciliationJobs((current) => {
+        const next = { ...current };
+        for (const [rowId, currentJob] of Object.entries(current)) {
+          if (currentJob?.id === job.id) next[rowId] = job;
+        }
+        return next;
+      });
+      if (!isActiveHistoryMaterializationJob(job)) {
+        void loadCatalog(false);
+      }
+    } catch {
+      if (!options.silent) setReconcilingRowId(null);
     }
   }
 
