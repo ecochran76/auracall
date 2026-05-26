@@ -275,6 +275,104 @@ Current State:
     budget, then still materializes the next routeable selected conversation
   - search and account-mirror catalog reads remain cache-only; browser work only
     starts from live-follow completion jobs or explicit reconciliation jobs
+- full multi-tenant reconciliation is now scoped in
+  [docs/dev/plans/0071-2026-05-24-full-multitenant-reconciliation.md](docs/dev/plans/0071-2026-05-24-full-multitenant-reconciliation.md):
+  - the lane owns campaign-level orchestration across all configured
+    account-bearing provider/runtime-profile targets after Plans 0069 and 0070
+    closed the one-target materialization and reconciliation mechanics
+  - a reconciliation campaign should discover configured live-follow targets
+    from config/status/cache evidence without browser work, classify eligible,
+    disabled, delayed, guarded, identity-mismatch, unsupported, and already
+    active targets, and then start or attach target completions under
+    provider/browser-profile concurrency budgets
+  - the campaign surface should expose durable API/CLI/MCP create/list/status
+    and control operations plus an operator UI detail view with aggregate
+    counts, target rows, child completion/materialization links, terminal
+    route-miss evidence, provider guards, and recommended operator actions
+  - first implementation checkpoint: dry-run reconciliation campaigns now have
+    a durable account-mirror cache store and API/CLI/MCP create/list/status/
+    control readback; the planner classifies configured targets and applies
+    selection budgets without launching provider browser work
+  - second implementation checkpoint: non-dry-run campaigns start selected
+    eligible targets as bounded full-sweep completion children, attach
+    already-active target completions, hydrate child status on readback, and
+    propagate pause/resume/cancel controls to child operations
+  - third implementation checkpoint: provider/browser/active-target budget
+    waits remain `deferred` campaign work, `run-next-pass` can advance the next
+    target after capacity frees, active campaign startup/readback hydration can
+    continue deferred targets, and the React Health dashboard exposes campaign
+    launch/list/detail/control rows
+  - installed-runtime checkpoint: dry-run enumeration proved 10 configured
+    targets without browser work, and a bounded execution campaign attached
+    five already-active child completions without duplicating target work
+  - fourth implementation checkpoint: campaigns now claim non-matching active
+    live-follow completions in place by upgrading them to bounded full-sweep
+    materialization, and campaign readback hydrates materialization jobs into
+    aggregate artifact/hash counts plus per-target asset and routeability
+    evidence
+  - installed-runtime checkpoint: the Gemini/default campaign child completed
+    a claimed full-sweep pass and queued a materialization job; that job
+    produced terminal routeability evidence for bogus conversation id
+    `download` but no downloadable asset checksum
+  - remaining closeout gap: prove successful campaign-owned materialized asset
+    checksums for at least two provider/runtime targets, not only ownership,
+    skipped jobs, or terminal routeability
+  - cache-only reads remain cache-only; browser work starts only from explicit
+    campaign execution, existing live-follow completions, or one-target
+    reconciliation/materialization jobs
+  - tenant/binding boundary tightening is implemented in
+    [docs/dev/plans/0072-2026-05-25-tenant-binding-boundary-tightening.md](docs/dev/plans/0072-2026-05-25-tenant-binding-boundary-tightening.md):
+    - tenant cache identity is provider plus bound identity
+    - AuraCall runtime profile and browser profile are execution bindings and
+      provenance, not cache owners
+    - moving a tenant to another browser binding should be a user-scoped config
+      edit plus identity smoke, not a DB migration
+    - status, catalog, reconciliation, CLI, MCP, and dashboard readback expose
+      distinct `tenantKey` and `bindingKey` fields
+- live-follow artifact inventory and scoped proof controls are now closed in
+  [docs/dev/plans/0073-2026-05-25-live-follow-artifact-inventory-proof-controls.md](docs/dev/plans/0073-2026-05-25-live-follow-artifact-inventory-proof-controls.md):
+  - isolated proof servers can run one provider/runtime target without adopting
+    unrelated persisted completions, resuming broad live-follow work, running
+    the scheduler, or draining unrelated API work; `/status.accountMirrorProofScope`
+    reports the provider/runtime, tenant key, binding key, browser operation
+    key, and suppression state
+  - metadata refresh now distinguishes live-observed counts from retained cache
+    counts via `observedThisPass`, `retainedFromCache`, and `mergedTotal`
+  - unscanned Gemini conversation detail surfaces now read as
+    `assetInventory.state = deferred|unknown` instead of false
+    `artifacts=0/files=0/media=0` tenant truth
+  - completion status hydrates terminal materialization job evidence so
+    recovered assets, checksums, routeability failures, manifests, and skipped
+    candidates are visible from the live-follow operation itself
+  - final installed Gemini proof
+    `acctmirror_completion_17ccf29f-e4ee-479c-9d0c-3a71776126bc` completed
+    with identity `ecochran76@gmail.com`; terminal materialization job
+    `hmj_112116b41db94ec5b9c3bb7c867e35e9` is hydrated into completion
+    readback as `materializationOutcome`
+  - the proof materialized seven assets from ten conversations with zero
+    failures and seven verified SHA-256 checksums, while metadata readback kept
+    unscanned conversation detail as `assetInventory.state = deferred`
+- Gemini no-renavigation and guard-first hardening is now closed in
+  [docs/dev/plans/0074-2026-05-26-gemini-no-renavigation-guard.md](docs/dev/plans/0074-2026-05-26-gemini-no-renavigation-guard.md)
+  as the protective sub-slice before resuming the Plan 0073 live proof:
+  - existing Gemini targets attach through a no-navigation target-reuse path
+  - ready read-only `/gems/view` and `/gems/edit/<projectId>` surfaces skip
+    duplicate `Page.navigate` calls while post-write Gem verification keeps
+    explicit fresh navigation/fresh-read behavior
+  - Gemini provider guard pages stop refresh work before collector interaction,
+    and the pre-pass guard census itself does not create, navigate, or focus
+    browser targets
+  - routine live follow remains rail-first; direct `/app/<conversationId>`
+    navigation is labeled as direct fallback or explicit operator diagnostics
+  - scoped proof completion
+    `acctmirror_completion_17ccf29f-e4ee-479c-9d0c-3a71776126bc` completed one
+    `gemini:auracall-gemini-pro` pass with provider guard clear, scheduler
+    diagnostics `reload=0`, and `duplicateSameRouteAttempts.total=0`
+  - Plan 0073 can now continue with terminal materialization/checksum proof;
+    the Plan 0074 completion handed off materialization job
+    `hmj_112116b41db94ec5b9c3bb7c867e35e9`, which succeeded at
+    `2026-05-26T14:47:12.730Z` with seven materialized assets from ten
+    conversations and zero failures
 - React operator UX redesign is now scoped in
   [docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md](docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md):
   - the current `/ops/browser` dashboard is a debug/proof-of-concept surface,

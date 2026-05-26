@@ -206,6 +206,9 @@ Terminology note:
 - source browser profile = Chromium profile used for cookie/bootstrap sourcing, such as `Default`
 - managed browser profile = Aura-Call-owned automation profile directory
 - AuraCall runtime profile = top-level `runtimeProfiles.<name>` config entry selected by `defaultRuntimeProfile` / `--profile`
+- account-mirror tenant key = `service-account:<provider>:<boundIdentityKey>`; this owns cached provider projects, conversations, artifacts, files, media, search rows, archive rows, and checksums
+- account-mirror binding key = `binding:<provider>:<runtimeProfileId>:<browserProfileId>`; this identifies the current execution binding and status/backoff provenance
+- moving a tenant to another browser is a user-scoped binding edit plus managed-browser login/cookie seeding and `auracall profile identity-smoke --target <provider> --include-negative --json`; no account-mirror DB/cache migration is required when the provider plus bound identity stays the same
 
 ## Integration
 
@@ -278,6 +281,10 @@ Terminology note:
   - `PATCH /v1/account-mirrors/preview-sessions/{preview_session_id}`
   - `DELETE /v1/account-mirrors/preview-sessions/{preview_session_id}`
   - `POST /v1/account-mirrors/refresh`
+  - `POST /v1/account-mirrors/reconciliations`
+  - `GET /v1/account-mirrors/reconciliations`
+  - `GET /v1/account-mirrors/reconciliations/{campaign_id}`
+  - `POST /v1/account-mirrors/reconciliations/{campaign_id}`
   - `POST /v1/account-mirrors/completions`
   - `GET /v1/account-mirrors/completions`
   - `GET /v1/account-mirrors/completions/{completion_id}`
@@ -400,10 +407,10 @@ Terminology note:
   once routeability/detail evidence exists. Snapshot failures such as Gemini
   bare `/app` route fallbacks are recorded as terminal per-conversation
   evidence and skip artifact materialization for that target. Provider hard
-  stops such as `google.com/sorry`, CAPTCHA, reCAPTCHA, or visible
-  human-verification pages surface as `provider_guard_required` job failures
-  with HTTP 409 semantics; operators must clear the managed browser profile
-  before retrying.
+  stops such as `google.com/sorry`, account chooser/sign-in, CAPTCHA,
+  reCAPTCHA, or visible human-verification pages surface as
+  `provider_guard_required` job failures with HTTP 409 semantics; operators
+  must clear the managed browser profile before retrying.
   Gemini reconciliation uses the loaded app/rail surface as its first
   conversation-opening path: direct `/app/<conversationId>` navigation is only a
   fallback when the conversation cannot be found/opened from the rail, or when
@@ -510,6 +517,36 @@ Terminology note:
   Gemini steady-follow completions also use a wider provider-specific envelope,
   and Gemini full sweeps use the widest default envelope because project/Gem
   history hydration and detail reads are intentionally slow.
+  Use `auracall api mirror-reconcile-all --dry-run` to create a durable
+  multi-tenant reconciliation campaign plan without touching provider
+  browsers. The dry-run planner reads config/status/cache evidence, classifies
+  configured targets as eligible, guarded, delayed, disabled, missing identity,
+  identity mismatch, unsupported, or already active, and records selected
+  target budgets plus full-sweep materialization policy. Use
+  `auracall api mirror-reconcile-all --no-dry-run` to start selected eligible
+  targets as bounded full-sweep child completions; already-active completions
+  are attached to the campaign instead of duplicated. Targets deferred by the
+  current provider, browser-profile, or active-target budget remain in the
+  campaign and can advance on startup/status readback or explicitly with
+  `auracall api mirror-reconciliation-control <campaign_id> run-next-pass`.
+  If an attached active completion does not satisfy the campaign's requested
+  full-sweep/materialization policy, the campaign claims that child in place
+  and upgrades it to bounded full-sweep materialization rather than starting a
+  duplicate target completion. Campaign readback hydrates child
+  materialization jobs into aggregate materialized/checksum counts plus
+  per-target asset and terminal-routeability evidence. Bounded operator
+  reconciliation bypasses the routine minimum-interval wait, but it still
+  respects identity mismatches, provider guards, hard stops, failure backoff,
+  and browser-operation locks. Materialized asset evidence is reported with
+  the archive item provider conversation id and bound identity when available,
+  so artifact hashes remain attributable to the source conversation.
+  Read a campaign back with
+  `auracall api mirror-reconciliation-status <campaign_id>`, list recent
+  campaigns with `auracall api mirror-reconciliations`, or use the Health
+  dashboard reconciliation section for launcher/status/control rows. MCP
+  exposes the same object through `account_mirror_reconciliation_create`,
+  `account_mirror_reconciliation_status`, and
+  `account_mirror_reconciliation_control`.
   Steady-follow refreshes recheck the current top of the provider
   rail/project conversation list instead of resuming the previous deep
   attachment cursor, so provider-modified conversations that move back to the
@@ -528,11 +565,17 @@ Terminology note:
   full-sweep continuation cursor, and tolerate an individual Gem route failure
   with diagnostic evidence rather than aborting the whole sweep.
   For isolated materialization or one-provider proof runs, start the API with
+  scoped proof mode, for example
+  `auracall --profile auracall-gemini-pro api serve --port 18173 --account-mirror-proof-provider gemini --account-mirror-proof-runtime-profile auracall-gemini-pro`.
+  Proof scope suppresses startup completion resume, configured live-follow
+  reconciliation, scheduler execution, and background drain until an operator
+  explicitly starts the bounded proof completion; the proof server does not
+  adopt unrelated persisted active completions from the shared store.
+  `/status.accountMirrorProofScope` reports the provider, runtime profile,
+  tenant key, binding key, and suppression state, and `/status.liveFollow` is
+  scoped to the proof target.
+  The manual fallback remains
   `--background-drain-interval-ms 0 --account-mirror-scheduler-interval-ms 0 --no-account-mirror-completions-on-start`.
-  The completion flag keeps persisted completion records readable but prevents
-  startup completion resume and configured live-follow reconciliation until an
-  operator explicitly starts a completion; the interval flags prevent the proof
-  server from inheriting configured background drain or scheduler cadence.
   Shutdown only parks completion loops owned by the current server process, so
   an isolated readback server does not rewrite unrelated persisted completion
   records when it exits.
@@ -544,10 +587,21 @@ Terminology note:
   `auracall api scheduler-diagnostics --provider chatgpt --runtime-profile default`
   reads the same scheduler diagnostics bundle exposed by the dashboard and MCP,
   including the recent in-process browser mutation audit for the selected
-  provider/runtime profile when available, without relying on browser clipboard
-  access or attaching to CDP.
+  provider/runtime profile when available. The mutation readback includes raw
+  items plus `byKind`, `bySource`, and duplicate same-route navigation attempt
+  counts, so scoped Gemini proof runs can distinguish rail clicks, direct
+  conversation fallback, Gem navigation, target attach/select, and reload
+  evidence without relying on browser clipboard access or attaching to CDP.
   `/status.accountMirrorCompletions` reports completion metrics plus active and
-  recent records, and `/ops/browser` renders the same live-follow posture plus
+  recent records. Completion readback hydrates terminal materialization job
+  status into `materializationOutcome`, including attempted conversations,
+  materialized/skipped/failed counts, checksum counts, manifest paths, and
+  routeability counts when the handoff job is terminal. Account-mirror status
+  separates `metadataEvidence.countEvidence.observedThisPass`,
+  `retainedFromCache`, and `mergedTotal`; unscanned Gemini conversation asset
+  detail is reported through `assetInventory.state = deferred|unknown` instead
+  of treating `artifacts=0` as proof that no assets exist. `/ops/browser`
+  renders the same live-follow posture plus
   service controls for the background drain, mirror scheduler run-once,
   scheduler pause/resume, and live-follow start/pause/resume/cancel in the
   local operator dashboard. Row controls show a compact action-result card with

@@ -1,3 +1,88 @@
+- 2026-05-26: Gemini live-follow hardening now separates target selection from
+  surface navigation in code. Browser-service target reuse can select an
+  existing same-origin or compatible-host target without `Page.navigate`, and
+  Gemini attach uses that path. Ready read-only Gem manager/edit routes skip
+  duplicate same-route navigation, while post-write Gem verification still
+  forces a fresh provider read. Account-mirror refresh runs a non-mutating
+  Gemini target census before collector work and records provider guards for
+  `google.com/sorry`, account chooser/sign-in, CAPTCHA/reCAPTCHA, or other
+  human-verification classes. Scheduler diagnostics now expose browser mutation
+  counts by kind/source plus duplicate same-route navigation attempts, so
+  scoped proof readback does not require manually scanning raw mutation rows.
+
+- 2026-05-26: Gemini target attach must not navigate an existing target as a
+  side effect. Keep target selection separate from provider surface navigation,
+  add same-route readiness skips for ready read-only `/gems/view` and
+  `/gems/edit/<projectId>` paths, but preserve explicit fresh navigation or
+  fresh-read checks for post-write Gem verification. The guard-first target
+  census must be non-mutating before live-follow collector work: no target
+  creation, navigation, or focus side effect while classifying
+  `google.com/sorry`, account chooser/sign-in, CAPTCHA/reCAPTCHA, or other
+  human-verification guard classes. Treat direct `/app/<conversationId>`
+  validation as an explicit fallback or operator diagnostic rather than a
+  routine discovery path.
+
+- 2026-05-26: Scoped account-mirror proof servers should advertise and enforce
+  their scope instead of relying only on a remembered flag bundle. Use
+  `--account-mirror-proof-provider` with
+  `--account-mirror-proof-runtime-profile` for one-provider proof runs; the API
+  suppresses startup completion resume, configured live-follow reconciliation,
+  scheduler execution, and background drain, and `/status.accountMirrorProofScope`
+  reports tenant key, binding key, and suppression state. Completion readback
+  now hydrates terminal history-materialization jobs into
+  `materializationOutcome`, and account-mirror metadata evidence distinguishes
+  observed-this-pass, retained-from-cache, merged-total, detail-scanned, and
+  deferred/unknown asset inventory so a Gemini pass cannot present unscanned
+  artifact detail as a meaningful zero.
+
+- 2026-05-25: Account-mirror artifact counts must distinguish live-observed
+  detail from retained cached catalog data. A Gemini completion can merge
+  persisted conversations into its tenant counts while scanning no current
+  conversation detail surfaces; report unscanned artifact/file/media inventory
+  as unknown or deferred instead of presenting a false zero, and hydrate the
+  terminal history-materialization result back into completion readback so
+  recovered assets and checksums are visible from the live-follow operation.
+
+- 2026-05-25: Account-mirror readback must make tenant identity and execution
+  binding visibly separate. Emit `tenantKey` for provider plus bound identity
+  and `bindingKey` for provider/runtime/browser binding on status, catalog,
+  reconciliation, CLI, MCP, and dashboard surfaces; warn on duplicate enabled
+  live-follow bindings for the same tenant, and keep cache/catalog reads
+  provider-plus-identity scoped so a browser move is not treated as a DB
+  migration.
+
+- 2026-05-25: Tenant cache ownership must remain provider plus bound identity,
+  not AuraCall runtime profile, browser profile, Chrome executable, or managed
+  browser profile path. Treat those fields as execution bindings/provenance;
+  moving a tenant to another browser binding should require user-scoped config,
+  login/cookie seeding, and identity smoke, not account-mirror cache migration.
+
+- 2026-05-25: Per-request browser work must re-apply the selected AuraCall
+  runtime profile before constructing provider services. Setting only
+  `auracallProfile`/`defaultRuntimeProfile` leaves the already-resolved
+  top-level browser object stale, which can send Gemini history
+  materialization through stock Chrome, the wrong debug port, or the wrong
+  managed browser profile.
+
+- 2026-05-25: Browser-service managed launches must pass the resolved browser
+  family `display` to the manual-login launcher. For RDP-backed stealth
+  profiles, selecting the stealth Chromium binary is not enough; the launch
+  plan must also carry display `:10` into the headed Chrome startup path.
+
+- 2026-05-24: Reconciliation campaign execution must attach existing active
+  account-mirror completions before starting new child work. Non-dry-run
+  campaign creation now attaches active provider/runtime targets, starts only
+  selected eligible targets as bounded full-sweep completions, hydrates child
+  completion/materialization state on readback, and propagates pause/resume/
+  cancel controls to child completions.
+
+- 2026-05-24: Multi-tenant reconciliation planning must be a cache/status
+  operation until an operator starts execution. The dry-run campaign planner
+  now reads configured account-mirror status plus active completion records,
+  classifies every target, persists the campaign record, and exposes
+  API/CLI/MCP readback without starting child completions or acquiring provider
+  browser locks.
+
 - 2026-05-24: Repeated `serveResponsesHttp` tests can accumulate shutdown
   latency when stop signals leave their paired listener behind or HTTP
   keep-alive sockets stay idle during close. The server now removes both
@@ -17151,3 +17236,143 @@ browser-stage lifecycle observability, not transcript truncation.
   reconciliation target selection uses those manifest bindings so a
   steady-follow refresh can materialize newly discovered assets even before a
   cached transcript row has fresh count metadata.
+
+- 2026-05-24: Multi-tenant reconciliation budget waits must remain resumable
+  campaign work, not terminal skips. When a provider/browser-profile/
+  active-target budget is full, keep the target selected with `deferred`
+  execution status; `run_next_pass`, startup recovery, and campaign read/list
+  hydration can then start the next eligible child completion once capacity is
+  available without duplicating active completions.
+
+- 2026-05-24: Mirror API CLI commands must use the same local auth retry path
+  as other operator API clients. Authenticated installed services return 401 on
+  the first unauthenticated request; retry with `~/.auracall/api.env` or
+  `AURACALL_API_KEY` before reporting the command failed.
+
+- 2026-05-24: A multi-tenant reconciliation campaign that attaches an existing
+  active live-follow completion has proven ownership, not necessarily the
+  requested full-sweep/materialization policy. If the active child is
+  metadata-only or otherwise non-matching, the campaign needs an explicit
+  claim/policy-upgrade handoff or a later campaign-owned child before claiming
+  artifacts were fully reconciled.
+
+- 2026-05-24: Campaign readback should recover from live-follow child
+  replacement. If an attached child fails during restart churn but a new active
+  completion exists for the same provider/runtime target, status hydration
+  should reattach that replacement instead of leaving the campaign on the stale
+  terminal child id.
+
+- 2026-05-24: Multi-tenant reconciliation attachment is not enough when the
+  active child policy is weaker than the campaign policy. Claim the child in
+  place by upgrading it to bounded full-sweep/materialization policy, wake it
+  out of idle cooldown, and make live-follow startup treat that bounded child
+  as active ownership so no duplicate target work starts.
+
+- 2026-05-24: Campaign materialization evidence belongs to the child/job pair,
+  not just the target. When campaign readback reattaches a replacement child or
+  observes a different materialization job id, clear stale asset/checksum/
+  routeability rows before hydrating the new job result.
+
+- 2026-05-24: History-materialization result summaries can expose the same
+  snapshot refresh through both `snapshotRefreshes` and
+  `phases.snapshotRefresh`. Deduplicate refresh evidence by timestamp, status,
+  routeability state, target conversation id, and message before aggregating
+  terminal routeability counts.
+
+- 2026-05-24: Operator-driven bounded reconciliation should not wait behind the
+  routine account-mirror minimum interval. Bypass only that routine interval
+  for bounded reconciliation while preserving identity mismatch, provider guard,
+  hard-stop, failure-backoff, and browser-operation lock decisions. Persisted
+  bounded children should also clear stale `nextAttemptAt` on resume and then
+  re-evaluate the real target state.
+
+- 2026-05-24: Reconciliation campaigns are not complete while selected
+  materialization jobs are still active. Derive campaign status from both child
+  completion status and selected materialization job status so operators do not
+  see `completed_with_skips` before artifact jobs have reached a terminal
+  state.
+
+- 2026-05-24: Campaign asset checksum evidence must retain the source
+  conversation id even when the history-materialization result target is null.
+  Enrich materialized result entries from matching archive items before
+  de-duplicating by archive item id so campaign readback reports
+  `providerConversationId`, `boundIdentityKey`, and checksum together.
+
+- 2026-05-24: Gemini rail discovery can surface static application routes such
+  as `/app/download`; those are not conversations. Filter these ids both during
+  Gemini rail scraping and during automatic history-materialization candidate
+  selection so a full-sweep campaign does not spend its budget on a static app
+  route.
+
+- 2026-05-25: Gemini account redirect URLs can pollute cached conversation ids
+  when an `accounts.google.com/ServiceLogin` URL embeds Gemini `continue` or
+  `followup` parameters. Reconciliation should canonicalize Gemini targets to
+  direct `https://gemini.google.com/app/<conversationId>` routes before
+  routeability checks and should reject or strip non-id suffixes such as
+  `&followup=https:` from cached ids.
+
+- 2026-05-25: Bounded Gemini artifact reconciliation should not keep spending
+  target budget on conversations already proven terminal-unavailable. After a
+  routeability sweep records bare-`/app` misses, the next installed-runtime
+  materialization pass should skip those rows during candidate planning and
+  report zero candidates instead of rechecking the same deleted/unavailable
+  conversation ids.
+
+- 2026-05-25: Grok DOM identity fallback must not treat arbitrary prompt text
+  that starts with `@` as an account handle. Accept only handle-shaped Grok
+  values like `@SwantonDoug`, and have account-mirror politeness ignore
+  malformed Grok at-text so stale prompt-derived identity evidence does not
+  hard-block live follow or reconciliation after the real browser identity is
+  healthy.
+
+- 2026-05-25: History-backed Gemini materialization must resolve browser work
+  through the rail surface (`/app` or `/gem/<projectId>`) even when the
+  target evidence is a direct `/app/<conversationId>` URL. Passing the direct
+  URL into browser-service target selection can trigger account-chooser or
+  bare-`/app` churn before the provider adapter has a chance to click the rail.
+
+- 2026-05-25: Live Gemini snapshot refresh cannot use cached conversation
+  context as routeability proof. If provider context read fails, history
+  snapshot refresh should surface that live failure instead of falling back to
+  stale cached messages and reporting `routeable`.
+
+- 2026-05-25: Gemini history materialization should pass normalized bound
+  identity evidence into provider context refresh. Signed-out or wrong-account
+  browser states are account/session failures and should not be collapsed into
+  deleted-conversation or route-miss evidence.
+
+- 2026-05-25: Gemini live follow should not be enabled on the shared
+  `default/gemini` managed browser profile when the intended tenant runs
+  through `auracall-gemini-pro` on the stealth CDP/RDP browser family. Keep the
+  live-follow target, cookie paths, and `manualLoginProfileDir` on the same
+  dedicated managed browser profile so signed-out default state cannot be
+  mistaken for Gemini tenant state.
+
+- 2026-05-26: Scoped account-mirror proof servers must not adopt unrelated
+  persisted active completions from the shared completion store. In proof mode,
+  start the in-process completion service empty, scope `/status.liveFollow` to
+  the requested provider/runtime target, and leave the durable store untouched
+  so the proof server proves isolation without cancelling the long-lived fleet.
+
+- 2026-05-26: Gemini `google.com/sorry` remains a hard stop even when scoped
+  proof mode is otherwise healthy. If identity smoke or bounded proof returns
+  `gemini_identity_not_detected`, immediately inspect with `browser-tools
+  doctor`; when all selected Gemini tabs are on Google unusual-traffic
+  interstitials, stop automation on that managed browser profile until an
+  operator manually clears the page.
+
+- 2026-05-26: Close Gemini anti-bot hardening from scheduler diagnostics, not
+  from absence of visible errors. The passing Plan 0074 proof used a scoped
+  server with zero adopted completions and required `reload=0` plus
+  `duplicateSameRouteAttempts.total=0` for completion
+  `acctmirror_completion_17ccf29f-e4ee-479c-9d0c-3a71776126bc`; remaining
+  navigation was acceptable only because sources were distinct provider
+  operations rather than attach-time or same-route churn.
+
+- 2026-05-26: Close live-follow artifact inventory from completion readback and
+  checksum evidence together. The final Plan 0073 Gemini proof kept metadata
+  artifact counts honest as deferred because no conversation detail surface was
+  scanned in the metadata pass, then proved recovery through terminal
+  `materializationOutcome` for job
+  `hmj_112116b41db94ec5b9c3bb7c867e35e9`: ten conversations attempted, seven
+  assets materialized, zero failures, and seven SHA-256 checksums.

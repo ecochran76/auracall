@@ -1,3 +1,457 @@
+## Turn 313 | 2026-05-26
+
+- Goal: close Plan 0073 with the installed Gemini terminal materialization and
+  checksum proof.
+- Result:
+  - installed completion
+    `acctmirror_completion_17ccf29f-e4ee-479c-9d0c-3a71776126bc` is completed
+    and readable from the restored long-lived service on port `18095`.
+  - completion status hydrates materialization job
+    `hmj_112116b41db94ec5b9c3bb7c867e35e9` into
+    `materializationOutcome`.
+  - terminal outcome: ten conversations attempted, seven assets materialized,
+    one skipped, zero failed, seven checksums, six manifest paths.
+  - metadata readback preserves the Plan 0073 distinction between
+    observed-this-pass counts, retained cache, merged total, and deferred
+    conversation asset detail.
+  - Plan 0073 is closed.
+- Verification:
+  - `/home/ecochran76/.local/bin/auracall api mirror-completion-status acctmirror_completion_17ccf29f-e4ee-479c-9d0c-3a71776126bc --port 18095 --json`
+  - `/home/ecochran76/.local/bin/auracall api history-materialization-status hmj_112116b41db94ec5b9c3bb7c867e35e9 --port 18095 --json`
+  - `sha256sum` over the seven materialized local files listed in Plan 0073
+  - `pnpm vitest run tests/http.responsesServer.test.ts --maxWorkers 1 -t "account mirror|proof server|scheduler diagnostics|history materialization|provider guard"`
+
+## Turn 312 | 2026-05-26
+
+- Goal: close Plan 0074 with the live scoped Gemini no-renavigation proof.
+- Result:
+  - Gemini provider guard was clear on the dedicated
+    `auracall-gemini-pro` / `gemini-stealthcdp` managed browser profile.
+  - identity smoke matched `ecochran76@gmail.com` from the Gemini
+    Google-account label.
+  - scoped proof server on `127.0.0.1:18173` had proof scope enabled,
+    global live follow suppressed, one scoped Gemini target, and zero adopted
+    active completions.
+  - completion `acctmirror_completion_17ccf29f-e4ee-479c-9d0c-3a71776126bc`
+    completed one `full_sweep` pass; provider guard remained clear.
+  - scheduler diagnostics for that completion reported `reload=0` and
+    `duplicateSameRouteAttempts.total=0` with mutation source counts separated
+    for connect-tab, Gem manager navigation, conversation-surface navigation,
+    and Gem edit navigation.
+  - Plan 0074 is closed; follow-on materialization job
+    `hmj_112116b41db94ec5b9c3bb7c867e35e9` succeeded with seven materialized
+    assets from ten conversations and zero failures; terminal checksum
+    reconciliation remains Plan 0073 work.
+  - restored the shared `auracall-api.service` on port `18095` after stopping
+    the scoped proof server.
+- Verification:
+  - `/home/ecochran76/.local/bin/auracall --profile auracall-gemini-pro profile identity-smoke --target gemini --include-negative --json`
+  - `/home/ecochran76/.local/bin/auracall api mirror-complete --port 18173 --provider gemini --runtime-profile auracall-gemini-pro --max-passes 1 --sweep-mode full_sweep --materialization-policy full_missing_assets --materialization-asset-kind all --json`
+  - `/home/ecochran76/.local/bin/auracall api mirror-completion-status acctmirror_completion_17ccf29f-e4ee-479c-9d0c-3a71776126bc --port 18173 --json`
+  - `/home/ecochran76/.local/bin/auracall api scheduler-diagnostics --port 18173 --provider gemini --runtime-profile auracall-gemini-pro --completion-id acctmirror_completion_17ccf29f-e4ee-479c-9d0c-3a71776126bc --json`
+  - `/home/ecochran76/.local/bin/auracall api history-materialization-status hmj_112116b41db94ec5b9c3bb7c867e35e9 --port 18095 --json`
+  - `curl -fsS http://127.0.0.1:18095/status`
+
+## Turn 311 | 2026-05-26
+
+- Goal: execute Plan 0074 deterministic hardening before the next Gemini live
+  proof attempt.
+- Change:
+  - added browser-service no-navigation reuse for existing same-origin or
+    compatible-host targets, and wired Gemini attach to use it.
+  - added Gemini ready-route short-circuits for read-only `/gems/view` and
+    `/gems/edit/<projectId>` surfaces while keeping force-navigation on
+    post-write Gem verification paths.
+  - added Gemini guard-first target census before account-mirror collector
+    work, including account chooser/sign-in and CAPTCHA/reCAPTCHA guard
+    classes.
+  - labeled Gemini rail clicks and direct conversation fallback as distinct
+    mutation sources, and extended scheduler diagnostics with mutation
+    `byKind`, `bySource`, and duplicate same-route navigation readback.
+  - confirmed Gemini detail inventory was already conversation-first with
+    cursor resume coverage from the Plan 0073 evidence slice.
+- Verification:
+  - `pnpm vitest run tests/browser-service/chromeTargetReuse.test.ts tests/browser/geminiAdapter.test.ts tests/accountMirror/refreshService.test.ts tests/cli/apiSchedulerDiagnosticsCommand.test.ts`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `/home/ecochran76/.local/bin/auracall --version`
+  - `pnpm run plans:audit -- --keep 74`
+  - `git diff --check`
+
+## Turn 310 | 2026-05-26
+
+- Goal: apply the Plan 0074 review findings before implementation starts.
+- Result:
+  - amended
+    `docs/dev/plans/0074-2026-05-26-gemini-no-renavigation-guard.md`.
+  - made the guard-first target census explicitly read-only and non-mutating:
+    no target creation, navigation, or focus side effects while classifying
+    guarded Gemini targets.
+  - scoped Gem manager/edit same-route skips so read-only ready surfaces can
+    avoid duplicate navigation while post-write Gem verification can still
+    force a fresh provider read.
+  - expanded acceptance coverage for account chooser/sign-in and
+    CAPTCHA/reCAPTCHA provider guard states.
+  - updated `ROADMAP.md`, `RUNBOOK.md`, and `docs/dev-fixes-log.md` to carry
+    the clarified contract.
+- Verification:
+  - docs-only planning review amendment
+  - `pnpm run plans:audit -- --keep 74`
+  - `git diff --check`
+
+## Turn 309 | 2026-05-26
+
+- Goal: turn the Gemini browser anti-bot/renavigation audit into a bounded
+  repo plan before resuming live Gemini proof work.
+- Result:
+  - opened
+    `docs/dev/plans/0074-2026-05-26-gemini-no-renavigation-guard.md`.
+  - scoped the plan around guard-first target census, no-navigation Gemini
+    target attach, same-route short-circuits for `/gems/view` and
+    `/gems/edit/<projectId>`, rail-first routine conversation work, detail
+    inventory prioritization, and mutation diagnostics.
+  - wired Plan 0074 into `ROADMAP.md`, `RUNBOOK.md`, Plan 0073, and
+    `docs/dev-fixes-log.md`.
+  - did not run live Gemini automation because the last verified browser state
+    was still the `google.com/sorry` hard stop.
+- Verification:
+  - docs-only planning slice
+  - `pnpm run plans:audit -- --keep 74`
+  - `git diff --check`
+
+## Turn 308 | 2026-05-26
+
+- Goal: continue Plan 0073 by rechecking whether the Gemini managed profile
+  can support the required installed proof.
+- Result:
+  - rechecked `auracall-gemini-pro` / `gemini-stealthcdp/gemini` on display
+    `:0.0`.
+  - `browser-tools tabs` again reported all nine Gemini tabs on
+    `google.com/sorry` unusual-traffic interstitials.
+  - did not start identity smoke, a proof server, or the bounded proof because
+    this remains a manual-clear hard stop.
+  - after three consecutive goal turns with the same blocker, the active Plan
+    0073 goal was marked blocked pending operator clearance.
+- Verification:
+  - `DISPLAY=:0.0 pnpm tsx scripts/browser-tools.ts --auracall-profile auracall-gemini-pro --browser-target gemini tabs`
+
+## Turn 307 | 2026-05-26
+
+- Goal: continue Plan 0073 by checking whether the Gemini managed profile is
+  clear enough to rerun the installed proof.
+- Result:
+  - rechecked `auracall-gemini-pro` / `gemini-stealthcdp/gemini` on display
+    `:0.0`.
+  - `browser-tools tabs` reported all nine Gemini tabs on
+    `google.com/sorry` unusual-traffic interstitials.
+  - did not run identity smoke or the scoped bounded proof because provider
+    hard-stop policy requires human clearance first.
+- Verification:
+  - `DISPLAY=:0.0 pnpm tsx scripts/browser-tools.ts --auracall-profile auracall-gemini-pro --browser-target gemini tabs`
+
+## Turn 306 | 2026-05-26
+
+- Goal: carry Plan 0073 from plan text into scoped proof/evidence code and
+  installed Gemini proof.
+- Change:
+  - added `api serve --account-mirror-proof-provider` plus
+    `--account-mirror-proof-runtime-profile` for isolated proof servers.
+  - proof servers now suppress completion resume, configured live-follow
+    reconciliation, scheduler execution, and background drain, start without
+    adopting unrelated persisted completions, and scope `/status.liveFollow` to
+    the proof target.
+  - refresh evidence now separates `observedThisPass`, `retainedFromCache`,
+    and `mergedTotal`, and exposes detail-scanned evidence plus
+    `assetInventory` so unscanned Gemini conversation assets read as
+    deferred/unknown instead of false zero.
+  - completion readback now hydrates terminal history-materialization outcomes
+    into completion/API/CLI/MCP/dashboard surfaces.
+  - Gemini root conversation discovery now moves from Gem catalog routes back
+    to `/app` for rail reads.
+- Live proof:
+  - installed runtime was rebuilt with the patch.
+  - isolated proof server on `127.0.0.1:18173` reported
+    `globalLiveFollowSuppressed: true`, zero adopted completions, and one
+    scoped `gemini/auracall-gemini-pro` target.
+  - bounded proof
+    `acctmirror_completion_3f704a1b-1521-4de8-b3ab-aa3962bd7bd8` blocked before
+    scraping with `account_mirror_identity_mismatch` because Gemini identity
+    detection returned null.
+  - `browser-tools doctor` showed all Gemini managed-profile tabs on
+    `google.com/sorry`, so no further automation was attempted on that profile.
+- Verification:
+  - targeted account-mirror, Gemini adapter, CLI, MCP, HTTP proof-scope suites
+  - `pnpm run typecheck`
+  - targeted Biome lint for changed source/CLI files
+  - `pnpm run ux:build`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 73`
+  - `git diff --check`
+  - `pnpm run install:user-runtime`
+
+## Turn 305 | 2026-05-25
+
+- Goal: make the full plan for the Gemini live-follow artifact inventory gap
+  exposed by the installed smoke.
+- Result:
+  - opened
+    `docs/dev/plans/0073-2026-05-25-live-follow-artifact-inventory-proof-controls.md`.
+  - scoped the implementation around seven slices:
+    scoped proof controls, observed-versus-retained refresh evidence, Gemini
+    rail discovery reliability, detail inventory semantics, materialization
+    handoff readback, operator API/UI language, and practical proof backoff.
+  - anchored the plan in the installed proof:
+    `acctmirror_completion_aa103492-0111-4d28-8fc1-cec2b350fe29` completed a
+    Gemini pass for `auracall-gemini-pro`; materialization job
+    `hmj_0d7f222208fd4e6eb97fdd1f43c2828e` succeeded with four assets from
+    five conversations.
+  - recorded the main semantic gap: merged tenant catalog counts can make a
+    refresh look conversation-aware while the current provider pass did not
+    observe conversation detail surfaces; unscanned artifact detail must be
+    represented as unknown/deferred instead of zero.
+  - wired the plan into `ROADMAP.md`, `RUNBOOK.md`, and
+    `docs/dev-fixes-log.md`.
+- Verification:
+  - `pnpm run plans:audit -- --keep 73`
+  - `git diff --check`
+
+## Turn 304 | 2026-05-25
+
+- Goal: complete Plan 0072 by making account-mirror tenant ownership distinct
+  from runtime/browser execution bindings in code, docs, and tests.
+- Change:
+  - added canonical account-mirror tenant/binding key helpers and exposed
+    `tenantKey` plus `bindingKey` through status, catalog, reconciliation,
+    CLI summaries, MCP schemas, `/status` live-follow readback, and both
+    dashboard surfaces.
+  - added config doctor warning
+    `duplicate-enabled-live-follow-tenant-binding` for multiple enabled
+    live-follow bindings targeting the same provider plus bound identity.
+  - documented move semantics: edit the user-scoped binding, seed/login the
+    managed browser profile if needed, run identity smoke, no DB/cache
+    migration when provider plus bound identity is unchanged.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/tenantBinding.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/catalogService.test.ts tests/accountMirror/reconciliationCampaignService.test.ts tests/configModel.test.ts tests/mcp.accountMirrorStatus.test.ts tests/mcp.accountMirrorCatalog.test.ts tests/cli/apiMirrorCompletionCommand.test.ts`
+  - `pnpm run typecheck`
+  - `pnpm exec biome lint src/accountMirror/tenantBinding.ts src/accountMirror/politePolicy.ts src/accountMirror/statusRegistry.ts src/accountMirror/catalogService.ts src/accountMirror/reconciliationCampaignService.ts src/config/model.ts src/mcp/tools/accountMirrorStatus.ts src/mcp/tools/accountMirrorCatalog.ts src/status/liveFollowHealth.ts src/http/responsesServer.ts src/cli/apiStatusCommand.ts src/cli/apiMirrorCompletionCommand.ts ux/operator/src/App.jsx tests/accountMirror/tenantBinding.test.ts tests/accountMirror/statusRegistry.test.ts tests/accountMirror/catalogService.test.ts tests/accountMirror/reconciliationCampaignService.test.ts tests/configModel.test.ts tests/mcp.accountMirrorStatus.test.ts tests/mcp.accountMirrorCatalog.test.ts tests/cli/apiMirrorCompletionCommand.test.ts tests/runtime.searchProjectionService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm run plans:audit -- --keep 72`
+  - `pnpm run check`
+  - `git diff --check`
+
+## Turn 303 | 2026-05-25
+
+- Goal: plan the docs/code boundary tightening for tenant identity versus
+  runtime/browser execution binding.
+- Result:
+  - opened
+    `docs/dev/plans/0072-2026-05-25-tenant-binding-boundary-tightening.md`.
+  - scoped the boundary contract:
+    - tenant cache key is provider plus bound identity
+    - AuraCall runtime profile and browser profile are binding/provenance
+      fields
+    - moving a tenant's browser binding should require config/login/identity
+      smoke, not cache migration
+  - added the follow-up note to Plan 0071 and wired Plan 0072 into
+    `ROADMAP.md` and `RUNBOOK.md`.
+- Verification:
+  - `pnpm run plans:audit -- --keep 72`
+  - `git diff --check`
+  - docs-only planning slice; follow-up implementation validation is listed in
+    Plan 0072 acceptance criteria.
+
+## Turn 302 | 2026-05-25
+
+- Goal: make Gemini live-follow/history materialization use the dedicated
+  stealth CDP/RDP AuraCall runtime profile instead of inherited default
+  browser state.
+- Change:
+  - added a shared runtime-profile user-config resolver that re-applies the
+    selected AuraCall runtime profile's browser family, service binding, debug
+    port, display, and managed browser profile before per-request browser work.
+  - history materialization now uses that resolver for snapshot refresh,
+    artifact/file/media materialization, and media-generation materialization.
+  - account-mirror metadata collection now uses the same resolver instead of a
+    local duplicate.
+  - browser-service managed launches now pass the resolved browser-family
+    `display` through to the manual-login launcher.
+- Installed proof:
+  - installed config resolves `auracall-gemini-pro/gemini` to
+    `browser-profiles/gemini-stealthcdp/gemini`, stealth Chromium
+    `150.0.7835.0+stealthcdp.3676a7503929`, debug port `45019`, and display
+    `:10`.
+  - bounded Gemini history job `hmj_7f0c04b6f16a4a7dbd8a756dc8c08d45`
+    launched `/home/ecochran76/workspace.local/chromium/artifacts/chromium-stealthcdp/150.0.7835.0+stealthcdp.3676a7503929/chrome-linux/chrome`
+    with `--remote-debugging-port=45019` and
+    `--user-data-dir=/home/ecochran76/.auracall/browser-profiles/gemini-stealthcdp/gemini`.
+  - the job then failed at Gemini identity preflight with
+    `gemini_identity_not_detected`, so the remaining live blocker is account
+    seeding for the dedicated Gemini managed browser profile, not runtime
+    profile or browser-family selection.
+- Verification:
+  - `pnpm vitest run tests/browser/profileConfig.test.ts tests/browser/browserService.test.ts tests/runtime.historyMaterializationService.test.ts`
+  - `pnpm run check`
+  - `pnpm exec biome lint packages/browser-service/src/service/browserService.ts src/browser/service/profileConfig.ts src/accountMirror/chatgptMetadataCollector.ts src/runtime/historyMaterializationService.ts tests/browser/profileConfig.test.ts tests/browser/browserService.test.ts`
+  - `git diff --check`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - installed config-resolution smoke and bounded Gemini history materialization
+    job `hmj_7f0c04b6f16a4a7dbd8a756dc8c08d45`.
+
+## Turn 301 | 2026-05-25
+
+- Goal: smoke Grok before continuing multi-tenant artifact reconciliation work.
+- Live proof:
+  - `profile identity-smoke --target grok --include-negative --json` launched
+    or reattached the managed `default/grok` browser on port `37831` and
+    verified expected and actual identity as `ez86944@gmail.com` /
+    `@SwantonDoug`.
+  - direct browser prompt smoke reused the same profile, passed Grok login,
+    selected current Heavy mode, and returned exactly
+    `AURACALL_GROK_SMOKE_OK_20260525`.
+  - account-mirror status initially reported stale `identity-mismatch` evidence
+    with detected identity `@google calendar what's on my schedule today?`.
+  - after the fix and installed-runtime restart, Grok live follow
+    `acctmirror_completion_826ae161-a723-474c-bbc7-9836cf561170` completed a
+    refresh pass, detected `ez86944@gmail.com`, mirrored 6 projects and 25
+    conversations, and reported mirror completeness `complete`.
+  - final Grok reconciliation dry-run
+    `acctmirror_reconciliation_ba0d9bfb-cee5-4580-8c50-9b178338f1e7` classified
+    `grok:default` as `already_active`, not `identity_mismatch`.
+- Change:
+  - Grok DOM identity fallback now accepts only real handle-shaped values such
+    as `@SwantonDoug`; prompt-like at-text with spaces is treated as no identity
+    signal.
+  - account-mirror politeness now ignores malformed Grok at-text when comparing
+    detected identity evidence against the configured bound identity.
+- Verification:
+  - `pnpm vitest run tests/browser/grokIdentity.test.ts tests/accountMirror/politePolicy.test.ts --maxWorkers 1`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - direct Grok browser prompt smoke, Grok live-follow status readback, Grok
+    reconciliation dry-run, and `git diff --check`
+
+## Turn 207 | 2026-05-24
+
+- Continued implementation plan:
+  `docs/dev/plans/0071-2026-05-24-full-multitenant-reconciliation.md`
+- Goal: validate campaign orchestration against the installed runtime and
+  identify whether Plan 0071 can close.
+- Change:
+  - added regression coverage for campaign status readback reattaching a
+    replacement active child after an older attached child fails.
+  - reinstalled the built user runtime and API service after the final
+    campaign service patch.
+  - proved the installed CLI/API path can create dry-run and execution
+    reconciliation campaigns through local API auth retry without exposing the
+    API key on the command line.
+- Live validation:
+  - `/status` on the installed `127.0.0.1:18095` service exposed
+    `/v1/account-mirrors/reconciliations` and reported live-follow healthy with
+    six enabled active targets.
+  - dry-run campaign
+    `acctmirror_reconciliation_144abd13-3842-47c2-b33f-16f8b1ee5bfa`
+    enumerated ten targets without browser work: six already active and four
+    unconfigured.
+  - execution campaign
+    `acctmirror_reconciliation_d10f53c4-7683-45c0-89ea-57983b150deb`
+    selected five already-active targets and attached existing child
+    completions instead of starting duplicate target completions.
+- Remaining gap:
+  - Plan 0071 should stay open. With every enabled target already occupied by
+    active live-follow completions, this proof did not launch a
+    campaign-owned full-sweep child or materialize new artifacts. The next
+    slice needs a claim/policy-upgrade path for non-matching live-follow
+    children, or a live eligible target, before closing the plan.
+- Validation:
+  - `pnpm vitest run tests/accountMirror/reconciliationCampaignService.test.ts`
+  - `pnpm run typecheck`
+  - `pnpm vitest run tests/accountMirror/reconciliationCampaignService.test.ts tests/http.accountMirrorReconciliation.test.ts tests/cli/apiMirrorCompletionCommand.test.ts tests/mcp.accountMirrorReconciliation.test.ts`
+  - `pnpm run ux:build`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 70`
+  - `git diff --check`
+  - installed runtime/service dry-run, execution, status, and `/status`
+    smokes on port `18095`.
+
+## Turn 206 | 2026-05-24
+
+- Continued implementation plan:
+  `docs/dev/plans/0071-2026-05-24-full-multitenant-reconciliation.md`
+- Goal: make execution campaigns progress beyond the first conservative pass
+  and add the operator UI surface.
+- Change:
+  - provider/browser/active-target budget waits now use target execution
+    status `deferred`, preserving campaign work for later advancement.
+  - campaign read/list hydration and API/MCP startup recovery can start the
+    next eligible deferred target when capacity is available.
+  - added `run_next_pass` campaign control across service, HTTP, CLI, MCP, and
+    operator UI; CLI and MCP also accept the operator-friendly
+    `run-next-pass` spelling.
+  - mounted the React Health dashboard reconciliation campaign section with
+    launch, refresh, target detail, child operation links, and campaign
+    controls.
+  - routed mirror completion/reconciliation CLI HTTP calls through the shared
+    local API auth retry helper, so installed authenticated user services work
+    without exposing API keys on the command line.
+- Validation:
+  - focused reconciliation service, HTTP, CLI, and MCP tests.
+  - TypeScript typecheck.
+
+## Turn 205 | 2026-05-24
+
+- Continued implementation plan:
+  `docs/dev/plans/0071-2026-05-24-full-multitenant-reconciliation.md`
+- Goal: add campaign execution coordination on top of the dry-run planner.
+- Change:
+  - non-dry-run campaigns now start bounded full-sweep completion children for
+    selected eligible targets.
+  - already-active target completions are attached to the campaign rather than
+    duplicated.
+  - target rows now hydrate child completion/materialization state on campaign
+    readback, including after service restart.
+  - campaign pause/resume/cancel controls propagate to child completions.
+- Validation:
+  - focused reconciliation service, HTTP, CLI, and MCP tests.
+  - TypeScript typecheck.
+
+## Turn 204 | 2026-05-24
+
+- Continued implementation plan:
+  `docs/dev/plans/0071-2026-05-24-full-multitenant-reconciliation.md`
+- Goal: make the full multi-tenant reconciliation plan executable enough for
+  deterministic dry-run target discovery.
+- Change:
+  - added account-mirror reconciliation campaign service/store types and
+    durable cache-backed records.
+  - added the dry-run planner that classifies configured targets from
+    account-mirror status and active completion records without launching
+    provider browser work.
+  - exposed dry-run campaign create/list/status/control through API, CLI, and
+    MCP with shared target metrics and policy fields.
+- Validation:
+  - focused reconciliation/service, HTTP, CLI, and MCP tests.
+  - TypeScript typecheck.
+
+## Turn 203 | 2026-05-24
+
+- Continued implementation plan:
+  `docs/dev/plans/0071-2026-05-24-full-multitenant-reconciliation.md`
+- Goal: create the governing plan for full multi-tenant account-mirror
+  reconciliation.
+- Change:
+  - opened Plan 0071 as the campaign-level layer above existing
+    one-target live-follow completion and history-materialization jobs.
+  - wired the plan into `ROADMAP.md` and `RUNBOOK.md`.
+  - kept the core boundary explicit: campaign discovery may read
+    config/status/cache state, but provider browser work starts only from
+    explicit campaign execution or existing explicit reconciliation jobs.
+- Validation:
+  - plan audit, diff hygiene, and targeted doc checks for the planning slice.
+
 ## Turn 202 | 2026-05-24
 
 - Continued implementation plans:
@@ -33840,6 +34294,55 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - `pnpm run check`
 
+## Turn 299 | 2026-05-24
+
+- Goal: close Plan 0071 with live multi-tenant artifact reconciliation proof
+  and fix the stale-wait/evidence issues exposed by the campaign run.
+- Change:
+  - bounded operator reconciliation bypasses routine minimum-interval waits
+    while preserving identity mismatches, provider guards, hard stops,
+    failure backoff, and browser-operation locks.
+  - bounded reconciliation children clear stale persisted `nextAttemptAt` on
+    resume and immediately re-evaluate the real target state.
+  - campaign status now remains active while a selected materialization job is
+    active.
+  - campaign materialized-asset evidence now enriches result entries from
+    matching archive items so checksum evidence carries provider conversation
+    ids and bound identities even when the job result target is `null`.
+  - history-materialization jobs have a default 10 minute timeout.
+  - Gemini static `/app/download` ids are filtered from rail discovery and
+    automatic history-materialization target selection.
+- Live proof:
+  - Gemini first selected bogus static id `download`; after filtering, it
+    selected real conversation `23340d1698de29b8`, but the managed browser
+    profile redirected to a Google account chooser for the conversation URL,
+    so Gemini retries stopped under the browser-work rules.
+  - installed campaign
+    `acctmirror_reconciliation_87fbb97c-88ce-4294-92b2-a471df9c9279`
+    closed `completed_with_skips` with aggregate materialization metrics
+    `jobs=2`, `terminalJobs=2`, `conversations=2`, `materialized=2`,
+    `archiveItems=2`, and `checksummedAssets=2`.
+  - selected target `chatgpt:wsl-chrome-4` materialized conversation
+    `68e6442e-e7d4-832e-b4f6-6db6cd5a7c3f` artifact
+    `canvas:68e64580d6988191bbab7e4b006ceed2` with checksum
+    `329d9d0fef7a3215b8ff78eac8360584cf2d042ad45f1ca0d360186baac8184b`.
+  - claimed active target `chatgpt:wsl-chrome-3` materialized conversation
+    `6a0fa901-77d0-83ea-80e0-fbaaa4eca529` artifact
+    `bd8a65b0-4d5c-41b5-a49b-ab8fe39629b6:download:sandbox:/mnt/data/Mason_Cochran_AHS_Acceleration_Form_PreCalculus_TestOut_clean_2page.pdf`
+    with checksum
+    `7275c5d08508b22855a8ad36bc06d7cc6e3476f5ab84620814381b09b037e767`.
+  - selected target `chatgpt:wsl-chrome-2` failed independently with
+    `Account mirror metadata collector timed out for chatgpt/wsl-chrome-2`.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1 --testNamePattern "job timeout|exceeds the job timeout|missing assets over refresh-only|static app routes"`
+  - `pnpm vitest run tests/accountMirror/politePolicy.test.ts --maxWorkers 1 --testNamePattern "operator reconciliation|ChatGPT failure backoff|explicit-refresh"`
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts --maxWorkers 1 --testNamePattern "stale persisted minimum interval|rechecks persisted cooldowns|bounded completion"`
+  - `pnpm vitest run tests/accountMirror/reconciliationCampaignService.test.ts --maxWorkers 1 --testNamePattern "active materialization|hydrates active|dry-run classifies"`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `pnpm tsx scripts/install-user-runtime.ts --skip-build`
+  - `pnpm tsx scripts/install-user-api-service.ts`
+
 ## Turn 295 | 2026-05-24
 
 - Goal: tighten Plan 0070 steady-follow reconciliation after live Gemini proof
@@ -33856,6 +34359,45 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1 --testNamePattern "freshness evidence|manifest asset evidence|terminal Gemini route misses"`
   - `pnpm exec biome lint src/runtime/historyMaterializationService.ts tests/runtime.historyMaterializationService.test.ts`
+
+## Turn 298 | 2026-05-24
+
+- Goal: advance Plan 0071 from attachment-only campaign proof to campaign
+  claim/upgrade semantics with durable materialization evidence readback.
+- Change:
+  - account-mirror completion service now supports policy upgrades for active
+    children, converting non-matching live-follow operations into bounded
+    full-sweep materialization work without changing the child id.
+  - live-follow startup treats any active same-target completion as ownership,
+    so it does not duplicate a bounded campaign child.
+  - reconciliation campaigns now hydrate history-materialization jobs into
+    aggregate materialized/checksum counts, per-target asset evidence, and
+    terminal routeability metrics.
+  - CLI and React Health campaign detail summaries now surface aggregate asset
+    and checksum counts.
+  - replacement-child reattach clears stale materialization evidence when the
+    campaign child or materialization job changes.
+- Live proof:
+  - installed `auracall-api.service` on `127.0.0.1:18095` exposed the
+    reconciliation routes and six enabled live-follow targets.
+  - campaign `acctmirror_reconciliation_c3215fb5-c3f6-4df5-a013-674d9b689f71`
+    claimed/upgraded the Gemini/default child and completed a full-sweep pass.
+  - materialization job `hmj_09f57e2164b04a5da2fdd5bb5b7d43cf` reached
+    terminal `skipped` with routeability evidence for bogus conversation id
+    `download`; no asset checksum was produced.
+  - a later restart interrupted replacement job
+    `hmj_a03151837b4a4464a03ed2eeffb001d4`; readback now reattaches the newer
+    child without retaining stale rows from the older job.
+- Verification:
+  - `pnpm vitest run tests/accountMirror/completionService.test.ts tests/accountMirror/liveFollowReconciler.test.ts tests/accountMirror/reconciliationCampaignService.test.ts tests/http.accountMirrorReconciliation.test.ts tests/cli/apiMirrorCompletionCommand.test.ts tests/mcp.accountMirrorReconciliation.test.ts`
+  - `pnpm run typecheck`
+  - `pnpm vitest run tests/accountMirror/reconciliationCampaignService.test.ts tests/cli/apiMirrorCompletionCommand.test.ts`
+  - `pnpm vitest run tests/accountMirror/reconciliationCampaignService.test.ts`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 70`
+  - `git diff --check`
+  - `pnpm tsx scripts/install-user-runtime.ts --skip-build`
+  - `pnpm tsx scripts/install-user-api-service.ts`
 
 ## Turn 294 | 2026-05-24
 
@@ -33909,6 +34451,52 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - cache item/search/archive curl readbacks for `1ab8bb794846c491`,
     including post-patch freshness state `fresh`.
 
+## Turn 300 | 2026-05-25
+
+- Goal: recover after WSLg/RustDesk input degradation and resume a bounded
+  Gemini reconciliation proof.
+- Live proof:
+  - WSLg bridge files refreshed after `wsl --shutdown`; `weston.log`,
+    `/mnt/wslg/runtime-dir/wayland-0`, and `/mnt/wslg/.X11-unix/X0` all had
+    2026-05-25 timestamps.
+  - installed `auracall-api.service` was active after boot.
+  - stale profile-error modal was absent; Gemini had one focused
+    `https://gemini.google.com/app` tab and no account-chooser tabs.
+  - Gemini campaign `acctmirror_reconciliation_cfc2289c-9695-4968-8b4b-c1a96bce63ef`
+    attached to active completion
+    `acctmirror_completion_7fe6b95d-2cd5-4a15-bc39-0e9639912cf3`, upgraded it
+    to bounded full-sweep `recent_missing_assets`, and queued
+    `hmj_4ad3678234294e22bd19f8b7d630e79b`.
+  - materialization job terminated as `skipped`; four selected cached Gemini
+    candidates all landed on bare `/app`, so no artifact was materialized.
+  - after install and `auracall-api.service` restart, completion
+    `acctmirror_completion_2c5bbf32-8442-45c3-8043-576f0e1e6730` resumed under
+    PID `70026`, accepted campaign
+    `acctmirror_reconciliation_e67b9710-8b95-4a13-bdb0-070fea5592c9`, and
+    queued post-fix materialization job
+    `hmj_d23975a94cba41b5bb88f5f5ab4ff3eb`.
+  - the post-fix job terminated as `skipped` with zero candidate
+    conversations, confirming terminal routeability evidence and Gemini target
+    canonicalization prevented spending another pass on the stale/deleted rows.
+- Change:
+  - Gemini reconciliation now canonicalizes provider conversation targets
+    before route checks. `accounts.google.com` redirect URLs with
+    `continue=`/`followup=` Gemini routes are converted to
+    `https://gemini.google.com/app/<conversationId>`, and malformed
+    conversation ids such as `23340d1698de29b8&followup=https:` are stripped
+    back to the real id.
+  - Added regression coverage for the exact redirect-polluted Gemini row
+    observed in the live job.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1 --testNamePattern "canonicalizes Gemini redirect|static app routes|missing assets over refresh-only|route misses"`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - installed runtime dry-run/execution Gemini reconciliation smoke, completion
+    status, materialization status, `pnpm run plans:audit -- --keep 70`, and
+    `git diff --check`
+
 ## Turn 293 | 2026-05-23
 
 - Goal: apply the no-refresh Gemini rail rule to context and artifact
@@ -33945,3 +34533,68 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api history-materialization-create --port 18083 --provider gemini --runtime-profile auracall-gemini-pro --conversation-id 1ab8bb794846c491 --provider-conversation-url https://gemini.google.com/app/1ab8bb794846c491 --asset-kind media --max-items 1 --refresh-snapshot --force --timeout-ms 20000 --json`
   - `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api history-materialization-status hmj_1959cca2de1c40c8b55b2776fb23f906 --port 18083 --json`
   - `curl -sS --max-time 20 'http://127.0.0.1:18083/v1/account-mirrors/scheduler/diagnostics?provider=gemini&runtimeProfile=auracall-gemini-pro'`
+
+## Turn 294 | 2026-05-25
+
+- Goal: retry a single Gemini image-artifact materialization from a known
+  conversation and tighten false-positive routeability evidence.
+- Live proof:
+  - installed API service restarted under PID `38643`, then `85431` after the
+    cache-fallback fix.
+  - targeted Gemini job `hmj_2dcbb29ed3d647a19b74db0396ce4372` against
+    conversation `10b7e2a15e2dd77c` refreshed one cached `Generated image 1`
+    artifact but failed in materialization after landing on
+    `accounts.google.com/v3/signin/accountchooser`.
+  - after rail-target installation, retry job
+    `hmj_f87469e096d647c9b938d9a38c6a1c28` no longer hit account chooser, but
+    failed on bare `https://gemini.google.com/app`.
+  - browser DOM inspection on the default Gemini managed browser profile showed
+    no `[data-test-id="all-conversations"]` rail and a visible Sign in link, so
+    further artifact retries against that profile are blocked on account state,
+    not on candidate discovery.
+  - existing cached image evidence remains present:
+    `10b7e2a15e2dd77c` has sha256
+    `5df1e3626b11b5016e38710e711152e663e10333c591eb4b4db383b3540704c0`;
+    `1ab8bb794846c491` has sha256 values
+    `80fcaeb067bcafd5d083a05a30beba58350e30869a6557fcbf84106e8037836b`
+    and `b54ac02a55be8790328ec1d17f89bb5bd2b83470f81447a36a6faec4f60a8501`.
+- Change:
+  - history materialization now resolves Gemini provider browser work through
+    the rail surface (`/app` or `/gem/<projectId>`) while preserving the direct
+    conversation URL as evidence, avoiding account-chooser direct-navigation
+    churn before provider rail logic runs.
+  - history materialization now passes normalized bound identity evidence into
+    provider context refresh, so signed-out or wrong-account states fail as
+    account/session evidence instead of being confused with deleted
+    conversations.
+  - `getConversationContext()` gained `allowCacheFallback`; history snapshot
+    refresh sets it false so stale cached context cannot be reported as a live,
+    routeable Gemini snapshot.
+- Verification:
+  - `pnpm vitest run tests/runtime.historyMaterializationService.test.ts --maxWorkers 1 --testNamePattern "Gemini rail surface|canonicalizes Gemini redirect|static app routes|missing assets over refresh-only|route misses"`
+  - `pnpm vitest run tests/browser/llmServiceContext.test.ts tests/runtime.historyMaterializationService.test.ts --maxWorkers 1 --testNamePattern "live refresh|Gemini rail surface|canonicalizes Gemini redirect|static app routes|missing assets over refresh-only|route misses"`
+  - `pnpm exec biome lint src/browser/llmService/llmService.ts src/runtime/historyMaterializationService.ts tests/browser/llmServiceContext.test.ts tests/runtime.historyMaterializationService.test.ts`
+  - `pnpm run typecheck`
+  - `pnpm run build`
+  - `pnpm run install:user-runtime`
+  - `systemctl --user restart auracall-api.service`
+  - `git diff --check`
+
+## Turn 295 | 2026-05-25
+
+- Goal: correct the installed Gemini live-follow browser/runtime profile
+  binding before retrying artifact materialization.
+- Result:
+  - user-scoped `~/.auracall/config.json` now disables live follow on
+    `default/gemini` and enables it on `auracall-gemini-pro/gemini`.
+  - `auracall-gemini-pro` now uses the dedicated managed browser profile
+    `/home/ecochran76/.auracall/browser-profiles/gemini-stealthcdp/gemini`
+    instead of the shared `default/gemini` profile.
+  - `browserFamilies.gemini-stealthcdp` now reads cookies from the same
+    dedicated managed profile and uses display `:10` for the local RDP-backed
+    headed surface.
+  - config backup:
+    `~/.auracall/config.json.bak-2026-05-25-gemini-stealthrdp-profile`.
+- Verification:
+  - `jq empty ~/.auracall/config.json`
+  - `DISPLAY=:10 xdpyinfo`

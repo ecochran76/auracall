@@ -140,6 +140,8 @@
       - `accountMirrorStatus.metrics.delayed`
       - `accountMirrorStatus.metrics.blocked`
       - `accountMirrorStatus.entries[].provider`
+      - `accountMirrorStatus.entries[].tenantKey`
+      - `accountMirrorStatus.entries[].bindingKey`
       - `accountMirrorStatus.entries[].runtimeProfileId`
       - `accountMirrorStatus.entries[].browserProfileId`
       - `accountMirrorStatus.entries[].expectedIdentityKey`
@@ -150,8 +152,14 @@
       - `accountMirrorStatus.entries[].mirrorState.lastDispatcherKey`
       - `accountMirrorStatus.entries[].metadataCounts`
       - `accountMirrorStatus.entries[].metadataEvidence`
+      - `accountMirrorStatus.entries[].metadataEvidence.countEvidence.observedThisPass`
+      - `accountMirrorStatus.entries[].metadataEvidence.countEvidence.retainedFromCache`
+      - `accountMirrorStatus.entries[].metadataEvidence.countEvidence.mergedTotal`
+      - `accountMirrorStatus.entries[].metadataEvidence.detailScannedThisPass`
+      - `accountMirrorStatus.entries[].metadataEvidence.assetInventory.state = observed|complete|in_progress|deferred|unknown`
       - `accountMirrorStatus.entries[].metadataEvidence.attachmentInventory`
       - `accountMirrorStatus.entries[].mirrorCompleteness.state = none|complete|in_progress|unknown`
+      - `accountMirrorStatus.entries[].mirrorCompleteness.assetInventory.state`
       - `accountMirrorStatus.entries[].mirrorCompleteness.remainingDetailSurfaces`
       - this readback may hydrate counts/evidence from the existing provider
         cache store, but it must not enqueue browser work or scrape provider
@@ -181,6 +189,10 @@
       - scheduler diagnostics parity is available with
         `auracall api scheduler-diagnostics --port 8080 --provider chatgpt --runtime-profile default`
         and MCP `account_mirror_scheduler_diagnostics`
+      - scheduler diagnostics browser-mutation readback includes `byKind`,
+        `bySource`, and `duplicateSameRouteAttempts` so scoped Gemini proof can
+        assert zero reloads and zero duplicate same-route navigations without
+        manually scanning raw mutation rows
       - compact history reports `latestYield`, `yieldEvents[]`,
         queued-work owner/kind, resume cursor, and remaining detail surfaces
       - nonblocking completion is available with
@@ -189,6 +201,28 @@
       - CLI parity is available with
         `auracall api mirror-complete --port 8080` and
         `auracall api mirror-completion-status <id> --port 8080`
+      - scoped proof server mode is available with
+        `auracall --profile auracall-gemini-pro api serve --port 18173 --account-mirror-proof-provider gemini --account-mirror-proof-runtime-profile auracall-gemini-pro`
+      - scoped proof status must include
+        `accountMirrorProofScope.enabled = true`,
+        `accountMirrorProofScope.provider`,
+        `accountMirrorProofScope.runtimeProfileId`,
+        `accountMirrorProofScope.tenantKey`,
+        `accountMirrorProofScope.bindingKey`, and
+        `accountMirrorProofScope.globalLiveFollowSuppressed = true`
+      - scoped proof startup must report zero adopted completions before the
+        operator starts the bounded proof, even when the shared completion
+        store contains unrelated persisted active operations; proof
+        `/status.liveFollow` should include only the requested provider/runtime
+        target
+      - after starting the bounded proof completion, use
+        `auracall api mirror-complete --port 18173 --provider gemini --runtime-profile auracall-gemini-pro --max-passes 1 --sweep-mode full_sweep --materialization-policy full_missing_assets --materialization-asset-kinds all`
+      - read back with
+        `auracall api mirror-completion-status <completion_id> --port 18173`;
+        terminal handoff jobs should hydrate
+        `materializationOutcome.materialized`,
+        `materializationOutcome.checksumCount`, manifest paths, and
+        routeability counts
       - provider guard clearance is available with
         `auracall api mirror-provider-guard-clear --port 8080 --provider gemini --runtime-profile default`
         and MCP `account_mirror_provider_guard_clear`
@@ -390,6 +424,9 @@
         manifest rows by provider plus bound identity; it must not acquire the
         browser dispatcher, launch browsers, submit prompts, scrape provider
         pages, or load conversation ids
+      - regression coverage should prove that changing only the browser binding
+        keeps the same tenant catalog visible and that old binding-scoped
+        status/backoff state is not treated as missing tenant catalog data
       - cached conversation rows expose `conversationFreshness`; tests should
         treat that object as cache projection only and should not expect catalog
         or search reads to validate routeability online
