@@ -310,13 +310,16 @@ Current State:
     materialization, and campaign readback hydrates materialization jobs into
     aggregate artifact/hash counts plus per-target asset and routeability
     evidence
-  - installed-runtime checkpoint: the Gemini/default campaign child completed
-    a claimed full-sweep pass and queued a materialization job; that job
-    produced terminal routeability evidence for bogus conversation id
-    `download` but no downloadable asset checksum
-  - remaining closeout gap: prove successful campaign-owned materialized asset
-    checksums for at least two provider/runtime targets, not only ownership,
-    skipped jobs, or terminal routeability
+  - installed-runtime checkpoint: campaign
+    `acctmirror_reconciliation_87fbb97c-88ce-4294-92b2-a471df9c9279`
+    closed the campaign-owned checksum proof with two terminal
+    materialization jobs, two archive items, and two checksummed assets across
+    distinct ChatGPT runtime-profile targets:
+    `chatgpt:wsl-chrome-4` for `ecochran76@gmail.com` and
+    `chatgpt:wsl-chrome-3` for `eric.cochran@soylei.com`
+  - later Gemini/default campaign work proved terminal routeability and static
+    route filtering but did not add a Gemini checksum; Gemini checksum recovery
+    is now provider-specific follow-up, not a blocker for Plan 0071 closeout
   - cache-only reads remain cache-only; browser work starts only from explicit
     campaign execution, existing live-follow completions, or one-target
     reconciliation/materialization jobs
@@ -368,11 +371,11 @@ Current State:
     `acctmirror_completion_17ccf29f-e4ee-479c-9d0c-3a71776126bc` completed one
     `gemini:auracall-gemini-pro` pass with provider guard clear, scheduler
     diagnostics `reload=0`, and `duplicateSameRouteAttempts.total=0`
-  - Plan 0073 can now continue with terminal materialization/checksum proof;
-    the Plan 0074 completion handed off materialization job
+  - Plan 0073 is closed with terminal materialization/checksum proof; the Plan
+    0074 completion handed off materialization job
     `hmj_112116b41db94ec5b9c3bb7c867e35e9`, which succeeded at
     `2026-05-26T14:47:12.730Z` with seven materialized assets from ten
-    conversations and zero failures
+    conversations, zero failures, and seven checksums
 - React operator UX redesign is now scoped in
   [docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md](docs/dev/plans/0067-2026-05-16-react-operator-ux-redesign.md):
   - the current `/ops/browser` dashboard is a debug/proof-of-concept surface,

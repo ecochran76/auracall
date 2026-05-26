@@ -1,3 +1,24 @@
+## Turn 314 | 2026-05-26
+
+- Goal: verify Plan 0071 campaign-owned checksum proof and remove stale
+  roadmap wording after Plan 0073 closeout.
+- Result:
+  - installed campaign
+    `acctmirror_reconciliation_87fbb97c-88ce-4294-92b2-a471df9c9279`
+    read back as `completed_with_skips`.
+  - campaign materialization metrics remain terminal:
+    `jobs=2`, `terminalJobs=2`, `materialized=2`, `archiveItems=2`, and
+    `checksummedAssets=2`.
+  - target evidence still ties checksummed assets to
+    `chatgpt:wsl-chrome-4` / `ecochran76@gmail.com` and
+    `chatgpt:wsl-chrome-3` / `eric.cochran@soylei.com`.
+  - updated `ROADMAP.md` so Plan 0071 is not described as waiting on a
+    checksum proof and Plan 0073 is not described as still needing terminal
+    materialization/checksum proof.
+- Verification:
+  - `/home/ecochran76/.local/bin/auracall api mirror-reconciliation-status acctmirror_reconciliation_87fbb97c-88ce-4294-92b2-a471df9c9279 --port 18095 --json`
+  - `curl -fsS http://127.0.0.1:18095/status`
+
 ## Turn 313 | 2026-05-26
 
 - Goal: close Plan 0073 with the installed Gemini terminal materialization and

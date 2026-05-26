@@ -1,5 +1,28 @@
 # RUNBOOK
 
+## Turn 164 | 2026-05-26
+
+- Active plan:
+  `docs/dev/plans/0071-2026-05-24-full-multitenant-reconciliation.md`
+- Goal: verify the campaign-owned checksum proof and clean up stale roadmap
+  wording after Plans 0073 and 0074 closed.
+- Result:
+  - confirmed campaign
+    `acctmirror_reconciliation_87fbb97c-88ce-4294-92b2-a471df9c9279`
+    remains readable from the installed service on port `18095`.
+  - campaign status is `completed_with_skips` with materialization metrics:
+    `jobs=2`, `terminalJobs=2`, `conversations=2`, `materialized=2`,
+    `archiveItems=2`, and `checksummedAssets=2`.
+  - proof targets remain distinct runtime-profile/bound-identity pairs:
+    `chatgpt:wsl-chrome-4` / `ecochran76@gmail.com` and
+    `chatgpt:wsl-chrome-3` / `eric.cochran@soylei.com`.
+  - updated the roadmap so Plan 0071 no longer advertises an open checksum
+    closeout gap, and so Plan 0073 is marked closed after the terminal
+    materialization/checksum proof.
+- Verification:
+  - `/home/ecochran76/.local/bin/auracall api mirror-reconciliation-status acctmirror_reconciliation_87fbb97c-88ce-4294-92b2-a471df9c9279 --port 18095 --json`
+  - `curl -fsS http://127.0.0.1:18095/status`
+
 ## Turn 163 | 2026-05-26
 
 - Active plan:
